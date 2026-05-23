@@ -3,38 +3,202 @@
 import { useState, useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Save, Loader2, Settings2, Landmark, Sparkles, Eye, EyeOff, CreditCard, FileText } from "lucide-react";
-import { getBursarySettings, updateBursarySetting } from "@/actions/bursary";
+import { 
+    Loader2, 
+    Settings2, 
+    Landmark, 
+    Sparkles, 
+    Eye, 
+    EyeOff, 
+    CreditCard, 
+    FileText,
+    ArrowRightLeft,
+    Plus,
+    Building2,
+    Link
+} from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { 
+    getBursarySettings, 
+    updateBursarySetting, 
+    getSettlementAccounts, 
+    createSettlementAccount, 
+    getFeeItemsWithSettlement, 
+    linkFeeItemToSettlementAccount,
+    createGatewaySubaccountAction
+} from "@/actions/bursary";
 import { getCOA } from "@/actions/accounting";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+
+interface GLAccount {
+    id: number;
+    code: string;
+    name: string;
+    category: string;
+}
+
+interface SettlementAccount {
+    id: number;
+    accountName: string;
+    bankName: string;
+    bankCode: string;
+    accountNumber: string;
+    isActive: boolean | null;
+}
+
+interface FeeItem {
+    id: number;
+    name: string;
+    description: string | null;
+    defaultAmount: string;
+    category: 'tuition' | 'hostel' | 'library' | 'lab' | 'other' | null;
+    recurrence: 'once' | 'per_semester' | 'per_session' | null;
+    isRequired: boolean | null;
+    settlementAccountId: number | null;
+    settlementAccount: SettlementAccount | null;
+}
 
 export default function BursarySettingsPage() {
     const [settings, setSettings] = useState<Record<string, string>>({});
-    const [accounts, setAccounts] = useState<any[]>([]);
+    const [accounts, setAccounts] = useState<GLAccount[]>([]);
+    const [settlements, setSettlements] = useState<SettlementAccount[]>([]);
+    const [feeItemsList, setFeeItemsList] = useState<FeeItem[]>([]);
     const [loading, setLoading] = useState(true);
-    const [submitting, setSubmitting] = useState(false);
     const [showApiKey, setShowApiKey] = useState<Record<string, boolean>>({});
+
+    // New Settlement Form state
+    const [newAcctName, setNewAcctName] = useState("");
+    const [newBankName, setNewBankName] = useState("");
+    const [newBankCode, setNewBankCode] = useState("");
+    const [newAcctNum, setNewAcctNum] = useState("");
+    const [addingSettlement, setAddingSettlement] = useState(false);
+
+    // New Subaccount mapping state
+    const [mappingAcctId, setMappingAcctId] = useState<number | null>(null);
+    const [mappingGateway, setMappingGateway] = useState<'paystack' | 'flutterwave' | 'remita'>('paystack');
+    const [mappingCode, setMappingCode] = useState("");
+    const [mappingLoading, setMappingLoading] = useState(false);
 
     useEffect(() => {
         fetchData();
     }, []);
 
     const fetchData = async () => {
-        const [settingsData, coaData] = await Promise.all([
-            getBursarySettings(),
-            getCOA()
-        ]);
-        setSettings(settingsData);
-        setAccounts(coaData);
-        setLoading(false);
+        try {
+            const [settingsData, coaData, settlementsData, feeItemsData] = await Promise.all([
+                getBursarySettings(),
+                getCOA(),
+                getSettlementAccounts(),
+                getFeeItemsWithSettlement()
+            ]);
+            setSettings(settingsData);
+            setAccounts(coaData);
+            setSettlements(settlementsData);
+            setFeeItemsList(feeItemsData);
+        } catch (error) {
+            console.error("Failed to load settings data:", error);
+            toast.error("Failed to load settings data. Please reload.");
+        } finally {
+            setLoading(false);
+        }
     };
 
     const handleSave = async (key: string, value: string) => {
-        setSubmitting(true);
-        await updateBursarySetting(key, value);
-        // Refresh settings locally to update UI immediately
-        setSettings(prev => ({ ...prev, [key]: value }));
-        setSubmitting(false);
+        const res = await updateBursarySetting(key, value);
+        if (res.success) {
+            setSettings(prev => ({ ...prev, [key]: value }));
+            toast.success(`Setting '${key}' updated successfully.`);
+        } else {
+            toast.error(res.error || "Failed to update setting.");
+        }
+    };
+
+    const handleCreateSettlement = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!newAcctName || !newBankName || !newBankCode || !newAcctNum) {
+            toast.error("Please fill in all settlement account fields.");
+            return;
+        }
+        setAddingSettlement(true);
+        try {
+            const res = await createSettlementAccount({
+                accountName: newAcctName,
+                bankName: newBankName,
+                bankCode: newBankCode,
+                accountNumber: newAcctNum
+            });
+            if (res.success) {
+                toast.success("Settlement account registered successfully.");
+                setNewAcctName("");
+                setNewBankName("");
+                setNewBankCode("");
+                setNewAcctNum("");
+                // Reload data
+                const freshSettlements = await getSettlementAccounts();
+                setSettlements(freshSettlements);
+            } else {
+                toast.error(res.error || "Failed to create settlement account.");
+            }
+        } catch (error) {
+            const err = error as Error;
+            toast.error(err.message || "Failed to create account.");
+        } finally {
+            setAddingSettlement(false);
+        }
+    };
+
+    const handleCreateMapping = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!mappingAcctId || !mappingCode) {
+            toast.error("Please provide subaccount mapping details.");
+            return;
+        }
+        setMappingLoading(true);
+        try {
+            const res = await createGatewaySubaccountAction({
+                settlementAccountId: mappingAcctId,
+                gatewayName: mappingGateway,
+                gatewaySubaccountCode: mappingCode
+            });
+            if (res.success) {
+                toast.success("Gateway subaccount mapping registered.");
+                setMappingCode("");
+                setMappingAcctId(null);
+                // Refresh
+                fetchData();
+            } else {
+                toast.error(res.error || "Failed to map subaccount.");
+            }
+        } catch (error) {
+            const err = error as Error;
+            toast.error(err.message || "Failed to map subaccount.");
+        } finally {
+            setMappingLoading(false);
+        }
+    };
+
+    const handleLinkFeeItem = async (feeItemId: number, acctId: string) => {
+        const parsedAcctId = acctId ? parseInt(acctId) : null;
+        try {
+            const res = await linkFeeItemToSettlementAccount(feeItemId, parsedAcctId);
+            if (res.success) {
+                toast.success("Fee item linked to settlement bank account.");
+                // Update local list
+                setFeeItemsList(prev => prev.map(item => {
+                    if (item.id === feeItemId) {
+                        const matchedAcct = settlements.find(s => s.id === parsedAcctId);
+                        return { ...item, settlementAccountId: parsedAcctId, settlementAccount: matchedAcct || null };
+                    }
+                    return item;
+                }));
+            } else {
+                toast.error(res.error || "Failed to link fee item.");
+            }
+        } catch (error) {
+            const err = error as Error;
+            toast.error(err.message || "Failed to link fee item.");
+        }
     };
 
     if (loading) {
@@ -53,21 +217,22 @@ export default function BursarySettingsPage() {
     ];
 
     return (
-        <div className="p-8 max-w-4xl mx-auto">
+        <div className="p-8 max-w-5xl mx-auto space-y-8">
             <div className="mb-8">
                 <h2 className="text-3xl font-bold text-slate-900 tracking-tight flex items-center gap-3">
-                    <Settings2 className="w-8 h-8 text-indigo-600" />
+                    <Settings2 className="w-8 h-8 text-indigo-600 animate-pulse" />
                     Bursary Settings
                 </h2>
-                <p className="text-slate-500 mt-1">Configure financial policies and module behavior</p>
+                <p className="text-slate-500 mt-1">Configure financial policies, gateways, split settling rules, and ledger mappings</p>
             </div>
 
-            <div className="space-y-6">
-                <Card className="border-none shadow-sm">
-                    <CardHeader>
-                        <CardTitle className="text-lg">Payment Configuration</CardTitle>
+            <div className="grid grid-cols-1 gap-6">
+                {/* 1. PAYMENT CONFIGURATION CARD */}
+                <Card className="border border-slate-100 shadow-sm rounded-2xl overflow-hidden">
+                    <CardHeader className="bg-slate-50/50 border-b border-slate-100">
+                        <CardTitle className="text-base font-bold text-slate-800">Payment Configuration</CardTitle>
                     </CardHeader>
-                    <CardContent className="space-y-6">
+                    <CardContent className="space-y-6 pt-6">
                         <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
                             <div>
                                 <p className="font-bold text-slate-900">Payment Mode</p>
@@ -77,14 +242,14 @@ export default function BursarySettingsPage() {
                                 <Button
                                     onClick={() => handleSave('payment_mode', 'semester')}
                                     variant={settings['payment_mode'] === 'semester' ? 'default' : 'outline'}
-                                    className={settings['payment_mode'] === 'semester' ? 'bg-indigo-600' : ''}
+                                    className={cn("font-semibold rounded-lg", settings['payment_mode'] === 'semester' ? 'bg-indigo-600 text-white' : '')}
                                 >
                                     Semester
                                 </Button>
                                 <Button
                                     onClick={() => handleSave('payment_mode', 'annual')}
                                     variant={settings['payment_mode'] === 'annual' ? 'default' : 'outline'}
-                                    className={settings['payment_mode'] === 'annual' ? 'bg-indigo-600' : ''}
+                                    className={cn("font-semibold rounded-lg", settings['payment_mode'] === 'annual' ? 'bg-indigo-600 text-white' : '')}
                                 >
                                     Annual
                                 </Button>
@@ -96,7 +261,7 @@ export default function BursarySettingsPage() {
                             <div className="flex gap-4">
                                 <input
                                     type="number"
-                                    className="flex-1 px-4 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 text-sm"
+                                    className="flex-1 px-4 py-2.5 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 text-sm bg-white"
                                     placeholder="e.g. 5000"
                                     defaultValue={settings['late_fee_amount']}
                                     onBlur={(e) => handleSave('late_fee_amount', e.target.value)}
@@ -109,14 +274,309 @@ export default function BursarySettingsPage() {
                     </CardContent>
                 </Card>
 
-                <Card className="border-none shadow-sm overflow-hidden bg-indigo-50/10">
-                    <CardHeader>
-                        <CardTitle className="text-lg flex items-center gap-2">
-                            <Sparkles className="w-5 h-5 text-indigo-500" />
-                            Receipt Customization
+                {/* 2. SPLIT PAYMENT GATEWAY bearer RULES */}
+                <Card className="border border-slate-100 shadow-sm rounded-2xl overflow-hidden bg-slate-50/10">
+                    <CardHeader className="bg-slate-50/50 border-b border-slate-100 flex flex-row justify-between items-center">
+                        <CardTitle className="text-base font-bold text-slate-800 flex items-center gap-2">
+                            <ArrowRightLeft className="w-5 h-5 text-indigo-500" />
+                            Multi-Gateway split Payments & Bearer Rules
                         </CardTitle>
                     </CardHeader>
-                    <CardContent className="space-y-6">
+                    <CardContent className="pt-6 space-y-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Active Payment Gateway</label>
+                                <select
+                                    className="w-full px-4 py-2 rounded-lg border border-slate-200 h-11 text-sm focus:ring-2 focus:ring-indigo-500 bg-white"
+                                    value={settings['active_payment_gateway'] || "paystack"}
+                                    onChange={(e) => handleSave('active_payment_gateway', e.target.value)}
+                                >
+                                    <option value="paystack">Paystack API (Subaccounts)</option>
+                                    <option value="flutterwave">Flutterwave API (Subaccounts)</option>
+                                    <option value="remita">Remita API (Dynamic Line Items)</option>
+                                </select>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Gateway Fee Bearer Strategy</label>
+                                <select
+                                    className="w-full px-4 py-2 rounded-lg border border-slate-200 h-11 text-sm focus:ring-2 focus:ring-indigo-500 bg-white"
+                                    value={settings['gateway_fee_bearer'] || "default"}
+                                    onChange={(e) => handleSave('gateway_fee_bearer', e.target.value)}
+                                >
+                                    <option value="default">Default: Deduct entire fee from School Main Account</option>
+                                    <option value="developer">Developer: Deduct entire fee from Developer share</option>
+                                    <option value="subaccounts">Sub-accounts: Deduct fee from other subaccounts</option>
+                                    <option value="student">Student: Add fee on top of student total amount</option>
+                                    <option value="prorated">Prorated: Deduct proportionally across all splits</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        {/* Default Main school commercial bank configuration */}
+                        <div className="bg-slate-50 rounded-2xl p-6 border border-slate-200/60 space-y-4">
+                            <h4 className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                                <Building2 className="w-4 h-4 text-indigo-500" />
+                                Primary School Default Bank Account
+                            </h4>
+                            <p className="text-xs text-slate-400 leading-normal">
+                                Used as the fallback settlement bank account for unallocated splits and default fee absorbs.
+                            </p>
+
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Account Name</label>
+                                    <input
+                                        type="text"
+                                        className="w-full px-3 py-2 text-xs rounded-lg border border-slate-200 bg-white"
+                                        defaultValue={settings['main_school_account_name'] || "FSS Ibadan Main Account"}
+                                        onBlur={(e) => handleSave('main_school_account_name', e.target.value)}
+                                    />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Bank Name & CBN Code</label>
+                                    <select
+                                        className="w-full px-3 py-2 text-xs rounded-lg border border-slate-200 bg-white"
+                                        value={settings['main_school_bank_code'] || "011"}
+                                        onChange={(e) => handleSave('main_school_bank_code', e.target.value)}
+                                    >
+                                        <option value="011">First Bank (011)</option>
+                                        <option value="058">GTBank (058)</option>
+                                        <option value="033">United Bank for Africa (033)</option>
+                                        <option value="301">Jaiz Bank (301)</option>
+                                        <option value="057">Zenith Bank (057)</option>
+                                    </select>
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Account Number</label>
+                                    <input
+                                        type="text"
+                                        className="w-full px-3 py-2 text-xs rounded-lg border border-slate-200 bg-white"
+                                        defaultValue={settings['main_school_account_number'] || "1022340092"}
+                                        onBlur={(e) => handleSave('main_school_account_number', e.target.value)}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                {/* 3. SETTLEMENT ACCOUNTS MANAGER */}
+                <Card className="border border-slate-100 shadow-sm rounded-2xl overflow-hidden">
+                    <CardHeader className="bg-slate-50/50 border-b border-slate-100 flex flex-row items-center justify-between">
+                        <CardTitle className="text-base font-bold text-slate-800 flex items-center gap-2">
+                            <Landmark className="w-5 h-5 text-indigo-500" />
+                            Settlement Accounts Console
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="pt-6 space-y-6">
+                        {/* List registered settlements */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {settlements.map((acct) => (
+                                <div key={acct.id} className="p-4 rounded-xl border border-slate-200 bg-white flex flex-col justify-between hover:shadow-md transition-shadow">
+                                    <div className="flex justify-between items-start">
+                                        <div className="flex gap-3">
+                                            <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg shrink-0 h-10 w-10 flex items-center justify-center">
+                                                <Building2 className="w-5 h-5" />
+                                            </div>
+                                            <div>
+                                                <p className="font-bold text-slate-800 text-sm leading-tight">{acct.accountName}</p>
+                                                <p className="text-xs text-slate-400 mt-1">{acct.bankName} • {acct.accountNumber}</p>
+                                                <p className="text-[10px] font-mono text-slate-500 mt-0.5">CBN Bank Code: {acct.bankCode}</p>
+                                            </div>
+                                        </div>
+                                        <Badge className="bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 text-[10px]">
+                                            Active
+                                        </Badge>
+                                    </div>
+                                    
+                                    {/* Action to map subaccount code */}
+                                    <div className="mt-4 pt-3 border-t border-slate-100 flex justify-between items-center">
+                                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Gateway Mappings</span>
+                                        <Button 
+                                            size="sm" 
+                                            variant="outline"
+                                            className="text-xs font-semibold py-1 px-3 text-indigo-600 hover:text-indigo-700"
+                                            onClick={() => setMappingAcctId(acct.id)}
+                                        >
+                                            <Link className="w-3.5 h-3.5 mr-1" />
+                                            Map Subaccount
+                                        </Button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Map Gateway Subaccount Code Modal/Popover simulator */}
+                        {mappingAcctId && (
+                            <form onSubmit={handleCreateMapping} className="p-5 rounded-2xl bg-indigo-50/30 border border-indigo-100 space-y-4">
+                                <h4 className="text-xs font-extrabold text-indigo-900 uppercase tracking-widest flex items-center gap-1.5">
+                                    <Link className="w-4 h-4" />
+                                    Map Commercial Account to Gateway Subaccount Identifier
+                                </h4>
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Gateway Provider</label>
+                                        <select
+                                            className="w-full px-3 py-2 text-xs rounded-lg border border-slate-200 bg-white"
+                                            value={mappingGateway}
+                                            onChange={(e) => setMappingGateway(e.target.value as 'paystack' | 'flutterwave' | 'remita')}
+                                        >
+                                            <option value="paystack">Paystack</option>
+                                            <option value="flutterwave">Flutterwave</option>
+                                        </select>
+                                    </div>
+                                    <div className="space-y-1 sm:col-span-2">
+                                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                                            Gateway Subaccount ID (e.g. ACCT_tuition123 or RS_B6B23C9C)
+                                        </label>
+                                        <div className="flex gap-2">
+                                            <input
+                                                type="text"
+                                                className="flex-1 px-3 py-2 text-xs rounded-lg border border-slate-200 bg-white"
+                                                placeholder="Enter gateway code..."
+                                                value={mappingCode}
+                                                onChange={(e) => setMappingCode(e.target.value)}
+                                            />
+                                            <Button 
+                                                type="submit" 
+                                                disabled={mappingLoading}
+                                                className="bg-indigo-600 text-white px-4 text-xs font-semibold"
+                                            >
+                                                {mappingLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Save"}
+                                            </Button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </form>
+                        )}
+
+                        {/* Add new physical bank account form */}
+                        <form onSubmit={handleCreateSettlement} className="bg-slate-50 rounded-2xl p-6 border border-slate-200/60 space-y-4">
+                            <h4 className="text-sm font-bold text-slate-700 flex items-center gap-1.5">
+                                <Plus className="w-4 h-4 text-slate-500" />
+                                Register New Settlement Bank Account
+                            </h4>
+                            
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Account Name</label>
+                                    <input
+                                        type="text"
+                                        placeholder="e.g. Tuition Account"
+                                        className="w-full px-3 py-2 text-xs rounded-lg border border-slate-200 bg-white"
+                                        value={newAcctName}
+                                        onChange={(e) => setNewAcctName(e.target.value)}
+                                    />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Bank Name</label>
+                                    <input
+                                        type="text"
+                                        placeholder="e.g. First Bank"
+                                        className="w-full px-3 py-2 text-xs rounded-lg border border-slate-200 bg-white"
+                                        value={newBankName}
+                                        onChange={(e) => setNewBankName(e.target.value)}
+                                    />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">CBN Bank Code</label>
+                                    <input
+                                        type="text"
+                                        placeholder="e.g. 011"
+                                        className="w-full px-3 py-2 text-xs rounded-lg border border-slate-200 bg-white"
+                                        value={newBankCode}
+                                        onChange={(e) => setNewBankCode(e.target.value)}
+                                    />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Account Number</label>
+                                    <input
+                                        type="text"
+                                        placeholder="10 Digits"
+                                        className="w-full px-3 py-2 text-xs rounded-lg border border-slate-200 bg-white"
+                                        value={newAcctNum}
+                                        onChange={(e) => setNewAcctNum(e.target.value)}
+                                    />
+                                </div>
+                            </div>
+                            <div className="flex justify-end pt-2">
+                                <Button 
+                                    type="submit" 
+                                    disabled={addingSettlement}
+                                    className="bg-indigo-600 text-white font-semibold rounded-lg flex items-center gap-1.5 text-xs py-2.5"
+                                >
+                                    {addingSettlement ? (
+                                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                    ) : (
+                                        <>
+                                            <Plus className="w-3.5 h-3.5" />
+                                            Add Account
+                                        </>
+                                    )}
+                                </Button>
+                            </div>
+                        </form>
+                    </CardContent>
+                </Card>
+
+                {/* 4. FEE ITEM MAPPINGS */}
+                <Card className="border border-slate-100 shadow-sm rounded-2xl overflow-hidden bg-slate-50/10">
+                    <CardHeader className="bg-slate-50/50 border-b border-slate-100">
+                        <CardTitle className="text-base font-bold text-slate-800">Fee Items Settlement Account Mappings</CardTitle>
+                    </CardHeader>
+                    <CardContent className="pt-6">
+                        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+                            <table className="w-full text-left border-collapse text-xs">
+                                <thead>
+                                    <tr className="bg-slate-50 text-slate-500 font-bold uppercase tracking-wider border-b border-slate-200">
+                                        <th className="p-4">FEE ITEM NAME</th>
+                                        <th className="p-4">CATEGORY</th>
+                                        <th className="p-4">DEFAULT AMOUNT</th>
+                                        <th className="p-4">DESTINATION SETTLEMENT BANK ACCOUNT</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100">
+                                    {feeItemsList.map((item) => (
+                                        <tr key={item.id} className="hover:bg-slate-50/60 transition-colors">
+                                            <td className="p-4 font-bold text-slate-800">{item.name}</td>
+                                            <td className="p-4">
+                                                <Badge variant="outline" className="capitalize px-2 py-0.5 border-slate-200 text-slate-600 bg-white">
+                                                    {item.category}
+                                                </Badge>
+                                            </td>
+                                            <td className="p-4 font-mono text-slate-700">₦{parseFloat(item.defaultAmount).toLocaleString()}</td>
+                                            <td className="p-4">
+                                                <select
+                                                    className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs focus:ring-1 focus:ring-indigo-500 bg-white outline-none w-full max-w-xs"
+                                                    value={item.settlementAccountId || ""}
+                                                    onChange={(e) => handleLinkFeeItem(item.id, e.target.value)}
+                                                >
+                                                    <option value="">Primary Default Account fallback</option>
+                                                    {settlements.map((acct) => (
+                                                        <option key={acct.id} value={acct.id}>
+                                                            {acct.accountName} ({acct.bankName} - {acct.accountNumber})
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                {/* 5. RECEIPT CUSTOMIZATION */}
+                <Card className="border border-slate-100 shadow-sm rounded-2xl overflow-hidden bg-indigo-50/10">
+                    <CardHeader className="bg-slate-50/50 border-b border-slate-100">
+                        <CardTitle className="text-base font-bold text-slate-800 flex items-center gap-2">
+                            <Sparkles className="w-5 h-5 text-indigo-500" />
+                            Receipt Customization Template
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-6 pt-6">
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             {[
                                 { id: 'modern', name: 'Modern', desc: 'Sleek, colorful, and highly premium look.' },
@@ -147,19 +607,20 @@ export default function BursarySettingsPage() {
                     </CardContent>
                 </Card>
 
-                <Card className="border-none shadow-sm">
-                    <CardHeader className="flex flex-row items-center justify-between">
-                        <CardTitle className="text-lg flex items-center gap-2">
+                {/* 6. GL ACCOUNT MAPPING CARD */}
+                <Card className="border border-slate-100 shadow-sm rounded-2xl overflow-hidden">
+                    <CardHeader className="bg-slate-50/50 border-b border-slate-100 flex flex-row items-center justify-between">
+                        <CardTitle className="text-base font-bold text-slate-800 flex items-center gap-2">
                             <Landmark className="w-5 h-5 text-indigo-500" />
-                            GL Account Mapping
+                            GL Account Mapping (GL Mappings)
                         </CardTitle>
                     </CardHeader>
-                    <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6">
                         {glSettings.map((item) => (
                             <div key={item.key} className="space-y-2">
                                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">{item.label}</label>
                                 <select
-                                    className="w-full px-4 py-2 rounded-lg border border-slate-200 h-10 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+                                    className="w-full px-4 py-2.5 rounded-lg border border-slate-200 h-11 text-sm focus:ring-2 focus:ring-indigo-500 bg-white outline-none"
                                     value={settings[item.key] || ""}
                                     onChange={(e) => handleSave(item.key, e.target.value)}
                                 >
@@ -187,11 +648,12 @@ export default function BursarySettingsPage() {
                     </div>
                 </Card>
 
-                <Card className="border-none shadow-sm">
-                    <CardHeader>
-                        <CardTitle className="text-lg">Approval Workflow</CardTitle>
+                {/* 7. APPROVAL WORKFLOW CARD */}
+                <Card className="border border-slate-100 shadow-sm rounded-2xl overflow-hidden">
+                    <CardHeader className="bg-slate-50/50 border-b border-slate-100">
+                        <CardTitle className="text-base font-bold text-slate-800">Approval Workflow</CardTitle>
                     </CardHeader>
-                    <CardContent className="space-y-4">
+                    <CardContent className="space-y-4 pt-6">
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="font-bold text-slate-900">Require Approval for Fee Structures</p>
@@ -200,7 +662,7 @@ export default function BursarySettingsPage() {
                             <Button
                                 onClick={() => handleSave('require_fee_approval', settings['require_fee_approval'] === 'true' ? 'false' : 'true')}
                                 variant={settings['require_fee_approval'] === 'true' ? 'default' : 'outline'}
-                                className={settings['require_fee_approval'] === 'true' ? 'bg-green-600 hover:bg-green-700 border-none' : ''}
+                                className={cn("font-semibold rounded-lg", settings['require_fee_approval'] === 'true' ? 'bg-green-600 hover:bg-green-700 text-white' : '')}
                             >
                                 {settings['require_fee_approval'] === 'true' ? 'Enabled' : 'Disabled'}
                             </Button>
@@ -208,19 +670,20 @@ export default function BursarySettingsPage() {
                     </CardContent>
                 </Card>
 
-                <Card className="border-none shadow-sm">
-                    <CardHeader>
-                        <CardTitle className="text-lg flex items-center gap-2">
+                {/* 8. PAYMENT GATEWAY API KEYS */}
+                <Card className="border border-slate-100 shadow-sm rounded-2xl overflow-hidden">
+                    <CardHeader className="bg-slate-50/50 border-b border-slate-100">
+                        <CardTitle className="text-base font-bold text-slate-800 flex items-center gap-2">
                             <CreditCard className="w-5 h-5 text-indigo-500" />
-                            Payment Gateway Integrations
+                            Payment Gateway Integrations Credentials
                         </CardTitle>
                     </CardHeader>
-                    <CardContent className="space-y-6">
+                    <CardContent className="space-y-6 pt-6">
                         {[
-                            { name: "Paystack", key: "gateway_paystack_key", help: "Secret Key from Paystack Dashboard" },
-                            { name: "Flutterwave", key: "gateway_flutterwave_key", help: "Secret Key (FLWSECK-X)" },
-                            { name: "Remita", key: "gateway_remita_key", help: "API Key / Public Key" },
-                            { name: "OPay", key: "gateway_opay_key", help: "Merchant ID / Secret Key" },
+                            { name: "Paystack API Key", key: "gateway_paystack_key", help: "Secret Key from Paystack Dashboard" },
+                            { name: "Flutterwave Secret Key", key: "gateway_flutterwave_key", help: "Secret Key (FLWSECK-X)" },
+                            { name: "Remita API Key", key: "gateway_remita_key", help: "API Key / Public Key" },
+                            { name: "OPay Secret Key", key: "gateway_opay_key", help: "Merchant ID / Secret Key" },
                         ].map((gateway) => (
                             <div key={gateway.key} className="space-y-2">
                                 <label className="text-sm font-bold text-slate-700">{gateway.name}</label>
@@ -228,7 +691,7 @@ export default function BursarySettingsPage() {
                                 <div className="flex gap-4 relative">
                                     <input
                                         type={showApiKey[gateway.key] ? "text" : "password"}
-                                        className="flex-1 px-4 py-2 pr-12 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 text-sm bg-white"
+                                        className="flex-1 px-4 py-2.5 pr-12 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 text-sm bg-white"
                                         placeholder={`Enter ${gateway.name} credentials...`}
                                         defaultValue={settings[gateway.key]}
                                         onBlur={(e) => handleSave(gateway.key, e.target.value)}
@@ -246,21 +709,22 @@ export default function BursarySettingsPage() {
                     </CardContent>
                 </Card>
 
-                <Card className="border-none shadow-sm overflow-hidden bg-indigo-50/30">
-                    <CardHeader>
-                        <CardTitle className="text-lg flex items-center gap-2 text-indigo-900">
+                {/* 9. AI & INSTITUTIONAL INTELLIGENCE CARD */}
+                <Card className="border border-slate-100 shadow-sm rounded-2xl overflow-hidden bg-indigo-50/30">
+                    <CardHeader className="bg-slate-50/50 border-b border-slate-100">
+                        <CardTitle className="text-base font-bold text-slate-800 flex items-center gap-2 text-indigo-900">
                             <Sparkles className="w-5 h-5 text-indigo-500" />
-                            AI & Institutional Intelligence
+                            AI & Institutional Intelligence Config
                         </CardTitle>
                     </CardHeader>
-                    <CardContent className="space-y-4">
+                    <CardContent className="space-y-4 pt-6">
                         <div className="space-y-2">
                             <label className="text-sm font-bold text-slate-700">Google Gemini API Key</label>
                             <p className="text-xs text-slate-500 mb-3">Required for Intelligent OCR (Invoice Scanning) and Bursary-Bot. Get your key from Google AI Studio.</p>
                             <div className="flex gap-4 relative">
                                 <input
                                     type={showApiKey['gemini_api_key'] ? "text" : "password"}
-                                    className="flex-1 px-4 py-2 pr-12 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 text-sm bg-white"
+                                    className="flex-1 px-4 py-2.5 pr-12 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 text-sm bg-white"
                                     placeholder="Enter your Gemini API key..."
                                     defaultValue={settings['gemini_api_key']}
                                     onBlur={(e) => handleSave('gemini_api_key', e.target.value)}

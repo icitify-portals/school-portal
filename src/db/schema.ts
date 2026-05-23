@@ -778,6 +778,22 @@ export const genericRequests = mysqlTable('generic_requests', {
 });
 
 // --- BURSARY / FINANCE MODULE ---
+export const settlementAccounts = mysqlTable('settlement_accounts', {
+  id: int('id').autoincrement().primaryKey(),
+  accountName: varchar('account_name', { length: 255 }).notNull(),
+  bankName: varchar('bank_name', { length: 255 }).notNull(),
+  bankCode: varchar('bank_code', { length: 10 }).notNull(),
+  accountNumber: varchar('account_number', { length: 15 }).notNull(),
+  isActive: boolean('is_active').default(true),
+});
+
+export const gatewaySubaccounts = mysqlTable('gateway_subaccounts', {
+  id: int('id').autoincrement().primaryKey(),
+  settlementAccountId: int('settlement_account_id').references(() => settlementAccounts.id),
+  gatewayName: mysqlEnum('gateway_name', ['paystack', 'flutterwave', 'remita']).notNull(),
+  gatewaySubaccountCode: varchar('gateway_subaccount_code', { length: 100 }).notNull(),
+});
+
 export const feeItems = mysqlTable('fee_items', {
   id: int('id').autoincrement().primaryKey(),
   name: varchar('name', { length: 255 }).notNull(),
@@ -786,6 +802,7 @@ export const feeItems = mysqlTable('fee_items', {
   category: mysqlEnum('category', ['tuition', 'hostel', 'library', 'lab', 'other']).default('other'),
   recurrence: mysqlEnum('recurrence', ['once', 'per_semester', 'per_session']).default('per_session'),
   isRequired: boolean('is_required').default(true),
+  settlementAccountId: int('settlement_account_id').references(() => settlementAccounts.id),
 });
 
 export const feeAllocationRules = mysqlTable('fee_allocation_rules', {
@@ -2790,9 +2807,25 @@ export const genericRequestsRelations = relations(genericRequests, ({ one }) => 
 }));
 
 // --- BURSARY RELATIONS ---
-export const feeItemsRelations = relations(feeItems, ({ many }) => ({
+export const settlementAccountsRelations = relations(settlementAccounts, ({ many }) => ({
+  feeItems: many(feeItems),
+  gatewaySubaccounts: many(gatewaySubaccounts),
+}));
+
+export const gatewaySubaccountsRelations = relations(gatewaySubaccounts, ({ one }) => ({
+  settlementAccount: one(settlementAccounts, {
+    fields: [gatewaySubaccounts.settlementAccountId],
+    references: [settlementAccounts.id],
+  }),
+}));
+
+export const feeItemsRelations = relations(feeItems, ({ one, many }) => ({
   structureItems: many(feeStructureItems),
   discounts: many(discounts),
+  settlementAccount: one(settlementAccounts, {
+    fields: [feeItems.settlementAccountId],
+    references: [settlementAccounts.id],
+  }),
 }));
 
 export const feeStructuresRelations = relations(feeStructures, ({ one, many }) => ({

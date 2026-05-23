@@ -25,7 +25,9 @@ import {
     nelfundDisbursements,
     nelfundBeneficiaries,
     externalInflows,
-    expenditureRequests
+    expenditureRequests,
+    settlementAccounts,
+    gatewaySubaccounts
 } from "@/db/schema";
 import { eq, and, desc, sql, inArray, gte, lte, ne } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
@@ -617,7 +619,7 @@ export async function verifyGatewayPayment(reference: string, gateway: 'paystack
                     amount: res.amount,
                     studentId: transaction.studentId!,
                     studentName: transaction.studentName!,
-                    feeItemId: (transaction as any).feeItemId,
+                    feeItemId: (transaction as unknown as { feeItemId?: number }).feeItemId,
                     reference: reference,
                     method: 'gateway',
                     recordedBy: 0 // System automated
@@ -1019,17 +1021,18 @@ export async function requestRefund(data: {
 
 export async function getRefundRequests(status?: 'pending' | 'approved' | 'rejected' | 'disbursed') {
     try {
-        let query = db.select({
+        const conditions = [];
+        if (status) {
+            conditions.push(eq(refundRequests.status, status));
+        }
+
+        return await db.select({
             request: refundRequests,
             student: students
         }).from(refundRequests)
-            .leftJoin(students, eq(refundRequests.studentId, students.id));
-
-        if (status) {
-            query = query.where(eq(refundRequests.status, status)) as any;
-        }
-
-        return await query.orderBy(desc(refundRequests.createdAt));
+            .leftJoin(students, eq(refundRequests.studentId, students.id))
+            .where(conditions.length > 0 ? and(...conditions) : undefined)
+            .orderBy(desc(refundRequests.createdAt));
     } catch (error) {
         console.error("Failed to fetch refund requests:", error);
         return [];
@@ -1695,5 +1698,223 @@ export async function postDirectPayment(studentId: number, billId: number, amoun
     } catch (error) {
         console.error("Failed to post direct payment:", error);
         return { success: false, error: (error as Error).message };
+    }
+}
+
+export async function initializeOnlineCheckoutAction(studentId: number, billId: number, amount: number) {
+    try {
+        const { SplitPaymentEngine } = await import("@/services/SplitPaymentEngine");
+        const res = await SplitPaymentEngine.checkoutBill(studentId, billId, amount);
+        return {
+            success: res.success,
+            checkoutUrl: res.checkoutUrl,
+            reference: res.reference,
+            rrr: res.rrr,
+            error: res.error
+        };
+    } catch (error) {
+        console.error("Online checkout initialization failed:", error);
+        return { success: false, error: (error as Error).message };
+    }
+}
+
+export async function resolveOnlinePaymentAction(reference: string, status: 'completed' | 'failed', billId?: number) {
+    try {
+        return await db.transaction(async (tx) => {
+            // 1. Fetch the transaction
+            const [txRecord] = await tx.select().from(transactions).where(eq(transactions.gatewayReference, reference)).limit(1);
+            if (!txRecord) {
+                throw new Error(`Transaction with reference ${reference} not found.`);
+            }
+
+            if (txRecord.status !== 'pending') {
+                return { success: true, message: "Transaction already resolved." };
+            }
+
+            const paymentAmount = parseFloat(txRecord.amount);
+
+            // 2. If status is failed, just mark it and return
+            if (status === 'failed') {
+                await tx.update(transactions)
+                    .set({ status: 'failed' })
+                    .where(eq(transactions.gatewayReference, reference));
+                return { success: true, status: 'failed' };
+            }
+
+            // 3. Update transaction to completed
+            await tx.update(transactions)
+                .set({ status: 'completed' })
+                .where(eq(transactions.gatewayReference, reference));
+
+            // 4. Update Student wallet & ledger
+            const studentId = txRecord.studentId!;
+            const [student] = await tx.select().from(students).where(eq(students.id, studentId)).limit(1);
+            if (!student) {
+                throw new Error(`Student #${studentId} not found.`);
+            }
+
+            const currentBalance = parseFloat(student.walletBalance || '0');
+            const newBalance = currentBalance + paymentAmount;
+
+            await tx.update(students)
+                .set({ walletBalance: newBalance.toFixed(2) })
+                .where(eq(students.id, studentId));
+
+            // 5. Update Bill if billId is provided
+            if (billId) {
+                const [bill] = await tx.select().from(studentBills).where(eq(studentBills.id, billId)).limit(1);
+                if (bill) {
+                    const totalAmount = parseFloat(bill.totalAmount);
+                    const currentPaid = parseFloat(bill.amountPaid || "0.00");
+                    const newPaid = currentPaid + paymentAmount;
+
+                    let billStatus: 'pending' | 'partially_paid' | 'paid' = 'partially_paid';
+                    if (Math.abs(newPaid - totalAmount) < 0.01 || newPaid >= totalAmount) {
+                        billStatus = 'paid';
+                    }
+
+                    await tx.update(studentBills)
+                        .set({
+                            amountPaid: newPaid.toFixed(2),
+                            status: billStatus
+                        })
+                        .where(eq(studentBills.id, billId));
+                }
+            }
+
+            // 6. Post Credit Entry in Student Ledger
+            const [lastLedgerEntry] = await tx.select()
+                .from(studentLedger)
+                .where(eq(studentLedger.studentId, studentId))
+                .orderBy(desc(studentLedger.createdAt))
+                .limit(1);
+
+            const lastBalance = lastLedgerEntry ? parseFloat(lastLedgerEntry.balance) : 0;
+            const newBalanceOwed = lastBalance - paymentAmount;
+
+            await tx.insert(studentLedger).values({
+                studentId,
+                transactionId: txRecord.id,
+                description: txRecord.purpose || `Gateway Fees Checkout (${reference})`,
+                debit: "0.00",
+                credit: paymentAmount.toFixed(2),
+                balance: newBalanceOwed.toFixed(2)
+            });
+
+            // 7. General Ledger Posting
+            try {
+                const [user] = await tx.select().from(users).where(eq(users.id, student.userId)).limit(1);
+                const studentName = user ? user.name : `Student #${studentId}`;
+                const { AccountingService } = await import("@/services/AccountingService");
+                await AccountingService.postReceiptToGL({
+                    amount: paymentAmount,
+                    studentName,
+                    feeItemId: 0,
+                    feeCategory: "Student Fees (Gateway)",
+                    recordedBy: 0,
+                    paymentMethod: 'gateway'
+                });
+            } catch (glError) {
+                console.error("Automated GL Posting failed inside resolveOnlinePaymentAction:", glError);
+            }
+
+            return { success: true, status: 'completed' };
+        });
+    } catch (error) {
+        console.error("Failed to resolve online payment:", error);
+        return { success: false, error: (error as Error).message };
+    }
+}
+
+export async function getSettlementAccounts() {
+    try {
+        await ensureBursaryStaff();
+        return await db.select().from(settlementAccounts);
+    } catch (error) {
+        console.error("Failed to fetch settlement accounts:", error);
+        return [];
+    }
+}
+
+export async function createSettlementAccount(data: {
+    accountName: string;
+    bankName: string;
+    bankCode: string;
+    accountNumber: string;
+}) {
+    try {
+        await ensureBursaryStaff();
+        const [res] = await db.insert(settlementAccounts).values({
+            accountName: data.accountName,
+            bankName: data.bankName,
+            bankCode: data.bankCode,
+            accountNumber: data.accountNumber,
+            isActive: true
+        });
+        revalidatePath("/admin/bursary/settings");
+        return { success: true, id: res.insertId };
+    } catch (error) {
+        console.error("Failed to create settlement account:", error);
+        return { success: false, error: (error as Error).message };
+    }
+}
+
+export async function getGatewaySubaccountsAction(accountId: number) {
+    try {
+        await ensureBursaryStaff();
+        return await db.select()
+            .from(gatewaySubaccounts)
+            .where(eq(gatewaySubaccounts.settlementAccountId, accountId));
+    } catch (error) {
+        console.error("Failed to fetch gateway subaccounts:", error);
+        return [];
+    }
+}
+
+export async function createGatewaySubaccountAction(data: {
+    settlementAccountId: number;
+    gatewayName: 'paystack' | 'flutterwave' | 'remita';
+    gatewaySubaccountCode: string;
+}) {
+    try {
+        await ensureBursaryStaff();
+        await db.insert(gatewaySubaccounts).values({
+            settlementAccountId: data.settlementAccountId,
+            gatewayName: data.gatewayName,
+            gatewaySubaccountCode: data.gatewaySubaccountCode
+        });
+        revalidatePath("/admin/bursary/settings");
+        return { success: true };
+    } catch (error) {
+        console.error("Failed to map gateway subaccount:", error);
+        return { success: false, error: (error as Error).message };
+    }
+}
+
+export async function linkFeeItemToSettlementAccount(feeItemId: number, settlementAccountId: number | null) {
+    try {
+        await ensureBursaryStaff();
+        await db.update(feeItems)
+            .set({ settlementAccountId })
+            .where(eq(feeItems.id, feeItemId));
+        revalidatePath("/admin/bursary/settings");
+        return { success: true };
+    } catch (error) {
+        console.error("Failed to link fee item to settlement account:", error);
+        return { success: false, error: (error as Error).message };
+    }
+}
+
+export async function getFeeItemsWithSettlement() {
+    try {
+        await ensureBursaryStaff();
+        return await db.query.feeItems.findMany({
+            with: {
+                settlementAccount: true
+            }
+        });
+    } catch (error) {
+        console.error("Failed to fetch fee items with settlement accounts:", error);
+        return [];
     }
 }

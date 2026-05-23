@@ -23,11 +23,11 @@ import {
 } from "lucide-react";
 import { 
     getStudentLedger, 
-    processPayment, 
     getStudentBills, 
     getStudentFinancialSummary, 
     getBursarySettings,
-    payBillWithWalletAction 
+    payBillWithWalletAction,
+    initializeOnlineCheckoutAction
 } from "@/actions/bursary";
 import { getStudentByUserId } from "@/actions/students";
 import { useSession } from "next-auth/react";
@@ -196,23 +196,16 @@ export default function StudentFinancePage() {
                 }
             } else {
                 // Online gateway payment
-                const res = await processPayment({
-                    studentId: student.id,
-                    amount: selectedAmount.toFixed(2),
-                    purpose: `Tuition Payment: ${selectedBill.billNumber}`,
-                    gateway: 'paystack',
-                    gatewayReference: `PAY-${Date.now()}`,
-                    billId: selectedBill.id
-                });
+                const res = await initializeOnlineCheckoutAction(student.id, selectedBill.id, selectedAmount);
 
-                if (res.success) {
+                if (res.success && res.checkoutUrl) {
                     setCheckoutSuccess(true);
                     setTimeout(() => {
                         setIsCheckoutOpen(false);
-                        fetchData();
-                    }, 2000);
+                        window.location.href = `${res.checkoutUrl}&billId=${selectedBill.id}`;
+                    }, 1500);
                 } else {
-                    setCheckoutError(res.error || "Gateway payment failed.");
+                    setCheckoutError(res.error || "Online checkout initialization failed.");
                 }
             }
         } catch (err) {
