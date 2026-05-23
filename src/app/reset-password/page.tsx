@@ -1,0 +1,133 @@
+"use client";
+
+import { useState, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
+import { resetPasswordWithToken } from "@/actions/auth-actions";
+import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { GraduationCap, AlertCircle, CheckCircle2, Loader2, ArrowLeft, Lock } from "lucide-react";
+import Link from "next/link";
+
+function ResetPasswordForm() {
+    const searchParams = useSearchParams();
+    const token = searchParams.get("token");
+    
+    const [password, setPassword] = useState("");
+    const [confirmPassword, setConfirmPassword] = useState("");
+    const [status, setStatus] = useState<{ success?: boolean; message?: string; error?: string } | null>(null);
+    const [loading, setLoading] = useState(false);
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (password !== confirmPassword) {
+            setStatus({ success: false, error: "Passwords do not match." });
+            return;
+        }
+
+        if (password.length < 8) {
+            setStatus({ success: false, error: "Password must be at least 8 characters long." });
+            return;
+        }
+
+        setLoading(true);
+        setStatus(null);
+
+        try {
+            const result = await resetPasswordWithToken(token!, password);
+            setStatus(result);
+        } catch (err) {
+            setStatus({ success: false, error: "An error occurred. Please try again." });
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    if (!token) {
+        return (
+            <div className="p-4 bg-rose-50 text-rose-700 rounded-xl text-sm flex gap-3">
+                <AlertCircle className="w-5 h-5 shrink-0" />
+                <span>Invalid or missing reset token. Please request a new link.</span>
+            </div>
+        );
+    }
+
+    return (
+        <form onSubmit={handleSubmit} className="space-y-4">
+            {status && (
+                <div className={`p-4 rounded-xl text-sm flex gap-3 ${status.success ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>
+                    {status.success ? <CheckCircle2 className="w-5 h-5 shrink-0" /> : <AlertCircle className="w-5 h-5 shrink-0" />}
+                    <span>{status.message || status.error}</span>
+                </div>
+            )}
+            
+            {!status?.success && (
+                <>
+                    <div className="space-y-2">
+                        <label className="text-sm font-semibold text-slate-700">New Password</label>
+                        <div className="relative">
+                            <Lock className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                            <input
+                                type="password"
+                                required
+                                className="w-full pl-11 pr-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-slate-900 bg-white"
+                                placeholder="••••••••"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                            />
+                        </div>
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-sm font-semibold text-slate-700">Confirm New Password</label>
+                        <div className="relative">
+                            <Lock className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                            <input
+                                type="password"
+                                required
+                                className="w-full pl-11 pr-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-slate-900 bg-white"
+                                placeholder="••••••••"
+                                value={confirmPassword}
+                                onChange={(e) => setConfirmPassword(e.target.value)}
+                            />
+                        </div>
+                    </div>
+                    <Button
+                        type="submit"
+                        disabled={loading}
+                        className="w-full bg-indigo-600 hover:bg-indigo-700 py-6 rounded-xl text-lg h-auto shadow-lg shadow-indigo-500/20 font-bold"
+                    >
+                        {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : "Reset Password"}
+                    </Button>
+                </>
+            )}
+
+            <div className="pt-4 text-center">
+                <Link href="/login" className="text-slate-500 hover:text-indigo-600 font-bold text-sm flex items-center justify-center gap-2 transition-colors">
+                    <ArrowLeft className="w-4 h-4" /> Back to Login
+                </Link>
+            </div>
+        </form>
+    );
+}
+
+export default function ResetPasswordPage() {
+    return (
+        <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
+            <Card className="w-full max-w-md border-none shadow-xl">
+                <CardHeader className="text-center space-y-1">
+                    <div className="flex justify-center mb-4">
+                        <div className="p-3 bg-indigo-600 rounded-2xl text-white">
+                            <GraduationCap className="w-10 h-10" />
+                        </div>
+                    </div>
+                    <CardTitle className="text-2xl font-bold text-slate-900">Set New Password</CardTitle>
+                    <CardDescription>Enter your new password below to secure your account.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <Suspense fallback={<div className="flex justify-center p-8"><Loader2 className="w-8 h-8 animate-spin text-slate-200" /></div>}>
+                        <ResetPasswordForm />
+                    </Suspense>
+                </CardContent>
+            </Card>
+        </div>
+    );
+}

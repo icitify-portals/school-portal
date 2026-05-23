@@ -1,5 +1,10 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## Modules Documentation
+- [Live Class Module (Video Conferencing)](./LIVE_CLASS_MODULE.md)
+- [Admission Validation Module](./ADMISSION_VALIDATION_MODULE.md)
+- [Applicant Documents Module](./APPLICANT_DOCUMENTS_MODULE.md)
+
 ## Getting Started
 
 First, run the development server:

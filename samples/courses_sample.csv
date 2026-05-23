@@ -1,0 +1,8 @@
+Code,Title,Units,Level,Semester,Status,Dept. Code
+CSC101,Introduction to Computer Science,3,100,1,compulsory,CSC
+CSC102,Introduction to Web Development,3,100,2,compulsory,CSC
+CSC201,Data Structures and Algorithms,4,200,1,compulsory,CSC
+CSC202,Database Management Systems,3,200,2,compulsory,CSC
+MTH101,Elementary Mathematics I,3,100,1,required,MTH
+ENG101,Use of English I,2,100,1,compulsory,ENG
+HIS101,Nigerian History,2,100,2,elective,HIS
