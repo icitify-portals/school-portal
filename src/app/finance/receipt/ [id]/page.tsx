@@ -58,7 +58,7 @@ export default function ReceiptPage() {
         );
     }
 
-    const { transaction, student, programme, branding, template } = data;
+    const { transaction, student, programme, branding, template, bursar, arrears, bursarySettings } = data;
 
     // Enrich student data with programme info for templates
     const enrichedStudent = { ...student, programme };
@@ -86,11 +86,11 @@ export default function ReceiptPage() {
             {/* Template Rendering */}
             <div className="px-4">
                 {template === 'classic' ? (
-                    <ClassicReceipt transaction={transaction} student={enrichedStudent} branding={branding} />
+                    <ClassicReceipt transaction={transaction} student={enrichedStudent} branding={branding} bursar={bursar} arrears={arrears} bursarySettings={bursarySettings} />
                 ) : template === 'minimalist' ? (
-                    <MinimalistReceipt transaction={transaction} student={enrichedStudent} branding={branding} />
+                    <MinimalistReceipt transaction={transaction} student={enrichedStudent} branding={branding} bursar={bursar} arrears={arrears} bursarySettings={bursarySettings} />
                 ) : (
-                    <ModernReceipt transaction={transaction} student={enrichedStudent} branding={branding} />
+                    <ModernReceipt transaction={transaction} student={enrichedStudent} branding={branding} bursar={bursar} arrears={arrears} bursarySettings={bursarySettings} />
                 )}
             </div>
 

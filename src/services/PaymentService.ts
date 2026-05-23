@@ -1,6 +1,6 @@
 import { db } from "@/db/db";
-import { transactions, directPayments, students, users } from "@/db/schema";
-import { eq, and, sql } from "drizzle-orm";
+import { transactions, directPayments, students, users, studentBills, studentLedger, walletTransactions } from "@/db/schema";
+import { eq, and, sql, desc } from "drizzle-orm";
 import crypto from "crypto";
 
 export type PaymentContext = 'Main' | 'Admission' | 'Hostel' | 'Other';
@@ -116,5 +116,153 @@ export class PaymentService {
         }
 
         throw new Error("Transaction not found in direct payments or gateway logs.");
+    }
+
+    /**
+     * Deducts funds from the student's wallet to pay a specific bill.
+     */
+    static async payBillWithWallet(studentId: number, billId: number, amount: number, recordedBy: number) {
+        return await db.transaction(async (tx) => {
+            // 1. Fetch student
+            const [student] = await tx.select().from(students).where(eq(students.id, studentId)).limit(1);
+            if (!student) throw new Error("Student not found.");
+
+            const walletBalance = parseFloat(student.walletBalance || "0.00");
+            if (walletBalance < amount) {
+                throw new Error("Insufficient wallet balance.");
+            }
+
+            // 2. Fetch bill
+            const [bill] = await tx.select().from(studentBills).where(eq(studentBills.id, billId)).limit(1);
+            if (!bill) throw new Error("Bill not found.");
+
+            const totalAmount = parseFloat(bill.totalAmount);
+            const currentPaid = parseFloat(bill.amountPaid || "0.00");
+            const newPaid = currentPaid + amount;
+
+            if (newPaid > totalAmount + 0.01) {
+                throw new Error(`Payment amount exceeds outstanding bill balance. Max payable: ₦${(totalAmount - currentPaid).toFixed(2)}`);
+            }
+
+            // 3. Update student wallet balance
+            const newWalletBalance = walletBalance - amount;
+            await tx.update(students)
+                .set({ walletBalance: newWalletBalance.toFixed(2) })
+                .where(eq(students.id, studentId));
+
+            // 4. Create wallet transaction entry (debit)
+            const walletTxRef = `WLT-PAY-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+            await tx.insert(walletTransactions).values({
+                studentId,
+                amount: amount.toFixed(2),
+                type: 'debit',
+                purpose: `Bill Payment: ${bill.billNumber}`,
+                reference: walletTxRef,
+                status: 'success'
+            });
+
+            // 5. Create core payment transaction
+            const [newCoreTx] = await tx.insert(transactions).values({
+                studentId,
+                amount: amount.toFixed(2),
+                type: 'credit',
+                purpose: `Tuition Payment: ${bill.billNumber} (Wallet)`,
+                status: 'completed',
+                gateway: 'wallet',
+                gatewayReference: walletTxRef
+            });
+
+            // 6. Update student bill status
+            let billStatus: 'pending' | 'partially_paid' | 'paid' = 'partially_paid';
+            if (Math.abs(newPaid - totalAmount) < 0.01) {
+                billStatus = 'paid';
+            }
+            await tx.update(studentBills)
+                .set({
+                    amountPaid: newPaid.toFixed(2),
+                    status: billStatus
+                })
+                .where(eq(studentBills.id, billId));
+
+            // 7. Post credit entry in student ledger
+            const [lastLedgerEntry] = await tx.select()
+                .from(studentLedger)
+                .where(eq(studentLedger.studentId, studentId))
+                .orderBy(desc(studentLedger.createdAt))
+                .limit(1);
+
+            const lastBalance = lastLedgerEntry ? parseFloat(lastLedgerEntry.balance) : 0;
+            const newBalanceOwed = lastBalance - amount;
+
+            await tx.insert(studentLedger).values({
+                studentId,
+                transactionId: newCoreTx.insertId,
+                description: `Payment: ${bill.billNumber} (Wallet)`,
+                debit: "0.00",
+                credit: amount.toFixed(2),
+                balance: newBalanceOwed.toFixed(2)
+            });
+
+            // 8. Post Receipt to General Ledger (RV)
+            try {
+                const [user] = await tx.select().from(users).where(eq(users.id, student.userId)).limit(1);
+                const studentName = user ? user.name : `Student #${studentId}`;
+                
+                const { AccountingService } = await import("./AccountingService");
+                await AccountingService.postReceiptToGL({
+                    amount,
+                    studentName,
+                    feeItemId: 0, // General fee item
+                    feeCategory: "Student Fees",
+                    recordedBy,
+                    paymentMethod: 'gateway' // Wallet acts as an online transaction
+                });
+            } catch (glErr) {
+                console.error("[PaymentService] GL posting failed inside wallet payment:", glErr);
+            }
+
+            return { success: true, transactionId: newCoreTx.insertId, amount };
+        });
+    }
+
+    /**
+     * Top-up a student's wallet balance using an online gateway.
+     */
+    static async topUpWallet(studentId: number, amount: number, reference: string) {
+        return await db.transaction(async (tx) => {
+            // 1. Fetch student
+            const [student] = await tx.select().from(students).where(eq(students.id, studentId)).limit(1);
+            if (!student) throw new Error("Student not found.");
+
+            // 2. Insert wallet transaction entry (credit)
+            await tx.insert(walletTransactions).values({
+                studentId,
+                amount: amount.toFixed(2),
+                type: 'credit',
+                purpose: "Wallet Deposit",
+                reference: reference,
+                status: 'success'
+            });
+
+            // 3. Insert core deposit transaction
+            await tx.insert(transactions).values({
+                studentId,
+                amount: amount.toFixed(2),
+                type: 'credit',
+                purpose: "Wallet Deposit",
+                status: 'completed',
+                gateway: 'paystack', // default gateway
+                gatewayReference: reference
+            });
+
+            // 4. Update student wallet balance
+            const currentBalance = parseFloat(student.walletBalance || "0.00");
+            const newBalance = currentBalance + amount;
+            await tx.update(students)
+                .set({ walletBalance: newBalance.toFixed(2) })
+                .where(eq(students.id, studentId));
+
+            return { success: true, balance: newBalance };
+        });
     }
 }

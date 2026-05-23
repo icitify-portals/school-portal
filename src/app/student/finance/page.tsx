@@ -1,11 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { useState, useEffect, useCallback } from "react";
+import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
     Wallet,
-    ArrowUpCircle,
     ArrowDownCircle,
     History,
     CreditCard,
@@ -14,36 +13,96 @@ import {
     Download,
     Undo2,
     FileText,
-    ExternalLink,
     Printer,
-    AlertCircle
+    AlertCircle,
+    CheckCircle2,
+    X,
+    Coins,
+    Sparkles,
+    ShieldAlert
 } from "lucide-react";
-import { getStudentLedger, processPayment, getStudentBills, getStudentFinancialSummary } from "@/actions/bursary";
+import { 
+    getStudentLedger, 
+    processPayment, 
+    getStudentBills, 
+    getStudentFinancialSummary, 
+    getBursarySettings,
+    payBillWithWalletAction 
+} from "@/actions/bursary";
 import { getStudentByUserId } from "@/actions/students";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { AcademicNomenclature } from "@/lib/nomenclature";
+
+interface LedgerEntry {
+    id: number;
+    createdAt: string | Date;
+    description: string;
+    debit: string;
+    credit: string;
+    balance: string;
+    transactionId?: number | string;
+}
+
+interface BillItem {
+    id: number;
+    feeItem?: { name: string };
+    amount: string;
+}
+
+interface Bill {
+    id: number;
+    billNumber: string;
+    totalAmount: string;
+    amountPaid?: string;
+    status: 'pending' | 'partially_paid' | 'paid';
+    note?: string;
+    createdAt: string | Date;
+    session?: { name: string; currentSemester?: string };
+    items?: BillItem[];
+}
+
+interface FinancialSummary {
+    walletBalance: number;
+    outstandingBalance: number;
+    totalPaid: number;
+}
+
+interface StudentProfile {
+    id: number;
+    firstName: string;
+    lastName: string;
+    matricNumber?: string;
+    userId: number;
+    programme?: { name: string };
+}
 
 export default function StudentFinancePage() {
     const { data: session } = useSession();
     const router = useRouter();
-    const [ledger, setLedger] = useState<any[]>([]);
-    const [bills, setBills] = useState<any[]>([]);
-    const [summary, setSummary] = useState<any>(null);
-    const [student, setStudent] = useState<any>(null);
+    const [ledger, setLedger] = useState<LedgerEntry[]>([]);
+    const [bills, setBills] = useState<Bill[]>([]);
+    const [summary, setSummary] = useState<FinancialSummary | null>(null);
+    const [student, setStudent] = useState<StudentProfile | null>(null);
+    const [settings, setSettings] = useState<Record<string, string>>({});
     const [loading, setLoading] = useState(true);
-    const [isPaying, setIsPaying] = useState(false);
-    const [payAmount, setPayAmount] = useState("");
     const [activeTab, setActiveTab] = useState<'ledger' | 'bills'>('ledger');
 
-    useEffect(() => {
-        if (session?.user) {
-            fetchData();
-        }
-    }, [session]);
+    // Checkout Modal State
+    const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+    const [selectedBill, setSelectedBill] = useState<Bill | null>(null);
+    const [selectedAmount, setSelectedAmount] = useState<number>(0);
+    const [paymentMode, setPaymentMode] = useState<'gateway' | 'wallet'>('gateway');
+    const [checkoutLoading, setCheckoutLoading] = useState(false);
+    const [checkoutSuccess, setCheckoutSuccess] = useState(false);
+    const [checkoutError, setCheckoutError] = useState("");
 
-    const fetchData = async () => {
-        const userId = (session?.user as any)?.id;
+    // Search filter state
+    const [filterQuery, setFilterQuery] = useState("");
+
+    const fetchData = useCallback(async () => {
+        const userId = (session?.user as { id?: string })?.id;
         if (!userId) return;
 
         try {
@@ -52,154 +111,259 @@ export default function StudentFinancePage() {
                 setLoading(false);
                 return;
             }
-            setStudent(studentData);
+            setStudent(studentData as StudentProfile);
             const studentId = studentData.id;
 
-            const [ledgerData, billsData, summaryData] = await Promise.all([
+            const [ledgerData, billsData, summaryData, settingsData] = await Promise.all([
                 getStudentLedger(studentId),
                 getStudentBills(studentId),
-                getStudentFinancialSummary(studentId)
+                getStudentFinancialSummary(studentId),
+                getBursarySettings()
             ]);
-            setLedger(ledgerData);
-            setBills(billsData);
-            setSummary(summaryData);
+            setLedger(ledgerData as LedgerEntry[]);
+            setBills(billsData as Bill[]);
+            setSummary(summaryData as FinancialSummary);
+            setSettings(settingsData);
         } catch (error) {
             console.error("Failed to fetch financial data:", error);
         } finally {
             setLoading(false);
         }
-    };
+    }, [session]);
 
-    const handlePayment = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!student) return;
-        setIsPaying(true);
-        const res = await processPayment({
-            studentId: student.id,
-            amount: payAmount,
-            purpose: "Online Tuition Payment"
-        });
-        if (res.success) {
-            setPayAmount("");
+    useEffect(() => {
+        if (session?.user) {
             fetchData();
         }
-        setIsPaying(false);
+    }, [session, fetchData]);
+
+    const openCheckout = (bill: Bill) => {
+        setSelectedBill(bill);
+        const outstanding = parseFloat(bill.totalAmount) - parseFloat(bill.amountPaid || "0.00");
+        setSelectedAmount(outstanding);
+        setPaymentMode('gateway');
+        setCheckoutError("");
+        setCheckoutSuccess(false);
+        setIsCheckoutOpen(true);
     };
 
-    const walletBalance = summary?.walletBalance?.toLocaleString() || "0.00";
-    const totalOwed = summary?.outstandingBalance?.toLocaleString() || "0.00";
-    const totalPaid = summary?.totalPaid?.toLocaleString() || "0.00";
+    const handleCheckoutSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!student || !selectedBill) return;
+
+        // Validation
+        const outstanding = parseFloat(selectedBill.totalAmount) - parseFloat(selectedBill.amountPaid || "0.00");
+        const partPaymentEnabled = settings['part_payment_enabled'] !== 'false';
+        const minPercentage = parseFloat(settings['min_part_payment_percentage'] || "30");
+        const minFlatAmount = parseFloat(settings['min_part_payment_amount'] || "5000");
+
+        const pctAmount = (outstanding * minPercentage) / 100;
+        const minPayment = partPaymentEnabled 
+            ? Math.min(outstanding, Math.max(pctAmount, minFlatAmount))
+            : outstanding;
+
+        if (selectedAmount < minPayment) {
+            setCheckoutError(`Minimum payment of ₦${minPayment.toLocaleString()} is required.`);
+            return;
+        }
+
+        if (selectedAmount > outstanding + 0.01) {
+            setCheckoutError(`Payment exceeds outstanding balance of ₦${outstanding.toLocaleString()}.`);
+            return;
+        }
+
+        setCheckoutLoading(true);
+        setCheckoutError("");
+
+        try {
+            if (paymentMode === 'wallet') {
+                const currentWalletBalance = summary?.walletBalance || 0;
+                if (currentWalletBalance < selectedAmount) {
+                    setCheckoutError("Insufficient wallet balance. Please top up your wallet first.");
+                    setCheckoutLoading(false);
+                    return;
+                }
+
+                const res = await payBillWithWalletAction(student.id, selectedBill.id, selectedAmount);
+                if (res.success) {
+                    setCheckoutSuccess(true);
+                    setTimeout(() => {
+                        setIsCheckoutOpen(false);
+                        fetchData();
+                    }, 2000);
+                } else {
+                    setCheckoutError(res.error || "Wallet payment failed.");
+                }
+            } else {
+                // Online gateway payment
+                const res = await processPayment({
+                    studentId: student.id,
+                    amount: selectedAmount.toFixed(2),
+                    purpose: `Tuition Payment: ${selectedBill.billNumber}`,
+                    gateway: 'paystack',
+                    gatewayReference: `PAY-${Date.now()}`,
+                    billId: selectedBill.id
+                });
+
+                if (res.success) {
+                    setCheckoutSuccess(true);
+                    setTimeout(() => {
+                        setIsCheckoutOpen(false);
+                        fetchData();
+                    }, 2000);
+                } else {
+                    setCheckoutError(res.error || "Gateway payment failed.");
+                }
+            }
+        } catch (err) {
+            const errorMessage = err instanceof Error ? err.message : "An unexpected error occurred during checkout.";
+            setCheckoutError(errorMessage);
+        } finally {
+            setCheckoutLoading(false);
+        }
+    };
+
+    const walletBalanceText = summary?.walletBalance?.toLocaleString() || "0.00";
+    const totalOwedText = summary?.outstandingBalance?.toLocaleString() || "0.00";
+    const totalPaidText = summary?.totalPaid?.toLocaleString() || "0.00";
+
+    const unpaidBill = bills.find(b => b.status !== 'paid');
+
+    // Filters transaction ledger
+    const filteredLedger = ledger.filter(entry => 
+        entry.description.toLowerCase().includes(filterQuery.toLowerCase()) ||
+        (entry.transactionId || "").toString().includes(filterQuery)
+    );
+
+    if (loading) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50/50">
+                <Loader2 className="w-10 h-10 animate-spin text-indigo-600 mb-4" />
+                <p className="text-slate-500 font-bold text-xs uppercase tracking-widest">Loading secure ledger...</p>
+            </div>
+        );
+    }
 
     return (
-        <div className="p-8 max-w-6xl mx-auto">
-            <div className="flex justify-between items-center mb-10">
+        <div className="p-8 max-w-6xl mx-auto space-y-10 min-h-screen">
+            {/* Header */}
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-2">
                 <div>
-                    <h2 className="text-3xl font-bold text-slate-900 tracking-tight">Financial Overview</h2>
-                    <p className="text-slate-500 mt-1">Manage your payments, wallet, and financial records</p>
+                    <h2 className="text-3xl font-black text-slate-900 tracking-tight">Student Finance Center</h2>
+                    <p className="text-slate-500 font-medium mt-1">Manage your digital wallet, outstanding bills, and payment vouchers</p>
                 </div>
                 <div className="flex gap-3">
                     <Button
                         variant="outline"
-                        className="gap-2 h-11 px-6 rounded-xl border-slate-200 text-slate-600 hover:text-indigo-600 hover:border-indigo-100 hover:bg-indigo-50"
+                        className="gap-2 h-11 px-6 rounded-xl border-slate-200 text-slate-600 hover:text-indigo-600 hover:border-indigo-100 hover:bg-indigo-50 font-bold text-xs transition-all shadow-sm"
                         onClick={() => router.push("/student/finance/refund")}
                     >
                         <Undo2 className="w-4 h-4" />
                         Apply for Refund
                     </Button>
-                    <Button variant="outline" className="gap-2 h-11 px-6 rounded-xl border-slate-200 text-slate-600">
+                    <Button 
+                        variant="outline" 
+                        onClick={() => window.print()}
+                        className="gap-2 h-11 px-6 rounded-xl border-slate-200 text-slate-600 hover:bg-slate-50 font-bold text-xs shadow-sm"
+                    >
                         <Download className="w-4 h-4" />
-                        Download Ledger
+                        Export Statement
                     </Button>
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-10">
-                <Card className="border-none shadow-sm bg-indigo-600 text-white overflow-hidden relative">
-                    <div className="absolute top-0 right-0 p-8 opacity-10">
-                        <Wallet className="w-24 h-24" />
+            {/* KPI Cards */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                {/* Wallet Balance Card */}
+                <div className="bg-indigo-600 rounded-[2.5rem] p-8 text-white relative overflow-hidden shadow-2xl shadow-indigo-100 group transition-all duration-300 hover:shadow-indigo-200">
+                    <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform duration-700">
+                        <Wallet className="w-32 h-32" />
                     </div>
-                    <CardContent className="p-8">
-                        <p className="text-indigo-100 text-[10px] font-bold uppercase tracking-widest mb-2 opacity-80">Wallet Balance</p>
-                        <h3 className="text-4xl font-extrabold mb-8">₦{walletBalance}</h3>
-                        <div className="flex gap-2">
-                            <Button className="bg-white text-indigo-600 hover:bg-indigo-50 w-full font-bold h-11">
-                                Top Up Wallet
-                            </Button>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <Card className="border-none shadow-sm bg-white overflow-hidden border border-slate-100">
-                    <CardContent className="p-8">
-                        <div className="flex items-center gap-3 text-red-600 bg-red-50 w-fit px-3 py-1 rounded-full text-[10px] font-bold mb-4 uppercase tracking-widest">
-                            <ArrowDownCircle className="w-4 h-4" />
-                            Outstanding Debt
-                        </div>
-                        <h3 className="text-4xl font-extrabold text-slate-900 mb-8">₦{totalOwed}</h3>
-                        <Button className="bg-slate-900 text-white w-full font-bold h-11">
-                            Pay Fees Now
+                    <p className="text-indigo-100 text-[10px] font-black uppercase tracking-widest mb-2 opacity-80 flex items-center gap-1.5">
+                        <Coins className="w-4 h-4" /> Available Wallet Balance
+                    </p>
+                    <h3 className="text-4xl font-black mb-10 tracking-tight">₦{walletBalanceText}</h3>
+                    <div className="flex gap-2">
+                        <Button 
+                            className="bg-white text-indigo-600 hover:bg-indigo-50 w-full font-black rounded-2xl h-12 shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all"
+                            onClick={() => router.push("/student/finance/wallet")}
+                        >
+                            Go to Wallet Hub
                         </Button>
-                    </CardContent>
-                </Card>
+                    </div>
+                </div>
 
-                <Card className="border-none shadow-md bg-slate-900 text-white">
-                    <CardHeader>
-                        <CardTitle className="text-lg flex items-center gap-2">
-                            <CreditCard className="w-5 h-5 text-indigo-400" />
-                            Quick Payment
+                {/* Outstanding Debt Card */}
+                <div className="bg-white rounded-[2.5rem] p-8 relative overflow-hidden shadow-xl shadow-slate-100 border border-slate-100/50 group transition-all duration-300">
+                    <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:scale-110 transition-transform duration-700">
+                        <ArrowDownCircle className="w-32 h-32 text-red-600" />
+                    </div>
+                    <div className="flex items-center gap-2 text-red-600 bg-red-50 w-fit px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest mb-4">
+                        <ArrowDownCircle className="w-3.5 h-3.5" />
+                        Outstanding Balance
+                    </div>
+                    <h3 className="text-4xl font-black text-slate-900 mb-10 tracking-tight">₦{totalOwedText}</h3>
+                    <Button 
+                        disabled={!unpaidBill}
+                        onClick={() => unpaidBill && openCheckout(unpaidBill)}
+                        className="bg-slate-900 hover:bg-slate-800 text-white w-full font-black rounded-2xl h-12 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:pointer-events-none shadow-lg"
+                    >
+                        {unpaidBill ? "Pay Fees Now" : "All Fees Settled"}
+                    </Button>
+                </div>
+
+                {/* Information Card / Quick Insights */}
+                <div className="bg-slate-900 rounded-[2.5rem] p-8 text-white relative overflow-hidden shadow-2xl group transition-all duration-300">
+                    <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:scale-110 transition-transform duration-700">
+                        <CreditCard className="w-32 h-32 text-indigo-400" />
+                    </div>
+                    <CardHeader className="p-0 mb-4">
+                        <CardTitle className="text-lg flex items-center gap-2 font-bold tracking-tight">
+                            <Sparkles className="w-5 h-5 text-indigo-400" />
+                            Financial Insights
                         </CardTitle>
                     </CardHeader>
-                    <CardContent>
-                        <form onSubmit={handlePayment} className="space-y-4">
-                            <div className="space-y-1">
-                                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Amount to Pay</label>
-                                <input
-                                    type="number"
-                                    required
-                                    className="w-full bg-slate-800 border-none rounded-xl h-12 px-4 focus:ring-2 focus:ring-indigo-500 transition-all text-white placeholder:text-slate-600"
-                                    placeholder="Enter amount (NGN)"
-                                    value={payAmount}
-                                    onChange={(e) => setPayAmount(e.target.value)}
-                                />
-                            </div>
-                            <Button
-                                type="submit"
-                                disabled={isPaying || !payAmount}
-                                className="w-full bg-indigo-600 hover:bg-indigo-700 h-12 rounded-xl font-bold transition-all shadow-lg shadow-indigo-600/20"
-                            >
-                                {isPaying ? <Loader2 className="w-5 h-5 animate-spin" /> : "Authorize Payment"}
-                            </Button>
-                        </form>
-                    </CardContent>
-                </Card>
+                    <div className="space-y-4">
+                        <p className="text-xs text-slate-400 leading-relaxed">
+                            Your payment mode is locked to secure online gateways and digital wallet checkout to eliminate manual deposit delays.
+                        </p>
+                        <div className="p-4 bg-slate-800/80 rounded-2xl border border-slate-700 flex justify-between items-center">
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Paid:</span>
+                            <span className="font-extrabold text-sm text-indigo-400">₦{totalPaidText}</span>
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            <Card className="border-none shadow-sm overflow-hidden border border-slate-100">
-                <CardHeader className="border-b border-slate-50 bg-white/50 backdrop-blur-sm sticky top-0 z-10 flex flex-row items-center justify-between">
-                    <CardTitle className="text-lg flex items-center gap-2">
+            {/* Transaction Ledger Card */}
+            <Card className="border-none shadow-xl shadow-slate-100/50 rounded-[2.5rem] overflow-hidden border border-slate-100">
+                <CardHeader className="border-b border-slate-50 bg-white/50 backdrop-blur-sm p-8 flex flex-col md:flex-row items-center justify-between gap-4">
+                    <CardTitle className="text-lg flex items-center gap-2 font-bold tracking-tight text-slate-900">
                         <History className="w-5 h-5 text-indigo-600" />
                         Transaction Ledger
                     </CardTitle>
-                    <div className="relative">
-                        <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <div className="relative w-full md:w-72">
+                        <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
                         <input
-                            className="pl-9 pr-4 py-2 bg-slate-50 border-none rounded-lg text-sm focus:ring-1 focus:ring-indigo-500 w-64"
-                            placeholder="Filter transactions..."
+                            className="pl-11 pr-4 py-2 bg-slate-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 w-full h-11 transition-all outline-none"
+                            placeholder="Filter transactions by details..."
+                            value={filterQuery}
+                            onChange={(e) => setFilterQuery(e.target.value)}
                         />
                     </div>
                 </CardHeader>
 
-                <div className="bg-white border-b border-slate-100 flex justify-between items-center px-8">
+                <div className="bg-white border-b border-slate-50 flex justify-between items-center px-8">
                     <div className="flex">
                         <button
                             onClick={() => setActiveTab('ledger')}
-                            className={cn("py-4 text-xs font-bold uppercase tracking-widest border-b-2 px-4 transition-all", activeTab === 'ledger' ? "border-indigo-600 text-indigo-600" : "border-transparent text-slate-400")}
+                            className={cn("py-4 text-[10px] font-black uppercase tracking-widest border-b-2 px-4 transition-all", activeTab === 'ledger' ? "border-indigo-600 text-indigo-600" : "border-transparent text-slate-400")}
                         >
                             Transaction Ledger
                         </button>
                         <button
                             onClick={() => setActiveTab('bills')}
-                            className={cn("py-4 text-xs font-bold uppercase tracking-widest border-b-2 px-4 transition-all", activeTab === 'bills' ? "border-indigo-600 text-indigo-600" : "border-transparent text-slate-400")}
+                            className={cn("py-4 text-[10px] font-black uppercase tracking-widest border-b-2 px-4 transition-all", activeTab === 'bills' ? "border-indigo-600 text-indigo-600" : "border-transparent text-slate-400")}
                         >
                             My School Bills
                         </button>
@@ -208,81 +372,54 @@ export default function StudentFinancePage() {
                         variant="ghost"
                         size="sm"
                         onClick={() => window.print()}
-                        className="text-[10px] font-bold uppercase tracking-widest gap-2 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 border border-indigo-200"
+                        className="text-[9px] font-black uppercase tracking-widest gap-2 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 border border-indigo-200 rounded-xl px-4 py-2"
                     >
                         <Printer className="w-3.5 h-3.5" />
-                        Download PDF Statement
+                        Print statement
                     </Button>
-                </div>
-
-                {/* Print-only Header for Formal Statement */}
-                <div className="hidden print:block print:p-8">
-                    <div className="text-center mb-8 border-b-2 border-slate-900 pb-4">
-                        <h1 className="text-3xl font-black uppercase tracking-tight text-slate-900">Official Financial Statement</h1>
-                        <p className="text-slate-500 font-bold uppercase tracking-widest mt-1" suppressHydrationWarning>Generated: {new Date().toLocaleDateString('en-US')}</p>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-8 mb-8">
-                        <div>
-                            <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Student Details</h3>
-                            <p className="font-bold text-slate-900 text-lg uppercase">{student?.firstName} {student?.lastName}</p>
-                            <p className="font-mono text-slate-600 font-semibold">{student?.matricNumber}</p>
-                            <p className="text-sm text-slate-500">{summary?.walletBalance ? `Current Balance: ₦${summary.walletBalance.toLocaleString()}` : ''}</p>
-                        </div>
-                        <div className="text-right">
-                            <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Institution</h3>
-                            <p className="font-bold text-slate-900 text-lg uppercase">Bursary Department</p>
-                            <p className="text-slate-600">Office of the Bursar</p>
-                            <p className="text-sm text-slate-500">certified true copy</p>
-                        </div>
-                    </div>
                 </div>
 
                 <div className="overflow-x-auto print:border-none print:shadow-none bg-white">
                     {activeTab === 'ledger' ? (
                         <table className="w-full text-left">
                             <thead>
-                                <tr className="bg-slate-50/50 text-slate-500 text-[10px] font-extrabold uppercase tracking-widest">
+                                <tr className="bg-slate-50/50 text-slate-500 text-[10px] font-black uppercase tracking-widest border-b border-slate-100">
                                     <th className="px-8 py-5">Date</th>
                                     <th className="px-8 py-5">Description</th>
                                     <th className="px-8 py-5">Debit</th>
                                     <th className="px-8 py-5">Credit</th>
                                     <th className="px-8 py-5">Balance</th>
                                     <th className="px-8 py-5">Reference</th>
-                                    <th className="px-8 py-5 text-right">Action</th>
+                                    <th className="px-8 py-5 text-right">Receipt</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100">
-                                {loading ? (
+                                {filteredLedger.length === 0 ? (
                                     <tr>
-                                        <td colSpan={6} className="px-8 py-20 text-center">
-                                            <Loader2 className="w-8 h-8 animate-spin mx-auto text-slate-300" />
+                                        <td colSpan={7} className="px-8 py-20 text-center text-slate-400 italic text-sm">
+                                            No transactions found matching the filter.
                                         </td>
                                     </tr>
-                                ) : ledger.length === 0 ? (
-                                    <tr>
-                                        <td colSpan={6} className="px-8 py-20 text-center text-slate-400 italic">No transactions found in your ledger.</td>
-                                    </tr>
                                 ) : (
-                                    ledger.map((entry) => (
+                                    filteredLedger.map((entry) => (
                                         <tr key={entry.id} className="hover:bg-slate-50/50 transition-colors group">
-                                            <td className="px-8 py-5 text-sm text-slate-500">
+                                            <td className="px-8 py-5 text-xs font-bold text-slate-500">
                                                 {new Date(entry.createdAt).toLocaleDateString('en-US')}
                                             </td>
                                             <td className="px-8 py-5">
-                                                <p className="text-sm font-bold text-slate-700">{entry.description}</p>
+                                                <p className="text-sm font-extrabold text-slate-800">{entry.description}</p>
                                             </td>
                                             <td className="px-8 py-5">
                                                 {parseFloat(entry.debit) > 0 ? (
-                                                    <span className="text-sm font-bold text-red-600">₦{parseFloat(entry.debit).toLocaleString()}</span>
+                                                    <span className="text-sm font-black text-rose-600">₦{parseFloat(entry.debit).toLocaleString()}</span>
                                                 ) : "-"}
                                             </td>
                                             <td className="px-8 py-5">
                                                 {parseFloat(entry.credit) > 0 ? (
-                                                    <span className="text-sm font-bold text-green-600">₦{parseFloat(entry.credit).toLocaleString()}</span>
+                                                    <span className="text-sm font-black text-emerald-600">₦{parseFloat(entry.credit).toLocaleString()}</span>
                                                 ) : "-"}
                                             </td>
-                                            <td className="px-8 py-5 text-sm font-extrabold text-slate-900">
+                                            <td className="px-8 py-5 text-sm font-black text-slate-900">
                                                 ₦{parseFloat(entry.balance).toLocaleString()}
                                             </td>
                                             <td className="px-8 py-5 font-mono text-[10px] text-slate-400 group-hover:text-slate-600">
@@ -293,7 +430,7 @@ export default function StudentFinancePage() {
                                                     <Button
                                                         variant="ghost"
                                                         size="sm"
-                                                        className="h-8 px-3 rounded-lg text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 font-bold text-[10px] gap-1.5 uppercase tracking-tighter"
+                                                        className="h-8 px-3 rounded-lg text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 font-black text-[9px] gap-1.5 uppercase tracking-wider"
                                                         onClick={() => window.open(`/finance/receipt/${entry.transactionId}`, '_blank')}
                                                     >
                                                         <FileText className="w-3 h-3" />
@@ -309,69 +446,286 @@ export default function StudentFinancePage() {
                     ) : (
                         <div className="p-8 space-y-6">
                             {bills.length === 0 ? (
-                                <div className="py-20 text-center text-slate-400 italic">No bills generated for your account yet.</div>
+                                <div className="py-20 text-center text-slate-400 italic text-sm">No bills generated for your account yet.</div>
                             ) : (
-                                bills.map((bill) => (
-                                    <div key={bill.id} className="bg-slate-50 rounded-2xl p-6 border border-slate-100 relative overflow-hidden group">
-                                        <div className="absolute top-0 right-0 p-6 opacity-5 group-hover:opacity-10 transition-opacity">
-                                            <FileText className="w-20 h-20" />
-                                        </div>
-                                        <div className="flex flex-col md:flex-row justify-between gap-6 mb-6">
-                                            <div>
-                                                <div className="flex items-center gap-2 mb-1">
-                                                    <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full uppercase">Bill Number</span>
-                                                    <span className="text-sm font-mono font-bold text-slate-700">{bill.billNumber}</span>
-                                                </div>
-                                                <h4 className="text-xl font-extrabold text-slate-900">{bill.session?.name} School Fees</h4>
-                                                <p className="text-xs text-slate-500 mt-1">Generated on {new Date(bill.createdAt).toLocaleDateString('en-US')}</p>
+                                bills.map((bill) => {
+                                    const outstanding = parseFloat(bill.totalAmount) - parseFloat(bill.amountPaid || "0.00");
+                                    const termLabel = AcademicNomenclature.getLabel(
+                                        bill.session?.currentSemester || "1",
+                                        settings
+                                    );
+                                    
+                                    return (
+                                        <div key={bill.id} className="bg-slate-50/50 hover:bg-slate-50 rounded-3xl p-8 border border-slate-100 relative overflow-hidden group transition-all duration-300">
+                                            <div className="absolute top-0 right-0 p-6 opacity-5 group-hover:opacity-10 transition-opacity">
+                                                <FileText className="w-24 h-24" />
                                             </div>
-                                            <div className="text-right">
-                                                <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Total Amount</p>
-                                                <h3 className="text-2xl font-black text-slate-900">₦{parseFloat(bill.totalAmount).toLocaleString()}</h3>
-                                                <span className={cn("inline-block px-3 py-1 rounded-full text-[10px] font-bold uppercase mt-2",
-                                                    bill.status === 'paid' ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700")}>
-                                                    {bill.status}
-                                                </span>
-                                            </div>
-                                        </div>
-
-                                        <div className="border-t border-slate-200 pt-4 mb-4">
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                {bill.items?.map((item: any) => (
-                                                    <div key={item.id} className="flex justify-between items-center text-sm">
-                                                        <span className="text-slate-500">{item.feeItem?.name}</span>
-                                                        <span className="font-bold text-slate-700">₦{parseFloat(item.amount).toLocaleString()}</span>
+                                            <div className="flex flex-col md:flex-row justify-between gap-6 mb-6">
+                                                <div>
+                                                    <div className="flex items-center gap-2 mb-2">
+                                                        <span className="text-[9px] font-black text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full uppercase tracking-wider">Bill ID</span>
+                                                        <span className="text-xs font-mono font-bold text-slate-600">{bill.billNumber}</span>
                                                     </div>
-                                                ))}
-                                            </div>
-                                        </div>
-
-                                        {bill.note && (
-                                            <div className="bg-white/50 p-4 rounded-xl border border-dashed border-indigo-200 mt-4">
-                                                <div className="flex items-center gap-2 mb-2 text-indigo-600 font-bold text-xs">
-                                                    <AlertCircle className="w-3 h-3" />
-                                                    INSTITUTIONAL NOTE:
+                                                    <h4 className="text-xl font-black text-slate-900">{bill.session?.name} School Fees</h4>
+                                                    <p className="text-xs text-slate-500 mt-1 uppercase font-bold tracking-widest text-indigo-500/80">{termLabel}</p>
                                                 </div>
-                                                <p className="text-sm text-slate-600 italic leading-relaxed">{bill.note}</p>
+                                                <div className="text-right">
+                                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Outstanding Balance</p>
+                                                    <h3 className="text-2xl font-black text-slate-900">₦{outstanding.toLocaleString()}</h3>
+                                                    <span className={cn("inline-block px-3 py-1 rounded-full text-[9px] font-black uppercase mt-3 tracking-wider",
+                                                        bill.status === 'paid' ? "bg-emerald-100 text-emerald-800" : bill.status === 'partially_paid' ? "bg-amber-100 text-amber-800" : "bg-rose-100 text-rose-800")}>
+                                                        {bill.status === 'partially_paid' ? 'Part-Paid' : bill.status}
+                                                    </span>
+                                                </div>
                                             </div>
-                                        )}
 
-                                        <div className="mt-6 flex justify-end gap-3">
-                                            <Button variant="outline" className="h-9 text-xs gap-2 rounded-lg">
-                                                <Printer className="w-3 h-3" />
-                                                Print Bill
-                                            </Button>
-                                            <Button className="h-9 text-xs bg-slate-900 rounded-lg">
-                                                Pay This Bill
-                                            </Button>
+                                            <div className="border-t border-slate-200/60 pt-4 mb-4">
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                    {bill.items?.map((item) => (
+                                                        <div key={item.id} className="flex justify-between items-center text-xs">
+                                                            <span className="text-slate-500 font-medium">{item.feeItem?.name}</span>
+                                                            <span className="font-extrabold text-slate-800">₦{parseFloat(item.amount).toLocaleString()}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+
+                                            {bill.note && (
+                                                <div className="bg-white p-4 rounded-2xl border border-slate-100 mt-4">
+                                                    <div className="flex items-center gap-2 mb-2 text-indigo-600 font-bold text-xs">
+                                                        <AlertCircle className="w-3.5 h-3.5" />
+                                                        Note:
+                                                    </div>
+                                                    <p className="text-xs text-slate-500 italic leading-relaxed">{bill.note}</p>
+                                                </div>
+                                            )}
+
+                                            <div className="mt-6 flex justify-end gap-3">
+                                                <Button 
+                                                    disabled={outstanding <= 0}
+                                                    onClick={() => openCheckout(bill)}
+                                                    className="h-10 px-5 text-xs font-black bg-slate-900 rounded-xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-md"
+                                                >
+                                                    Pay This Bill
+                                                </Button>
+                                            </div>
                                         </div>
-                                    </div>
-                                ))
+                                    );
+                                })
                             )}
                         </div>
                     )}
                 </div>
             </Card>
+
+            {/* Premium Checkout Modal */}
+            {isCheckoutOpen && selectedBill && (
+                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-lg overflow-hidden border border-slate-100 relative animate-in fade-in zoom-in-95 duration-200">
+                        {/* Close button */}
+                        <button 
+                            onClick={() => setIsCheckoutOpen(false)}
+                            className="absolute top-6 right-6 p-2 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all"
+                        >
+                            <X className="w-5 h-5" />
+                        </button>
+
+                        <div className="p-8">
+                            <div className="flex items-center gap-3 mb-6">
+                                <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                                    <CreditCard className="w-5 h-5" />
+                                </div>
+                                <div>
+                                    <h3 className="text-xl font-black text-slate-900">Secure Checkout</h3>
+                                    <p className="text-xs text-slate-500">Bill ID: {selectedBill.billNumber}</p>
+                                </div>
+                            </div>
+
+                            {checkoutSuccess ? (
+                                <div className="py-12 flex flex-col items-center justify-center text-center space-y-4">
+                                    <div className="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center text-emerald-500 animate-bounce">
+                                        <CheckCircle2 className="w-12 h-12" />
+                                    </div>
+                                    <h4 className="text-xl font-black text-slate-900">Payment Authorized!</h4>
+                                    <p className="text-xs text-slate-400">Your student ledger balance has been credited successfully. Receipts are now viewable.</p>
+                                </div>
+                            ) : (
+                                <form onSubmit={handleCheckoutSubmit} className="space-y-6">
+                                    {/* Bill summary box */}
+                                    <div className="bg-slate-50 rounded-3xl p-6 border border-slate-100 space-y-3">
+                                        <div className="flex justify-between items-center text-xs">
+                                            <span className="text-slate-400 font-bold uppercase tracking-wider">Academic Term:</span>
+                                            <span className="font-extrabold text-indigo-600 uppercase">
+                                                {AcademicNomenclature.getLabel(selectedBill.session?.currentSemester || "1", settings)}
+                                            </span>
+                                        </div>
+                                        <div className="flex justify-between items-center text-xs">
+                                            <span className="text-slate-400 font-bold uppercase tracking-wider">Outstanding:</span>
+                                            <span className="font-extrabold text-slate-800">
+                                                ₦{(parseFloat(selectedBill.totalAmount) - parseFloat(selectedBill.amountPaid || "0.00")).toLocaleString()}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    {/* Installment / Amount selector */}
+                                    {(() => {
+                                        const outstanding = parseFloat(selectedBill.totalAmount) - parseFloat(selectedBill.amountPaid || "0.00");
+                                        const partPaymentEnabled = settings['part_payment_enabled'] !== 'false';
+                                        const minPercentage = parseFloat(settings['min_part_payment_percentage'] || "30");
+                                        const minFlatAmount = parseFloat(settings['min_part_payment_amount'] || "5000");
+                                        const pctAmount = (outstanding * minPercentage) / 100;
+                                        const minPayment = partPaymentEnabled 
+                                            ? Math.min(outstanding, Math.max(pctAmount, minFlatAmount))
+                                            : outstanding;
+
+                                        return (
+                                            <div className="space-y-4">
+                                                <div className="flex justify-between items-center">
+                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Amount to Settle (₦)</label>
+                                                    {partPaymentEnabled && (
+                                                        <span className="text-[10px] text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full font-black uppercase tracking-wider">
+                                                            Installments Allowed (Min: {minPercentage}%)
+                                                        </span>
+                                                    )}
+                                                </div>
+
+                                                <input
+                                                    type="number"
+                                                    required
+                                                    className="w-full bg-slate-50 border border-slate-100 rounded-2xl h-12 px-4 focus:ring-2 focus:ring-indigo-500 transition-all font-black text-slate-800 placeholder:text-slate-400 text-lg"
+                                                    placeholder="Enter amount (NGN)"
+                                                    value={selectedAmount || ""}
+                                                    onChange={(e) => {
+                                                        const val = parseFloat(e.target.value);
+                                                        setSelectedAmount(isNaN(val) ? 0 : val);
+                                                    }}
+                                                />
+
+                                                {partPaymentEnabled && outstanding > minPayment && (
+                                                    <div className="space-y-2">
+                                                        <input
+                                                            type="range"
+                                                            min={minPayment}
+                                                            max={outstanding}
+                                                            step={100}
+                                                            value={selectedAmount || minPayment}
+                                                            onChange={(e) => setSelectedAmount(parseFloat(e.target.value))}
+                                                            className="w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                                                        />
+                                                        <div className="flex justify-between text-[9px] font-bold text-slate-400 uppercase tracking-wider">
+                                                            <span>Min: ₦{minPayment.toLocaleString()}</span>
+                                                            <span>Max: ₦{outstanding.toLocaleString()}</span>
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {selectedAmount < minPayment && (
+                                                    <div className="flex items-start gap-2 text-amber-600 bg-amber-50/50 p-4 rounded-2xl border border-amber-100/50 text-xs">
+                                                        <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                                                        <p className="leading-relaxed">
+                                                            Amount is below the minimum required installment of <strong>₦{minPayment.toLocaleString()}</strong> ({minPercentage}% setting threshold).
+                                                        </p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })()}
+
+                                    {/* Secure Payment Mode Select */}
+                                    <div className="space-y-3">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Select Secure Payment Mode</label>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <button
+                                                type="button"
+                                                onClick={() => setPaymentMode('gateway')}
+                                                className={cn(
+                                                    "p-4 rounded-3xl border-2 text-left transition-all",
+                                                    paymentMode === 'gateway'
+                                                        ? "border-indigo-600 bg-white shadow-md shadow-indigo-50"
+                                                        : "border-slate-100 bg-slate-50/50 hover:border-slate-200"
+                                                )}
+                                            >
+                                                <CreditCard className={cn("w-5 h-5 mb-2", paymentMode === 'gateway' ? "text-indigo-600" : "text-slate-400")} />
+                                                <p className="font-extrabold text-slate-800 text-xs">Online Gateway</p>
+                                                <p className="text-[9px] text-slate-400 leading-tight mt-1">Paystack, Remita secure checkout</p>
+                                            </button>
+
+                                            <button
+                                                type="button"
+                                                onClick={() => setPaymentMode('wallet')}
+                                                className={cn(
+                                                    "p-4 rounded-3xl border-2 text-left transition-all",
+                                                    paymentMode === 'wallet'
+                                                        ? "border-indigo-600 bg-white shadow-md shadow-indigo-50"
+                                                        : "border-slate-100 bg-slate-50/50 hover:border-slate-200"
+                                                )}
+                                            >
+                                                <Wallet className={cn("w-5 h-5 mb-2", paymentMode === 'wallet' ? "text-indigo-600" : "text-slate-400")} />
+                                                <p className="font-extrabold text-slate-800 text-xs">Digital Wallet</p>
+                                                <p className="text-[9px] text-slate-400 leading-tight mt-1">Instant debit (Bal: ₦{walletBalanceText})</p>
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {/* Direct cashier message */}
+                                    <div className="flex gap-2.5 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                                        <ShieldAlert className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
+                                        <p className="text-[10px] text-slate-500 leading-relaxed font-medium">
+                                            Students have no manual bank teller deposit privileges. Manual verification handles bank drafts, cashiers, and tellers exclusively.
+                                        </p>
+                                    </div>
+
+                                    {/* Wallet validation message */}
+                                    {paymentMode === 'wallet' && (summary?.walletBalance || 0) < selectedAmount && (
+                                        <div className="flex items-start gap-2 text-rose-600 bg-rose-50/50 p-4 rounded-2xl border border-rose-100/50 text-xs">
+                                            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                                            <p className="leading-relaxed">
+                                                Your digital wallet has insufficient funds (₦{walletBalanceText} available). Please fund your wallet in the Wallet Portal before finalizing.
+                                            </p>
+                                        </div>
+                                    )}
+
+                                    {checkoutError && (
+                                        <div className="p-4 bg-rose-50 text-rose-600 border border-rose-100 rounded-2xl text-xs font-bold flex items-center gap-2">
+                                            <AlertCircle className="w-4 h-4" />
+                                            {checkoutError}
+                                        </div>
+                                    )}
+
+                                    <Button
+                                        type="submit"
+                                        disabled={
+                                            checkoutLoading || 
+                                            selectedAmount <= 0 || 
+                                            (paymentMode === 'wallet' && (summary?.walletBalance || 0) < selectedAmount) ||
+                                            (() => {
+                                                const outstanding = parseFloat(selectedBill.totalAmount) - parseFloat(selectedBill.amountPaid || "0.00");
+                                                const partPaymentEnabled = settings['part_payment_enabled'] !== 'false';
+                                                const minPercentage = parseFloat(settings['min_part_payment_percentage'] || "30");
+                                                const minFlatAmount = parseFloat(settings['min_part_payment_amount'] || "5000");
+                                                const pctAmount = (outstanding * minPercentage) / 100;
+                                                const minPayment = partPaymentEnabled 
+                                                    ? Math.min(outstanding, Math.max(pctAmount, minFlatAmount))
+                                                    : outstanding;
+                                                return selectedAmount < minPayment || selectedAmount > outstanding + 0.01;
+                                            })()
+                                        }
+                                        className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black h-12 rounded-2xl shadow-lg shadow-indigo-100 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:pointer-events-none"
+                                    >
+                                        {checkoutLoading ? (
+                                            <Loader2 className="w-5 h-5 animate-spin mx-auto" />
+                                        ) : paymentMode === 'wallet' ? (
+                                            "Debit Wallet & Settle"
+                                        ) : (
+                                            "Authorize Gateway Payment"
+                                        )}
+                                    </Button>
+                                </form>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

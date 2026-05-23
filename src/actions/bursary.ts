@@ -288,6 +288,7 @@ export async function processPayment(data: {
     purpose: string;
     gateway?: 'paystack' | 'flutterwave' | 'remita' | 'opay' | 'manual';
     gatewayReference?: string;
+    billId?: number;
 }) {
     try {
         const result = await db.transaction(async (tx) => {
@@ -302,19 +303,40 @@ export async function processPayment(data: {
                 gatewayReference: data.gatewayReference
             });
 
-            // 2. Get current student balance
+            // 2. Resolve billing impact if billId is passed
+            const paymentAmount = parseFloat(data.amount);
+            if (data.billId) {
+                const [bill] = await tx.select().from(studentBills).where(eq(studentBills.id, data.billId)).limit(1);
+                if (bill) {
+                    const totalAmount = parseFloat(bill.totalAmount);
+                    const currentPaid = parseFloat(bill.amountPaid || "0.00");
+                    const newPaid = currentPaid + paymentAmount;
+                    
+                    let billStatus: 'pending' | 'partially_paid' | 'paid' = 'partially_paid';
+                    if (Math.abs(newPaid - totalAmount) < 0.01 || newPaid >= totalAmount) {
+                        billStatus = 'paid';
+                    }
+
+                    await tx.update(studentBills)
+                        .set({
+                            amountPaid: newPaid.toFixed(2),
+                            status: billStatus
+                        })
+                        .where(eq(studentBills.id, data.billId));
+                }
+            }
+
+            // 3. Get current student balance
             const [student] = await tx.select().from(students).where(eq(students.id, data.studentId));
             const currentBalance = parseFloat(student.walletBalance || '0');
-            const paymentAmount = parseFloat(data.amount);
             const newBalance = currentBalance + paymentAmount;
 
-            // 3. Update student wallet
+            // 4. Update student wallet (record wallet deposits if top-up or let it keep active unspent ledger)
             await tx.update(students)
                 .set({ walletBalance: newBalance.toFixed(2) })
                 .where(eq(students.id, data.studentId));
 
-            // 4. Record in Ledger
-            // First get the last ledger balance
+            // 5. Record in Ledger
             const [lastLedgerEntry] = await tx.select()
                 .from(studentLedger)
                 .where(eq(studentLedger.studentId, data.studentId))
@@ -322,9 +344,6 @@ export async function processPayment(data: {
                 .limit(1);
 
             const lastBalance = lastLedgerEntry ? parseFloat(lastLedgerEntry.balance) : 0;
-            // In a school portal ledger, usually charges (debits) increase balance owed, 
-            // and payments (credits) decrease balance owed.
-            // So: newBalanceOwed = lastBalance - paymentAmount
             const newBalanceOwed = lastBalance - paymentAmount;
 
             await tx.insert(studentLedger).values({
@@ -334,6 +353,23 @@ export async function processPayment(data: {
                 credit: data.amount,
                 balance: newBalanceOwed.toFixed(2)
             });
+
+            // 6. Post RV to General Ledger (Consolidation)
+            try {
+                const [user] = await tx.select().from(users).where(eq(users.id, student.userId)).limit(1);
+                const studentName = user ? user.name : `Student #${data.studentId}`;
+                const { AccountingService } = await import("@/services/AccountingService");
+                await AccountingService.postReceiptToGL({
+                    amount: paymentAmount,
+                    studentName,
+                    feeItemId: 0,
+                    feeCategory: "Student Fees (Gateway)",
+                    recordedBy: 0,
+                    paymentMethod: 'gateway'
+                });
+            } catch (glError) {
+                console.error("Automated GL Posting failed inside processPayment:", glError);
+            }
 
             return { success: true, transactionId: newTx.insertId };
         });
@@ -843,10 +879,28 @@ export async function getTransactionForReceipt(id: number) {
         const bursarySettings = await getBursarySettings();
         const bursar = await OfficialService.getBursarSignature(data[0].student?.unitId || undefined);
 
+        // Fetch overall outstanding arrears
+        const studentId = data[0].student?.id;
+        let arrears = 0;
+        if (studentId) {
+            const unpaidBills = await db.select({
+                total: studentBills.totalAmount,
+                paid: studentBills.amountPaid
+            })
+                .from(studentBills)
+                .where(and(
+                    eq(studentBills.studentId, studentId),
+                    ne(studentBills.status, 'paid')
+                ));
+            arrears = unpaidBills.reduce((sum, b) => sum + (parseFloat(b.total) - parseFloat(b.paid || "0.00")), 0);
+        }
+
         return {
             ...data[0],
             branding,
             bursar,
+            arrears,
+            bursarySettings,
             template: bursarySettings['receipt_template'] || 'modern'
         };
     } catch (error) {
@@ -1102,6 +1156,7 @@ export async function getFinancialReports(filters: {
     deptId?: number;
     programmeId?: number;
     feeItemId?: number;
+    facultyId?: number;
 }) {
     try {
         await ensureBursaryStaff();
@@ -1113,6 +1168,16 @@ export async function getFinancialReports(filters: {
         if (filters.level) conditions.push(eq(students.currentLevel, filters.level));
         if (filters.deptId) conditions.push(eq(students.deptId, filters.deptId));
         if (filters.programmeId) conditions.push(eq(students.programmeId, filters.programmeId));
+
+        if (filters.facultyId) {
+            const deptsInFaculty = await db.select({ id: departments.id }).from(departments).where(eq(departments.facultyId, filters.facultyId));
+            const deptIds = deptsInFaculty.map(d => d.id);
+            if (deptIds.length > 0) {
+                conditions.push(inArray(students.deptId, deptIds));
+            } else {
+                conditions.push(sql`1 = 0`); // Force empty if faculty has no departments
+            }
+        }
 
         if (filters.feeItemId) {
             const [item] = await db.select().from(feeItems).where(eq(feeItems.id, filters.feeItemId));
@@ -1511,6 +1576,124 @@ export async function getAccountsReceivableAging() {
         return { success: true, analysis, details: detailedBills };
     } catch (error) {
         console.error("Failed to generate aging analysis:", error);
+        return { success: false, error: (error as Error).message };
+    }
+}
+
+export async function payBillWithWalletAction(studentId: number, billId: number, amount: number) {
+    try {
+        const { PaymentService } = await import("@/services/PaymentService");
+        const session = await auth();
+        if (!session?.user?.id) throw new Error("Unauthorized");
+        const recordedBy = 0; // System automated
+        const res = await PaymentService.payBillWithWallet(studentId, billId, amount, recordedBy);
+        revalidatePath("/student/finance");
+        return res;
+    } catch (error) {
+        console.error("Wallet checkout action failed:", error);
+        return { success: false, error: (error as Error).message };
+    }
+}
+
+export async function topUpWalletAction(studentId: number, amount: number) {
+    try {
+        const { PaymentService } = await import("@/services/PaymentService");
+        const ref = `WLT-TOP-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+        const res = await PaymentService.topUpWallet(studentId, amount, ref);
+        revalidatePath("/student/finance");
+        return res;
+    } catch (error) {
+        console.error("Wallet top-up action failed:", error);
+        return { success: false, error: (error as Error).message };
+    }
+}
+
+export async function postDirectPayment(studentId: number, billId: number, amount: number, tellerNumber: string, bankName: string) {
+    try {
+        await ensureBursaryStaff();
+        
+        return await db.transaction(async (tx) => {
+            const [student] = await tx.select().from(students).where(eq(students.id, studentId)).limit(1);
+            if (!student) throw new Error("Student not found.");
+
+            const [bill] = await tx.select().from(studentBills).where(eq(studentBills.id, billId)).limit(1);
+            if (!bill) throw new Error("Bill not found.");
+
+            const totalAmount = parseFloat(bill.totalAmount);
+            const currentPaid = parseFloat(bill.amountPaid || "0.00");
+            const newPaid = currentPaid + amount;
+
+            if (newPaid > totalAmount + 0.01) {
+                throw new Error("Payment exceeds bill outstanding balance.");
+            }
+
+            // 1. Create cashier-recorded transaction
+            const ref = `TEL-${tellerNumber}-${Date.now()}`;
+            const [newCoreTx] = await tx.insert(transactions).values({
+                studentId,
+                amount: amount.toFixed(2),
+                type: 'credit',
+                purpose: `Tuition Payment: ${bill.billNumber} (Bank Deposit: ${bankName})`,
+                status: 'completed',
+                gateway: 'manual',
+                gatewayReference: ref
+            });
+
+            // 2. Update student bill
+            let billStatus: 'pending' | 'partially_paid' | 'paid' = 'partially_paid';
+            if (Math.abs(newPaid - totalAmount) < 0.01) {
+                billStatus = 'paid';
+            }
+            await tx.update(studentBills)
+                .set({
+                    amountPaid: newPaid.toFixed(2),
+                    status: billStatus
+                })
+                .where(eq(studentBills.id, billId));
+
+            // 3. Post to Student Ledger
+            const [lastLedgerEntry] = await tx.select()
+                .from(studentLedger)
+                .where(eq(studentLedger.studentId, studentId))
+                .orderBy(desc(studentLedger.createdAt))
+                .limit(1);
+
+            const lastBalance = lastLedgerEntry ? parseFloat(lastLedgerEntry.balance) : 0;
+            const newBalanceOwed = lastBalance - amount;
+
+            await tx.insert(studentLedger).values({
+                studentId: studentId,
+                transactionId: newCoreTx.insertId,
+                description: `Payment: ${bill.billNumber} (Cashier Bank Deposit)`,
+                debit: "0.00",
+                credit: amount.toFixed(2),
+                balance: newBalanceOwed.toFixed(2)
+            });
+
+            // 4. Post RV to General Ledger
+            try {
+                const [user] = await tx.select().from(users).where(eq(users.id, student.userId)).limit(1);
+                const studentName = user ? user.name : `Student #${studentId}`;
+                const session = await auth();
+                const recordedBy = session?.user?.id ? parseInt(session.user.id) : 1;
+
+                const { AccountingService } = await import("@/services/AccountingService");
+                await AccountingService.postReceiptToGL({
+                    amount,
+                    studentName,
+                    feeItemId: 0,
+                    feeCategory: "Student Fees (Manual)",
+                    recordedBy,
+                    paymentMethod: 'bank'
+                });
+            } catch (glErr) {
+                console.error("Direct payment GL posting failed:", glErr);
+            }
+
+            return { success: true, transactionId: newCoreTx.insertId };
+        });
+    } catch (error) {
+        console.error("Failed to post direct payment:", error);
         return { success: false, error: (error as Error).message };
     }
 }

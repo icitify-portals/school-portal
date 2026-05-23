@@ -13,7 +13,7 @@ import {
     studentLedger,
     academicSessions
 } from "@/db/schema";
-import { eq, sum, and, sql, desc } from "drizzle-orm";
+import { eq, sum, and, sql, desc, inArray } from "drizzle-orm";
 
 export class BursaryService {
 
@@ -230,11 +230,12 @@ export class BursaryService {
      */
     static async queueBatchBilling(data: {
         sessionId: number;
-        scope: 'all' | 'department' | 'level' | 'programme';
+        scope: 'all' | 'department' | 'level' | 'programme' | 'faculty';
         filters: {
             deptId?: number;
             level?: number;
             programmeId?: number;
+            facultyId?: number;
         };
         note?: string;
     }) {
@@ -246,6 +247,16 @@ export class BursaryService {
             conditions.push(eq(students.programmeId, data.filters.programmeId));
         } else if (data.scope === 'level' && data.filters.level) {
             conditions.push(eq(students.currentLevel, data.filters.level));
+        } else if (data.scope === 'faculty' && data.filters.facultyId) {
+            const depts = await db.select({ id: departments.id })
+                .from(departments)
+                .where(eq(departments.facultyId, data.filters.facultyId));
+            const deptIds = depts.map(d => d.id);
+            if (deptIds.length > 0) {
+                conditions.push(inArray(students.departmentId, deptIds));
+            } else {
+                return { success: false, error: "No departments found for this faculty." };
+            }
         }
 
         const studentList = await db.select({ id: students.id })
