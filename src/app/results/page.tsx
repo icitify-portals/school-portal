@@ -11,7 +11,8 @@ import {
     users,
     departments,
     programmes,
-    systemSettings
+    systemSettings,
+    institutionalUnits
 } from "@/db/schema";
 import { eq, and, asc, sql } from "drizzle-orm";
 import StudentResults from "@/components/lms/StudentResults";
@@ -39,12 +40,14 @@ export default async function ResultsPage() {
             student: students,
             programme: programmes,
             department: departments,
-            user: users
+            user: users,
+            unit: institutionalUnits
         })
             .from(students)
             .leftJoin(programmes, eq(students.programmeId, programmes.id))
             .leftJoin(departments, eq(students.deptId, departments.id))
             .leftJoin(users, eq(students.userId, users.id))
+            .leftJoin(institutionalUnits, eq(students.unitId, institutionalUnits.id))
             .where(eq(students.userId, userId))
             .limit(1);
 
@@ -52,7 +55,8 @@ export default async function ResultsPage() {
             ...studentRows[0].student,
             programme: studentRows[0].programme,
             department: studentRows[0].department,
-            user: studentRows[0].user
+            user: studentRows[0].user,
+            academicTier: studentRows[0].unit?.academicTier || 'tertiary'
         } : null;
 
         if (student) {

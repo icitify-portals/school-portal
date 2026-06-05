@@ -1107,6 +1107,128 @@ export const MinimalistReportCard006 = ({ data, term }: { data: any, term: strin
     );
 };
 
+export const TertiarySemesterResultCard = ({ data, term }: { data: any, term: string }) => {
+    const { student, results, summaries } = data;
+    const termNumber = parseInt(term);
+    const currentTermResults = results.filter((r: any) => r.semester === termNumber || !r.semester);
+
+    // Support both direct summary object and summaries array
+    const summary = data.summary || (summaries && summaries.find((s: any) => s.semester === term.toString())) || { gpa: 0, cgpa: 0, tcr: 0, tce: 0 };
+    const tcr = summary.tcr || 0;
+    const tce = summary.tce || 0;
+    const gpa = summary.gpa || 0;
+    const cgpa = summary.cgpa || 0;
+    const twgp = currentTermResults.reduce((s: number, r: any) => s + ((r.gp || r.gradePoint || 0) * (r.units || r.creditUnits || 0)), 0);
+
+    return (
+        <div className="bg-white p-8 border border-slate-200 rounded-3xl shadow-xl max-w-4xl mx-auto space-y-6 text-slate-800" style={{ fontFamily: "'Montserrat', sans-serif" }}>
+            {/* Header */}
+            <div className="text-center border-b pb-6 space-y-2">
+                <h1 className="text-2xl font-black text-slate-900 tracking-tight uppercase">OFFICIAL SEMESTER RESULT SLIP</h1>
+                <p className="text-slate-400 text-xs font-bold mt-1">TERM/SEMESTER {term} • SESSION {data.session || "2024/2025"}</p>
+            </div>
+
+            {/* Profile */}
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-xs bg-slate-50 p-5 rounded-xl border border-slate-100">
+                <div>
+                    <span className="text-slate-400 block font-bold uppercase tracking-wider text-[9px] mb-0.5">STUDENT NAME</span>
+                    <span className="font-extrabold text-slate-800 text-sm uppercase">{student.name}</span>
+                </div>
+                <div>
+                    <span className="text-slate-400 block font-bold uppercase tracking-wider text-[9px] mb-0.5">MATRIC / ADM NO</span>
+                    <span className="font-bold text-slate-800 text-sm font-mono uppercase">{student.matricNumber || student.admissionNumber}</span>
+                </div>
+                <div>
+                    <span className="text-slate-400 block font-bold uppercase tracking-wider text-[9px] mb-0.5">DEPARTMENT</span>
+                    <span className="font-bold text-slate-700 text-sm uppercase">{student.department || 'N/A'}</span>
+                </div>
+                <div>
+                    <span className="text-slate-400 block font-bold uppercase tracking-wider text-[9px] mb-0.5">PROGRAMME</span>
+                    <span className="font-bold text-slate-700 text-sm uppercase">{student.programme || 'N/A'}</span>
+                </div>
+                <div>
+                    <span className="text-slate-400 block font-bold uppercase tracking-wider text-[9px] mb-0.5">LEVEL</span>
+                    <span className="font-bold text-slate-700 text-sm">{student.currentLevel || student.level || 100} LEVEL</span>
+                </div>
+            </div>
+
+            {/* Table */}
+            <div className="overflow-hidden border border-slate-200 rounded-2xl shadow-sm bg-white">
+                <table className="w-full text-left text-xs">
+                    <thead className="bg-slate-900 text-white uppercase text-[9px] tracking-wider">
+                        <tr>
+                            <th className="px-4 py-3">Course Code</th>
+                            <th className="px-4 py-3">Course Title</th>
+                            <th className="px-4 py-3 text-center">Credit Units</th>
+                            <th className="px-4 py-3 text-center">Score</th>
+                            <th className="px-4 py-3 text-center">Grade</th>
+                            <th className="px-4 py-3 text-center">Grade Point</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                        {currentTermResults.map((r: any, i: number) => (
+                            <tr key={i} className="hover:bg-slate-50 transition-colors">
+                                <td className="px-4 py-3 font-bold text-slate-900 font-mono uppercase">{r.code}</td>
+                                <td className="px-4 py-3 text-slate-700 font-medium">{r.title}</td>
+                                <td className="px-4 py-3 text-center font-bold text-slate-600">{r.units || r.creditUnits || 0}</td>
+                                <td className="px-4 py-3 text-center font-bold text-slate-600">{r.totalScore || r.score || 0}</td>
+                                <td className="px-4 py-3 text-center font-black text-indigo-600">{r.grade || 'N/A'}</td>
+                                <td className="px-4 py-3 text-center font-mono font-bold text-slate-600">{(r.gp || r.gradePoint || 0).toFixed(2)}</td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+
+            {/* Performance Summary Footer */}
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-100 text-center text-xs font-bold text-slate-600">
+                <div>
+                    <span className="text-[9px] uppercase tracking-wider block text-slate-400">Total Registered (TCR)</span>
+                    <span className="text-slate-950 font-black text-sm">{tcr}</span>
+                </div>
+                <div>
+                    <span className="text-[9px] uppercase tracking-wider block text-slate-400">Total Earned (TCE)</span>
+                    <span className="text-slate-950 font-black text-sm">{tce}</span>
+                </div>
+                <div>
+                    <span className="text-[9px] uppercase tracking-wider block text-slate-400">Weighted Points (TWGP)</span>
+                    <span className="text-slate-950 font-black text-sm">{twgp.toFixed(2)}</span>
+                </div>
+                <div>
+                    <span className="text-[9px] uppercase tracking-wider block text-slate-400">Semester GPA (SGPA)</span>
+                    <span className="text-indigo-600 font-black text-sm">{gpa.toFixed(2)}</span>
+                </div>
+                <div>
+                    <span className="text-[9px] uppercase tracking-wider block text-slate-400">Cumulative GPA (CGPA)</span>
+                    <span className="text-emerald-600 font-black text-sm">{cgpa.toFixed(2)}</span>
+                </div>
+            </div>
+
+            {/* Approval Signatures */}
+            <div className="grid grid-cols-2 gap-8 pt-6 border-t border-slate-100 text-center text-xs font-semibold text-slate-500">
+                <div className="space-y-4">
+                    <div className="h-12 flex items-center justify-center">
+                        <span className="text-[10px] text-slate-300 italic">Signed Digitally</span>
+                    </div>
+                    <div className="border-t border-slate-200 pt-2">
+                        <p className="font-bold text-slate-800">HEAD OF DEPARTMENT (HOD)</p>
+                        <p className="text-[9px] text-slate-400 uppercase tracking-widest mt-0.5">Official Stamp / Signature</p>
+                    </div>
+                </div>
+                <div className="space-y-4">
+                    <div className="h-12 flex items-center justify-center">
+                        <span className="text-[10px] text-slate-300 italic">Signed Digitally</span>
+                    </div>
+                    <div className="border-t border-slate-200 pt-2">
+                        <p className="font-bold text-slate-800">DEAN OF FACULTY</p>
+                        <p className="text-[9px] text-slate-400 uppercase tracking-widest mt-0.5">Official Stamp / Signature</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 export const K12_REPORT_TEMPLATES: Record<string, React.FC<{ data: any; term: string; templateCode?: string }>> = {
     '002': RowelSchools002ReportCard,
     '002a': RowelSchools002ReportCard,
@@ -1118,6 +1240,7 @@ export const K12_REPORT_TEMPLATES: Record<string, React.FC<{ data: any; term: st
     '001a': RowelSchoolsReportCard,
     '001': RowelSchoolsReportCard,
     'rowel_schools': RowelSchoolsReportCard,
+    'tertiary_semester': TertiarySemesterResultCard,
     'default': DefaultK12ReportCard
 };
 

@@ -45,6 +45,7 @@ interface Props {
         level: number;
         programme: string;
         unitId?: number;
+        academicTier?: string;
     };
     sessions: SessionData[];
     cgpa: number;
@@ -59,6 +60,7 @@ export default function StudentResults({ student, sessions, cgpa, branding, sign
     const [expandedSession, setExpandedSession] = useState<string | null>(sessions[0]?.name || null);
 
     const downloadResultSlip = (sessionName: string, semester: SemesterData) => {
+        const isTertiary = student.academicTier === 'tertiary' || student.level >= 100;
         DocumentService.generateResultSlip({
             institution: branding,
             student,
@@ -72,7 +74,8 @@ export default function StudentResults({ student, sessions, cgpa, branding, sign
                 tce: semester.tce
             },
             unitId: student.unitId,
-            headSignature: signatures?.head
+            headSignature: signatures?.head,
+            templateCode: isTertiary ? 'tertiary_semester' : undefined
         });
     };
 

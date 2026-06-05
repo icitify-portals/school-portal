@@ -10,98 +10,111 @@ interface jsPDFWithPlugin extends jsPDF {
 export class DocumentService {
     static async generateResultSlip(data: {
         institution: { name: string; motto: string; logoUrl?: string };
-        student: { name: string; matricNumber: string; department: string; level: number };
+        student: { name: string; matricNumber: string; department: string; level: number; programme?: string };
         session: string;
         semester: string;
         results: { code: string; title: string; units: number; score: number; grade: string; gp: number }[];
         summary: { gpa: number; cgpa: number; tcr: number; tce: number };
         unitId?: number;
         headSignature?: { name: string; signatureUrl?: string };
+        templateCode?: string;
     }) {
         const doc = new jsPDF() as jsPDFWithPlugin;
-        const pageWidth = doc.internal.pageSize.getWidth();
 
-        // Use Passed Signature
-        const head = data.headSignature;
+        if (data.templateCode === 'tertiary_semester') {
+            await DocumentService.renderTertiarySemesterResult(doc, data);
+        } else {
+            const pageWidth = doc.internal.pageSize.getWidth();
+            const head = data.headSignature;
 
-        // 1. Header
-        doc.setFontSize(18);
-        doc.setFont('helvetica', 'bold');
-        doc.text(data.institution.name.toUpperCase(), pageWidth / 2, 20, { align: 'center' });
+            // 1. Header
+            doc.setFontSize(18);
+            doc.setFont('helvetica', 'bold');
+            doc.text(data.institution.name.toUpperCase(), pageWidth / 2, 20, { align: 'center' });
 
-        doc.setFontSize(10);
-        doc.setFont('helvetica', 'italic');
-        doc.text(data.institution.motto, pageWidth / 2, 26, { align: 'center' });
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'italic');
+            doc.text(data.institution.motto, pageWidth / 2, 26, { align: 'center' });
 
-        doc.setFontSize(14);
-        doc.setFont('helvetica', 'bold');
-        doc.text('OFFICIAL SEMESTER RESULT SLIP', pageWidth / 2, 35, { align: 'center' });
+            doc.setFontSize(14);
+            doc.setFont('helvetica', 'bold');
+            doc.text('OFFICIAL SEMESTER RESULT SLIP', pageWidth / 2, 35, { align: 'center' });
 
-        // 2. Student Info (Two Columns)
-        doc.setFontSize(10);
-        doc.setFont('helvetica', 'normal');
+            // 2. Student Info (Two Columns)
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'normal');
 
-        const leftCol = 15;
-        const rightCol = 110;
-        let y = 50;
+            const leftCol = 15;
+            const rightCol = 110;
+            let y = 50;
 
-        doc.text(`NAME: ${data.student.name.toUpperCase()}`, leftCol, y);
-        doc.text(`SESSION: ${data.session}`, rightCol, y);
-        y += 7;
-        doc.text(`MATRIC NO: ${data.student.matricNumber}`, leftCol, y);
-        doc.text(`SEMESTER: ${data.semester}`, rightCol, y);
-        y += 7;
-        doc.text(`DEPARTMENT: ${data.student.department}`, leftCol, y);
-        doc.text(`LEVEL: ${data.student.level}`, rightCol, y);
+            doc.text(`NAME: ${data.student.name.toUpperCase()}`, leftCol, y);
+            doc.text(`SESSION: ${data.session}`, rightCol, y);
+            y += 7;
+            doc.text(`MATRIC NO: ${data.student.matricNumber}`, leftCol, y);
+            doc.text(`SEMESTER: ${data.semester}`, rightCol, y);
+            y += 7;
+            doc.text(`DEPARTMENT: ${data.student.department}`, leftCol, y);
+            doc.text(`LEVEL: ${data.student.level}`, rightCol, y);
 
-        // 3. Results Table
-        (doc as any).autoTable({
-            startY: y + 10,
-            head: [['COURSE CODE', 'COURSE TITLE', 'UNITS', 'SCORE', 'GRADE', 'GP']],
-            body: data.results.map(r => [r.code, r.title, r.units, r.score, r.grade, r.gp.toFixed(2)]),
-            theme: 'grid',
-            headStyles: { fillColor: 200, textColor: 0, fontStyle: 'bold' },
-            styles: { fontSize: 9, cellPadding: 3 },
-            columnStyles: {
-                2: { halign: 'center' },
-                3: { halign: 'center' },
-                4: { halign: 'center' },
-                5: { halign: 'center' }
+            // 3. Results Table
+            (doc as any).autoTable({
+                startY: y + 10,
+                head: [['COURSE CODE', 'COURSE TITLE', 'UNITS', 'SCORE', 'GRADE', 'GP']],
+                body: data.results.map(r => [r.code, r.title, r.units, r.score, r.grade, r.gp.toFixed(2)]),
+                theme: 'grid',
+                headStyles: { fillColor: 200, textColor: 0, fontStyle: 'bold' },
+                styles: { fontSize: 9, cellPadding: 3 },
+                columnStyles: {
+                    2: { halign: 'center' },
+                    3: { halign: 'center' },
+                    4: { halign: 'center' },
+                    5: { halign: 'center' }
+                }
+            });
+
+            // 4. Summary Stats
+            const finalY = (doc as any).lastAutoTable.finalY + 10;
+            doc.setFont('helvetica', 'bold');
+            doc.text('PERFORMANCE SUMMARY', leftCol, finalY);
+
+            doc.autoTable({
+                startY: finalY + 5,
+                body: [
+                    ['Total Credits Registered (TCR)', data.summary.tcr.toString(), 'Total Credits Earned (TCE)', data.summary.tce.toString()],
+                    ['Semester GPA', data.summary.gpa.toFixed(2), 'Cumulative GPA (CGPA)', data.summary.cgpa.toFixed(2)]
+                ],
+                theme: 'plain',
+                styles: { fontSize: 10, cellPadding: 2, fontStyle: 'bold' }
+            });
+
+            // 5. Authentication
+            const footerY = 250;
+            if (head?.signatureUrl) {
+                try {
+                    doc.addImage(head.signatureUrl, 'PNG', leftCol, footerY - 18, 40, 15);
+                } catch (e) {
+                    console.error("Signature rendering failed", e);
+                }
             }
-        });
+            doc.line(leftCol, footerY, leftCol + 60, footerY);
+            doc.setFontSize(8);
+            doc.text(head?.name?.toUpperCase() || 'HEAD OF SCHOOL', leftCol + 30, footerY + 4, { align: 'center' });
+            doc.text('Signature / Stamp', leftCol + 30, footerY + 8, { align: 'center' });
 
-        // 4. Summary Stats
-        const finalY = (doc as any).lastAutoTable.finalY + 10;
-        doc.setFont('helvetica', 'bold');
-        doc.text('PERFORMANCE SUMMARY', leftCol, finalY);
-
-        doc.autoTable({
-            startY: finalY + 5,
-            body: [
-                ['Total Credits Registered (TCR)', data.summary.tcr.toString(), 'Total Credits Earned (TCE)', data.summary.tce.toString()],
-                ['Semester GPA', data.summary.gpa.toFixed(2), 'Cumulative GPA (CGPA)', data.summary.cgpa.toFixed(2)]
-            ],
-            theme: 'plain',
-            styles: { fontSize: 10, cellPadding: 2, fontStyle: 'bold' }
-        });
-
-        // 5. Authentication
-        const footerY = 250;
-        if (head?.signatureUrl) {
-            try {
-                doc.addImage(head.signatureUrl, 'PNG', leftCol, footerY - 18, 40, 15);
-            } catch (e) {
-                console.error("Signature rendering failed", e);
-            }
+            doc.text(`Date Printed: ${new Date().toLocaleDateString()}`, rightCol + 30, footerY + 8, { align: 'center' });
         }
-        doc.line(leftCol, footerY, leftCol + 60, footerY);
-        doc.setFontSize(8);
-        doc.text(head?.name?.toUpperCase() || 'HEAD OF SCHOOL', leftCol + 30, footerY + 4, { align: 'center' });
-        doc.text('Signature / Stamp', leftCol + 30, footerY + 8, { align: 'center' });
-
-        doc.text(`Date Printed: ${new Date().toLocaleDateString()}`, rightCol + 30, footerY + 8, { align: 'center' });
 
         doc.save(`Result_Slip_${data.student.matricNumber}_${data.session}_Sem${data.semester}.pdf`);
+    }
+
+    private static getClassOfDegree(cgpa: number): string {
+        if (cgpa >= 4.50) return "First Class Honours";
+        if (cgpa >= 3.50) return "Second Class Honours (Upper Division)";
+        if (cgpa >= 2.40) return "Second Class Honours (Lower Division)";
+        if (cgpa >= 1.50) return "Third Class Honours";
+        if (cgpa >= 1.00) return "Pass";
+        return "Fail / No Degree";
     }
 
     /**
@@ -109,7 +122,7 @@ export class DocumentService {
      */
     static async generateTranscript(data: {
         institution: { name: string; motto: string };
-        student: { name: string; matricNumber: string; department: string; programme: string; dateOfBirth?: string };
+        student: { name: string; matricNumber: string; department: string; programme: string; dateOfBirth?: string; currentLevel?: number };
         sessions: {
             name: string;
             semesters: {
@@ -122,76 +135,227 @@ export class DocumentService {
         unitId?: number;
         registrarSignature?: { name: string; signatureUrl?: string };
     }) {
-        const doc = new jsPDF() as jsPDFWithPlugin;
+        const doc = new jsPDF('p', 'mm', 'a4') as jsPDFWithPlugin;
         const pageWidth = doc.internal.pageSize.getWidth();
-
-        // Use Passed Signature
+        const pageHeight = doc.internal.pageSize.getHeight();
         const registrar = data.registrarSignature;
 
-        // Header (Compressed for Transcript)
-        doc.setFontSize(16);
+        // Helper to draw layout/border/watermark for a page
+        const decoratePage = (pageDoc: jsPDF) => {
+            pageDoc.setDrawColor(15, 23, 42); // Navy
+            pageDoc.setLineWidth(1.0);
+            pageDoc.rect(8, 8, pageWidth - 16, pageHeight - 16);
+            pageDoc.setDrawColor(226, 232, 240);
+            pageDoc.setLineWidth(0.3);
+            pageDoc.rect(9.5, 9.5, pageWidth - 19, pageHeight - 19);
+
+            // Watermark
+            pageDoc.setTextColor(241, 245, 249);
+            pageDoc.setFontSize(36);
+            pageDoc.setFont('helvetica', 'bold');
+            pageDoc.text('OFFICIAL ACADEMIC TRANSCRIPT', pageWidth / 2, pageHeight / 2, {
+                align: 'center',
+                angle: 45
+            });
+            // Reset state defaults
+            pageDoc.setTextColor(0, 0, 0);
+            pageDoc.setFont('helvetica', 'normal');
+            pageDoc.setFontSize(10);
+        };
+
+        // Initialize first page layout
+        decoratePage(doc);
+
+        // Header
+        doc.setFontSize(18);
         doc.setFont('helvetica', 'bold');
-        doc.text(data.institution.name.toUpperCase(), pageWidth / 2, 15, { align: 'center' });
-        doc.setFontSize(12);
-        doc.text('OFFICIAL ACADEMIC TRANSCRIPT', pageWidth / 2, 22, { align: 'center' });
+        doc.setTextColor(15, 23, 42);
+        doc.text(data.institution.name.toUpperCase(), pageWidth / 2, 20, { align: 'center' });
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'italic');
+        doc.setTextColor(100, 116, 139);
+        doc.text(data.institution.motto, pageWidth / 2, 25, { align: 'center' });
 
-        // Student Profile Header
+        doc.setFontSize(13);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(79, 70, 229);
+        doc.text('OFFICIAL ACADEMIC TRANSCRIPT', pageWidth / 2, 33, { align: 'center' });
+
+        // Student Profile Header Box
+        let y = 39;
+        doc.setFillColor(248, 250, 252);
+        doc.setDrawColor(226, 232, 240);
+        doc.setLineWidth(0.4);
+        doc.rect(15, y, pageWidth - 30, 25, 'FD');
+
+        doc.setFontSize(7.5);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(148, 163, 184);
+
+        // Labels
+        doc.text('STUDENT NAME', 20, y + 6);
+        doc.text('MATRIC NUMBER', 110, y + 6);
+        doc.text('PROGRAMME', 20, y + 14);
+        doc.text('DEPARTMENT', 110, y + 14);
+        doc.text('DATE OF BIRTH', 20, y + 22);
+        doc.text('ACADEMIC STATUS', 110, y + 22);
+
+        // Values
         doc.setFontSize(9);
-        doc.setFont('helvetica', 'normal');
-        let y = 35;
-        doc.text(`NAME: ${data.student.name}`, 15, y);
-        doc.text(`MATRIC NO: ${data.student.matricNumber}`, 110, y);
-        y += 5;
-        doc.text(`PROGRAMME: ${data.student.programme}`, 15, y);
-        doc.text(`DEPT: ${data.student.department}`, 110, y);
-        y += 10;
+        doc.setTextColor(15, 23, 42);
+        doc.text(data.student.name.toUpperCase(), 20, y + 10);
+        doc.text(data.student.matricNumber.toUpperCase(), 110, y + 10);
+        doc.text(data.student.programme.toUpperCase(), 20, y + 18);
+        doc.text(data.student.department.toUpperCase(), 110, y + 18);
+        doc.text(data.student.dateOfBirth || 'N/A', 20, y + 26);
+        doc.text('GRADUATED', 110, y + 26);
 
-        // Iterate through sessions and semesters
-        data.sessions.forEach((session, sIdx) => {
-            session.semesters.forEach((semester, semIdx) => {
-                // Check if we need a new page
-                if (y > 230) {
+        y += 34;
+
+        // Iterate sessions & semesters
+        for (let sIdx = 0; sIdx < data.sessions.length; sIdx++) {
+            const session = data.sessions[sIdx];
+            for (let semIdx = 0; semIdx < session.semesters.length; semIdx++) {
+                const semester = session.semesters[semIdx];
+
+                // Page boundary check
+                if (y > 225) {
                     doc.addPage();
+                    decoratePage(doc);
                     y = 20;
                 }
 
+                doc.setFontSize(10);
                 doc.setFont('helvetica', 'bold');
-                doc.text(`${session.name} - SEMESTER ${semester.number}`, 15, y);
+                doc.setTextColor(15, 23, 42);
+                doc.text(`${session.name} ACADEMIC SESSION - SEMESTER ${semester.number}`, 15, y);
+                y += 2;
+
+                const tableBody = semester.results.map(r => [
+                    r.code,
+                    r.title,
+                    r.units.toString(),
+                    r.grade,
+                    r.gp.toFixed(2)
+                ]);
 
                 (doc as any).autoTable({
-                    startY: y + 2,
-                    head: [['CODE', 'COURSE TITLE', 'UNITS', 'GRADE', 'GP']],
-                    body: semester.results.map(r => [r.code, r.title, r.units, r.grade, r.gp.toFixed(2)]),
-                    theme: 'striped',
-                    styles: { fontSize: 8, cellPadding: 1 },
+                    startY: y,
+                    head: [['CODE', 'COURSE TITLE', 'CREDIT UNITS', 'GRADE', 'GRADE POINT']],
+                    body: tableBody,
+                    theme: 'grid',
+                    headStyles: { fillColor: [71, 85, 105], textColor: 255, fontStyle: 'bold', fontSize: 8 },
+                    styles: { fontSize: 7.5, cellPadding: 2, textColor: [51, 65, 85] },
+                    columnStyles: {
+                        0: { fontStyle: 'bold', cellWidth: 25 },
+                        2: { halign: 'center', cellWidth: 25 },
+                        3: { halign: 'center', fontStyle: 'bold', textColor: [79, 70, 229], cellWidth: 20 },
+                        4: { halign: 'center', cellWidth: 25 }
+                    },
                     margin: { left: 15, right: 15 }
                 });
 
-                y = (doc as any).lastAutoTable.finalY + 5;
-                doc.text(`GPA: ${semester.summary.gpa.toFixed(2)} | TCR: ${semester.summary.tcr} | TCE: ${semester.summary.tce}`, 15, y);
-                y += 10;
-            });
-        });
+                y = (doc as any).lastAutoTable.finalY + 4;
+                doc.setFontSize(8);
+                doc.setFont('helvetica', 'bold');
+                doc.setTextColor(15, 23, 42);
+                doc.text(`Semester Summary: GPA: ${semester.summary.gpa.toFixed(2)} | TCR: ${semester.summary.tcr} | TCE: ${semester.summary.tce}`, 15, y);
+                y += 8;
+            }
+        }
 
-        // Final Standing
-        if (y > 250) doc.addPage(), y = 20;
+        // Final standing block
+        if (y > 200) {
+            doc.addPage();
+            decoratePage(doc);
+            y = 20;
+        }
+
+        y += 4;
+        doc.setFillColor(241, 245, 249);
+        doc.rect(15, y, pageWidth - 30, 22, 'F');
+        doc.setDrawColor(79, 70, 229);
+        doc.setLineWidth(0.5);
         doc.line(15, y, pageWidth - 15, y);
-        y += 10;
-        doc.setFontSize(12);
-        doc.text(`FINAL CGPA: ${data.finalCgpa.toFixed(2)}`, 15, y);
+        doc.line(15, y + 22, pageWidth - 15, y + 22);
 
-        // Signatures at the end
-        y += 20;
-        if (y > 260) { doc.addPage(); y = 30; }
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(15, 23, 42);
+        doc.text('CUMULATIVE PERFORMANCE SUMMARY', 20, y + 6);
+        
+        doc.setFontSize(9.5);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(51, 65, 85);
+        doc.text(`FINAL CGPA:`, 20, y + 14);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(79, 70, 229);
+        doc.text(`${data.finalCgpa.toFixed(2)}`, 45, y + 14);
+
+        const classOfDegree = DocumentService.getClassOfDegree(data.finalCgpa);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(51, 65, 85);
+        doc.text(`CLASS OF DEGREE:`, 90, y + 14);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(16, 185, 129); // emerald-500
+        doc.text(`${classOfDegree.toUpperCase()}`, 128, y + 14);
+
+        y += 30;
+
+        // Registrar verification block
+        if (y > 235) {
+            doc.addPage();
+            decoratePage(doc);
+            y = 25;
+        }
+
+        // Registrar Digital Signature Seal
+        doc.setFillColor(240, 253, 250);
+        doc.setDrawColor(20, 184, 166);
+        doc.setLineWidth(0.5);
+        doc.rect(15, y, 65, 10, 'FD');
+        doc.setFontSize(7.5);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(13, 148, 136);
+        doc.text('OFFICIALLY CERTIFIED COPY', 47.5, y + 6.5, { align: 'center' });
 
         if (registrar?.signatureUrl) {
             try {
-                doc.addImage(registrar.signatureUrl, 'PNG', 15, y - 10, 40, 15);
-            } catch (e) {}
+                doc.addImage(registrar.signatureUrl, 'PNG', pageWidth - 80, y - 12, 45, 18);
+            } catch (e) {
+                console.error("Registrar signature failed to load in PDF:", e);
+            }
         }
-        doc.line(15, y, 75, y);
+
+        doc.setDrawColor(203, 213, 225);
+        doc.setLineWidth(0.5);
+        doc.line(pageWidth - 85, y + 10, pageWidth - 15, y + 10);
+
+        doc.setFontSize(8.5);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(15, 23, 42);
+        doc.text(registrar?.name?.toUpperCase() || 'REGISTRAR', pageWidth - 50, y + 14.5, { align: 'center' });
+
+        doc.setFontSize(7);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(148, 163, 184);
+        doc.text('UNIVERSITY REGISTRAR / SIGNATURE DATE', pageWidth - 50, y + 18, { align: 'center' });
+
+        // Date of Issuance info
         doc.setFontSize(8);
-        doc.text(registrar?.name?.toUpperCase() || 'REGISTRAR', 45, y + 4, { align: 'center' });
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(100, 116, 139);
+        doc.text(`Transcript Issue Date: ${new Date().toLocaleDateString()}`, 15, y + 18);
+
+        // Add dynamic page numbers
+        const totalPages = (doc as any).internal.getNumberOfPages();
+        for (let i = 1; i <= totalPages; i++) {
+            doc.setPage(i);
+            doc.setFontSize(7.5);
+            doc.setTextColor(148, 163, 184);
+            doc.text(`Page ${i} of ${totalPages}`, pageWidth - 15, pageHeight - 12, { align: 'right' });
+            doc.text(`Official Academic Transcript • ${data.student.name.toUpperCase()} (${data.student.matricNumber.toUpperCase()})`, 15, pageHeight - 12);
+        }
 
         doc.save(`Transcript_${data.student.matricNumber}.pdf`);
     }
@@ -207,6 +371,7 @@ export class DocumentService {
         '004': (doc, data) => DocumentService.renderCaramotSchool004Report(doc, data),
         '005': (doc, data) => DocumentService.renderAdaptiveReport005(doc, data),
         '006': (doc, data) => DocumentService.renderMinimalistReport006(doc, data),
+        'tertiary_semester': (doc, data) => DocumentService.renderTertiarySemesterResult(doc, data),
         'default': (doc, data) => DocumentService.renderDefaultK12Report(doc, data)
     };
 
@@ -1859,6 +2024,248 @@ export class DocumentService {
             body: data.results.map((r: any) => [r.code, r.title, r.caScore, r.examScore, r.totalScore, r.grade]),
             theme: 'grid'
         });
+    }
+
+    private static getGpForGrade(grade: string): number {
+        const g = grade.toUpperCase();
+        if (g.startsWith('A')) return 5.0;
+        if (g.startsWith('B')) return 4.0;
+        if (g.startsWith('C')) return 3.0;
+        if (g.startsWith('D')) return 2.0;
+        if (g.startsWith('E')) return 1.0;
+        return 0.0;
+    }
+
+    private static async renderTertiarySemesterResult(doc: jsPDF, data: any) {
+        // Page double border
+        doc.setDrawColor(79, 70, 229); // Accent indigo
+        doc.setLineWidth(1.2);
+        doc.rect(5, 5, 200, 287);
+        doc.setLineWidth(0.4);
+        doc.setDrawColor(226, 232, 240); // light gray
+        doc.rect(6.5, 6.5, 197, 284);
+
+        // Circular Logo placeholder or loaded image
+        const logoUrl = data.institution?.logoUrl;
+        let logoLoaded = false;
+        if (logoUrl) {
+            try {
+                doc.addImage(logoUrl, 'PNG', 15, 12, 22, 22);
+                logoLoaded = true;
+            } catch (e) {
+                console.error("Failed to render institution logo in tertiary result PDF:", e);
+            }
+        }
+
+        if (!logoLoaded) {
+            doc.setFillColor(79, 70, 229); // Indigo
+            doc.circle(26, 23, 11, 'F');
+            doc.setFontSize(6.5);
+            doc.setTextColor(255, 255, 255);
+            doc.setFont('helvetica', 'bold');
+            doc.text('TERTIARY', 26, 21.5, { align: 'center' });
+            doc.text('PORTAL', 26, 25.5, { align: 'center' });
+        }
+
+        // Header text info
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(18);
+        doc.setTextColor(15, 23, 42); // slate-900
+        const schoolName = data.institution?.name || "TERTIARY INSTITUTION";
+        doc.text(schoolName.toUpperCase(), 43, 19);
+
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'italic');
+        doc.setTextColor(71, 85, 105);
+        doc.text(data.institution?.motto || "Excellence and Integrity", 43, 24);
+
+        doc.setFontSize(8.5);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(100, 116, 139);
+        doc.text(`Official Academic Record • Date Printed: ${new Date().toLocaleDateString()}`, 43, 28.5);
+
+        // Header Title banner
+        doc.setFillColor(241, 245, 249);
+        doc.rect(15, 38, 180, 10, 'F');
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(10.5);
+        doc.setTextColor(79, 70, 229); // Indigo
+        const termLabel = data.semester?.toString() === '1' ? 'FIRST SEMESTER' : data.semester?.toString() === '2' ? 'SECOND SEMESTER' : `SEMESTER ${data.semester || data.term}`;
+        doc.text(`${termLabel} REPORT FOR THE ${data.session} ACADEMIC SESSION`, 105, 44.5, { align: 'center' });
+
+        // Student Profile section
+        const leftCol = 15;
+        let profileY = 52;
+
+        // Draw profile background box
+        doc.setFillColor(248, 250, 252);
+        doc.setDrawColor(226, 232, 240);
+        doc.setLineWidth(0.4);
+        doc.rect(15, profileY, 180, 24, 'FD');
+
+        doc.setFontSize(7.5);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(148, 163, 184);
+
+        // Row 1 label
+        doc.text('STUDENT NAME', leftCol + 5, profileY + 6);
+        doc.text('MATRIC / ADMISSION NO', leftCol + 65, profileY + 6);
+        doc.text('LEVEL', leftCol + 125, profileY + 6);
+
+        // Row 1 value
+        doc.setFontSize(9);
+        doc.setTextColor(15, 23, 42);
+        const nameVal = data.student?.name || `${data.student?.firstName || ''} ${data.student?.lastName || ''}`.trim() || 'STUDENT';
+        doc.text(nameVal.toUpperCase(), leftCol + 5, profileY + 11);
+        const matricVal = data.student?.matricNumber || data.student?.admissionNumber || 'N/A';
+        doc.text(matricVal.toUpperCase(), leftCol + 65, profileY + 11);
+        const levelVal = data.student?.currentLevel || data.student?.level || 100;
+        doc.text(`${levelVal} LEVEL`, leftCol + 125, profileY + 11);
+
+        // Row 2 label
+        doc.setFontSize(7.5);
+        doc.setTextColor(148, 163, 184);
+        doc.text('DEPARTMENT', leftCol + 5, profileY + 18);
+        doc.text('PROGRAMME', leftCol + 65, profileY + 18);
+        doc.text('STATUS', leftCol + 125, profileY + 18);
+
+        // Row 2 value
+        doc.setFontSize(9);
+        doc.setTextColor(15, 23, 42);
+        const deptVal = data.student?.department || 'N/A';
+        doc.text(deptVal.toUpperCase(), leftCol + 5, profileY + 23);
+        const progVal = data.student?.programme || 'N/A';
+        doc.text(progVal.toUpperCase(), leftCol + 65, profileY + 23);
+        doc.text('ACTIVE', leftCol + 125, profileY + 23);
+
+        // Results Table using AutoTable
+        let tableY = profileY + 29;
+        
+        const results = data.results || [];
+        const tableBody = results.map((r: any) => [
+            r.code || r.courseCode || 'N/A',
+            r.title || r.courseTitle || 'N/A',
+            (r.units || r.creditUnits || 3).toString(),
+            (r.score || r.totalScore || 0).toString(),
+            r.grade || 'N/A',
+            (r.gp || r.gradePoint || DocumentService.getGpForGrade(r.grade || '')).toFixed(2)
+        ]);
+
+        (doc as any).autoTable({
+            startY: tableY,
+            head: [['COURSE CODE', 'COURSE TITLE', 'CREDIT UNITS', 'SCORE', 'GRADE', 'GRADE POINT']],
+            body: tableBody,
+            theme: 'grid',
+            headStyles: { fillColor: [15, 23, 42], textColor: 255, fontStyle: 'bold', fontSize: 8 },
+            styles: { fontSize: 8, cellPadding: 2.5, textColor: [51, 65, 85] },
+            columnStyles: {
+                0: { fontStyle: 'bold', halign: 'left', cellWidth: 35 },
+                1: { halign: 'left' },
+                2: { halign: 'center', cellWidth: 25 },
+                3: { halign: 'center', cellWidth: 20 },
+                4: { halign: 'center', fontStyle: 'bold', textColor: [79, 70, 229], cellWidth: 20 },
+                5: { halign: 'center', cellWidth: 25 }
+            },
+            margin: { left: 15, right: 15 }
+        });
+
+        const finalTableY = (doc as any).lastAutoTable.finalY || (tableY + 30);
+        let summaryY = finalTableY + 8;
+
+        // Perform TCR, TCE, SGPA calculations
+        let tcr = data.summary?.tcr || 0;
+        let tce = data.summary?.tce || 0;
+        let sgpa = data.summary?.gpa || 0;
+        let cgpa = data.summary?.cgpa || 0;
+        let twgp = 0;
+
+        if (data.summary) {
+            twgp = results.reduce((s: number, r: any) => s + ((r.gp || r.gradePoint || 0) * (r.units || r.creditUnits || 0)), 0);
+        } else {
+            tcr = results.reduce((s: number, r: any) => s + (r.units || r.creditUnits || 3), 0);
+            tce = results.reduce((s: number, r: any) => s + (r.grade !== 'F' ? (r.units || r.creditUnits || 3) : 0), 0);
+            twgp = results.reduce((s: number, r: any) => {
+                const gpVal = r.gp || r.gradePoint || DocumentService.getGpForGrade(r.grade || '');
+                return s + (gpVal * (r.units || r.creditUnits || 3));
+            }, 0);
+            sgpa = tcr > 0 ? (twgp / tcr) : 0;
+            cgpa = sgpa;
+        }
+
+        // Draw summary box header
+        doc.setFontSize(8.5);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(15, 23, 42);
+        doc.text('ACADEMIC STANDING / PERFORMANCE SUMMARY', leftCol, summaryY);
+
+        summaryY += 3;
+        (doc as any).autoTable({
+            startY: summaryY,
+            body: [
+                ['Total Credits Registered (TCR)', tcr.toString(), 'Total Credits Earned (TCE)', tce.toString(), 'Total Weighted Points (TWGP)', twgp.toFixed(2)],
+                ['Semester GPA (SGPA)', sgpa.toFixed(2), 'Cumulative GPA (CGPA)', cgpa.toFixed(2), 'Academic Standing', sgpa >= 2.0 ? 'GOOD STANDING' : 'PROBATION']
+            ],
+            theme: 'grid',
+            styles: { fontSize: 7.5, cellPadding: 2.5 },
+            columnStyles: {
+                0: { fontStyle: 'bold', fillColor: [248, 250, 252], cellWidth: 45 },
+                1: { halign: 'center', fontStyle: 'bold', cellWidth: 15 },
+                2: { fontStyle: 'bold', fillColor: [248, 250, 252], cellWidth: 45 },
+                3: { halign: 'center', fontStyle: 'bold', cellWidth: 15 },
+                4: { fontStyle: 'bold', fillColor: [248, 250, 252], cellWidth: 45 },
+                5: { halign: 'center', fontStyle: 'bold', textColor: [79, 70, 229], cellWidth: 15 }
+            },
+            margin: { left: 15, right: 15 }
+        });
+
+        const finalSummaryY = (doc as any).lastAutoTable.finalY || (summaryY + 20);
+        let signatureY = finalSummaryY + 12;
+
+        if (signatureY > 250) {
+            doc.addPage();
+            signatureY = 30;
+            doc.setDrawColor(79, 70, 229);
+            doc.setLineWidth(1.2);
+            doc.rect(5, 5, 200, 287);
+            doc.setLineWidth(0.4);
+            doc.setDrawColor(226, 232, 240);
+            doc.rect(6.5, 6.5, 197, 284);
+        }
+
+        const sigWidth = 80;
+        const hodX = 15;
+        const deanX = 115;
+
+        doc.setFillColor(240, 253, 250);
+        doc.setDrawColor(20, 184, 166);
+        doc.setLineWidth(0.5);
+        
+        doc.rect(hodX + 15, signatureY, 50, 8, 'FD');
+        doc.setFontSize(7.5);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(13, 148, 136);
+        doc.text('APPROVED DIGITALLY', hodX + 40, signatureY + 5.5, { align: 'center' });
+
+        doc.rect(deanX + 15, signatureY, 50, 8, 'FD');
+        doc.text('APPROVED DIGITALLY', deanX + 40, signatureY + 5.5, { align: 'center' });
+
+        signatureY += 16;
+        doc.setDrawColor(203, 213, 225);
+        doc.setLineWidth(0.5);
+        doc.line(hodX, signatureY, hodX + sigWidth, signatureY);
+        doc.line(deanX, signatureY, deanX + sigWidth, signatureY);
+
+        doc.setFontSize(8.5);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(15, 23, 42);
+        doc.text('HEAD OF DEPARTMENT (HOD)', hodX + (sigWidth / 2), signatureY + 4, { align: 'center' });
+        doc.text('DEAN OF FACULTY', deanX + (sigWidth / 2), signatureY + 4, { align: 'center' });
+
+        doc.setFontSize(7);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(140, 140, 140);
+        doc.text('OFFICIAL SIGNATURE / DATE STAMP', hodX + (sigWidth / 2), signatureY + 7.5, { align: 'center' });
+        doc.text('OFFICIAL SIGNATURE / DATE STAMP', deanX + (sigWidth / 2), signatureY + 7.5, { align: 'center' });
     }
 }
 
