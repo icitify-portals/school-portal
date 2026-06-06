@@ -62,9 +62,32 @@ interface MenuItem {
 
 const studentMenuItems: MenuItem[] = [
     { name: "Dashboard", icon: LayoutDashboard, href: "/" },
-    { name: "Admission Status", icon: GraduationCap, href: "/student/admission", module: "admission" },
-    { name: "Course Registration", icon: BookOpen, href: "/student/registration", module: "results" }, // grouped with results/academics
-    { name: "Add/Drop Module", icon: Plus, href: "/student/registration/add-drop", module: "results" },
+    {
+        name: "Academics",
+        icon: GraduationCap,
+        subItems: [
+            { name: "Admission Status", href: "/student/admission", module: "admission" },
+            { name: "Course Registration", href: "/student/registration" },
+            { name: "Add/Drop Module", href: "/student/registration/add-drop" },
+            { name: "My Registrations", href: "/student/registration" },
+            { name: "Academic Transcript", href: "/student/transcript", module: "results" },
+            { name: "Graduate Documents", href: "/alumni/documents" },
+            { name: "Terminal Report Card", href: "/student/report-card" },
+            { name: "Weekly Timetable", href: "/student/timetable" },
+            { name: "Exam Clearance", href: "/student/clearance", module: "exams_records" },
+            { name: "Class Recordings", href: "/student/recordings" },
+            { name: "Learning Analytics", href: "/student/analytics", module: "results" },
+        ]
+    },
+    {
+        name: "E-Learning & ITS",
+        icon: BrainCircuit,
+        subItems: [
+            { name: "CBT Center", href: "/student/cbt" },
+            { name: "SmartBooks", href: "/student/smartbooks", module: "its" },
+            { name: "Tutor Feedback", href: "/student/evaluations" },
+        ]
+    },
     {
         name: "Payments & Wallet",
         icon: Wallet,
@@ -83,25 +106,28 @@ const studentMenuItems: MenuItem[] = [
             { name: "My Excuses", href: "/student/attendance/excuses" },
         ]
     },
-    { name: "Hostel Management", icon: Home, href: "/hostel", module: "hostels" },
-    { name: "Academic Transcript", icon: FileText, href: "/student/transcript", module: "results" },
-    { name: "Learning Analytics", icon: PieChart, href: "/student/analytics", module: "results" },
-    { name: "Weekly Timetable", icon: Calendar, href: "/student/timetable" },
-    { name: "Exam Clearance", icon: ShieldCheck, href: "/student/clearance", module: "exams_records" },
-    { name: "Status Changes", icon: RefreshCw, href: "/status" },
-    { name: "My Registrations", icon: FileText, href: "/student/registration" },
-    { name: "Terminal Report Card", icon: PieChart, href: "/student/report-card" },
-    { name: "CBT Center", icon: LayoutDashboard, href: "/student/cbt" },
-    { name: "SmartBooks", icon: BookOpen, href: "/student/smartbooks", module: "its" },
-    { name: "Hero Series", icon: Trophy, href: "/student/hero-series", module: "gamification" },
-    { name: "My Achievements", icon: Award, href: "/student/achievements", module: "gamification" },
-    { name: "SIWES Portal", icon: Briefcase, href: "/student/siwes" },
-    { name: "Leaderboard", icon: Trophy, href: "/student/leaderboard", module: "gamification" },
-    { name: "Digital ID Card", icon: ShieldCheck, href: "/student/id-card" },
-    { name: "Class Recordings", icon: Database, href: "/student/recordings" },
-    { name: "Communications", icon: MessageSquare, href: "/communications" },
-    { name: "Sports & Athletics", icon: Trophy, href: "/student/sports", module: "sports" },
-    { name: "Tutor Feedback", icon: UserCheck, href: "/student/evaluations" },
+    {
+        name: "Sports & Achievements",
+        icon: Trophy,
+        subItems: [
+            { name: "Sports & Athletics", href: "/student/sports", module: "sports" },
+            { name: "Hero Series", href: "/student/hero-series", module: "gamification" },
+            { name: "My Achievements", href: "/student/achievements", module: "gamification" },
+            { name: "Leaderboard", href: "/student/leaderboard", module: "gamification" },
+        ]
+    },
+    {
+        name: "Campus Life & Tools",
+        icon: Home,
+        subItems: [
+            { name: "Hostel Management", href: "/hostel", module: "hostels" },
+            { name: "SIWES Portal", href: "/student/siwes" },
+            { name: "Digital ID Card", href: "/student/id-card" },
+            { name: "Library & OPAC", href: "/library", module: "library" },
+            { name: "Communications", href: "/communications" },
+            { name: "Status Changes", href: "/status" },
+        ]
+    },
     { name: "Profile", icon: User, href: "/profile" },
 ];
 
@@ -146,6 +172,7 @@ const adminMenuItems: MenuItem[] = [
             { name: "Grading Systems", href: "/admin/settings/grading" },
             { name: "Registration Controls", href: "/admin/registration/controls" },
             { name: "Academic Transcripts", href: "/admin/academics/transcripts" },
+            { name: "Graduate Document Requests", href: "/admin/exams-records/documents" },
             { name: "Result Views", href: "/admin/exams-records/results" },
             { name: "Quality Assurance", href: "/admin/quality-assurance" },
         ]
@@ -188,6 +215,7 @@ const adminMenuItems: MenuItem[] = [
             { name: "Expenditure Requests", href: "/admin/bursary/expenditure" },
             { name: "External Inflows", href: "/admin/bursary/inflows" },
             { name: "Exam Clearance", href: "/admin/bursary/clearance" },
+            { name: "Document Pricing Settings", href: "/admin/bursary/documents" },
             { name: "Scholarships & Trusts", href: "/admin/bursary/scholarships" },
             { name: "Bank Reconciliation", href: "/admin/bursary/reconciliation" },
             { name: "Transaction History", href: "/admin/bursary/history" },
@@ -344,6 +372,16 @@ const adminMenuItems: MenuItem[] = [
         ]
     },
     {
+        name: "Library Management",
+        icon: BookOpen,
+        module: "library",
+        subItems: [
+            { name: "Library OPAC Hub", href: "/library" },
+            { name: "Manage Collections", href: "/admin/library" },
+            { name: "Webcam Scanner", href: "/library/scan" },
+        ]
+    },
+    {
         name: "Inventory & Stock",
         icon: Package,
         subItems: [
@@ -356,16 +394,33 @@ const adminMenuItems: MenuItem[] = [
 
 const dvcMenuItems: MenuItem[] = [
     { name: "DVC Dashboard", icon: LayoutDashboard, href: "/admin/dashboard" },
+    { name: "All Students", icon: UsersIcon, href: "/admin/students" },
+    { name: "Staff Directory", icon: UsersIcon, href: "/admin/hr" },
     { name: "Registration Concessions", icon: ShieldAlert, href: "/admin/registration/concessions" },
     { name: "Profile", icon: User, href: "/profile" },
 ];
 
 const staffMenuItems: MenuItem[] = [
     { name: "Dashboard", icon: LayoutDashboard, href: "/staff/dashboard" },
-    { name: "Result Grading", icon: GraduationCap, href: "/staff/results" },
-    { name: "Assignments", icon: FileText, href: "/staff/assignments" },
-    { name: "CBT Quizzes", icon: BrainCircuit, href: "/staff/quizzes" },
-    { name: "Lesson Notes", icon: BookOpen, href: "/staff/courses" },
+    {
+        name: "Academics & Teaching",
+        icon: GraduationCap,
+        subItems: [
+            { name: "Result Grading", href: "/staff/results" },
+            { name: "Assignments", href: "/staff/assignments" },
+            { name: "Lesson Notes", href: "/staff/courses" },
+            { name: "Weekly Timetable", href: "/staff/timetable" },
+            { name: "Class Recordings", href: "/staff/recordings" },
+        ]
+    },
+    {
+        name: "E-Learning & Feedback",
+        icon: BrainCircuit,
+        subItems: [
+            { name: "CBT Quizzes", href: "/staff/quizzes" },
+            { name: "Student Evaluations", href: "/staff/feedback" },
+        ]
+    },
     {
         name: "Attendance",
         icon: ClipboardCheck,
@@ -375,15 +430,25 @@ const staffMenuItems: MenuItem[] = [
             { name: "Excuse Review", href: "/staff/attendance/excuses" },
         ]
     },
-    { name: "Class Recordings", icon: Database, href: "/staff/recordings" },
-    { name: "Weekly Timetable", icon: Calendar, href: "/staff/timetable" },
-    { name: "My Payslips", icon: Wallet, href: "/staff/payslips" },
-    { name: "Expenditure Requests", icon: Wallet, href: "/staff/expenditure" },
-    { name: "Staff ID Card", icon: ShieldCheck, href: "/staff/id-card" },
-    { name: "Growth & Certifications", icon: Award, href: "/staff/growth" },
-    { name: "Communications", icon: MessageSquare, href: "/communications" },
-    { name: "Sports Coaching", icon: Trophy, href: "/staff/sports", module: "sports" },
-    { name: "Student Evaluations", icon: UserCheck, href: "/staff/feedback" },
+    {
+        name: "Financials & HR",
+        icon: Wallet,
+        subItems: [
+            { name: "My Payslips", href: "/staff/payslips" },
+            { name: "Expenditure Requests", href: "/staff/expenditure" },
+            { name: "Staff ID Card", href: "/staff/id-card" },
+        ]
+    },
+    {
+        name: "Campus & Development",
+        icon: Home,
+        subItems: [
+            { name: "Sports Coaching", href: "/staff/sports", module: "sports" },
+            { name: "Growth & Certifications", href: "/staff/growth" },
+            { name: "Library Portal", href: "/library", module: "library" },
+            { name: "Communications", href: "/communications" },
+        ]
+    },
     { name: "Profile", icon: User, href: "/profile" },
 ];
 
@@ -419,6 +484,12 @@ export function Sidebar({ enabledModules = {}, mobileOpen = false, onClose }: {
                 if (item.module && enabledModules[item.module] === false) {
                     return false;
                 }
+                if (isK12) {
+                    const topHiddenInK12 = ["/admin/siwes"];
+                    if (topHiddenInK12.includes(item.href || '')) {
+                        return false;
+                    }
+                }
                 return true;
             })
             .map(item => {
@@ -434,9 +505,24 @@ export function Sidebar({ enabledModules = {}, mobileOpen = false, onClose }: {
                                     "/admin/faculties",
                                     "/admin/departments",
                                     "/admin/programmes",
-                                    "/admin/registration/controls"
+                                    "/admin/registration/controls",
+                                    "/admin/academics/transcripts",
+                                    "/admin/siwes",
+                                    "/student/transcript",
+                                    "/student/registration/add-drop",
+                                    "/student/recordings",
+                                    "/staff/recordings",
+                                    "/student/siwes"
                                 ];
-                                if (hiddenInK12.includes(sub.href)) {
+                                if (hiddenInK12.includes(sub.href || '')) {
+                                    return false;
+                                }
+                            } else {
+                                const hiddenInTertiary = [
+                                    "/student/report-card",
+                                    "/student/evaluations"
+                                ];
+                                if (hiddenInTertiary.includes(sub.href || '')) {
                                     return false;
                                 }
                             }
@@ -448,11 +534,47 @@ export function Sidebar({ enabledModules = {}, mobileOpen = false, onClose }: {
             });
     };
 
-    const rawMenuItems = (role === 'admin' || role === 'superadmin') ? adminMenuItems :
-        role === 'dvc' ? dvcMenuItems :
-            role === 'staff' ? staffMenuItems :
-                role === 'parent' ? parentMenuItems :
-                    studentMenuItems;
+    const rawMenuItems = (() => {
+        if (role === 'admin' || role === 'superadmin' || role === 'registrar' || role === 'bursar' || role === 'librarian') {
+            return adminMenuItems;
+        } else if (role === 'dvc') {
+            return dvcMenuItems;
+        } else if (role === 'hod' || role === 'dean') {
+            // Customize staffMenuItems for HOD and Dean
+            const updated = staffMenuItems.map((item, idx) => {
+                if (idx === 0 && item.name === "Dashboard") {
+                    return {
+                        name: role === 'hod' ? "HOD Dashboard" : "Dean Dashboard",
+                        icon: LayoutDashboard,
+                        href: role === 'hod' ? "/admin/hod" : "/admin/dean"
+                    };
+                }
+                return item;
+            });
+            // Insert "Directory Search" administrative section before "Campus & Development"
+            const insertIndex = updated.findIndex(item => item.name === "Campus & Development");
+            const adminSection: MenuItem = {
+                name: "Directory Search",
+                icon: UsersIcon,
+                subItems: [
+                    { name: "All Students", href: "/admin/students" },
+                    { name: "Staff Directory", href: "/admin/hr" }
+                ]
+            };
+            if (insertIndex !== -1) {
+                updated.splice(insertIndex, 0, adminSection);
+            } else {
+                updated.push(adminSection);
+            }
+            return updated;
+        } else if (role === 'parent') {
+            return parentMenuItems;
+        } else if (role === 'staff') {
+            return staffMenuItems;
+        } else {
+            return studentMenuItems;
+        }
+    })();
 
     const menuItems = filterItems(rawMenuItems);
 
@@ -464,14 +586,23 @@ export function Sidebar({ enabledModules = {}, mobileOpen = false, onClose }: {
         );
     };
 
+    const isStudent = role === 'student';
+
     const sidebarContent = (
         <div 
-            className="flex flex-col h-screen w-64 text-white border-r border-white/10"
-            style={{ backgroundColor: 'var(--brand-secondary, #0f172a)' }}
+            className={cn(
+                "flex flex-col h-screen w-64 border-r",
+                isStudent ? "bg-white border-slate-100 text-slate-800 shadow-sm" : "text-white border-white/10"
+            )}
+            style={isStudent ? {} : { backgroundColor: 'var(--brand-secondary, #0f172a)' }}
         >
             <div className="p-6">
                 <div className="flex items-center gap-3">
-                    {branding?.INST_LOGO ? (
+                    {isStudent ? (
+                        <div className="p-2 bg-emerald-600 rounded-lg shadow-lg shadow-emerald-500/20">
+                            <GraduationCap className="w-5 h-5 text-white" />
+                        </div>
+                    ) : branding?.INST_LOGO ? (
                         <img src={branding.INST_LOGO} alt="Logo" className="w-8 h-8 rounded-lg object-contain" />
                     ) : (
                         <div className="p-2 bg-indigo-600 rounded-lg shadow-lg shadow-indigo-500/20">
@@ -479,10 +610,13 @@ export function Sidebar({ enabledModules = {}, mobileOpen = false, onClose }: {
                         </div>
                     )}
                     <div>
-                        <h1 className="text-xl font-bold bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent truncate w-40">
-                            {branding?.INST_NAME || "SchoolPortal"}
+                        <h1 className={cn(
+                            "text-lg font-black truncate w-40 uppercase tracking-tighter",
+                            isStudent ? "text-emerald-800" : "bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent"
+                        )}>
+                            {isStudent ? "Student Portal" : (branding?.INST_NAME || "SchoolPortal")}
                         </h1>
-                        {branding?.INST_MOTTO && (
+                        {!isStudent && branding?.INST_MOTTO && (
                             <p className="text-[8px] text-slate-500 uppercase font-black tracking-widest truncate w-40">
                                 {branding.INST_MOTTO}
                             </p>
@@ -494,12 +628,18 @@ export function Sidebar({ enabledModules = {}, mobileOpen = false, onClose }: {
             {/* Branch Switcher */}
             {availableUnits.length > 1 && (
                 <div className="px-6 mb-4">
-                    <div className="bg-white/5 rounded-2xl p-4 border border-white/10">
+                    <div className={cn(
+                        "rounded-2xl p-4 border",
+                        isStudent ? "bg-slate-50 border-slate-100" : "bg-white/5 border-white/10"
+                    )}>
                         <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block">Active Branch</label>
                         <select 
                             value={activeUnit?.id} 
                             onChange={(e) => switchUnit(Number(e.target.value))}
-                            className="w-full bg-slate-800 text-white text-xs font-bold rounded-lg p-2 border border-white/10 focus:ring-2 focus:ring-indigo-500 outline-none"
+                            className={cn(
+                                "w-full text-xs font-bold rounded-lg p-2 border focus:ring-2 focus:ring-indigo-500 outline-none",
+                                isStudent ? "bg-white text-slate-800 border-slate-200" : "bg-slate-800 text-white border-white/10"
+                            )}
                         >
                             {availableUnits.map((u) => (
                                 <option key={u.unit.id} value={u.unit.id}>
@@ -518,32 +658,52 @@ export function Sidebar({ enabledModules = {}, mobileOpen = false, onClose }: {
                     const isSubItemActive = hasSubItems && item.subItems?.some(sub => pathname === sub.href);
                     const isActive = pathname === item.href || isSubItemActive;
 
+                    const itemClassName = isStudent
+                        ? cn(
+                            "flex items-center justify-between w-full px-3 py-2 rounded-xl transition-all hover:bg-slate-50 group mb-0.5 relative overflow-hidden",
+                            isActive ? "text-emerald-700 bg-emerald-50 font-extrabold after:absolute after:right-0 after:top-0 after:bottom-0 after:w-1 after:bg-emerald-700" : "text-slate-600 hover:text-slate-900 font-bold"
+                          )
+                        : cn(
+                            "flex items-center justify-between w-full px-3 py-2 rounded-xl transition-all hover:bg-white/10 group mb-0.5",
+                            isActive ? "text-white bg-indigo-600 shadow-xl shadow-indigo-600/20" : "text-white/90 hover:text-white"
+                          );
+
+                    const linkClassName = isStudent
+                        ? cn(
+                            "flex items-center gap-3 px-3 py-2 rounded-xl transition-all hover:bg-slate-50 group mb-0.5 relative overflow-hidden",
+                            pathname === item.href ? "text-emerald-700 bg-emerald-50 font-extrabold after:absolute after:right-0 after:top-0 after:bottom-0 after:w-1 after:bg-emerald-700" : "text-slate-600 hover:text-slate-900 font-bold"
+                          )
+                        : cn(
+                            "flex items-center gap-3 px-3 py-2 rounded-xl transition-all hover:bg-white/10 group mb-0.5",
+                            pathname === item.href ? "text-white shadow-xl bg-indigo-600 shadow-indigo-600/20" : "text-white/90 hover:text-white"
+                          );
+
+                    const iconClassName = isStudent
+                        ? cn("w-5 h-5", isActive || pathname === item.href ? "text-emerald-700" : "text-slate-400 group-hover:text-emerald-600")
+                        : cn("w-5 h-5", isActive || pathname === item.href ? "text-white" : "text-slate-400 group-hover:text-indigo-300");
+
+                    const chevronColor = isStudent ? "text-slate-400 group-hover:text-slate-600" : "text-white/50 group-hover:text-white";
+
                     return (
                         <div key={item.name} className="space-y-1">
                             {hasSubItems ? (
                                 <button
                                     onClick={() => toggleMenu(item.name)}
                                     aria-expanded={isOpen}
-                                    className={cn(
-                                        "flex items-center justify-between w-full px-3 py-2 rounded-xl transition-all hover:bg-white/10 group mb-0.5",
-                                        isActive ? "text-white bg-indigo-600 shadow-xl shadow-indigo-600/20" : "text-white/90 hover:text-white"
-                                    )}
+                                    className={itemClassName}
                                 >
                                     <div className="flex items-center gap-3">
-                                        <item.icon className={cn("w-5 h-5", isActive ? "text-white" : "text-slate-400 group-hover:text-indigo-300")} />
+                                        <item.icon className={iconClassName} />
                                         <span className="font-black text-[14px]">{item.name}</span>
                                     </div>
-                                    {isOpen ? <ChevronDown className="w-4 h-4 text-white/50 group-hover:text-white" /> : <ChevronRight className="w-4 h-4 text-white/50 group-hover:text-white" />}
+                                    {isOpen ? <ChevronDown className={cn("w-4 h-4", chevronColor)} /> : <ChevronRight className={cn("w-4 h-4", chevronColor)} />}
                                 </button>
                             ) : item.href ? (
                                 <Link
                                     href={item.href}
-                                    className={cn(
-                                        "flex items-center gap-3 px-3 py-2 rounded-xl transition-all hover:bg-white/10 group mb-0.5",
-                                        pathname === item.href ? "text-white shadow-xl bg-indigo-600 shadow-indigo-600/20" : "text-white/90 hover:text-white"
-                                    )}
+                                    className={linkClassName}
                                 >
-                                    <item.icon className={cn("w-5 h-5", pathname === item.href ? "text-white" : "text-slate-400 group-hover:text-indigo-300")} />
+                                    <item.icon className={iconClassName} />
                                     <span className="font-black text-[14px]">
                                         {item.name.replace("Student", alias("student" as any)).replace("Course", alias("course" as any)).replace("Semester", alias("term" as any))}
                                     </span>
@@ -551,17 +711,28 @@ export function Sidebar({ enabledModules = {}, mobileOpen = false, onClose }: {
                             ) : null}
 
                             {hasSubItems && isOpen && (
-                                <div className="ml-9 space-y-0.5 border-l border-slate-700/50 pl-2 mb-1">
+                                <div className={cn(
+                                    "ml-9 space-y-0.5 pl-2 mb-1",
+                                    isStudent ? "border-l border-slate-200" : "border-l border-slate-700/50"
+                                )}>
                                     {item.subItems?.map((sub) => (
                                         <Link
                                             key={sub.name}
                                             href={sub.href}
-                                            className={cn(
-                                                "block px-3 py-1.5 text-[11px] font-black rounded-lg transition-all",
-                                                pathname === sub.href
-                                                    ? "bg-white/20 text-white"
-                                                    : "text-white/70 hover:text-white hover:bg-white/5"
-                                            )}
+                                            className={isStudent
+                                                ? cn(
+                                                    "block px-3 py-1.5 text-[11px] font-bold rounded-lg transition-all",
+                                                    pathname === sub.href
+                                                        ? "bg-emerald-50 text-emerald-700"
+                                                        : "text-slate-500 hover:text-slate-800 hover:bg-slate-50"
+                                                  )
+                                                : cn(
+                                                    "block px-3 py-1.5 text-[11px] font-black rounded-lg transition-all",
+                                                    pathname === sub.href
+                                                        ? "bg-white/20 text-white"
+                                                        : "text-white/70 hover:text-white hover:bg-white/5"
+                                                  )
+                                            }
                                         >
                                             {sub.name.replace("Course", isK12 ? "Subject" : "Course").replace("course", isK12 ? "subject" : "course")}
                                         </Link>
@@ -573,24 +744,36 @@ export function Sidebar({ enabledModules = {}, mobileOpen = false, onClose }: {
                 })}
             </nav>
 
-            <div className="p-4 border-t border-slate-800 space-y-1">
+            <div className={cn(
+                "p-4 border-t space-y-1",
+                isStudent ? "border-slate-100" : "border-slate-800"
+            )}>
                 <Link
                     href="/"
-                    className="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-300 hover:bg-slate-800 transition-all font-medium text-sm"
+                    className={cn(
+                        "flex items-center gap-3 px-3 py-2 rounded-lg transition-all font-medium text-sm",
+                        isStudent ? "text-slate-600 hover:bg-slate-50 hover:text-slate-900" : "text-slate-300 hover:bg-slate-800"
+                    )}
                 >
                     <Globe className="w-5 h-5 text-slate-400" />
                     <span>Public Homepage</span>
                 </Link>
                 <Link
                     href="/profile"
-                    className="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-300 hover:bg-slate-800 transition-all font-medium text-sm"
+                    className={cn(
+                        "flex items-center gap-3 px-3 py-2 rounded-lg transition-all font-medium text-sm",
+                        isStudent ? "text-slate-600 hover:bg-slate-50 hover:text-slate-900" : "text-slate-300 hover:bg-slate-800"
+                    )}
                 >
                     <Settings className="w-5 h-5 text-slate-400" />
                     <span>Settings</span>
                 </Link>
                 <button
                     onClick={() => signOut({ callbackUrl: "/login" })}
-                    className="flex items-center gap-3 w-full px-3 py-2 rounded-lg text-red-400 hover:bg-red-500/10 transition-all font-medium text-sm"
+                    className={cn(
+                        "flex items-center gap-3 w-full px-3 py-2 rounded-lg transition-all font-medium text-sm",
+                        isStudent ? "text-rose-600 hover:bg-rose-50" : "text-red-400 hover:bg-red-500/10"
+                    )}
                 >
                     <LogOut className="w-5 h-5" />
                     <span>Logout</span>
