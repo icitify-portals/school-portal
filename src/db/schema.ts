@@ -8,7 +8,7 @@ export const users = mysqlTable('users', {
   name: varchar('name', { length: 255 }).notNull(),
   email: varchar('email', { length: 255 }).unique().notNull(),
   password: varchar('password', { length: 255 }).notNull(),
-  role: mysqlEnum('role', ['admin', 'staff', 'student', 'dvc', 'healthadmin', 'applicant', 'fresher', 'superadmin', 'parent', 'icitify_dev']).default('student'),
+  role: mysqlEnum('role', ['admin', 'staff', 'student', 'dvc', 'healthadmin', 'applicant', 'fresher', 'superadmin', 'parent', 'icitify_dev', 'bursar', 'registrar', 'librarian', 'hod', 'dean', 'admission_officer']).default('student'),
   status: mysqlEnum('status', ['active', 'suspended', 'withdrawn', 'graduated', 'rusticated']).default('active'),
   phone: varchar('phone', { length: 20 }),
   imageUrl: varchar('image_url', { length: 255 }),

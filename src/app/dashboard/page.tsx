@@ -16,17 +16,35 @@ export default async function DashboardRedirectPage() {
 
     switch (role) {
         case 'superadmin':
+        case 'icitify_dev':
             redirect("/super-admin/dashboard");
         case 'admin':
             redirect("/admin/dashboard");
         case 'staff':
             redirect("/staff/dashboard");
         case 'student':
-            redirect("/student/dashboard");
+            redirect("/student");
         case 'parent':
             redirect("/parent/dashboard");
         case 'dvc':
-            redirect("/admin/dashboard"); // DVCs use admin dashboard in this system
+            redirect("/dvc/dashboard");
+        case 'bursar':
+            redirect("/admin/bursary"); // Task-bounded Bursar Finance Dashboard
+        case 'registrar':
+        case 'admission_officer':
+            redirect("/admin/admission"); // Task-bounded Registrar & Admission Dashboard
+        case 'librarian':
+            redirect("/admin/library"); // Task-bounded Librarian & Journal Dashboard
+        case 'healthadmin':
+            redirect("/healthadmin/dashboard"); // Task-bounded Health Admin Dashboard
+        case 'fresher':
+            redirect("/fresher"); // Task-bounded Admitted Fresher Portal
+        case 'applicant':
+            redirect("/admission"); // Intake Portal for Applicants
+        case 'hod':
+            redirect("/admin/hod"); // Dedicated Standalone HOD Workspace
+        case 'dean':
+            redirect("/admin/dean"); // Dedicated Standalone Dean Workspace
         default:
             redirect("/");
     }

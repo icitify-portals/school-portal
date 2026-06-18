@@ -535,7 +535,7 @@ export function Sidebar({ enabledModules = {}, mobileOpen = false, onClose }: {
     };
 
     const rawMenuItems = (() => {
-        if (role === 'admin' || role === 'superadmin' || role === 'registrar' || role === 'bursar' || role === 'librarian') {
+        if (role === 'admin' || role === 'superadmin' || role === 'registrar' || role === 'bursar' || role === 'librarian' || role === 'admission_officer') {
             return adminMenuItems;
         } else if (role === 'dvc') {
             return dvcMenuItems;
