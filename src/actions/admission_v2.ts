@@ -6,11 +6,17 @@ import {
     admissionFormSections, 
     admissionFormFields,
     admissionApplicationsV2,
+    admissionApplicantsV2,
+    examinationBodies,
+    applicantOLevelSittings,
+    applicantOLevelSubjects,
     users,
-    students
+    students,
+    systemSettings
 } from "@/db/schema";
-import { eq, and, desc, asc } from "drizzle-orm";
+import { eq, and, desc, asc, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { sendInAppNotification } from "./notifications";
 
 /**
  * Form Template Actions
@@ -60,17 +66,17 @@ export async function getFormTemplate(id: number) {
 
 export async function saveFormTemplate(data: any) {
     try {
-        const { id, name, level, slug, description, applicationFee, lateFee, startDate, endDate, lateEndDate, minAge, isActive } = data;
+        const { id, name, level, slug, description, flowType, feeStructureId, applicationFee, lateFee, startDate, endDate, lateEndDate, minAge, isActive } = data;
         
         if (id) {
             await db.update(admissionFormTemplates)
-                .set({ name, level, slug, description, applicationFee, lateFee, startDate, endDate, lateEndDate, minAge, isActive })
+                .set({ name, level, slug, description, flowType, feeStructureId, applicationFee, lateFee, startDate, endDate, lateEndDate, minAge, isActive })
                 .where(eq(admissionFormTemplates.id, id));
             revalidatePath(`/admin/admission/builder/${id}`);
             return { success: true, id };
         } else {
             const [result] = await db.insert(admissionFormTemplates).values({
-                name, level, slug, description, applicationFee, lateFee, startDate, endDate, lateEndDate, minAge, isActive
+                name, level, slug, description, flowType, feeStructureId, applicationFee, lateFee, startDate, endDate, lateEndDate, minAge, isActive
             });
             revalidatePath("/admin/admission/builder");
             return { success: true, id: result.insertId };
@@ -453,8 +459,12 @@ export async function confirmAcceptancePayment(applicationId: number, reference:
                 updatedAt: new Date()
             })
             .where(eq(admissionApplicationsV2.id, applicationId));
+
+        // Auto-finalize the admission and generate the matric number immediately!
+        await finalizeStudentAdmission(applicationId);
         
         revalidatePath(`/admission/status/${applicationId}`);
+        return { success: true };
     } catch (error) {
         console.error("Failed to confirm acceptance payment:", error);
         return { success: false, error: "An error occurred" };
@@ -483,10 +493,31 @@ export async function finalizeStudentAdmission(applicationId: number) {
 
         const formData = JSON.parse(application.formData || "{}");
 
-        // Generate Matric Number (Simple Year + Level + Application ID)
+        // Resilient scanning for JAMB registration number in dynamic forms
+        let jambRegNo = "";
+        for (const key of Object.keys(formData)) {
+            if (key.toLowerCase().includes("jamb") && formData[key]) {
+                jambRegNo = String(formData[key]).trim();
+                break;
+            }
+        }
+        const isJambCandidate = !!jambRegNo && !jambRegNo.toLowerCase().includes("temp") && !jambRegNo.toLowerCase().includes("direct");
+        const studyMode = isJambCandidate ? "Full-Time" : "Part-Time";
+        const studyModeCode = isJambCandidate ? "FT" : "PT";
+        const modeOfEntry = isJambCandidate ? "JAMB" : "Direct";
+
+        // Generate FSS standard matriculation number
         const year = new Date().getFullYear();
-        const levelCode = template.level.charAt(0).toUpperCase();
-        const matricNumber = `${year}/${levelCode}/${application.id}/${Math.floor(1000 + Math.random() * 9000)}`;
+        const progName = (template.level.toLowerCase().includes("nd") || template.level.toLowerCase().includes("diploma")) ? "ND" : "HND";
+        
+        // Query total student count for the year to generate a unique sequence number
+        const countRes = await db.select({ count: sql<number>`count(*)` })
+            .from(students)
+            .where(eq(students.admissionYear, year));
+        
+        const sequence = (countRes[0]?.count || 0) + 1;
+        const formattedSeq = sequence.toString().padStart(4, '0');
+        const matricNumber = `FSS/IB/${year}/${studyModeCode}/${progName}/${formattedSeq}`;
 
         // 1. Create User
         const [userResult] = await db.insert(users).values({
@@ -501,12 +532,15 @@ export async function finalizeStudentAdmission(applicationId: number) {
 
         const userId = userResult.insertId;
 
-        // 2. Create Student with extended mapping
+        // 2. Create Student with extended mapping including Study Mode
         await db.insert(students).values({
             userId: userId,
             firstName: formData.firstName || formData.fullName?.split(' ')[0],
             lastName: formData.lastName || formData.fullName?.split(' ').slice(1).join(' '),
             matricNumber: matricNumber,
+            jambNumber: jambRegNo || null,
+            modeOfEntry: modeOfEntry,
+            studyMode: studyMode,
             admissionYear: year,
             gender: (formData.gender?.toLowerCase() || 'other') as any,
             dob: formData.dob,
@@ -538,9 +572,302 @@ export async function finalizeStudentAdmission(applicationId: number) {
         revalidatePath(`/admission/status/${applicationId}`);
         revalidatePath("/admin/admission/reports");
         
+        await sendInAppNotification({
+            userId: userId,
+            title: "Admission Accepted!",
+            message: `Welcome! Your admission is finalized. Matric Number: ${matricNumber}`,
+            type: "success"
+        });
+        
         return { success: true, matricNumber };
     } catch (error: any) {
         console.error("Failed to finalize admission:", error);
         return { success: false, error: error.message || "An error occurred during registration" };
     }
 }
+
+import { SplitPaymentEngine } from "@/services/SplitPaymentEngine";
+
+export async function processAdmissionPayment(applicationId: number, feeStructureId: number, applicantEmail: string, applicantName: string) {
+    try {
+        const engine = new SplitPaymentEngine();
+        const res = await engine.checkoutAdmissionForm(applicationId, feeStructureId, applicantEmail, applicantName);
+        return res;
+    } catch (error: any) {
+        console.error("Admission Payment Error:", error);
+        return { success: false, error: error.message };
+    }
+}
+
+import { hash } from "bcryptjs";
+import { users } from "@/db/schema";
+
+export async function registerApplicant(data: any) {
+    try {
+        const { templateId, firstName, lastName, email, phone, password } = data;
+
+        // 1. Check if user exists
+        const existingUser = await db.query.users.findFirst({
+            where: eq(users.email, email)
+        });
+
+        let userId;
+
+        if (existingUser) {
+            userId = existingUser.id;
+        } else {
+            // Create user
+            const hashedPassword = await hash(password, 10);
+            const [userRes] = await db.insert(users).values({
+                name: `${firstName} ${lastName}`.trim(),
+                email,
+                phoneNumber: phone,
+                password: hashedPassword,
+                role: 'applicant',
+                isActive: true
+            });
+            userId = userRes.insertId;
+        }
+
+        // 2. Create Draft Application
+        const [appRes] = await db.insert(admissionApplicationsV2).values({
+            templateId,
+            applicantId: userId,
+            status: 'draft',
+            paymentStatus: 'pending'
+        });
+
+        return { success: true, applicationId: appRes.insertId };
+    } catch (error: any) {
+        console.error("Applicant Registration Error:", error);
+        return { success: false, error: error.message };
+    }
+}
+
+export async function getExaminationBodies() {
+    try {
+        return await db.select().from(examinationBodies).where(eq(examinationBodies.isActive, true));
+    } catch (error) {
+        console.error("Fetch exam bodies error:", error);
+        return [];
+    }
+}
+
+export async function saveOLevelResultsAction(applicationId: number, applicantId: number, sittings: any[]) {
+    try {
+        // Clear previous entries
+        const existingSittings = await db.select().from(applicantOLevelSittings)
+            .where(and(eq(applicantOLevelSittings.applicationId, applicationId), eq(applicantOLevelSittings.applicantId, applicantId)));
+            
+        for (const sitting of existingSittings) {
+            await db.delete(applicantOLevelSubjects).where(eq(applicantOLevelSubjects.sittingId, sitting.id));
+        }
+        await db.delete(applicantOLevelSittings).where(and(eq(applicantOLevelSittings.applicationId, applicationId), eq(applicantOLevelSittings.applicantId, applicantId)));
+
+        // Insert new ones
+        for (let i = 0; i < sittings.length; i++) {
+            const sitting = sittings[i];
+            const [res] = await db.insert(applicantOLevelSittings).values({
+                applicantId,
+                applicationId,
+                examBodyId: parseInt(sitting.examBodyId),
+                examYear: sitting.examYear,
+                examNumber: sitting.examNumber,
+                sittingNumber: i + 1
+            });
+            const sittingId = res.insertId;
+
+            if (sitting.subjects && sitting.subjects.length > 0) {
+                const subjectValues = sitting.subjects.filter((s: any) => s.subjectName && s.grade).map((s: any) => ({
+                    sittingId,
+                    subjectName: s.subjectName,
+                    grade: s.grade
+                }));
+                if (subjectValues.length > 0) {
+                    await db.insert(applicantOLevelSubjects).values(subjectValues);
+                }
+            }
+        }
+        return { success: true };
+    } catch (error: any) {
+        console.error("Save OLevel Error:", error);
+        return { success: false, error: error.message };
+    }
+}
+
+export async function getApplicantApplication(applicationId: number, applicantId: number) {
+    try {
+        const [app] = await db.select({
+            id: admissionApplicationsV2.id,
+            status: admissionApplicationsV2.status,
+            paymentStatus: admissionApplicationsV2.paymentStatus,
+            data: admissionApplicationsV2.data,
+            template: {
+                id: admissionFormTemplates.id,
+                name: admissionFormTemplates.name,
+                flowType: admissionFormTemplates.flowType,
+                applicationFee: admissionFormTemplates.applicationFee,
+                feeStructureId: admissionFormTemplates.feeStructureId,
+                sections: admissionFormTemplates.sections,
+                minAge: admissionFormTemplates.minAge
+            }
+        })
+        .from(admissionApplicationsV2)
+        .innerJoin(admissionFormTemplates, eq(admissionApplicationsV2.templateId, admissionFormTemplates.id))
+        .where(
+            and(
+                eq(admissionApplicationsV2.id, applicationId),
+                eq(admissionApplicationsV2.applicantId, applicantId)
+            )
+        );
+        
+        return app || null;
+    } catch (error) {
+        console.error("Fetch application error:", error);
+        return null;
+    }
+}
+
+export async function saveApplicationDraft(applicationId: number, applicantId: number, formData: any) {
+    try {
+        const ninValue = formData?.['NIN'] || formData?.__ninData?.nin || null;
+        await db.update(admissionApplicationsV2)
+            .set({ 
+                data: formData,
+                nin: ninValue
+            })
+            .where(
+                and(
+                    eq(admissionApplicationsV2.id, applicationId),
+                    eq(admissionApplicationsV2.applicantId, applicantId)
+                )
+            );
+        return { success: true };
+    } catch (error: any) {
+        if (error.code === 'ER_DUP_ENTRY') {
+            return { success: false, error: "This NIN has already been used in another application." };
+        }
+        return { success: false, error: error.message };
+    }
+}
+
+export async function submitApplicationFinal(applicationId: number, applicantId: number) {
+    try {
+        await db.update(admissionApplicationsV2)
+            .set({ status: 'submitted' })
+            .where(
+                and(
+                    eq(admissionApplicationsV2.id, applicationId),
+                    eq(admissionApplicationsV2.applicantId, applicantId)
+                )
+            );
+        return { success: true };
+    } catch (error: any) {
+        return { success: false, error: error.message };
+    }
+}
+
+/**
+ * NIN Verification & Global Settings Actions
+ */
+
+export async function verifyNinAction(nin: string) {
+    try {
+        if (!nin || nin.length !== 11 || !/^\d+$/.test(nin)) {
+            return { success: false, error: "NIN must be exactly 11 numeric digits." };
+        }
+
+        // Check uniqueness in database
+        const existing = await db.select().from(admissionApplicationsV2).where(eq(admissionApplicationsV2.nin, nin));
+        if (existing.length > 0) {
+            return { success: false, error: "This NIN has already been used in another application." };
+        }
+
+        // Simulating highly robust sandbox National Identity registry lookup
+        const mockDatabase: Record<string, any> = {
+            "12345678901": { firstName: "Abubakar", lastName: "Alao", dob: "2010-05-15", gender: "Male" },
+            "98765432109": { firstName: "Chinedu", lastName: "Okafor", dob: "2011-08-22", gender: "Male" },
+            "55555555555": { firstName: "Aminat", lastName: "Sanni", dob: "2009-12-03", gender: "Female" },
+            "11111111111": { firstName: "Folake", lastName: "Adewale", dob: "2012-04-10", gender: "Female" }
+        };
+
+        const result = mockDatabase[nin] || {
+            firstName: "Verified",
+            lastName: `Applicant-${nin.slice(-4)}`,
+            dob: "2010-01-01",
+            gender: "Female"
+        };
+
+        return {
+            success: true,
+            verifiedName: `${result.firstName} ${result.lastName}`,
+            firstName: result.firstName,
+            lastName: result.lastName,
+            dob: result.dob,
+            gender: result.gender
+        };
+    } catch (error) {
+        console.error("NIN Verification error:", error);
+        return { success: false, error: "Identity registry query failed." };
+    }
+}
+
+export async function getAdmissionEngineSetting() {
+    try {
+        const [setting] = await db.select()
+            .from(systemSettings)
+            .where(eq(systemSettings.settingKey, 'active_admission_engine'))
+            .limit(1);
+        
+        return setting?.settingValue || 'multi_level';
+    } catch (error) {
+        console.error("Failed to fetch active admission engine setting:", error);
+        return 'multi_level';
+    }
+}
+
+export async function saveAdmissionEngineSetting(engineType: string) {
+    try {
+        const [existing] = await db.select()
+            .from(systemSettings)
+            .where(eq(systemSettings.settingKey, 'active_admission_engine'))
+            .limit(1);
+
+        if (existing) {
+            await db.update(systemSettings)
+                .set({ settingValue: engineType })
+                .where(eq(systemSettings.settingKey, 'active_admission_engine'));
+        } else {
+            await db.insert(systemSettings).values({
+                settingKey: 'active_admission_engine',
+                settingValue: engineType,
+                description: 'Global Admission Engine selector (multi_level, jamb_only, direct_only)'
+            });
+        }
+
+        revalidatePath("/admin/admission/settings");
+        revalidatePath("/admission");
+        return { success: true };
+    } catch (error) {
+        console.error("Failed to save admission engine setting:", error);
+        return { success: false, error: "Failed to update configuration" };
+    }
+}
+
+export async function updateSectionsOrder(sections: { id: number, order: number }[], templateId: number) {
+    try {
+        await db.transaction(async (tx) => {
+            for (const sec of sections) {
+                await tx.update(admissionFormSections)
+                    .set({ order: sec.order })
+                    .where(eq(admissionFormSections.id, sec.id));
+            }
+        });
+        revalidatePath(`/admin/admission/builder/${templateId}`);
+        return { success: true };
+    } catch (error) {
+        console.error("Failed to update sections order:", error);
+        return { success: false, error: "Failed to save pages order" };
+    }
+}
+

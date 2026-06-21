@@ -47,22 +47,28 @@ vi.mock('@/db/db', () => ({
 
 // Mock LiveKit
 vi.mock('livekit-server-sdk', () => ({
-  AccessToken: vi.fn().mockImplementation(() => ({
-    addGrant: vi.fn(),
-    toJwt: vi.fn(() => 'mock-jwt-token'),
-  })),
-  EgressClient: vi.fn().mockImplementation(() => ({
-    startRoomCompositeEgress: vi.fn(),
-    stopEgress: vi.fn(),
-  })),
-  RoomServiceClient: vi.fn().mockImplementation(() => ({
-    listParticipants: vi.fn(),
-    removeParticipant: vi.fn(),
-    mutePublishedTrack: vi.fn(),
-  })),
-  StreamOutput: vi.fn(),
-  EncodedFileOutput: vi.fn(),
-  S3Upload: vi.fn(),
+  AccessToken: vi.fn().mockImplementation(function() {
+    return {
+      addGrant: vi.fn(),
+      toJwt: vi.fn(() => 'mock-jwt-token'),
+    };
+  }),
+  EgressClient: vi.fn().mockImplementation(function() {
+    return {
+      startRoomCompositeEgress: vi.fn(),
+      stopEgress: vi.fn(),
+    };
+  }),
+  RoomServiceClient: vi.fn().mockImplementation(function() {
+    return {
+      listParticipants: vi.fn(),
+      removeParticipant: vi.fn(),
+      mutePublishedTrack: vi.fn(),
+    };
+  }),
+  StreamOutput: vi.fn().mockImplementation(function() {}),
+  EncodedFileOutput: vi.fn().mockImplementation(function() {}),
+  S3Upload: vi.fn().mockImplementation(function() {}),
 }));
 
 // Mock AI Provider

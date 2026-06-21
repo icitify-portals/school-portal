@@ -29,9 +29,11 @@ describe('Live Class Actions', () => {
 
       // Mock 100 participants already in
       const listParticipants = vi.fn().mockResolvedValue(new Array(100).fill({ identity: 'other' }));
-      (RoomServiceClient as any).mockImplementation(() => ({
-        listParticipants,
-      }));
+      (RoomServiceClient as any).mockImplementation(function() {
+        return {
+          listParticipants,
+        };
+      });
 
       await expect(joinClassSession(1, 1)).rejects.toThrow('Room is full. Maximum 100 participants allowed for meeting mode.');
     });
@@ -52,10 +54,12 @@ describe('Live Class Actions', () => {
         { identity: '1' },
         ...new Array(99).fill({ identity: 'other' })
       ]);
-      (RoomServiceClient as any).mockImplementation(() => ({
-        listParticipants,
-        listRooms: vi.fn().mockResolvedValue([])
-      }));
+      (RoomServiceClient as any).mockImplementation(function() {
+        return {
+          listParticipants,
+          listRooms: vi.fn().mockResolvedValue([])
+        };
+      });
 
       const result = await joinClassSession(1, 1);
       expect(result).toHaveProperty('token');
@@ -73,9 +77,11 @@ describe('Live Class Actions', () => {
       (auth as any).mockResolvedValue({ user: { id: '2', name: 'Staff', role: 'staff' } });
       
       const startRoomCompositeEgress = vi.fn().mockResolvedValue({ egressId: 'egress-123' });
-      (EgressClient as any).mockImplementation(() => ({
-        startRoomCompositeEgress,
-      }));
+      (EgressClient as any).mockImplementation(function() {
+        return {
+          startRoomCompositeEgress,
+        };
+      });
 
       const result = await startLiveStream('room-1', ['rtmp://url']);
       expect(result).toEqual({ success: true, egressId: 'egress-123' });

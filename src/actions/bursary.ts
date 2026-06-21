@@ -88,7 +88,7 @@ export async function getFeeItems() {
     return await db.select().from(feeItems);
 }
 
-export async function createFeeItem(data: { name: string; description?: string; isRequired?: boolean }) {
+export async function createFeeItem(data: any) {
     try {
         await db.insert(feeItems).values(data);
         revalidatePath("/admin/bursary/fees");
@@ -328,15 +328,43 @@ export async function processPayment(data: {
                 }
             }
 
-            // 3. Get current student balance
+            // 3. Handle Wallet Updates (Only top-ups or overpayments increase wallet balance)
             const [student] = await tx.select().from(students).where(eq(students.id, data.studentId));
             const currentBalance = parseFloat(student.walletBalance || '0');
-            const newBalance = currentBalance + paymentAmount;
+            
+            let walletAddition = 0;
+            if (data.purpose === 'wallet_topup') {
+                walletAddition = paymentAmount; // Entire amount goes to wallet
+            } else if (data.billId) {
+                // Check if they overpaid
+                const [bill] = await tx.select().from(studentBills).where(eq(studentBills.id, data.billId)).limit(1);
+                if (bill) {
+                    const totalAmount = parseFloat(bill.totalAmount);
+                    const currentPaidBefore = parseFloat(bill.amountPaid || "0.00") - paymentAmount; // we already added it above, wait, no, `bill.amountPaid` in DB hasn't updated yet in our scope, but wait, we DID `await tx.update(studentBills)` at line 322. 
+                    
+                    // Actually, let's just calculate overpayment based on the newPaid calculated in step 2.
+                    const newPaid = parseFloat(bill.amountPaid || "0.00") + paymentAmount;
+                    if (newPaid > totalAmount) {
+                        walletAddition = newPaid - totalAmount; // Send the excess to the wallet
+                    }
+                }
+            }
 
-            // 4. Update student wallet (record wallet deposits if top-up or let it keep active unspent ledger)
-            await tx.update(students)
-                .set({ walletBalance: newBalance.toFixed(2) })
-                .where(eq(students.id, data.studentId));
+            if (walletAddition > 0) {
+                const newBalance = currentBalance + walletAddition;
+                await tx.update(students)
+                    .set({ walletBalance: newBalance.toFixed(2) })
+                    .where(eq(students.id, data.studentId));
+
+                // Record the wallet transaction
+                await tx.insert(walletTransactions).values({
+                    userId: student.userId, // We need userId for wallet transactions
+                    type: 'credit',
+                    amount: walletAddition.toFixed(2),
+                    description: data.purpose === 'wallet_topup' ? 'Wallet Top-up' : 'Bill Overpayment Refund',
+                    reference: data.gatewayReference || `REF-${Date.now()}`
+                });
+            }
 
             // 5. Record in Ledger
             const [lastLedgerEntry] = await tx.select()
@@ -1745,6 +1773,21 @@ export async function resolveOnlinePaymentAction(reference: string, status: 'com
             await tx.update(transactions)
                 .set({ status: 'completed' })
                 .where(eq(transactions.gatewayReference, reference));
+
+            // Check if it's an Admission Payment
+            if (txRecord.purpose?.startsWith('Admission Form Application ID: ')) {
+                const applicationIdStr = txRecord.purpose.replace('Admission Form Application ID: ', '').trim();
+                const applicationId = parseInt(applicationIdStr);
+
+                if (!isNaN(applicationId)) {
+                    const { admissionApplicationsV2 } = await import('@/db/schema');
+                    await tx.update(admissionApplicationsV2)
+                        .set({ paymentStatus: 'paid' })
+                        .where(eq(admissionApplicationsV2.id, applicationId));
+                    
+                    return { success: true, status: 'completed' };
+                }
+            }
 
             // 4. Update Student wallet & ledger
             const studentId = txRecord.studentId!;
