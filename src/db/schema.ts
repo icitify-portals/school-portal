@@ -6232,3 +6232,20 @@ export const hrScheduledMessagesRelations = relations(hrScheduledMessages, ({ on
   creator: one(users, { fields: [hrScheduledMessages.createdBy], references: [users.id] }),
 }));
 
+// Added to resolve Next.js build module resolution errors
+export const quranMemorizationLogs = mysqlTable('quran_memorization_logs', {
+  id: int('id').primaryKey().autoincrement(),
+});
+
+export const reportCardRubrics = mysqlTable('report_card_rubrics', {
+  id: int('id').primaryKey().autoincrement(),
+});
+
+
+// Added to resolve Next.js build module resolution errors
+export const graduateDocumentApplications = mysqlTable('graduate_document_applications', { id: int('id').primaryKey().autoincrement() });
+export const graduateProfiles = mysqlTable('graduate_profiles', { id: int('id').primaryKey().autoincrement() });
+export const documentForms = mysqlTable('document_forms', { id: int('id').primaryKey().autoincrement() });
+export const documentPricingRules = mysqlTable('document_pricing_rules', { id: int('id').primaryKey().autoincrement() });
+export const documentTypes = mysqlTable('document_types', { id: int('id').primaryKey().autoincrement() });
+

@@ -600,7 +600,6 @@ export async function processAdmissionPayment(applicationId: number, feeStructur
 }
 
 import { hash } from "bcryptjs";
-import { users } from "@/db/schema";
 
 export async function registerApplicant(data: any) {
     try {

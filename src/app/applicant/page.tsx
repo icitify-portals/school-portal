@@ -1,5 +1,4 @@
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
+import { auth } from "@/auth";
 import { db } from "@/db/db";
 import { admissionApplicationsV2, admissionFormTemplates } from "@/db/schema";
 import { eq } from "drizzle-orm";
@@ -9,7 +8,7 @@ import Link from "next/link";
 import { ArrowRight, FileText, CheckCircle2, Clock } from "lucide-react";
 
 export default async function ApplicantDashboard() {
-    const session = await getServerSession(authOptions);
+    const session = await auth();
     const userId = Number(session?.user?.id);
 
     // Fetch applicant's applications
