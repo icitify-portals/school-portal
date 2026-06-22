@@ -37,7 +37,7 @@ export const MediaSlider: React.FC<MediaSliderProps> = ({
   if (!items || items.length === 0) return null;
 
   return (
-    <div className={cn("w-full overflow-hidden rounded-3xl shadow-2xl bg-slate-100", className)}>
+    <div className={cn("w-full overflow-hidden rounded-2xl shadow-2xl bg-slate-100", className)}>
       <Swiper
         modules={[Autoplay, Navigation, Pagination, EffectFade]}
         spaceBetween={0}

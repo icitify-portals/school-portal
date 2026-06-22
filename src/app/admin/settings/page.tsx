@@ -16,7 +16,7 @@ export default async function SettingsPage() {
     const initialSettings = await getSystemSettings();
 
     return (
-        <div className="p-6 max-w-5xl mx-auto space-y-6">
+        <div className="p-6 max-w-[1600px] w-full mx-auto space-y-6">
             <div>
                 <h1 className="text-2xl font-black text-slate-900 flex items-center gap-2">
                     <Settings className="w-6 h-6 text-indigo-600" />

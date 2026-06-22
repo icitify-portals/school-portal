@@ -19,7 +19,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
-import { createModule, createLesson, deleteModule, deleteLesson, reorderModules, createCourseFromAI, updateModuleSettings } from "@/actions/lms";
+import { createModule, createLesson, deleteModule, deleteLesson, reorderModules, createCourseFromAI, updateModuleSettings, updateCourseSettings } from "@/actions/lms";
 import { uploadFile } from "@/actions/upload";
 import { generateCourseStructure } from "@/actions/ai-lms";
 import { cn } from "@/lib/utils";
@@ -48,11 +48,27 @@ interface Module {
 interface CourseEditorProps {
     courseId: number;
     initialModules: Module[];
+    initialFormatSettings?: {
+        courseFormat: 'topics' | 'weeks' | 'days';
+        courseStartDate: string | null;
+        totalDurationWeeks: number;
+        flowControl: 'sequential' | 'open';
+        minPassingScore: number;
+    };
 }
 
-export default function CourseEditor({ courseId, initialModules }: CourseEditorProps) {
+export default function CourseEditor({ courseId, initialModules, initialFormatSettings }: CourseEditorProps) {
     const [modules, setModules] = useState<Module[]>(initialModules);
     const [loading, setLoading] = useState(false);
+
+    // Course Settings State
+    const [isCourseSettingsOpen, setIsCourseSettingsOpen] = useState(false);
+    const [courseFormat, setCourseFormat] = useState<'topics' | 'weeks' | 'days'>(initialFormatSettings?.courseFormat || 'topics');
+    const [courseStartDate, setCourseStartDate] = useState<string>(initialFormatSettings?.courseStartDate || "");
+    const [totalDurationWeeks, setTotalDurationWeeks] = useState<number>(initialFormatSettings?.totalDurationWeeks || 12);
+    const [flowControl, setFlowControl] = useState<'sequential' | 'open'>(initialFormatSettings?.flowControl || 'open');
+    const [minPassingScore, setMinPassingScore] = useState<number>(initialFormatSettings?.minPassingScore || 75);
+
 
     // Module Modal State
     const [isModuleModalOpen, setIsModuleModalOpen] = useState(false);
@@ -193,15 +209,37 @@ export default function CourseEditor({ courseId, initialModules }: CourseEditorP
         await deleteLesson(lessonId, courseId);
     };
 
+    const handleSaveCourseSettings = async () => {
+        setLoading(true);
+        const res = await updateCourseSettings(courseId, {
+            courseFormat,
+            courseStartDate: courseStartDate || null,
+            totalDurationWeeks: Number(totalDurationWeeks),
+            flowControl,
+            minPassingScore: Number(minPassingScore)
+        });
+        if (res.success) {
+            setIsCourseSettingsOpen(false);
+            window.location.reload();
+        } else {
+            alert("Failed to update course settings");
+        }
+        setLoading(false);
+    };
+
     return (
         <div className="max-w-4xl mx-auto py-8">
             <div className="flex justify-between items-center mb-8">
                 <h1 className="text-2xl font-bold">Course Editor</h1>
                 <div className="flex gap-2">
+                    <Button variant="outline" className="text-slate-600 border-slate-200 hover:bg-slate-50" onClick={() => setIsCourseSettingsOpen(true)}>
+                        <Settings className="w-4 h-4 mr-2" /> Course Settings
+                    </Button>
                     <Button variant="outline" className="text-indigo-600 border-indigo-200 hover:bg-indigo-50" onClick={() => setAiStructureModalOpen(true)}>
                         <Sparkles className="w-4 h-4 mr-2" /> AI Generate
                     </Button>
                     <Button onClick={() => setIsModuleModalOpen(true)}>
+
                         <Plus className="w-4 h-4 mr-2" /> Add Module
                     </Button>
                 </div>
@@ -394,6 +432,69 @@ export default function CourseEditor({ courseId, initialModules }: CourseEditorP
                     </div>
                 </div>
             </Modal>
+
+            <Modal isOpen={isCourseSettingsOpen} onClose={() => setIsCourseSettingsOpen(false)} title="Moodle-Style Course Format & Flow Settings">
+                <div className="space-y-4">
+                    <div>
+                        <label className="text-sm font-medium mb-1 block">Course Format</label>
+                        <select
+                            className="w-full h-10 px-3 rounded-md border border-slate-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2"
+                            value={courseFormat}
+                            onChange={(e) => setCourseFormat(e.target.value as any)}
+                        >
+                            <option value="topics">Topics Format</option>
+                            <option value="weeks">Weekly Format</option>
+                            <option value="days">Daily Format</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label className="text-sm font-medium mb-1 block">Course Start Date</label>
+                        <Input
+                            type="date"
+                            value={courseStartDate}
+                            onChange={(e) => setCourseStartDate(e.target.value)}
+                        />
+                    </div>
+                    <div>
+                        <label className="text-sm font-medium mb-1 block">Total Duration (Weeks)</label>
+                        <Input
+                            type="number"
+                            min={1}
+                            max={52}
+                            value={totalDurationWeeks}
+                            onChange={(e) => setTotalDurationWeeks(Number(e.target.value))}
+                        />
+                    </div>
+                    <div>
+                        <label className="text-sm font-medium mb-1 block">Flow Control Locking Gate</label>
+                        <select
+                            className="w-full h-10 px-3 rounded-md border border-slate-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2"
+                            value={flowControl}
+                            onChange={(e) => setFlowControl(e.target.value as any)}
+                        >
+                            <option value="open">Open (Students can access any lesson anytime)</option>
+                            <option value="sequential">Sequential (Enforce chronology & locks)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label className="text-sm font-medium mb-1 block">Min passing Score (%) for locks</label>
+                        <Input
+                            type="number"
+                            min={0}
+                            max={100}
+                            value={minPassingScore}
+                            onChange={(e) => setMinPassingScore(Number(e.target.value))}
+                        />
+                    </div>
+                    <div className="flex justify-end gap-2 mt-6">
+                        <Button variant="ghost" onClick={() => setIsCourseSettingsOpen(false)}>Cancel</Button>
+                        <Button onClick={handleSaveCourseSettings} disabled={loading}>
+                            {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : "Save Course Settings"}
+                        </Button>
+                    </div>
+                </div>
+            </Modal>
         </div>
     );
 }
+

@@ -30,7 +30,7 @@ export default async function StudentIDCardPage() {
     const qrCode = card ? await IDCardService.generateVerificationQR(card.verificationCode) : undefined;
 
     return (
-        <div className="p-8 max-w-5xl mx-auto space-y-12 bg-slate-50 min-h-screen">
+        <div className="p-8 max-w-[1600px] w-full mx-auto space-y-12 bg-slate-50 min-h-screen">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
                 <div>
                     <h1 className="text-4xl font-black text-slate-900 tracking-tight uppercase italic">ID Card Services</h1>

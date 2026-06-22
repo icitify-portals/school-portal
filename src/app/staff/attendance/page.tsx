@@ -48,7 +48,7 @@ export default async function StaffAttendancePage() {
     const validLectures = todayLectures.filter(l => l.assignment && l.assignment.staffId === staff.id);
 
     return (
-        <div className="p-8 max-w-7xl mx-auto space-y-10">
+        <div className="p-8 max-w-[1600px] w-full mx-auto space-y-10">
             <header className="space-y-2">
                 <h1 className="text-4xl font-black text-slate-900 tracking-tight uppercase italic flex items-center gap-4">
                     <Calendar className="w-10 h-10 text-blue-600" /> Class Session Control

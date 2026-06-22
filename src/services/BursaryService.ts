@@ -172,8 +172,13 @@ export class BursaryService {
             }
 
             // 3. Fetch items for this fee structure
-            const items = await tx.select()
+            const items = await tx.select({
+                feeItemId: feeStructureItems.feeItemId,
+                amount: feeStructureItems.amount,
+                currency: feeItems.currency
+            })
                 .from(feeStructureItems)
+                .innerJoin(feeItems, eq(feeStructureItems.feeItemId, feeItems.id))
                 .where(eq(feeStructureItems.feeStructureId, allocation.feeStructureId));
 
             if (items.length === 0) {
@@ -181,6 +186,7 @@ export class BursaryService {
             }
 
             const total = items.reduce((sum, item) => sum + parseFloat(item.amount || "0"), 0);
+            const billCurrency = items.length > 0 && items[0].currency ? items[0].currency : 'NGN';
 
             // 4. Create the bill
             const billNumber = `BILL-${Date.now()}-${studentId}`;
@@ -188,6 +194,7 @@ export class BursaryService {
                 studentId,
                 sessionId,
                 billNumber,
+                currency: billCurrency,
                 totalAmount: total.toFixed(2),
                 amountPaid: "0.00",
                 status: 'pending',

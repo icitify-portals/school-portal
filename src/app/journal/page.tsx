@@ -38,7 +38,7 @@ export default function PublicJournalsPage() {
     );
 
     return (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-12">
+        <div className="max-w-[1600px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-12">
             <div className="text-center space-y-4 max-w-3xl mx-auto">
                 <Badge variant="outline" className="text-indigo-600 border-indigo-200 dark:text-indigo-400 px-3 py-1 rounded-full uppercase tracking-widest text-[10px] font-bold">University Press</Badge>
                 <h1 className="text-5xl font-black tracking-tight text-slate-900 dark:text-slate-100">Academic Journals</h1>
@@ -62,7 +62,7 @@ export default function PublicJournalsPage() {
                         <Card key={i} className="animate-pulse h-64 bg-slate-100 dark:bg-slate-900 rounded-2xl border-none shadow-none" />
                     ))
                 ) : filteredJournals.length === 0 ? (
-                    <div className="col-span-full text-center py-20 text-slate-500 bg-slate-50 dark:bg-slate-900/50 rounded-3xl border-2 border-dashed border-slate-200">
+                    <div className="col-span-full text-center py-20 text-slate-500 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border-2 border-dashed border-slate-200">
                         <BookOpen className="mx-auto h-16 w-16 opacity-20 mb-4" />
                         <p className="text-xl font-bold italic">No journals found matching your query.</p>
                         <Button variant="link" className="text-indigo-600 font-bold" onClick={() => setSearch("")}>Clear Search</Button>
@@ -70,7 +70,7 @@ export default function PublicJournalsPage() {
                 ) : (
                     filteredJournals.map((journal) => (
                         <Link key={journal.id} href={`/journal/${journal.slug}`}>
-                            <Card className="group h-full relative border-none shadow-xl shadow-slate-200/50 dark:shadow-none hover:shadow-2xl hover:shadow-indigo-500/10 transition-all duration-500 overflow-hidden rounded-3xl bg-white dark:bg-slate-900">
+                            <Card className="group h-full relative border-none shadow-xl shadow-slate-200/50 dark:shadow-none hover:shadow-2xl hover:shadow-indigo-500/10 transition-all duration-500 overflow-hidden rounded-2xl bg-white dark:bg-slate-900">
                                 <div className="h-2 bg-indigo-600 w-0 group-hover:w-full transition-all duration-500 absolute top-0" />
                                 <CardHeader className="pt-8 px-8">
                                     <div className="flex justify-between items-start mb-4">
@@ -121,7 +121,7 @@ export default function PublicJournalsPage() {
                             { icon: GraduationCap, label: "Partner Institutions", value: "45" },
                             { icon: Info, label: "Average DOI Speed", value: "14d" },
                         ].map((stat, i) => (
-                            <div key={i} className="bg-white/5 backdrop-blur-sm p-6 rounded-3xl border border-white/10 hover:bg-white/10 transition-colors">
+                            <div key={i} className="bg-white/5 backdrop-blur-sm p-6 rounded-2xl border border-white/10 hover:bg-white/10 transition-colors">
                                 <stat.icon className="h-8 w-8 text-indigo-400 mb-4" />
                                 <div className="text-3xl font-black">{stat.value}</div>
                                 <div className="text-indigo-200/60 text-xs font-bold uppercase tracking-widest mt-1">{stat.label}</div>

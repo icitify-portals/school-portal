@@ -15,7 +15,7 @@ export default async function VerifyPage({ params }: { params: Promise<{ code: s
                 <div className="h-4 bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-600" />
 
                 <CardHeader className="text-center pt-10 pb-6">
-                    <div className="mx-auto w-20 h-20 rounded-3xl bg-indigo-50 flex items-center justify-center mb-6 ring-1 ring-indigo-100 shadow-inner">
+                    <div className="mx-auto w-20 h-20 rounded-2xl bg-indigo-50 flex items-center justify-center mb-6 ring-1 ring-indigo-100 shadow-inner">
                         <ShieldCheck className={`w-10 h-10 ${res.success ? 'text-indigo-600' : 'text-slate-300'}`} />
                     </div>
                     <CardTitle className="text-3xl font-black text-slate-900 uppercase italic tracking-tighter">

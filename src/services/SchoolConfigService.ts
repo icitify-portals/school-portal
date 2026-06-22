@@ -1,5 +1,5 @@
 import { db } from "@/db/db";
-import { systemSettings, branches } from "@/db/schema";
+import { systemSettings, institutionalUnits } from "@/db/schema";
 import { eq, sql } from "drizzle-orm";
 
 export class SchoolConfigService {
@@ -9,7 +9,7 @@ export class SchoolConfigService {
      * Matches 'school list' from Rust.
      */
     static async listSettings() {
-        return await db.select({ key: systemSettings.key }).from(systemSettings);
+        return await db.select({ key: systemSettings.settingKey }).from(systemSettings);
     }
 
     /**
@@ -19,14 +19,14 @@ export class SchoolConfigService {
     static async getSetting(key: string, sessionId?: number) {
         const [setting] = await db.select()
             .from(systemSettings)
-            .where(eq(systemSettings.key, key))
+            .where(eq(systemSettings.settingKey, key))
             .limit(1);
         
         if (!setting) return "Not Found";
 
         // In some implementations, settings are JSON blobs that vary by session
         // For now, we return the direct value
-        return setting.value;
+        return setting.settingValue;
     }
 
     /**
@@ -38,16 +38,16 @@ export class SchoolConfigService {
         
         const [existing] = await db.select()
             .from(systemSettings)
-            .where(eq(systemSettings.key, key))
+            .where(eq(systemSettings.settingKey, key))
             .limit(1);
 
         if (existing) {
             await db.update(systemSettings)
-                .set({ value, updatedAt: new Date() })
-                .where(eq(systemSettings.key, key));
+                .set({ settingValue: value, updatedAt: new Date() })
+                .where(eq(systemSettings.settingKey, key));
         } else {
             await db.insert(systemSettings)
-                .values({ key, value });
+                .values({ settingKey: key, settingValue: value });
         }
         
         return { success: true };
@@ -58,7 +58,7 @@ export class SchoolConfigService {
      * Matches 'GeneralSettings' from Rust.
      */
     static async getGeneralInfo() {
-        const [branch] = await db.select().from(branches).limit(1); // Main branch info
+        const [branch] = await db.select().from(institutionalUnits).limit(1); // Main branch info
         const settings = await db.select().from(systemSettings);
         
         return {

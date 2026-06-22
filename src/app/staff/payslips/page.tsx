@@ -58,7 +58,7 @@ export default function StaffPayslipsPage() {
     };
 
     return (
-        <div className="p-8 max-w-7xl mx-auto space-y-8 bg-slate-50/50 min-h-screen">
+        <div className="p-8 max-w-[1600px] w-full mx-auto space-y-8 bg-slate-50/50 min-h-screen">
             <div className="flex justify-between items-end">
                 <div>
                     <h1 className="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-3 italic">
@@ -115,12 +115,12 @@ export default function StaffPayslipsPage() {
                 {/* Payslip View Center */}
                 <div className="lg:col-span-3">
                     {isFetchingDetails ? (
-                        <div className="h-[600px] flex items-center justify-center bg-white rounded-3xl shadow-sm border border-slate-100">
+                        <div className="h-[600px] flex items-center justify-center bg-white rounded-2xl shadow-sm border border-slate-100">
                             <Loader2 className="w-10 h-10 animate-spin text-indigo-200" />
                         </div>
                     ) : selectedPayslip ? (
                         <div className="space-y-6 animate-in fade-in duration-500">
-                            <div className="flex justify-between items-center bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
+                            <div className="flex justify-between items-center bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
                                 <div className="flex items-center gap-4">
                                     <div className="w-12 h-12 bg-slate-900 rounded-2xl flex items-center justify-center">
                                         <FileText className="w-6 h-6 text-white" />
@@ -150,7 +150,7 @@ export default function StaffPayslipsPage() {
                             </div>
 
                             {/* Actual Payslip Document Area */}
-                            <div id="payslip-print-area" className="bg-white rounded-3xl shadow-xl border border-slate-100 p-12 relative overflow-hidden">
+                            <div id="payslip-print-area" className="bg-white rounded-2xl shadow-xl border border-slate-100 p-12 relative overflow-hidden">
                                 <div className="absolute top-0 right-0 w-64 h-64 bg-slate-50 rounded-full -mr-32 -mt-32 opacity-50 pointer-events-none" />
 
                                 {/* Header */}
@@ -211,7 +211,7 @@ export default function StaffPayslipsPage() {
                                 </div>
 
                                 {/* Net Total Banner */}
-                                <div className="bg-slate-900 text-white p-8 rounded-3xl flex justify-between items-center">
+                                <div className="bg-slate-900 text-white p-8 rounded-2xl flex justify-between items-center">
                                     <div className="flex items-center gap-4">
                                         <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center">
                                             <Wallet className="w-6 h-6 text-indigo-400" />
@@ -243,7 +243,7 @@ export default function StaffPayslipsPage() {
                             </div>
                         </div>
                     ) : (
-                        <div className="h-[600px] flex flex-col items-center justify-center bg-white rounded-3xl shadow-sm border border-slate-100 text-center p-20">
+                        <div className="h-[600px] flex flex-col items-center justify-center bg-white rounded-2xl shadow-sm border border-slate-100 text-center p-20">
                             <Wallet className="w-16 h-16 text-slate-100 mb-6" />
                             <h2 className="text-2xl font-black text-slate-900 italic tracking-tight">No Payment History Detected</h2>
                             <p className="max-w-xs text-sm text-slate-400 font-medium mt-2">When your salary is processed, your interactive payslips will appear here automatically.</p>

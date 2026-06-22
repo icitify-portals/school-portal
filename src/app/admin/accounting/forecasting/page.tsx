@@ -93,7 +93,7 @@ export default function ForecastingPage() {
                                 <div>
                                     <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Projected Inflow</p>
                                     <h4 className="text-xl font-bold text-slate-900">
-                                        ₦{forecast?.projections?.reduce((s: number, p: any) => s + (p.inflow || 0), 0).toLocaleString()}
+                                        {settings?.base_currency || '₦'}{forecast?.projections?.reduce((s: number, p: any) => s + (p.inflow || 0), 0).toLocaleString()}
                                     </h4>
                                 </div>
                                 <ArrowUpRight className="w-5 h-5 text-emerald-500" />
@@ -106,7 +106,7 @@ export default function ForecastingPage() {
                                 <div>
                                     <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Projected Outflow</p>
                                     <h4 className="text-xl font-bold text-slate-900">
-                                        ₦{forecast?.projections?.reduce((s: number, p: any) => s + (p.outflow || 0), 0).toLocaleString()}
+                                        {settings?.base_currency || '₦'}{forecast?.projections?.reduce((s: number, p: any) => s + (p.outflow || 0), 0).toLocaleString()}
                                     </h4>
                                 </div>
                                 <ArrowDownRight className="w-5 h-5 text-rose-500" />
@@ -119,7 +119,7 @@ export default function ForecastingPage() {
                                 <div>
                                     <p className="text-xs font-bold text-indigo-600 uppercase tracking-widest mb-1">Net Cash Impact</p>
                                     <h4 className="text-xl font-bold text-indigo-900 font-mono">
-                                        ₦{(forecast?.projections?.reduce((s: number, p: any) => s + (p.net || 0), 0)).toLocaleString()}
+                                        {settings?.base_currency || '₦'}{(forecast?.projections?.reduce((s: number, p: any) => s + (p.net || 0), 0)).toLocaleString()}
                                     </h4>
                                 </div>
                                 <Activity className="w-5 h-5 text-indigo-500" />
@@ -153,13 +153,13 @@ export default function ForecastingPage() {
                                     {forecast?.projections?.map((p: any, idx: number) => (
                                         <tr key={idx} className="group hover:bg-slate-50/50 transition-colors">
                                             <td className="py-4 font-bold text-slate-700">{p.month}</td>
-                                            <td className="py-4 text-right text-emerald-600 font-medium">₦{p.inflow.toLocaleString()}</td>
-                                            <td className="py-4 text-right text-rose-600 font-medium">₦{p.outflow.toLocaleString()}</td>
+                                            <td className="py-4 text-right text-emerald-600 font-medium">{settings?.base_currency || '₦'}{p.inflow.toLocaleString()}</td>
+                                            <td className="py-4 text-right text-rose-600 font-medium">{settings?.base_currency || '₦'}{p.outflow.toLocaleString()}</td>
                                             <td className={cn(
                                                 "py-4 text-right font-black",
                                                 p.net >= 0 ? "text-slate-900" : "text-rose-700"
                                             )}>
-                                                {p.net < 0 ? "-" : "+"}₦{Math.abs(p.net).toLocaleString()}
+                                                {p.net < 0 ? "-" : "+"}{settings?.base_currency || '₦'}{Math.abs(p.net).toLocaleString()}
                                             </td>
                                         </tr>
                                     ))}

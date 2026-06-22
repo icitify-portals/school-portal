@@ -69,7 +69,7 @@ export default function CBTEntranceExam() {
     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-8">
        <div className="max-w-2xl w-full bg-white rounded-[40px] shadow-2xl overflow-hidden border border-slate-100">
           <div className="bg-slate-900 p-12 text-white text-center space-y-4">
-             <div className="w-20 h-20 bg-indigo-600 rounded-3xl flex items-center justify-center mx-auto shadow-xl shadow-indigo-500/20">
+             <div className="w-20 h-20 bg-indigo-600 rounded-2xl flex items-center justify-center mx-auto shadow-xl shadow-indigo-500/20">
                 <ShieldCheck size={40} />
              </div>
              <h1 className="text-3xl font-black tracking-tight">Institutional Entrance Examination</h1>
@@ -77,14 +77,14 @@ export default function CBTEntranceExam() {
           </div>
           <div className="p-12 space-y-8">
              <div className="grid grid-cols-2 gap-6">
-                <div className="p-6 bg-slate-50 rounded-3xl border border-slate-100 space-y-2">
+                <div className="p-6 bg-slate-50 rounded-2xl border border-slate-100 space-y-2">
                    <div className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Duration</div>
                    <div className="text-xl font-black text-slate-900 flex items-center gap-2">
                       <Timer size={20} className="text-indigo-600" />
                       60 Minutes
                    </div>
                 </div>
-                <div className="p-6 bg-slate-50 rounded-3xl border border-slate-100 space-y-2">
+                <div className="p-6 bg-slate-50 rounded-2xl border border-slate-100 space-y-2">
                    <div className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Questions</div>
                    <div className="text-xl font-black text-slate-900 flex items-center gap-2">
                       <HelpCircle size={20} className="text-indigo-600" />
@@ -108,7 +108,7 @@ export default function CBTEntranceExam() {
 
              <button 
                onClick={startExam}
-               className="w-full py-5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-3xl font-black text-lg transition-all shadow-xl shadow-indigo-100 flex items-center justify-center gap-2"
+               className="w-full py-5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black text-lg transition-all shadow-xl shadow-indigo-100 flex items-center justify-center gap-2"
              >
                 {loading ? <Loader2 className="animate-spin" /> : "Initiate Secure Session"}
                 <ChevronRight size={24} />
@@ -143,7 +143,7 @@ export default function CBTEntranceExam() {
           </div>
        </div>
 
-       <div className="flex-1 grid grid-cols-12 gap-8 p-8 max-w-7xl mx-auto w-full">
+       <div className="flex-1 grid grid-cols-12 gap-8 p-8 max-w-[1600px] w-full mx-auto w-full">
           {/* Question Area */}
           <div className="col-span-12 lg:col-span-8 space-y-8">
              <div className="bg-white p-12 rounded-[40px] shadow-sm border border-slate-100 space-y-8 animate-in slide-in-from-right-8 duration-300">
@@ -157,7 +157,7 @@ export default function CBTEntranceExam() {
                       <button 
                         key={i}
                         onClick={() => handleAnswer(questions[currentIdx].id, opt)}
-                        className={`w-full p-6 rounded-3xl text-left font-bold transition-all border-2 flex items-center justify-between group ${
+                        className={`w-full p-6 rounded-2xl text-left font-bold transition-all border-2 flex items-center justify-between group ${
                           answers[questions[currentIdx].id] === opt 
                           ? 'bg-indigo-50 border-indigo-600 text-indigo-700' 
                           : 'bg-white border-slate-100 text-slate-600 hover:border-indigo-100'

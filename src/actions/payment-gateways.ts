@@ -100,9 +100,39 @@ export async function initiatePayment(gateway: string, amount: number, reference
             if (data.status === 'success') paymentUrl = data.data.link;
             else return { error: data.message || "Flutterwave initialization failed" };
 
+        } else if (gateway === 'remita') {
+            const merchantId = process.env.REMITA_MERCHANT_ID || "2547916";
+            const serviceTypeId = process.env.REMITA_SERVICE_TYPE_ID || "4430731";
+            const apiKey = secretKey;
+            const crypto = require('crypto');
+            const hash = crypto.createHash('sha512').update(`${merchantId}${serviceTypeId}${reference}${amount}${apiKey}`).digest('hex');
+            
+            const res = await fetch('https://remitademo.net/remita/exapp/api/v1/send/api/echannelsvc/merchant/api/paymentinit', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `remitaConsumerKey=${merchantId},remitaConsumerToken=${hash}`
+                },
+                body: JSON.stringify({
+                    merchantId,
+                    serviceTypeId,
+                    amount: amount.toString(),
+                    orderId: reference,
+                    payerName: email.split('@')[0],
+                    payerEmail: email,
+                    payerPhone: "08000000000"
+                })
+            });
+            const data = await res.json();
+            if (data.statuscode === '025' && data.rrr) {
+                // Return a simulated checkout URL that handles Remita inline JS using the RRR
+                paymentUrl = `/finance/checkout/simulate?gateway=remita&reference=${reference}&amount=${amount}&rrr=${data.rrr}`;
+            } else {
+                return { error: data.message || "Remita initialization failed" };
+            }
         } else {
-            // Remita, OPay: infrastructure placeholder
-            return { error: `${def.name} integration coming soon. Use Paystack or Flutterwave for now.` };
+            // OPay: infrastructure placeholder
+            return { error: `${def.name} integration coming soon. Use Remita, Paystack, or Flutterwave for now.` };
         }
 
         await logActivity('initiate_payment', 'payment', undefined, { gateway, amount, reference });
@@ -140,6 +170,22 @@ export async function verifyPayment(gateway: string, reference: string) {
             const data = await res.json();
             verified = data.data?.status === 'successful';
             amount = data.data?.amount || 0;
+        } else if (gateway === 'remita') {
+            const merchantId = process.env.REMITA_MERCHANT_ID || "2547916";
+            const apiKey = secretKey;
+            const crypto = require('crypto');
+            const hash = crypto.createHash('sha512').update(`${reference}${apiKey}${merchantId}`).digest('hex');
+            
+            const res = await fetch(`https://remitademo.net/remita/exapp/api/v1/send/api/echannelsvc/${merchantId}/${reference}/${hash}/status.reg`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `remitaConsumerKey=${merchantId},remitaConsumerToken=${hash}`
+                }
+            });
+            const data = await res.json();
+            verified = data.status === '00' || data.status === '01'; // 00 means successful, 01 means successful
+            amount = data.amount || 0;
         }
 
         return { success: true, verified, amount, gateway };

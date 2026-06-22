@@ -155,7 +155,7 @@ export default function ClaimAdmissionPage() {
                                 <Button
                                     type="submit"
                                     disabled={loading}
-                                    className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black py-8 rounded-[2rem] text-sm uppercase tracking-[0.2em] shadow-2xl shadow-indigo-100 transition-all active:scale-95 flex gap-3"
+                                    className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black py-8 rounded-2xl text-sm uppercase tracking-[0.2em] shadow-2xl shadow-indigo-100 transition-all active:scale-95 flex gap-3"
                                 >
                                     {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <>Verify Credentials <ArrowRight className="w-5 h-5" /></>}
                                 </Button>
@@ -166,7 +166,7 @@ export default function ClaimAdmissionPage() {
                             <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
                                 <div className="space-y-4">
                                     <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest">Admission Details Confirmed</h3>
-                                    <div className="p-8 bg-slate-900 rounded-[2rem] text-white relative overflow-hidden">
+                                    <div className="p-8 bg-slate-900 rounded-2xl text-white relative overflow-hidden">
                                         <GraduationCap className="absolute -right-4 -bottom-4 w-32 h-32 text-white/5 rotate-12" />
                                         <div className="relative z-10 space-y-4">
                                             <div>
@@ -191,7 +191,7 @@ export default function ClaimAdmissionPage() {
                                 {validationStatus && (
                                     <div className="space-y-4">
                                         <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest">Requirements Validation</h3>
-                                        <div className="p-6 bg-white rounded-[2rem] border border-slate-200">
+                                        <div className="p-6 bg-white rounded-2xl border border-slate-200">
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                 <div className="flex items-center gap-3">
                                                     <div className={cn(
@@ -334,7 +334,7 @@ export default function ClaimAdmissionPage() {
 
                         {step === 4 && (
                             <div className="text-center space-y-8 py-4 animate-in zoom-in duration-500">
-                                <div className="w-24 h-24 bg-emerald-100 rounded-[2rem] flex items-center justify-center mx-auto text-emerald-600">
+                                <div className="w-24 h-24 bg-emerald-100 rounded-2xl flex items-center justify-center mx-auto text-emerald-600">
                                     <ShieldCheck className="w-12 h-12" />
                                 </div>
                                 <div className="space-y-2">
@@ -342,7 +342,7 @@ export default function ClaimAdmissionPage() {
                                     <p className="text-slate-500 font-bold max-w-sm mx-auto">Your institutional profile has been successfully claimed and initialized.</p>
                                 </div>
                                 <Link href="/login" className="block">
-                                    <Button className="w-full bg-slate-900 hover:bg-black text-white py-8 rounded-[2rem] font-black text-xs uppercase tracking-widest shadow-2xl transition-all hover:scale-105 active:scale-95">
+                                    <Button className="w-full bg-slate-900 hover:bg-black text-white py-8 rounded-2xl font-black text-xs uppercase tracking-widest shadow-2xl transition-all hover:scale-105 active:scale-95">
                                         Launch Student Portal
                                     </Button>
                                 </Link>

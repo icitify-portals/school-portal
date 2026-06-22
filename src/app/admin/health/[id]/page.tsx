@@ -117,7 +117,7 @@ export default function StudentMedicalReviewPage() {
     if (!healthData) return <div className="p-20 text-center font-bold text-rose-500">Student not found</div>;
 
     return (
-        <div className="p-8 max-w-7xl mx-auto space-y-10 pb-20">
+        <div className="p-8 max-w-[1600px] w-full mx-auto space-y-10 pb-20">
             <div className="flex items-center gap-6">
                 <Button
                     variant="ghost"

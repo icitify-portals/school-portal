@@ -130,7 +130,7 @@ export default function PrincipalOfficersPage() {
 
     return (
         <div className="p-8 space-y-8 bg-slate-50 min-h-screen">
-            <div className="max-w-7xl mx-auto space-y-8">
+            <div className="max-w-[1600px] w-full mx-auto space-y-8">
                 {/* Header */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
@@ -150,7 +150,7 @@ export default function PrincipalOfficersPage() {
                                     <UserPlus className="w-4 h-4 mr-2" /> Assign New Officer
                                 </Button>
                             </DialogTrigger>
-                            <DialogContent className="sm:max-w-[500px] border-none rounded-[2rem] p-8">
+                            <DialogContent className="sm:max-w-[500px] border-none rounded-2xl p-8">
                                 <DialogHeader>
                                     <DialogTitle className="text-2xl font-black uppercase tracking-tighter">Assign Officer</DialogTitle>
                                     <DialogDescription className="font-medium text-slate-500">Assign a staff member to an institutional role.</DialogDescription>
@@ -318,7 +318,7 @@ export default function PrincipalOfficersPage() {
                                     <tr>
                                         <td colSpan={4} className="px-8 py-20 text-center">
                                             <div className="max-w-xs mx-auto space-y-3">
-                                                <div className="p-4 bg-slate-50 rounded-3xl inline-block">
+                                                <div className="p-4 bg-slate-50 rounded-2xl inline-block">
                                                     <Users className="w-8 h-8 text-slate-200" />
                                                 </div>
                                                 <p className="font-bold text-slate-400">No principal officers found matches your criteria.</p>

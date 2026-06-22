@@ -56,7 +56,7 @@ export default function AcademicRecordPrintout({ studentId }: { studentId: numbe
 
     if (isK12 && selectedTerm) {
         return (
-            <div className="max-w-5xl mx-auto space-y-6">
+            <div className="max-w-[1600px] w-full mx-auto space-y-6">
                  <div className="flex justify-between items-center print:hidden">
                     <Button variant="ghost" onClick={() => setSelectedTerm(null)} className="gap-2 font-bold text-slate-500">
                         <ChevronLeft className="w-4 h-4" />
@@ -98,7 +98,7 @@ export default function AcademicRecordPrintout({ studentId }: { studentId: numbe
             </div>
 
             {/* Student Info Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12 p-8 bg-slate-50 rounded-3xl border border-slate-100 print:bg-transparent print:border-none print:px-0">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12 p-8 bg-slate-50 rounded-2xl border border-slate-100 print:bg-transparent print:border-none print:px-0">
                 <div className="space-y-4">
                     <div>
                         <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Full Name</p>

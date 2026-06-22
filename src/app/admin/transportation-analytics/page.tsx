@@ -310,7 +310,7 @@ export default function TransportationAnalytics() {
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
+      <div className="max-w-[1600px] w-full mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -424,9 +424,9 @@ export default function TransportationAnalytics() {
                     </div>
                     <div className="ml-4">
                       <p className="text-sm font-medium text-gray-600">Total Revenue</p>
-                      <p className="text-2xl font-bold text-gray-900">₦{analytics.summary.trips.totalRevenue.toLocaleString()}</p>
+                      <p className="text-2xl font-bold text-gray-900">{settings?.base_currency || '₦'}{analytics.summary.trips.totalRevenue.toLocaleString()}</p>
                       <p className="text-xs text-gray-500">
-                        ₦{Math.round(analytics.summary.trips.totalRevenue / analytics.summary.trips.totalTrips)} per trip
+                        {settings?.base_currency || '₦'}{Math.round(analytics.summary.trips.totalRevenue / analytics.summary.trips.totalTrips)} per trip
                       </p>
                     </div>
                   </div>
@@ -441,7 +441,7 @@ export default function TransportationAnalytics() {
                     </div>
                     <div className="ml-4">
                       <p className="text-sm font-medium text-gray-600">Fuel Cost</p>
-                      <p className="text-2xl font-bold text-gray-900">₦{analytics.summary.fuel.totalFuelCost.toLocaleString()}</p>
+                      <p className="text-2xl font-bold text-gray-900">{settings?.base_currency || '₦'}{analytics.summary.fuel.totalFuelCost.toLocaleString()}</p>
                       <p className="text-xs text-gray-500">
                         {analytics.summary.fuel.totalLiters} liters
                       </p>
@@ -819,7 +819,7 @@ export default function TransportationAnalytics() {
                     <div className="space-y-4">
                       <div className="flex justify-between">
                         <span>Total Cost:</span>
-                        <span className="font-bold">₦{fuelReport.summary?.totalFuelCost || 0}</span>
+                        <span className="font-bold">{settings?.base_currency || '₦'}{fuelReport.summary?.totalFuelCost || 0}</span>
                       </div>
                       <div className="flex justify-between">
                         <span>Total Liters:</span>
@@ -827,7 +827,7 @@ export default function TransportationAnalytics() {
                       </div>
                       <div className="flex justify-between">
                         <span>Avg Cost/Liter:</span>
-                        <span className="font-bold">₦{fuelReport.summary?.avgCostPerLiter || 0}</span>
+                        <span className="font-bold">{settings?.base_currency || '₦'}{fuelReport.summary?.avgCostPerLiter || 0}</span>
                       </div>
                     </div>
                   </CardContent>
@@ -1015,7 +1015,7 @@ export default function TransportationAnalytics() {
                           {incident.incident.severity}
                         </div>
                         <div className="text-sm text-gray-500 mt-1">
-                          Cost: ₦{incident.incident.estimatedCost}
+                          Cost: {settings?.base_currency || '₦'}{incident.incident.estimatedCost}
                         </div>
                         <div className="text-sm text-gray-500">
                           Status: {incident.incident.status}

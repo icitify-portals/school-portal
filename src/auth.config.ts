@@ -53,10 +53,15 @@ export const authConfig = {
 
             // Check role permissions for admin pages
             const userRole = (auth?.user as any)?.role?.toLowerCase();
-            const allowedAdminPaths = ["/admin/academics", "/admin/students", "/admin/hr"]; // Paths staff can access
+            const allowedAdminPaths = ["/admin/academics", "/admin/students", "/admin/hr", "/admin/exams-records"]; // Paths staff can access
             
-            if (isAdminPage) {
+             if (isAdminPage) {
                 if (userRole === 'admin' || userRole === 'superadmin' || userRole === 'dvc') return true;
+                if (userRole === 'bursar' && (nextUrl.pathname.startsWith("/admin/bursary") || nextUrl.pathname.startsWith("/admin/students") || nextUrl.pathname.startsWith("/admin/hr"))) return true;
+                if (userRole === 'registrar' && (nextUrl.pathname.startsWith("/admin/admission") || nextUrl.pathname.startsWith("/admin/admissions") || nextUrl.pathname.startsWith("/admin/academics") || nextUrl.pathname.startsWith("/admin/academic") || nextUrl.pathname.startsWith("/admin/students") || nextUrl.pathname.startsWith("/admin/hr") || nextUrl.pathname.startsWith("/admin/exams-records"))) return true;
+                if (userRole === 'librarian' && (nextUrl.pathname.startsWith("/admin/library") || nextUrl.pathname.startsWith("/admin/journal") || nextUrl.pathname.startsWith("/admin/students") || nextUrl.pathname.startsWith("/admin/hr"))) return true;
+                if (userRole === 'hod' && (nextUrl.pathname.startsWith("/admin/hod") || nextUrl.pathname.startsWith("/admin/academics") || nextUrl.pathname.startsWith("/admin/academic") || nextUrl.pathname.startsWith("/admin/students") || nextUrl.pathname.startsWith("/admin/hr"))) return true;
+                if (userRole === 'dean' && (nextUrl.pathname.startsWith("/admin/dean") || nextUrl.pathname.startsWith("/admin/academics") || nextUrl.pathname.startsWith("/admin/academic") || nextUrl.pathname.startsWith("/admin/students") || nextUrl.pathname.startsWith("/admin/hr"))) return true;
                 if (userRole === 'staff' && allowedAdminPaths.some(p => nextUrl.pathname.startsWith(p))) return true;
                 return Response.redirect(new URL("/", nextUrl));
             }

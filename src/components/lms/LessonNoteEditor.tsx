@@ -110,7 +110,7 @@ export default function LessonNoteEditor({ initialData, teacherId, courses, sess
         <div className="flex h-[calc(100vh-120px)] gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
             {/* Editor Side */}
             <div className="flex-1 flex flex-col gap-6 overflow-hidden">
-                <Card className="p-6 border-none shadow-xl bg-white/80 backdrop-blur-md rounded-3xl shrink-0">
+                <Card className="p-6 border-none shadow-xl bg-white/80 backdrop-blur-md rounded-2xl shrink-0">
                     <div className="grid grid-cols-4 gap-4">
                         <div className="col-span-2 space-y-2">
                             <Label className="text-xs font-black uppercase tracking-widest text-slate-400 ml-1">Note Title</Label>
@@ -145,7 +145,7 @@ export default function LessonNoteEditor({ initialData, teacherId, courses, sess
                     </div>
                 </Card>
 
-                <Card className="flex-1 p-0 border-none shadow-2xl bg-white rounded-3xl overflow-hidden relative">
+                <Card className="flex-1 p-0 border-none shadow-2xl bg-white rounded-2xl overflow-hidden relative">
                     <div className="absolute top-4 right-4 z-10 flex gap-2">
                         {status === 'rejected' && (
                             <Badge variant="destructive" className="rounded-full px-4 py-1 gap-2 border-none">
@@ -184,7 +184,7 @@ export default function LessonNoteEditor({ initialData, teacherId, courses, sess
                     </div>
                 </Card>
                 
-                <div className="flex justify-between items-center bg-white/50 backdrop-blur rounded-3xl p-4 shrink-0 border border-white/20">
+                <div className="flex justify-between items-center bg-white/50 backdrop-blur rounded-2xl p-4 shrink-0 border border-white/20">
                     <div className="flex gap-2">
                         <Button variant="outline" className="rounded-2xl gap-2 font-bold px-6">
                             <Eye className="w-4 h-4" /> Preview
@@ -233,7 +233,7 @@ export default function LessonNoteEditor({ initialData, teacherId, courses, sess
                 </div>
 
                 <div className="flex-1 p-6 flex flex-col gap-6 overflow-hidden">
-                    <Card className="bg-indigo-950/40 border-indigo-800 p-4 rounded-3xl space-y-4">
+                    <Card className="bg-indigo-950/40 border-indigo-800 p-4 rounded-2xl space-y-4">
                         <Label className="text-[10px] font-black uppercase tracking-widest text-indigo-400">Generation Prompt</Label>
                         <textarea 
                             value={aiPrompt}
@@ -269,7 +269,7 @@ export default function LessonNoteEditor({ initialData, teacherId, courses, sess
                             </div>
 
                             {feedback && (
-                                <div className="mt-4 p-4 bg-rose-500/10 border border-rose-500/20 rounded-3xl space-y-2">
+                                <div className="mt-4 p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl space-y-2">
                                     <div className="flex items-center gap-2 text-rose-300 font-bold text-xs uppercase tracking-wider">
                                         <History className="w-3 h-3" /> Supervisor Feedback
                                     </div>

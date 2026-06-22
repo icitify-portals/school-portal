@@ -62,7 +62,15 @@ export default async function CourseEditorPage(props: PageProps) {
             <CourseEditor
                 courseId={courseId}
                 initialModules={contentRes.content as any}
+                initialFormatSettings={{
+                    courseFormat: course.courseFormat || 'topics',
+                    courseStartDate: course.courseStartDate ? course.courseStartDate.toString() : null,
+                    totalDurationWeeks: course.totalDurationWeeks || 12,
+                    flowControl: course.flowControl || 'open',
+                    minPassingScore: course.minPassingScore || 75
+                }}
             />
         </div>
     );
 }
+

@@ -36,7 +36,7 @@ export default function ResultDownloadCenter({ studentId, sessionId, semester }:
   }
 
   return (
-    <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-xl space-y-6 relative overflow-hidden group">
+    <div className="bg-white p-8 rounded-2xl border border-slate-100 shadow-xl space-y-6 relative overflow-hidden group">
       <div className="absolute -right-8 -top-8 w-32 h-32 bg-indigo-50 rounded-full group-hover:scale-110 transition-transform duration-500" />
       
       <div className="relative z-10 space-y-6">

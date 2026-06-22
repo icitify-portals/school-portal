@@ -51,7 +51,7 @@ export default async function NewsArticlePage({ params }: { params: { slug: stri
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/60 to-transparent" />
                 
                 <div className="absolute bottom-0 left-0 w-full p-8 lg:p-20">
-                    <div className="max-w-5xl mx-auto space-y-6">
+                    <div className="max-w-[1600px] w-full mx-auto space-y-6">
                         <div className="flex items-center gap-3">
                             <Badge className="bg-indigo-600 text-white border-none py-1.5 px-4 rounded-full font-bold uppercase tracking-widest text-xs">
                                 {article.category}
@@ -72,14 +72,14 @@ export default async function NewsArticlePage({ params }: { params: { slug: stri
             </div>
 
             {/* Article Content Area */}
-            <div className="max-w-7xl mx-auto px-6 py-20">
+            <div className="max-w-[1600px] w-full mx-auto px-6 py-20">
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-16">
                     {/* Main Content */}
                     <div className="lg:col-span-8 space-y-12">
                         <div className="prose prose-slate prose-xl max-w-none 
                             prose-headings:font-black prose-headings:italic prose-headings:tracking-tighter
                             prose-p:text-slate-600 prose-p:leading-relaxed
-                            prose-img:rounded-3xl prose-img:shadow-2xl prose-img:border prose-img:border-slate-100"
+                            prose-img:rounded-2xl prose-img:shadow-2xl prose-img:border prose-img:border-slate-100"
                         >
                             <div dangerouslySetInnerHTML={{ __html: article.content }} />
                         </div>
@@ -103,7 +103,7 @@ export default async function NewsArticlePage({ params }: { params: { slug: stri
 
                     {/* Sidebar */}
                     <aside className="lg:col-span-4 space-y-12">
-                        <div className="bg-slate-50 rounded-3xl p-8 space-y-6">
+                        <div className="bg-slate-50 rounded-2xl p-8 space-y-6">
                             <h3 className="text-sm font-black uppercase tracking-[0.2em] text-indigo-600">Institutional Feed</h3>
                             <div className="space-y-8">
                                 {moreNews.map((n: any) => (
@@ -123,7 +123,7 @@ export default async function NewsArticlePage({ params }: { params: { slug: stri
                         </div>
 
                         {/* School Badge/CTA */}
-                        <div className="bg-indigo-600 rounded-3xl p-8 text-white relative overflow-hidden">
+                        <div className="bg-indigo-600 rounded-2xl p-8 text-white relative overflow-hidden">
                             <div className="relative z-10 space-y-4">
                                 <h3 className="text-xl font-black italic tracking-tighter">Stay updated on institutional progress.</h3>
                                 <p className="text-indigo-100 text-sm">Join our mailing list for weekly briefings from the Vice Chancellor's office.</p>

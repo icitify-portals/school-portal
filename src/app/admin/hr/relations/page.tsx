@@ -159,7 +159,7 @@ export default function RelationsDashboard() {
     };
 
     return (
-        <div className="p-8 max-w-7xl mx-auto space-y-8 bg-slate-50/50 min-h-screen">
+        <div className="p-8 max-w-[1600px] w-full mx-auto space-y-8 bg-slate-50/50 min-h-screen">
             <div className="flex justify-between items-end">
                 <div>
                     <h1 className="text-4xl font-black text-slate-900 tracking-tight flex items-center gap-3 italic">
@@ -171,7 +171,7 @@ export default function RelationsDashboard() {
                 <div className="flex gap-4">
                     <Button
                         onClick={() => setIsAdding(true)}
-                        className="bg-slate-900 hover:bg-black rounded-3xl py-6 px-8 font-black uppercase text-[10px] tracking-widest gap-2 shadow-2xl shadow-slate-200 transition-all"
+                        className="bg-slate-900 hover:bg-black rounded-2xl py-6 px-8 font-black uppercase text-[10px] tracking-widest gap-2 shadow-2xl shadow-slate-200 transition-all"
                     >
                         <Plus className="w-4 h-4" /> Log New Entry
                     </Button>
@@ -291,13 +291,13 @@ export default function RelationsDashboard() {
                                 <Button
                                     variant="outline"
                                     onClick={() => { setIsAdding(false); resetForm(); }}
-                                    className="flex-1 rounded-3xl py-6 font-black uppercase text-[10px] tracking-[0.2em] border-slate-200"
+                                    className="flex-1 rounded-2xl py-6 font-black uppercase text-[10px] tracking-[0.2em] border-slate-200"
                                 >
                                     Cancel
                                 </Button>
                                 <Button
                                     onClick={activeTab === "disciplinary" ? handleLogDisciplinary : activeTab === "training" ? handleRegisterTraining : handleInitiateExit}
-                                    className="flex-1 bg-slate-900 hover:bg-black rounded-3xl py-6 font-black uppercase text-[10px] tracking-[0.2em] shadow-xl shadow-slate-200"
+                                    className="flex-1 bg-slate-900 hover:bg-black rounded-2xl py-6 font-black uppercase text-[10px] tracking-[0.2em] shadow-xl shadow-slate-200"
                                 >
                                     Commit Record to Ledger
                                 </Button>
@@ -307,7 +307,7 @@ export default function RelationsDashboard() {
                 )}
 
                 <TabsContent value="disciplinary" className="space-y-6">
-                    <Card className="border-none shadow-sm overflow-hidden rounded-3xl italic">
+                    <Card className="border-none shadow-sm overflow-hidden rounded-2xl italic">
                         <CardHeader className="bg-white border-b border-slate-50 p-6 flex flex-row items-center justify-between">
                             <div className="flex items-center gap-3">
                                 <ShieldAlert className="w-5 h-5 text-rose-500" />
@@ -373,7 +373,7 @@ export default function RelationsDashboard() {
                 <TabsContent value="training" className="space-y-6">
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                         <div className="lg:col-span-2 space-y-6">
-                            <Card className="border-none shadow-sm overflow-hidden rounded-3xl italic">
+                            <Card className="border-none shadow-sm overflow-hidden rounded-2xl italic">
                                 <CardHeader className="bg-white border-b border-slate-50 p-6 flex flex-row items-center justify-between">
                                     <div className="flex items-center gap-3">
                                         <GraduationCap className="w-5 h-5 text-indigo-500" />
@@ -431,7 +431,7 @@ export default function RelationsDashboard() {
                             </Card>
                         </div>
                         <div className="lg:col-span-1">
-                            <Card className="border-none shadow-sm rounded-3xl bg-indigo-600 text-white p-8">
+                            <Card className="border-none shadow-sm rounded-2xl bg-indigo-600 text-white p-8">
                                 <GraduationCap className="w-10 h-10 mb-6 opacity-40 capitalize" />
                                 <h3 className="text-2xl font-black italic tracking-tight">Staff Learning</h3>
                                 <p className="text-sm font-medium opacity-80 mt-2 mb-8">HR verification ensures all faculty credentials meet institutional standards.</p>
@@ -447,7 +447,7 @@ export default function RelationsDashboard() {
                 </TabsContent>
 
                 <TabsContent value="student_growth" className="space-y-6">
-                    <Card className="border-none shadow-sm overflow-hidden rounded-3xl italic">
+                    <Card className="border-none shadow-sm overflow-hidden rounded-2xl italic">
                         <CardHeader className="bg-white border-b border-slate-50 p-6 flex flex-row items-center justify-between">
                             <div className="flex items-center gap-3">
                                 <GraduationCap className="w-5 h-5 text-amber-500" />
@@ -504,7 +504,7 @@ export default function RelationsDashboard() {
                 </TabsContent>
 
                 <TabsContent value="exit" className="space-y-6">
-                    <Card className="border-none shadow-sm overflow-hidden rounded-3xl italic">
+                    <Card className="border-none shadow-sm overflow-hidden rounded-2xl italic">
                         <CardHeader className="bg-white border-b border-slate-50 p-6">
                             <div className="flex items-center gap-3">
                                 <LogOut className="w-5 h-5 text-slate-900" />
@@ -547,7 +547,7 @@ export default function RelationsDashboard() {
                                                     </div>
                                                 </td>
                                                 <td className="px-8 py-6 text-right">
-                                                    <Button variant="outline" className="rounded-[2rem] text-[9px] font-black uppercase tracking-widest h-8 px-4 border-slate-200">Manage Workflow</Button>
+                                                    <Button variant="outline" className="rounded-2xl text-[9px] font-black uppercase tracking-widest h-8 px-4 border-slate-200">Manage Workflow</Button>
                                                 </td>
                                             </tr>
                                         ))}

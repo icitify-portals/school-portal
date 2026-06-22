@@ -193,7 +193,7 @@ export default function ExamManagerPage() {
 
                             <div className="grid grid-cols-1 gap-4">
                                 {currentSubject.questions.map((q: any, idx: number) => (
-                                    <Card key={q.id} className="border-none shadow-sm rounded-3xl p-8 bg-white group hover:shadow-xl transition-all border border-slate-50">
+                                    <Card key={q.id} className="border-none shadow-sm rounded-2xl p-8 bg-white group hover:shadow-xl transition-all border border-slate-50">
                                         <div className="flex gap-6">
                                             <div className="w-12 h-12 bg-slate-900 rounded-2xl flex items-center justify-center text-white font-black italic shrink-0">
                                                 {idx + 1}
@@ -246,7 +246,7 @@ export default function ExamManagerPage() {
                                 {currentSubject.questions.length === 0 && (
                                     <div className="py-32 text-center bg-white border-4 border-dashed border-slate-50 rounded-[3rem]">
                                         <div className="max-w-xs mx-auto space-y-4">
-                                            <div className="p-6 bg-slate-50 rounded-[2rem] w-fit mx-auto">
+                                            <div className="p-6 bg-slate-50 rounded-2xl w-fit mx-auto">
                                                 <FileQuestion className="w-10 h-10 text-slate-200" />
                                             </div>
                                             <h4 className="text-xl font-black text-slate-300 italic uppercase">No Questions</h4>
@@ -406,7 +406,7 @@ export default function ExamManagerPage() {
                                                 type="button"
                                                 onClick={() => setQuestionData({ ...questionData, correctAnswer: val, options: ['True', 'False'] })}
                                                 className={cn(
-                                                    "flex-1 p-6 rounded-[2rem] font-black uppercase italic tracking-widest transition-all",
+                                                    "flex-1 p-6 rounded-2xl font-black uppercase italic tracking-widest transition-all",
                                                     questionData.correctAnswer === val ? "bg-indigo-600 text-white shadow-xl" : "bg-slate-50 text-slate-400"
                                                 )}
                                             >

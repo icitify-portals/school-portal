@@ -103,7 +103,7 @@ export function HotspotEditor({ question, updateQuestion }: HotspotEditorProps) 
                     </div>
                 </div>
             ) : (
-                <div className="aspect-video bg-slate-50 border-2 border-dashed border-slate-200 rounded-3xl flex flex-col items-center justify-center text-center p-12">
+                <div className="aspect-video bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center text-center p-12">
                     <ImageIcon className="w-12 h-12 text-slate-200 mb-4" />
                     <h4 className="text-sm font-bold text-slate-400">No Image Provided</h4>
                     <p className="text-[10px] text-slate-300 max-w-xs mt-1">Please provide a valid image URL to start defining hotspots.</p>

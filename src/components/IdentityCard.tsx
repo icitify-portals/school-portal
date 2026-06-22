@@ -54,7 +54,7 @@ export function IdentityCard({ name, id, role, department, photoUrl, barcode, cl
             <CardContent className="p-0 flex flex-col items-center relative h-full">
                 {/* Profile Photo Area */}
                 <div className="mt-16 relative">
-                    <div className="w-32 h-32 rounded-3xl bg-slate-100 border-4 border-white shadow-xl overflow-hidden flex items-center justify-center">
+                    <div className="w-32 h-32 rounded-2xl bg-slate-100 border-4 border-white shadow-xl overflow-hidden flex items-center justify-center">
                         {photoUrl ? (
                             <img src={photoUrl} alt={name} className="w-full h-full object-cover" />
                         ) : (

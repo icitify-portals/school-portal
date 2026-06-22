@@ -82,12 +82,42 @@ export class PaymentService {
             .update(`${merchantId}${serviceTypeId}${reference}${amount}${apiKey}`)
             .digest('hex');
 
-        // In a real scenario, we'd POST to Remita API here
+        // Call Remita API
         console.log(`Remita API Hash: ${hash}`);
+        const payload = {
+            merchantId,
+            serviceTypeId,
+            amount: amount.toString(),
+            orderId: reference,
+            // Assuming default payer details if none provided directly here
+            payerName: "Student Payer",
+            payerEmail: "student@school.edu",
+            payerPhone: "08000000000"
+        };
+
+        let rrr = "RRR-MOCK-12345";
+        try {
+            const res = await fetch('https://remitademo.net/remita/exapp/api/v1/send/api/echannelsvc/merchant/api/paymentinit', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `remitaConsumerKey=${merchantId},remitaConsumerToken=${hash}`
+                },
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            if (data && data.statuscode === "025" && data.rrr) {
+                rrr = data.rrr;
+            } else {
+                console.error("Remita RRR Generation failed:", data);
+            }
+        } catch (error) {
+            console.error("Error connecting to Remita API:", error);
+        }
         
         return { 
             success: true, 
-            rrr: "RRR-MOCK-12345", // This would be the actual RRR from Remita
+            rrr,
             hash 
         };
     }
@@ -138,10 +168,28 @@ export class PaymentService {
 
             const totalAmount = parseFloat(bill.totalAmount);
             const currentPaid = parseFloat(bill.amountPaid || "0.00");
-            const newPaid = currentPaid + amount;
+            const outstanding = totalAmount - currentPaid;
 
+            // Installment payment validations
+            const allowed = bill.partPaymentAllowed !== false;
+            const minPercent = bill.partPaymentMinPercent ?? 60;
+            const minAllowedAmount = allowed ? (totalAmount * minPercent) / 100 : totalAmount;
+
+            if (currentPaid < 0.01) {
+                // Initial payment: must meet the minimum required installment percentage
+                if (amount < minAllowedAmount - 0.01) {
+                    throw new Error(`Minimum initial installment payment of ₦${minAllowedAmount.toLocaleString()} (${minPercent}%) is required.`);
+                }
+            }
+
+            const newPaid = currentPaid + amount;
             if (newPaid > totalAmount + 0.01) {
-                throw new Error(`Payment amount exceeds outstanding bill balance. Max payable: ₦${(totalAmount - currentPaid).toFixed(2)}`);
+                throw new Error(`Payment amount exceeds outstanding bill balance. Max payable: ₦${outstanding.toFixed(2)}`);
+            }
+
+            // If part payment is disabled, require full payment
+            if (!allowed && Math.abs(amount - outstanding) > 0.01) {
+                throw new Error(`Installments are not enabled for this payment. Full payment of ₦${outstanding.toFixed(2)} is required.`);
             }
 
             // 3. Update student wallet balance

@@ -227,7 +227,7 @@ export default function CommunicationsPage() {
                     </div>
                 ) : (
                     <div className="flex-1 flex flex-col items-center justify-center p-12 text-center">
-                        <div className="w-24 h-24 bg-white rounded-3xl shadow-lg border border-slate-100 flex items-center justify-center mb-8 rotate-3">
+                        <div className="w-24 h-24 bg-white rounded-2xl shadow-lg border border-slate-100 flex items-center justify-center mb-8 rotate-3">
                             <MessageSquare className="w-12 h-12 text-blue-500" />
                         </div>
                         <h2 className="text-2xl font-bold text-slate-900 mb-2">Select a message</h2>

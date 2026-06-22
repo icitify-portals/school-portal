@@ -186,7 +186,7 @@ export default function ExamInterface() {
                                             key={opt}
                                             onClick={() => setAnswers({ ...answers, [currentIdx]: opt })}
                                             className={cn(
-                                                "p-8 rounded-3xl border-2 font-black uppercase tracking-widest transition-all",
+                                                "p-8 rounded-2xl border-2 font-black uppercase tracking-widest transition-all",
                                                 answers[currentIdx] === opt ? "bg-white border-indigo-600 shadow-lg ring-4 ring-indigo-50 text-indigo-600" : "bg-white border-slate-100 text-slate-400 hover:border-slate-300"
                                             )}
                                         >

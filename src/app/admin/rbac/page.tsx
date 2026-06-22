@@ -60,7 +60,7 @@ export default function RBACPage() {
     if (loading) return <div className="p-20 text-center"><Loader2 className="w-10 h-10 animate-spin mx-auto text-slate-400" /></div>;
 
     return (
-        <div className="p-8 max-w-7xl mx-auto">
+        <div className="p-8 max-w-[1600px] w-full mx-auto">
             <div className="mb-8">
                 <h2 className="text-3xl font-bold text-slate-900 tracking-tight flex items-center gap-3">
                     <Shield className="w-8 h-8 text-indigo-600" />

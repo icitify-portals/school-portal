@@ -23,8 +23,11 @@ import {
 import {
     generateBillForStudent,
     generateBatchBills,
-    getFeeStructures
+    getFeeStructures,
+    getStudentBillsAdmin,
+    updateBillInstallmentSettings
 } from "@/actions/bursary";
+import { toast } from "sonner";
 import { getStudents } from "@/actions/students";
 import { getAcademicSessions } from "@/actions/portal";
 import { getDepartments } from "@/actions/departments";
@@ -53,9 +56,59 @@ export default function BursaryBillsPage() {
     const [submitting, setSubmitting] = useState(false);
     const [resultData, setResultData] = useState<{ count: number, failed: number } | null>(null);
 
+    // Bills List & Installment overrides state
+    const [billsList, setBillsList] = useState<any[]>([]);
+    const [billsLoading, setBillsLoading] = useState(false);
+    const [searchQuery, setSearchQuery] = useState("");
+    const [updatingBillId, setUpdatingBillId] = useState<number | null>(null);
+
+    const fetchBills = async (search?: string) => {
+        setBillsLoading(true);
+        const res = await getStudentBillsAdmin({ search });
+        if (res.success && res.data) {
+            setBillsList(res.data);
+        }
+        setBillsLoading(false);
+    };
+
     useEffect(() => {
         fetchInitialData();
+        fetchBills();
     }, []);
+
+    useEffect(() => {
+        const delayDebounceFn = setTimeout(() => {
+            fetchBills(searchQuery);
+        }, 500);
+
+        return () => clearTimeout(delayDebounceFn);
+    }, [searchQuery]);
+
+    const handleToggleInstallment = async (billId: number, currentAllowed: boolean, minPercent: number) => {
+        setUpdatingBillId(billId);
+        const newAllowed = !currentAllowed;
+        const res = await updateBillInstallmentSettings(billId, newAllowed, minPercent);
+        if (res.success) {
+            toast.success("Installment settings updated.");
+            setBillsList(prev => prev.map(b => b.id === billId ? { ...b, partPaymentAllowed: newAllowed } : b));
+        } else {
+            toast.error(res.error || "Failed to update settings.");
+        }
+        setUpdatingBillId(null);
+    };
+
+    const handleMinPercentChange = async (billId: number, allowed: boolean, newPercent: number) => {
+        if (isNaN(newPercent) || newPercent < 1 || newPercent > 100) return;
+        setUpdatingBillId(billId);
+        const res = await updateBillInstallmentSettings(billId, allowed, newPercent);
+        if (res.success) {
+            toast.success(`Minimum installment set to ${newPercent}%.`);
+            setBillsList(prev => prev.map(b => b.id === billId ? { ...b, partPaymentMinPercent: newPercent } : b));
+        } else {
+            toast.error(res.error || "Failed to update percentage.");
+        }
+        setUpdatingBillId(null);
+    };
 
     const fetchInitialData = async () => {
         setLoading(true);
@@ -93,6 +146,7 @@ export default function BursaryBillsPage() {
                     alert("Bill generated successfully!");
                     setIsGenerating(false);
                     setBillNote("");
+                    fetchBills(searchQuery);
                 } else {
                     alert((res as any).error || "Failed to generate bill");
                 }
@@ -109,9 +163,9 @@ export default function BursaryBillsPage() {
                 });
 
                 if (res.success) {
-                    setResultData({ count: res.count || 0, failed: res.failed || 0 });
+                    setResultData({ count: (res as any).successCount || 0, failed: (res as any).failCount || 0 });
                     setBillNote("");
-                    // Don't close immediately so they can see the count
+                    fetchBills(searchQuery);
                 } else {
                     alert(res.error || "Batch generation failed");
                 }
@@ -326,28 +380,125 @@ export default function BursaryBillsPage() {
             )}
 
             <div className="grid grid-cols-1 gap-6">
-                <Card className="border-none shadow-sm overflow-hidden bg-white ring-1 ring-slate-200">
-                    <CardHeader className="bg-slate-50/50 flex flex-row justify-between items-center border-b border-slate-100">
-                        <CardTitle className="text-lg font-bold text-slate-800">Operational Log</CardTitle>
-                        <div className="relative">
-                            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <Card className="border-none shadow-xl shadow-slate-100/50 rounded-[2.5rem] overflow-hidden border border-slate-100">
+                    <CardHeader className="bg-slate-50/50 flex flex-col sm:flex-row justify-between items-center border-b border-slate-100 p-8 gap-4">
+                        <div>
+                            <CardTitle className="text-lg font-bold text-slate-800">Student Bills & Installment Overrides</CardTitle>
+                            <p className="text-xs text-slate-500 font-medium mt-1">Configure part payment availability and minimum percentages per student bill</p>
+                        </div>
+                        <div className="relative w-full sm:w-80">
+                            <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
                             <input
-                                className="pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-indigo-500 w-64 outline-none transition-all"
-                                placeholder="Filter bill history..."
+                                className="pl-11 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none w-full h-11 transition-all"
+                                placeholder="Search by student, matric, or bill..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
                             />
                         </div>
                     </CardHeader>
-                    <div className="p-12 text-center text-slate-400 italic">
-                        <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-4 opacity-50">
-                            <FileText className="w-8 h-8" />
-                        </div>
-                        <p className="font-medium text-slate-600">History Log Accessible Below</p>
-                        <p className="text-sm mt-1">Visit the "Finance Ledger" for per-student detailed audit trails.</p>
-                        <div className="flex justify-center gap-4 mt-8 opacity-40">
-                            <Building2 className="w-5 h-5" />
-                            <Layers className="w-5 h-5" />
-                            <Users className="w-5 h-5" />
-                        </div>
+                    <div className="bg-white">
+                        {billsLoading ? (
+                            <div className="py-20 flex flex-col items-center justify-center text-slate-400 gap-3">
+                                <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
+                                <p className="text-xs font-bold uppercase tracking-widest text-slate-500">Retrieving student bills...</p>
+                            </div>
+                        ) : billsList.length === 0 ? (
+                            <div className="py-20 text-center text-slate-400 italic">
+                                <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-4 opacity-50">
+                                    <FileText className="w-8 h-8" />
+                                </div>
+                                <p className="font-medium text-slate-600">No student bills found</p>
+                                <p className="text-xs mt-1">Generate new bills above or refine search criteria.</p>
+                            </div>
+                        ) : (
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr className="bg-slate-50/50 text-slate-500 text-[10px] font-black uppercase tracking-widest border-b border-slate-100">
+                                            <th className="px-8 py-5">Bill Number</th>
+                                            <th className="px-8 py-5">Student Details</th>
+                                            <th className="px-8 py-5">Session</th>
+                                            <th className="px-8 py-5">Bill Amount</th>
+                                            <th className="px-8 py-5">Amount Paid</th>
+                                            <th className="px-8 py-5">Installment Override</th>
+                                            <th className="px-8 py-5">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100">
+                                        {billsList.map((bill) => {
+                                            const outstanding = parseFloat(bill.totalAmount) - parseFloat(bill.amountPaid || "0.00");
+                                            const isUpdating = updatingBillId === bill.id;
+
+                                            return (
+                                                <tr key={bill.id} className="hover:bg-slate-50/30 transition-colors">
+                                                    <td className="px-8 py-5 text-xs font-mono font-bold text-slate-600">
+                                                        {bill.billNumber}
+                                                    </td>
+                                                    <td className="px-8 py-5">
+                                                        <p className="text-sm font-extrabold text-slate-900">{bill.student?.firstName} {bill.student?.lastName}</p>
+                                                        <p className="text-[10px] font-bold text-slate-400 uppercase">{bill.student?.matricNumber || "ND/FT/MOCK"}</p>
+                                                    </td>
+                                                    <td className="px-8 py-5 text-xs font-bold text-slate-500">
+                                                        {bill.session?.name}
+                                                    </td>
+                                                    <td className="px-8 py-5 text-sm font-black text-slate-900">
+                                                        {settings?.base_currency || '₦'}{parseFloat(bill.totalAmount).toLocaleString()}
+                                                    </td>
+                                                    <td className="px-8 py-5">
+                                                        <p className="text-xs font-bold text-emerald-600">{settings?.base_currency || '₦'}{parseFloat(bill.amountPaid || "0.00").toLocaleString()}</p>
+                                                        <p className="text-[10px] text-slate-400">Owed: {settings?.base_currency || '₦'}{outstanding.toLocaleString()}</p>
+                                                    </td>
+                                                    <td className="px-8 py-5">
+                                                        <div className="flex items-center gap-6">
+                                                            <div className="flex items-center gap-2">
+                                                                <label className="relative inline-flex items-center cursor-pointer">
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        disabled={isUpdating}
+                                                                        checked={bill.partPaymentAllowed !== false}
+                                                                        onChange={() => handleToggleInstallment(bill.id, bill.partPaymentAllowed !== false, bill.partPaymentMinPercent ?? 60)}
+                                                                        className="sr-only peer"
+                                                                    />
+                                                                    <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600"></div>
+                                                                </label>
+                                                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                                                                    {bill.partPaymentAllowed !== false ? "Allowed" : "Disabled"}
+                                                                </span>
+                                                            </div>
+                                                            <div className="flex items-center gap-1.5">
+                                                                <input
+                                                                    type="number"
+                                                                    min="1"
+                                                                    max="100"
+                                                                    disabled={bill.partPaymentAllowed === false || isUpdating}
+                                                                    defaultValue={bill.partPaymentMinPercent ?? 60}
+                                                                    onBlur={(e) => handleMinPercentChange(bill.id, bill.partPaymentAllowed !== false, parseInt(e.target.value))}
+                                                                    className="w-12 h-8 px-1 text-center font-mono text-xs border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:opacity-40 font-bold bg-white"
+                                                                />
+                                                                <span className="text-xs text-slate-400 font-bold">%</span>
+                                                            </div>
+                                                            {isUpdating && <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-600" />}
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-8 py-5">
+                                                        <span className={cn(
+                                                            "px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider",
+                                                            bill.status === 'paid'
+                                                                ? "bg-emerald-100 text-emerald-800"
+                                                                : bill.status === 'partially_paid'
+                                                                ? "bg-amber-100 text-amber-800"
+                                                                : "bg-rose-100 text-rose-800"
+                                                        )}>
+                                                            {bill.status === 'partially_paid' ? 'Part-Paid' : bill.status}
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
                     </div>
                 </Card>
             </div>

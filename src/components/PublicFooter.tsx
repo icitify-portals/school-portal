@@ -9,7 +9,7 @@ export function PublicFooter() {
             className="text-white pt-20 pb-10"
             style={{ backgroundColor: 'var(--brand-secondary, #0f172a)' }}
         >
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="max-w-[1600px] w-full mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-16">
                     {/* Brand Section */}
                     <div className="space-y-6">

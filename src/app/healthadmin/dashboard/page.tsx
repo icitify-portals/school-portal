@@ -40,7 +40,7 @@ export default async function HealthAdminDashboard() {
     ];
 
     return (
-        <div className="p-8 max-w-7xl mx-auto space-y-8 bg-slate-50/30 min-h-screen">
+        <div className="p-8 max-w-[1600px] w-full mx-auto space-y-8 bg-slate-50/30 min-h-screen">
             {/* Header */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
@@ -80,7 +80,7 @@ export default async function HealthAdminDashboard() {
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 {/* Pending Reports */}
-                <Card className="border-none shadow-sm bg-white rounded-3xl overflow-hidden">
+                <Card className="border-none shadow-sm bg-white rounded-2xl overflow-hidden">
                     <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-6 flex flex-row items-center justify-between">
                         <div>
                             <CardTitle className="text-[10px] font-black uppercase tracking-widest text-indigo-600 mb-1">Incoming Data</CardTitle>
@@ -123,7 +123,7 @@ export default async function HealthAdminDashboard() {
                 </Card>
 
                 {/* Recent Vitals */}
-                <Card className="border-none shadow-sm bg-white rounded-3xl overflow-hidden">
+                <Card className="border-none shadow-sm bg-white rounded-2xl overflow-hidden">
                     <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-6 flex flex-row items-center justify-between">
                         <div>
                             <CardTitle className="text-[10px] font-black uppercase tracking-widest text-rose-600 mb-1">Clinical Activity</CardTitle>

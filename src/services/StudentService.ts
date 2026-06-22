@@ -328,7 +328,7 @@ export class StudentService {
         // or a snapshot table. For now, we'll update the 'updatedAt' timestamp
         // to signify a profile refresh.
         return await db.update(students)
-            .set({ status: students.status })
+            .set({ status: sql`${students.status}` })
             .where(eq(students.admissionNumber, admissionNumber));
     }
 

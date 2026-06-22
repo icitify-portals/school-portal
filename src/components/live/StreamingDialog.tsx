@@ -78,7 +78,7 @@ export default function StreamingDialog({ isOpen, onClose, roomName }: Streaming
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="sm:max-w-[500px] rounded-3xl border-slate-200 shadow-2xl bg-white/95 backdrop-blur-xl">
+            <DialogContent className="sm:max-w-[500px] rounded-2xl border-slate-200 shadow-2xl bg-white/95 backdrop-blur-xl">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2 text-xl font-bold text-slate-900">
                         <Radio className={isStreaming ? "text-red-500 animate-pulse" : "text-indigo-600"} />

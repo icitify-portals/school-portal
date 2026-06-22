@@ -73,7 +73,7 @@ export default function SupervisorApprovals({ supervisorId }: { supervisorId: nu
     };
 
     return (
-        <div className="p-8 max-w-7xl mx-auto space-y-8 animate-in fade-in duration-700">
+        <div className="p-8 max-w-[1600px] w-full mx-auto space-y-8 animate-in fade-in duration-700">
             <header className="flex justify-between items-end">
                 <div className="space-y-1">
                     <h1 className="text-4xl font-black tracking-tight text-slate-900 group">
@@ -91,7 +91,7 @@ export default function SupervisorApprovals({ supervisorId }: { supervisorId: nu
             <div className="grid grid-cols-12 gap-8">
                 {/* Statistics / Sidebar */}
                 <div className="col-span-3 space-y-6">
-                    <Card className="p-6 rounded-[2rem] border-none shadow-xl bg-indigo-600 text-white space-y-4">
+                    <Card className="p-6 rounded-2xl border-none shadow-xl bg-indigo-600 text-white space-y-4">
                         <div className="p-3 bg-indigo-500 rounded-2xl w-fit">
                             <Clock className="w-6 h-6" />
                         </div>
@@ -102,7 +102,7 @@ export default function SupervisorApprovals({ supervisorId }: { supervisorId: nu
                         <p className="text-indigo-200 text-xs leading-relaxed">System-wide notes awaiting your pedagogical review and signature.</p>
                     </Card>
 
-                    <Card className="p-6 rounded-[2rem] border-none shadow-xl bg-white space-y-4">
+                    <Card className="p-6 rounded-2xl border-none shadow-xl bg-white space-y-4">
                         <h4 className="font-black text-xs uppercase tracking-widest text-slate-400">Quick Filters</h4>
                         <div className="space-y-2">
                             <button className="w-full flex justify-between items-center p-3 rounded-xl hover:bg-slate-50 transition-colors">
@@ -144,7 +144,7 @@ export default function SupervisorApprovals({ supervisorId }: { supervisorId: nu
                     ) : (
                         <div className="space-y-4">
                             {notes.map((note) => (
-                                <Card key={note.id} className="group p-6 rounded-[2rem] border-none shadow-md hover:shadow-2xl transition-all bg-white flex items-center gap-6">
+                                <Card key={note.id} className="group p-6 rounded-2xl border-none shadow-md hover:shadow-2xl transition-all bg-white flex items-center gap-6">
                                     <div className="h-16 w-16 bg-slate-50 rounded-2xl flex items-center justify-center shrink-0 group-hover:bg-indigo-50 transition-colors">
                                         <BookOpen className="w-8 h-8 text-indigo-400" />
                                     </div>
@@ -204,7 +204,7 @@ export default function SupervisorApprovals({ supervisorId }: { supervisorId: nu
                                     <FileText className="w-4 h-4" /> Proposed Content
                                 </h4>
                                 <div 
-                                    className="prose prose-slate max-w-none text-slate-700 bg-white p-6 rounded-3xl border border-slate-100"
+                                    className="prose prose-slate max-w-none text-slate-700 bg-white p-6 rounded-2xl border border-slate-100"
                                     dangerouslySetInnerHTML={{ __html: selectedNote?.contentBody || "" }}
                                 />
                             </div>

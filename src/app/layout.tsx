@@ -61,39 +61,19 @@ export const viewport: Viewport = {
   maximumScale: 5,
 };
 
-const GoogleAnalytics = () => (
-  <>
-    <script
-      async
-      src={`https://www.googletagmanager.com/gtag/js?id=${process.env.NEXT_PUBLIC_GA_ID}`}
-    />
-    <script
-      dangerouslySetInnerHTML={{
-        __html: `
-          window.dataLayer = window.dataLayer || [];
-          function gtag(){dataLayer.push(arguments);}
-          gtag('js', new Date());
-          gtag('config', '${process.env.NEXT_PUBLIC_GA_ID}', {
-            page_path: window.location.pathname,
-          });
-        `,
-      }}
-    />
-  </>
-);
-
+import { GoogleAnalytics } from "@next/third-parties/google";
 import { ImpersonationBanner } from "@/components/ImpersonationBanner";
 import { AnnouncementBanner } from "@/components/communication/AnnouncementBanner";
 import { AuthProvider } from "@/providers/AuthProvider";
 import { AppContent } from "@/components/AppContent";
 import { Toaster } from "sonner";
 import ThemeInjector from "@/components/ThemeInjector";
-import { NotificationToastManager } from "@/components/NotificationToastManager";
 import { ServiceWorkerRegistrar } from "@/components/ServiceWorkerRegistrar";
 import { PushNotificationManager } from "@/components/PushNotificationManager";
 import { LanguageProvider } from "@/i18n/LanguageProvider";
 import { BranchProvider } from "@/providers/BranchProvider";
 import { auth } from "@/auth";
+import { DobEnforcer } from "@/components/DobEnforcer";
 
 
 import { getEnabledModules } from "@/actions/system-settings";
@@ -127,8 +107,8 @@ export default async function RootLayout({
                 <AnnouncementBanner />
                 <ThemeInjector />
                 <AppContent enabledModules={enabledModules}>
+                  <DobEnforcer />
                   {children}
-                  <NotificationToastManager />
                   <PushNotificationManager />
                   <ServiceWorkerRegistrar />
                   <Toaster position="top-right" richColors />
@@ -141,4 +121,3 @@ export default async function RootLayout({
     </html>
   );
 }
-

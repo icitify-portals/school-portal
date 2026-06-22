@@ -104,7 +104,7 @@ export default function AttendancePage() {
     };
 
     return (
-        <div className="p-8 space-y-12 max-w-7xl mx-auto">
+        <div className="p-8 space-y-12 max-w-[1600px] w-full mx-auto">
             <div className="flex flex-col md:flex-row justify-between items-center gap-6">
                 <div className="space-y-2 text-center md:text-left">
                     <h1 className="text-4xl font-black text-slate-900 tracking-tight uppercase italic flex items-center justify-center md:justify-start gap-3">
@@ -156,7 +156,7 @@ export default function AttendancePage() {
                         <CardContent className="p-8">
                             {scanMode === "camera" ? (
                                 <div className="space-y-6">
-                                    <div id="reader" className="overflow-hidden rounded-3xl border-4 border-slate-100 bg-slate-50 aspect-video" />
+                                    <div id="reader" className="overflow-hidden rounded-2xl border-4 border-slate-100 bg-slate-50 aspect-video" />
                                     <p className="text-center text-[10px] font-bold text-slate-400 uppercase italic">
                                         Center your Identity Card QR/Barcode within the frame
                                     </p>
@@ -170,7 +170,7 @@ export default function AttendancePage() {
                                             value={barcode}
                                             onChange={(e) => setBarcode(e.target.value)}
                                             placeholder="Ready for hardware scan..."
-                                            className="text-center text-xl font-black h-20 rounded-3xl bg-slate-50 border-2 border-slate-100 focus:ring-4 focus:ring-blue-100 transition-all placeholder:text-slate-300"
+                                            className="text-center text-xl font-black h-20 rounded-2xl bg-slate-50 border-2 border-slate-100 focus:ring-4 focus:ring-blue-100 transition-all placeholder:text-slate-300"
                                             autoComplete="off"
                                             disabled={loading}
                                             autoFocus
@@ -187,7 +187,7 @@ export default function AttendancePage() {
                             {result && (
                                 <div
                                     className={cn(
-                                        "mt-8 p-8 rounded-[2rem] flex flex-col items-center gap-4 animate-in fade-in slide-in-from-bottom-4 duration-500 border-2",
+                                        "mt-8 p-8 rounded-2xl flex flex-col items-center gap-4 animate-in fade-in slide-in-from-bottom-4 duration-500 border-2",
                                         result.success ? "bg-blue-50/50 border-blue-100" : "bg-rose-50/50 border-rose-100"
                                     )}
                                 >

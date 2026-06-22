@@ -17,6 +17,7 @@ import {
     XCircle,
     Loader2
 } from "lucide-react";
+import { RemitaInlineCheckout } from "@/components/finance/RemitaInlineCheckout";
 
 function CheckoutSimulatorContent() {
     const searchParams = useSearchParams();
@@ -199,7 +200,7 @@ function CheckoutSimulatorContent() {
                             <div>
                                 <p className="text-slate-500 text-xs font-semibold uppercase tracking-wider">Amount Due</p>
                                 <h3 className="text-3xl font-extrabold text-white mt-1">
-                                    ₦{amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    {settings?.base_currency || '₦'}{amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                 </h3>
                             </div>
                             <div className="text-right">
@@ -241,7 +242,7 @@ function CheckoutSimulatorContent() {
                                             </div>
                                         </div>
                                         <span className="font-mono font-bold text-white">
-                                            ₦{(amount * 0.4).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                            {settings?.base_currency || '₦'}{(amount * 0.4).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                         </span>
                                     </div>
 
@@ -255,7 +256,7 @@ function CheckoutSimulatorContent() {
                                         </div>
                                         <div className="text-right">
                                             <span className="font-mono font-bold text-white">
-                                                ₦{(amount * 0.1).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                                {settings?.base_currency || '₦'}{(amount * 0.1).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                             </span>
                                             <Badge className="block mt-1 bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[10px] scale-90 px-1 py-0">
                                                 Developer Share
@@ -272,7 +273,7 @@ function CheckoutSimulatorContent() {
                                             </div>
                                         </div>
                                         <span className="font-mono font-bold text-white">
-                                            ₦{(amount * 0.2).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                            {settings?.base_currency || '₦'}{(amount * 0.2).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                         </span>
                                     </div>
 
@@ -285,7 +286,7 @@ function CheckoutSimulatorContent() {
                                             </div>
                                         </div>
                                         <span className="font-mono font-bold text-white">
-                                            ₦{(amount * 0.3).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                            {settings?.base_currency || '₦'}{(amount * 0.3).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                         </span>
                                     </div>
                                 </div>
@@ -311,23 +312,38 @@ function CheckoutSimulatorContent() {
                                 Simulate Cancel/Fail
                             </Button>
 
-                            <Button
-                                className={`w-full py-6 font-semibold flex items-center justify-center gap-2 text-white bg-emerald-600 hover:bg-emerald-500 border border-emerald-500/35`}
-                                disabled={loading}
-                                onClick={() => handleSimulate('completed')}
-                            >
-                                {loading ? (
-                                    <>
-                                        <Loader2 className="w-5 h-5 animate-spin" />
-                                        Processing Splits...
-                                    </>
-                                ) : (
-                                    <>
-                                        <CheckCircle2 className="w-5 h-5" />
-                                        Simulate Success
-                                    </>
-                                )}
-                            </Button>
+                            {gateway === 'remita' && rrr ? (
+                                <div className="w-full">
+                                    <RemitaInlineCheckout 
+                                        rrr={rrr} 
+                                        amount={amount} 
+                                        email={"student@school.edu"} 
+                                        firstName={"Student"} 
+                                        lastName={"Payer"} 
+                                        onSuccess={(response) => handleSimulate('completed')} 
+                                        onError={(response) => handleSimulate('failed')} 
+                                        onClose={() => handleSimulate('failed')} 
+                                    />
+                                </div>
+                            ) : (
+                                <Button
+                                    className={`w-full py-6 font-semibold flex items-center justify-center gap-2 text-white bg-emerald-600 hover:bg-emerald-500 border border-emerald-500/35`}
+                                    disabled={loading}
+                                    onClick={() => handleSimulate('completed')}
+                                >
+                                    {loading ? (
+                                        <>
+                                            <Loader2 className="w-5 h-5 animate-spin" />
+                                            Processing Splits...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <CheckCircle2 className="w-5 h-5" />
+                                            Simulate Success
+                                        </>
+                                    )}
+                                </Button>
+                            )}
                         </div>
                     </CardContent>
                 </Card>

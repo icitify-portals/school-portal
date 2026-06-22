@@ -150,7 +150,7 @@ export default function QuizTaker({ quiz, studentId, onComplete }: QuizTakerProp
                 <h2 className="text-3xl font-black text-slate-900 tracking-tight leading-none mb-2 italic">Examination Pending</h2>
                 <p className="text-slate-400 font-bold uppercase tracking-widest text-xs mb-8">Synchronizing with central scheduling...</p>
                 
-                <div className="bg-slate-900 text-white p-8 rounded-[2rem] space-y-4 shadow-xl shadow-indigo-200">
+                <div className="bg-slate-900 text-white p-8 rounded-2xl space-y-4 shadow-xl shadow-indigo-200">
                     <div className="flex flex-col items-center">
                         <p className="text-indigo-400 font-black uppercase tracking-tighter text-[10px] mb-2">Automated Countdown</p>
                         <div className="flex gap-4">
@@ -194,7 +194,7 @@ export default function QuizTaker({ quiz, studentId, onComplete }: QuizTakerProp
     if (!started) {
         return (
             <div className="max-w-xl mx-auto bg-white p-12 rounded-[3.5rem] shadow-2xl shadow-indigo-100/30 border-2 border-slate-50 text-center animate-in slide-in-from-bottom-8 duration-700">
-                <div className="w-20 h-20 bg-indigo-600 rounded-[2rem] flex items-center justify-center text-white mx-auto mb-8 shadow-xl shadow-indigo-200 -rotate-3">
+                <div className="w-20 h-20 bg-indigo-600 rounded-2xl flex items-center justify-center text-white mx-auto mb-8 shadow-xl shadow-indigo-200 -rotate-3">
                     <Timer className="w-10 h-10" />
                 </div>
                 <h2 className="text-3xl font-black text-slate-900 tracking-tighter mb-2 italic uppercase">{quiz.quizType === 'examination' ? 'Final Examination' : 'Knowledge Check'}</h2>
@@ -203,11 +203,11 @@ export default function QuizTaker({ quiz, studentId, onComplete }: QuizTakerProp
                 </div>
 
                 <div className="grid grid-cols-2 gap-4 mb-10">
-                    <div className="bg-slate-50/80 p-6 rounded-[2rem] border border-slate-100/50 backdrop-blur-sm">
+                    <div className="bg-slate-50/80 p-6 rounded-2xl border border-slate-100/50 backdrop-blur-sm">
                         <span className="block text-2xl font-black text-indigo-600 tracking-tight">{quiz.timeLimitMinutes || "30"}m</span>
                         <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Global Timer</span>
                     </div>
-                    <div className="bg-slate-50/80 p-6 rounded-[2rem] border border-slate-100/50 backdrop-blur-sm">
+                    <div className="bg-slate-50/80 p-6 rounded-2xl border border-slate-100/50 backdrop-blur-sm">
                         <span className="block text-2xl font-black text-emerald-600 tracking-tight">{quiz.passingScore || 50}%</span>
                         <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Threshold</span>
                     </div>
@@ -215,7 +215,7 @@ export default function QuizTaker({ quiz, studentId, onComplete }: QuizTakerProp
 
                 <Button 
                     size="lg" 
-                    className="w-full h-16 rounded-[2rem] bg-slate-900 hover:bg-black font-black uppercase tracking-widest text-xs gap-3 shadow-xl transition-all hover:scale-[1.02]" 
+                    className="w-full h-16 rounded-2xl bg-slate-900 hover:bg-black font-black uppercase tracking-widest text-xs gap-3 shadow-xl transition-all hover:scale-[1.02]" 
                     onClick={handleStart} 
                     disabled={loading}
                 >

@@ -24,6 +24,7 @@ import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { PublicNavbar } from "@/components/PublicNavbar";
 import { PublicFooter } from "@/components/PublicFooter";
 import { IntelligentTutoringSystem } from "@/components/ai/IntelligentTutoringSystem";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
 
 const statusConfig: Record<string, { label: string; color: string; bgColor: string; icon: any; message: string }> = {
     graduated: {
@@ -139,10 +140,17 @@ export function AppContent({ children, enabledModules }: { children: React.React
                         </div>
                         <span className="font-black text-sm truncate">SchoolPortal</span>
                     </div>
-                    <div className="ml-auto">
+                    <div className="ml-auto flex items-center gap-2">
+                        <NotificationBell />
                         <LanguageSwitcher />
                     </div>
                 </header>
+
+                {/* Desktop top bar */}
+                <div className="hidden md:flex items-center justify-end px-6 py-3 bg-white border-b border-slate-100 shadow-sm sticky top-0 z-30 gap-4">
+                    <LanguageSwitcher />
+                    <NotificationBell />
+                </div>
 
                 <main className="flex-1 overflow-y-auto relative" role="main">
 

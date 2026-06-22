@@ -60,7 +60,7 @@ export default async function CRMDashboard() {
                     { label: "Interested", value: leads?.filter((l:any) => l.status === 'interested').length || 0, icon: CheckCircle2, color: "text-green-600", bg: "bg-green-50" },
                     { label: "Conversion Rate", value: "0%", icon: ArrowUpRight, color: "text-purple-600", bg: "bg-purple-50" },
                 ].map((stat, i) => (
-                    <div key={i} className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex items-center gap-5">
+                    <div key={i} className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-5">
                         <div className={cn("p-4 rounded-2xl", stat.bg)}>
                             <stat.icon className={cn("w-6 h-6", stat.color)} />
                         </div>

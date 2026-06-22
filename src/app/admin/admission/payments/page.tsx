@@ -58,7 +58,7 @@ export default function AdmissionPaymentsPage() {
     });
 
     return (
-        <div className="p-8 max-w-7xl mx-auto space-y-8">
+        <div className="p-8 max-w-[1600px] w-full mx-auto space-y-8">
             <div className="flex justify-between items-center">
                 <div>
                     <h1 className="text-4xl font-black text-slate-900 flex items-center gap-4 italic">
@@ -150,7 +150,7 @@ export default function AdmissionPaymentsPage() {
                                                 </div>
                                             </td>
                                             <td className="px-8 py-6 font-black text-slate-900 italic">
-                                                ₦{app.template.applicationFee.toLocaleString()}
+                                                {settings?.base_currency || '₦'}{app.template.applicationFee.toLocaleString()}
                                             </td>
                                             <td className="px-8 py-6">
                                                 <span className={cn(

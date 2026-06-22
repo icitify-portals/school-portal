@@ -51,7 +51,7 @@ export default function ResultApprovalControlCenter() {
   const getCount = (status: string) => stats.find(s => s.status === status)?.count || 0;
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-8 bg-slate-50 min-h-screen">
+    <div className="p-8 max-w-[1600px] w-full mx-auto space-y-8 bg-slate-50 min-h-screen">
       <div className="flex justify-between items-end">
         <div className="flex items-center gap-4">
           <div className="w-14 h-14 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-xl shadow-indigo-100">
@@ -67,7 +67,7 @@ export default function ResultApprovalControlCenter() {
       <div className="grid grid-cols-12 gap-8">
         {/* Progress Overview */}
         <div className="col-span-12 lg:col-span-4 space-y-6">
-           <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm space-y-8">
+           <div className="bg-white p-8 rounded-2xl border border-slate-100 shadow-sm space-y-8">
               <h2 className="text-sm font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
                 <BarChart size={14} />
                 Approval Pipeline
@@ -126,7 +126,7 @@ export default function ResultApprovalControlCenter() {
               </div>
            </div>
 
-           <div className="bg-slate-900 rounded-3xl p-8 text-white space-y-4">
+           <div className="bg-slate-900 rounded-2xl p-8 text-white space-y-4">
               <div className="flex items-center gap-2 text-amber-400 font-bold uppercase tracking-widest text-xs">
                  <Lock size={14} />
                  Visibility Lock Active
@@ -141,7 +141,7 @@ export default function ResultApprovalControlCenter() {
         <div className="col-span-12 lg:col-span-8 space-y-8">
            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               {/* HOD Action */}
-              <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-xl space-y-6 relative overflow-hidden group">
+              <div className="bg-white p-8 rounded-2xl border border-slate-100 shadow-xl space-y-6 relative overflow-hidden group">
                  <div className="absolute -right-8 -top-8 w-32 h-32 bg-indigo-50 rounded-full group-hover:scale-110 transition-transform duration-500" />
                  <div className="relative z-10 space-y-6">
                     <div className="w-14 h-14 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center">
@@ -163,7 +163,7 @@ export default function ResultApprovalControlCenter() {
               </div>
 
               {/* Dean Action */}
-              <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-xl space-y-6 relative overflow-hidden group">
+              <div className="bg-white p-8 rounded-2xl border border-slate-100 shadow-xl space-y-6 relative overflow-hidden group">
                  <div className="absolute -right-8 -top-8 w-32 h-32 bg-emerald-50 rounded-full group-hover:scale-110 transition-transform duration-500" />
                  <div className="relative z-10 space-y-6">
                     <div className="w-14 h-14 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center">
@@ -186,7 +186,7 @@ export default function ResultApprovalControlCenter() {
            </div>
 
            {/* Complaints Summary */}
-           <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
+           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
               <div className="p-6 border-b border-slate-50 flex justify-between items-center bg-slate-50/30">
                  <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
                     <MessageSquare size={20} className="text-rose-500" />

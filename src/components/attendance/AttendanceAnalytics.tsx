@@ -50,7 +50,7 @@ export default function AttendanceAnalytics({ data }: AnalyticsProps) {
                     <Card key={i} className="border-none shadow-xl rounded-[2.5rem] bg-white overflow-hidden group hover:scale-[1.02] transition-transform">
                         <CardContent className="p-8">
                             <div className="flex justify-between items-start mb-4">
-                                <div className={`${stat.bg} ${stat.color} p-4 rounded-3xl`}>
+                                <div className={`${stat.bg} ${stat.color} p-4 rounded-2xl`}>
                                     <stat.icon className="w-6 h-6" />
                                 </div>
                                 <div className="text-emerald-500 bg-emerald-50 px-2 py-1 rounded-full text-[10px] font-black flex items-center gap-1">

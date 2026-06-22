@@ -44,7 +44,7 @@ export default async function EditLessonNotePage({ params }: { params: { id: str
     const tier = await getStaffTier(staff.id);
 
     return (
-        <div className="p-8 max-w-7xl mx-auto space-y-8 bg-slate-50/30 min-h-screen">
+        <div className="p-8 max-w-[1600px] w-full mx-auto space-y-8 bg-slate-50/30 min-h-screen">
             <header className="space-y-1">
                 <h1 className="text-4xl font-black tracking-tight text-slate-900 group">
                     Refine <span className="text-indigo-600 italic">Lesson Note</span>
@@ -53,7 +53,7 @@ export default async function EditLessonNotePage({ params }: { params: { id: str
             </header>
 
             {note.status === 'rejected' && note.supervisorFeedback && (
-                <div className="bg-rose-50 border-2 border-rose-100 p-6 rounded-[2rem] space-y-2">
+                <div className="bg-rose-50 border-2 border-rose-100 p-6 rounded-2xl space-y-2">
                     <h4 className="text-xs font-black uppercase tracking-widest text-rose-600 flex items-center gap-2">
                         <AlertCircle className="w-4 h-4" /> Supervisor Feedback
                     </h4>

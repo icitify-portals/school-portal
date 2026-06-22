@@ -871,3 +871,40 @@ export async function updateSectionsOrder(sections: { id: number, order: number 
     }
 }
 
+export async function getAllExaminationBodies() {
+    try {
+        return await db.select().from(examinationBodies).orderBy(examinationBodies.name);
+    } catch (error) {
+        return [];
+    }
+}
+
+export async function addExaminationBody(name: string) {
+    try {
+        await db.insert(examinationBodies).values({ name, isActive: true });
+        revalidatePath("/admin/admission/settings");
+        return { success: true };
+    } catch (e: any) {
+        return { success: false, error: "Failed to add examination body. It might already exist." };
+    }
+}
+
+export async function updateExaminationBody(id: number, isActive: boolean) {
+    try {
+        await db.update(examinationBodies).set({ isActive }).where(eq(examinationBodies.id, id));
+        revalidatePath("/admin/admission/settings");
+        return { success: true };
+    } catch (e: any) {
+        return { success: false, error: e.message };
+    }
+}
+
+export async function deleteExaminationBody(id: number) {
+    try {
+        await db.delete(examinationBodies).where(eq(examinationBodies.id, id));
+        revalidatePath("/admin/admission/settings");
+        return { success: true };
+    } catch (e: any) {
+        return { success: false, error: "Cannot delete this exam body because it is currently in use by applicants." };
+    }
+}

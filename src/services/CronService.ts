@@ -1,5 +1,5 @@
 import { db } from "@/db/db";
-import { transactions, directPayments, users } from "@/db/schema";
+import { transactions, directPayments, users, journalReviews } from "@/db/schema";
 import { PaymentService } from "./PaymentService";
 import { BackupService } from "./BackupService";
 import { eq, and, lt, sql } from "drizzle-orm";
@@ -115,5 +115,39 @@ export class CronService {
         console.log("Regulating backups (retention policy)...");
         await BackupService.regulate(30); // 30 days retention
         return { success: true };
+    }
+
+    /**
+     * OJS standard reviewer invitations automatic expiration task.
+     * Cancels pending reviewer invitations that are older than 3 days.
+     */
+    static async expireJournalReviewInvitations() {
+        console.log("Checking for expired journal reviewer invitations...");
+        const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
+        try {
+            // Find all pending reviews that were sent more than 3 days ago
+            const expiredReviews = await db.select()
+                .from(journalReviews)
+                .where(and(
+                    eq(journalReviews.invitationStatus, 'pending'),
+                    lt(journalReviews.invitedAt, threeDaysAgo)
+                ));
+
+            for (const review of expiredReviews) {
+                await db.transaction(async (tx) => {
+                    // Update invitation status to 'expired'
+                    await tx.update(journalReviews)
+                        .set({ invitationStatus: 'expired' })
+                        .where(eq(journalReviews.id, review.id));
+
+                    console.log(`[CRON] Reviewer invitation ID ${review.id} for article ID ${review.articleId} has expired.`);
+                });
+            }
+
+            return { success: true, expiredCount: expiredReviews.length };
+        } catch (error) {
+            console.error("Cron review invitations expiration failed:", error);
+            return { success: false, error };
+        }
     }
 }

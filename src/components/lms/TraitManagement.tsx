@@ -88,7 +88,7 @@ export default function TraitManagement() {
 
     return (
         <div className="space-y-8">
-            <div className="flex justify-between items-center bg-white p-8 rounded-[2rem] shadow-sm border border-slate-100">
+            <div className="flex justify-between items-center bg-white p-8 rounded-2xl shadow-sm border border-slate-100">
                 <div>
                     <h2 className="text-3xl font-black text-slate-900 tracking-tight">Trait Configuration</h2>
                     <p className="text-slate-500 mt-1">Define behavioral and physical traits for student evaluation</p>

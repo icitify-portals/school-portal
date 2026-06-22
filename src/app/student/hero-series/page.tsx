@@ -23,7 +23,7 @@ export default function HeroSeriesPage() {
     const [game, setGame] = useState<'math' | 'spelling' | null>(null);
 
     return (
-        <div className="p-8 max-w-7xl mx-auto space-y-12">
+        <div className="p-8 max-w-[1600px] w-full mx-auto space-y-12">
             {!game ? (
                 <>
                     <div className="text-center space-y-4">
@@ -126,7 +126,7 @@ function MathHero({ onBack }: { onBack: () => void }) {
 
     return (
         <div className="max-w-xl mx-auto space-y-8 animate-in fade-in zoom-in duration-500">
-            <div className="flex justify-between items-center bg-white p-6 rounded-[2rem] border border-slate-100 shadow-xl shadow-slate-200/50">
+            <div className="flex justify-between items-center bg-white p-6 rounded-2xl border border-slate-100 shadow-xl shadow-slate-200/50">
                 <Button variant="ghost" size="sm" onClick={onBack} className="text-slate-400 font-black uppercase text-[10px]">Exit Mission</Button>
                 <div className="flex items-center gap-6">
                     <div className="text-right">
@@ -151,9 +151,9 @@ function MathHero({ onBack }: { onBack: () => void }) {
                 )}
                 
                 <div className="flex justify-center items-center gap-8 text-7xl font-black text-slate-900">
-                    <div className="w-32 h-32 bg-slate-50 rounded-3xl flex items-center justify-center">{num1}</div>
+                    <div className="w-32 h-32 bg-slate-50 rounded-2xl flex items-center justify-center">{num1}</div>
                     <XCircle className="w-12 h-12 text-slate-300" />
-                    <div className="w-32 h-32 bg-slate-50 rounded-3xl flex items-center justify-center">{num2}</div>
+                    <div className="w-32 h-32 bg-slate-50 rounded-2xl flex items-center justify-center">{num2}</div>
                 </div>
 
                 <form onSubmit={checkAnswer} className="space-y-6">
@@ -163,7 +163,7 @@ function MathHero({ onBack }: { onBack: () => void }) {
                         value={answer}
                         onChange={(e) => setAnswer(e.target.value)}
                         className={cn(
-                            "w-full text-6xl font-black text-center py-8 rounded-[2rem] bg-slate-50 border-4 outline-none transition-all",
+                            "w-full text-6xl font-black text-center py-8 rounded-2xl bg-slate-50 border-4 outline-none transition-all",
                             feedback === 'correct' ? "border-emerald-400 bg-emerald-50 text-emerald-600" :
                             feedback === 'wrong' ? "border-rose-400 bg-rose-50 text-rose-600" : "border-slate-100 focus:border-indigo-600"
                         )}
@@ -216,7 +216,7 @@ function SpellingHero({ onBack }: { onBack: () => void }) {
 
     return (
         <div className="max-w-xl mx-auto space-y-8 animate-in fade-in zoom-in duration-500">
-            <div className="flex justify-between items-center bg-white p-6 rounded-[2rem] border border-slate-100 shadow-xl shadow-slate-200/50">
+            <div className="flex justify-between items-center bg-white p-6 rounded-2xl border border-slate-100 shadow-xl shadow-slate-200/50">
                 <Button variant="ghost" size="sm" onClick={onBack} className="text-slate-400 font-black uppercase text-[10px]">Exit Mission</Button>
                 <div className="text-right">
                     <p className="text-[10px] font-black uppercase text-slate-400">Score</p>
@@ -240,7 +240,7 @@ function SpellingHero({ onBack }: { onBack: () => void }) {
                         value={userInput}
                         onChange={(e) => setUserInput(e.target.value)}
                         className={cn(
-                            "w-full text-4xl font-black text-center py-8 rounded-[2rem] bg-slate-50 border-4 outline-none transition-all uppercase tracking-widest",
+                            "w-full text-4xl font-black text-center py-8 rounded-2xl bg-slate-50 border-4 outline-none transition-all uppercase tracking-widest",
                             feedback === 'correct' ? "border-emerald-400 bg-emerald-50 text-emerald-600" :
                             feedback === 'wrong' ? "border-rose-400 bg-rose-50 text-rose-600" : "border-slate-100 focus:border-rose-600"
                         )}

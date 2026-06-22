@@ -26,7 +26,7 @@ export default function NotificationTemplatePreview() {
   const cgpa = "4.82";
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-8 bg-slate-50 min-h-screen">
+    <div className="p-8 max-w-[1600px] w-full mx-auto space-y-8 bg-slate-50 min-h-screen">
       <div className="flex justify-between items-end">
         <div className="flex items-center gap-4">
           <div className="w-14 h-14 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-xl shadow-indigo-100">
@@ -42,7 +42,7 @@ export default function NotificationTemplatePreview() {
       <div className="grid grid-cols-12 gap-8">
         {/* Template Selector */}
         <div className="col-span-12 lg:col-span-4 space-y-6">
-           <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm space-y-4">
+           <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm space-y-4">
               <h2 className="text-sm font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
                  <Palette size={14} />
                  Select Channel
@@ -75,7 +75,7 @@ export default function NotificationTemplatePreview() {
               </div>
            </div>
 
-           <div className="bg-slate-900 p-8 rounded-3xl text-white space-y-4">
+           <div className="bg-slate-900 p-8 rounded-2xl text-white space-y-4">
               <div className="flex items-center gap-2 text-indigo-400 font-bold uppercase tracking-widest text-xs">
                  <Layout size={14} />
                  Dynamic Placeholders
@@ -90,7 +90,7 @@ export default function NotificationTemplatePreview() {
 
         {/* Live Preview */}
         <div className="col-span-12 lg:col-span-8 space-y-6">
-           <div className="bg-white rounded-3xl border border-slate-100 shadow-xl overflow-hidden min-h-[600px] flex flex-col">
+           <div className="bg-white rounded-2xl border border-slate-100 shadow-xl overflow-hidden min-h-[600px] flex flex-col">
               <div className="p-6 border-b border-slate-50 bg-slate-50/50 flex justify-between items-center">
                  <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
                     <Eye size={20} className="text-indigo-600" />

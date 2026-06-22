@@ -40,7 +40,7 @@ export default async function ParentChildReportPage({
     
     return (
         <div className="space-y-8">
-            <div className="p-8 bg-indigo-900 text-white rounded-[2rem] shadow-xl shadow-indigo-200">
+            <div className="p-8 bg-indigo-900 text-white rounded-2xl shadow-xl shadow-indigo-200">
                 <h1 className="text-3xl font-black">Academic Progress Report</h1>
                 <p className="text-indigo-200 font-medium">Monitoring academic excellence and terminal growth.</p>
             </div>

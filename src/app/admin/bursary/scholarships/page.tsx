@@ -102,7 +102,7 @@ export default function ScholarshipsPage() {
     };
 
     return (
-        <div className="p-8 max-w-7xl mx-auto space-y-8 animate-in fade-in duration-700">
+        <div className="p-8 max-w-[1600px] w-full mx-auto space-y-8 animate-in fade-in duration-700">
             <div className="flex flex-col md:flex-row justify-between items-start gap-4">
                 <div>
                     <h2 className="text-4xl font-black text-slate-900 tracking-tighter flex items-center gap-3 italic uppercase">
@@ -138,7 +138,7 @@ export default function ScholarshipsPage() {
 
                 <TabsContent value="protocols" className="space-y-8 animate-in slide-in-from-bottom-4 duration-500">
                     {isAdding && (
-                        <Card className="border-2 border-emerald-100 shadow-xl rounded-3xl overflow-hidden animate-in zoom-in-95 duration-300">
+                        <Card className="border-2 border-emerald-100 shadow-xl rounded-2xl overflow-hidden animate-in zoom-in-95 duration-300">
                             <CardHeader className="bg-emerald-50/50 border-b border-emerald-100 p-6">
                                 <CardTitle className="text-xl font-black italic uppercase text-emerald-900">Configure New Funding Protocol</CardTitle>
                             </CardHeader>
@@ -191,7 +191,7 @@ export default function ScholarshipsPage() {
                     )}
 
                     {isAllocating && (
-                        <Card className="border-2 border-indigo-100 shadow-xl rounded-3xl overflow-hidden animate-in zoom-in-95 duration-300">
+                        <Card className="border-2 border-indigo-100 shadow-xl rounded-2xl overflow-hidden animate-in zoom-in-95 duration-300">
                             <CardHeader className="bg-indigo-50/50 border-b border-indigo-100 p-6">
                                 <CardTitle className="text-xl font-black italic uppercase text-indigo-900">Grant Scholarship: {selectedScholarship?.name}</CardTitle>
                             </CardHeader>
@@ -234,7 +234,7 @@ export default function ScholarshipsPage() {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                         {scholarships.map(s => (
-                            <Card key={s.id} className="group border-none shadow-md hover:shadow-2xl transition-all duration-500 rounded-3xl overflow-hidden bg-white">
+                            <Card key={s.id} className="group border-none shadow-md hover:shadow-2xl transition-all duration-500 rounded-2xl overflow-hidden bg-white">
                                 <CardHeader className="bg-slate-50 border-b border-slate-100 flex flex-row items-center justify-between p-6">
                                     <div className="p-3 bg-emerald-100 text-emerald-700 rounded-2xl transition-transform group-hover:scale-110 duration-500">
                                         <GraduationCap className="w-6 h-6" />
@@ -278,7 +278,7 @@ export default function ScholarshipsPage() {
                 </TabsContent>
 
                 <TabsContent value="active" className="animate-in slide-in-from-bottom-4 duration-500">
-                    <Card className="border-none shadow-xl rounded-3xl overflow-hidden bg-white">
+                    <Card className="border-none shadow-xl rounded-2xl overflow-hidden bg-white">
                         <div className="overflow-x-auto">
                             <table className="w-full text-left">
                                 <thead>

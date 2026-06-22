@@ -99,7 +99,7 @@ export default function StaffCourseAttendancePage() {
             </div>
 
             {/* Course ID Input */}
-            <Card className="border-none shadow-xl rounded-[2rem] bg-white/80 backdrop-blur-xl">
+            <Card className="border-none shadow-xl rounded-2xl bg-white/80 backdrop-blur-xl">
                 <CardContent className="p-6">
                     <div className="flex flex-col md:flex-row gap-4 items-end">
                         <div className="flex-1">

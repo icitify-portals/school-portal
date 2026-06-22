@@ -2,8 +2,12 @@ import { getStaffProfiles } from "@/actions/hr";
 import { getUsers } from "@/actions/rbac";
 import { getDepartments } from "@/actions/departments";
 import { StaffDirectoryClient } from "./StaffDirectoryClient";
+import { auth } from "@/auth";
 
 export default async function HRStaffDirectoryPage() {
+    const session = await auth();
+    const userRole = (session?.user as any)?.role?.toLowerCase() || "";
+
     const staff = await getStaffProfiles();
     const allUsers = await getUsers();
     const departments = await getDepartments();
@@ -17,6 +21,7 @@ export default async function HRStaffDirectoryPage() {
                 initialStaff={staff}
                 nonStaffUsers={nonStaffUsers}
                 departments={departments}
+                userRole={userRole}
             />
         </div>
     );

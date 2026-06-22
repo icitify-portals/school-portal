@@ -113,7 +113,7 @@ export default function GradingInterface({ submission, assignment, rubric, grade
                         <TabsContent value="content" className="m-0 h-full overflow-y-auto space-y-4 pr-2">
                             {/* Text Submission */}
                             {submission.onlineText && (
-                                <Card className="border-none shadow-sm rounded-3xl overflow-hidden">
+                                <Card className="border-none shadow-sm rounded-2xl overflow-hidden">
                                     <CardHeader className="bg-white border-b border-slate-50">
                                         <CardTitle className="text-sm font-bold flex items-center gap-2">
                                             <MessageSquare className="w-4 h-4 text-indigo-500" /> Online Text Submission
@@ -127,7 +127,7 @@ export default function GradingInterface({ submission, assignment, rubric, grade
 
                             {/* Audio Submission */}
                             {submission.audioUrl && (
-                                <Card className="border-none shadow-sm rounded-3xl overflow-hidden bg-indigo-900 text-white">
+                                <Card className="border-none shadow-sm rounded-2xl overflow-hidden bg-indigo-900 text-white">
                                     <CardContent className="p-8 flex items-center gap-6">
                                         <div className="h-16 w-16 bg-white/10 rounded-2xl flex items-center justify-center animate-pulse">
                                             <Mic className="w-8 h-8 text-indigo-200" />
@@ -144,7 +144,7 @@ export default function GradingInterface({ submission, assignment, rubric, grade
 
                             {/* Link Submission */}
                             {externalLinks.length > 0 && (
-                                <Card className="border-none shadow-sm rounded-3xl overflow-hidden">
+                                <Card className="border-none shadow-sm rounded-2xl overflow-hidden">
                                     <CardHeader>
                                         <CardTitle className="text-sm font-bold flex items-center gap-2">
                                             <LinkIcon className="w-4 h-4 text-emerald-500" /> External Links
@@ -173,7 +173,7 @@ export default function GradingInterface({ submission, assignment, rubric, grade
 
                             {/* Cloud / File Submission */}
                             {(submission.fileUrl || submission.cloudFileUrl) && (
-                                <Card className="border-none shadow-sm rounded-3xl overflow-hidden">
+                                <Card className="border-none shadow-sm rounded-2xl overflow-hidden">
                                      <CardHeader>
                                         <CardTitle className="text-sm font-bold flex items-center gap-2">
                                             <FileText className="w-4 h-4 text-rose-500" /> Attached Document
@@ -221,7 +221,7 @@ export default function GradingInterface({ submission, assignment, rubric, grade
             {/* Right Column: Feedback & Score */}
             <div className="lg:col-span-4 space-y-6 flex flex-col h-full overflow-y-auto pr-2 pb-8">
                 {/* Score Section */}
-                <Card className="border-none shadow-2xl rounded-3xl overflow-hidden bg-white ring-1 ring-slate-100">
+                <Card className="border-none shadow-2xl rounded-2xl overflow-hidden bg-white ring-1 ring-slate-100">
                     <CardHeader className="bg-indigo-600 text-white p-6">
                         <div className="flex justify-between items-center mb-4">
                             <Badge className="bg-white/20 text-white border-none text-[10px] h-6 flex items-center font-black">MARKING MODE</Badge>
@@ -272,7 +272,7 @@ export default function GradingInterface({ submission, assignment, rubric, grade
                     <div className="space-y-4">
                         <h4 className="text-xs font-black text-slate-500 uppercase tracking-widest px-2">Rubric Criteria</h4>
                         {rubric.criteria.map((crit: any) => (
-                            <Card key={crit.id} className="border-none shadow-sm rounded-3xl overflow-hidden bg-white">
+                            <Card key={crit.id} className="border-none shadow-sm rounded-2xl overflow-hidden bg-white">
                                 <CardHeader className="p-4 bg-slate-50/50 flex flex-row items-center justify-between">
                                     <span className="text-xs font-bold text-slate-700">{crit.title}</span>
                                     <Badge className="bg-indigo-100 text-indigo-700 border-none text-[10px]">

@@ -91,7 +91,7 @@ export default function QualityAssurancePage() {
     if (printProfile) {
         // High fidelity printable appraisal sheet
         return (
-            <div className="bg-white p-12 max-w-4xl mx-auto space-y-8 border-[6px] border-slate-900 rounded-[2rem] shadow-none print:border-none print:p-0 print:shadow-none animate-in fade-in duration-500">
+            <div className="bg-white p-12 max-w-4xl mx-auto space-y-8 border-[6px] border-slate-900 rounded-2xl shadow-none print:border-none print:p-0 print:shadow-none animate-in fade-in duration-500">
                 <div className="flex justify-between items-center mb-8 border-b-4 border-slate-900 pb-6 print:hidden">
                     <Button onClick={() => setPrintProfile(null)} variant="outline" className="font-bold rounded-xl">
                         Back to QA Console
@@ -191,7 +191,7 @@ export default function QualityAssurancePage() {
     }
 
     return (
-        <div className="p-8 max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500">
+        <div className="p-8 max-w-[1600px] w-full mx-auto space-y-8 animate-in fade-in duration-500">
             {/* Header */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
@@ -206,7 +206,7 @@ export default function QualityAssurancePage() {
             </div>
 
             {/* Filters Dashboard */}
-            <div className="bg-white rounded-3xl p-8 border border-slate-100 shadow-xl shadow-slate-100/50 space-y-6">
+            <div className="bg-white rounded-2xl p-8 border border-slate-100 shadow-xl shadow-slate-100/50 space-y-6">
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                     {/* Session */}
                     <div className="space-y-2">
@@ -279,7 +279,7 @@ export default function QualityAssurancePage() {
             {profiles.length > 0 ? (
                 <div className="space-y-6">
                     {profiles.map((prof) => (
-                        <div key={prof.staffId} className="bg-white border border-slate-100 rounded-3xl p-8 shadow-xl shadow-slate-100/50 grid grid-cols-1 lg:grid-cols-3 gap-8 hover:border-slate-200 transition-all duration-300">
+                        <div key={prof.staffId} className="bg-white border border-slate-100 rounded-2xl p-8 shadow-xl shadow-slate-100/50 grid grid-cols-1 lg:grid-cols-3 gap-8 hover:border-slate-200 transition-all duration-300">
                             
                             {/* Left Panel: Tutor Info & Aggregate Score */}
                             <div className="lg:col-span-1 space-y-4 flex flex-col justify-between">

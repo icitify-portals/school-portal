@@ -121,7 +121,7 @@ const studentMenuItems: MenuItem[] = [
         icon: Home,
         subItems: [
             { name: "Hostel Management", href: "/hostel", module: "hostels" },
-            { name: "SIWES Portal", href: "/student/siwes" },
+            { name: "SIWES Portal", href: "/student/siwes", module: "siwes" },
             { name: "Digital ID Card", href: "/student/id-card" },
             { name: "Library & OPAC", href: "/library", module: "library" },
             { name: "Communications", href: "/communications" },
@@ -282,6 +282,7 @@ const adminMenuItems: MenuItem[] = [
     {
         name: "Marketing & CRM",
         icon: TrendingUp,
+        module: "crm",
         subItems: [
             { name: "Leads Dashboard", href: "/admin/crm" },
             { name: "Campaign Tracking", href: "/admin/crm/campaigns" },
@@ -313,6 +314,7 @@ const adminMenuItems: MenuItem[] = [
     {
         name: "Attendance",
         icon: ClipboardList,
+        module: "attendance",
         subItems: [
             { name: "Scanner", href: "/admin/attendance" },
             { name: "Reports & Analysis", href: "/admin/attendance/reports" },
@@ -331,6 +333,7 @@ const adminMenuItems: MenuItem[] = [
     {
         name: "Communication",
         icon: Megaphone,
+        module: "communications",
         subItems: [
             { name: "Broadcast Center", href: "/admin/announcements" },
             { name: "Global Forums", href: "/forums" },
@@ -349,10 +352,11 @@ const adminMenuItems: MenuItem[] = [
             { name: "GDPR Tools", href: "/admin/security/gdpr" },
         ]
     },
-    { name: "SIWES Management", icon: Briefcase, href: "/admin/siwes" },
+    { name: "SIWES Management", icon: Briefcase, href: "/admin/siwes", module: "siwes" },
     {
         name: "CMS & Website",
         icon: Globe,
+        module: "cms",
         subItems: [
             { name: "Pages Manager", href: "/admin/cms" },
             { name: "Menu Builder", href: "/admin/cms/menus" },
@@ -384,6 +388,7 @@ const adminMenuItems: MenuItem[] = [
     {
         name: "Inventory & Stock",
         icon: Package,
+        module: "inventory",
         subItems: [
             { name: "Inventory Dashboard", href: "/admin/inventory" },
             { name: "Stock Movement", href: "/admin/inventory/transactions" },
@@ -745,34 +750,34 @@ export function Sidebar({ enabledModules = {}, mobileOpen = false, onClose }: {
             </nav>
 
             <div className={cn(
-                "p-4 border-t space-y-1",
-                isStudent ? "border-slate-100" : "border-slate-800"
+                "p-4 mt-auto space-y-1 relative z-10",
+                isStudent ? "bg-emerald-900 text-white" : "border-t border-slate-800"
             )}>
                 <Link
                     href="/"
                     className={cn(
                         "flex items-center gap-3 px-3 py-2 rounded-lg transition-all font-medium text-sm",
-                        isStudent ? "text-slate-600 hover:bg-slate-50 hover:text-slate-900" : "text-slate-300 hover:bg-slate-800"
+                        isStudent ? "text-emerald-100 hover:bg-emerald-800 hover:text-white" : "text-slate-300 hover:bg-slate-800"
                     )}
                 >
-                    <Globe className="w-5 h-5 text-slate-400" />
+                    <Globe className={cn("w-5 h-5", isStudent ? "text-emerald-300" : "text-slate-400")} />
                     <span>Public Homepage</span>
                 </Link>
                 <Link
                     href="/profile"
                     className={cn(
                         "flex items-center gap-3 px-3 py-2 rounded-lg transition-all font-medium text-sm",
-                        isStudent ? "text-slate-600 hover:bg-slate-50 hover:text-slate-900" : "text-slate-300 hover:bg-slate-800"
+                        isStudent ? "text-emerald-100 hover:bg-emerald-800 hover:text-white" : "text-slate-300 hover:bg-slate-800"
                     )}
                 >
-                    <Settings className="w-5 h-5 text-slate-400" />
+                    <Settings className={cn("w-5 h-5", isStudent ? "text-emerald-300" : "text-slate-400")} />
                     <span>Settings</span>
                 </Link>
                 <button
                     onClick={() => signOut({ callbackUrl: "/login" })}
                     className={cn(
-                        "flex items-center gap-3 w-full px-3 py-2 rounded-lg transition-all font-medium text-sm",
-                        isStudent ? "text-rose-600 hover:bg-rose-50" : "text-red-400 hover:bg-red-500/10"
+                        "flex items-center gap-3 w-full px-3 py-2 rounded-lg transition-all font-bold text-sm",
+                        isStudent ? "text-white bg-rose-600 hover:bg-rose-700 shadow-md shadow-rose-900/20 mt-3" : "text-red-400 hover:bg-red-500/10"
                     )}
                 >
                     <LogOut className="w-5 h-5" />
@@ -785,7 +790,7 @@ export function Sidebar({ enabledModules = {}, mobileOpen = false, onClose }: {
     return (
         <>
             {/* Desktop sidebar */}
-            <aside className="hidden md:block shrink-0" aria-label="Sidebar navigation">
+            <aside className="hidden md:block shrink-0 sticky top-0 h-screen" aria-label="Sidebar navigation">
                 {sidebarContent}
             </aside>
 

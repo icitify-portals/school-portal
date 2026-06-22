@@ -4,6 +4,7 @@ import React from "react";
 import { cn } from "@/lib/utils";
 import { BadgeCheck, Landmark, ShieldCheck, Mail, Phone, Receipt } from "lucide-react";
 import { AcademicNomenclature } from "@/lib/nomenclature";
+import { amountInWords } from "@/lib/numberToWords";
 
 interface ReceiptProps {
     transaction: any;
@@ -89,7 +90,7 @@ export const ModernReceipt = ({ transaction, student, branding, bursar, arrears 
                         </div>
                         <div className="text-center md:text-right">
                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Amount Paid</p>
-                            <h2 className="text-4xl font-black text-white">₦{parseFloat(transaction.amount).toLocaleString()}</h2>
+                            <h2 className="text-4xl font-black text-white">{settings?.base_currency || '₦'}{parseFloat(transaction.amount).toLocaleString()}</h2>
                         </div>
                     </div>
 
@@ -98,7 +99,7 @@ export const ModernReceipt = ({ transaction, student, branding, bursar, arrears 
                         <div className="flex items-center gap-2">
                             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Arrears / Outstanding Balance:</span>
                             <span className={cn("text-lg font-black", isPaidInFull ? "text-emerald-400" : "text-amber-400")}>
-                                ₦{arrears.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                {settings?.base_currency || '₦'}{arrears.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </span>
                         </div>
                         <div>
@@ -207,7 +208,7 @@ export const ClassicReceipt = ({ transaction, student, branding, bursar, arrears
                     <tr className="border-b border-slate-100">
                         <td className="py-3 text-[10px] font-bold text-slate-400 uppercase">Outstanding Balance:</td>
                         <td className="py-3 text-right font-black text-red-600">
-                            ₦{arrears.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                            {settings?.base_currency || '₦'}{arrears.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                         </td>
                     </tr>
                 </tbody>
@@ -222,7 +223,7 @@ export const ClassicReceipt = ({ transaction, student, branding, bursar, arrears
                 </div>
                 <div className="bg-slate-50 border-2 border-slate-900 p-6 min-w-[250px] text-right">
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Amount Paid</p>
-                    <h2 className="text-3xl font-serif font-black text-slate-900">₦{parseFloat(transaction.amount).toLocaleString()}</h2>
+                    <h2 className="text-3xl font-serif font-black text-slate-900">{settings?.base_currency || '₦'}{parseFloat(transaction.amount).toLocaleString()}</h2>
                 </div>
             </div>
 
@@ -286,18 +287,18 @@ export const MinimalistReceipt = ({ transaction, student, branding, bursar, arre
                             Paid via {transaction.gateway === "wallet" ? "Student Wallet" : transaction.gateway}
                         </p>
                     </div>
-                    <p className="font-bold text-slate-900">₦{parseFloat(transaction.amount).toLocaleString()}</p>
+                    <p className="font-bold text-slate-900">{settings?.base_currency || '₦'}{parseFloat(transaction.amount).toLocaleString()}</p>
                 </div>
 
                 <div className="py-4 flex justify-between items-center text-sm border-b border-slate-100">
                     <span className="text-slate-500">Remaining Balance (Arrears):</span>
-                    <span className="font-bold text-slate-900">₦{arrears.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                    <span className="font-bold text-slate-900">{settings?.base_currency || '₦'}{arrears.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                 </div>
 
                 <div className="py-4 flex justify-between items-center">
                     <p className="text-sm font-bold text-slate-900">Total Settled In This Transaction</p>
                     <p className="text-2xl font-black text-slate-900 underline underline-offset-8 decoration-slate-200 leading-none">
-                        ₦{parseFloat(transaction.amount).toLocaleString()}
+                        {settings?.base_currency || '₦'}{parseFloat(transaction.amount).toLocaleString()}
                     </p>
                 </div>
 
@@ -332,6 +333,158 @@ export const MinimalistReceipt = ({ transaction, student, branding, bursar, arre
                         <p className="text-[10px] font-black uppercase text-slate-900 tracking-wider leading-none mb-1">{bursar?.name || "Official Bursar"}</p>
                         <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest leading-none">Financial Control</p>
                     </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+export const HeritageReceipt = ({ transaction, student, branding, bursar, arrears = 0, bursarySettings }: ReceiptProps) => {
+    const isPaidInFull = arrears <= 0.01;
+    const termLabel = AcademicNomenclature.getLabel(
+        transaction.sessionId || student.admissionSessionId || "1",
+        bursarySettings
+    );
+    const amountVal = parseFloat(transaction.amount);
+    const spelledOutAmount = amountInWords(amountVal);
+
+    // Determine checklist active options
+    const isCash = transaction.gateway === "manual";
+    const isCheque = false;
+    const isTeller = transaction.gateway === "direct";
+    const isDraft = ["paystack", "flutterwave", "remita", "wallet"].includes(transaction.gateway || "");
+
+    return (
+        <div id="receipt-content" className="max-w-2xl mx-auto bg-amber-50/10 p-10 border-2 border-slate-800 rounded-2xl shadow-xl print:shadow-none print:border-none print:p-0 font-serif">
+            {/* Header: School Logo & Details */}
+            <div className="flex flex-col md:flex-row justify-between items-center border-b-2 border-slate-800 pb-4 mb-6">
+                <div className="flex items-center gap-4">
+                    {branding.INST_LOGO ? (
+                        <img src={branding.INST_LOGO} alt="Logo" className="w-16 h-16 object-contain" />
+                    ) : (
+                        <div className="w-14 h-14 bg-slate-900 flex items-center justify-center text-white rounded-xl">
+                            <Landmark className="w-7 h-7" />
+                        </div>
+                    )}
+                    <div className="text-left">
+                        <h1 className="text-xl font-bold text-blue-900 tracking-tight leading-none uppercase">
+                            {branding.INST_NAME}
+                        </h1>
+                        {branding.INST_MOTTO && (
+                            <p className="text-[10px] italic text-slate-500 mt-1 font-sans">{branding.INST_MOTTO}</p>
+                        )}
+                    </div>
+                </div>
+                <div className="text-right text-xs mt-4 md:mt-0 font-sans text-slate-600 max-w-xs leading-normal">
+                    <p>{branding.INST_ADDRESS || "PMB 5030, Ibadan, Oyo State"}</p>
+                    <p>Tel: {branding.INST_PHONE || "+234 000 000 0000"}</p>
+                </div>
+            </div>
+
+            {/* Receipt No & Date Row */}
+            <div className="flex justify-between items-center mb-6">
+                <div className="flex items-center gap-4">
+                    <span className="bg-emerald-700 text-white font-extrabold uppercase tracking-widest text-xs py-1 px-4 rounded-lg">
+                        RECEIPT
+                    </span>
+                    <span className="font-mono text-sm font-bold text-slate-800 font-sans">
+                        No: <span className="text-red-600 font-bold">#{transaction.id?.toString().padStart(6, "0")}</span>
+                    </span>
+                </div>
+                <div className="flex items-center gap-1 text-xs font-sans">
+                    <span className="text-slate-400 uppercase tracking-widest">Date:</span>
+                    <span className="border-b border-dashed border-slate-600 px-3 font-mono italic">
+                        {new Date(transaction.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                    </span>
+                </div>
+            </div>
+
+            {/* Handwritten Fields */}
+            <div className="space-y-6 mb-8 text-sm">
+                <div className="flex items-end gap-2">
+                    <span className="whitespace-nowrap font-bold text-slate-700">Received from:</span>
+                    <div className="flex-1 border-b border-dashed border-slate-600 pb-0.5 px-4 text-left italic font-bold text-blue-950 font-sans tracking-wide">
+                        {student.firstName} {student.lastName} ({student.matricNumber || student.id})
+                    </div>
+                </div>
+
+                <div className="flex items-end gap-2">
+                    <span className="whitespace-nowrap font-bold text-slate-700">the sum of:</span>
+                    <div className="flex-1 border-b border-dashed border-slate-600 pb-0.5 px-4 text-left italic font-bold text-blue-950 font-sans tracking-wide">
+                        {spelledOutAmount}
+                    </div>
+                </div>
+
+                <div className="flex items-end gap-2">
+                    <span className="whitespace-nowrap font-bold text-slate-700">Being the transaction of:</span>
+                    <div className="flex-1 border-b border-dashed border-slate-600 pb-0.5 px-4 text-left italic font-bold text-blue-950 font-sans tracking-wide">
+                        {transaction.purpose}
+                    </div>
+                </div>
+            </div>
+
+            {/* Checklist of Payment Modes */}
+            <div className="border border-slate-300 rounded-xl p-4 bg-slate-50/50 mb-8 font-sans">
+                <div className="flex justify-between items-center gap-4">
+                    <div className="flex items-center gap-6">
+                        <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold text-slate-600">Cash</span>
+                            <div className={`w-8 h-6 border border-slate-800 flex items-center justify-center font-bold text-xs bg-white ${isCash ? 'text-emerald-700' : 'text-transparent'}`}>
+                                {isCash ? '✓' : ''}
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold text-slate-600">Cheque</span>
+                            <div className={`w-8 h-6 border border-slate-800 flex items-center justify-center font-bold text-xs bg-white ${isCheque ? 'text-emerald-700' : 'text-transparent'}`}>
+                                {isCheque ? '✓' : ''}
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold text-slate-600">Teller</span>
+                            <div className={`w-8 h-6 border border-slate-800 flex items-center justify-center font-bold text-xs bg-white ${isTeller ? 'text-emerald-700' : 'text-transparent'}`}>
+                                {isTeller ? '✓' : ''}
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold text-slate-600">Draft</span>
+                            <div className={`w-8 h-6 border border-slate-800 flex items-center justify-center font-bold text-xs bg-white ${isDraft ? 'text-emerald-700' : 'text-transparent'}`}>
+                                {isDraft ? '✓' : ''}
+                            </div>
+                        </div>
+                    </div>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Tick as appropriate</span>
+                </div>
+            </div>
+
+            {/* Bottom Row: Amount Box, Balance & Cashier Signature */}
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-8 border-t border-slate-300 pt-6">
+                <div className="flex items-center gap-4">
+                    <div className="border-2 border-slate-800 py-2 px-4 bg-slate-900 text-white font-mono rounded-lg flex items-center gap-2">
+                        <span className="text-xl font-bold">&#8358;</span>
+                        <span className="text-2xl font-black">{amountVal.toLocaleString()} : 00</span>
+                        <span className="text-xs font-bold">K</span>
+                    </div>
+                    <div className="text-left font-sans">
+                        <span className="text-xs font-bold text-slate-400 uppercase block tracking-wider">Bal:</span>
+                        <span className="text-sm font-black text-slate-800">
+                            {arrears > 0.01 ? `₦${arrears.toLocaleString()}` : "—"}
+                        </span>
+                    </div>
+                </div>
+
+                <div className="text-center min-w-[150px]">
+                    <div className="h-10 flex items-end justify-center mb-1">
+                        {bursar?.signatureUrl && (
+                            <img 
+                                src={bursar.signatureUrl} 
+                                className="h-full object-contain brightness-0" 
+                                alt="Signature"
+                            />
+                        )}
+                    </div>
+                    <div className="w-32 border-t border-slate-800 mx-auto mb-1"></div>
+                    <span className="text-xs font-bold text-slate-600 block leading-none font-sans uppercase">{bursar?.name || "Official Bursar"}</span>
+                    <span className="text-[9px] text-slate-400 font-sans uppercase tracking-widest leading-none">Cashier</span>
                 </div>
             </div>
         </div>

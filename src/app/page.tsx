@@ -66,6 +66,7 @@ export default async function HomePage() {
 function getDashboardUrl(role: string) {
     switch (role) {
         case 'superadmin':
+        case 'icitify_dev':
             return "/super-admin/dashboard";
         case 'admin':
             return "/admin/dashboard";
@@ -77,6 +78,22 @@ function getDashboardUrl(role: string) {
             return "/parent/dashboard";
         case 'dvc':
             return "/admin/dashboard";
+        case 'bursar':
+            return "/admin/bursary";
+        case 'registrar':
+            return "/admin/admission";
+        case 'librarian':
+            return "/admin/library";
+        case 'healthadmin':
+            return "/healthadmin/dashboard";
+        case 'fresher':
+            return "/fresher";
+        case 'applicant':
+            return "/admission";
+        case 'hod':
+            return "/admin/hod";
+        case 'dean':
+            return "/admin/dean";
         default:
             return "/dashboard";
     }
@@ -93,7 +110,7 @@ function SectionRenderer({ section, session }: { section: any; session: any }) {
                         className="absolute inset-0 z-0" 
                         style={{ backgroundImage: 'radial-gradient(circle at 30% 30%, rgba(var(--brand-primary-rgb, 16, 185, 129), 0.15), transparent)' }}
                     />
-                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 grid lg:grid-cols-2 gap-12 items-center">
+                    <div className="max-w-[1600px] w-full mx-auto px-4 sm:px-6 lg:px-8 relative z-10 grid lg:grid-cols-2 gap-12 items-center">
                         <div className="space-y-8">
                             {content.badge && (
                                 <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20 py-1.5 px-4 rounded-full font-black uppercase tracking-widest text-[10px]">
@@ -137,7 +154,7 @@ function SectionRenderer({ section, session }: { section: any; session: any }) {
         case 'slider':
             return (
                 <section className="py-20 px-4 bg-slate-50">
-                    <div className="max-w-7xl mx-auto">
+                    <div className="max-w-[1600px] w-full mx-auto">
                         <MediaSlider items={section.media || []} className="h-[700px]" />
                     </div>
                 </section>
@@ -145,7 +162,7 @@ function SectionRenderer({ section, session }: { section: any; session: any }) {
         case 'gallery':
             return (
                 <section className="py-32 bg-slate-50 relative overflow-hidden">
-                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+                    <div className="max-w-[1600px] w-full mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
                         <div className="mb-16 text-center space-y-4">
                             <h2 className="text-4xl md:text-5xl font-black text-slate-900 uppercase italic tracking-tighter">{section.title || "Our Campus Life"}</h2>
                             <p className="text-slate-500 text-lg font-medium max-w-2xl mx-auto">{section.subtitle}</p>
@@ -172,7 +189,7 @@ function SectionRenderer({ section, session }: { section: any; session: any }) {
         case 'cta':
             return (
                 <section className="py-20 px-4">
-                    <div className="max-w-5xl mx-auto bg-emerald-600 rounded-[3rem] p-12 md:p-20 text-center relative overflow-hidden shadow-[0_40px_80px_-20px_rgba(16,185,129,0.4)]">
+                    <div className="max-w-[1600px] w-full mx-auto bg-emerald-600 rounded-[3rem] p-12 md:p-20 text-center relative overflow-hidden shadow-[0_40px_80px_-20px_rgba(16,185,129,0.4)]">
                         <div className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/2 w-96 h-96 bg-white/10 rounded-full blur-3xl" />
                         <div className="relative z-10 space-y-8">
                             <h2 className="text-4xl md:text-6xl font-black text-white uppercase italic tracking-tighter leading-none">{section.title || "Ready to join us?"}</h2>
@@ -193,7 +210,7 @@ function SectionRenderer({ section, session }: { section: any; session: any }) {
             return (
                 <section className="py-32 bg-slate-50 dark:bg-slate-900 relative overflow-hidden">
                     <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_80%,rgba(16,185,129,0.05),transparent)] z-0" />
-                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+                    <div className="max-w-[1600px] w-full mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
                         <div className="mb-20 text-center space-y-4 max-w-3xl mx-auto">
                             <Badge className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 py-1.5 px-4 rounded-full font-black uppercase tracking-widest text-[10px]">
                                 Academics & Innovation
@@ -229,7 +246,7 @@ function SectionRenderer({ section, session }: { section: any; session: any }) {
                                 return (
                                     <div 
                                         key={idx} 
-                                        className="glass-card hover-lift p-8 rounded-[2rem] flex flex-col justify-between h-full space-y-6 relative overflow-hidden group"
+                                        className="glass-card hover-lift p-8 rounded-2xl flex flex-col justify-between h-full space-y-6 relative overflow-hidden group"
                                     >
                                         <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-emerald-500/10 to-transparent rounded-bl-[4rem] group-hover:scale-110 transition-transform duration-500" />
                                         <div className="space-y-4 relative z-10">
@@ -290,7 +307,7 @@ async function DefaultLandingPage({ session }: { session: any }) {
                     
                     {/* Prestigious Tenant Routing Badge */}
                     <div 
-                        className="max-w-xl mx-auto p-6 border rounded-[2rem] flex flex-col gap-3 text-left text-xs font-mono text-slate-300 shadow-2xl backdrop-blur-md"
+                        className="max-w-xl mx-auto p-6 border rounded-2xl flex flex-col gap-3 text-left text-xs font-mono text-slate-300 shadow-2xl backdrop-blur-md"
                         style={{ 
                             backgroundColor: 'rgba(var(--brand-secondary-rgb, 15, 23, 42), 0.8)', 
                             borderColor: 'rgba(var(--brand-primary-rgb, 16, 185, 129), 0.2)' 

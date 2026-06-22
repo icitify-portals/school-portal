@@ -7,9 +7,10 @@ import { revalidatePath } from "next/cache";
 export async function impersonateUser(targetUserId: number) {
     try {
         const session = await auth();
+        const actorRole = (session?.user as any)?.role?.toLowerCase() || "";
 
-        // Only admins can impersonate
-        if (!session?.user || (session.user as any).role !== 'admin' || !session.user.id) {
+        const allowedRoles = ['superadmin', 'admin', 'dvc', 'bursar', 'registrar'];
+        if (!session?.user || !allowedRoles.includes(actorRole) || !session.user.id) {
             return { error: "Unauthorized. Admin access required." };
         }
 
@@ -22,12 +23,21 @@ export async function impersonateUser(targetUserId: number) {
 
         // Fetch target user data
         const { db } = await import("@/db/db");
-        const { users } = await import("@/db/schema");
+        const { users, systemAuditLogs } = await import("@/db/schema");
         const { eq } = await import("drizzle-orm");
 
         const [targetUser] = await db.select().from(users).where(eq(users.id, targetUserId)).limit(1);
 
         if (!targetUser) return { error: "Target user not found." };
+
+        // Log impersonation to systemAuditLogs
+        await db.insert(systemAuditLogs).values({
+            actorId: parseInt(session.user.id),
+            action: 'IMPERSONATE_USER',
+            targetId: targetUserId.toString(),
+            details: JSON.stringify({ targetUserEmail: targetUser.email, targetUserName: targetUser.name, timestamp: new Date() }),
+            status: 'success'
+        });
 
         // Set impersonated ID and Role
         cookieStore.set("impersonated_id", targetUserId.toString(), {

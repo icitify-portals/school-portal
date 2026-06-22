@@ -4,7 +4,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { getTransactionForReceipt } from "@/actions/bursary";
-import { ModernReceipt, ClassicReceipt, MinimalistReceipt } from "@/components/finance/ReceiptTemplates";
+import { ModernReceipt, ClassicReceipt, MinimalistReceipt, HeritageReceipt } from "@/components/finance/ReceiptTemplates";
 import { Button } from "@/components/ui/button";
 import { Loader2, Printer, Download, Undo2, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -46,7 +46,7 @@ export default function ReceiptPage() {
     if (!data) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6">
-                <div className="max-w-md w-full bg-white p-8 rounded-3xl shadow-xl shadow-slate-200 text-center">
+                <div className="max-w-md w-full bg-white p-8 rounded-2xl shadow-xl shadow-slate-200 text-center">
                     <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-6" />
                     <h2 className="text-2xl font-bold text-slate-900 mb-2">Receipt Not Found</h2>
                     <p className="text-slate-500 mb-8">The transaction record you are looking for might have been moved or deleted.</p>
@@ -89,6 +89,8 @@ export default function ReceiptPage() {
                     <ClassicReceipt transaction={transaction} student={enrichedStudent} branding={branding} bursar={bursar} arrears={arrears} bursarySettings={bursarySettings} />
                 ) : template === 'minimalist' ? (
                     <MinimalistReceipt transaction={transaction} student={enrichedStudent} branding={branding} bursar={bursar} arrears={arrears} bursarySettings={bursarySettings} />
+                ) : template === 'heritage' ? (
+                    <HeritageReceipt transaction={transaction} student={enrichedStudent} branding={branding} bursar={bursar} arrears={arrears} bursarySettings={bursarySettings} />
                 ) : (
                     <ModernReceipt transaction={transaction} student={enrichedStudent} branding={branding} bursar={bursar} arrears={arrears} bursarySettings={bursarySettings} />
                 )}

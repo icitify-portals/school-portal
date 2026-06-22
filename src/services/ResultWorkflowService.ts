@@ -37,7 +37,8 @@ export class ResultWorkflowService {
         // Find all students in this faculty
         const studentIds = await db.select({ id: students.id })
             .from(students)
-            .where(eq(students.facultyId, facultyId));
+            .innerJoin(departments, eq(students.deptId, departments.id))
+            .where(eq(departments.facultyId, facultyId));
 
         const ids = studentIds.map(s => s.id);
         if (ids.length === 0) return { success: true };

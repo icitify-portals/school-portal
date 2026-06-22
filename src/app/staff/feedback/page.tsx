@@ -55,7 +55,7 @@ export default function StaffFeedbackPage() {
     }
 
     return (
-        <div className="p-8 max-w-5xl mx-auto space-y-8 animate-in fade-in duration-500">
+        <div className="p-8 max-w-[1600px] w-full mx-auto space-y-8 animate-in fade-in duration-500">
             {/* Header */}
             <div>
                 <h2 className="text-4xl font-black text-slate-900 tracking-tighter flex items-center gap-4">
@@ -71,7 +71,7 @@ export default function StaffFeedbackPage() {
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     {/* Left: Overall aggregate and ratings */}
                     <div className="lg:col-span-1 space-y-6">
-                        <div className="bg-slate-900 text-white rounded-3xl p-8 shadow-xl relative overflow-hidden">
+                        <div className="bg-slate-900 text-white rounded-2xl p-8 shadow-xl relative overflow-hidden">
                             <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-600/20 rounded-full blur-2xl -mr-8 -mt-8" />
                             
                             <h3 className="font-black text-sm uppercase tracking-widest text-indigo-300 mb-6">Teaching Index Score</h3>
@@ -95,7 +95,7 @@ export default function StaffFeedbackPage() {
                         </div>
 
                         {/* Professional details */}
-                        <div className="bg-white border border-slate-100 rounded-3xl p-6 shadow-sm space-y-4">
+                        <div className="bg-white border border-slate-100 rounded-2xl p-6 shadow-sm space-y-4">
                             <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none border-b border-slate-50 pb-2">Instructor Profile</h4>
                             <div className="space-y-2">
                                 <div>
@@ -113,7 +113,7 @@ export default function StaffFeedbackPage() {
                     {/* Right: Breakdown & Comments */}
                     <div className="lg:col-span-2 space-y-6">
                         {/* Domain Performance */}
-                        <div className="bg-white border border-slate-100 rounded-3xl p-8 shadow-xl shadow-slate-100/50 space-y-6">
+                        <div className="bg-white border border-slate-100 rounded-2xl p-8 shadow-xl shadow-slate-100/50 space-y-6">
                             <h3 className="text-lg font-black text-slate-900 tracking-tight leading-none mb-1 flex items-center gap-2">
                                 <BarChart2 className="w-5 h-5 text-indigo-600" />
                                 Domain Performance Indices
@@ -138,7 +138,7 @@ export default function StaffFeedbackPage() {
                         </div>
 
                         {/* Qualitative constructive comments */}
-                        <div className="bg-white border border-slate-100 rounded-3xl p-8 shadow-xl shadow-slate-100/50 space-y-6">
+                        <div className="bg-white border border-slate-100 rounded-2xl p-8 shadow-xl shadow-slate-100/50 space-y-6">
                             <h3 className="text-lg font-black text-slate-900 tracking-tight leading-none mb-1 flex items-center gap-2">
                                 <MessageSquare className="w-5 h-5 text-indigo-600" />
                                 Qualitative Recommendations

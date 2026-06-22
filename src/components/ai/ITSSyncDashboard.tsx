@@ -78,7 +78,7 @@ export function ITSSyncDashboard() {
 
             {/* Storage Overview */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <Card className="border-none shadow-xl shadow-slate-200/50 rounded-3xl bg-slate-900 text-white overflow-hidden">
+                <Card className="border-none shadow-xl shadow-slate-200/50 rounded-2xl bg-slate-900 text-white overflow-hidden">
                     <CardContent className="p-8 space-y-4">
                         <div className="flex items-center gap-4">
                             <div className="p-3 bg-white/10 rounded-xl">
@@ -94,7 +94,7 @@ export function ITSSyncDashboard() {
                     </CardContent>
                 </Card>
 
-                <Card className="border-none shadow-xl shadow-slate-200/50 rounded-3xl bg-white overflow-hidden">
+                <Card className="border-none shadow-xl shadow-slate-200/50 rounded-2xl bg-white overflow-hidden">
                     <CardContent className="p-8 flex items-center gap-6 h-full">
                         <div className="p-4 bg-indigo-50 rounded-2xl">
                             <Database className="w-6 h-6 text-indigo-600" />
@@ -106,7 +106,7 @@ export function ITSSyncDashboard() {
                     </CardContent>
                 </Card>
 
-                <Card className="border-none shadow-xl shadow-slate-200/50 rounded-3xl bg-white overflow-hidden">
+                <Card className="border-none shadow-xl shadow-slate-200/50 rounded-2xl bg-white overflow-hidden">
                     <CardContent className="p-8 flex items-center gap-6 h-full">
                         <div className="p-4 bg-emerald-50 rounded-2xl">
                             <CheckCircle2 className="w-6 h-6 text-emerald-600" />
@@ -127,7 +127,7 @@ export function ITSSyncDashboard() {
                 </h3>
                 <div className="grid grid-cols-1 gap-4">
                     {lessons.map((lesson) => (
-                        <div key={lesson.id} className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm flex items-center justify-between group hover:shadow-md transition-all">
+                        <div key={lesson.id} className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between group hover:shadow-md transition-all">
                             <div className="flex items-center gap-6">
                                 <div className="w-12 h-12 bg-slate-900 rounded-2xl flex items-center justify-center text-white">
                                     <Play className="w-5 h-5 ml-1" />

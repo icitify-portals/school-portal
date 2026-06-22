@@ -117,7 +117,7 @@ export default function SystemMaintenanceDashboard() {
                      bg: 'bg-purple-50'
                    }
                  ].map((task) => (
-                    <div key={task.id} className="group p-6 bg-slate-50 border border-slate-100 rounded-3xl flex items-center justify-between hover:bg-white hover:border-indigo-100 hover:shadow-lg transition-all duration-300">
+                    <div key={task.id} className="group p-6 bg-slate-50 border border-slate-100 rounded-2xl flex items-center justify-between hover:bg-white hover:border-indigo-100 hover:shadow-lg transition-all duration-300">
                        <div className="flex items-center gap-5">
                           <div className={`w-14 h-14 ${task.bg} ${task.color} rounded-2xl flex items-center justify-center transition-transform group-hover:scale-110 duration-500`}>
                              <task.icon size={24} />

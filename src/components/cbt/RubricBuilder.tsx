@@ -107,7 +107,7 @@ export function RubricBuilder({ rubric, onChange }: Props) {
             </div>
 
             {criteria.length === 0 && (
-                <div className="py-8 text-center border-2 border-dashed border-slate-100 rounded-3xl">
+                <div className="py-8 text-center border-2 border-dashed border-slate-100 rounded-2xl">
                     <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">No criteria defined</p>
                 </div>
             )}

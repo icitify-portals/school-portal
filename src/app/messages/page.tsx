@@ -116,7 +116,7 @@ export default function MessagingPage() {
                     </div>
                 ) : (
                     <div className="text-center space-y-4 max-w-sm">
-                        <div className="w-20 h-20 rounded-3xl bg-indigo-50 flex items-center justify-center mx-auto shadow-xl shadow-indigo-100/50">
+                        <div className="w-20 h-20 rounded-2xl bg-indigo-50 flex items-center justify-center mx-auto shadow-xl shadow-indigo-100/50">
                             <MessageSquare className="w-10 h-10 text-indigo-600" />
                         </div>
                         <div>

@@ -95,7 +95,7 @@ export default async function CMSPage({ params }: { params: Promise<{ slug: stri
             {/* Main Content */}
             <main className="max-w-4xl mx-auto px-4 py-16 sm:py-24">
                 <article
-                    className="prose prose-slate prose-lg lg:prose-xl max-w-none prose-headings:font-black prose-headings:uppercase prose-headings:italic prose-a:text-indigo-600 prose-img:rounded-3xl prose-img:shadow-xl"
+                    className="prose prose-slate prose-lg lg:prose-xl max-w-none prose-headings:font-black prose-headings:uppercase prose-headings:italic prose-a:text-indigo-600 prose-img:rounded-2xl prose-img:shadow-xl"
                     dangerouslySetInnerHTML={{ __html: page.content || "" }}
                 />
             </main>

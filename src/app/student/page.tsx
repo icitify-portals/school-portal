@@ -166,10 +166,10 @@ export default async function StudentDashboard() {
     ];
 
     return (
-        <div className="p-8 space-y-8 max-w-[1600px] mx-auto min-h-screen text-slate-800">
+        <div className="p-5 md:p-6 space-y-6 max-w-[1600px] w-full mx-auto min-h-screen text-slate-800">
             
             {/* Header Greeting Banner (FSS Style) */}
-            <div className="flex flex-col md:flex-row items-center gap-6 bg-emerald-800 text-white rounded-3xl p-8 shadow-md relative overflow-hidden">
+            <div className="flex flex-col md:flex-row items-center gap-6 bg-emerald-800 text-white rounded-2xl p-6 md:p-8 shadow-sm relative overflow-hidden">
                 <div className="absolute top-0 right-0 p-10 opacity-5 pointer-events-none">
                     <GraduationCap className="w-48 h-48 text-white" />
                 </div>
@@ -309,7 +309,7 @@ export default async function StudentDashboard() {
                 <div className="space-y-8">
                     
                     {/* Recent Activities Ledger */}
-                    <Card className="shadow-sm border-none bg-white rounded-3xl overflow-hidden">
+                    <Card className="shadow-sm border-none bg-white rounded-2xl overflow-hidden">
                         <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-6">
                             <CardTitle className="text-[9px] font-black uppercase tracking-widest text-emerald-600 mb-1">Operational Logs</CardTitle>
                             <CardDescription className="text-lg font-black text-slate-900 uppercase italic leading-none">Activity Feed</CardDescription>

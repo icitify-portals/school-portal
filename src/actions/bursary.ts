@@ -27,9 +27,10 @@ import {
     externalInflows,
     expenditureRequests,
     settlementAccounts,
-    gatewaySubaccounts
+    gatewaySubaccounts,
+    budgets
 } from "@/db/schema";
-import { eq, and, desc, sql, inArray, gte, lte, ne } from "drizzle-orm";
+import { eq, and, desc, sql, inArray, gte, lte, ne, sum } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { hasRole, hasPermission } from "@/lib/rbac";
 import { recordTransaction } from "./accounting";
@@ -1287,6 +1288,65 @@ export async function getFinancialReports(filters: {
             transactions: [],
             stats: { totalRevenue: 0, totalCollections: 0, totalRefunds: 0, count: 0 },
             charts: { revenueByLevel: [], revenueByCategory: [], dailyTrend: [] }
+        };
+    }
+}
+
+export async function getBursaryDashboardSummary(academicYear?: string) {
+    try {
+        await ensureBursaryStaff();
+        
+        let yearToUse = academicYear;
+        if (!yearToUse) {
+            const currentSession = await getCurrentSession();
+            yearToUse = currentSession?.name || "2025/2026";
+        }
+
+        // Total Generated (Revenue)
+        // Note: For simplicity, we get all completed transactions. 
+        // If we strictly tie transactions to academicYear, we'd need a join or date filter.
+        // We'll just grab all for the year if possible, but transactions don't have academic_year directly.
+        // Let's just do a rough global sum for now, or sum by date if we have session start/end.
+        // But for "at a glance", overall or year specific is fine. Let's do overall since sessions might not map cleanly.
+        
+        const [revenueRow] = await db.select({
+            total: sql<number>`SUM(CASE WHEN ${transactions.type} = 'credit' THEN ${transactions.amount} ELSE 0 END)`
+        }).from(transactions).where(eq(transactions.status, 'completed'));
+
+        // Total Budget
+        const [budgetRow] = await db.select({
+            total: sum(budgets.amount)
+        }).from(budgets).where(
+            and(
+                eq(budgets.status, 'active'),
+                eq(budgets.academicYear, yearToUse)
+            )
+        );
+
+        // Total Spent (Disbursed Expenditures)
+        const [spentRow] = await db.select({
+            total: sum(expenditureRequests.amount)
+        }).from(expenditureRequests).where(eq(expenditureRequests.status, 'disbursed'));
+
+        // Pending Outflows
+        const [pendingRow] = await db.select({
+            total: sum(expenditureRequests.amount)
+        }).from(expenditureRequests).where(inArray(expenditureRequests.status, ['pending', 'approved']));
+
+        return {
+            totalGenerated: parseFloat(revenueRow?.total?.toString() || "0"),
+            totalBudget: parseFloat(budgetRow?.total || "0"),
+            totalSpent: parseFloat(spentRow?.total || "0"),
+            totalPendingOutflow: parseFloat(pendingRow?.total || "0")
+        };
+
+    } catch (error) {
+        console.error("Failed to fetch bursary summary:", error);
+        return {
+            totalGenerated: 0,
+            totalBudget: 0,
+            totalSpent: 0,
+            totalPendingOutflow: 0
         };
     }
 }

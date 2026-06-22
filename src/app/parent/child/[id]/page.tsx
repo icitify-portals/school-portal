@@ -24,7 +24,7 @@ export default async function ChildDetailsPage({ params }: { params: { id: strin
     if (error) {
         return (
             <div className="p-8 text-center">
-                <div className="bg-red-50 text-red-600 p-6 rounded-3xl border border-red-100 max-w-xl mx-auto">
+                <div className="bg-red-50 text-red-600 p-6 rounded-2xl border border-red-100 max-w-xl mx-auto">
                     <h2 className="text-xl font-black mb-2">Access Denied</h2>
                     <p className="font-medium mb-4">{error}</p>
                     <Link href="/parent/dashboard" className="text-indigo-600 font-black flex items-center justify-center gap-2">
@@ -36,18 +36,61 @@ export default async function ChildDetailsPage({ params }: { params: { id: strin
         );
     }
 
+    const isK12 = student.academicTier === "k12";
+
     const quickActions = [
-        { name: "Report Card", icon: FileText, color: "text-indigo-600", bg: "bg-indigo-50", desc: "Download terminal performance reports" },
-        { name: "ITS Insights", icon: BrainCircuit, color: "text-indigo-600", bg: "bg-indigo-50", desc: "View AI Tutoring engagement and mastery" },
-        { name: "Attendance Records", icon: Clock, color: "text-green-600", bg: "bg-green-50", desc: "Track daily and lecture attendance" },
-        { name: "Financial Status", icon: Wallet, color: "text-purple-600", bg: "bg-purple-50", desc: "Outstanding fees and payment history" },
-        { name: "Weekly Timetable", icon: Calendar, color: "text-amber-600", bg: "bg-amber-50", desc: "Class schedule and lecture venues" },
-        { name: "Course Enrollment", icon: BookOpen, color: "text-blue-600", bg: "bg-blue-50", desc: "Currently registered courses and units" },
-        { name: "Communications", icon: MessageSquare, color: "text-rose-600", bg: "bg-rose-50", desc: "Message teachers and administration" },
+        { 
+            name: isK12 ? "Report Card" : "Academic Transcript", 
+            slug: isK12 ? "report-card" : "transcript", 
+            icon: FileText, 
+            color: "text-indigo-600", 
+            bg: "bg-indigo-50", 
+            desc: isK12 ? "Download terminal performance reports" : "Download full academic records" 
+        },
+        { 
+            name: "ITS Insights", 
+            slug: "its", 
+            icon: BrainCircuit, 
+            color: "text-indigo-600", 
+            bg: "bg-indigo-50", 
+            desc: "View AI Tutoring engagement and mastery" 
+        },
+        { 
+            name: "Attendance Records", 
+            slug: "attendance-records", 
+            icon: Clock, 
+            color: "text-green-600", 
+            bg: "bg-green-50", 
+            desc: "Track daily and lecture attendance" 
+        },
+        { 
+            name: "Financial Status", 
+            slug: "financial-status", 
+            icon: Wallet, 
+            color: "text-purple-600", 
+            bg: "bg-purple-50", 
+            desc: "Outstanding fees and payment history" 
+        },
+        { 
+            name: isK12 ? "Subject Enrollment" : "Course Enrollment", 
+            slug: "academic-results", 
+            icon: BookOpen, 
+            color: "text-blue-600", 
+            bg: "bg-blue-50", 
+            desc: isK12 ? "Currently registered subjects and performance" : "Currently registered courses and units" 
+        },
+        { 
+            name: "Communications", 
+            slug: "communications", 
+            icon: MessageSquare, 
+            color: "text-rose-600", 
+            bg: "bg-rose-50", 
+            desc: "Message teachers and administration" 
+        },
     ];
 
     return (
-        <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+        <div className="p-4 md:p-8 max-w-[1600px] w-full mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
             {/* Header / Breadcrumb */}
             <div className="flex items-center gap-4">
                 <Link 
@@ -70,12 +113,12 @@ export default async function ChildDetailsPage({ params }: { params: { id: strin
 
             {/* Child Profile Card */}
             <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-2xl shadow-indigo-500/5 p-8 relative overflow-hidden">
-                <div className="absolute top-0 right-0 p-12 opacity-[0.03] pointer-events-none">
+                <div className="absolute top-0 right-0 p-12 opacity-[0.03] pointer-events-none select-none">
                     <GraduationCap className="w-64 h-64" />
                 </div>
                 
                 <div className="flex flex-col md:flex-row md:items-center gap-8 relative z-10">
-                    <div className="w-24 h-24 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-3xl flex items-center justify-center text-white shadow-2xl shadow-indigo-500/20">
+                    <div className="w-24 h-24 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center text-white shadow-2xl shadow-indigo-500/20">
                         <span className="text-4xl font-black">{student.firstName[0]}{student.lastName[0]}</span>
                     </div>
                     <div className="space-y-4">
@@ -90,10 +133,12 @@ export default async function ChildDetailsPage({ params }: { params: { id: strin
                                 <MapPin className="w-4 h-4 text-indigo-500" />
                                 {student.unitName}
                             </div>
-                            <div className="flex items-center gap-2 px-4 py-2 bg-slate-50 rounded-xl text-slate-600 font-bold text-sm">
-                                <GraduationCap className="w-4 h-4 text-indigo-500" />
-                                {student.programmeName}
-                            </div>
+                            {student.programmeName && (
+                                <div className="flex items-center gap-2 px-4 py-2 bg-slate-50 rounded-xl text-slate-600 font-bold text-sm">
+                                    <GraduationCap className="w-4 h-4 text-indigo-500" />
+                                    {student.programmeName}
+                                </div>
+                            )}
                             <div className="flex items-center gap-2 px-4 py-2 bg-slate-50 rounded-xl text-slate-600 font-bold text-sm">
                                 <TrendingUp className="w-4 h-4 text-indigo-500" />
                                 {student.currentLevel} Level
@@ -106,7 +151,7 @@ export default async function ChildDetailsPage({ params }: { params: { id: strin
             {/* Stats Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 {stats.map((stat: any) => (
-                    <Card key={stat.name} className="border-none shadow-xl shadow-slate-200/50 rounded-3xl overflow-hidden group hover:scale-[1.02] transition-all">
+                    <Card key={stat.name} className="border-none shadow-xl shadow-slate-200/50 rounded-2xl overflow-hidden group hover:scale-[1.02] transition-all">
                         <CardContent className="p-8">
                             <div className="flex items-center gap-5">
                                 <div className={`p-4 rounded-2xl ${stat.bg}`}>
@@ -131,8 +176,8 @@ export default async function ChildDetailsPage({ params }: { params: { id: strin
                     </h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {quickActions.map((action) => (
-                            <Link key={action.name} href={`/parent/child/${student.id}/${action.name.toLowerCase().replace(" ", "-")}`}>
-                                <div className="group bg-white p-8 rounded-[2rem] border border-slate-100 shadow-xl shadow-slate-200/40 hover:shadow-2xl hover:shadow-indigo-500/10 transition-all h-full flex flex-col justify-between">
+                            <Link key={action.name} href={`/parent/child/${student.id}/${action.slug}`}>
+                                <div className="group bg-white p-8 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow hover:shadow-2xl hover:shadow-indigo-500/10 transition-all h-full flex flex-col justify-between">
                                     <div className="space-y-4">
                                         <div className={`p-4 rounded-2xl w-fit ${action.bg} group-hover:scale-110 transition-transform duration-500`}>
                                             <action.icon className={`w-6 h-6 ${action.color}`} />
@@ -160,7 +205,7 @@ export default async function ChildDetailsPage({ params }: { params: { id: strin
                         <span className="w-2 h-8 bg-indigo-600 rounded-full" />
                         Activity Timeline
                     </h2>
-                    <div className="bg-white rounded-[2rem] border border-slate-100 p-8 shadow-xl shadow-slate-200/40 relative overflow-hidden">
+                    <div className="bg-white rounded-2xl border border-slate-100 p-8 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
                         <div className="space-y-8 relative z-10">
                             {[
                                 { title: "New Result Uploaded", time: "2h ago", type: "academic", desc: "Mathematics (1st Term)" },

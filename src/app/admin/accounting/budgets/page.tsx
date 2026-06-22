@@ -183,7 +183,7 @@ export default function BudgetManagementPage() {
                             <Loader2 className="w-8 h-8 animate-spin mx-auto text-slate-400" />
                         </div>
                     ) : budgets.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center py-20 bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200">
+                        <div className="flex flex-col items-center justify-center py-20 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200">
                             <PieChart className="w-12 h-12 text-slate-300 mb-4" />
                             <h4 className="text-lg font-bold text-slate-400">No budgets defined</h4>
                             <p className="text-sm text-slate-400 text-center max-w-xs px-4">Allocate funds to departments to start tracking utilization and preventing over-expenditure.</p>
@@ -210,7 +210,7 @@ export default function BudgetManagementPage() {
                                                 <p className="text-sm text-slate-500 capitalize">{b.category} Budget</p>
                                             </div>
                                             <div className="text-right">
-                                                <p className="text-xl font-black text-slate-900">₦{parseFloat(b.amount).toLocaleString()}</p>
+                                                <p className="text-xl font-black text-slate-900">{settings?.base_currency || '₦'}{parseFloat(b.amount).toLocaleString()}</p>
                                                 <p className="text-xs font-bold text-emerald-600 flex items-center justify-end gap-1">
                                                     <BadgeCheck className="w-3 h-3" />
                                                     Active Allocation
@@ -256,11 +256,11 @@ export default function BudgetManagementPage() {
                                     <div className="grid grid-cols-2 gap-4 text-sm">
                                         <div>
                                             <p className="text-indigo-300 mb-1">Actual Spent</p>
-                                            <p className="font-bold text-lg">₦{selectedAnalysis.actual.toLocaleString()}</p>
+                                            <p className="font-bold text-lg">{settings?.base_currency || '₦'}{selectedAnalysis.actual.toLocaleString()}</p>
                                         </div>
                                         <div>
                                             <p className="text-indigo-300 mb-1">Remaining</p>
-                                            <p className="font-bold text-lg">₦{selectedAnalysis.remaining.toLocaleString()}</p>
+                                            <p className="font-bold text-lg">{settings?.base_currency || '₦'}{selectedAnalysis.remaining.toLocaleString()}</p>
                                         </div>
                                     </div>
 

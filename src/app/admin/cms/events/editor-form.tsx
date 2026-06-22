@@ -70,7 +70,7 @@ export default function EventEditorForm({ initialData }: { initialData?: any }) 
 
     return (
         <div className="p-4 sm:p-6 lg:p-8 bg-slate-50 min-h-screen">
-            <div className="max-w-5xl mx-auto space-y-6">
+            <div className="max-w-[1600px] w-full mx-auto space-y-6">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
                         <Button variant="ghost" size="icon" asChild className="rounded-xl border border-slate-200">
@@ -115,7 +115,7 @@ export default function EventEditorForm({ initialData }: { initialData?: any }) 
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     <div className="lg:col-span-2 space-y-6">
-                        <Card className="rounded-3xl border-none shadow-sm overflow-hidden bg-white">
+                        <Card className="rounded-2xl border-none shadow-sm overflow-hidden bg-white">
                             <CardContent className="p-6 space-y-6">
                                 <div className="space-y-4">
                                     <div className="space-y-2">
@@ -163,7 +163,7 @@ export default function EventEditorForm({ initialData }: { initialData?: any }) 
                     </div>
 
                     <div className="space-y-6">
-                        <Card className="rounded-3xl border-none shadow-sm bg-white overflow-hidden p-6 space-y-6">
+                        <Card className="rounded-2xl border-none shadow-sm bg-white overflow-hidden p-6 space-y-6">
                             <div className="space-y-4">
                                 <div className="flex items-center justify-between p-4 rounded-2xl bg-slate-50">
                                     <div className="space-y-1">
@@ -204,7 +204,7 @@ export default function EventEditorForm({ initialData }: { initialData?: any }) 
                             <div className="pt-6 border-t border-slate-50 space-y-4">
                                 <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Poster / Cover</Label>
                                 <div className={cn(
-                                    "aspect-square rounded-3xl border-2 border-dashed flex flex-col items-center justify-center gap-2 cursor-pointer transition-all",
+                                    "aspect-square rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-2 cursor-pointer transition-all",
                                     formData.featuredImage ? "border-indigo-100 bg-indigo-50/30" : "border-slate-100 bg-slate-50 hover:bg-slate-100/50"
                                 )}>
                                     {formData.featuredImage ? (

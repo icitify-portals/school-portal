@@ -165,7 +165,7 @@ export default function ProfilePage() {
     ];
 
     return (
-        <div className="p-8 max-w-7xl mx-auto space-y-12 animate-in fade-in duration-700">
+        <div className="p-8 max-w-[1600px] w-full mx-auto space-y-12 animate-in fade-in duration-700">
             {/* Header Section */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8 bg-white p-10 rounded-[3.5rem] shadow-2xl shadow-emerald-100/50 border border-emerald-50/50">
                 <div className="flex gap-8 items-center">
@@ -222,7 +222,7 @@ export default function ProfilePage() {
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id as any)}
                             className={cn(
-                                "w-full flex items-center gap-4 p-6 rounded-3xl transition-all font-black text-[10px] uppercase tracking-widest border border-transparent",
+                                "w-full flex items-center gap-4 p-6 rounded-2xl transition-all font-black text-[10px] uppercase tracking-widest border border-transparent",
                                 activeTab === tab.id
                                     ? "bg-emerald-600 text-white shadow-2xl shadow-emerald-200 translate-x-3 scale-105"
                                     : "bg-white text-slate-400 hover:bg-emerald-50 hover:text-emerald-600 shadow-xl shadow-slate-100"
@@ -408,7 +408,7 @@ export default function ProfilePage() {
                                                         </div>
                                                     ) : (
                                                         <div className="space-y-4">
-                                                            <div className="flex flex-col items-center justify-center border-2 border-dashed border-slate-200 hover:border-emerald-500 rounded-3xl p-8 bg-slate-50/50 hover:bg-emerald-50/20 transition-all cursor-pointer relative group">
+                                                            <div className="flex flex-col items-center justify-center border-2 border-dashed border-slate-200 hover:border-emerald-500 rounded-2xl p-8 bg-slate-50/50 hover:bg-emerald-50/20 transition-all cursor-pointer relative group">
                                                                 <input
                                                                     id="profile-upload-input"
                                                                     type="file"
@@ -496,7 +496,7 @@ export default function ProfilePage() {
                                     </div>
                                     <div className="space-y-3">
                                         <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Permanent Home Address</Label>
-                                        <Textarea name="guardianAddress" value={profile.guardianAddress || ""} onChange={handleChange} className="rounded-[2rem] border-slate-200 p-6 font-bold text-slate-900 shadow-sm min-h-[120px]" />
+                                        <Textarea name="guardianAddress" value={profile.guardianAddress || ""} onChange={handleChange} className="rounded-2xl border-slate-200 p-6 font-bold text-slate-900 shadow-sm min-h-[120px]" />
                                     </div>
                                 </div>
                             )}
@@ -525,7 +525,7 @@ export default function ProfilePage() {
                                     </div>
                                     <div className="space-y-3">
                                         <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Kin Address</Label>
-                                        <Textarea name="kinAddress" value={profile.kinAddress || ""} onChange={handleChange} className="rounded-[2rem] border-slate-200 p-6 font-bold text-slate-900 min-h-[120px]" />
+                                        <Textarea name="kinAddress" value={profile.kinAddress || ""} onChange={handleChange} className="rounded-2xl border-slate-200 p-6 font-bold text-slate-900 min-h-[120px]" />
                                     </div>
                                 </div>
                             )}
@@ -556,11 +556,11 @@ export default function ProfilePage() {
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                         <div className="space-y-3">
                                             <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 italic">Chronical Ailments</Label>
-                                            <Textarea name="ailments" value={profile.ailments || ""} onChange={handleChange} placeholder="e.g. Type 1 Diabetes, Asthma..." className="rounded-[2rem] border-slate-200 p-6 font-bold text-slate-900 min-h-[100px]" />
+                                            <Textarea name="ailments" value={profile.ailments || ""} onChange={handleChange} placeholder="e.g. Type 1 Diabetes, Asthma..." className="rounded-2xl border-slate-200 p-6 font-bold text-slate-900 min-h-[100px]" />
                                         </div>
                                         <div className="space-y-3">
                                             <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 italic">Surgical History (Operations)</Label>
-                                            <Textarea name="operations" value={profile.operations || ""} onChange={handleChange} placeholder="e.g. Appendectomy (2022)" className="rounded-[2rem] border-slate-200 p-6 font-bold text-slate-900 min-h-[100px]" />
+                                            <Textarea name="operations" value={profile.operations || ""} onChange={handleChange} placeholder="e.g. Appendectomy (2022)" className="rounded-2xl border-slate-200 p-6 font-bold text-slate-900 min-h-[100px]" />
                                         </div>
                                     </div>
 
@@ -584,7 +584,7 @@ export default function ProfilePage() {
                                     </div>
 
                                     <div className="space-y-6">
-                                        <div className="flex items-center justify-between p-6 bg-white border border-slate-100 rounded-3xl shadow-sm">
+                                        <div className="flex items-center justify-between p-6 bg-white border border-slate-100 rounded-2xl shadow-sm">
                                             <div className="space-y-1">
                                                 <h5 className="text-sm font-black text-slate-900 uppercase tracking-tight">Browser Push Notifications</h5>
                                                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">

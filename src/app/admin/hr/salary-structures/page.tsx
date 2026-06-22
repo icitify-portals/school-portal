@@ -100,19 +100,19 @@ export default async function HRSalaryStructuresPage() {
                                     <div className="space-y-2">
                                         <div className="flex justify-between items-center text-sm">
                                             <span className="text-slate-500">Base Pay:</span>
-                                            <span className="font-mono font-bold text-slate-900">₦{parseFloat(s.basePay).toLocaleString()}</span>
+                                            <span className="font-mono font-bold text-slate-900">{settings?.base_currency || '₦'}{parseFloat(s.basePay).toLocaleString()}</span>
                                         </div>
                                         <div className="flex justify-between items-center text-xs text-green-600">
                                             <span>(+) Allowances:</span>
-                                            <span className="font-mono">+₦{parseFloat(s.allowances || "0").toLocaleString()}</span>
+                                            <span className="font-mono">+{settings?.base_currency || '₦'}{parseFloat(s.allowances || "0").toLocaleString()}</span>
                                         </div>
                                         <div className="flex justify-between items-center text-xs text-red-500 border-b border-slate-100 pb-2">
                                             <span>(-) Deductions:</span>
-                                            <span className="font-mono">-₦{parseFloat(s.deductions || "0").toLocaleString()}</span>
+                                            <span className="font-mono">-{settings?.base_currency || '₦'}{parseFloat(s.deductions || "0").toLocaleString()}</span>
                                         </div>
                                         <div className="flex justify-between items-center pt-2">
                                             <span className="text-xs font-bold uppercase text-slate-400">Net Take Home:</span>
-                                            <span className="text-lg font-extrabold text-slate-900">₦{(parseFloat(s.basePay) + parseFloat(s.allowances || "0") - parseFloat(s.deductions || "0")).toLocaleString()}</span>
+                                            <span className="text-lg font-extrabold text-slate-900">{settings?.base_currency || '₦'}{(parseFloat(s.basePay) + parseFloat(s.allowances || "0") - parseFloat(s.deductions || "0")).toLocaleString()}</span>
                                         </div>
                                     </div>
                                 </div>

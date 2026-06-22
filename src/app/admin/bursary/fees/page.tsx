@@ -39,6 +39,7 @@ export default function FeesPage() {
     const [itemName, setItemName] = useState("");
     const [itemDesc, setItemDesc] = useState("");
     const [itemRequired, setItemRequired] = useState(true);
+    const [itemCurrency, setItemCurrency] = useState("NGN");
 
     // Fee Structure Form State
     const [structName, setStructName] = useState("");
@@ -63,7 +64,7 @@ export default function FeesPage() {
 
     const handleCreateItem = async (e: React.FormEvent) => {
         e.preventDefault();
-        const res = await createFeeItem({ name: itemName, description: itemDesc, isRequired: itemRequired });
+        const res = await createFeeItem({ name: itemName, description: itemDesc, isRequired: itemRequired, currency: itemCurrency });
         if (res.success) {
             setItemName("");
             setItemDesc("");
@@ -147,7 +148,7 @@ export default function FeesPage() {
             {isAdding && activeTab === 'items' && (
                 <Card className="mb-8 border-none shadow-md bg-slate-50">
                     <CardContent className="pt-6">
-                        <form onSubmit={handleCreateItem} className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <form onSubmit={handleCreateItem} className="grid grid-cols-1 md:grid-cols-4 gap-4">
                             <div className="space-y-1">
                                 <label className="text-xs font-bold text-slate-500 uppercase">Item Name</label>
                                 <input
@@ -166,6 +167,19 @@ export default function FeesPage() {
                                     value={itemDesc}
                                     onChange={(e) => setItemDesc(e.target.value)}
                                 />
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-xs font-bold text-slate-500 uppercase">Currency</label>
+                                <select
+                                    className="w-full px-4 py-2 rounded-lg border border-slate-200 bg-white"
+                                    value={itemCurrency}
+                                    onChange={(e) => setItemCurrency(e.target.value)}
+                                >
+                                    <option value="NGN">NGN</option>
+                                    <option value="USD">USD</option>
+                                    <option value="EUR">EUR</option>
+                                    <option value="GBP">GBP</option>
+                                </select>
                             </div>
                             <div className="flex items-end mb-1">
                                 <Button type="submit" className="w-full bg-slate-900 h-10">Save Item</Button>
@@ -269,7 +283,7 @@ export default function FeesPage() {
                         <tr className="bg-slate-50 text-slate-500 text-xs font-bold uppercase tracking-wider">
                             <th className="px-6 py-4">{activeTab === 'items' ? "ID" : "Name"}</th>
                             <th className="px-6 py-4">{activeTab === 'items' ? "Fee Name" : "Academic Year"}</th>
-                            <th className="px-6 py-4">{activeTab === 'items' ? "Description" : "Level"}</th>
+                            <th className="px-6 py-4">{activeTab === 'items' ? "Currency" : "Level"}</th>
                             <th className="px-6 py-4">{activeTab === 'items' ? "Required" : "Items"}</th>
                             <th className="px-6 py-4 text-right">Status / Actions</th>
                         </tr>
@@ -288,7 +302,7 @@ export default function FeesPage() {
                                 <tr key={item.id} className="hover:bg-slate-50/50">
                                     <td className="px-6 py-4 text-sm font-mono text-slate-400">#{item.id}</td>
                                     <td className="px-6 py-4 text-sm font-bold text-slate-700">{item.name}</td>
-                                    <td className="px-6 py-4 text-sm text-slate-500">{item.description}</td>
+                                    <td className="px-6 py-4 text-sm text-slate-500">{item.currency || 'NGN'}</td>
                                     <td className="px-6 py-4">
                                         <span className={cn("px-2 py-1 rounded-full text-[10px] font-bold uppercase", item.isRequired ? "bg-green-50 text-green-600" : "bg-slate-100 text-slate-500")}>
                                             {item.isRequired ? "Yes" : "No"}

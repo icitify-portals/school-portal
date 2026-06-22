@@ -13,10 +13,17 @@ export default function CitationGenerator({ resource }: { resource: any }) {
     const title = resource.title;
     const publisher = resource.publisher || 'Independent';
 
+    const makeBibtexKey = () => {
+        const firstAuthor = authors.split(',')[0].split(' ')[0].toLowerCase().replace(/[^a-z0-9]/g, '');
+        const firstTitleWord = title.split(' ')[0].toLowerCase().replace(/[^a-z0-9]/g, '');
+        return `${firstAuthor || 'unknown'}${year}${firstTitleWord || 'book'}`;
+    };
+
     const citations = {
         APA: `${authors} (${year}). ${title}. ${publisher}.`,
         MLA: `${authors}. "${title}." ${publisher}, ${year}.`,
-        Chicago: `${authors}. ${title}. ${publisher}, ${year}.`
+        Chicago: `${authors}. ${title}. ${publisher}, ${year}.`,
+        BibTeX: `@book{${makeBibtexKey()},\n  author = {${authors}},\n  title = {${title}},\n  year = {${year}},\n  publisher = {${publisher}}\n}`
     };
 
     const handleCopy = (text: string) => {
@@ -37,14 +44,15 @@ export default function CitationGenerator({ resource }: { resource: any }) {
                     <DialogTitle className="text-xl font-black">Generate Citation</DialogTitle>
                 </DialogHeader>
                 <Tabs defaultValue="APA" className="w-full mt-4">
-                    <TabsList className="grid w-full grid-cols-3 bg-slate-900">
+                    <TabsList className="grid w-full grid-cols-4 bg-slate-900">
                         <TabsTrigger value="APA">APA</TabsTrigger>
                         <TabsTrigger value="MLA">MLA</TabsTrigger>
                         <TabsTrigger value="Chicago">Chicago</TabsTrigger>
+                        <TabsTrigger value="BibTeX">BibTeX</TabsTrigger>
                     </TabsList>
                     {Object.entries(citations).map(([format, text]) => (
                         <TabsContent key={format} value={format} className="mt-4">
-                            <div className="p-4 bg-slate-900 rounded-xl border border-slate-800 text-sm font-medium leading-relaxed font-serif">
+                            <div className={`p-4 bg-slate-900 rounded-xl border border-slate-800 text-sm font-medium leading-relaxed whitespace-pre-wrap ${format === 'BibTeX' ? 'font-mono text-xs' : 'font-serif'}`}>
                                 {text}
                             </div>
                             <Button 

@@ -201,7 +201,7 @@ export function AttendanceSessionManager({ slot, qrRotationInterval }: Attendanc
                         <div className="flex flex-col items-center space-y-6">
                             {/* QR Code with rotation indicator */}
                             <div className="relative">
-                                <div className="p-6 bg-white rounded-[2rem] border-4 border-slate-100 shadow-2xl shadow-slate-100 relative">
+                                <div className="p-6 bg-white rounded-2xl border-4 border-slate-100 shadow-2xl shadow-slate-100 relative">
                                     <img
                                         src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${qrToken}`}
                                         alt="Attendance QR"
@@ -261,7 +261,7 @@ export function AttendanceSessionManager({ slot, qrRotationInterval }: Attendanc
                                 </h3>
                                 <Badge className="bg-emerald-100 text-emerald-700 font-black text-[10px]">{attendees.length} PRESENT</Badge>
                             </div>
-                            <div className="bg-slate-50 rounded-3xl p-6 h-[25rem] overflow-y-auto border border-slate-100">
+                            <div className="bg-slate-50 rounded-2xl p-6 h-[25rem] overflow-y-auto border border-slate-100">
                                 {attendees.length > 0 ? (
                                     <div className="space-y-3">
                                         {attendees.map((a, i) => (

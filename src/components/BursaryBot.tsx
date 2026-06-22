@@ -79,7 +79,7 @@ export default function BursaryBot() {
     }
 
     return (
-        <div className="fixed bottom-8 right-8 w-[400px] h-[600px] bg-white rounded-3xl shadow-2xl border border-slate-100 flex flex-col overflow-hidden z-50 animate-in slide-in-from-bottom-5 duration-300">
+        <div className="fixed bottom-8 right-8 w-[400px] h-[600px] bg-white rounded-2xl shadow-2xl border border-slate-100 flex flex-col overflow-hidden z-50 animate-in slide-in-from-bottom-5 duration-300">
             {/* Header */}
             <div className="bg-indigo-600 p-6 text-white flex items-center justify-between">
                 <div className="flex items-center gap-3">

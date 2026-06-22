@@ -37,7 +37,7 @@ export default function AcademicEnginePage() {
     };
 
     return (
-        <div className="p-8 max-w-5xl mx-auto">
+        <div className="p-8 max-w-[1600px] w-full mx-auto">
             <header className="mb-10">
                 <h1 className="text-4xl font-black text-slate-900 tracking-tighter uppercase italic">
                     Academic <span className="text-indigo-600">Engine</span> Control Center
@@ -118,7 +118,7 @@ export default function AcademicEnginePage() {
                 </Card>
             </div>
             
-            <footer className="mt-16 p-8 bg-slate-900 rounded-[2rem] text-white">
+            <footer className="mt-16 p-8 bg-slate-900 rounded-2xl text-white">
                 <div className="flex items-center gap-4 mb-4">
                     <div className="p-2 bg-indigo-500 rounded-lg">
                         <Zap className="w-4 h-4" />

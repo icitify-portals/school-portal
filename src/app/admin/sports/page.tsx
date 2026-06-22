@@ -64,25 +64,25 @@ export default function SportsAdminPage() {
     );
 
     return (
-        <div className="p-8 max-w-7xl mx-auto space-y-12">
+        <div className="p-8 max-w-[1600px] w-full mx-auto space-y-12">
             {/* Hero Header */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                 <div>
                     <h1 className="text-5xl font-black text-slate-900 flex items-center gap-6 italic tracking-tighter">
-                        <div className="p-4 bg-orange-500 rounded-[2rem] shadow-2xl shadow-orange-200">
+                        <div className="p-4 bg-orange-500 rounded-2xl shadow-2xl shadow-orange-200">
                             <Trophy className="w-10 h-10 text-white" />
                         </div>
                         ATHLETICS & SPORTS
                     </h1>
                     <p className="text-slate-500 font-black uppercase tracking-[0.3em] text-[10px] mt-4 ml-24">Global governance of teams, fixtures, and sports media</p>
                 </div>
-                <Button className="bg-slate-900 hover:bg-slate-800 text-white font-black px-10 py-8 rounded-[2rem] shadow-2xl transition-all hover:scale-105 active:scale-95 flex gap-4 uppercase text-[10px] tracking-widest group">
+                <Button className="bg-slate-900 hover:bg-slate-800 text-white font-black px-10 py-8 rounded-2xl shadow-2xl transition-all hover:scale-105 active:scale-95 flex gap-4 uppercase text-[10px] tracking-widest group">
                     <Plus className="w-6 h-6 group-hover:rotate-90 transition-transform duration-500" /> New Sports Entity
                 </Button>
             </div>
 
             <Tabs defaultValue="teams" onValueChange={setActiveTab} className="space-y-8">
-                <TabsList className="bg-slate-100 p-2 rounded-[2rem] h-auto flex-wrap md:flex-nowrap gap-2">
+                <TabsList className="bg-slate-100 p-2 rounded-2xl h-auto flex-wrap md:flex-nowrap gap-2">
                     <TabsTrigger value="teams" className="rounded-full px-8 py-3 data-[state=active]:bg-white data-[state=active]:shadow-lg font-black uppercase text-[10px] tracking-widest gap-2">
                         <Users className="w-4 h-4" /> Teams
                     </TabsTrigger>
@@ -175,7 +175,7 @@ export default function SportsAdminPage() {
                                         </div>
                                     </div>
 
-                                    <div className="flex flex-col items-center gap-2 px-8 py-4 bg-slate-50 rounded-[2rem] border border-slate-100">
+                                    <div className="flex flex-col items-center gap-2 px-8 py-4 bg-slate-50 rounded-2xl border border-slate-100">
                                         <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">VS</span>
                                         <div className={cn(
                                             "px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest",
@@ -219,14 +219,14 @@ export default function SportsAdminPage() {
                 <TabsContent value="media" className="animate-in fade-in slide-in-from-bottom-4">
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                         {media.map((m) => (
-                            <div key={m.id} className="group relative aspect-square rounded-[2rem] overflow-hidden shadow-lg cursor-pointer">
+                            <div key={m.id} className="group relative aspect-square rounded-2xl overflow-hidden shadow-lg cursor-pointer">
                                 <img src={m.url} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" alt={m.caption} />
                                 <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity p-6 flex flex-col justify-end">
                                     <p className="text-white text-[10px] font-black uppercase tracking-widest">{m.caption}</p>
                                 </div>
                             </div>
                         ))}
-                        <button className="aspect-square rounded-[2rem] border-2 border-dashed border-slate-200 flex flex-col items-center justify-center gap-4 text-slate-400 hover:bg-slate-50 hover:border-indigo-300 transition-all">
+                        <button className="aspect-square rounded-2xl border-2 border-dashed border-slate-200 flex flex-col items-center justify-center gap-4 text-slate-400 hover:bg-slate-50 hover:border-indigo-300 transition-all">
                             <Plus className="w-8 h-8" />
                             <span className="text-[9px] font-black uppercase tracking-widest">Add Media</span>
                         </button>

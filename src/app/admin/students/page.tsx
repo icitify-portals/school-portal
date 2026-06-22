@@ -5,7 +5,7 @@ import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Users, CheckCircle, Loader2, Search, FileUp, X, FileText, ShieldAlert } from "lucide-react";
-import { getStudents, approveStudent, bulkImportStudents } from "@/actions/students";
+import { getStudents, approveStudent, bulkImportStudents, toggleFinancialLock } from "@/actions/students";
 import { impersonateUser } from "@/actions/impersonation";
 import { UniversalImporter } from "@/components/UniversalImporter";
 import { StudentSeeder } from "@/components/StudentSeeder";
@@ -13,10 +13,13 @@ import { DataTablePagination } from "@/components/DataTablePagination";
 import { Suspense } from "react";
 import { AccountManagementModal } from "@/components/admin/AccountManagementModal";
 
+import { useBranch } from "@/providers/BranchProvider";
+
 function StudentsPageContent() {
     const router = useRouter();
     const pathname = usePathname();
     const searchParams = useSearchParams();
+    const { isK12 } = useBranch();
 
     const [students, setStudents] = useState<any[]>([]);
     const [totalCount, setTotalCount] = useState(0);
@@ -27,16 +30,22 @@ function StudentsPageContent() {
     const page = parseInt(searchParams.get("page") || "1");
     const pageSize = parseInt(searchParams.get("pageSize") || "10");
     const search = searchParams.get("search") || "";
+    const levelParam = searchParams.get("level");
+    const level = levelParam ? parseInt(levelParam) : undefined;
+
+    const levels = isK12 
+        ? [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+        : [100, 200, 300, 400, 500, 600, 700, 800];
 
     const fetchStudents = useCallback(async () => {
         setLoading(true);
-        const res = await getStudents({ search, page, pageSize });
+        const res = await getStudents({ search, page, pageSize, level });
         if (res.success) {
             setStudents(res.data);
             setTotalCount(res.totalCount);
         }
         setLoading(false);
-    }, [search, page, pageSize]);
+    }, [search, page, pageSize, level]);
 
     useEffect(() => {
         fetchStudents();
@@ -53,11 +62,33 @@ function StudentsPageContent() {
         router.push(`${pathname}?${params.toString()}`);
     };
 
+    const handleLevelChange = (value: string) => {
+        const params = new URLSearchParams(searchParams);
+        if (value) {
+            params.set("level", value);
+        } else {
+            params.delete("level");
+        }
+        params.set("page", "1");
+        router.push(`${pathname}?${params.toString()}`);
+    };
+
     const handleApprove = async (userId: number) => {
         const matric = prompt("Enter Matric Number for this student:");
         if (!matric) return;
         const res = await approveStudent(userId, matric);
         if (res.success) fetchStudents();
+    };
+
+    const handleToggleLock = async (studentId: number, currentStatus: boolean, name: string) => {
+        if (confirm(`Are you sure you want to ${currentStatus ? 'unlock' : 'lock'} the financial status for ${name}?`)) {
+            const res = await toggleFinancialLock(studentId, !currentStatus);
+            if (res.success) {
+                fetchStudents();
+            } else {
+                alert(res.error);
+            }
+        }
     };
 
     return (
@@ -67,7 +98,7 @@ function StudentsPageContent() {
                     <h2 className="text-3xl font-bold text-slate-900 tracking-tight">Student Management</h2>
                     <p className="text-slate-500 mt-1">Review and manage student records</p>
                 </div>
-                <div className="flex gap-2 w-full md:w-auto">
+                <div className="flex flex-wrap gap-2 w-full md:w-auto items-center">
                     <Button
                         onClick={() => setShowImporter(!showImporter)}
                         variant="outline"
@@ -76,10 +107,24 @@ function StudentsPageContent() {
                         {showImporter ? <X className="w-4 h-4" /> : <FileUp className="w-4 h-4" />}
                         {showImporter ? "Close Importer" : "Import Students"}
                     </Button>
-                    <div className="relative w-full md:w-72">
+                    
+                    <select
+                        className="px-3 h-10 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white shadow-sm text-xs font-bold uppercase tracking-wider text-slate-700 cursor-pointer"
+                        value={levelParam || ""}
+                        onChange={(e) => handleLevelChange(e.target.value)}
+                    >
+                        <option value="">All Levels</option>
+                        {levels.map((lvl) => (
+                            <option key={lvl} value={lvl}>
+                                {isK12 ? `Grade ${lvl}` : `${lvl} Level`}
+                            </option>
+                        ))}
+                    </select>
+
+                    <div className="relative w-full md:w-64">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                         <input
-                            className="w-full pl-10 pr-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white shadow-sm"
+                            className="w-full pl-10 pr-4 py-2 h-10 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white shadow-sm text-sm"
                             placeholder="Search students..."
                             defaultValue={search}
                             onKeyDown={(e) => {
@@ -118,21 +163,23 @@ function StudentsPageContent() {
                             <tr className="bg-slate-50 text-slate-500 text-xs font-bold uppercase tracking-wider">
                                 <th className="px-6 py-4">Student</th>
                                 <th className="px-6 py-4">Matric No.</th>
+                                <th className="px-6 py-4">Level</th>
                                 <th className="px-6 py-4">Programme</th>
                                 <th className="px-6 py-4">Wallet</th>
+                                <th className="px-6 py-4">Fin Status</th>
                                 <th className="px-6 py-4 text-right">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
                             {loading ? (
                                 <tr>
-                                    <td colSpan={5} className="px-6 py-10 text-center">
+                                    <td colSpan={6} className="px-6 py-10 text-center">
                                         <Loader2 className="w-6 h-6 animate-spin mx-auto text-slate-400" />
                                     </td>
                                 </tr>
                             ) : students.length === 0 ? (
                                 <tr>
-                                    <td colSpan={5} className="px-6 py-10 text-center text-slate-500">
+                                    <td colSpan={6} className="px-6 py-10 text-center text-slate-500">
                                         No students found.
                                     </td>
                                 </tr>
@@ -155,10 +202,25 @@ function StudentsPageContent() {
                                             )}
                                         </td>
                                         <td className="px-6 py-4">
+                                            <span className="text-sm font-bold text-slate-600">
+                                                {isK12 ? `Grade ${s.currentLevel}` : `${s.currentLevel} L`}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4">
                                             <span className="text-sm text-slate-600">{s.programme?.name || 'Not Assigned'}</span>
                                         </td>
                                         <td className="px-6 py-4">
-                                            <span className="text-sm font-bold text-slate-700">₦{parseFloat(s.walletBalance).toLocaleString()}</span>
+                                            <span className="text-sm font-bold text-slate-700">{settings?.base_currency || '₦'}{parseFloat(s.walletBalance).toLocaleString()}</span>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => handleToggleLock(s.id, s.isFinanciallyLocked, s.user?.name)}
+                                                className={`h-8 px-2 text-xs gap-1 rounded-lg border font-bold ${s.isFinanciallyLocked ? 'border-rose-200 text-rose-600 bg-rose-50 hover:bg-rose-100' : 'border-emerald-200 text-emerald-600 bg-emerald-50 hover:bg-emerald-100'}`}
+                                            >
+                                                {s.isFinanciallyLocked ? 'Locked' : 'Clear'}
+                                            </Button>
                                         </td>
                                         <td className="px-6 py-4 text-right flex justify-end gap-2 items-center">
                                             <Button

@@ -121,7 +121,7 @@ export default function GeneralStudentSearch() {
             )}
 
             {!loading && search.trim() && students.length === 0 && (
-                <div className="py-20 text-center bg-white rounded-3xl border-2 border-dashed border-slate-100">
+                <div className="py-20 text-center bg-white rounded-2xl border-2 border-dashed border-slate-100">
                     <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
                         <FileSearch className="w-8 h-8 text-slate-300" />
                     </div>

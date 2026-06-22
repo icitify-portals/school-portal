@@ -58,6 +58,8 @@ interface Bill {
     amountPaid?: string;
     status: 'pending' | 'partially_paid' | 'paid';
     note?: string;
+    partPaymentAllowed?: boolean;
+    partPaymentMinPercent?: number;
     createdAt: string | Date;
     session?: { name: string; currentSemester?: string };
     items?: BillItem[];
@@ -153,14 +155,15 @@ export default function StudentFinancePage() {
 
         // Validation
         const outstanding = parseFloat(selectedBill.totalAmount) - parseFloat(selectedBill.amountPaid || "0.00");
-        const partPaymentEnabled = settings['part_payment_enabled'] !== 'false';
-        const minPercentage = parseFloat(settings['min_part_payment_percentage'] || "30");
+        const partPaymentEnabled = selectedBill.partPaymentAllowed !== false && settings['part_payment_enabled'] !== 'false';
+        const minPercentage = parseFloat(selectedBill.partPaymentMinPercent?.toString() || settings['min_part_payment_percentage'] || "60");
         const minFlatAmount = parseFloat(settings['min_part_payment_amount'] || "5000");
+        const isInitialPayment = parseFloat(selectedBill.amountPaid || "0.00") < 0.01;
 
-        const pctAmount = (outstanding * minPercentage) / 100;
-        const minPayment = partPaymentEnabled 
+        const pctAmount = (parseFloat(selectedBill.totalAmount) * minPercentage) / 100;
+        const minPayment = (partPaymentEnabled && isInitialPayment)
             ? Math.min(outstanding, Math.max(pctAmount, minFlatAmount))
-            : outstanding;
+            : Math.min(outstanding, 1000);
 
         if (selectedAmount < minPayment) {
             setCheckoutError(`Minimum payment of ₦${minPayment.toLocaleString()} is required.`);
@@ -192,7 +195,7 @@ export default function StudentFinancePage() {
                         fetchData();
                     }, 2000);
                 } else {
-                    setCheckoutError(res.error || "Wallet payment failed.");
+                    setCheckoutError((res as any).error || "Wallet payment failed.");
                 }
             } else {
                 // Online gateway payment
@@ -275,7 +278,7 @@ export default function StudentFinancePage() {
                     <p className="text-indigo-100 text-[10px] font-black uppercase tracking-widest mb-2 opacity-80 flex items-center gap-1.5">
                         <Coins className="w-4 h-4" /> Available Wallet Balance
                     </p>
-                    <h3 className="text-4xl font-black mb-10 tracking-tight">₦{walletBalanceText}</h3>
+                    <h3 className="text-4xl font-black mb-10 tracking-tight">{settings?.base_currency || '₦'}{walletBalanceText}</h3>
                     <div className="flex gap-2">
                         <Button 
                             className="bg-white text-indigo-600 hover:bg-indigo-50 w-full font-black rounded-2xl h-12 shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all"
@@ -295,7 +298,7 @@ export default function StudentFinancePage() {
                         <ArrowDownCircle className="w-3.5 h-3.5" />
                         Outstanding Balance
                     </div>
-                    <h3 className="text-4xl font-black text-slate-900 mb-10 tracking-tight">₦{totalOwedText}</h3>
+                    <h3 className="text-4xl font-black text-slate-900 mb-10 tracking-tight">{settings?.base_currency || '₦'}{totalOwedText}</h3>
                     <Button 
                         disabled={!unpaidBill}
                         onClick={() => unpaidBill && openCheckout(unpaidBill)}
@@ -322,7 +325,7 @@ export default function StudentFinancePage() {
                         </p>
                         <div className="p-4 bg-slate-800/80 rounded-2xl border border-slate-700 flex justify-between items-center">
                             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Paid:</span>
-                            <span className="font-extrabold text-sm text-indigo-400">₦{totalPaidText}</span>
+                            <span className="font-extrabold text-sm text-indigo-400">{settings?.base_currency || '₦'}{totalPaidText}</span>
                         </div>
                     </div>
                 </div>
@@ -404,16 +407,16 @@ export default function StudentFinancePage() {
                                             </td>
                                             <td className="px-8 py-5">
                                                 {parseFloat(entry.debit) > 0 ? (
-                                                    <span className="text-sm font-black text-rose-600">₦{parseFloat(entry.debit).toLocaleString()}</span>
+                                                    <span className="text-sm font-black text-rose-600">{settings?.base_currency || '₦'}{parseFloat(entry.debit).toLocaleString()}</span>
                                                 ) : "-"}
                                             </td>
                                             <td className="px-8 py-5">
                                                 {parseFloat(entry.credit) > 0 ? (
-                                                    <span className="text-sm font-black text-emerald-600">₦{parseFloat(entry.credit).toLocaleString()}</span>
+                                                    <span className="text-sm font-black text-emerald-600">{settings?.base_currency || '₦'}{parseFloat(entry.credit).toLocaleString()}</span>
                                                 ) : "-"}
                                             </td>
                                             <td className="px-8 py-5 text-sm font-black text-slate-900">
-                                                ₦{parseFloat(entry.balance).toLocaleString()}
+                                                {settings?.base_currency || '₦'}{parseFloat(entry.balance).toLocaleString()}
                                             </td>
                                             <td className="px-8 py-5 font-mono text-[10px] text-slate-400 group-hover:text-slate-600">
                                                 #{entry.transactionId || "SYS-" + entry.id}
@@ -449,7 +452,7 @@ export default function StudentFinancePage() {
                                     );
                                     
                                     return (
-                                        <div key={bill.id} className="bg-slate-50/50 hover:bg-slate-50 rounded-3xl p-8 border border-slate-100 relative overflow-hidden group transition-all duration-300">
+                                        <div key={bill.id} className="bg-slate-50/50 hover:bg-slate-50 rounded-2xl p-8 border border-slate-100 relative overflow-hidden group transition-all duration-300">
                                             <div className="absolute top-0 right-0 p-6 opacity-5 group-hover:opacity-10 transition-opacity">
                                                 <FileText className="w-24 h-24" />
                                             </div>
@@ -464,7 +467,7 @@ export default function StudentFinancePage() {
                                                 </div>
                                                 <div className="text-right">
                                                     <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Outstanding Balance</p>
-                                                    <h3 className="text-2xl font-black text-slate-900">₦{outstanding.toLocaleString()}</h3>
+                                                    <h3 className="text-2xl font-black text-slate-900">{settings?.base_currency || '₦'}{outstanding.toLocaleString()}</h3>
                                                     <span className={cn("inline-block px-3 py-1 rounded-full text-[9px] font-black uppercase mt-3 tracking-wider",
                                                         bill.status === 'paid' ? "bg-emerald-100 text-emerald-800" : bill.status === 'partially_paid' ? "bg-amber-100 text-amber-800" : "bg-rose-100 text-rose-800")}>
                                                         {bill.status === 'partially_paid' ? 'Part-Paid' : bill.status}
@@ -477,7 +480,7 @@ export default function StudentFinancePage() {
                                                     {bill.items?.map((item) => (
                                                         <div key={item.id} className="flex justify-between items-center text-xs">
                                                             <span className="text-slate-500 font-medium">{item.feeItem?.name}</span>
-                                                            <span className="font-extrabold text-slate-800">₦{parseFloat(item.amount).toLocaleString()}</span>
+                                                            <span className="font-extrabold text-slate-800">{settings?.base_currency || '₦'}{parseFloat(item.amount).toLocaleString()}</span>
                                                         </div>
                                                     ))}
                                                 </div>
@@ -494,6 +497,14 @@ export default function StudentFinancePage() {
                                             )}
 
                                             <div className="mt-6 flex justify-end gap-3">
+                                                <Button
+                                                    variant="outline"
+                                                    onClick={() => router.push(`/finance/bill/${bill.id}`)}
+                                                    className="h-10 px-5 text-xs font-black rounded-xl border-slate-200 text-slate-600 hover:bg-slate-50 gap-2 transition-all"
+                                                >
+                                                    <Printer className="w-3.5 h-3.5" />
+                                                    View &amp; Print Bill
+                                                </Button>
                                                 <Button 
                                                     disabled={outstanding <= 0}
                                                     onClick={() => openCheckout(bill)}
@@ -545,7 +556,7 @@ export default function StudentFinancePage() {
                             ) : (
                                 <form onSubmit={handleCheckoutSubmit} className="space-y-6">
                                     {/* Bill summary box */}
-                                    <div className="bg-slate-50 rounded-3xl p-6 border border-slate-100 space-y-3">
+                                    <div className="bg-slate-50 rounded-2xl p-6 border border-slate-100 space-y-3">
                                         <div className="flex justify-between items-center text-xs">
                                             <span className="text-slate-400 font-bold uppercase tracking-wider">Academic Term:</span>
                                             <span className="font-extrabold text-indigo-600 uppercase">
@@ -555,7 +566,7 @@ export default function StudentFinancePage() {
                                         <div className="flex justify-between items-center text-xs">
                                             <span className="text-slate-400 font-bold uppercase tracking-wider">Outstanding:</span>
                                             <span className="font-extrabold text-slate-800">
-                                                ₦{(parseFloat(selectedBill.totalAmount) - parseFloat(selectedBill.amountPaid || "0.00")).toLocaleString()}
+                                                {settings?.base_currency || '₦'}{(parseFloat(selectedBill.totalAmount) - parseFloat(selectedBill.amountPaid || "0.00")).toLocaleString()}
                                             </span>
                                         </div>
                                     </div>
@@ -563,13 +574,14 @@ export default function StudentFinancePage() {
                                     {/* Installment / Amount selector */}
                                     {(() => {
                                         const outstanding = parseFloat(selectedBill.totalAmount) - parseFloat(selectedBill.amountPaid || "0.00");
-                                        const partPaymentEnabled = settings['part_payment_enabled'] !== 'false';
-                                        const minPercentage = parseFloat(settings['min_part_payment_percentage'] || "30");
+                                        const partPaymentEnabled = selectedBill.partPaymentAllowed !== false && settings['part_payment_enabled'] !== 'false';
+                                        const minPercentage = parseFloat(selectedBill.partPaymentMinPercent?.toString() || settings['min_part_payment_percentage'] || "60");
                                         const minFlatAmount = parseFloat(settings['min_part_payment_amount'] || "5000");
-                                        const pctAmount = (outstanding * minPercentage) / 100;
-                                        const minPayment = partPaymentEnabled 
+                                        const isInitialPayment = parseFloat(selectedBill.amountPaid || "0.00") < 0.01;
+                                        const pctAmount = (parseFloat(selectedBill.totalAmount) * minPercentage) / 100;
+                                        const minPayment = (partPaymentEnabled && isInitialPayment)
                                             ? Math.min(outstanding, Math.max(pctAmount, minFlatAmount))
-                                            : outstanding;
+                                            : Math.min(outstanding, 1000);
 
                                         return (
                                             <div className="space-y-4">
@@ -606,8 +618,8 @@ export default function StudentFinancePage() {
                                                             className="w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-indigo-600"
                                                         />
                                                         <div className="flex justify-between text-[9px] font-bold text-slate-400 uppercase tracking-wider">
-                                                            <span>Min: ₦{minPayment.toLocaleString()}</span>
-                                                            <span>Max: ₦{outstanding.toLocaleString()}</span>
+                                                            <span>Min: {settings?.base_currency || '₦'}{minPayment.toLocaleString()}</span>
+                                                            <span>Max: {settings?.base_currency || '₦'}{outstanding.toLocaleString()}</span>
                                                         </div>
                                                     </div>
                                                 )}
@@ -616,7 +628,7 @@ export default function StudentFinancePage() {
                                                     <div className="flex items-start gap-2 text-amber-600 bg-amber-50/50 p-4 rounded-2xl border border-amber-100/50 text-xs">
                                                         <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
                                                         <p className="leading-relaxed">
-                                                            Amount is below the minimum required installment of <strong>₦{minPayment.toLocaleString()}</strong> ({minPercentage}% setting threshold).
+                                                            Amount is below the minimum required installment of <strong>{settings?.base_currency || '₦'}{minPayment.toLocaleString()}</strong> ({minPercentage}% setting threshold).
                                                         </p>
                                                     </div>
                                                 )}
@@ -632,7 +644,7 @@ export default function StudentFinancePage() {
                                                 type="button"
                                                 onClick={() => setPaymentMode('gateway')}
                                                 className={cn(
-                                                    "p-4 rounded-3xl border-2 text-left transition-all",
+                                                    "p-4 rounded-2xl border-2 text-left transition-all",
                                                     paymentMode === 'gateway'
                                                         ? "border-indigo-600 bg-white shadow-md shadow-indigo-50"
                                                         : "border-slate-100 bg-slate-50/50 hover:border-slate-200"
@@ -647,7 +659,7 @@ export default function StudentFinancePage() {
                                                 type="button"
                                                 onClick={() => setPaymentMode('wallet')}
                                                 className={cn(
-                                                    "p-4 rounded-3xl border-2 text-left transition-all",
+                                                    "p-4 rounded-2xl border-2 text-left transition-all",
                                                     paymentMode === 'wallet'
                                                         ? "border-indigo-600 bg-white shadow-md shadow-indigo-50"
                                                         : "border-slate-100 bg-slate-50/50 hover:border-slate-200"
@@ -655,7 +667,7 @@ export default function StudentFinancePage() {
                                             >
                                                 <Wallet className={cn("w-5 h-5 mb-2", paymentMode === 'wallet' ? "text-indigo-600" : "text-slate-400")} />
                                                 <p className="font-extrabold text-slate-800 text-xs">Digital Wallet</p>
-                                                <p className="text-[9px] text-slate-400 leading-tight mt-1">Instant debit (Bal: ₦{walletBalanceText})</p>
+                                                <p className="text-[9px] text-slate-400 leading-tight mt-1">Instant debit (Bal: {settings?.base_currency || '₦'}{walletBalanceText})</p>
                                             </button>
                                         </div>
                                     </div>
@@ -673,7 +685,7 @@ export default function StudentFinancePage() {
                                         <div className="flex items-start gap-2 text-rose-600 bg-rose-50/50 p-4 rounded-2xl border border-rose-100/50 text-xs">
                                             <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
                                             <p className="leading-relaxed">
-                                                Your digital wallet has insufficient funds (₦{walletBalanceText} available). Please fund your wallet in the Wallet Portal before finalizing.
+                                                Your digital wallet has insufficient funds ({settings?.base_currency || '₦'}{walletBalanceText} available). Please fund your wallet in the Wallet Portal before finalizing.
                                             </p>
                                         </div>
                                     )}
@@ -693,13 +705,14 @@ export default function StudentFinancePage() {
                                             (paymentMode === 'wallet' && (summary?.walletBalance || 0) < selectedAmount) ||
                                             (() => {
                                                 const outstanding = parseFloat(selectedBill.totalAmount) - parseFloat(selectedBill.amountPaid || "0.00");
-                                                const partPaymentEnabled = settings['part_payment_enabled'] !== 'false';
-                                                const minPercentage = parseFloat(settings['min_part_payment_percentage'] || "30");
+                                                const partPaymentEnabled = selectedBill.partPaymentAllowed !== false && settings['part_payment_enabled'] !== 'false';
+                                                const minPercentage = parseFloat(selectedBill.partPaymentMinPercent?.toString() || settings['min_part_payment_percentage'] || "60");
                                                 const minFlatAmount = parseFloat(settings['min_part_payment_amount'] || "5000");
-                                                const pctAmount = (outstanding * minPercentage) / 100;
-                                                const minPayment = partPaymentEnabled 
+                                                const isInitialPayment = parseFloat(selectedBill.amountPaid || "0.00") < 0.01;
+                                                const pctAmount = (parseFloat(selectedBill.totalAmount) * minPercentage) / 100;
+                                                const minPayment = (partPaymentEnabled && isInitialPayment)
                                                     ? Math.min(outstanding, Math.max(pctAmount, minFlatAmount))
-                                                    : outstanding;
+                                                    : Math.min(outstanding, 1000);
                                                 return selectedAmount < minPayment || selectedAmount > outstanding + 0.01;
                                             })()
                                         }

@@ -44,7 +44,7 @@ export default function RevenueAnalysisDashboard() {
   }
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-8 bg-slate-50 min-h-screen">
+    <div className="p-8 max-w-[1600px] w-full mx-auto space-y-8 bg-slate-50 min-h-screen">
       <div className="flex justify-between items-end">
         <div className="flex items-center gap-4">
           <div className="w-14 h-14 bg-emerald-600 text-white rounded-2xl flex items-center justify-center shadow-xl shadow-emerald-100">
@@ -68,7 +68,7 @@ export default function RevenueAnalysisDashboard() {
 
       {/* KPI Section */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm space-y-2">
+        <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm space-y-2">
           <div className="flex justify-between items-start">
             <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg">
               <DollarSign size={20} />
@@ -80,11 +80,11 @@ export default function RevenueAnalysisDashboard() {
           </div>
           <div>
             <h3 className="text-slate-400 text-sm font-bold uppercase tracking-widest">Total Revenue</h3>
-            <p className="text-3xl font-black text-slate-900">₦{data.totalRevenue.toLocaleString()}</p>
+            <p className="text-3xl font-black text-slate-900">{settings?.base_currency || '₦'}{data.totalRevenue.toLocaleString()}</p>
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm space-y-2">
+        <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm space-y-2">
           <div className="flex justify-between items-start">
             <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg">
               <TrendingUp size={20} />
@@ -96,11 +96,11 @@ export default function RevenueAnalysisDashboard() {
           </div>
           <div>
             <h3 className="text-slate-400 text-sm font-bold uppercase tracking-widest">Avg. Per Student</h3>
-            <p className="text-3xl font-black text-slate-900">₦{(data.totalRevenue / 1250).toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
+            <p className="text-3xl font-black text-slate-900">{settings?.base_currency || '₦'}{(data.totalRevenue / 1250).toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm space-y-2">
+        <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm space-y-2">
           <div className="flex justify-between items-start">
             <div className="p-2 bg-amber-50 text-amber-600 rounded-lg">
               <Target size={20} />
@@ -112,7 +112,7 @@ export default function RevenueAnalysisDashboard() {
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm space-y-2">
+        <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm space-y-2">
           <div className="flex justify-between items-start">
             <div className="p-2 bg-rose-50 text-rose-600 rounded-lg">
               <Building2 size={20} />
@@ -128,7 +128,7 @@ export default function RevenueAnalysisDashboard() {
       <div className="grid grid-cols-12 gap-8">
         {/* Account Breakdown */}
         <div className="col-span-12 lg:col-span-7 space-y-6">
-          <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
             <div className="p-8 border-b border-slate-50 flex justify-between items-center bg-slate-50/30">
                <div>
                  <h2 className="text-xl font-bold text-slate-900">Revenue by Account</h2>
@@ -144,7 +144,7 @@ export default function RevenueAnalysisDashboard() {
                         <span className="text-xs font-mono font-bold text-slate-400 bg-slate-50 px-2 py-0.5 rounded">{acc.accountCode}</span>
                         <span className="text-sm font-bold text-slate-700">{acc.accountName}</span>
                       </div>
-                      <span className="text-sm font-black text-slate-900">₦{Number(acc.total).toLocaleString()}</span>
+                      <span className="text-sm font-black text-slate-900">{settings?.base_currency || '₦'}{Number(acc.total).toLocaleString()}</span>
                    </div>
                    <div className="h-2 w-full bg-slate-50 rounded-full overflow-hidden">
                       <div 
@@ -157,7 +157,7 @@ export default function RevenueAnalysisDashboard() {
             </div>
           </div>
 
-          <div className="bg-slate-900 rounded-3xl p-8 text-white relative overflow-hidden">
+          <div className="bg-slate-900 rounded-2xl p-8 text-white relative overflow-hidden">
              <TrendingUp className="absolute -right-10 -bottom-10 w-64 h-64 opacity-10" />
              <div className="relative z-10 space-y-6">
                 <div className="flex items-center gap-2 text-emerald-400 font-bold uppercase tracking-widest text-xs">
@@ -181,7 +181,7 @@ export default function RevenueAnalysisDashboard() {
 
         {/* Faculty Distribution & Trends */}
         <div className="col-span-12 lg:col-span-5 space-y-8">
-           <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm space-y-6">
+           <div className="bg-white p-8 rounded-2xl border border-slate-100 shadow-sm space-y-6">
               <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
                 <PieChart size={20} className="text-indigo-500" />
                 Faculty Performance
@@ -195,7 +195,7 @@ export default function RevenueAnalysisDashboard() {
                          }`} />
                          <span className="text-sm font-bold text-slate-600 group-hover:text-indigo-600 transition-colors">{faculty.name}</span>
                       </div>
-                      <span className="text-sm font-black text-slate-900">₦{faculty.total.toLocaleString()}</span>
+                      <span className="text-sm font-black text-slate-900">{settings?.base_currency || '₦'}{faculty.total.toLocaleString()}</span>
                    </div>
                  ))}
               </div>
@@ -207,7 +207,7 @@ export default function RevenueAnalysisDashboard() {
               </div>
            </div>
 
-           <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm space-y-6">
+           <div className="bg-white p-8 rounded-2xl border border-slate-100 shadow-sm space-y-6">
               <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
                 <Calendar size={20} className="text-indigo-500" />
                 Revenue Trend (6M)
@@ -217,7 +217,7 @@ export default function RevenueAnalysisDashboard() {
                    <div key={i} className="space-y-1">
                       <div className="flex justify-between items-end">
                         <span className="text-xs font-bold text-slate-400">{month.month}</span>
-                        <span className="text-xs font-black text-slate-900">₦{Number(month.total).toLocaleString()}</span>
+                        <span className="text-xs font-black text-slate-900">{settings?.base_currency || '₦'}{Number(month.total).toLocaleString()}</span>
                       </div>
                       <div className="h-1 w-full bg-slate-50 rounded-full overflow-hidden">
                         <div 

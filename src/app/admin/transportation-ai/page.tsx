@@ -284,7 +284,7 @@ export default function TransportationAI() {
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
+      <div className="max-w-[1600px] w-full mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -447,7 +447,7 @@ export default function TransportationAI() {
                   <div className="space-y-4">
                     <div className="flex justify-between">
                       <span>Fuel Savings:</span>
-                      <span className="font-bold">₦{aiInsights.insights.routeOptimization.totalFuelSavings}</span>
+                      <span className="font-bold">{settings?.base_currency || '₦'}{aiInsights.insights.routeOptimization.totalFuelSavings}</span>
                     </div>
                     <div className="flex justify-between">
                       <span>Time Savings:</span>
@@ -478,7 +478,7 @@ export default function TransportationAI() {
                     </div>
                     <div className="flex justify-between">
                       <span>Cost Savings:</span>
-                      <span className="font-bold">₦{aiInsights.insights.predictiveMaintenance.estimatedCostSavings}</span>
+                      <span className="font-bold">{settings?.base_currency || '₦'}{aiInsights.insights.predictiveMaintenance.estimatedCostSavings}</span>
                     </div>
                   </div>
                 </CardContent>
@@ -748,7 +748,7 @@ export default function TransportationAI() {
                         <div className="text-sm text-gray-500">Optimized</div>
                       </div>
                       <div className="text-center">
-                        <div className="text-2xl font-bold text-blue-600">₦{optimization.optimization.fuelSavings}</div>
+                        <div className="text-2xl font-bold text-blue-600">{settings?.base_currency || '₦'}{optimization.optimization.fuelSavings}</div>
                         <div className="text-sm text-gray-500">Fuel Saved</div>
                       </div>
                       <div className="text-center">
@@ -808,7 +808,7 @@ export default function TransportationAI() {
                         <div className="text-sm text-gray-500">Predicted Boardings</div>
                       </div>
                       <div className="text-center">
-                        <div className="text-2xl font-bold text-green-600">₦{forecast.forecast.predictedRevenue}</div>
+                        <div className="text-2xl font-bold text-green-600">{settings?.base_currency || '₦'}{forecast.forecast.predictedRevenue}</div>
                         <div className="text-sm text-gray-500">Predicted Revenue</div>
                       </div>
                     </div>
@@ -820,7 +820,7 @@ export default function TransportationAI() {
                           <div className="text-sm text-gray-500">Actual Boardings</div>
                         </div>
                         <div className="text-center">
-                          <div className="text-2xl font-bold text-green-600">₦{forecast.forecast.actualRevenue}</div>
+                          <div className="text-2xl font-bold text-green-600">{settings?.base_currency || '₦'}{forecast.forecast.actualRevenue}</div>
                           <div className="text-sm text-gray-500">Actual Revenue</div>
                         </div>
                       </div>
@@ -886,7 +886,7 @@ export default function TransportationAI() {
                           {alert.alert.urgencyLevel}
                         </div>
                         <div className="text-sm text-gray-500 mt-1">
-                          Est. Cost: ₦{alert.alert.estimatedCost}
+                          Est. Cost: {settings?.base_currency || '₦'}{alert.alert.estimatedCost}
                         </div>
                         <div className="text-sm text-gray-500">
                           Status: {alert.alert.status}
@@ -961,7 +961,7 @@ export default function TransportationAI() {
                       </div>
                       <div className="flex justify-between text-sm">
                         <span>Fare Paid:</span>
-                        <span className="font-medium">₦{behavior.behavior.farePaid}</span>
+                        <span className="font-medium">{settings?.base_currency || '₦'}{behavior.behavior.farePaid}</span>
                       </div>
                       <div className="flex justify-between text-sm">
                         <span>Loyalty Score:</span>

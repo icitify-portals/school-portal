@@ -37,7 +37,7 @@ export default function TrialBalancePage() {
     const entries = report?.entries || [];
 
     return (
-        <div className="p-8 max-w-5xl mx-auto">
+        <div className="p-8 max-w-[1600px] w-full mx-auto">
             <div className="flex justify-between items-center mb-10">
                 <div>
                     <h2 className="text-3xl font-bold text-slate-900 tracking-tight">Trial Balance</h2>
@@ -55,13 +55,13 @@ export default function TrialBalancePage() {
                 <Card className="border-none shadow-sm bg-white border border-slate-100">
                     <CardContent className="p-6">
                         <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">Total Debits</p>
-                        <h3 className="text-2xl font-extrabold text-indigo-600">₦{totalDebit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</h3>
+                        <h3 className="text-2xl font-extrabold text-indigo-600">{settings?.base_currency || '₦'}{totalDebit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</h3>
                     </CardContent>
                 </Card>
                 <Card className="border-none shadow-sm bg-white border border-slate-100">
                     <CardContent className="p-6">
                         <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">Total Credits</p>
-                        <h3 className="text-2xl font-extrabold text-slate-900">₦{totalCredit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</h3>
+                        <h3 className="text-2xl font-extrabold text-slate-900">{settings?.base_currency || '₦'}{totalCredit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</h3>
                     </CardContent>
                 </Card>
                 <Card className={cn(

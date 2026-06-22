@@ -118,7 +118,7 @@ export default function AdmissionApplicationPortal() {
              <h1 className="text-3xl font-black text-slate-900 tracking-tight">Application Submitted</h1>
              <p className="text-slate-500 font-medium">Your application for **{selectedTemplate?.name}** has been successfully recorded. Please proceed to payment to activate your candidacy.</p>
           </div>
-          <div className="p-8 bg-slate-50 rounded-3xl border border-slate-100 space-y-1">
+          <div className="p-8 bg-slate-50 rounded-2xl border border-slate-100 space-y-1">
              <div className="text-slate-400 font-bold uppercase tracking-widest text-xs">Application ID</div>
              <div className="text-2xl font-black text-slate-900">ADM-2026-{submittedId}</div>
           </div>
@@ -200,7 +200,7 @@ export default function AdmissionApplicationPortal() {
                            onChange={(e) => handleInputChange(field.systemKey || field.label, e.target.value)}
                          />
                       ) : field.type === 'file' ? (
-                         <div className="col-span-full border-2 border-dashed border-slate-200 rounded-3xl p-12 text-center space-y-4 hover:border-indigo-400 transition-colors cursor-pointer group">
+                         <div className="col-span-full border-2 border-dashed border-slate-200 rounded-2xl p-12 text-center space-y-4 hover:border-indigo-400 transition-colors cursor-pointer group">
                             <div className="w-16 h-16 bg-slate-50 text-slate-400 rounded-2xl flex items-center justify-center mx-auto group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-all">
                                <Upload size={24} />
                             </div>

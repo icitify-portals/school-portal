@@ -80,7 +80,7 @@ export default function CourseEvaluationPortal() {
   };
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-8 bg-slate-50 min-h-screen">
+    <div className="p-8 max-w-[1600px] w-full mx-auto space-y-8 bg-slate-50 min-h-screen">
       <div className="flex justify-between items-end">
         <div className="flex items-center gap-4">
           <div className="w-14 h-14 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-xl shadow-indigo-100">
@@ -175,7 +175,7 @@ export default function CourseEvaluationPortal() {
                         { id: 'engagement', label: 'Student Engagement', desc: 'Did the teacher encourage participation and questions?' },
                         { id: 'grading', label: 'Grading Fairness', desc: 'Transparency and fairness in assessment and grading.' }
                       ].map((item) => (
-                         <div key={item.id} className="space-y-4 p-6 rounded-3xl hover:bg-slate-50 transition-colors group">
+                         <div key={item.id} className="space-y-4 p-6 rounded-2xl hover:bg-slate-50 transition-colors group">
                             <div>
                                <h4 className="font-bold text-slate-900">{item.label}</h4>
                                <p className="text-[11px] text-slate-500 font-medium">{item.desc}</p>
@@ -203,7 +203,7 @@ export default function CourseEvaluationPortal() {
                          Qualitative Feedback & Comments
                       </label>
                       <textarea 
-                        className="w-full h-32 p-6 rounded-3xl border border-slate-100 bg-slate-50 focus:bg-white focus:ring-4 focus:ring-indigo-50 outline-none font-medium transition-all"
+                        className="w-full h-32 p-6 rounded-2xl border border-slate-100 bg-slate-50 focus:bg-white focus:ring-4 focus:ring-indigo-50 outline-none font-medium transition-all"
                         placeholder="Share your thoughts on how this course can be improved..."
                         value={comments}
                         onChange={(e) => setComments(e.target.value)}

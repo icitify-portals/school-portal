@@ -87,7 +87,7 @@ export default function InflowsPage() {
     };
 
     return (
-        <div className="p-8 max-w-5xl mx-auto">
+        <div className="p-8 max-w-[1600px] w-full mx-auto">
             <div className="flex justify-between items-center mb-10">
                 <div>
                     <h2 className="text-3xl font-bold text-slate-900 tracking-tight">External Inflows</h2>
@@ -217,7 +217,7 @@ export default function InflowsPage() {
                                     <div className="text-right">
                                         <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Receipt Amount</p>
                                         <p className={cn("text-3xl font-extrabold", inflow.status === 'reversed' ? "text-slate-300 line-through" : "text-blue-600")}>
-                                            ₦{parseFloat(inflow.amount).toLocaleString()}
+                                            {settings?.base_currency || '₦'}{parseFloat(inflow.amount).toLocaleString()}
                                         </p>
 
                                         <div className="mt-4 flex justify-end">

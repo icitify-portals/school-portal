@@ -8,6 +8,7 @@ import { addLibraryResource } from "./library";
 import { CrossrefService } from "@/lib/crossref";
 import { eq, desc, asc, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { sanitizeHtmlClean, sanitizeTitleHtml } from "@/lib/sanitizer";
 
 // --- Journal Management ---
 
@@ -83,8 +84,8 @@ export async function submitArticle(data: {
         return await db.transaction(async (tx) => {
             const [artResult] = await tx.insert(journalArticles).values({
                 journalId: data.journalId,
-                title: data.title,
-                abstract: data.abstract,
+                title: sanitizeTitleHtml(data.title),
+                abstract: data.abstract ? sanitizeHtmlClean(data.abstract) : undefined,
                 keywords: data.keywords,
                 funding: data.funding,
                 conflictOfInterest: data.conflictOfInterest,
@@ -116,7 +117,10 @@ export async function submitArticle(data: {
                 await tx.insert(journalArticleFiles).values(
                     data.files.map(file => ({
                         articleId,
-                        ...file
+                        fileUrl: file.fileUrl,
+                        fileName: file.fileName,
+                        fileType: file.fileType,
+                        storageType: file.fileType === "galley" ? "public" : "private"
                     }))
                 );
             }
@@ -225,6 +229,8 @@ export async function assignReviewer(articleId: number, reviewerId: number, dueD
             articleId,
             reviewerId,
             dueDate,
+            invitationStatus: "pending",
+            invitedAt: new Date()
         });
         await db.update(journalArticles).set({ status: "under_review" }).where(eq(journalArticles.id, articleId));
         return { success: true };

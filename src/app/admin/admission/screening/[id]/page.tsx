@@ -52,7 +52,7 @@ export default async function ApplicantScoringPage({ params }: { params: Promise
     const programmeScoring = await db.select().from(programmes).where(eq(programmes.id, application.programmeId)).limit(1).then(res => res[0]);
 
     return (
-        <div className="p-6 max-w-5xl mx-auto space-y-6">
+        <div className="p-6 max-w-[1600px] w-full mx-auto space-y-6">
             <h1 className="text-3xl font-bold tracking-tight">Candidate Evaluation</h1>
 
             <div className="grid gap-6 md:grid-cols-3">

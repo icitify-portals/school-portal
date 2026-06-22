@@ -79,7 +79,7 @@ export default function StaffGrowthPage() {
     };
 
     return (
-        <div className="p-8 max-w-5xl mx-auto space-y-8">
+        <div className="p-8 max-w-[1600px] w-full mx-auto space-y-8">
             <div className="flex justify-between items-end">
                 <div>
                     <h1 className="text-3xl font-black text-slate-900 tracking-tight uppercase italic flex items-center gap-3">
@@ -97,7 +97,7 @@ export default function StaffGrowthPage() {
             </div>
 
             {isAdding && (
-                <Card className="border-none shadow-2xl rounded-[2rem] overflow-hidden animate-in fade-in slide-in-from-top-4 duration-500">
+                <Card className="border-none shadow-2xl rounded-2xl overflow-hidden animate-in fade-in slide-in-from-top-4 duration-500">
                     <CardHeader className="bg-slate-900 text-white p-6">
                         <CardTitle className="text-sm font-black uppercase tracking-widest">Self-Reported Certification</CardTitle>
                     </CardHeader>
@@ -157,7 +157,7 @@ export default function StaffGrowthPage() {
                 {loading ? (
                     <div className="col-span-full py-20 text-center text-slate-400 italic font-black uppercase text-[10px] tracking-widest animate-pulse">Scanning Academic Records...</div>
                 ) : trainings.map((t) => (
-                    <Card key={t.training.id} className="border-none shadow-sm hover:shadow-xl transition-all group rounded-[2rem] overflow-hidden">
+                    <Card key={t.training.id} className="border-none shadow-sm hover:shadow-xl transition-all group rounded-2xl overflow-hidden">
                         <CardHeader className="bg-slate-50/50 p-6 flex flex-row items-start justify-between">
                             <div className="p-3 bg-white rounded-2xl shadow-sm group-hover:bg-indigo-600 group-hover:text-white transition-all">
                                 <Award className="w-6 h-6" />

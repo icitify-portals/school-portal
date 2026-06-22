@@ -53,7 +53,7 @@ export default function NexusControlCenter() {
   };
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-8 bg-slate-950 min-h-screen text-slate-300 font-sans">
+    <div className="p-8 max-w-[1600px] w-full mx-auto space-y-8 bg-slate-950 min-h-screen text-slate-300 font-sans">
       {/* Header: Institutional Nexus Branding */}
       <div className="flex justify-between items-end border-b border-slate-800 pb-8">
         <div className="flex items-center gap-6">

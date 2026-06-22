@@ -141,7 +141,7 @@ export default function StudentRefundRequestPage() {
                                                     <option value="">Select previous payment...</option>
                                                     {ledger.map(tx => (
                                                         <option key={tx.id} value={tx.transactionId}>
-                                                            Ref: {tx.transactionId} - ₦{parseFloat(tx.credit).toLocaleString()} ({tx.description})
+                                                            Ref: {tx.transactionId} - {settings?.base_currency || '₦'}{parseFloat(tx.credit).toLocaleString()} ({tx.description})
                                                         </option>
                                                     ))}
                                                 </select>

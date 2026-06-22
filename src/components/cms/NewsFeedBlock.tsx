@@ -14,7 +14,7 @@ export default async function NewsFeedBlock({ title, subtitle }: { title?: strin
 
     return (
         <section className="py-24 bg-white relative overflow-hidden">
-            <div className="max-w-7xl mx-auto px-6 relative z-10">
+            <div className="max-w-[1600px] w-full mx-auto px-6 relative z-10">
                 <div className="flex flex-col md:flex-row md:items-end justify-between mb-16 gap-6">
                     <div className="space-y-4">
                         <div className="flex items-center gap-2">

@@ -348,7 +348,7 @@ export default function StudentExamPage({ params }: Props) {
                                             key={opt}
                                             onClick={() => handleAnswer(currentQ.id, opt)}
                                             className={cn(
-                                                "p-8 rounded-3xl border-2 font-black uppercase tracking-widest transition-all",
+                                                "p-8 rounded-2xl border-2 font-black uppercase tracking-widest transition-all",
                                                 answers[currentQ.id] === opt ? "bg-white border-indigo-600 shadow-lg ring-4 ring-indigo-50 text-indigo-600" : "bg-white border-slate-100 text-slate-400 hover:border-slate-300"
                                             )}
                                         >

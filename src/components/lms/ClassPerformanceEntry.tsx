@@ -259,7 +259,7 @@ export default function ClassPerformanceEntry({ groupId, sessionId, term, staffI
             {/* Entry Form - Main Content */}
             <div className="lg:col-span-9 space-y-6">
                 {/* Header Information */}
-                <div className="flex justify-between items-center bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100">
+                <div className="flex justify-between items-center bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
                     <div className="flex items-center gap-4">
                         <div className="w-16 h-16 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600 font-black text-2xl">
                             {bulkMode ? <CheckSquare className="w-8 h-8" /> : (currentStudent?.lastName?.[0] || "?")}
@@ -278,7 +278,7 @@ export default function ClassPerformanceEntry({ groupId, sessionId, term, staffI
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     {/* Attendance & Comments */}
                     <div className="space-y-6">
-                        <Card className="border-none shadow-sm rounded-[2rem]">
+                        <Card className="border-none shadow-sm rounded-2xl">
                             <CardHeader>
                                 <CardTitle className="text-lg flex items-center gap-2">
                                     <CalendarCheck className="w-5 h-5 text-indigo-600" />
@@ -312,7 +312,7 @@ export default function ClassPerformanceEntry({ groupId, sessionId, term, staffI
                             </CardContent>
                         </Card>
 
-                        <Card className="border-none shadow-sm rounded-[2rem]">
+                        <Card className="border-none shadow-sm rounded-2xl">
                             <CardHeader>
                                 <CardTitle className="text-lg flex items-center gap-2">
                                     <MessageSquare className="w-5 h-5 text-indigo-600" />
@@ -331,7 +331,7 @@ export default function ClassPerformanceEntry({ groupId, sessionId, term, staffI
                     </div>
 
                     {/* Behavioral Traits */}
-                    <Card className="border-none shadow-sm rounded-[2rem]">
+                    <Card className="border-none shadow-sm rounded-2xl">
                         <CardHeader>
                             <CardTitle className="text-lg flex items-center gap-2">
                                 <Smile className="w-5 h-5 text-indigo-600" />

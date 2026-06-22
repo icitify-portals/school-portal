@@ -63,7 +63,7 @@ export default async function ChildAttendancePage({ params }: { params: { id: st
                     { label: "Attended", value: summary.totalAttended, icon: CheckCircle2, color: "text-emerald-600", bg: "bg-emerald-50" },
                     { label: "Missed", value: summary.totalMissed, icon: XCircle, color: "text-rose-600", bg: "bg-rose-50" },
                 ].map((stat, i) => (
-                    <Card key={i} className="border-none shadow-xl shadow-slate-200/50 rounded-3xl overflow-hidden group hover:scale-[1.02] transition-all bg-white">
+                    <Card key={i} className="border-none shadow-xl shadow-slate-200/50 rounded-2xl overflow-hidden group hover:scale-[1.02] transition-all bg-white">
                         <CardContent className="p-8 flex items-center gap-6">
                             <div className={cn("p-4 rounded-2xl", stat.bg)}>
                                 <stat.icon className={cn("w-6 h-6", stat.color)} />
@@ -88,7 +88,7 @@ export default async function ChildAttendancePage({ params }: { params: { id: st
                         {courses.map((course: any) => (
                             <div 
                                 key={course.courseId} 
-                                className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-xl shadow-slate-200/40 group hover:shadow-2xl hover:shadow-green-500/10 transition-all flex flex-col md:flex-row justify-between items-center gap-8"
+                                className="bg-white p-8 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow group hover:shadow-2xl hover:shadow-green-500/10 transition-all flex flex-col md:flex-row justify-between items-center gap-8"
                             >
                                 <div className="flex items-center gap-6 w-full md:w-auto">
                                     <div className={cn(
@@ -166,7 +166,7 @@ export default async function ChildAttendancePage({ params }: { params: { id: st
                                 </div>
                             </div>
 
-                            <div className="p-6 bg-white/5 rounded-[2rem] border border-white/10 flex items-center gap-4">
+                            <div className="p-6 bg-white/5 rounded-2xl border border-white/10 flex items-center gap-4">
                                 <Info className="w-6 h-6 text-indigo-400" />
                                 <p className="text-[9px] font-bold text-slate-400 leading-relaxed uppercase tracking-widest">
                                     Excuse letters for medical absences must be submitted within {result.settings?.excuseWindowDays || 7} days.

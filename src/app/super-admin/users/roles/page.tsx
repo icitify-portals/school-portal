@@ -80,7 +80,7 @@ export default function RoleManagerPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Left: User Selection */}
         <div className="space-y-6">
-          <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm space-y-4">
+          <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm space-y-4">
             <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
               <Search size={20} className="text-indigo-500" />
               Find User Account
@@ -140,7 +140,7 @@ export default function RoleManagerPage() {
             </div>
           </div>
 
-          <div className="bg-indigo-900 p-8 rounded-3xl text-white relative overflow-hidden group">
+          <div className="bg-indigo-900 p-8 rounded-2xl text-white relative overflow-hidden group">
             <Zap className="absolute -right-4 -bottom-4 w-32 h-32 opacity-10 group-hover:scale-110 transition-transform" />
             <h3 className="text-xl font-bold mb-2">Security Note</h3>
             <p className="text-indigo-200 text-sm leading-relaxed">
@@ -153,9 +153,9 @@ export default function RoleManagerPage() {
         {/* Right: Elevation Details */}
         <div className="space-y-6">
           {selectedUser ? (
-            <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-xl space-y-8 animate-in fade-in slide-in-from-right-4 duration-300">
+            <div className="bg-white p-8 rounded-2xl border border-slate-100 shadow-xl space-y-8 animate-in fade-in slide-in-from-right-4 duration-300">
               <div className="flex items-center gap-4">
-                <div className="w-16 h-16 rounded-3xl bg-indigo-50 flex items-center justify-center text-indigo-600 text-2xl font-bold shadow-inner">
+                <div className="w-16 h-16 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600 text-2xl font-bold shadow-inner">
                   {selectedUser.name.charAt(0)}
                 </div>
                 <div>
@@ -207,7 +207,7 @@ export default function RoleManagerPage() {
               </div>
             </div>
           ) : (
-            <div className="bg-white p-20 rounded-3xl border-2 border-dashed border-slate-200 flex flex-col items-center justify-center text-center space-y-4 opacity-50">
+            <div className="bg-white p-20 rounded-2xl border-2 border-dashed border-slate-200 flex flex-col items-center justify-center text-center space-y-4 opacity-50">
               <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center text-slate-400">
                 <User size={40} />
               </div>

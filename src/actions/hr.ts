@@ -11,7 +11,8 @@ import {
     generalLedger,
     chartOfAccounts,
     userRoles,
-    roles
+    roles,
+    systemAuditLogs
 } from "@/db/schema";
 import { eq, and, desc, sql, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
@@ -22,17 +23,63 @@ import { getBursarySettings } from "./bursary";
 import { sendEmail } from "@/lib/mail";
 import { getHRSettings } from "./hr_settings";
 import bcrypt from "bcryptjs";
+import { auth } from "@/auth";
 
 async function ensureHRStaff() {
-    const isHR = await hasRole("admin"); // For now, only admin or specific HR role if added later
-    const isBursar = await hasRole("bursar");
-    if (!isHR && !isBursar) throw new Error("Unauthorized: HR access required");
+    const session = await auth();
+    const role = (session?.user as any)?.role?.toLowerCase();
+    if (!['superadmin', 'admin', 'dvc', 'bursar', 'registrar'].includes(role)) {
+        throw new Error("Unauthorized: HR access required (only superadmin, vice chancellor, bursar, registrar are allowed).");
+    }
 }
 
 // --- STAFF MANAGEMENT ---
 export async function getStaffProfiles() {
     try {
-        const profiles = await db.select().from(staffProfiles);
+        const session = await auth();
+        const userRole = (session?.user as any)?.role?.toLowerCase() || "";
+        const actorId = session?.user?.id ? parseInt(session.user.id) : null;
+
+        let scopeCondition: any = undefined;
+
+        if (userRole === "hod" && actorId) {
+            const [profile] = await db.select({ departmentId: staffProfiles.departmentId })
+                .from(staffProfiles)
+                .where(eq(staffProfiles.userId, actorId))
+                .limit(1);
+            const hodDeptId = profile?.departmentId;
+            if (!hodDeptId) {
+                return [];
+            }
+            scopeCondition = eq(staffProfiles.departmentId, hodDeptId);
+        } else if (userRole === "dean" && actorId) {
+            const [profile] = await db.select({ facultyId: departments.facultyId })
+                .from(staffProfiles)
+                .leftJoin(departments, eq(staffProfiles.departmentId, departments.id))
+                .where(eq(staffProfiles.userId, actorId))
+                .limit(1);
+            const deanFacultyId = profile?.facultyId;
+            if (!deanFacultyId) {
+                return [];
+            }
+            const depts = await db.select({ id: departments.id })
+                .from(departments)
+                .where(eq(departments.facultyId, deanFacultyId));
+            const deanDeptIds = depts.map(d => d.id);
+            if (deanDeptIds.length === 0) {
+                return [];
+            }
+            scopeCondition = inArray(staffProfiles.departmentId, deanDeptIds);
+        } else if (!["superadmin", "admin", "dvc", "bursar", "registrar", "librarian"].includes(userRole)) {
+            // Unauthorized roles see nothing
+            return [];
+        }
+
+        const profilesQuery = db.select().from(staffProfiles);
+        const profiles = scopeCondition 
+            ? await profilesQuery.where(scopeCondition)
+            : await profilesQuery;
+
         const allUsers = await db.select().from(users);
         const allDepts = await db.select().from(departments);
 
@@ -70,6 +117,18 @@ export async function hireStaff(data: {
             staffId,
             barcode
         });
+
+        const session = await auth();
+        const actorId = session?.user?.id ? parseInt(session.user.id) : null;
+        if (actorId) {
+            await db.insert(systemAuditLogs).values({
+                actorId,
+                action: 'HIRE_STAFF',
+                targetId: staffId,
+                details: JSON.stringify({ userId: data.userId, jobTitle: data.jobTitle, departmentId: data.departmentId, timestamp: new Date() }),
+                status: 'success'
+            });
+        }
 
         revalidatePath("/admin/hr");
         return { success: true };
@@ -293,6 +352,18 @@ export async function bulkImportStaff(data: any[]) {
                 });
             }
         });
+
+        const session = await auth();
+        const actorId = session?.user?.id ? parseInt(session.user.id) : null;
+        if (actorId) {
+            await db.insert(systemAuditLogs).values({
+                actorId,
+                action: 'BULK_IMPORT_STAFF',
+                targetId: 'SYSTEM',
+                details: JSON.stringify({ count: data.length, timestamp: new Date() }),
+                status: 'success'
+            });
+        }
 
         revalidatePath("/admin/hr");
         return { success: true, message: `Successfully processed ${data.length} records.` };

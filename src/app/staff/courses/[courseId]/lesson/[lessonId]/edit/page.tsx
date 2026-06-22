@@ -45,7 +45,7 @@ export default async function LessonEditPage(props: PageProps) {
 
     return (
         <div className="min-h-screen bg-slate-50 p-6">
-            <div className="max-w-5xl mx-auto">
+            <div className="max-w-[1600px] w-full mx-auto">
                 <div className="mb-6">
                     <Link href={`/staff/courses/${courseId}/editor`} className="inline-flex items-center text-sm text-slate-500 hover:text-slate-900 mb-2">
                         <ArrowLeft className="w-4 h-4 mr-1" />

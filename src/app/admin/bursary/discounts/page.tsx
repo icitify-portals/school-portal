@@ -48,7 +48,7 @@ export default function DiscountsDashboardPage() {
     };
 
     return (
-        <div className="p-8 max-w-5xl mx-auto">
+        <div className="p-8 max-w-[1600px] w-full mx-auto">
             <div className="mb-10 text-center lg:text-left">
                 <h2 className="text-3xl font-bold text-slate-900 tracking-tight">Discount Approvals</h2>
                 <p className="text-slate-500 mt-1">Review and approve student financial aid and discount requests</p>

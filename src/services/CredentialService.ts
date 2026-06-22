@@ -7,7 +7,9 @@ import {
     students,
     courses,
     studentProgress,
-    users
+    users,
+    courseModules,
+    courseLessons
 } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
@@ -142,6 +144,42 @@ export class CredentialService {
 
     static async checkAndIssueCourseCertificate(courseId: number, studentId: number) {
         try {
+            // 1. Fetch course details to check customizable passing scores
+            const courseList = await db.select().from(courses).where(eq(courses.id, courseId)).limit(1);
+            const courseInfo = courseList[0] || null;
+            const threshold = courseInfo?.minPassingScore || 75;
+
+            // 2. Fetch all quiz lessons associated with the course
+            const quizLessons = await db.select({
+                lessonId: courseLessons.id,
+                title: courseLessons.title
+            })
+            .from(courseLessons)
+            .innerJoin(courseModules, eq(courseLessons.moduleId, courseModules.id))
+            .where(and(
+                eq(courseModules.courseId, courseId),
+                eq(courseLessons.contentType, 'quiz')
+            ));
+
+            // 3. Fetch progress for this student and course
+            const progress = await db.select().from(studentProgress)
+                .where(and(
+                    eq(studentProgress.studentId, studentId),
+                    eq(studentProgress.courseId, courseId),
+                    eq(studentProgress.isCompleted, true)
+                ));
+
+            // 4. Verify all quizzes have been successfully taken and passed
+            for (const ql of quizLessons) {
+                const prog = progress.find(p => p.lessonId === ql.lessonId);
+                if (!prog || prog.quizScore === null || prog.quizScore < threshold) {
+                    return { 
+                        success: false, 
+                        error: `Prerequisite quiz "${ql.title}" is either incomplete or score is under the ${threshold}% passing threshold.` 
+                    };
+                }
+            }
+
             // Find active certificate template for this course
             const templates = await db.select()
                 .from(courseCertificates)
@@ -154,9 +192,6 @@ export class CredentialService {
             if (templates.length === 0) return { success: false, error: "No certificate configured for this course" };
 
             const template = templates[0];
-
-            // In a real scenario, we might check grade thresholds here too
-            // For now, based on updatedProgress reaching 100%, we issue.
 
             return await this.issueCertificate(template.id, studentId);
         } catch (error) {

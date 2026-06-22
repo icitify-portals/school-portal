@@ -32,7 +32,7 @@ export const RowelSchoolsReportCard = ({ data, term, templateCode = 'rowel_schoo
     const scorePercentage = totalMarksObtainable > 0 ? Math.round((totalMarksObtained / totalMarksObtainable) * 100) : 0;
 
     return (
-        <div className="bg-white p-8 border-[10px] border-emerald-700 rounded-[2.5rem] shadow-2xl relative max-w-5xl mx-auto space-y-6 text-slate-800" style={{ fontFamily: "'Montserrat', sans-serif" }}>
+        <div className="bg-white p-8 border-[10px] border-emerald-700 rounded-[2.5rem] shadow-2xl relative max-w-[1600px] w-full mx-auto space-y-6 text-slate-800" style={{ fontFamily: "'Montserrat', sans-serif" }}>
             {/* Double Border Details */}
             <div className="absolute inset-2 border border-emerald-700/30 rounded-[2.2rem] pointer-events-none" />
 
@@ -51,7 +51,7 @@ export const RowelSchoolsReportCard = ({ data, term, templateCode = 'rowel_schoo
                 </div>
                 <div className="text-center md:text-right">
                     <div className="inline-block px-4 py-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full text-xs font-black uppercase tracking-wider mb-2">
-                        {termNumber === 1 ? "FIRST TERM" : termNumber === 2 ? "SECOND TERM" : "THIRD TERM"} REPORT SHEET
+                        {data.rubric ? data.rubric.name : `${termNumber === 1 ? "FIRST TERM" : termNumber === 2 ? "SECOND TERM" : "THIRD TERM"} REPORT SHEET`}
                     </div>
                     <p className="text-slate-500 text-xs font-bold">{data.session || "2024/2025"} ACADEMIC SESSION</p>
                 </div>
@@ -181,8 +181,16 @@ export const RowelSchoolsReportCard = ({ data, term, templateCode = 'rowel_schoo
                     <thead className="bg-slate-900 text-indigo-200 uppercase tracking-widest text-[9px]">
                         <tr>
                             <th className="px-6 py-4">Subject Name</th>
-                            <th className="px-6 py-4 text-center">CA (40%)</th>
-                            <th className="px-6 py-4 text-center">EXAM (60%)</th>
+                            {data.rubric?.columnsConfig ? (
+                                data.rubric.columnsConfig.map((col: any) => (
+                                    <th key={col.id} className="px-6 py-4 text-center">{col.name} ({col.maxScore})</th>
+                                ))
+                            ) : (
+                                <>
+                                    <th className="px-6 py-4 text-center">CA (40%)</th>
+                                    <th className="px-6 py-4 text-center">EXAM (60%)</th>
+                                </>
+                            )}
                             <th className="px-6 py-4 text-center">TOTAL (100)</th>
                             <th className="px-6 py-4 text-center">GRADE</th>
                             <th className="px-6 py-4 text-center">REMARK</th>
@@ -195,8 +203,21 @@ export const RowelSchoolsReportCard = ({ data, term, templateCode = 'rowel_schoo
                                     <div className="font-black text-slate-900 tracking-tight uppercase">{r.title}</div>
                                     <div className="text-[9px] font-bold text-slate-400 font-mono tracking-tighter">{r.code}</div>
                                 </td>
-                                <td className="px-6 py-4 text-center font-bold text-slate-600">{r.caScore || 0}</td>
-                                <td className="px-6 py-4 text-center font-bold text-slate-600">{r.examScore || 0}</td>
+                                {data.rubric?.columnsConfig ? (
+                                    data.rubric.columnsConfig.map((col: any) => {
+                                        let val = 0;
+                                        if (col.isExam) val = r.examScore || 0;
+                                        else if (col.id === 'ca1' || col.name.toLowerCase().includes('1st')) val = r.test1 !== undefined ? r.test1 : Math.round((r.caScore || 0) / 2);
+                                        else if (col.id === 'ca2' || col.name.toLowerCase().includes('2nd')) val = r.test2 !== undefined ? r.test2 : (r.caScore ? r.caScore - Math.round(r.caScore / 2) : 0);
+                                        else val = r.caScore || 0;
+                                        return <td key={col.id} className="px-6 py-4 text-center font-bold text-slate-600">{val}</td>;
+                                    })
+                                ) : (
+                                    <>
+                                        <td className="px-6 py-4 text-center font-bold text-slate-600">{r.caScore || 0}</td>
+                                        <td className="px-6 py-4 text-center font-bold text-slate-600">{r.examScore || 0}</td>
+                                    </>
+                                )}
                                 <td className="px-6 py-4 text-center">
                                     <span className="text-base font-black text-slate-900 tabular-nums">{r.totalScore || 0}</span>
                                 </td>
@@ -291,7 +312,7 @@ export const DefaultK12ReportCard = ({ data, term }: { data: any, term: string }
     const summary = summaries ? summaries.find((s: any) => s.semester === term.toString()) : null;
 
     return (
-        <div className="bg-white p-8 border border-slate-200 rounded-3xl shadow-xl max-w-4xl mx-auto space-y-6 text-slate-800">
+        <div className="bg-white p-8 border border-slate-200 rounded-2xl shadow-xl max-w-4xl mx-auto space-y-6 text-slate-800">
             <div className="text-center border-b pb-6">
                 <h1 className="text-2xl font-black text-slate-900">K-12 ACADEMIC REPORT CARD</h1>
                 <p className="text-slate-400 text-xs font-bold mt-1">TERM {term} • SESSION {data.session || "2024/2025"}</p>
@@ -366,7 +387,7 @@ export const RowelSchools002ReportCard = ({ data, term, templateCode = '002' }: 
     const termLabel = termNumber === 1 ? "FIRST TERM" : termNumber === 2 ? "SECOND TERM" : "THIRD TERM";
 
     return (
-        <div className="bg-white p-8 border-[10px] border-sky-600 rounded-[2.5rem] shadow-2xl relative max-w-5xl mx-auto space-y-6 text-slate-800" style={{ fontFamily: "'Montserrat', sans-serif" }}>
+        <div className="bg-white p-8 border-[10px] border-sky-600 rounded-[2.5rem] shadow-2xl relative max-w-[1600px] w-full mx-auto space-y-6 text-slate-800" style={{ fontFamily: "'Montserrat', sans-serif" }}>
             <div className="absolute inset-2 border border-sky-600/30 rounded-[2.2rem] pointer-events-none" />
 
             {/* Header */}
@@ -385,7 +406,7 @@ export const RowelSchools002ReportCard = ({ data, term, templateCode = '002' }: 
                 </div>
                 <div className="text-center md:text-right">
                     <div className="inline-block px-4 py-1.5 bg-sky-50 text-sky-700 border border-sky-200 rounded-full text-xs font-black uppercase tracking-wider mb-2">
-                        {termLabel} REPORT SHEET
+                        {data.rubric ? data.rubric.name : `${termLabel} REPORT SHEET`}
                     </div>
                     <p className="text-slate-500 text-xs font-bold">{data.session || "2024/2025"} ACADEMIC SESSION</p>
                 </div>
@@ -441,8 +462,16 @@ export const RowelSchools002ReportCard = ({ data, term, templateCode = '002' }: 
                     <thead className="bg-sky-600 text-white uppercase tracking-wider text-[9px]">
                         <tr>
                             <th className="px-4 py-3" rowSpan={2}>Subject</th>
-                            <th className="px-4 py-3 text-center" colSpan={2}>Continuous</th>
-                            <th className="px-4 py-3 text-center" rowSpan={2}>Exam</th>
+                            {data.rubric?.columnsConfig ? (
+                                data.rubric.columnsConfig.map((col: any) => (
+                                    <th key={col.id} className="px-4 py-3 text-center" rowSpan={2}>{col.name} ({col.maxScore})</th>
+                                ))
+                            ) : (
+                                <>
+                                    <th className="px-4 py-3 text-center" colSpan={2}>Continuous</th>
+                                    <th className="px-4 py-3 text-center" rowSpan={2}>Exam</th>
+                                </>
+                            )}
                             <th className="px-4 py-3 text-center" rowSpan={2}>Term Total</th>
                             {isThirdTerm && (
                                 <>
@@ -454,10 +483,12 @@ export const RowelSchools002ReportCard = ({ data, term, templateCode = '002' }: 
                             <th className="px-4 py-3 text-center" rowSpan={2}>Grade</th>
                             <th className="px-4 py-3 text-center" rowSpan={2}>Remark</th>
                         </tr>
-                        <tr className="bg-sky-500 text-white">
-                            <th className="px-2 py-1 text-center font-bold">CA1 (20)</th>
-                            <th className="px-2 py-1 text-center font-bold">CA2 (20)</th>
-                        </tr>
+                        {!data.rubric?.columnsConfig && (
+                            <tr className="bg-sky-500 text-white">
+                                <th className="px-2 py-1 text-center font-bold">CA1 (20)</th>
+                                <th className="px-2 py-1 text-center font-bold">CA2 (20)</th>
+                            </tr>
+                        )}
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                         {currentTermResults.map((r: any, i: number) => {
@@ -467,9 +498,22 @@ export const RowelSchools002ReportCard = ({ data, term, templateCode = '002' }: 
                             return (
                                 <tr key={i} className="hover:bg-slate-50 transition-colors">
                                     <td className="px-4 py-3 font-black text-slate-900 tracking-tight uppercase">{r.title}</td>
-                                    <td className="px-4 py-3 text-center font-bold text-slate-600">{test1Val}</td>
-                                    <td className="px-4 py-3 text-center font-bold text-slate-600">{test2Val}</td>
-                                    <td className="px-4 py-3 text-center font-bold text-slate-600">{r.examScore || 0}</td>
+                                    {data.rubric?.columnsConfig ? (
+                                        data.rubric.columnsConfig.map((col: any) => {
+                                            let val = 0;
+                                            if (col.isExam) val = r.examScore || 0;
+                                            else if (col.id === 'ca1' || col.name.toLowerCase().includes('1st')) val = test1Val;
+                                            else if (col.id === 'ca2' || col.name.toLowerCase().includes('2nd')) val = test2Val;
+                                            else val = r.caScore || 0;
+                                            return <td key={col.id} className="px-4 py-3 text-center font-bold text-slate-600">{val}</td>;
+                                        })
+                                    ) : (
+                                        <>
+                                            <td className="px-4 py-3 text-center font-bold text-slate-600">{test1Val}</td>
+                                            <td className="px-4 py-3 text-center font-bold text-slate-600">{test2Val}</td>
+                                            <td className="px-4 py-3 text-center font-bold text-slate-600">{r.examScore || 0}</td>
+                                        </>
+                                    )}
                                     <td className="px-4 py-3 text-center font-black text-slate-900">{r.totalScore || 0}</td>
                                     {isThirdTerm && (
                                         <>
@@ -597,7 +641,7 @@ export const K12ReportCard003 = ({ data, term }: { data: any, term: string }) =>
     const scorePercentage = totalMarksObtainable > 0 ? Math.round((totalMarksObtained / totalMarksObtainable) * 100) : 0;
 
     return (
-        <div className="bg-white p-8 border border-slate-200 rounded-3xl shadow-xl max-w-4xl mx-auto space-y-6 text-slate-800" style={{ fontFamily: "'Montserrat', sans-serif" }}>
+        <div className="bg-white p-8 border border-slate-200 rounded-2xl shadow-xl max-w-4xl mx-auto space-y-6 text-slate-800" style={{ fontFamily: "'Montserrat', sans-serif" }}>
             {/* Logo in center below name */}
             <div className="text-center pb-6 border-b space-y-2">
                 <h1 className="text-2xl font-black text-slate-900 tracking-tight uppercase">{data.session ? 'Rowel Institution' : 'THE INSTITUTION NAME'}</h1>
@@ -608,7 +652,7 @@ export const K12ReportCard003 = ({ data, term }: { data: any, term: string }) =>
                     </div>
                 </div>
                 <h2 className="text-sm font-black text-slate-800 uppercase tracking-widest mt-2">
-                    {termNumber === 1 ? "FIRST TERM" : termNumber === 2 ? "SECOND TERM" : "THIRD TERM"} REPORT SHEET
+                    {data.rubric ? data.rubric.name : `${termNumber === 1 ? "FIRST TERM" : termNumber === 2 ? "SECOND TERM" : "THIRD TERM"} REPORT SHEET`}
                 </h2>
             </div>
 
@@ -644,8 +688,16 @@ export const K12ReportCard003 = ({ data, term }: { data: any, term: string }) =>
                     <thead className="bg-slate-900 text-white uppercase text-[9px] tracking-wider">
                         <tr>
                             <th className="px-4 py-3">Subject Name</th>
-                            <th className="px-4 py-3 text-center">Test (40)</th>
-                            <th className="px-4 py-3 text-center">Exam (60)</th>
+                            {data.rubric?.columnsConfig ? (
+                                data.rubric.columnsConfig.map((col: any) => (
+                                    <th key={col.id} className="px-4 py-3 text-center">{col.name} ({col.maxScore})</th>
+                                ))
+                            ) : (
+                                <>
+                                    <th className="px-4 py-3 text-center">Test (40)</th>
+                                    <th className="px-4 py-3 text-center">Exam (60)</th>
+                                </>
+                            )}
                             <th className="px-4 py-3 text-center">Total (100)</th>
                             {isThirdTerm && (
                                 <>
@@ -668,8 +720,20 @@ export const K12ReportCard003 = ({ data, term }: { data: any, term: string }) =>
                             return (
                                 <tr key={i} className="hover:bg-slate-50">
                                     <td className="px-4 py-3 font-bold text-slate-800 uppercase">{r.title}</td>
-                                    <td className="px-4 py-3 text-center">{testVal}</td>
-                                    <td className="px-4 py-3 text-center">{r.examScore || 0}</td>
+                                    {data.rubric?.columnsConfig ? (
+                                        data.rubric.columnsConfig.map((col: any) => {
+                                            let val = 0;
+                                            if (col.isExam) val = r.examScore || 0;
+                                            else if (col.id === 'ca1' || col.name.toLowerCase().includes('1st') || col.name.toLowerCase().includes('test')) val = testVal;
+                                            else val = r.caScore || 0;
+                                            return <td key={col.id} className="px-4 py-3 text-center">{val}</td>;
+                                        })
+                                    ) : (
+                                        <>
+                                            <td className="px-4 py-3 text-center">{testVal}</td>
+                                            <td className="px-4 py-3 text-center">{r.examScore || 0}</td>
+                                        </>
+                                    )}
                                     <td className="px-4 py-3 text-center font-bold text-slate-900">{r.totalScore || 0}</td>
                                     {isThirdTerm && (
                                         <>
@@ -739,7 +803,7 @@ export const CaramotSchool004ReportCard = ({ data, term }: { data: any, term: st
     const scorePercentage = totalSubjects > 0 ? Math.round((totalMarksObtained / (totalSubjects * 100)) * 100) : 0;
 
     return (
-        <div className="bg-white p-8 border-[6px] border-blue-700 rounded-3xl shadow-xl max-w-4xl mx-auto space-y-6 text-[#2d2d6c]" style={{ fontFamily: "'Montserrat', sans-serif" }}>
+        <div className="bg-white p-8 border-[6px] border-blue-700 rounded-2xl shadow-xl max-w-4xl mx-auto space-y-6 text-[#2d2d6c]" style={{ fontFamily: "'Montserrat', sans-serif" }}>
             {/* Header banner */}
             <div className="flex justify-between items-center pb-6 border-b-2 border-blue-700/20">
                 <div className="flex items-center gap-4">
@@ -905,7 +969,7 @@ export const AdaptiveReportCard005 = ({ data, term }: { data: any, term: string 
 
     if (isPrePrimary) {
         return (
-            <div className="bg-white p-8 border border-slate-200 rounded-3xl shadow-xl max-w-4xl mx-auto space-y-6 text-slate-800" style={{ fontFamily: "'Montserrat', sans-serif" }}>
+            <div className="bg-white p-8 border border-slate-200 rounded-2xl shadow-xl max-w-4xl mx-auto space-y-6 text-slate-800" style={{ fontFamily: "'Montserrat', sans-serif" }}>
                 <div className="text-center pb-6 border-b">
                     <h1 className="text-3xl font-black text-slate-900 tracking-tight uppercase">{data.session ? 'THE INSTITUTION' : 'THE SCHOOL NAME'}</h1>
                     <p className="text-slate-400 text-xs mt-1">Nurturing Young Minds</p>
@@ -948,7 +1012,7 @@ export const AdaptiveReportCard005 = ({ data, term }: { data: any, term: string 
 
     // Primary school class layout
     return (
-        <div className="bg-white p-8 border border-slate-200 rounded-3xl shadow-xl max-w-4xl mx-auto space-y-6 text-slate-800" style={{ fontFamily: "'Montserrat', sans-serif" }}>
+        <div className="bg-white p-8 border border-slate-200 rounded-2xl shadow-xl max-w-4xl mx-auto space-y-6 text-slate-800" style={{ fontFamily: "'Montserrat', sans-serif" }}>
             <div className="text-center pb-6 border-b">
                 <h1 className="text-2xl font-black text-slate-900 tracking-tight uppercase">{data.session ? 'THE INSTITUTION' : 'THE SCHOOL NAME'}</h1>
                 <h2 className="text-sm font-bold text-slate-400 uppercase tracking-widest mt-1">PRIMARY REPORT CARD</h2>
@@ -1036,7 +1100,7 @@ export const MinimalistReportCard006 = ({ data, term }: { data: any, term: strin
     const behaviors = data.behaviors || [];
 
     return (
-        <div className="bg-white p-8 border border-slate-200 rounded-3xl shadow-xl max-w-4xl mx-auto space-y-6 text-slate-800" style={{ fontFamily: "'Montserrat', sans-serif" }}>
+        <div className="bg-white p-8 border border-slate-200 rounded-2xl shadow-xl max-w-4xl mx-auto space-y-6 text-slate-800" style={{ fontFamily: "'Montserrat', sans-serif" }}>
             <div className="text-center pb-6 border-b space-y-2">
                 <h1 className="text-2xl font-black text-slate-900 tracking-tight uppercase">{data.session ? 'THE INSTITUTION' : 'THE SCHOOL NAME'}</h1>
                 <p className="text-slate-400 text-xs italic">{remarks.nextTermStarts ? 'Nurturing Leaders' : 'Motto Text'}</p>
@@ -1121,7 +1185,7 @@ export const TertiarySemesterResultCard = ({ data, term }: { data: any, term: st
     const twgp = currentTermResults.reduce((s: number, r: any) => s + ((r.gp || r.gradePoint || 0) * (r.units || r.creditUnits || 0)), 0);
 
     return (
-        <div className="bg-white p-8 border border-slate-200 rounded-3xl shadow-xl max-w-4xl mx-auto space-y-6 text-slate-800" style={{ fontFamily: "'Montserrat', sans-serif" }}>
+        <div className="bg-white p-8 border border-slate-200 rounded-2xl shadow-xl max-w-4xl mx-auto space-y-6 text-slate-800" style={{ fontFamily: "'Montserrat', sans-serif" }}>
             {/* Header */}
             <div className="text-center border-b pb-6 space-y-2">
                 <h1 className="text-2xl font-black text-slate-900 tracking-tight uppercase">OFFICIAL SEMESTER RESULT SLIP</h1>

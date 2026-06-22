@@ -65,7 +65,7 @@ export default function ResultTemplateManager() {
   };
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-8 bg-slate-50 min-h-screen">
+    <div className="p-8 max-w-[1600px] w-full mx-auto space-y-8 bg-slate-50 min-h-screen">
       <div className="flex justify-between items-end">
         <div className="flex items-center gap-4">
           <div className="w-14 h-14 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-xl shadow-indigo-100">
@@ -88,7 +88,7 @@ export default function ResultTemplateManager() {
       <div className="grid grid-cols-12 gap-8">
         {/* Left: Template List */}
         <div className="col-span-12 lg:col-span-4 space-y-6">
-          <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 space-y-4">
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 space-y-4">
             <h2 className="text-sm font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
               <FileText size={14} />
               Stored Templates
@@ -99,7 +99,7 @@ export default function ResultTemplateManager() {
                   <Loader2 className="animate-spin text-indigo-500" size={24} />
                 </div>
               ) : templates.map((t) => (
-                <button 
+                <div 
                   key={t.id}
                   onClick={() => {
                     setSelectedTemplate(t);
@@ -108,7 +108,9 @@ export default function ResultTemplateManager() {
                     setHtml(t.templateHtml);
                     setCss(t.templateCss || '');
                   }}
-                  className={`w-full p-4 rounded-2xl text-left border flex items-center justify-between group transition-all ${
+                  role="button"
+                  tabIndex={0}
+                  className={`w-full p-4 rounded-2xl text-left border flex items-center justify-between group transition-all cursor-pointer ${
                     selectedTemplate?.id === t.id ? 'bg-indigo-50 border-indigo-200 ring-2 ring-indigo-500/10' : 'bg-white border-slate-50 hover:border-indigo-100'
                   }`}
                 >
@@ -121,8 +123,19 @@ export default function ResultTemplateManager() {
                       <div className="text-slate-400 text-[10px] font-bold uppercase tracking-widest">{t.level}</div>
                     </div>
                   </div>
-                  <ChevronRight size={18} className={`transition-all ${selectedTemplate?.id === t.id ? 'text-indigo-600 translate-x-1' : 'text-slate-300 group-hover:text-indigo-400'}`} />
-                </button>
+                  <div className="flex items-center gap-2">
+                    <button 
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            window.open(`/admin/academic/templates/preview?id=${t.id}`, '_blank');
+                        }}
+                        className="flex items-center gap-1 text-[10px] font-bold text-slate-500 bg-white border border-slate-200 px-2 py-1 rounded hover:bg-slate-100 hover:text-indigo-600 transition-colors"
+                    >
+                        <Eye size={12} /> Preview
+                    </button>
+                    <ChevronRight size={18} className={`transition-all ${selectedTemplate?.id === t.id ? 'text-indigo-600 translate-x-1' : 'text-slate-300 group-hover:text-indigo-400'}`} />
+                  </div>
+                </div>
               ))}
               {templates.length === 0 && !loading && (
                 <div className="p-10 text-center opacity-40 italic text-sm text-slate-500">No templates found</div>
@@ -133,7 +146,7 @@ export default function ResultTemplateManager() {
 
         {/* Right: Template Editor */}
         <div className="col-span-12 lg:col-span-8 space-y-6">
-          <div className="bg-white rounded-3xl border border-slate-100 shadow-xl overflow-hidden flex flex-col min-h-[700px]">
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-xl overflow-hidden flex flex-col min-h-[700px]">
             <div className="p-6 border-b border-slate-50 bg-slate-50/50 flex justify-between items-center">
                <div className="flex gap-4">
                   <div className="space-y-1">

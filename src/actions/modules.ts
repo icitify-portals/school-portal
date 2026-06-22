@@ -50,6 +50,17 @@ export async function seedModules() {
         { key: "hr", name: "Human Resources", description: "Staff profiles, Leave, and Performance" },
         { key: "security", name: "Security & Visitors", description: "Visitor tracking and Identity management" },
         { key: "sports", name: "Sports & Athletics", description: "Manage athletic teams, fixtures, rosters, and inventory" },
+        { key: "library", name: "Library & Information Hub", description: "OPAC catalog search, digital assets, barcodes checkout, and AI citations" },
+        { key: "results", name: "Academic Records & Results", description: "Student transcripts, grading, and learning analytics" },
+        { key: "exams_records", name: "Exams & Clearance", description: "Exam scheduling, digital clearance, and records" },
+        { key: "hostels", name: "Hostel Management", description: "Accommodation, bed spaces, and allocations" },
+        { key: "phd", name: "PhD Processing", description: "Manage PhD applications, theses, and defenses" },
+        { key: "siwes", name: "SIWES Management", description: "Student industrial work experience scheme and placements" },
+        { key: "inventory", name: "Inventory & Stock", description: "Warehouse, stock movement, suppliers, and requisitions" },
+        { key: "crm", name: "Marketing & CRM", description: "Leads, campaigns, and admissions marketing" },
+        { key: "cms", name: "CMS & Website", description: "Public pages, menus, and site builder" },
+        { key: "communications", name: "Communications", description: "Global broadcast, chat, and forums" },
+        { key: "attendance", name: "Attendance & Tracking", description: "Biometrics, scanner, and excuses" },
     ];
 
     for (const mod of modules) {

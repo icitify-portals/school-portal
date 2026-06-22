@@ -97,7 +97,7 @@ export default function BadgeGenerator({ data }: { data: BadgeData }) {
     };
 
     return (
-        <Card className="overflow-hidden rounded-[2rem] border-none shadow-xl bg-white">
+        <Card className="overflow-hidden rounded-2xl border-none shadow-xl bg-white">
             <CardHeader className="bg-slate-50 border-b border-slate-100 p-6">
                 <CardTitle className="text-sm font-black uppercase tracking-widest text-slate-500 flex items-center gap-2">
                     <UserIcon className="w-4 h-4 text-blue-600" /> Digital Identity Badge

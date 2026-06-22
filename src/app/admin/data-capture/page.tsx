@@ -106,7 +106,7 @@ export default function DataCapturePage() {
     }
 
     return (
-        <div className="p-8 max-w-7xl mx-auto space-y-12">
+        <div className="p-8 max-w-[1600px] w-full mx-auto space-y-12">
             {/* Header */}
             <div className="flex justify-between items-end bg-white p-10 rounded-[3rem] shadow-2xl border border-slate-100">
                 <div className="space-y-2">
@@ -139,7 +139,7 @@ export default function DataCapturePage() {
                         <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-50/50 rounded-full blur-3xl -mr-32 -mt-32 transition-all group-hover:bg-indigo-100/50" />
 
                         <div className="space-y-8 relative">
-                            <div className="w-20 h-20 bg-indigo-600 rounded-3xl flex items-center justify-center shadow-2xl shadow-indigo-200">
+                            <div className="w-20 h-20 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-2xl shadow-indigo-200">
                                 <Upload className="w-8 h-8 text-white" />
                             </div>
 
@@ -211,7 +211,7 @@ export default function DataCapturePage() {
                                 { icon: Sparkles, label: "Auto-Mapping" },
                                 { icon: ShieldCheck, label: "Data Integrity" },
                             ].map((item, i) => (
-                                <div key={i} className="p-6 bg-white rounded-3xl border border-slate-100 shadow-xl shadow-slate-100/50 flex items-center gap-4 transition-all hover:scale-105">
+                                <div key={i} className="p-6 bg-white rounded-2xl border border-slate-100 shadow-xl shadow-slate-100/50 flex items-center gap-4 transition-all hover:scale-105">
                                     <item.icon className="w-5 h-5 text-indigo-500" />
                                     <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">{item.label}</span>
                                 </div>
@@ -242,15 +242,15 @@ export default function DataCapturePage() {
 
                         {/* Summary Cards */}
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            <Card className="p-6 border-none shadow-xl bg-indigo-600 text-white rounded-[2rem] space-y-2">
+                            <Card className="p-6 border-none shadow-xl bg-indigo-600 text-white rounded-2xl space-y-2">
                                 <p className="text-[10px] font-black uppercase tracking-widest opacity-80">Total Items</p>
                                 <h4 className="text-3xl font-black tracking-tighter">{capturedData.courses.length + capturedData.lecturers.length}</h4>
                             </Card>
-                            <Card className="p-6 border-none shadow-xl bg-white rounded-[2rem] space-y-2 border border-slate-100">
+                            <Card className="p-6 border-none shadow-xl bg-white rounded-2xl space-y-2 border border-slate-100">
                                 <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Course Load</p>
                                 <h4 className="text-3xl font-black tracking-tighter text-slate-900">{capturedData.courses.length}</h4>
                             </Card>
-                            <Card className="p-6 border-none shadow-xl bg-white rounded-[2rem] space-y-2 border border-slate-100">
+                            <Card className="p-6 border-none shadow-xl bg-white rounded-2xl space-y-2 border border-slate-100">
                                 <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Personnel Found</p>
                                 <h4 className="text-3xl font-black tracking-tighter text-slate-900">{capturedData.lecturers.length}</h4>
                             </Card>

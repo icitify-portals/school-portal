@@ -176,7 +176,7 @@ export default function StudentTransferPage() {
                 </div>
 
                 {/* DECLARATION */}
-                <Card className="border-amber-100 bg-amber-50/20 rounded-[2rem]">
+                <Card className="border-amber-100 bg-amber-50/20 rounded-2xl">
                     <CardContent className="p-6">
                         <div className="flex gap-4 items-start">
                             <div className="p-3 bg-amber-100 rounded-2xl">

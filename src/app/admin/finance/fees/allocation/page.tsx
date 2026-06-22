@@ -79,7 +79,7 @@ export default function FeeAllocationManager() {
   const totalPercentage = rules.reduce((sum, r) => sum + parseFloat(r.percentage || '0'), 0);
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-8 bg-slate-50 min-h-screen">
+    <div className="p-8 max-w-[1600px] w-full mx-auto space-y-8 bg-slate-50 min-h-screen">
       <div className="flex justify-between items-end">
         <div className="flex items-center gap-4">
           <div className="w-14 h-14 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-xl shadow-indigo-100">
@@ -95,7 +95,7 @@ export default function FeeAllocationManager() {
       <div className="grid grid-cols-12 gap-8">
         {/* Left: Fee Item Sidebar */}
         <div className="col-span-12 lg:col-span-4 space-y-6">
-          <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 space-y-4">
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 space-y-4">
             <h2 className="text-sm font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
               <Database size={14} />
               University Fee Library
@@ -119,7 +119,7 @@ export default function FeeAllocationManager() {
                     </div>
                     <div>
                       <div className="text-slate-900 font-bold">{fee.name}</div>
-                      <div className="text-slate-400 text-xs">₦{parseFloat(fee.defaultAmount).toLocaleString()} • {fee.category}</div>
+                      <div className="text-slate-400 text-xs">{settings?.base_currency || '₦'}{parseFloat(fee.defaultAmount).toLocaleString()} • {fee.category}</div>
                     </div>
                   </div>
                   <ChevronRight size={18} className={`transition-all ${selectedFee?.id === fee.id ? 'text-indigo-600 translate-x-1' : 'text-slate-300 group-hover:text-indigo-400'}`} />
@@ -132,7 +132,7 @@ export default function FeeAllocationManager() {
         {/* Right: Allocation Rules */}
         <div className="col-span-12 lg:col-span-8 space-y-6">
           {selectedFee ? (
-            <div className="bg-white rounded-3xl border border-slate-100 shadow-xl overflow-hidden animate-in fade-in slide-in-from-right-4">
+            <div className="bg-white rounded-2xl border border-slate-100 shadow-xl overflow-hidden animate-in fade-in slide-in-from-right-4">
               <div className="p-8 border-b border-slate-50 bg-slate-50/50 flex justify-between items-center">
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 bg-white rounded-2xl border border-slate-200 flex items-center justify-center text-indigo-600">
@@ -267,7 +267,7 @@ export default function FeeAllocationManager() {
               </div>
             </div>
           ) : (
-            <div className="bg-white p-20 rounded-3xl border-2 border-dashed border-slate-200 text-center space-y-4 opacity-50 h-full flex flex-col items-center justify-center">
+            <div className="bg-white p-20 rounded-2xl border-2 border-dashed border-slate-200 text-center space-y-4 opacity-50 h-full flex flex-col items-center justify-center">
               <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center text-slate-400">
                 <Split size={40} />
               </div>

@@ -25,7 +25,7 @@ export default async function NewRubricPage() {
     return (
         <div className="bg-slate-50 min-h-screen">
             <div className="p-8">
-                <div className="max-w-5xl mx-auto mb-8">
+                <div className="max-w-[1600px] w-full mx-auto mb-8">
                     <Link
                         href="/staff/grading/rubrics"
                         className="inline-flex items-center gap-2 text-slate-500 hover:text-indigo-600 transition-colors font-bold uppercase text-[10px] tracking-widest mb-4"

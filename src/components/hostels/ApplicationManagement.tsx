@@ -47,7 +47,7 @@ export default function ApplicationManagement({ applications, rooms, onRefresh }
     };
 
     return (
-        <Card className="border-none shadow-xl bg-white overflow-hidden rounded-[2rem]">
+        <Card className="border-none shadow-xl bg-white overflow-hidden rounded-2xl">
             <div className="overflow-x-auto">
                 <table className="w-full text-left">
                     <thead>

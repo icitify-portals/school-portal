@@ -1,11 +1,12 @@
 "use server";
 
 import { db } from "@/db/db";
-import { gradingSystems, gradePoints, documentTemplates, annualSummaries, resultEditLogs } from "@/db/schema";
+import { gradingSystems, gradePoints, documentTemplates, annualSummaries, resultEditLogs, students } from "@/db/schema";
 import { revalidatePath } from "next/cache";
 import { hasRole } from "@/lib/rbac";
 import { eq } from "drizzle-orm";
 import { AdmissionLetterService } from "@/services/AdmissionLetterService";
+import { sendInAppNotification } from "./notifications";
 
 async function ensureAdminAccess() {
     const isAdmin = await hasRole("admin") || await hasRole("superadmin");
@@ -158,6 +159,17 @@ export async function dispatchResultNotificationsAction(studentId: number, metho
         const { AcademicNotificationService } = await import("@/services/AcademicNotificationService");
         if (method === 'email') {
             await AcademicNotificationService.sendResultEmail(studentId, {});
+            
+            const [student] = await db.select({ userId: students.userId }).from(students).where(eq(students.id, studentId)).limit(1);
+            if (student?.userId) {
+                await sendInAppNotification({
+                    userId: student.userId,
+                    title: "Results Published",
+                    message: "Your academic result has been published and is now available.",
+                    type: "info",
+                    link: "/student/academics/results"
+                });
+            }
         } else {
             await AcademicNotificationService.sendResultWhatsApp(studentId, "Your academic result is now available.");
         }

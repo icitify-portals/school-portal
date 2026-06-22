@@ -79,7 +79,7 @@ export default function LibrarianWorkspace() {
             </div>
 
             <Tabs defaultValue="inventory" className="w-full">
-                <TabsList className="bg-slate-100 p-1.5 rounded-3xl mb-10 h-16 border border-slate-200">
+                <TabsList className="bg-slate-100 p-1.5 rounded-2xl mb-10 h-16 border border-slate-200">
                     <TabsTrigger value="inventory" className="rounded-2xl px-10 font-black text-xs uppercase tracking-widest data-[state=active]:bg-white data-[state=active]:shadow-lg data-[state=active]:text-indigo-600 h-full transition-all">
                         <Package className="mr-2 h-4 w-4" /> Global Inventory
                     </TabsTrigger>
@@ -94,13 +94,13 @@ export default function LibrarianWorkspace() {
                             <Search className="absolute left-6 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 group-focus-within:text-indigo-600 transition-colors" />
                             <Input 
                                 placeholder="Search by Title, Author, or ISBN..." 
-                                className="h-16 pl-14 rounded-3xl border-none shadow-2xl shadow-indigo-50 bg-white font-bold text-slate-700" 
+                                className="h-16 pl-14 rounded-2xl border-none shadow-2xl shadow-indigo-50 bg-white font-bold text-slate-700" 
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                                 onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                             />
                         </div>
-                        <Button className="h-16 px-10 bg-indigo-600 hover:bg-indigo-700 rounded-3xl font-black text-white" onClick={handleSearch}>Find</Button>
+                        <Button className="h-16 px-10 bg-indigo-600 hover:bg-indigo-700 rounded-2xl font-black text-white" onClick={handleSearch}>Find</Button>
                     </div>
 
                     <div className="bg-white rounded-[40px] shadow-2xl shadow-indigo-100/50 border border-indigo-50 overflow-hidden">
@@ -158,7 +158,7 @@ export default function LibrarianWorkspace() {
                                         <Barcode className="absolute left-6 top-1/2 -translate-y-1/2 h-6 w-6 text-slate-400" />
                                         <Input 
                                             placeholder="Scan book..." 
-                                            className="h-20 pl-16 rounded-3xl bg-white/10 border-none text-2xl font-black placeholder:text-white/20 text-white focus:ring-2 focus:ring-indigo-500"
+                                            className="h-20 pl-16 rounded-2xl bg-white/10 border-none text-2xl font-black placeholder:text-white/20 text-white focus:ring-2 focus:ring-indigo-500"
                                             value={circulationBarcode}
                                             onChange={(e) => setCirculationBarcode(e.target.value)}
                                         />
@@ -171,7 +171,7 @@ export default function LibrarianWorkspace() {
                                         <Users className="absolute left-6 top-1/2 -translate-y-1/2 h-6 w-6 text-slate-400" />
                                         <Input 
                                             placeholder="Student ID..." 
-                                            className="h-20 pl-16 rounded-3xl bg-white/10 border-none text-2xl font-black placeholder:text-white/20 text-white focus:ring-2 focus:ring-indigo-500"
+                                            className="h-20 pl-16 rounded-2xl bg-white/10 border-none text-2xl font-black placeholder:text-white/20 text-white focus:ring-2 focus:ring-indigo-500"
                                             value={studentId}
                                             onChange={(e) => setStudentId(e.target.value)}
                                         />
@@ -180,7 +180,7 @@ export default function LibrarianWorkspace() {
 
                                 <div className="grid grid-cols-2 gap-4 pt-4">
                                     <Button 
-                                        className="h-20 rounded-3xl bg-indigo-600 hover:bg-indigo-700 text-xl font-black shadow-2xl"
+                                        className="h-20 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-xl font-black shadow-2xl"
                                         onClick={handleCheckout}
                                         disabled={isLoading}
                                     >
@@ -188,7 +188,7 @@ export default function LibrarianWorkspace() {
                                     </Button>
                                     <Button 
                                         variant="outline" 
-                                        className="h-20 rounded-3xl border-white/20 hover:bg-white/10 text-xl font-black"
+                                        className="h-20 rounded-2xl border-white/20 hover:bg-white/10 text-xl font-black"
                                         onClick={handleReturn}
                                         disabled={isLoading}
                                     >

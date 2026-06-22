@@ -22,16 +22,14 @@ import { CredentialService } from "@/services/CredentialService";
 
 export async function getCourseContent(courseId: number, studentId?: number) {
     try {
+        // Fetch course parameters for layout, scheduling, and sequential lockouts
+        const courseList = await db.select().from(courses).where(eq(courses.id, courseId)).limit(1);
+        const courseInfo = courseList[0] || null;
+
         // Fetch modules
         const modules = await db.select().from(courseModules)
             .where(eq(courseModules.courseId, courseId))
             .orderBy(asc(courseModules.order));
-
-        // Fetch lessons for all modules
-        // Optimization: In a real app we might fetch per module or use a join, 
-        // but for simplicity we fetch all for the course's modules.
-        // Drizzle doesn't have a simple "whereIn" for subquery easily without some verbosity,
-        // so let's fetch lessons and filter in JS or use a join if we want to be strict.
 
         // Let's get all lessons linked to these modules.
         const moduleIds = modules.map(m => m.id);
@@ -73,7 +71,6 @@ export async function getCourseContent(courseId: number, studentId?: number) {
             });
 
             // Fetch Assignments Submissions
-            // Need to import assignmentSubmissions schema
             const subs = await db.select().from(assignmentSubmissions)
                 .where(eq(assignmentSubmissions.studentId, studentId));
 
@@ -84,7 +81,13 @@ export async function getCourseContent(courseId: number, studentId?: number) {
 
         // Structure the response
         const content = modules.map(m => {
-            const moduleLessons = lessons.filter(l => l.moduleId === m.id);
+            let moduleLessons = lessons.filter(l => l.moduleId === m.id);
+            
+            // Hide completely unpublished draft lessons from student views
+            if (studentId) {
+                moduleLessons = moduleLessons.filter(l => l.isPublished !== false);
+            }
+
             const isCompleted = progressMap[`module-${m.id}`]?.isCompleted || false;
 
             // Check Lock Status
@@ -103,6 +106,11 @@ export async function getCourseContent(courseId: number, studentId?: number) {
                     if (!lLocked && l.prerequisiteLessonId) {
                         const lPrereq = progressMap[`lesson-${l.prerequisiteLessonId}`];
                         if (!lPrereq?.isCompleted) lLocked = true;
+                    }
+
+                    // Enforce future scheduled release lockout dates
+                    if (l.releaseDate && new Date(l.releaseDate) > new Date()) {
+                        lLocked = true;
                     }
 
                     // Attach Assignment/Quiz Data
@@ -133,7 +141,14 @@ export async function getCourseContent(courseId: number, studentId?: number) {
             };
         });
 
-        return { success: true, content };
+        return { 
+            success: true, 
+            content,
+            courseFormat: courseInfo?.courseFormat || 'topics',
+            courseStartDate: courseInfo?.courseStartDate || null,
+            flowControl: courseInfo?.flowControl || 'open',
+            minPassingScore: courseInfo?.minPassingScore || 75
+        };
     } catch (error) {
         console.error("Failed to get course content:", error);
         return { success: false, error: "Failed to load course content" };
@@ -460,12 +475,16 @@ export async function updateLessonSettings(
     courseId: number,
     data: {
         prerequisiteLessonId?: number | null;
+        releaseDate?: Date | null;
+        isPublished?: boolean;
     }
 ) {
     try {
         await db.update(courseLessons)
             .set({
-                prerequisiteLessonId: data.prerequisiteLessonId
+                prerequisiteLessonId: data.prerequisiteLessonId,
+                releaseDate: data.releaseDate,
+                isPublished: data.isPublished
             })
             .where(eq(courseLessons.id, lessonId));
 
@@ -590,3 +609,42 @@ export async function createCourseFromAI(courseId: number, modules: { title: str
         return { success: false, error: "Failed to create course structure" };
     }
 }
+
+export async function updateCourseSettings(
+    courseId: number,
+    data: {
+        courseFormat?: 'topics' | 'weeks' | 'days';
+        courseStartDate?: Date | string | null;
+        totalDurationWeeks?: number;
+        flowControl?: 'sequential' | 'open';
+        minPassingScore?: number;
+    }
+) {
+    try {
+        let formattedDate: string | null = null;
+        if (data.courseStartDate) {
+            const dateObj = new Date(data.courseStartDate);
+            if (!isNaN(dateObj.getTime())) {
+                formattedDate = dateObj.toISOString().split('T')[0];
+            }
+        }
+
+        await db.update(courses)
+            .set({
+                courseFormat: data.courseFormat,
+                courseStartDate: formattedDate,
+                totalDurationWeeks: data.totalDurationWeeks,
+                flowControl: data.flowControl,
+                minPassingScore: data.minPassingScore,
+            })
+            .where(eq(courses.id, courseId));
+
+        revalidatePath(`/staff/courses/${courseId}/editor`);
+        revalidatePath(`/student/classroom/${courseId}`);
+        return { success: true };
+    } catch (error) {
+        console.error("Update course settings error:", error);
+        return { success: false, error: "Failed to update course settings" };
+    }
+}
+

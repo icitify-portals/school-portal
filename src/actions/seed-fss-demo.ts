@@ -107,8 +107,8 @@ export async function seedFssDemoData() {
             subtitle: "A majestic call to truth, precision, technological growth, and patriotic duty.",
             content: JSON.stringify({
                 body: `
-                <div class="grid md:grid-cols-2 gap-8 mt-12 max-w-5xl mx-auto">
-                    <div class="p-8 rounded-3xl bg-slate-900/5 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 hover-lift backdrop-blur-sm">
+                <div class="grid md:grid-cols-2 gap-8 mt-12 max-w-[1600px] w-full mx-auto">
+                    <div class="p-8 rounded-2xl bg-slate-900/5 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 hover-lift backdrop-blur-sm">
                         <span class="text-xs font-black tracking-widest text-emerald-600 dark:text-emerald-400 uppercase font-mono">Stanza One</span>
                         <p class="italic text-base md:text-lg text-slate-700 dark:text-slate-300 font-medium leading-loose mt-4">
                             Great Federal School of Statistics,<br/>
@@ -119,7 +119,7 @@ export async function seedFssDemoData() {
                             With strength in our mind and truth in our heart.
                         </p>
                     </div>
-                    <div class="p-8 rounded-3xl bg-slate-900/5 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 hover-lift backdrop-blur-sm">
+                    <div class="p-8 rounded-2xl bg-slate-900/5 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 hover-lift backdrop-blur-sm">
                         <span class="text-xs font-black tracking-widest text-emerald-600 dark:text-emerald-400 uppercase font-mono">Stanza Two</span>
                         <p class="italic text-base md:text-lg text-slate-700 dark:text-slate-300 font-medium leading-loose mt-4">
                             FSS Ibadan, the premier of all,<br/>
@@ -193,7 +193,7 @@ export async function seedFssDemoData() {
             subtitle: "Led by national statistics architects and veteran academic administrators.",
             content: JSON.stringify({
                 body: `
-                <div class="grid md:grid-cols-2 gap-12 mt-12 items-center max-w-5xl mx-auto text-left">
+                <div class="grid md:grid-cols-2 gap-12 mt-12 items-center max-w-[1600px] w-full mx-auto text-left">
                     <div class="space-y-6">
                         <span class="bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 py-1.5 px-4 rounded-full font-black uppercase tracking-widest text-[10px]">Administrative Governance</span>
                         <h3 class="text-3xl font-black text-slate-900 dark:text-white uppercase italic tracking-tight">Statistician-General of the Federation</h3>

@@ -28,7 +28,7 @@ export default async function InstitutionalSettingsPage() {
     const classGroups = await db.select().from(studentGroups);
 
     return (
-        <div className="container mx-auto py-10 px-4 max-w-7xl">
+        <div className="container mx-auto py-10 px-4 max-w-[1600px] w-full">
             <InstitutionSettings 
                 units={units}
                 currentSession={currentSession}

@@ -5,9 +5,9 @@ export default async function RecycleBinPage() {
     const deletedStudents = await getDeletedStudents();
 
     return (
-        <div className="p-8 max-w-7xl mx-auto space-y-8 animate-in fade-in duration-700">
+        <div className="p-8 max-w-[1600px] w-full mx-auto space-y-8 animate-in fade-in duration-700">
             {/* Header section with Glassmorphism */}
-            <div className="flex justify-between items-end bg-white/10 backdrop-blur-md border border-white/20 p-8 rounded-3xl shadow-2xl">
+            <div className="flex justify-between items-end bg-white/10 backdrop-blur-md border border-white/20 p-8 rounded-2xl shadow-2xl">
                 <div>
                     <h1 className="text-4xl font-black text-white tracking-tight italic uppercase">Institutional Recycle Bin</h1>
                     <p className="text-blue-200 mt-2 font-medium">Safe recovery and permanent purging of institutional records</p>
@@ -31,7 +31,7 @@ export default async function RecycleBinPage() {
             {/* List Section */}
             <div className="grid gap-4">
                 {deletedStudents.length === 0 ? (
-                    <div className="bg-white/5 border border-white/10 p-20 rounded-3xl text-center backdrop-blur-sm">
+                    <div className="bg-white/5 border border-white/10 p-20 rounded-2xl text-center backdrop-blur-sm">
                         <div className="w-20 h-20 bg-blue-500/10 rounded-full flex items-center justify-center mx-auto mb-6 border border-blue-500/20">
                             <svg className="w-10 h-10 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />

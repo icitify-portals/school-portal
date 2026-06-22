@@ -53,11 +53,11 @@ export default async function AchievementsPage() {
                     </p>
                 </div>
                 <div className="flex gap-4">
-                    <div className="text-center p-6 bg-white rounded-3xl border border-slate-100 shadow-xl shadow-slate-200/50 min-w-[150px]">
+                    <div className="text-center p-6 bg-white rounded-2xl border border-slate-100 shadow-xl shadow-slate-200/50 min-w-[150px]">
                         <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">Total Earned</p>
                         <p className="text-4xl font-black text-indigo-600">{myBadges.length}</p>
                     </div>
-                    <div className="text-center p-6 bg-slate-900 rounded-3xl shadow-xl min-w-[150px]">
+                    <div className="text-center p-6 bg-slate-900 rounded-2xl shadow-xl min-w-[150px]">
                         <p className="text-[10px] font-black uppercase text-white/40 tracking-widest mb-1">Completion</p>
                         <p className="text-4xl font-black text-white">{allBadges.length > 0 ? Math.round((myBadges.length / allBadges.length) * 100) : 0}%</p>
                     </div>

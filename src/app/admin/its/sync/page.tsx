@@ -27,7 +27,7 @@ export default function ITSSyncPage() {
             </div>
 
             {/* Critical Info Alert */}
-            <Alert className="bg-indigo-600 text-white border-none rounded-[2rem] p-8 shadow-2xl shadow-indigo-500/30 overflow-hidden relative">
+            <Alert className="bg-indigo-600 text-white border-none rounded-2xl p-8 shadow-2xl shadow-indigo-500/30 overflow-hidden relative">
                 <Zap className="w-40 h-40 absolute -right-10 -bottom-10 text-white/10 rotate-12" />
                 <div className="flex gap-6 relative z-10">
                     <div className="p-4 bg-white/20 rounded-2xl shrink-0">

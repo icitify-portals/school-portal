@@ -1,6 +1,6 @@
 import { db } from "@/db/db";
 import { privileges, studentPrivileges, students, users } from "@/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 
 export class StudentPrivilegeService {
     
@@ -96,7 +96,7 @@ export class StudentPrivilegeService {
         .innerJoin(users, eq(students.userId, users.id))
         .where(and(
             eq(studentPrivileges.privilegeId, priv.id),
-            branchId ? eq(users.branchId, branchId) : undefined as any
+            branchId ? eq(students.unitId, branchId) : undefined as any
             // session filtering can be added via students table or enrollments
         ));
 

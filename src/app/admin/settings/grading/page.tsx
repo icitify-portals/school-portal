@@ -141,7 +141,7 @@ export default function GradingSystemsPage() {
     if (loading) return <div className="p-20 text-center animate-pulse">Loading Grading Systems...</div>;
 
     return (
-        <div className="p-8 max-w-7xl mx-auto space-y-8 pb-20">
+        <div className="p-8 max-w-[1600px] w-full mx-auto space-y-8 pb-20">
             <header className="flex justify-between items-center bg-white p-8 rounded-[2.5rem] shadow-xl border border-slate-100">
                 <div>
                     <h1 className="text-4xl font-black text-slate-900 flex items-center gap-4 italic uppercase tracking-tight">
@@ -176,7 +176,7 @@ export default function GradingSystemsPage() {
                             key={sys.id}
                             onClick={() => handleSelectSystem(sys)}
                             className={cn(
-                                "w-full text-left p-6 rounded-[2rem] transition-all group flex flex-col gap-2 relative overflow-hidden",
+                                "w-full text-left p-6 rounded-2xl transition-all group flex flex-col gap-2 relative overflow-hidden",
                                 selectedSystem?.id === sys.id
                                     ? "bg-slate-900 text-white shadow-2xl scale-105 z-10"
                                     : "bg-white text-slate-600 hover:bg-slate-50 border border-slate-100 shadow-sm"
@@ -210,7 +210,7 @@ export default function GradingSystemsPage() {
                     {selectedSystem ? (
                         <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
                             <Tabs.Root defaultValue="points" className="space-y-6">
-                                <Tabs.List className="flex bg-slate-100/50 p-2 rounded-[2rem] w-fit border border-slate-200/50 backdrop-blur-sm">
+                                <Tabs.List className="flex bg-slate-100/50 p-2 rounded-2xl w-fit border border-slate-200/50 backdrop-blur-sm">
                                     <Tabs.Trigger value="points" className="px-8 py-3 rounded-[1.5rem] text-[10px] font-black uppercase tracking-widest transition-all data-[state=active]:bg-white data-[state=active]:shadow-xl data-[state=active]:text-indigo-600 text-slate-400 flex items-center gap-2">
                                         <Settings2 className="w-4 h-4" /> Grade Points
                                     </Tabs.Trigger>
@@ -476,7 +476,7 @@ export default function GradingSystemsPage() {
                                             <p className="text-slate-400 font-bold uppercase tracking-widest text-[9px] mt-1">Configure automated rules for special cases and missed assessments</p>
                                         </CardHeader>
                                         <CardContent className="p-10 space-y-8">
-                                            <div className="flex items-center justify-between p-8 bg-slate-50 rounded-[2rem] border border-slate-100">
+                                            <div className="flex items-center justify-between p-8 bg-slate-50 rounded-2xl border border-slate-100">
                                                 <div className="space-y-1">
                                                     <h4 className="font-bold text-slate-900 text-lg">Default Proration (Pro-rata)</h4>
                                                     <p className="text-sm text-slate-500 max-w-xl">

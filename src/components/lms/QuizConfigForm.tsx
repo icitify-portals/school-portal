@@ -78,7 +78,7 @@ export default function QuizConfigForm({ quiz, onChange }: QuizConfigFormProps) 
                         type="button"
                         onClick={() => setQuizType(type.id as any)}
                         className={cn(
-                            "p-5 rounded-[2rem] border-2 text-left transition-all flex flex-col gap-3 group relative overflow-hidden",
+                            "p-5 rounded-2xl border-2 text-left transition-all flex flex-col gap-3 group relative overflow-hidden",
                             quizType === type.id 
                                 ? "border-indigo-600 bg-indigo-50/50 shadow-lg shadow-indigo-100" 
                                 : "border-slate-100 bg-white hover:border-slate-200"
@@ -226,7 +226,7 @@ export default function QuizConfigForm({ quiz, onChange }: QuizConfigFormProps) 
                 <hr className="border-slate-100" />
 
                 {/* CA Configuration */}
-                <div className="bg-slate-50/50 p-6 rounded-[2rem] border border-slate-100/50 space-y-6">
+                <div className="bg-slate-50/50 p-6 rounded-2xl border border-slate-100/50 space-y-6">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center">

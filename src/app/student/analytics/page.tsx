@@ -97,7 +97,7 @@ export default async function StudentAnalyticsPage() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <Card className="border-none shadow-xl shadow-indigo-100 rounded-[2rem] bg-indigo-600 text-white overflow-hidden relative group">
+                <Card className="border-none shadow-xl shadow-indigo-100 rounded-2xl bg-indigo-600 text-white overflow-hidden relative group">
                     <div className="absolute top-0 right-0 p-8 opacity-20 group-hover:scale-110 transition-transform duration-500">
                         <ChartIcon className="w-24 h-24" />
                     </div>
@@ -115,7 +115,7 @@ export default async function StudentAnalyticsPage() {
                     </CardContent>
                 </Card>
 
-                <Card className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden relative">
+                <Card className="border-none shadow-sm rounded-2xl bg-white overflow-hidden relative">
                     <CardHeader className="pb-2">
                         <CardTitle className="text-[10px] font-black uppercase tracking-widest text-slate-400">Total Credits Earned</CardTitle>
                     </CardHeader>
@@ -127,7 +127,7 @@ export default async function StudentAnalyticsPage() {
                     </CardContent>
                 </Card>
 
-                <Card className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden">
+                <Card className="border-none shadow-sm rounded-2xl bg-white overflow-hidden">
                     <CardHeader className="pb-2">
                         <CardTitle className="text-[10px] font-black uppercase tracking-widest text-slate-400">Active Learning Time</CardTitle>
                     </CardHeader>
@@ -160,7 +160,7 @@ export default async function StudentAnalyticsPage() {
                                 const percentage = (completed / totalLessons) * 100;
 
                                 return (
-                                    <div key={course.id} className="p-4 hover:bg-slate-50 rounded-3xl transition-all group">
+                                    <div key={course.id} className="p-4 hover:bg-slate-50 rounded-2xl transition-all group">
                                         <div className="flex justify-between items-start mb-3">
                                             <div>
                                                 <h4 className="text-sm font-black text-slate-900 uppercase italic tracking-tight group-hover:text-indigo-600 transition-colors">{course.name}</h4>

@@ -83,7 +83,7 @@ export default function BankReconciliationPage() {
     };
 
     return (
-        <div className="p-8 max-w-7xl mx-auto space-y-8">
+        <div className="p-8 max-w-[1600px] w-full mx-auto space-y-8">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <h1 className="text-3xl font-black text-slate-900 tracking-tight uppercase italic flex items-center gap-3">
@@ -167,7 +167,7 @@ export default function BankReconciliationPage() {
                                                             Ref: {entry.reference} • {new Date(entry.transactionDate).toLocaleDateString()}
                                                         </p>
                                                         <p className="text-xs font-black text-slate-900 mt-1">
-                                                            ₦{Number(parseFloat(entry.credit) > 0 ? entry.credit : entry.debit).toLocaleString()}
+                                                            {settings?.base_currency || '₦'}{Number(parseFloat(entry.credit) > 0 ? entry.credit : entry.debit).toLocaleString()}
                                                         </p>
                                                     </div>
                                                 </div>

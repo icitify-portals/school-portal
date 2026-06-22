@@ -131,7 +131,7 @@ export default function AttendanceSettingsPage() {
     };
 
     return (
-        <div className="p-6 md:p-10 max-w-5xl mx-auto space-y-8">
+        <div className="p-6 md:p-10 max-w-[1600px] w-full mx-auto space-y-8">
             <div className="flex items-center justify-between">
                 <div className="space-y-1">
                     <div className="flex items-center gap-3">
@@ -163,7 +163,7 @@ export default function AttendanceSettingsPage() {
                     const IconComp = card.icon;
                     const colors = colorMap[card.color] || colorMap.blue;
                     return (
-                        <Card key={card.key} className="border-none shadow-xl bg-white/80 backdrop-blur-xl rounded-[2rem] overflow-hidden">
+                        <Card key={card.key} className="border-none shadow-xl bg-white/80 backdrop-blur-xl rounded-2xl overflow-hidden">
                             <CardContent className="p-6">
                                 <div className="flex items-start gap-4">
                                     <div className={`p-3 rounded-2xl border ${colors}`}>
@@ -202,7 +202,7 @@ export default function AttendanceSettingsPage() {
             </div>
 
             {/* Preview section */}
-            <Card className="border-none shadow-xl bg-gradient-to-br from-slate-900 to-slate-800 text-white rounded-[2rem] overflow-hidden">
+            <Card className="border-none shadow-xl bg-gradient-to-br from-slate-900 to-slate-800 text-white rounded-2xl overflow-hidden">
                 <CardContent className="p-8">
                     <h3 className="font-black text-sm uppercase tracking-widest mb-6 opacity-50">Live Preview — Risk Levels</h3>
                     <div className="grid grid-cols-3 gap-4">

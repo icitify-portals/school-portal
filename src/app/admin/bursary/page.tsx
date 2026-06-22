@@ -16,6 +16,7 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { SessionSelector } from "@/components/SessionSelector";
 import { useState } from "react";
+import { BursarySummaryCards } from "./BursarySummaryCards";
 
 import { useSession } from "next-auth/react";
 
@@ -134,6 +135,8 @@ export default function BursaryDashboardPage() {
                     <SessionSelector onSessionChange={setSelectedSession} />
                 </div>
             </div>
+
+            <BursarySummaryCards session={selectedSession} />
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {allowedModules.map((module) => (

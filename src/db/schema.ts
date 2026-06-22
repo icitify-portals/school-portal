@@ -17,6 +17,7 @@ export const users = mysqlTable('users', {
   createdAt: timestamp('created_at').defaultNow(),
   deletedAt: datetime('deleted_at'),
   officeDescription: text('office_description'), // Description of the user's professional role/office
+  dateOfBirth: date('date_of_birth'), // Added for HR Birthday/Occasion tracking
 });
 
 export const userPermissions = mysqlTable('user_permissions', {
@@ -224,6 +225,7 @@ export const students = mysqlTable('students', {
   dob: varchar('dob', { length: 50 }),
   imageUrl: varchar('image_url', { length: 255 }),
   isProfileLocked: boolean('is_profile_locked').default(false),
+  isFinanciallyLocked: boolean('is_financially_locked').default(false),
   nin: varchar('nin', { length: 11 }),
   ninVerified: boolean('nin_verified').default(false),
   status: mysqlEnum('status', ['active', 'graduated', 'withdrawn', 'suspended', 'rusticated']).default('active'),
@@ -381,7 +383,7 @@ export const transactions = mysqlTable('transactions', {
   type: mysqlEnum('type', ['credit', 'debit']).notNull(),
   purpose: varchar('purpose', { length: 255 }).notNull(), // e.g., "Registration fee", "Hostel fee"
   status: mysqlEnum('status', ['pending', 'completed', 'failed', 'reversed']).default('pending'),
-  gateway: mysqlEnum('gateway', ['paystack', 'flutterwave', 'remita', 'opay', 'manual']).default('manual'),
+  gateway: mysqlEnum('gateway', ['paystack', 'flutterwave', 'remita', 'opay', 'manual']).default('remita'),
   gatewayReference: varchar('gateway_reference', { length: 255 }),
   createdAt: timestamp('created_at').defaultNow(),
 });
@@ -799,6 +801,7 @@ export const feeItems = mysqlTable('fee_items', {
   name: varchar('name', { length: 255 }).notNull(),
   description: text('description'),
   defaultAmount: decimal('default_amount', { precision: 12, scale: 2 }).default('0.00'),
+  currency: varchar('currency', { length: 10 }).default('NGN'),
   category: mysqlEnum('category', ['tuition', 'hostel', 'library', 'lab', 'other']).default('other'),
   recurrence: mysqlEnum('recurrence', ['once', 'per_semester', 'per_session']).default('per_session'),
   isRequired: boolean('is_required').default(true),
@@ -931,6 +934,7 @@ export const studentBills = mysqlTable('student_bills', {
   studentId: int('student_id').references(() => students.id).notNull(),
   sessionId: int('session_id').references(() => academicSessions.id).notNull(),
   billNumber: varchar('bill_number', { length: 50 }).unique().notNull(),
+  currency: varchar('currency', { length: 10 }).default('NGN'),
   totalAmount: decimal('total_amount', { precision: 12, scale: 2 }).notNull(),
   amountPaid: decimal('amount_paid', { precision: 12, scale: 2 }).default('0.00'),
   status: mysqlEnum('status', ['pending', 'partially_paid', 'paid']).default('pending'),
@@ -1030,6 +1034,16 @@ export const vendors = mysqlTable('vendors', {
   createdAt: timestamp('created_at').defaultNow(),
 });
 
+export const financialPeriods = mysqlTable('financial_periods', {
+  id: int('id').autoincrement().primaryKey(),
+  startDate: timestamp('start_date').notNull(),
+  endDate: timestamp('end_date').notNull(),
+  status: mysqlEnum('status', ['open', 'soft_closed', 'hard_closed']).default('open'),
+  closedBy: int('closed_by').references(() => users.id),
+  closedAt: timestamp('closed_at'),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
 export const chartOfAccounts = mysqlTable('chart_of_accounts', {
   id: int('id').autoincrement().primaryKey(),
   code: varchar('code', { length: 20 }).unique().notNull(), // e.g., "1000", "4000"
@@ -1038,6 +1052,17 @@ export const chartOfAccounts = mysqlTable('chart_of_accounts', {
   description: text('description'),
   parentAccountId: int('parent_account_id'), // For hierarchical accounts
   isActive: boolean('is_active').default(true),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const monthlyAccountBalances = mysqlTable('monthly_account_balances', {
+  id: int('id').autoincrement().primaryKey(),
+  accountId: int('account_id').references(() => chartOfAccounts.id).notNull(),
+  periodId: int('period_id').references(() => financialPeriods.id).notNull(),
+  openingBalance: decimal('opening_balance', { precision: 12, scale: 2 }).default('0.00'),
+  totalDebit: decimal('total_debit', { precision: 12, scale: 2 }).default('0.00'),
+  totalCredit: decimal('total_credit', { precision: 12, scale: 2 }).default('0.00'),
+  closingBalance: decimal('closing_balance', { precision: 12, scale: 2 }).default('0.00'),
   createdAt: timestamp('created_at').defaultNow(),
 });
 
@@ -3977,7 +4002,7 @@ export const journalPayments = mysqlTable('journal_payments', {
   userId: int('user_id').references(() => users.id).notNull(),
   amount: decimal('amount', { precision: 10, scale: 2 }).notNull(),
   currency: varchar('currency', { length: 10 }).notNull(),
-  gateway: mysqlEnum('gateway', ['paystack', 'flutterwave', 'manual']).notNull(),
+  gateway: mysqlEnum('gateway', ['paystack', 'flutterwave', 'remita', 'manual']).notNull(),
   reference: varchar('reference', { length: 100 }).unique().notNull(),
   status: mysqlEnum('status', ['pending', 'completed', 'failed']).default('pending'),
   paidAt: datetime('paid_at'),
@@ -5529,6 +5554,8 @@ export const admissionFormTemplates = mysqlTable('admission_form_templates', {
   level: mysqlEnum('level', ['primary', 'secondary', 'tertiary']).notNull(),
   slug: varchar('slug', { length: 100 }).unique().notNull(),
   description: text('description'),
+  flowType: mysqlEnum('flow_type', ['payment_first', 'form_first', 'free_form']).default('form_first'),
+  feeStructureId: int('fee_structure_id').references(() => feeStructures.id),
   applicationFee: decimal('application_fee', { precision: 12, scale: 2 }).default('0.00'),
   lateFee: decimal('late_fee', { precision: 12, scale: 2 }).default('0.00'),
   requireAcceptanceFee: boolean('require_acceptance_fee').default(false),
@@ -5567,15 +5594,16 @@ export const admissionFormFields = mysqlTable('admission_form_fields', {
   isSystemField: boolean('is_system_field').default(false),
   systemKey: varchar('system_key', { length: 100 }), // e.g. "firstName", "dob"
 });
-
 export const admissionApplicationsV2 = mysqlTable('admission_applications_v2', {
   id: int('id').autoincrement().primaryKey(),
   templateId: int('template_id').notNull(),
+  applicantId: int('applicant_id').references(() => users.id),
   studentId: int('student_id').references(() => students.id),
   status: mysqlEnum('status', ['draft', 'submitted', 'paid', 'screened', 'admitted', 'rejected']).default('draft'),
   paymentStatus: mysqlEnum('payment_status', ['pending', 'paid', 'failed']).default('pending'),
   paymentReference: varchar('payment_reference', { length: 100 }),
-  formData: text('form_data'), // JSON blob of the dynamic fields
+  data: text('data'), // Dynamic JSON answers
+  nin: varchar('nin', { length: 11 }).unique(),
   applicantPhoto: varchar('applicant_photo', { length: 255 }),
   ageAtAdmission: int('age_at_admission'),
   editFineStatus: mysqlEnum('edit_fine_status', ['none', 'pending', 'paid']).default('none'),
@@ -6052,4 +6080,155 @@ export const tenantNodes = mysqlTable('tenant_nodes', {
   isActive: boolean('is_active').default(true),
   createdAt: timestamp('created_at').defaultNow(),
 });
+
+export const phdApplications = mysqlTable('phd_applications', {
+  id: int('id').autoincrement().primaryKey(),
+  studentId: int('student_id').references(() => students.id).notNull(),
+  researchTitle: varchar('research_title', { length: 500 }).notNull(),
+  status: varchar('status', { length: 100 }).default('applied'), // 'applied', 'supervisors_pending', 'supervisors_accepted', 'fees_paid', 'under_review', 'approved_corrections', 'defense_scheduled', 'completed'
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
+});
+
+export const phdSupervisors = mysqlTable('phd_supervisors', {
+  id: int('id').autoincrement().primaryKey(),
+  phdApplicationId: int('phd_application_id').references(() => phdApplications.id).notNull(),
+  type: varchar('type', { length: 50 }).notNull(), // 'internal' | 'external'
+  staffProfileId: int('staff_profile_id').references(() => staffProfiles.id), // Null for external
+  name: varchar('name', { length: 255 }).notNull(),
+  email: varchar('email', { length: 255 }).notNull(),
+  phone: varchar('phone', { length: 50 }),
+  token: varchar('token', { length: 255 }).notNull(),
+  status: varchar('status', { length: 50 }).default('pending'), // 'pending', 'accepted', 'rejected'
+  invitedAt: timestamp('invited_at').defaultNow(),
+  respondedAt: timestamp('responded_at'),
+});
+
+export const phdTheses = mysqlTable('phd_theses', {
+  id: int('id').autoincrement().primaryKey(),
+  phdApplicationId: int('phd_application_id').references(() => phdApplications.id).notNull(),
+  fileUrl: text('file_url').notNull(),
+  turnitinReportUrl: text('turnitin_report_url'),
+  turnitinScore: int('turnitin_score'),
+  status: varchar('status', { length: 100 }).default('draft'), // 'draft', 'dept_review', 'subdean_review', 'pg_committee_review', 'meeting_pending', 'approved', 'reupload_required'
+  isCorrectedVersion: boolean('is_corrected_version').default(false),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const phdReviewLogs = mysqlTable('phd_review_logs', {
+  id: int('id').autoincrement().primaryKey(),
+  phdThesisId: int('phd_thesis_id').references(() => phdTheses.id).notNull(),
+  reviewerId: int('reviewer_id').references(() => users.id).notNull(),
+  stage: varchar('stage', { length: 100 }).notNull(), // 'department', 'subdean', 'pg_committee', 'provost'
+  action: varchar('action', { length: 50 }).notNull(), // 'approve', 'reject'
+  comment: text('comment'),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const phdExaminers = mysqlTable('phd_examiners', {
+  id: int('id').autoincrement().primaryKey(),
+  phdApplicationId: int('phd_application_id').references(() => phdApplications.id).notNull(),
+  name: varchar('name', { length: 255 }).notNull(),
+  email: varchar('email', { length: 255 }).notNull(),
+  type: varchar('type', { length: 50 }).notNull(), // 'internal', 'external'
+  honorariumAmount: varchar('honorarium_amount', { length: 100 }), // String decimal
+  paymentStatus: varchar('payment_status', { length: 50 }).default('pending'), // 'pending', 'approved_by_provost', 'paid'
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const phdDefenses = mysqlTable('phd_defenses', {
+  id: int('id').autoincrement().primaryKey(),
+  phdApplicationId: int('phd_application_id').references(() => phdApplications.id).notNull(),
+  defenseDate: timestamp('defense_date').notNull(),
+  location: varchar('location', { length: 255 }).notNull(),
+  status: varchar('status', { length: 50 }).default('scheduled'), // 'scheduled', 'successful', 'failed'
+  provostApprovedAt: timestamp('provost_approved_at'),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+// --- EXAMINATION BODIES & O-LEVEL RESULTS ---
+
+export const examinationBodies = mysqlTable('examination_bodies', {
+  id: int('id').autoincrement().primaryKey(),
+  name: varchar('name', { length: 50 }).notNull().unique(), // e.g., WAEC, NECO
+  isActive: boolean('is_active').default(true),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const applicantOLevelSittings = mysqlTable('applicant_olevel_sittings', {
+  id: int('id').autoincrement().primaryKey(),
+  applicantId: int('applicant_id').references(() => users.id).notNull(),
+  applicationId: int('application_id').references(() => admissionApplicationsV2.id).notNull(),
+  examBodyId: int('exam_body_id').references(() => examinationBodies.id).notNull(),
+  examYear: varchar('exam_year', { length: 4 }).notNull(),
+  examNumber: varchar('exam_number', { length: 50 }).notNull(),
+  sittingNumber: int('sitting_number').notNull(), // 1 or 2
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow().onUpdateNow()
+});
+
+export const applicantOLevelSubjects = mysqlTable('applicant_olevel_subjects', {
+  id: int('id').autoincrement().primaryKey(),
+  sittingId: int('sitting_id').references(() => applicantOLevelSittings.id).notNull(),
+  subjectName: varchar('subject_name', { length: 100 }).notNull(),
+  grade: varchar('grade', { length: 10 }).notNull(),
+  createdAt: timestamp('created_at').defaultNow()
+});
+
+export const applicantOLevelSittingsRelations = relations(applicantOLevelSittings, ({ one, many }) => ({
+    applicant: one(users, {
+        fields: [applicantOLevelSittings.applicantId],
+        references: [users.id],
+    }),
+    application: one(admissionApplicationsV2, {
+        fields: [applicantOLevelSittings.applicationId],
+        references: [admissionApplicationsV2.id],
+    }),
+    examBody: one(examinationBodies, {
+        fields: [applicantOLevelSittings.examBodyId],
+        references: [examinationBodies.id],
+    }),
+    subjects: many(applicantOLevelSubjects),
+}));
+
+export const applicantOLevelSubjectsRelations = relations(applicantOLevelSubjects, ({ one }) => ({
+    sitting: one(applicantOLevelSittings, {
+        fields: [applicantOLevelSubjects.sittingId],
+        references: [applicantOLevelSittings.id],
+    }),
+}));
+
+// --- HR AUTOMATED COMMUNICATIONS ---
+
+export const hrMessageTemplates = mysqlTable('hr_message_templates', {
+  id: int('id').autoincrement().primaryKey(),
+  eventName: varchar('event_name', { length: 100 }).unique().notNull(), // e.g. "birthday_staff", "birthday_student", "work_anniversary"
+  subject: varchar('subject', { length: 255 }).notNull(),
+  messageBody: text('message_body').notNull(), // Supports variables like [FirstName]
+  isActive: boolean('is_active').default(true),
+  sendViaEmail: boolean('send_via_email').default(true),
+  sendViaWhatsapp: boolean('send_via_whatsapp').default(true),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
+});
+
+export const hrScheduledMessages = mysqlTable('hr_scheduled_messages', {
+  id: int('id').autoincrement().primaryKey(),
+  subject: varchar('subject', { length: 255 }).notNull(),
+  messageBody: text('message_body').notNull(),
+  targetAudience: mysqlEnum('target_audience', ['all_staff', 'all_students', 'all_users', 'specific_user']).notNull(),
+  targetUserId: int('target_user_id').references(() => users.id),
+  scheduledDate: date('scheduled_date').notNull(),
+  status: mysqlEnum('status', ['pending', 'sent', 'failed', 'cancelled']).default('pending'),
+  sendViaEmail: boolean('send_via_email').default(true),
+  sendViaWhatsapp: boolean('send_via_whatsapp').default(false),
+  createdBy: int('created_by').references(() => users.id),
+  createdAt: timestamp('created_at').defaultNow(),
+  sentAt: timestamp('sent_at'),
+});
+
+export const hrScheduledMessagesRelations = relations(hrScheduledMessages, ({ one }) => ({
+  targetUser: one(users, { fields: [hrScheduledMessages.targetUserId], references: [users.id] }),
+  creator: one(users, { fields: [hrScheduledMessages.createdBy], references: [users.id] }),
+}));
 

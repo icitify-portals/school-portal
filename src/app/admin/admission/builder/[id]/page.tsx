@@ -31,7 +31,8 @@ import {
     deleteFormSection,
     saveFormField,
     deleteFormField,
-    updateFieldsOrder
+    updateFieldsOrder,
+    updateSectionsOrder
 } from "@/actions/admission_v2";
 import { cn } from "@/lib/utils";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
@@ -41,11 +42,15 @@ const FIELD_TYPES = [
     { label: "Short Text", value: "text", icon: Type },
     { label: "Long Text", value: "textarea", icon: Layout },
     { label: "Select List", value: "select", icon: List },
+    { label: "Nationality Dropdown", value: "nationality", icon: List },
+    { label: "State of Origin Dropdown", value: "state", icon: List },
+    { label: "L.G.A Dropdown", value: "lga", icon: List },
     { label: "Date", value: "date", icon: Calendar },
     { label: "Number", value: "number", icon: Hash },
     { label: "Email", value: "email", icon: Mail },
     { label: "Phone", value: "phone", icon: Phone },
     { label: "File Upload", value: "file", icon: FileUp },
+    { label: "O-Level Result Grid", value: "olevel_result", icon: Layout },
 ];
 
 export default function AdmissionFormBuilder() {
@@ -56,6 +61,8 @@ export default function AdmissionFormBuilder() {
     const [activeSection, setActiveSection] = useState<number | null>(null);
     const [showSectionModal, setShowSectionModal] = useState(false);
     const [showFieldModal, setShowFieldModal] = useState(false);
+    const [showSettingsModal, setShowSettingsModal] = useState(false);
+    const [settingsData, setSettingsData] = useState({ name: "", slug: "" });
     
     const [sectionData, setSectionData] = useState({ title: "" });
     const [fieldData, setFieldData] = useState({
@@ -76,10 +83,23 @@ export default function AdmissionFormBuilder() {
         setLoading(true);
         const data = await getFormTemplate(templateId);
         setTemplate(data);
+        setSettingsData({ name: data?.name || "", slug: data?.slug || "" });
         if (data?.sections?.length > 0) {
             setActiveSection(data.sections[0].id);
         }
         setLoading(false);
+    };
+
+    const handleSaveSettings = async (e: React.FormEvent) => {
+        e.preventDefault();
+        const res = await saveFormTemplate({ id: templateId, ...template, name: settingsData.name, slug: settingsData.slug });
+        if (res.success) {
+            setShowSettingsModal(false);
+            fetchTemplate();
+            toast.success("Template settings updated!");
+        } else {
+            toast.error(res.error || "Failed to update template");
+        }
     };
 
     const handleSaveSection = async (e: React.FormEvent) => {
@@ -142,6 +162,31 @@ export default function AdmissionFormBuilder() {
         }
     };
 
+    const handleSectionDragEnd = async (result: any) => {
+        if (!result.destination) return;
+        
+        const items = Array.from(template.sections);
+        const [reorderedItem] = items.splice(result.source.index, 1);
+        items.splice(result.destination.index, 0, reorderedItem);
+
+        const updatedSections = items.map((item: any, index: number) => ({
+            id: item.id,
+            order: index
+        }));
+
+        // Optimistic update
+        const newTemplate = { ...template, sections: items };
+        setTemplate(newTemplate);
+
+        const res = await updateSectionsOrder(updatedSections, templateId);
+        if (!res.success) {
+            toast.error("Failed to save sections order");
+            fetchTemplate();
+        } else {
+            toast.success("Page order saved!");
+        }
+    };
+
     if (loading) return <div className="p-20 flex justify-center"><Plus className="w-10 h-10 animate-spin text-indigo-500" /></div>;
     if (!template) return <div className="p-20 text-center">Template not found</div>;
 
@@ -170,6 +215,9 @@ export default function AdmissionFormBuilder() {
                         </div>
                     </div>
                     <div className="flex gap-4">
+                        <Button onClick={() => setShowSettingsModal(true)} variant="outline" className="rounded-2xl border-slate-200 font-black px-6 py-6 flex gap-2 uppercase text-[10px] tracking-widest">
+                            <Settings className="w-4 h-4" /> Settings
+                        </Button>
                         <Button variant="outline" className="rounded-2xl border-slate-200 font-black px-6 py-6 flex gap-2 uppercase text-[10px] tracking-widest">
                             <Eye className="w-4 h-4" /> Preview
                         </Button>
@@ -190,28 +238,47 @@ export default function AdmissionFormBuilder() {
                                 <Plus className="w-4 h-4" />
                             </Button>
                         </div>
-                        <div className="space-y-3">
-                            {template.sections.map((section: any) => (
-                                <button
-                                    key={section.id}
-                                    onClick={() => setActiveSection(section.id)}
-                                    className={cn(
-                                        "w-full flex items-center justify-between p-5 rounded-2xl transition-all font-bold text-sm",
-                                        activeSection === section.id 
-                                            ? "bg-indigo-600 text-white shadow-lg shadow-indigo-100 -translate-x-2" 
-                                            : "bg-slate-50 text-slate-600 hover:bg-slate-100"
-                                    )}
-                                >
-                                    <span className="truncate">{section.title}</span>
-                                    <ChevronLeft className={cn("w-4 h-4 transition-transform", activeSection === section.id ? "rotate-180" : "opacity-0")} />
-                                </button>
-                            ))}
-                            {template.sections.length === 0 && (
-                                <div className="text-center py-10 border-2 border-dashed border-slate-100 rounded-[2rem]">
-                                    <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">No sections yet</p>
-                                </div>
-                            )}
-                        </div>
+                        <DragDropContext onDragEnd={handleSectionDragEnd}>
+                            <Droppable droppableId="sections">
+                                {(provided) => (
+                                    <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-3">
+                                        {template.sections.map((section: any, index: number) => (
+                                            <Draggable key={section.id.toString()} draggableId={section.id.toString()} index={index}>
+                                                {(provided) => (
+                                                    <div
+                                                        ref={provided.innerRef}
+                                                        {...provided.draggableProps}
+                                                        className="group/sec flex items-center gap-2"
+                                                    >
+                                                        <div {...provided.dragHandleProps} className="p-2 bg-slate-50 rounded-xl text-slate-300 hover:text-indigo-400 cursor-grab active:cursor-grabbing">
+                                                            <GripVertical className="w-4 h-4" />
+                                                        </div>
+                                                        <button
+                                                            onClick={() => setActiveSection(section.id)}
+                                                            className={cn(
+                                                                "flex-1 flex items-center justify-between p-5 rounded-2xl transition-all font-bold text-sm text-left truncate",
+                                                                activeSection === section.id 
+                                                                    ? "bg-indigo-600 text-white shadow-lg shadow-indigo-100 -translate-x-1" 
+                                                                    : "bg-slate-50 text-slate-600 hover:bg-slate-100"
+                                                            )}
+                                                        >
+                                                            <span className="truncate max-w-[130px]">{section.title}</span>
+                                                            <ChevronLeft className={cn("w-4 h-4 transition-transform shrink-0", activeSection === section.id ? "rotate-180" : "opacity-0")} />
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </Draggable>
+                                        ))}
+                                        {provided.placeholder}
+                                        {template.sections.length === 0 && (
+                                            <div className="text-center py-10 border-2 border-dashed border-slate-100 rounded-2xl">
+                                                <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">No sections yet</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </Droppable>
+                        </DragDropContext>
                     </Card>
 
                     <Card className="border-none shadow-xl rounded-[2.5rem] p-8 bg-slate-900 text-white">
@@ -261,7 +328,7 @@ export default function AdmissionFormBuilder() {
                                                         <div
                                                             ref={provided.innerRef}
                                                             {...provided.draggableProps}
-                                                            className="group bg-white rounded-[2rem] p-6 shadow-sm border border-slate-100 flex items-center gap-6 hover:shadow-xl hover:border-indigo-100 transition-all"
+                                                            className="group bg-white rounded-2xl p-6 shadow-sm border border-slate-100 flex items-center gap-6 hover:shadow-xl hover:border-indigo-100 transition-all"
                                                         >
                                                             <div {...provided.dragHandleProps} className="p-3 bg-slate-50 rounded-2xl text-slate-300 group-hover:text-indigo-400 group-hover:bg-indigo-50 transition-colors">
                                                                 <GripVertical className="w-6 h-6" />
@@ -310,7 +377,7 @@ export default function AdmissionFormBuilder() {
                                             {currentSection.fields.length === 0 && (
                                                 <div className="py-32 text-center bg-white border-4 border-dashed border-slate-50 rounded-[3rem]">
                                                     <div className="max-w-xs mx-auto space-y-4">
-                                                        <div className="p-6 bg-slate-50 rounded-[2rem] w-fit mx-auto">
+                                                        <div className="p-6 bg-slate-50 rounded-2xl w-fit mx-auto">
                                                             <Plus className="w-10 h-10 text-slate-200" />
                                                         </div>
                                                         <h4 className="text-xl font-black text-slate-300 italic uppercase">Empty Section</h4>
@@ -434,7 +501,7 @@ export default function AdmissionFormBuilder() {
                                     <label htmlFor="isRequired" className="text-xs font-black uppercase tracking-widest text-slate-700 cursor-pointer">Required Field</label>
                                 </div>
 
-                                <div className="p-6 bg-indigo-50 rounded-[2rem] space-y-4">
+                                <div className="p-6 bg-indigo-50 rounded-2xl space-y-4">
                                     <div className="flex items-center gap-4">
                                         <input 
                                             type="checkbox"
@@ -460,6 +527,7 @@ export default function AdmissionFormBuilder() {
                                                 <option value="gender">Gender</option>
                                                 <option value="email">Email</option>
                                                 <option value="phone">Phone Number</option>
+                                                <option value="nin">National Identification Number (NIN)</option>
                                             </select>
                                         </div>
                                     )}
@@ -481,6 +549,55 @@ export default function AdmissionFormBuilder() {
                 .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
                 .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #cbd5e1; }
             `}</style>
+            {showSettingsModal && (
+                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-50 flex items-center justify-center p-4">
+                    <Card className="w-full max-w-md border-none shadow-2xl rounded-[3rem] overflow-hidden animate-in fade-in zoom-in duration-300">
+                        <CardHeader className="bg-slate-900 text-white p-8">
+                            <CardTitle className="text-2xl font-black italic uppercase">Form Template Settings</CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-8 space-y-6 bg-white">
+                            <form onSubmit={handleSaveSettings} className="space-y-4">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">Form Title</label>
+                                    <input 
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 font-bold outline-none focus:ring-2 focus:ring-indigo-500"
+                                        placeholder="e.g. 2026/2027 Admission"
+                                        value={settingsData.name}
+                                        onChange={(e) => setSettingsData({...settingsData, name: e.target.value})}
+                                        required
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">Custom Public URL (Slug)</label>
+                                    <input 
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 font-bold outline-none focus:ring-2 focus:ring-indigo-500"
+                                        placeholder="e.g. primary-intake-2026"
+                                        value={settingsData.slug}
+                                        onChange={(e) => setSettingsData({...settingsData, slug: e.target.value.toLowerCase().replace(/ /g, '-')})}
+                                        required
+                                    />
+                                    <p className="text-[10px] font-bold text-slate-500 px-1">Changes the URL users visit. Current URL: /admission/{template.slug}</p>
+                                </div>
+                                <div className="flex gap-4 pt-4">
+                                    <Button 
+                                        type="button" variant="ghost"
+                                        onClick={() => setShowSettingsModal(false)}
+                                        className="flex-1 font-black py-6 rounded-2xl uppercase text-[10px] tracking-widest"
+                                    >
+                                        Cancel
+                                    </Button>
+                                    <Button 
+                                        type="submit"
+                                        className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-black py-6 rounded-2xl uppercase text-[10px] tracking-widest"
+                                    >
+                                        Save Changes
+                                    </Button>
+                                </div>
+                            </form>
+                        </CardContent>
+                    </Card>
+                </div>
+            )}
         </div>
     );
 }

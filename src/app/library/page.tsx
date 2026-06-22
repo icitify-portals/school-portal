@@ -9,6 +9,7 @@ import { searchLibraryBento } from "@/actions/library";
 import { toast } from "sonner";
 import LibraryChatBot from "@/components/library/LibraryChatBot";
 import CitationGenerator from "@/components/library/CitationGenerator";
+import LiveShelfMap from "@/components/library/LiveShelfMap";
 
 export default function LibraryBentoBox() {
     const [searchQuery, setSearchQuery] = useState("");
@@ -18,6 +19,17 @@ export default function LibraryBentoBox() {
     const [physicalBooks, setPhysicalBooks] = useState<any[]>([]);
     const [digitalAssets, setDigitalAssets] = useState<any[]>([]);
     const [isSearching, setIsSearching] = useState(false);
+
+    // Live shelf map states
+    const [selectedShelf, setSelectedShelf] = useState<string | null>(null);
+    const [selectedTitle, setSelectedTitle] = useState("");
+    const [mapOpen, setMapOpen] = useState(false);
+
+    const handleLocateBook = (shelf: string, title: string) => {
+        setSelectedShelf(shelf);
+        setSelectedTitle(title);
+        setMapOpen(true);
+    };
 
     // Debounce search
     useEffect(() => {
@@ -112,7 +124,7 @@ export default function LibraryBentoBox() {
                             <div className="space-y-4">
                                 {physicalBooks.length === 0 ? <p className="text-slate-500 font-bold italic">No physical books found.</p> : null}
                                 {physicalBooks.map((item, i) => (
-                                    <div key={i} className="flex gap-4 p-5 bg-slate-900 rounded-3xl border border-slate-800 hover:border-indigo-500/50 transition-all">
+                                    <div key={i} className="flex gap-4 p-5 bg-slate-900 rounded-2xl border border-slate-800 hover:border-indigo-500/50 transition-all">
                                         <div className="h-24 w-16 bg-slate-800 rounded-xl overflow-hidden shrink-0 shadow-lg">
                                             {item.resource.coverUrl ? <img src={item.resource.coverUrl} className="h-full w-full object-cover" /> : <div className="h-full w-full bg-slate-800 flex items-center justify-center"><Book className="text-slate-600 h-6 w-6"/></div>}
                                         </div>
@@ -129,6 +141,14 @@ export default function LibraryBentoBox() {
                                             </div>
                                             <div className="absolute right-0 bottom-0 flex gap-2">
                                                 <CitationGenerator resource={item.resource} />
+                                                <Button 
+                                                    variant="outline" 
+                                                    size="sm" 
+                                                    className="h-8 text-xs font-bold bg-indigo-600 hover:bg-indigo-700 border-none text-white shadow-sm"
+                                                    onClick={() => handleLocateBook(item.resource.shelfLocation || "Shelf A-1", item.resource.title)}
+                                                >
+                                                    Locate
+                                                </Button>
                                                 <Button 
                                                     variant="outline" 
                                                     size="sm" 
@@ -162,7 +182,7 @@ export default function LibraryBentoBox() {
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 {digitalAssets.length === 0 ? <p className="text-slate-500 font-bold italic col-span-2">No digital resources found.</p> : null}
                                 {digitalAssets.map((item, i) => (
-                                    <div key={i} className="group p-5 bg-gradient-to-br from-slate-900 to-slate-900/50 rounded-3xl border border-slate-800 hover:border-purple-500/50 transition-all flex flex-col justify-between min-h-[160px] relative overflow-hidden">
+                                    <div key={i} className="group p-5 bg-gradient-to-br from-slate-900 to-slate-900/50 rounded-2xl border border-slate-800 hover:border-purple-500/50 transition-all flex flex-col justify-between min-h-[160px] relative overflow-hidden">
                                          <div className="absolute -right-6 -bottom-6 h-32 w-32 bg-purple-500/5 blur-3xl rounded-full group-hover:bg-purple-500/20 transition-all" />
                                          <div className="flex justify-between items-start relative z-10 gap-2">
                                             <Badge className="bg-slate-800 text-purple-300 gap-1 rounded-full uppercase tracking-widest text-[10px] shrink-0">
@@ -197,6 +217,13 @@ export default function LibraryBentoBox() {
             </div>
 
             <LibraryChatBot />
+
+            <LiveShelfMap 
+                isOpen={mapOpen} 
+                onClose={() => setMapOpen(false)} 
+                shelfLocation={selectedShelf || "Shelf A-1"} 
+                bookTitle={selectedTitle} 
+            />
         </div>
     );
 }

@@ -135,7 +135,7 @@ export default function InstitutionSettings({ units, currentSession, initialSett
 
     return (
         <div className="space-y-8 animate-in fade-in duration-500">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
                 <div className="flex items-center gap-4">
                     <div className="w-14 h-14 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-100">
                         <School className="text-white w-7 h-7" />
@@ -180,7 +180,7 @@ export default function InstitutionSettings({ units, currentSession, initialSett
                     <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                         {/* Units Navigation */}
                         <div className="lg:col-span-4 space-y-4">
-                            <Card className="border-none shadow-sm rounded-3xl overflow-hidden ring-1 ring-slate-100">
+                            <Card className="border-none shadow-sm rounded-2xl overflow-hidden ring-1 ring-slate-100">
                                 <CardHeader className="bg-slate-50/50 border-b border-slate-100">
                                     <CardTitle className="text-lg font-black text-slate-900 flex items-center gap-2">
                                         <LayoutGrid className="w-5 h-5 text-indigo-600" /> Academic Levels
@@ -211,7 +211,7 @@ export default function InstitutionSettings({ units, currentSession, initialSett
                                 </CardContent>
                             </Card>
 
-                            <Card className="border-none shadow-sm rounded-3xl overflow-hidden ring-1 ring-slate-100 bg-indigo-600 text-white">
+                            <Card className="border-none shadow-sm rounded-2xl overflow-hidden ring-1 ring-slate-100 bg-indigo-600 text-white">
                                 <CardContent className="p-6 space-y-4">
                                     <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
                                         <Plus className="w-6 h-6" />
@@ -233,7 +233,7 @@ export default function InstitutionSettings({ units, currentSession, initialSett
                             </div>
 
                             {/* Quick Add Form */}
-                            <Card className="border-none shadow-sm rounded-3xl ring-1 ring-slate-100 overflow-hidden">
+                            <Card className="border-none shadow-sm rounded-2xl ring-1 ring-slate-100 overflow-hidden">
                                 <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-6">
                                     <CardTitle className="text-sm font-black text-slate-900 uppercase tracking-widest">Quick Add Group</CardTitle>
                                 </CardHeader>
@@ -268,7 +268,7 @@ export default function InstitutionSettings({ units, currentSession, initialSett
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 {classGroups.filter(g => g.unitId === activeUnit).map((group) => (
-                                    <Card key={group.id} className="border-none shadow-sm rounded-3xl group hover:shadow-md transition-all ring-1 ring-slate-100">
+                                    <Card key={group.id} className="border-none shadow-sm rounded-2xl group hover:shadow-md transition-all ring-1 ring-slate-100">
                                         <CardContent className="p-6">
                                             <div className="flex items-center justify-between mb-4">
                                                 <div className="flex items-center gap-3">
@@ -303,7 +303,7 @@ export default function InstitutionSettings({ units, currentSession, initialSett
 
                 {/* CALENDAR TAB */}
                 <TabsContent value="calendar" className="mt-0 ring-offset-transparent focus-visible:outline-none">
-                    <Card className="border-none shadow-sm rounded-3xl overflow-hidden ring-1 ring-slate-100">
+                    <Card className="border-none shadow-sm rounded-2xl overflow-hidden ring-1 ring-slate-100">
                         <CardHeader className="bg-amber-50/50 border-b border-amber-100/50 p-8">
                             <div className="flex items-center gap-4">
                                 <div className="w-12 h-12 bg-amber-600 rounded-2xl flex items-center justify-center shadow-lg shadow-amber-100">
@@ -363,7 +363,7 @@ export default function InstitutionSettings({ units, currentSession, initialSett
 
                 {/* BRANDING TAB */}
                 <TabsContent value="branding" className="mt-0 ring-offset-transparent focus-visible:outline-none">
-                     <Card className="border-none shadow-sm rounded-3xl overflow-hidden ring-1 ring-slate-100">
+                     <Card className="border-none shadow-sm rounded-2xl overflow-hidden ring-1 ring-slate-100">
                         <CardHeader className="bg-emerald-50/50 border-b border-emerald-100/50 p-8">
                             <CardTitle className="text-2xl font-black text-slate-900">Visual Identity</CardTitle>
                         </CardHeader>
@@ -396,7 +396,7 @@ export default function InstitutionSettings({ units, currentSession, initialSett
 
                 {/* TERMINOLOGY TAB */}
                 <TabsContent value="terminology" className="mt-0 ring-offset-transparent focus-visible:outline-none">
-                     <Card className="border-none shadow-sm rounded-3xl overflow-hidden ring-1 ring-slate-100">
+                     <Card className="border-none shadow-sm rounded-2xl overflow-hidden ring-1 ring-slate-100">
                         <CardHeader className="bg-rose-50/50 border-b border-rose-100/50 p-8">
                             <CardTitle className="text-2xl font-black text-slate-900">Level Specific Terminology</CardTitle>
                             <CardDescription>Customize naming for {units.find(u => u.id === activeUnit)?.name}</CardDescription>

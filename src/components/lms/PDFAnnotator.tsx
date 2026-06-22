@@ -50,7 +50,7 @@ export default function PDFAnnotator({ fileUrl, initialData, onSave }: PDFAnnota
     };
 
     return (
-        <div className={`relative flex flex-col border border-slate-200 rounded-3xl overflow-hidden bg-white shadow-xl transition-all ${isFullscreen ? 'fixed inset-0 z-50' : 'h-[600px]'}`}>
+        <div className={`relative flex flex-col border border-slate-200 rounded-2xl overflow-hidden bg-white shadow-xl transition-all ${isFullscreen ? 'fixed inset-0 z-50' : 'h-[600px]'}`}>
             {/* Toolbar */}
             <div className="flex items-center justify-between px-6 py-3 bg-slate-900 text-white">
                 <div className="flex items-center gap-4">

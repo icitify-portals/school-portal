@@ -95,7 +95,7 @@ export function UniversalImporter({ title, description, onImport, templateColumn
     };
 
     return (
-        <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
             <div className="p-6 border-b border-slate-50 flex items-center justify-between">
                 <div>
                     <h3 className="text-lg font-black text-slate-900 tracking-tight uppercase italic">{title}</h3>
@@ -118,7 +118,7 @@ export function UniversalImporter({ title, description, onImport, templateColumn
                         )}
                     >
                         <input {...getInputProps()} />
-                        <div className="w-16 h-16 bg-blue-100 rounded-3xl flex items-center justify-center mb-4 text-blue-600">
+                        <div className="w-16 h-16 bg-blue-100 rounded-2xl flex items-center justify-center mb-4 text-blue-600">
                             <Upload className="w-8 h-8" />
                         </div>
                         <p className="text-sm font-bold text-slate-900">Drop your file here or click to browse</p>

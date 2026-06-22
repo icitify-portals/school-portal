@@ -34,7 +34,7 @@ export default async function DVCDashboard() {
     ];
 
     return (
-        <div className="p-8 max-w-7xl mx-auto space-y-10 bg-slate-50/20 min-h-screen">
+        <div className="p-8 max-w-[1600px] w-full mx-auto space-y-10 bg-slate-50/20 min-h-screen">
             {/* Header */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                 <div>
@@ -85,15 +85,15 @@ export default async function DVCDashboard() {
                     </CardHeader>
                     <CardContent className="p-10 pt-12">
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-8">
-                            <div className="p-6 bg-indigo-800/50 rounded-3xl border border-indigo-700/50 hover:bg-indigo-800 transition-colors">
+                            <div className="p-6 bg-indigo-800/50 rounded-2xl border border-indigo-700/50 hover:bg-indigo-800 transition-colors">
                                 <p className="text-4xl font-black italic">{stats.totalProgrammes}</p>
                                 <p className="text-[10px] font-black uppercase tracking-widest text-indigo-400 mt-2">Active Programmes</p>
                             </div>
-                            <div className="p-6 bg-indigo-800/50 rounded-3xl border border-indigo-700/50 hover:bg-indigo-800 transition-colors">
+                            <div className="p-6 bg-indigo-800/50 rounded-2xl border border-indigo-700/50 hover:bg-indigo-800 transition-colors">
                                 <p className="text-4xl font-black italic">85%</p>
                                 <p className="text-[10px] font-black uppercase tracking-widest text-indigo-400 mt-2">Admissions Filled</p>
                             </div>
-                            <div className="p-6 bg-indigo-800/50 rounded-3xl border border-indigo-700/50 hover:bg-indigo-800 transition-colors">
+                            <div className="p-6 bg-indigo-800/50 rounded-2xl border border-indigo-700/50 hover:bg-indigo-800 transition-colors">
                                 <p className="text-4xl font-black italic">94%</p>
                                 <p className="text-[10px] font-black uppercase tracking-widest text-indigo-400 mt-2">Result Audit Rate</p>
                             </div>
@@ -115,7 +115,7 @@ export default async function DVCDashboard() {
 
                 {/* System Monitoring */}
                 <div className="space-y-8">
-                    <Card className="border-none shadow-xl bg-white rounded-3xl">
+                    <Card className="border-none shadow-xl bg-white rounded-2xl">
                         <CardHeader>
                             <CardTitle className="text-sm font-black uppercase italic tracking-widest text-slate-400">Governance Tools</CardTitle>
                         </CardHeader>
@@ -140,7 +140,7 @@ export default async function DVCDashboard() {
                         </CardContent>
                     </Card>
 
-                    <Card className="border-none shadow-xl bg-emerald-600 text-white rounded-3xl overflow-hidden relative group cursor-pointer hover:bg-emerald-700 transition-colors">
+                    <Card className="border-none shadow-xl bg-emerald-600 text-white rounded-2xl overflow-hidden relative group cursor-pointer hover:bg-emerald-700 transition-colors">
                         <div className="absolute -bottom-4 -right-4 p-8 opacity-10 group-hover:scale-125 transition-transform">
                             <PieChart className="w-24 h-24" />
                         </div>

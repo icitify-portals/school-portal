@@ -55,7 +55,7 @@ export default function TemplateEngineStudio() {
   };
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-8 bg-slate-50 min-h-screen">
+    <div className="p-8 max-w-[1600px] w-full mx-auto space-y-8 bg-slate-50 min-h-screen">
       <div className="flex justify-between items-end">
         <div className="flex items-center gap-4">
           <div className="w-14 h-14 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-xl shadow-indigo-100">
@@ -108,16 +108,29 @@ export default function TemplateEngineStudio() {
                         </div>
                      </div>
                      
-                     {!template.isActive && previewTemplate?.id === template.id && (
-                        <button 
-                          onClick={(e) => { e.stopPropagation(); handleActivate(template.id); }}
-                          disabled={activating === template.id}
-                          className="bg-indigo-600 text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-indigo-700 transition-all flex items-center gap-2"
-                        >
-                           {activating === template.id ? <Loader2 size={14} className="animate-spin" /> : <RefreshCcw size={14} />}
-                           Set Active
-                        </button>
-                     )}
+                     <div className="flex gap-2">
+                        {previewTemplate?.id === template.id && (
+                            <button 
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    window.open(`/admin/academic/templates/preview?id=${template.id}`, '_blank');
+                                }}
+                                className="bg-white border border-slate-200 text-slate-600 px-4 py-2 rounded-xl text-xs font-bold hover:bg-slate-50 transition-all flex items-center gap-2 shadow-sm"
+                            >
+                                <Eye size={14} /> Full Preview
+                            </button>
+                        )}
+                        {!template.isActive && previewTemplate?.id === template.id && (
+                           <button 
+                             onClick={(e) => { e.stopPropagation(); handleActivate(template.id); }}
+                             disabled={activating === template.id}
+                             className="bg-indigo-600 text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-indigo-700 transition-all flex items-center gap-2 shadow-sm shadow-indigo-200"
+                           >
+                              {activating === template.id ? <Loader2 size={14} className="animate-spin" /> : <RefreshCcw size={14} />}
+                              Set Active
+                           </button>
+                        )}
+                     </div>
                   </div>
                 );
               })}

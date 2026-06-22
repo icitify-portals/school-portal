@@ -10,7 +10,7 @@ export default function NotFound() {
                         404
                     </div>
                     <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="w-24 h-24 bg-indigo-600 rounded-3xl rotate-12 flex items-center justify-center shadow-xl shadow-indigo-200">
+                        <div className="w-24 h-24 bg-indigo-600 rounded-2xl rotate-12 flex items-center justify-center shadow-xl shadow-indigo-200">
                             <MessageSquare className="w-12 h-12 text-white -rotate-12" />
                         </div>
                     </div>

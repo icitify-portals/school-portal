@@ -396,7 +396,7 @@ export default function TimetableManager({
                     </div>
 
                     {submission && submission.status !== 'approved' && (
-                        <div className="mt-8 p-6 bg-slate-900 rounded-[2rem] flex flex-col md:flex-row justify-between items-center gap-6">
+                        <div className="mt-8 p-6 bg-slate-900 rounded-2xl flex flex-col md:flex-row justify-between items-center gap-6">
                             <div className="flex gap-4 items-center">
                                 <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center">
                                     <Plus className="w-6 h-6 text-white" />
@@ -801,7 +801,7 @@ export default function TimetableManager({
                                     </span>
                                 </Button>
                             </DialogTrigger>
-                            <DialogContent className="sm:max-w-[425px] rounded-3xl overflow-hidden p-0 h-[600px] flex flex-col">
+                            <DialogContent className="sm:max-w-[425px] rounded-2xl overflow-hidden p-0 h-[600px] flex flex-col">
                                 <DialogHeader className="p-6 bg-slate-50 border-b shrink-0">
                                     <DialogTitle className="flex items-center gap-2">
                                         <MessageSquare className="w-5 h-5 text-indigo-600" />

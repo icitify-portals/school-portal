@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/db/db";
 import { students } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import { sendInAppNotification } from "./notifications";
 
 export async function getStudentWalletStatusAction(studentId: number) {
     try {
@@ -30,6 +31,18 @@ export async function getStudentWalletStatusAction(studentId: number) {
 export async function processWalletPaymentAction(studentId: number, amount: number, purpose: string) {
     try {
         const result = await WalletService.payFromWallet(studentId, amount, purpose);
+        
+        const student = await db.select({ userId: students.userId }).from(students).where(eq(students.id, studentId)).limit(1);
+        if (student.length > 0 && student[0].userId) {
+            await sendInAppNotification({
+                userId: student[0].userId,
+                title: "Wallet Payment",
+                message: `Your payment of ${amount} for ${purpose} was successful.`,
+                type: "success",
+                link: "/student/finance/wallet"
+            });
+        }
+
         revalidatePath("/student/finance/wallet");
         return { success: true, ...result };
     } catch (error) {
@@ -44,6 +57,18 @@ export async function simulateTopUpAction(studentId: number, amount: number) {
     try {
         const ref = `SIM-${Date.now()}`;
         await WalletService.creditWallet(studentId, amount, ref);
+        
+        const student = await db.select({ userId: students.userId }).from(students).where(eq(students.id, studentId)).limit(1);
+        if (student.length > 0 && student[0].userId) {
+            await sendInAppNotification({
+                userId: student[0].userId,
+                title: "Wallet Funded",
+                message: `Your wallet has been credited with ${amount}. Ref: ${ref}`,
+                type: "success",
+                link: "/student/finance/wallet"
+            });
+        }
+
         revalidatePath("/student/finance/wallet");
         return { success: true, reference: ref };
     } catch (error) {

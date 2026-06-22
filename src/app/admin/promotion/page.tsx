@@ -100,7 +100,7 @@ export default function PromotionPage() {
     }) || [];
 
     return (
-        <div className="p-6 md:p-10 max-w-7xl mx-auto space-y-8">
+        <div className="p-6 md:p-10 max-w-[1600px] w-full mx-auto space-y-8">
             {/* Header */}
             <div className="flex items-center gap-3">
                 <div className="p-3 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl shadow-lg shadow-indigo-200">
@@ -117,7 +117,7 @@ export default function PromotionPage() {
             </div>
 
             {/* Session Selectors */}
-            <Card className="border-none shadow-xl rounded-[2rem] bg-white overflow-hidden">
+            <Card className="border-none shadow-xl rounded-2xl bg-white overflow-hidden">
                 <CardContent className="p-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
@@ -199,7 +199,7 @@ export default function PromotionPage() {
 
             {/* Result Banner */}
             {result && (
-                <Card className="border-none shadow-xl rounded-[2rem] bg-gradient-to-r from-emerald-50 to-green-50 overflow-hidden">
+                <Card className="border-none shadow-xl rounded-2xl bg-gradient-to-r from-emerald-50 to-green-50 overflow-hidden">
                     <CardContent className="p-6 flex items-center gap-4">
                         <CheckCircle2 className="w-10 h-10 text-emerald-600" />
                         <div>

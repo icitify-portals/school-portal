@@ -43,7 +43,7 @@ export default function AdminTransfersPage() {
 
             <div className="grid grid-cols-1 gap-6">
                 {transfers.map((transfer) => (
-                    <Card key={transfer.id} className="border-slate-200 shadow-sm rounded-[2rem] overflow-hidden bg-white">
+                    <Card key={transfer.id} className="border-slate-200 shadow-sm rounded-2xl overflow-hidden bg-white">
                         <CardHeader className="p-6 border-b border-slate-100 flex flex-row items-center justify-between">
                             <div className="flex items-center gap-4">
                                 <div className="h-12 w-12 rounded-2xl bg-indigo-50 flex items-center justify-center">

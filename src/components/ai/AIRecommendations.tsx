@@ -83,7 +83,7 @@ export function AIRecommendations() {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {data.recommendations.map((rec) => (
                         <Link key={rec.id} href={`/student/courses/${rec.courseId}/lessons/${rec.id}`}>
-                            <div className="group p-6 rounded-[2rem] border-2 border-slate-50 bg-slate-50/30 hover:border-indigo-600 hover:bg-white hover:shadow-xl transition-all duration-300 h-full flex flex-col justify-between">
+                            <div className="group p-6 rounded-2xl border-2 border-slate-50 bg-slate-50/30 hover:border-indigo-600 hover:bg-white hover:shadow-xl transition-all duration-300 h-full flex flex-col justify-between">
                                 <div className="space-y-4">
                                     <div className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center text-indigo-600 group-hover:scale-110 transition-transform">
                                         <BookOpen className="w-5 h-5" />

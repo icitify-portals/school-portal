@@ -171,12 +171,12 @@ export default function UnitsPage() {
     );
 
     return (
-        <div className="p-8 max-w-7xl mx-auto space-y-12 pb-24">
+        <div className="p-8 max-w-[1600px] w-full mx-auto space-y-12 pb-24">
             {/* Header Section */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                 <div>
                     <h1 className="text-5xl font-black text-slate-900 flex items-center gap-6 italic tracking-tighter">
-                        <div className="p-4 bg-indigo-600 rounded-[2rem] shadow-2xl shadow-indigo-200">
+                        <div className="p-4 bg-indigo-600 rounded-2xl shadow-2xl shadow-indigo-200">
                             <Building2 className="w-10 h-10 text-white" />
                         </div>
                         INSTITUTIONAL ARCHITECTURE
@@ -187,13 +187,13 @@ export default function UnitsPage() {
                     <Button
                         onClick={() => setShowCategoryModal(true)}
                         variant="outline"
-                        className="border-slate-200 hover:bg-slate-50 text-slate-900 font-black px-8 py-8 rounded-[2rem] flex gap-3 uppercase text-[10px] tracking-widest"
+                        className="border-slate-200 hover:bg-slate-50 text-slate-900 font-black px-8 py-8 rounded-2xl flex gap-3 uppercase text-[10px] tracking-widest"
                     >
                         <Settings className="w-5 h-5" /> Categories
                     </Button>
                     <Button
                         onClick={handleOpenAdd}
-                        className="bg-slate-900 hover:bg-slate-800 text-white font-black px-10 py-8 rounded-[2rem] shadow-2xl transition-all hover:scale-105 active:scale-95 flex gap-4 uppercase text-[10px] tracking-widest group"
+                        className="bg-slate-900 hover:bg-slate-800 text-white font-black px-10 py-8 rounded-2xl shadow-2xl transition-all hover:scale-105 active:scale-95 flex gap-4 uppercase text-[10px] tracking-widest group"
                     >
                         <Plus className="w-6 h-6 group-hover:rotate-90 transition-transform duration-500" /> Register Branch
                     </Button>
@@ -225,7 +225,7 @@ export default function UnitsPage() {
                             <CardHeader className="p-10 bg-slate-900 text-white flex flex-row justify-between items-center relative overflow-hidden">
                                 <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full -mr-16 -mt-16 blur-3xl" />
                                 <div className="flex items-center gap-6 relative z-10">
-                                    <div className="p-4 bg-white/10 rounded-3xl backdrop-blur-xl border border-white/10 shadow-2xl">
+                                    <div className="p-4 bg-white/10 rounded-2xl backdrop-blur-xl border border-white/10 shadow-2xl">
                                         <Icon className="w-8 h-8 text-indigo-400" />
                                     </div>
                                     <div>
@@ -282,7 +282,7 @@ export default function UnitsPage() {
 
                                 {/* Status Badges */}
                                 <div className="grid grid-cols-2 gap-6">
-                                    <div className="p-6 bg-slate-50 rounded-[2rem] border border-slate-100">
+                                    <div className="p-6 bg-slate-50 rounded-2xl border border-slate-100">
                                         <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">Operational Status</p>
                                         <span className={cn(
                                             "flex items-center gap-2 text-[11px] font-black uppercase tracking-widest",
@@ -292,7 +292,7 @@ export default function UnitsPage() {
                                             {u.unit.isActive ? "Live" : "Deactivated"}
                                         </span>
                                     </div>
-                                    <div className="p-6 bg-slate-50 rounded-[2rem] border border-slate-100">
+                                    <div className="p-6 bg-slate-50 rounded-2xl border border-slate-100">
                                         <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">Registry Reference</p>
                                         <span className="text-[11px] font-black text-slate-900 uppercase tracking-widest flex items-center gap-2">
                                             <CheckCircle2 className="w-4 h-4 text-indigo-600" />
@@ -368,7 +368,7 @@ export default function UnitsPage() {
                                     <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-4">Institutional Designation</label>
                                     <Input
                                         placeholder="e.g. Faculty of Applied Sciences"
-                                        className="rounded-3xl border-slate-200 px-8 py-8 font-black italic text-lg shadow-inner focus:ring-4 focus:ring-indigo-500/10 transition-all"
+                                        className="rounded-2xl border-slate-200 px-8 py-8 font-black italic text-lg shadow-inner focus:ring-4 focus:ring-indigo-500/10 transition-all"
                                         value={formData.name}
                                         onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                                         required
@@ -380,7 +380,7 @@ export default function UnitsPage() {
                                         <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-4">Registry Code</label>
                                         <Input
                                             placeholder="FAS"
-                                            className="rounded-3xl border-slate-200 px-8 py-8 font-black uppercase text-center text-lg shadow-inner focus:ring-4 focus:ring-indigo-500/10 transition-all"
+                                            className="rounded-2xl border-slate-200 px-8 py-8 font-black uppercase text-center text-lg shadow-inner focus:ring-4 focus:ring-indigo-500/10 transition-all"
                                             value={formData.code}
                                             onChange={(e) => setFormData({ ...formData, code: e.target.value })}
                                             required
@@ -389,7 +389,7 @@ export default function UnitsPage() {
                                     <div className="space-y-3">
                                         <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-4">Branch Category</label>
                                         <select
-                                            className="w-full h-[68px] rounded-3xl border border-slate-200 px-8 font-black uppercase text-[10px] tracking-widest bg-slate-50 shadow-inner appearance-none cursor-pointer focus:ring-4 focus:ring-indigo-500/10 transition-all"
+                                            className="w-full h-[68px] rounded-2xl border border-slate-200 px-8 font-black uppercase text-[10px] tracking-widest bg-slate-50 shadow-inner appearance-none cursor-pointer focus:ring-4 focus:ring-indigo-500/10 transition-all"
                                             value={formData.type}
                                             onChange={(e) => setFormData({ ...formData, type: e.target.value as any })}
                                         >
@@ -407,7 +407,7 @@ export default function UnitsPage() {
                                             type="button"
                                             onClick={() => setFormData({ ...formData, academicTier: 'tertiary' })}
                                             className={cn(
-                                                "p-6 rounded-[2rem] border-2 transition-all flex flex-col items-center gap-2",
+                                                "p-6 rounded-2xl border-2 transition-all flex flex-col items-center gap-2",
                                                 formData.academicTier === 'tertiary' ? "bg-indigo-600 border-indigo-600 text-white shadow-xl shadow-indigo-200" : "bg-slate-50 border-slate-100 text-slate-400 hover:border-slate-200"
                                             )}
                                         >
@@ -418,7 +418,7 @@ export default function UnitsPage() {
                                             type="button"
                                             onClick={() => setFormData({ ...formData, academicTier: 'k12' })}
                                             className={cn(
-                                                "p-6 rounded-[2rem] border-2 transition-all flex flex-col items-center gap-2",
+                                                "p-6 rounded-2xl border-2 transition-all flex flex-col items-center gap-2",
                                                 formData.academicTier === 'k12' ? "bg-indigo-600 border-indigo-600 text-white shadow-xl shadow-indigo-200" : "bg-slate-50 border-slate-100 text-slate-400 hover:border-slate-200"
                                             )}
                                         >
@@ -432,7 +432,7 @@ export default function UnitsPage() {
                                     <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-4">Executive Designation (Head Title)</label>
                                     <Input
                                         placeholder="Provost / Director / Dean"
-                                        className="rounded-3xl border-slate-200 px-8 py-8 font-black italic shadow-inner focus:ring-4 focus:ring-indigo-500/10 transition-all"
+                                        className="rounded-2xl border-slate-200 px-8 py-8 font-black italic shadow-inner focus:ring-4 focus:ring-indigo-500/10 transition-all"
                                         value={formData.headTitle}
                                         onChange={(e) => setFormData({ ...formData, headTitle: e.target.value })}
                                     />
@@ -441,7 +441,7 @@ export default function UnitsPage() {
                                 <div className="space-y-3">
                                     <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-4">Assign Controller (User)</label>
                                     <select
-                                        className="w-full h-[68px] rounded-3xl border border-slate-200 px-8 font-black uppercase text-[10px] tracking-widest bg-slate-50 shadow-inner appearance-none cursor-pointer focus:ring-4 focus:ring-indigo-500/10 transition-all"
+                                        className="w-full h-[68px] rounded-2xl border border-slate-200 px-8 font-black uppercase text-[10px] tracking-widest bg-slate-50 shadow-inner appearance-none cursor-pointer focus:ring-4 focus:ring-indigo-500/10 transition-all"
                                         value={formData.headUserId}
                                         onChange={(e) => setFormData({ ...formData, headUserId: e.target.value ? parseInt(e.target.value) : undefined })}
                                     >
@@ -457,13 +457,13 @@ export default function UnitsPage() {
                                         type="button"
                                         variant="ghost"
                                         onClick={() => setShowAddModal(false)}
-                                        className="flex-1 font-black py-8 rounded-3xl uppercase text-[10px] tracking-widest hover:bg-slate-100 transition-all"
+                                        className="flex-1 font-black py-8 rounded-2xl uppercase text-[10px] tracking-widest hover:bg-slate-100 transition-all"
                                     >
                                         Discard
                                     </Button>
                                     <Button
                                         type="submit"
-                                        className="flex-1 bg-slate-900 hover:bg-indigo-600 text-white font-black py-8 rounded-3xl uppercase text-[10px] tracking-widest shadow-2xl transition-all hover:scale-[1.02] active:scale-[0.98]"
+                                        className="flex-1 bg-slate-900 hover:bg-indigo-600 text-white font-black py-8 rounded-2xl uppercase text-[10px] tracking-widest shadow-2xl transition-all hover:scale-[1.02] active:scale-[0.98]"
                                     >
                                         {editingId ? "Commit Changes" : "Deploy Unit"}
                                     </Button>

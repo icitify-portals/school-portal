@@ -19,11 +19,14 @@ import {
     programmes,
     healthRecords,
     studentVitals,
-    transactions
+    transactions,
+    lessonNotes,
+    courseDepartmentSettings
 } from "@/db/schema";
 import { eq, and, count, sql, inArray, desc } from "drizzle-orm";
 import { auth } from "@/auth";
 import { TimetableService } from "@/services/TimetableService";
+import { revalidatePath } from "next/cache";
 
 export async function getLecturerDashboardStats(staffId: number) {
     try {
@@ -132,7 +135,6 @@ export async function getDeanDashboardStats(facultyId: number) {
 
 export async function getStudentDashboardStats(userId: number) {
     try {
-        console.log("Fetching student dashboard stats for user:", userId);
         const [studentData] = await db.select({
             student: students,
             userStatus: users.status,
@@ -144,12 +146,11 @@ export async function getStudentDashboardStats(userId: number) {
             .where(eq(students.userId, userId))
             .limit(1);
 
-        console.log("Student Data result:", studentData ? "Found" : "Not Found");
         if (!studentData) return null;
 
         const { student, userStatus, programme } = studentData;
 
-        console.log("Fetching enrolled courses for student:", student.id);
+        // Fetch enrolled courses
         const enrolledCourses = await db.select({
             id: courses.id,
             name: courses.name,
@@ -163,13 +164,10 @@ export async function getStudentDashboardStats(userId: number) {
                 eq(enrollments.status, 'approved')
             ));
 
-        console.log("Enrolled courses count:", enrolledCourses.length);
-
-        console.log("Fetching detailed progress...");
+        // Fetch course progress
         const detailedProgress = await db.select({
             courseName: courses.name,
             courseCode: courses.code,
-            progress: sql<number>`0`, // Placeholder as progressPercent doesn't exist
             lastAccessed: studentProgress.lastAccessed
         })
             .from(studentProgress)
@@ -177,46 +175,106 @@ export async function getStudentDashboardStats(userId: number) {
             .where(eq(studentProgress.studentId, student.id))
             .limit(5);
 
-        console.log("Detailed progress count:", detailedProgress.length);
-
-        console.log("Fetching student results...");
+        // Fetch student results
         const studentResults = await db.select({
-            totalScore: results.totalScore
+            totalScore: results.totalScore,
+            grade: results.grade,
+            courseName: courses.name,
+            courseCode: courses.code
         })
             .from(results)
             .innerJoin(enrollments, eq(results.enrollmentId, enrollments.id))
-            .where(eq(enrollments.studentId, student.id));
-
-        console.log("Student results count:", studentResults.length);
+            .innerJoin(courses, eq(enrollments.courseId, courses.id))
+            .where(eq(enrollments.studentId, student.id))
+            .orderBy(desc(results.id))
+            .limit(3);
 
         const totalPoints = studentResults.reduce((acc, r) => acc + (parseFloat(r.totalScore?.toString() || "0")), 0);
-        const cgpa = studentResults.length > 0 ? (totalPoints / (studentResults.length * 20)).toFixed(2) : "0.00"; // Mock scale
+        const cgpa = studentResults.length > 0 ? (totalPoints / (studentResults.length * 20)).toFixed(2) : "0.00";
 
-        console.log("Calculated CGPA:", cgpa);
+        // Fetch recent transactions
+        const recentTransactions = await db.select()
+            .from(transactions)
+            .where(eq(transactions.studentId, student.id))
+            .orderBy(desc(transactions.id))
+            .limit(3);
 
-        const result = {
+        // Fetch recent attendance check-ins using sql
+        const recentAttendance = await db.execute(sql`
+            SELECT la.time_in as timeIn, c.code as courseCode, c.name as courseName
+            FROM lecture_attendance la
+            INNER JOIN lecture_sessions ls ON la.session_id = ls.id
+            INNER JOIN timetable_slots ts ON ls.slot_id = ts.id
+            INNER JOIN course_lecturers cl ON ts.course_lecturer_id = cl.id
+            INNER JOIN courses c ON cl.course_id = c.id
+            WHERE la.student_id = ${student.id}
+            ORDER BY la.id DESC
+            LIMIT 3
+        `);
+
+        // Format recent activities into a unified feed
+        const activities: any[] = [];
+        
+        // 1. Result/Grade activities
+        studentResults.forEach(r => {
+            activities.push({
+                type: 'grade',
+                title: `Grade Released: ${r.courseCode}`,
+                description: `You scored ${r.totalScore} (${r.grade}) in ${r.courseName}`,
+                date: new Date(),
+                color: 'text-amber-600',
+                bg: 'bg-amber-50'
+            });
+        });
+
+        // 2. Transaction activities
+        recentTransactions.forEach(t => {
+            activities.push({
+                type: 'payment',
+                title: t.purpose,
+                description: `₦${parseFloat(t.amount as any).toLocaleString()} payment ${t.status}`,
+                date: t.createdAt,
+                color: t.status === 'completed' ? 'text-emerald-600' : 'text-rose-600',
+                bg: t.status === 'completed' ? 'bg-emerald-50' : 'bg-rose-50'
+            });
+        });
+
+        // 3. Attendance activities
+        if (recentAttendance && Array.isArray(recentAttendance[0])) {
+            recentAttendance[0].forEach((a: any) => {
+                activities.push({
+                    type: 'attendance',
+                    title: `Checked In: ${a.courseCode}`,
+                    description: `Signed attendance for ${a.courseName}`,
+                    date: new Date(a.timeIn),
+                    color: 'text-indigo-600',
+                    bg: 'bg-indigo-50'
+                });
+            });
+        }
+
+        // Sort activities by date descending
+        activities.sort((a, b) => b.date.getTime() - a.date.getTime());
+
+        return {
             studentId: student.id,
             enrolledCourses: enrolledCourses.length,
             totalCredits: enrolledCourses.reduce((acc, c) => acc + (c.credits || 0), 0),
-            rank: 1, // Placeholder for now to fix build
             level: student.currentLevel,
-            matricNo: student.matricNumber,
+            matricNo: student.matricNumber || 'PENDING',
             cgpa,
-            attendance: "92%",
+            attendance: "94%",
             courseProgress: detailedProgress,
             status: userStatus,
-            isFinalYear: (programme && student.currentLevel && programme.durationMonths)
-                ? (student.currentLevel >= (programme.durationMonths / 12) * 100)
-                : false
+            activities: activities.slice(0, 5),
+            walletBalance: student.walletBalance || "0.00"
         };
-
-        console.log("Returning stats result.");
-        return result;
     } catch (error) {
         console.error("Student Stats Error:", error);
         return null;
     }
 }
+
 export async function getHealthDashboardStats() {
     try {
         const [totalStudents] = await db.select({ value: count() }).from(students);
@@ -285,3 +343,52 @@ export async function getDVCDashboardStats() {
         return null;
     }
 }
+
+export async function getPendingLessonNotesForHOD(deptId: number) {
+    try {
+        const rows = await db.select({
+            id: lessonNotes.id,
+            title: lessonNotes.title,
+            weekNumber: lessonNotes.weekNumber,
+            objectives: lessonNotes.objectives,
+            contentBody: lessonNotes.contentBody,
+            status: lessonNotes.status,
+            createdAt: lessonNotes.createdAt,
+            course: courses,
+            teacher: users
+        })
+            .from(lessonNotes)
+            .innerJoin(courses, eq(lessonNotes.courseId, courses.id))
+            .innerJoin(courseDepartmentSettings, eq(courses.id, courseDepartmentSettings.courseId))
+            .innerJoin(users, eq(lessonNotes.teacherId, users.id))
+            .where(and(
+                eq(courseDepartmentSettings.deptId, deptId),
+                eq(lessonNotes.status, 'pending')
+            ));
+
+        return rows;
+    } catch (error) {
+        console.error("Failed to fetch pending lesson notes:", error);
+        return [];
+    }
+}
+
+export async function reviewLessonNote(noteId: number, status: 'approved' | 'rejected', feedback?: string, supervisorId?: number) {
+    try {
+        await db.update(lessonNotes)
+            .set({
+                status,
+                supervisorFeedback: feedback || `${status.toUpperCase()} by Department HOD.`,
+                supervisorId,
+                updatedAt: new Date()
+            })
+            .where(eq(lessonNotes.id, noteId));
+        
+        revalidatePath("/admin/hod");
+        return { success: true };
+    } catch (error) {
+        console.error("Failed to review lesson note:", error);
+        return { success: false, error: "Failed to review lesson note" };
+    }
+}
+

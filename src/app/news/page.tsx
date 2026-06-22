@@ -15,7 +15,7 @@ export default async function NewsHubPage() {
         <main className="bg-slate-50 min-h-screen">
             {/* Header / Search Hero */}
             <div className="bg-white border-b border-slate-100 py-20">
-                <div className="max-w-7xl mx-auto px-6 space-y-8">
+                <div className="max-w-[1600px] w-full mx-auto px-6 space-y-8">
                     <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                         <div className="space-y-4">
                             <Badge className="bg-indigo-50 text-indigo-600 border-indigo-100 rounded-full font-black uppercase tracking-[0.2em] text-[10px] px-4 py-1.5">
@@ -35,7 +35,7 @@ export default async function NewsHubPage() {
                 </div>
             </div>
 
-            <div className="max-w-7xl mx-auto px-6 py-16 space-y-20">
+            <div className="max-w-[1600px] w-full mx-auto px-6 py-16 space-y-20">
                 {/* Featured Story */}
                 {featured && (
                     <section>

@@ -28,7 +28,7 @@ export default async function HRPayrollPage() {
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 {/* Control Panel */}
-                <div className="bg-slate-900 rounded-3xl p-8 text-white shadow-2xl shadow-slate-200 relative overflow-hidden group">
+                <div className="bg-slate-900 rounded-2xl p-8 text-white shadow-2xl shadow-slate-200 relative overflow-hidden group">
                     <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-all scale-150 rotate-12">
                         <Cpu className="w-32 h-32" />
                     </div>
@@ -84,7 +84,7 @@ export default async function HRPayrollPage() {
                 </div>
 
                 {/* Status / Log */}
-                <div className="bg-white rounded-3xl p-8 border border-slate-200 shadow-sm flex flex-col justify-center text-center space-y-6">
+                <div className="bg-white rounded-2xl p-8 border border-slate-200 shadow-sm flex flex-col justify-center text-center space-y-6">
                     <div className="mx-auto p-6 bg-slate-50 rounded-full">
                         <FileText className="w-12 h-12 text-slate-300" />
                     </div>

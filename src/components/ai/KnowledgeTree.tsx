@@ -86,7 +86,7 @@ export function KnowledgeTree() {
                             key={branch.id}
                             onClick={() => setActiveBranch(branch)}
                             className={cn(
-                                "p-6 rounded-[2rem] border-2 transition-all cursor-pointer group",
+                                "p-6 rounded-2xl border-2 transition-all cursor-pointer group",
                                 activeBranch?.id === branch.id 
                                     ? "bg-indigo-600 border-indigo-600 text-white shadow-xl shadow-indigo-200" 
                                     : "bg-slate-50 border-transparent hover:border-slate-200"
@@ -149,7 +149,7 @@ export function KnowledgeTree() {
                             </div>
 
                             {activeBranch.mastery === 100 && (
-                                <div className="p-8 bg-amber-50 rounded-[2rem] border-2 border-amber-200 text-center space-y-4 animate-in zoom-in duration-500">
+                                <div className="p-8 bg-amber-50 rounded-2xl border-2 border-amber-200 text-center space-y-4 animate-in zoom-in duration-500">
                                     <Trophy className="w-12 h-12 text-amber-500 mx-auto" />
                                     <h4 className="text-xl font-black text-amber-900 uppercase tracking-tighter">Perfect Bloom!</h4>
                                     <p className="text-xs font-medium text-amber-700">You have achieved full sessional mastery in {activeBranch.subject}. Legendary status unlocked!</p>

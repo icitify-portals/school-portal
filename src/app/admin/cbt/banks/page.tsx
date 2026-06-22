@@ -49,7 +49,7 @@ export default function QuestionBanksPage() {
     };
 
     return (
-        <div className="p-8 max-w-7xl mx-auto space-y-8">
+        <div className="p-8 max-w-[1600px] w-full mx-auto space-y-8">
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
                     <Link href="/admin/cbt">
@@ -105,7 +105,7 @@ export default function QuestionBanksPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {banks.length === 0 && (
-                    <div className="col-span-full py-20 text-center bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200">
+                    <div className="col-span-full py-20 text-center bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200">
                         <FolderKanban className="w-12 h-12 text-slate-300 mx-auto mb-4" />
                         <h3 className="font-bold text-slate-900">No question banks found</h3>
                         <p className="text-sm text-slate-500">Create your first repository to start organizing questions.</p>
@@ -258,7 +258,7 @@ function BulkImportModal({ bank, onClose, onSuccess }: { bank: any, onClose: () 
                     </div>
 
                     <div className="relative">
-                        <label className="flex flex-col items-center justify-center w-full h-32 rounded-3xl border-2 border-dashed border-slate-200 bg-slate-50 hover:bg-white hover:border-indigo-500 transition-all cursor-pointer group">
+                        <label className="flex flex-col items-center justify-center w-full h-32 rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 hover:bg-white hover:border-indigo-500 transition-all cursor-pointer group">
                             <div className="flex flex-col items-center justify-center pt-5 pb-6">
                                 <Upload className="w-8 h-8 text-slate-300 group-hover:text-indigo-500 mb-2" />
                                 <p className="text-[10px] font-black uppercase text-slate-400">

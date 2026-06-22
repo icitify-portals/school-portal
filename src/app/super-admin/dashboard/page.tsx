@@ -41,12 +41,12 @@ export default function SuperAdminDashboard() {
         fetchStats();
     }, []);
 
-    const fetchStats = async () => {
+    async function fetchStats() {
         setLoading(true);
         const data = await getSuperAdminStats();
         setStats(data);
         setLoading(false);
-    };
+    }
 
     const handleOnboard = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -60,7 +60,7 @@ export default function SuperAdminDashboard() {
     if (loading) return <div className="p-20 text-center"><Loader2 className="w-10 h-10 animate-spin mx-auto text-indigo-500" /></div>;
 
     return (
-        <div className="p-8 max-w-7xl mx-auto space-y-8">
+        <div className="p-5 md:p-6 max-w-[1600px] w-full mx-auto space-y-6">
             <div className="flex justify-between items-center">
                 <div>
                     <h1 className="text-4xl font-black text-slate-900 flex items-center gap-4 italic">
@@ -252,8 +252,8 @@ export default function SuperAdminDashboard() {
 function StatCard({ label, value, icon: Icon, color }: any) {
     return (
         <Card className="border-none shadow-xl rounded-[2.5rem] overflow-hidden group hover:shadow-2xl transition-all duration-500">
-            <CardContent className="p-8 flex items-center gap-6">
-                <div className={cn("p-4 rounded-3xl transition-transform duration-500 group-hover:scale-110 group-hover:rotate-6", color)}>
+            <CardContent className="p-6 flex items-center gap-5">
+                <div className={cn("p-4 rounded-2xl transition-transform duration-500 group-hover:scale-110 group-hover:rotate-6", color)}>
                     <Icon className="w-8 h-8 text-white" />
                 </div>
                 <div>

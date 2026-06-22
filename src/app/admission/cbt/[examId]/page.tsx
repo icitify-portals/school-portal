@@ -174,7 +174,7 @@ export default function CandidateCBTPage() {
                             </div>
                         </div>
 
-                        <Button onClick={handleStart} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black py-10 rounded-3xl uppercase text-sm tracking-widest shadow-2xl shadow-indigo-200 transition-all hover:scale-[1.02]">
+                        <Button onClick={handleStart} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black py-10 rounded-2xl uppercase text-sm tracking-widest shadow-2xl shadow-indigo-200 transition-all hover:scale-[1.02]">
                             Initialize Examination
                         </Button>
                     </Card>
@@ -352,7 +352,7 @@ export default function CandidateCBTPage() {
                             <Button 
                                 onClick={handleFinalSubmit}
                                 disabled={submitting}
-                                className="w-full bg-rose-600 hover:bg-rose-700 text-white font-black py-8 rounded-3xl uppercase text-xs tracking-widest shadow-xl shadow-rose-100 flex gap-3"
+                                className="w-full bg-rose-600 hover:bg-rose-700 text-white font-black py-8 rounded-2xl uppercase text-xs tracking-widest shadow-xl shadow-rose-100 flex gap-3"
                             >
                                 {submitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <><CheckCircle className="w-5 h-5" /> Submit Examination</>}
                             </Button>

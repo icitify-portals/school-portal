@@ -102,7 +102,7 @@ export default function HostelList({
             ))}
 
             <button className="h-full min-h-[300px] border-4 border-dashed border-slate-100 rounded-[2.5rem] flex flex-col items-center justify-center gap-4 group hover:border-indigo-200 transition-all duration-500 hover:bg-indigo-50/30">
-                <div className="w-16 h-16 bg-white rounded-3xl shadow-lg border border-slate-100 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <div className="w-16 h-16 bg-white rounded-2xl shadow-lg border border-slate-100 flex items-center justify-center group-hover:scale-110 transition-transform">
                     <Plus className="w-8 h-8 text-indigo-600" />
                 </div>
                 <div className="text-center">

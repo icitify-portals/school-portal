@@ -79,7 +79,7 @@ export default function StudentGrowthPage() {
     };
 
     return (
-        <div className="p-8 max-w-5xl mx-auto space-y-8 bg-white min-h-screen">
+        <div className="p-8 max-w-[1600px] w-full mx-auto space-y-8 bg-white min-h-screen">
             <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-6 text-center lg:text-left">
                 <div>
                     <h1 className="text-4xl font-black text-slate-900 tracking-tight uppercase flex items-center justify-center lg:justify-start gap-4">
@@ -90,7 +90,7 @@ export default function StudentGrowthPage() {
                 </div>
                 <Button
                     onClick={() => setIsAdding(!isAdding)}
-                    className="bg-indigo-600 hover:bg-slate-900 rounded-3xl py-7 px-10 font-black uppercase text-[10px] tracking-widest gap-2 shadow-2xl transition-all w-full lg:w-auto"
+                    className="bg-indigo-600 hover:bg-slate-900 rounded-2xl py-7 px-10 font-black uppercase text-[10px] tracking-widest gap-2 shadow-2xl transition-all w-full lg:w-auto"
                 >
                     {isAdding ? "Cancel Entry" : <><Plus className="w-4 h-4" /> Add Achievement</>}
                 </Button>
@@ -110,7 +110,7 @@ export default function StudentGrowthPage() {
                                     value={title}
                                     onChange={e => setTitle(e.target.value)}
                                     placeholder="e.g. Google Data Analytics Professional Certificate"
-                                    className="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-3xl text-sm font-bold outline-none focus:border-indigo-500 transition-all"
+                                    className="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-2xl text-sm font-bold outline-none focus:border-indigo-500 transition-all"
                                 />
                             </div>
                             <div className="space-y-3">
@@ -120,7 +120,7 @@ export default function StudentGrowthPage() {
                                     value={provider}
                                     onChange={e => setProvider(e.target.value)}
                                     placeholder="e.g. Coursera / Google"
-                                    className="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-3xl text-sm font-bold outline-none focus:border-indigo-500 transition-all"
+                                    className="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-2xl text-sm font-bold outline-none focus:border-indigo-500 transition-all"
                                 />
                             </div>
                             <div className="space-y-3">
@@ -129,7 +129,7 @@ export default function StudentGrowthPage() {
                                     type="date"
                                     value={completionDate}
                                     onChange={e => setCompletionDate(e.target.value)}
-                                    className="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-3xl text-sm font-bold outline-none"
+                                    className="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-2xl text-sm font-bold outline-none"
                                 />
                             </div>
                             <div className="space-y-3">
@@ -139,13 +139,13 @@ export default function StudentGrowthPage() {
                                     value={certificateUrl}
                                     onChange={e => setCertificateUrl(e.target.value)}
                                     placeholder="Link to digital credential..."
-                                    className="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-3xl text-sm font-bold outline-none"
+                                    className="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-2xl text-sm font-bold outline-none"
                                 />
                             </div>
                         </div>
                         <Button
                             onClick={handleSubmit}
-                            className="w-full bg-slate-900 hover:bg-black rounded-3xl py-8 font-black uppercase text-xs tracking-[0.3em] shadow-2xl"
+                            className="w-full bg-slate-900 hover:bg-black rounded-2xl py-8 font-black uppercase text-xs tracking-[0.3em] shadow-2xl"
                         >
                             Submit for Verification
                         </Button>
@@ -160,7 +160,7 @@ export default function StudentGrowthPage() {
                     <Card key={c.certification.id} className="border-none shadow-[0_20px_50px_rgba(0,0,0,0.05)] rounded-[3rem] p-4 group hover:scale-[1.02] transition-all relative overflow-hidden bg-slate-50/50">
                         <div className="p-8 space-y-6">
                             <div className="flex justify-between items-start">
-                                <div className="w-16 h-16 bg-white rounded-3xl shadow-sm flex items-center justify-center group-hover:bg-indigo-600 transition-colors">
+                                <div className="w-16 h-16 bg-white rounded-2xl shadow-sm flex items-center justify-center group-hover:bg-indigo-600 transition-colors">
                                     <Award className="w-8 h-8 text-slate-900 group-hover:text-white" />
                                 </div>
                                 <span className={cn(

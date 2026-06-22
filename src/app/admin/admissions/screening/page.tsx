@@ -62,13 +62,41 @@ export default function AdmissionsScreeningDashboard() {
      }
   };
 
-  const filteredApplicants = applicants.filter(a => 
-    getApplicantName(a.formData).toLowerCase().includes(searchTerm.toLowerCase()) ||
-    a.id.toString().includes(searchTerm)
-  );
+  const getStudyMode = (formDataStr: string) => {
+     try {
+        const formData = JSON.parse(formDataStr || "{}");
+        let jambRegNo = "";
+        for (const key of Object.keys(formData)) {
+            if (key.toLowerCase().includes("jamb") && formData[key]) {
+                jambRegNo = String(formData[key]).trim();
+                break;
+            }
+        }
+        const isJambCandidate = !!jambRegNo && !jambRegNo.toLowerCase().includes("temp") && !jambRegNo.toLowerCase().includes("direct");
+        return isJambCandidate ? "Full-Time" : "Part-Time";
+     } catch (e) {
+        return "Part-Time";
+     }
+  };
+
+  const [activeTab, setActiveTab] = useState<'all' | 'ft' | 'pt'>('all');
+
+  const ftCount = applicants.filter(a => getStudyMode(a.formData) === 'Full-Time').length;
+  const ptCount = applicants.filter(a => getStudyMode(a.formData) === 'Part-Time').length;
+
+  const filteredApplicants = applicants.filter(a => {
+    const nameMatches = getApplicantName(a.formData).toLowerCase().includes(searchTerm.toLowerCase()) ||
+                        a.id.toString().includes(searchTerm);
+    if (!nameMatches) return false;
+
+    const mode = getStudyMode(a.formData);
+    if (activeTab === 'ft') return mode === 'Full-Time';
+    if (activeTab === 'pt') return mode === 'Part-Time';
+    return true;
+  });
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-8 bg-slate-50 min-h-screen">
+    <div className="p-8 max-w-[1600px] w-full mx-auto space-y-8 bg-slate-50 min-h-screen">
       <div className="flex justify-between items-end">
         <div className="flex items-center gap-4">
           <div className="w-14 h-14 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-xl shadow-indigo-100">
@@ -110,7 +138,7 @@ export default function AdmissionsScreeningDashboard() {
              { label: 'Unpaid Applications', value: applicants.filter(a => a.paymentStatus !== 'paid').length, icon: AlertCircle, color: 'text-amber-600', bg: 'bg-amber-50' },
              { label: 'Average Exam Score', value: '68.4%', icon: BarChart3, color: 'text-rose-600', bg: 'bg-rose-50' }
            ].map((stat, i) => (
-             <div key={i} className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex items-center gap-4">
+             <div key={i} className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-4">
                 <div className={`w-12 h-12 ${stat.bg} ${stat.color} rounded-2xl flex items-center justify-center`}>
                    <stat.icon size={24} />
                 </div>
@@ -124,7 +152,35 @@ export default function AdmissionsScreeningDashboard() {
 
         {/* Applicant List */}
         <div className="col-span-12 lg:col-span-9 space-y-6">
-           <div className="bg-white rounded-3xl border border-slate-100 shadow-xl overflow-hidden">
+           {/* Dynamic Tabs */}
+           <div className="flex border-b border-slate-200 gap-8 text-sm font-bold px-2">
+              <button 
+                onClick={() => setActiveTab('all')}
+                className={`pb-4 border-b-2 transition-all ${
+                  activeTab === 'all' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-400 hover:text-slate-600'
+                }`}
+              >
+                All ({applicants.length})
+              </button>
+              <button 
+                onClick={() => setActiveTab('ft')}
+                className={`pb-4 border-b-2 transition-all ${
+                  activeTab === 'ft' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-400 hover:text-slate-600'
+                }`}
+              >
+                Full-Time (JAMB) ({ftCount})
+              </button>
+              <button 
+                onClick={() => setActiveTab('pt')}
+                className={`pb-4 border-b-2 transition-all ${
+                  activeTab === 'pt' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-400 hover:text-slate-600'
+                }`}
+              >
+                Part-Time (Direct) ({ptCount})
+              </button>
+           </div>
+
+           <div className="bg-white rounded-2xl border border-slate-100 shadow-xl overflow-hidden">
               <div className="p-6 border-b border-slate-50 bg-slate-50/30 flex justify-between items-center">
                  <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
                     <FileText size={20} className="text-indigo-600" />
@@ -142,6 +198,7 @@ export default function AdmissionsScreeningDashboard() {
                        <tr className="border-b border-slate-50 text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-slate-50/50">
                           <th className="px-6 py-4 w-12"><input type="checkbox" className="rounded" /></th>
                           <th className="px-6 py-4">Applicant Detail</th>
+                          <th className="px-6 py-4">Study Mode</th>
                           <th className="px-6 py-4">Exam Score</th>
                           <th className="px-6 py-4">Status</th>
                           <th className="px-6 py-4">Applied Date</th>
@@ -151,7 +208,7 @@ export default function AdmissionsScreeningDashboard() {
                     <tbody className="divide-y divide-slate-50">
                        {loading ? (
                           <tr>
-                             <td colSpan={6} className="py-20 text-center">
+                             <td colSpan={7} className="py-20 text-center">
                                 <Loader2 size={32} className="animate-spin text-indigo-500 mx-auto" />
                              </td>
                           </tr>
@@ -174,6 +231,13 @@ export default function AdmissionsScreeningDashboard() {
                                       <div className="font-bold text-slate-900">{getApplicantName(app.formData)}</div>
                                       <div className="text-xs font-medium text-slate-400">ID: ADM-2026-{app.id}</div>
                                    </div>
+                                </div>
+                             </td>
+                             <td className="px-6 py-4">
+                                <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-black ${
+                                  getStudyMode(app.formData) === 'Full-Time' ? 'bg-indigo-50 text-indigo-700' : 'bg-orange-50 text-orange-700'
+                                }`}>
+                                   {getStudyMode(app.formData)}
                                 </div>
                              </td>
                              <td className="px-6 py-4">
@@ -214,7 +278,7 @@ export default function AdmissionsScreeningDashboard() {
 
         {/* Right Sidebar: Decision Center */}
         <div className="col-span-12 lg:col-span-3 space-y-6">
-           <div className="bg-slate-900 rounded-3xl p-8 text-white space-y-6 shadow-xl shadow-indigo-100">
+           <div className="bg-slate-900 rounded-2xl p-8 text-white space-y-6 shadow-xl shadow-indigo-100">
               <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center text-indigo-400">
                  <GraduationCap size={24} />
               </div>
@@ -230,7 +294,7 @@ export default function AdmissionsScreeningDashboard() {
               </button>
            </div>
 
-           <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm space-y-4">
+           <div className="bg-white p-8 rounded-2xl border border-slate-100 shadow-sm space-y-4">
               <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
                  <ArrowUpRight size={14} />
                  Recent Decisions

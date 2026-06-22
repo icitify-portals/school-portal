@@ -70,7 +70,7 @@ export default function COAPage() {
         : accounts;
 
     return (
-        <div className="p-8 max-w-5xl mx-auto">
+        <div className="p-8 max-w-[1600px] w-full mx-auto">
             <div className="flex justify-between items-center mb-10">
                 <div>
                     <h2 className="text-3xl font-bold text-slate-900 tracking-tight">Chart of Accounts</h2>

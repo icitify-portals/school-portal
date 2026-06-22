@@ -85,7 +85,7 @@ export default function ProfileStudio() {
            {activeTab === 'profile' ? (
              <div className="bg-white rounded-[40px] border border-slate-100 shadow-xl overflow-hidden animate-in slide-in-from-left-8 duration-500">
                 <div className="h-40 bg-gradient-to-r from-indigo-600 to-indigo-800 relative">
-                   <div className="absolute -bottom-16 left-12 p-1.5 bg-white rounded-3xl shadow-xl">
+                   <div className="absolute -bottom-16 left-12 p-1.5 bg-white rounded-2xl shadow-xl">
                       <div className="w-32 h-32 bg-slate-100 rounded-[22px] flex items-center justify-center text-slate-400 group relative cursor-pointer overflow-hidden">
                          <User size={48} />
                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">

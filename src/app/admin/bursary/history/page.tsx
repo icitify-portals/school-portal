@@ -57,7 +57,7 @@ export default function TransactionHistoryPage() {
     });
 
     return (
-        <div className="p-8 max-w-7xl mx-auto">
+        <div className="p-8 max-w-[1600px] w-full mx-auto">
             <div className="flex justify-between items-center mb-10">
                 <div>
                     <h2 className="text-3xl font-bold text-slate-900 tracking-tight flex items-center gap-3">
@@ -138,7 +138,7 @@ export default function TransactionHistoryPage() {
                                             </div>
                                         </td>
                                         <td className="px-8 py-4 font-black text-slate-900">
-                                            ₦{parseFloat(tx.amount).toLocaleString()}
+                                            {settings?.base_currency || '₦'}{parseFloat(tx.amount).toLocaleString()}
                                         </td>
                                         <td className="px-8 py-4 text-xs">
                                             <div className="flex items-center gap-1.5">

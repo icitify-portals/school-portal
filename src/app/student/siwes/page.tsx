@@ -88,7 +88,7 @@ export default function StudentSiwesPortal() {
     const currentPlacement = placements[0];
 
     return (
-        <div className="p-8 max-w-7xl mx-auto space-y-8">
+        <div className="p-8 max-w-[1600px] w-full mx-auto space-y-8">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                 <div>
                     <h1 className="text-4xl font-black text-slate-900 tracking-tight flex items-center gap-4 uppercase italic">
@@ -110,7 +110,7 @@ export default function StudentSiwesPortal() {
                     <button
                         onClick={() => setActiveTab('overview')}
                         className={cn(
-                            "w-full p-6 rounded-[2rem] text-left transition-all flex items-center gap-4 group",
+                            "w-full p-6 rounded-2xl text-left transition-all flex items-center gap-4 group",
                             activeTab === 'overview' ? "bg-indigo-600 text-white shadow-xl shadow-indigo-100" : "bg-white text-slate-400 hover:bg-slate-50"
                         )}
                     >
@@ -120,7 +120,7 @@ export default function StudentSiwesPortal() {
                     <button
                         onClick={() => setActiveTab('apply')}
                         className={cn(
-                            "w-full p-6 rounded-[2rem] text-left transition-all flex items-center gap-4 group",
+                            "w-full p-6 rounded-2xl text-left transition-all flex items-center gap-4 group",
                             activeTab === 'apply' ? "bg-indigo-600 text-white shadow-xl shadow-indigo-100" : "bg-white text-slate-400 hover:bg-slate-50"
                         )}
                     >
@@ -131,7 +131,7 @@ export default function StudentSiwesPortal() {
                         onClick={() => setActiveTab('logbook')}
                         disabled={!currentPlacement || currentPlacement.status === 'applied'}
                         className={cn(
-                            "w-full p-6 rounded-[2rem] text-left transition-all flex items-center gap-4 group",
+                            "w-full p-6 rounded-2xl text-left transition-all flex items-center gap-4 group",
                             activeTab === 'logbook' ? "bg-indigo-600 text-white shadow-xl shadow-indigo-100" : "bg-white text-slate-400 hover:bg-slate-50",
                             (!currentPlacement || currentPlacement.status === 'applied') && "opacity-50 cursor-not-allowed"
                         )}
@@ -176,15 +176,15 @@ export default function StudentSiwesPortal() {
                                         </div>
 
                                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-                                            <div className="p-6 rounded-3xl bg-slate-50 border border-slate-100 space-y-1">
+                                            <div className="p-6 rounded-2xl bg-slate-50 border border-slate-100 space-y-1">
                                                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Start Date</p>
                                                 <p className="text-sm font-black text-slate-700 uppercase italic">{currentPlacement.startDate ? new Date(currentPlacement.startDate).toLocaleDateString() : 'Pending'}</p>
                                             </div>
-                                            <div className="p-6 rounded-3xl bg-slate-50 border border-slate-100 space-y-1">
+                                            <div className="p-6 rounded-2xl bg-slate-50 border border-slate-100 space-y-1">
                                                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">End Date</p>
                                                 <p className="text-sm font-black text-slate-700 uppercase italic">{currentPlacement.endDate ? new Date(currentPlacement.endDate).toLocaleDateString() : 'Pending'}</p>
                                             </div>
-                                            <div className="p-6 rounded-3xl bg-slate-50 border border-slate-100 space-y-1">
+                                            <div className="p-6 rounded-2xl bg-slate-50 border border-slate-100 space-y-1">
                                                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Weeks Covered</p>
                                                 <p className="text-sm font-black text-slate-700 uppercase italic">{currentPlacement.logbooks?.length || 0} / {eligibility.config.durationMonths * 4}</p>
                                             </div>
@@ -305,7 +305,7 @@ export default function StudentSiwesPortal() {
                                                     {l.status}
                                                 </Badge>
                                             </div>
-                                            <p className="text-sm text-slate-600 font-medium leading-relaxed bg-white/50 p-6 rounded-3xl border border-slate-100 italic">
+                                            <p className="text-sm text-slate-600 font-medium leading-relaxed bg-white/50 p-6 rounded-2xl border border-slate-100 italic">
                                                 "{l.activities}"
                                             </p>
                                             <div className="mt-6 pt-6 border-t border-slate-100 flex justify-between items-center">

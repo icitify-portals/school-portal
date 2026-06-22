@@ -157,7 +157,7 @@ export default function HodReportsPage() {
     const reportTitle = reportType === 'final_year' ? 'FINAL YEAR RESULTS' : 'NON-FINAL YEAR RESULTS';
 
     return (
-        <div className="p-6 md:p-10 max-w-7xl mx-auto space-y-8">
+        <div className="p-6 md:p-10 max-w-[1600px] w-full mx-auto space-y-8">
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -184,7 +184,7 @@ export default function HodReportsPage() {
             </div>
 
             {/* Controls */}
-            <Card className="border-none shadow-xl rounded-[2rem] bg-white overflow-hidden">
+            <Card className="border-none shadow-xl rounded-2xl bg-white overflow-hidden">
                 <CardContent className="p-6">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
@@ -255,7 +255,7 @@ export default function HodReportsPage() {
             {/* On-screen Report Preview */}
             {report && (
                 <div className="space-y-4">
-                    <Card className="border-none shadow-xl rounded-[2rem] bg-white overflow-hidden">
+                    <Card className="border-none shadow-xl rounded-2xl bg-white overflow-hidden">
                         <CardContent className="p-6 space-y-6">
                             {/* Report Header (on-screen) */}
                             <div className="text-center space-y-1">

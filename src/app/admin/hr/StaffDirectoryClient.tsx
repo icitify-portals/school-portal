@@ -22,19 +22,37 @@ interface StaffDirectoryClientProps {
     initialStaff: any[];
     nonStaffUsers: any[];
     departments: any[];
+    userRole: string;
 }
 
-export function StaffDirectoryClient({ initialStaff, nonStaffUsers, departments }: StaffDirectoryClientProps) {
+export function StaffDirectoryClient({ initialStaff, nonStaffUsers, departments, userRole }: StaffDirectoryClientProps) {
     const [search, setSearch] = useState("");
+    const [categoryFilter, setCategoryFilter] = useState("");
+    const [departmentFilter, setDepartmentFilter] = useState("");
+    const [gradeFilter, setGradeFilter] = useState("");
     const [showImporter, setShowImporter] = useState(false);
     const [selectedUser, setSelectedUser] = useState<any | null>(null);
     const router = useRouter();
 
-    const filteredStaff = initialStaff.filter(s =>
-        s.user?.name.toLowerCase().includes(search.toLowerCase()) ||
-        s.user?.email.toLowerCase().includes(search.toLowerCase()) ||
-        s.staffId?.toLowerCase().includes(search.toLowerCase())
-    );
+    const canManageStaff = ["admin", "superadmin", "registrar", "dvc"].includes(userRole);
+
+    const filteredStaff = initialStaff.filter(s => {
+        const matchesSearch = 
+            s.user?.name.toLowerCase().includes(search.toLowerCase()) ||
+            s.user?.email.toLowerCase().includes(search.toLowerCase()) ||
+            s.staffId?.toLowerCase().includes(search.toLowerCase());
+        
+        const matchesCategory = 
+            !categoryFilter || s.staffCategory === categoryFilter;
+
+        const matchesDepartment = 
+            !departmentFilter || s.departmentId === parseInt(departmentFilter);
+
+        const matchesGrade = 
+            !gradeFilter || s.gradeLevel === gradeFilter;
+
+        return matchesSearch && matchesCategory && matchesDepartment && matchesGrade;
+    });
 
     return (
         <div className="space-y-8">
@@ -44,14 +62,16 @@ export function StaffDirectoryClient({ initialStaff, nonStaffUsers, departments 
                     <p className="text-slate-500 mt-1">Manage institutional human resources and employment status.</p>
                 </div>
                 <div className="flex items-center gap-4">
-                    <Button
-                        onClick={() => setShowImporter(!showImporter)}
-                        variant="outline"
-                        className="rounded-xl font-bold text-xs uppercase tracking-widest h-10 border-slate-200 bg-white gap-2"
-                    >
-                        {showImporter ? <X className="w-4 h-4" /> : <FileUp className="w-4 h-4" />}
-                        {showImporter ? "Close Importer" : "Import Staff"}
-                    </Button>
+                    {canManageStaff && (
+                        <Button
+                            onClick={() => setShowImporter(!showImporter)}
+                            variant="outline"
+                            className="rounded-xl font-bold text-xs uppercase tracking-widest h-10 border-slate-200 bg-white gap-2"
+                        >
+                            {showImporter ? <X className="w-4 h-4" /> : <FileUp className="w-4 h-4" />}
+                            {showImporter ? "Close Importer" : "Import Staff"}
+                        </Button>
+                    )}
                     <div className="bg-white px-4 py-2 rounded-xl shadow-sm border border-slate-200 flex items-center gap-4">
                         <Users className="w-5 h-5 text-blue-600" />
                         <div>
@@ -78,85 +98,128 @@ export function StaffDirectoryClient({ initialStaff, nonStaffUsers, departments 
             )}
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* Hiring Form */}
-                <div className="lg:col-span-1">
-                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 sticky top-8">
-                        <div className="flex items-center gap-2 mb-6 text-blue-600">
-                            <UserPlus className="w-5 h-5" />
-                            <h2 className="font-bold uppercase tracking-tight italic">Hire New Staff</h2>
+                {/* Hiring Form - Only shown to authorized roles */}
+                {canManageStaff && (
+                    <div className="lg:col-span-1">
+                        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 sticky top-8">
+                            <div className="flex items-center gap-2 mb-6 text-blue-600">
+                                <UserPlus className="w-5 h-5" />
+                                <h2 className="font-bold uppercase tracking-tight italic">Hire New Staff</h2>
+                            </div>
+
+                            <form action={async (formData) => {
+                                const userId = parseInt(formData.get("userId") as string);
+                                const departmentId = parseInt(formData.get("departmentId") as string);
+                                const jobTitle = formData.get("jobTitle") as string;
+                                const gradeLevel = formData.get("gradeLevel") as string;
+
+                                await hireStaff({
+                                    userId,
+                                    departmentId,
+                                    jobTitle,
+                                    gradeLevel
+                                });
+                                router.refresh();
+                            }} className="space-y-4">
+                                <div>
+                                    <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 tracking-widest">Select User</label>
+                                    <select name="userId" required className="w-full p-2.5 border border-slate-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-blue-500 outline-none transition-all">
+                                        <option value="">Choose a user...</option>
+                                        {nonStaffUsers.map(u => (
+                                            <option key={u.id} value={u.id}>{u.name} ({u.email})</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 tracking-widest">Job Title</label>
+                                    <input name="jobTitle" type="text" placeholder="e.g. Senior Lecturer" required className="w-full p-2.5 border border-slate-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-blue-500 outline-none transition-all" />
+                                </div>
+
+                                <div>
+                                    <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 tracking-widest">Department</label>
+                                    <select name="departmentId" required className="w-full p-2.5 border border-slate-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-blue-500 outline-none transition-all">
+                                        <option value="">Select Department</option>
+                                        {departments.map(d => (
+                                            <option key={d.id} value={d.id}>{d.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 tracking-widest">Grade Level</label>
+                                    <select name="gradeLevel" className="w-full p-2.5 border border-slate-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-blue-500 outline-none transition-all">
+                                        <option value="L1">Level 1</option>
+                                        <option value="L2">Level 2</option>
+                                        <option value="L3">Level 3</option>
+                                        <option value="L4">Level 4</option>
+                                        <option value="L5">Level 5</option>
+                                    </select>
+                                </div>
+
+                                <button className="w-full bg-blue-600 text-white py-3 rounded-xl font-black uppercase text-xs tracking-[0.2em] hover:bg-blue-700 transition shadow-lg mt-2">
+                                    Complete Onboarding
+                                </button>
+                            </form>
                         </div>
+                    </div>
+                )}
 
-                        <form action={async (formData) => {
-                            const userId = parseInt(formData.get("userId") as string);
-                            const departmentId = parseInt(formData.get("departmentId") as string);
-                            const jobTitle = formData.get("jobTitle") as string;
-                            const gradeLevel = formData.get("gradeLevel") as string;
-
-                            await hireStaff({
-                                userId,
-                                departmentId,
-                                jobTitle,
-                                gradeLevel
-                            });
-                            router.refresh();
-                        }} className="space-y-4">
-                            <div>
-                                <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 tracking-widest">Select User</label>
-                                <select name="userId" required className="w-full p-2.5 border border-slate-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-blue-500 outline-none transition-all">
-                                    <option value="">Choose a user...</option>
-                                    {nonStaffUsers.map(u => (
-                                        <option key={u.id} value={u.id}>{u.name} ({u.email})</option>
-                                    ))}
+                {/* Staff List */}
+                <div className={cn(canManageStaff ? "lg:col-span-2" : "lg:col-span-3")}>
+                    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                        <div className="p-6 border-b border-slate-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                            <h2 className="font-bold text-slate-800 uppercase tracking-tight italic">Employment Records</h2>
+                            <div className="flex flex-wrap gap-2 items-center w-full md:w-auto">
+                                <select
+                                    className="px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50 text-xs font-bold uppercase tracking-wider text-slate-700 cursor-pointer"
+                                    value={categoryFilter}
+                                    onChange={(e) => setCategoryFilter(e.target.value)}
+                                >
+                                    <option value="">All Categories</option>
+                                    <option value="academic">Academic</option>
+                                    <option value="non-academic">Non-Academic</option>
+                                    <option value="management">Management</option>
+                                    <option value="security">Security</option>
+                                    <option value="maintenance">Maintenance</option>
                                 </select>
-                            </div>
 
-                            <div>
-                                <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 tracking-widest">Job Title</label>
-                                <input name="jobTitle" type="text" placeholder="e.g. Senior Lecturer" required className="w-full p-2.5 border border-slate-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-blue-500 outline-none transition-all" />
-                            </div>
-
-                            <div>
-                                <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 tracking-widest">Department</label>
-                                <select name="departmentId" required className="w-full p-2.5 border border-slate-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-blue-500 outline-none transition-all">
-                                    <option value="">Select Department</option>
-                                    {departments.map(d => (
-                                        <option key={d.id} value={d.id}>{d.name}</option>
-                                    ))}
-                                </select>
-                            </div>
-
-                            <div>
-                                <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 tracking-widest">Grade Level</label>
-                                <select name="gradeLevel" className="w-full p-2.5 border border-slate-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-blue-500 outline-none transition-all">
+                                <select
+                                    className="px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50 text-xs font-bold uppercase tracking-wider text-slate-700 cursor-pointer"
+                                    value={gradeFilter}
+                                    onChange={(e) => setGradeFilter(e.target.value)}
+                                >
+                                    <option value="">All Levels</option>
                                     <option value="L1">Level 1</option>
                                     <option value="L2">Level 2</option>
                                     <option value="L3">Level 3</option>
                                     <option value="L4">Level 4</option>
                                     <option value="L5">Level 5</option>
                                 </select>
-                            </div>
 
-                            <button className="w-full bg-blue-600 text-white py-3 rounded-xl font-black uppercase text-xs tracking-[0.2em] hover:bg-blue-700 transition shadow-lg mt-2">
-                                Complete Onboarding
-                            </button>
-                        </form>
-                    </div>
-                </div>
+                                <select
+                                    className="px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50 text-xs font-bold uppercase tracking-wider text-slate-700 cursor-pointer"
+                                    value={departmentFilter}
+                                    onChange={(e) => setDepartmentFilter(e.target.value)}
+                                >
+                                    <option value="">All Departments</option>
+                                    {departments.map((d) => (
+                                        <option key={d.id} value={d.id.toString()}>
+                                            {d.name}
+                                        </option>
+                                    ))}
+                                </select>
 
-                {/* Staff List */}
-                <div className="lg:col-span-2">
-                    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                        <div className="p-6 border-b border-slate-100 flex justify-between items-center">
-                            <h2 className="font-bold text-slate-800 uppercase tracking-tight italic">Employment Records</h2>
-                            <div className="relative">
-                                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                                <input
-                                    type="text"
-                                    placeholder="Search staff..."
-                                    value={search}
-                                    onChange={(e) => setSearch(e.target.value)}
-                                    className="pl-10 pr-4 py-2 bg-slate-50 border-none rounded-xl text-sm w-64 focus:ring-2 focus:ring-blue-500 outline-none font-medium"
-                                />
+                                <div className="relative">
+                                    <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                                    <input
+                                        type="text"
+                                        placeholder="Search staff..."
+                                        value={search}
+                                        onChange={(e) => setSearch(e.target.value)}
+                                        className="pl-10 pr-4 py-2 bg-slate-50 border-none rounded-xl text-sm w-48 focus:ring-2 focus:ring-blue-500 outline-none font-medium"
+                                    />
+                                </div>
                             </div>
                         </div>
                         <div className="overflow-x-auto">
@@ -168,7 +231,7 @@ export function StaffDirectoryClient({ initialStaff, nonStaffUsers, departments 
                                         <th className="px-6 py-4">Department</th>
                                         <th className="px-6 py-4">Joined</th>
                                         <th className="px-6 py-4">Status</th>
-                                        <th className="px-6 py-4 text-right">Actions</th>
+                                        {canManageStaff && <th className="px-6 py-4 text-right">Actions</th>}
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100 italic">
@@ -212,21 +275,23 @@ export function StaffDirectoryClient({ initialStaff, nonStaffUsers, departments 
                                                     {s.isActive ? 'Active' : 'Inactive'}
                                                 </span>
                                             </td>
-                                            <td className="px-6 py-4 text-right">
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={() => setSelectedUser(s.user)}
-                                                    className="h-8 px-3 text-[10px] font-black uppercase tracking-widest text-indigo-600 hover:bg-indigo-50 rounded-lg"
-                                                >
-                                                    Account
-                                                </Button>
-                                            </td>
+                                            {canManageStaff && (
+                                                <td className="px-6 py-4 text-right">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => setSelectedUser(s.user)}
+                                                        className="h-8 px-3 text-[10px] font-black uppercase tracking-widest text-indigo-600 hover:bg-indigo-50 rounded-lg"
+                                                    >
+                                                        Account
+                                                    </Button>
+                                                </td>
+                                            )}
                                         </tr>
                                     ))}
                                     {filteredStaff.length === 0 && (
                                         <tr>
-                                            <td colSpan={5} className="px-6 py-12 text-center text-slate-400 italic">
+                                            <td colSpan={canManageStaff ? 6 : 5} className="px-6 py-12 text-center text-slate-400 italic">
                                                 No staff records found matching your search.
                                             </td>
                                         </tr>

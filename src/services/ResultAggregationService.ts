@@ -20,7 +20,7 @@ export class ResultAggregationService {
             name: users.name,
             admissionNumber: students.admissionNumber,
             currentLevel: students.currentLevel,
-            branchId: students.branchId
+            branchId: students.unitId
         })
         .from(students)
         .innerJoin(users, eq(students.userId, users.id))

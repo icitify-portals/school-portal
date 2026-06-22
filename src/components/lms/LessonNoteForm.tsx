@@ -248,7 +248,7 @@ export default function LessonNoteForm({
                                     <Label className="text-[10px] font-black uppercase tracking-tighter ml-1">Objectives</Label>
                                     <textarea 
                                         placeholder="What should students know after this lesson?"
-                                        className="min-h-[120px] w-full p-4 rounded-3xl border border-slate-100 bg-slate-50/50 text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                                        className="min-h-[120px] w-full p-4 rounded-2xl border border-slate-100 bg-slate-50/50 text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
                                         value={formData.objectives}
                                         onChange={(e) => setFormData({...formData, objectives: e.target.value})}
                                     />

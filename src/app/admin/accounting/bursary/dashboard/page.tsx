@@ -74,7 +74,7 @@ export default function BursaryDashboard() {
   };
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-8 bg-slate-50 min-h-screen">
+    <div className="p-8 max-w-[1600px] w-full mx-auto space-y-8 bg-slate-50 min-h-screen">
       <div className="flex justify-between items-end">
         <div className="flex items-center gap-4">
           <div className="w-14 h-14 bg-emerald-600 text-white rounded-2xl flex items-center justify-center shadow-xl shadow-emerald-100">
@@ -111,7 +111,7 @@ export default function BursaryDashboard() {
             </div>
             <div>
                <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Total Revenue</div>
-               <div className="text-4xl font-black text-slate-900">₦{overview?.revenue?.toLocaleString() || '0.00'}</div>
+               <div className="text-4xl font-black text-slate-900">{settings?.base_currency || '₦'}{overview?.revenue?.toLocaleString() || '0.00'}</div>
             </div>
          </div>
 
@@ -127,7 +127,7 @@ export default function BursaryDashboard() {
             </div>
             <div>
                <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Total Expenditure</div>
-               <div className="text-4xl font-black text-slate-900">₦{overview?.expenditure?.toLocaleString() || '0.00'}</div>
+               <div className="text-4xl font-black text-slate-900">{settings?.base_currency || '₦'}{overview?.expenditure?.toLocaleString() || '0.00'}</div>
             </div>
          </div>
 
@@ -142,7 +142,7 @@ export default function BursaryDashboard() {
             </div>
             <div>
                <div className="text-xs font-bold text-indigo-200 uppercase tracking-widest mb-1">Available Balance</div>
-               <div className="text-4xl font-black">₦{overview?.balance?.toLocaleString() || '0.00'}</div>
+               <div className="text-4xl font-black">{settings?.base_currency || '₦'}{overview?.balance?.toLocaleString() || '0.00'}</div>
             </div>
          </div>
       </div>
@@ -195,7 +195,7 @@ export default function BursaryDashboard() {
                                 </div>
                              </td>
                              <td className="px-8 py-6">
-                                <div className="text-lg font-black text-slate-900">₦{parseFloat(item.amount).toLocaleString()}</div>
+                                <div className="text-lg font-black text-slate-900">{settings?.base_currency || '₦'}{parseFloat(item.amount).toLocaleString()}</div>
                                 <div className="text-[10px] font-bold text-slate-400 flex items-center gap-1">
                                    <Clock size={10} />
                                    {new Date(item.date).toLocaleDateString()}

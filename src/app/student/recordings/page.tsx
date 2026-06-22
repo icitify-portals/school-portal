@@ -24,7 +24,7 @@ export default async function StudentRecordingsPage() {
 
     if (!student) {
         return (
-            <div className="p-6 md:p-10 max-w-7xl mx-auto">
+            <div className="p-6 md:p-10 max-w-[1600px] w-full mx-auto">
                 <Alert variant="destructive">
                     <AlertCircle className="h-4 w-4" />
                     <AlertTitle>Access Denied</AlertTitle>
@@ -53,7 +53,7 @@ export default async function StudentRecordingsPage() {
     }
 
     return (
-        <div className="p-6 md:p-10 space-y-6 max-w-7xl mx-auto">
+        <div className="p-6 md:p-10 space-y-6 max-w-[1600px] w-full mx-auto">
             <div>
                 <h1 className="text-3xl font-bold tracking-tight">Class Recordings</h1>
                 <p className="text-slate-500 mt-2">

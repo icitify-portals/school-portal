@@ -86,7 +86,7 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({ items, className }) 
                   className="w-full h-auto rounded-xl shadow-2xl"
                 />
               ) : item.mediaType === "audio" ? (
-                <div className="bg-white p-12 rounded-3xl w-full max-w-md shadow-2xl flex flex-col items-center gap-6">
+                <div className="bg-white p-12 rounded-2xl w-full max-w-md shadow-2xl flex flex-col items-center gap-6">
                   <div className="h-24 w-24 rounded-full bg-indigo-600 flex items-center justify-center animate-bounce">
                     <Music className="w-10 h-10 text-white" />
                   </div>
@@ -94,7 +94,7 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({ items, className }) 
                   <audio src={item.url} controls className="w-full" />
                 </div>
               ) : item.mediaType === "document" ? (
-                 <div className="bg-white p-12 rounded-3xl w-full max-w-md shadow-2xl flex flex-col items-center gap-6">
+                 <div className="bg-white p-12 rounded-2xl w-full max-w-md shadow-2xl flex flex-col items-center gap-6">
                     <FileText className="w-16 h-16 text-emerald-600" />
                     <h3 className="text-xl font-bold text-center">{item.caption || "Document"}</h3>
                     <a 

@@ -64,7 +64,7 @@ export default function SEOAnalyticsDashboard() {
                     { label: "Average Position", value: "12.4", change: "-1.2", icon: BarChart3, color: "text-amber-600", bg: "bg-amber-50" },
                     { label: "Indexed Pages", value: "1,245", change: "+42", icon: MonitorCheck, color: "text-purple-600", bg: "bg-purple-50" },
                 ].map((stat, i) => (
-                    <Card key={i} className="border-none shadow-sm rounded-3xl overflow-hidden">
+                    <Card key={i} className="border-none shadow-sm rounded-2xl overflow-hidden">
                         <CardContent className="p-6">
                             <div className="flex justify-between items-start">
                                 <div className={`p-3 rounded-2xl ${stat.bg} ${stat.color}`}>

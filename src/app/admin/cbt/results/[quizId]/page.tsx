@@ -86,7 +86,7 @@ export default function QuizResultsPage({ params }: Props) {
     if (loading) return <div className="p-8 text-center text-slate-500 font-bold">Loading assessment results...</div>;
 
     return (
-        <div className="p-8 space-y-8 max-w-7xl mx-auto">
+        <div className="p-8 space-y-8 max-w-[1600px] w-full mx-auto">
             <header className="flex justify-between items-end">
                 <div className="flex items-center gap-6">
                     <div>
@@ -104,9 +104,10 @@ export default function QuizResultsPage({ params }: Props) {
                             <SelectValue placeholder="AI Model" />
                         </SelectTrigger>
                         <SelectContent className="rounded-xl border-slate-100 shadow-xl">
-                            <SelectItem value="openai">OpenAI (GPT-4o)</SelectItem>
-                            <SelectItem value="gemini">Gemini (1.5 Flash)</SelectItem>
-                            <SelectItem value="deepseek">DeepSeek (V3)</SelectItem>
+                            <SelectItem value="gemini">Google Gemini (Free/Cheap)</SelectItem>
+                            <SelectItem value="openai">OpenAI (GPT-4o-mini)</SelectItem>
+                            <SelectItem value="openrouter">OpenRouter (Llama 3 / Others)</SelectItem>
+                            <SelectItem value="deepseek">Deepseek</SelectItem>
                         </SelectContent>
                     </Select>
                     <Button variant="outline" className="h-11 rounded-xl border-slate-200">
@@ -122,7 +123,7 @@ export default function QuizResultsPage({ params }: Props) {
             </header>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <Card className="rounded-3xl border-none shadow-sm bg-emerald-50/50">
+                <Card className="rounded-2xl border-none shadow-sm bg-emerald-50/50">
                     <CardHeader className="pb-2">
                         <CardTitle className="text-[10px] font-black uppercase text-emerald-600 tracking-widest">Average Score</CardTitle>
                     </CardHeader>
@@ -130,7 +131,7 @@ export default function QuizResultsPage({ params }: Props) {
                         <p className="text-3xl font-black text-emerald-900">{avgScore}%</p>
                     </CardContent>
                 </Card>
-                <Card className="rounded-3xl border-none shadow-sm bg-indigo-50/50">
+                <Card className="rounded-2xl border-none shadow-sm bg-indigo-50/50">
                     <CardHeader className="pb-2">
                         <CardTitle className="text-[10px] font-black uppercase text-indigo-600 tracking-widest">Completion Rate</CardTitle>
                     </CardHeader>
@@ -138,7 +139,7 @@ export default function QuizResultsPage({ params }: Props) {
                         <p className="text-3xl font-black text-indigo-900">{completionRate}%</p>
                     </CardContent>
                 </Card>
-                <Card className="rounded-3xl border-none shadow-sm bg-amber-50/50">
+                <Card className="rounded-2xl border-none shadow-sm bg-amber-50/50">
                     <CardHeader className="pb-2">
                         <CardTitle className="text-[10px] font-black uppercase text-amber-600 tracking-widest">Pending Grading</CardTitle>
                     </CardHeader>

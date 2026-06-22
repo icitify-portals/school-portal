@@ -16,7 +16,7 @@ export default function ReportCardUI({ data }: { data: any }) {
     const { student, results, behaviors, remarks, session, term: termName } = data;
 
     return (
-        <div className="p-4 md:p-8 max-w-5xl mx-auto space-y-12 animate-in fade-in duration-700">
+        <div className="p-4 md:p-8 max-w-[1600px] w-full mx-auto space-y-12 animate-in fade-in duration-700">
             {/* Action Bar (Not for Print) */}
             <div className="flex justify-between items-center print:hidden">
                 <div className="space-y-1">
@@ -67,7 +67,7 @@ export default function ReportCardUI({ data }: { data: any }) {
                             <FileText className="w-5 h-5 text-indigo-600" />
                             <h4 className="text-lg font-black uppercase tracking-tight text-slate-900">Academic Summary</h4>
                         </div>
-                        <div className="overflow-hidden border border-slate-100 rounded-3xl">
+                        <div className="overflow-hidden border border-slate-100 rounded-2xl">
                             <table className="w-full text-left">
                                 <thead className="bg-slate-50">
                                     <tr>
@@ -142,7 +142,7 @@ export default function ReportCardUI({ data }: { data: any }) {
                                 <Star className="w-5 h-5 text-indigo-600" />
                                 <h4 className="text-lg font-black uppercase tracking-tight text-slate-900">Official Remarks</h4>
                             </div>
-                            <div className="bg-slate-50 p-8 rounded-3xl space-y-6 border border-slate-100">
+                            <div className="bg-slate-50 p-8 rounded-2xl space-y-6 border border-slate-100">
                                 <div className="space-y-2">
                                     <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest italic">Form Teacher's Remark</p>
                                     <p className="text-sm font-medium text-slate-700 leading-relaxed italic">

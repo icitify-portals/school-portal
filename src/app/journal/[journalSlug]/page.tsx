@@ -120,7 +120,7 @@ export default function JournalDetailPage() {
         <div className="bg-slate-50/30 dark:bg-slate-950/20 min-h-screen">
             {/* Hero Section */}
             <div className="bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800 pt-12 pb-16">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div className="max-w-[1600px] w-full mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex flex-col md:flex-row gap-10 items-start">
                         <div className="h-48 w-48 rounded-[32px] bg-slate-50 dark:bg-slate-800 shadow-inner flex items-center justify-center p-6 shrink-0 outline outline-offset-4 outline-slate-100 dark:outline-slate-800">
                              {journal.logoUrl ? (
@@ -159,9 +159,9 @@ export default function JournalDetailPage() {
                 </div>
             </div>
 
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+            <div className="max-w-[1600px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-12">
                 <Tabs defaultValue="current" className="space-y-10 group">
-                    <TabsList className="bg-white dark:bg-slate-900 h-16 p-2 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800 w-full md:w-auto relative overflow-hidden">
+                    <TabsList className="bg-white dark:bg-slate-900 h-16 p-2 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 w-full md:w-auto relative overflow-hidden">
                         <div className="absolute top-0 left-0 w-full h-[2px] bg-slate-50 dark:bg-slate-800" />
                         <TabsTrigger value="current" className="rounded-2xl px-8 h-full font-black text-sm data-[state=active]:bg-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all">
                             Current Issue
@@ -215,7 +215,7 @@ export default function JournalDetailPage() {
                                             </Card>
                                         ) : (
                                             articles.filter(a => a.issueId === currentIssue.id && a.status === 'published').map((article) => (
-                                                <Card key={article.id} className="group/item hover:bg-white dark:hover:bg-slate-900 border-none shadow-sm hover:shadow-xl transition-all duration-300 rounded-3xl p-8 bg-transparent md:bg-white dark:md:bg-slate-900 border-slate-100 dark:border-slate-800">
+                                                <Card key={article.id} className="group/item hover:bg-white dark:hover:bg-slate-900 border-none shadow-sm hover:shadow-xl transition-all duration-300 rounded-2xl p-8 bg-transparent md:bg-white dark:md:bg-slate-900 border-slate-100 dark:border-slate-800">
                                                     <div className="flex flex-col md:flex-row gap-8">
                                                         <div className="flex-1 space-y-4">
                                                             <h4 className="text-xl font-black group-hover/item:text-indigo-600 transition-colors leading-tight">{article.title}</h4>
@@ -258,7 +258,7 @@ export default function JournalDetailPage() {
                                 <div className="col-span-full py-20 text-center opacity-40 italic font-medium">Archive is currently empty.</div>
                             ) : (
                                 issues.filter(i => i.isPublished).map((issue) => (
-                                    <Card key={issue.id} className="group hover:border-indigo-200 transition-all rounded-3xl overflow-hidden shadow-sm hover:shadow-xl">
+                                    <Card key={issue.id} className="group hover:border-indigo-200 transition-all rounded-2xl overflow-hidden shadow-sm hover:shadow-xl">
                                         <div className="h-40 bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
                                             {issue.coverUrl ? (
                                                 // eslint-disable-next-line @next/next/no-img-element
@@ -280,7 +280,7 @@ export default function JournalDetailPage() {
 
                     <TabsContent value="editorial" className="animate-in fade-in slide-in-from-bottom-4 duration-500">
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                            <Card className="rounded-3xl border-slate-100 p-6 space-y-4">
+                            <Card className="rounded-2xl border-slate-100 p-6 space-y-4">
                                 <div className="h-12 w-12 rounded-xl bg-indigo-50 dark:bg-indigo-950/20 text-indigo-600 flex items-center justify-center font-black">C</div>
                                 <div>
                                     <h4 className="font-black text-lg">Dr. Adegoke Babatunde</h4>
@@ -288,7 +288,7 @@ export default function JournalDetailPage() {
                                     <p className="text-xs text-slate-500 mt-2 font-medium">Department of Statistics, Federal School of Statistics, Nigeria</p>
                                 </div>
                             </Card>
-                            <Card className="rounded-3xl border-slate-100 p-6 space-y-4">
+                            <Card className="rounded-2xl border-slate-100 p-6 space-y-4">
                                 <div className="h-12 w-12 rounded-xl bg-indigo-50 dark:bg-indigo-950/20 text-indigo-600 flex items-center justify-center font-black">A</div>
                                 <div>
                                     <h4 className="font-black text-lg">Prof. Elizabeth Carter</h4>
@@ -296,7 +296,7 @@ export default function JournalDetailPage() {
                                     <p className="text-xs text-slate-500 mt-2 font-medium">School of Mathematics & Computing, University of Manchester, UK</p>
                                 </div>
                             </Card>
-                            <Card className="rounded-3xl border-slate-100 p-6 space-y-4">
+                            <Card className="rounded-2xl border-slate-100 p-6 space-y-4">
                                 <div className="h-12 w-12 rounded-xl bg-indigo-50 dark:bg-indigo-950/20 text-indigo-600 flex items-center justify-center font-black">T</div>
                                 <div>
                                     <h4 className="font-black text-lg">Dr. Marcus Vance</h4>
@@ -323,7 +323,7 @@ export default function JournalDetailPage() {
                             </div>
                         </div>
 
-                        <div className="border border-slate-100 rounded-3xl p-8 bg-slate-50/50 space-y-4">
+                        <div className="border border-slate-100 rounded-2xl p-8 bg-slate-50/50 space-y-4">
                             <h3 className="text-xl font-black">Author Submission Guidelines</h3>
                             <ul className="list-disc pl-5 text-sm text-slate-500 space-y-2 leading-relaxed">
                                 <li><strong>Titles</strong> must be descriptive, succinct, and formatted in sentence case.</li>

@@ -37,7 +37,7 @@ export default function ParentCommunicationsPage({ params }: { params: { id: str
     ];
 
     return (
-        <div className="p-8 max-w-7xl mx-auto space-y-8 animate-in fade-in duration-700">
+        <div className="p-8 max-w-[1600px] w-full mx-auto space-y-8 animate-in fade-in duration-700">
             {/* Header */}
             <div className="flex items-center gap-4">
                 <Link href={`/parent/child/${studentId}`} className="p-3 bg-white rounded-2xl border border-slate-100 shadow-sm hover:bg-slate-50 transition-colors group">

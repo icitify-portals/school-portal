@@ -15,7 +15,7 @@ const availableCourses = [
 
 export default function CourseRegistrationPage() {
     return (
-        <div className="p-8 max-w-5xl mx-auto">
+        <div className="p-8 max-w-[1600px] w-full mx-auto">
             <div className="flex justify-between items-end mb-8">
                 <div>
                     <h2 className="text-3xl font-bold text-slate-900 tracking-tight">Course Registration</h2>

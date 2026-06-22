@@ -238,7 +238,7 @@ export default function TransportationManagement() {
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
+      <div className="max-w-[1600px] w-full mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -380,7 +380,7 @@ export default function TransportationManagement() {
                           <div className="text-sm text-gray-500">{type.count} routes</div>
                         </div>
                         <div className="text-right">
-                          <div className="text-lg font-bold text-gray-900">₦{type.avgFare || 0}</div>
+                          <div className="text-lg font-bold text-gray-900">{settings?.base_currency || '₦'}{type.avgFare || 0}</div>
                           <div className="text-xs text-gray-500">avg fare</div>
                         </div>
                       </div>
@@ -733,7 +733,7 @@ export default function TransportationManagement() {
                       </div>
                       <div className="flex items-center text-sm">
                         <DollarSign className="w-4 h-4 mr-2 text-gray-400" />
-                        <span>₦{route.fareAmount}</span>
+                        <span>{settings?.base_currency || '₦'}{route.fareAmount}</span>
                       </div>
                       {route.operatingHoursStart && route.operatingHoursEnd && (
                         <div className="flex items-center text-sm">

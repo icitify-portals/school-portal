@@ -198,12 +198,12 @@ export default function SportsCoachingPage() {
     );
 
     return (
-        <div className="p-8 max-w-7xl mx-auto space-y-10 bg-slate-50/30 min-h-screen">
+        <div className="p-8 max-w-[1600px] w-full mx-auto space-y-10 bg-slate-50/30 min-h-screen">
             {/* Header */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 border-b border-slate-100 pb-6">
                 <div>
                     <h1 className="text-4xl md:text-5xl font-black text-slate-900 flex items-center gap-4 italic tracking-tighter uppercase">
-                        <div className="p-3 bg-emerald-600 rounded-[2rem] text-white shadow-xl shadow-emerald-600/10">
+                        <div className="p-3 bg-emerald-600 rounded-2xl text-white shadow-xl shadow-emerald-600/10">
                             <Trophy className="w-9 h-9" />
                         </div>
                         Sports Coaching
@@ -327,7 +327,7 @@ export default function SportsCoachingPage() {
                             </Card>
                         ) : (
                             fixtures.map((f) => (
-                                <Card key={f.fixture.id} className="border-none shadow-sm rounded-3xl overflow-hidden bg-white p-6 hover:shadow transition-shadow">
+                                <Card key={f.fixture.id} className="border-none shadow-sm rounded-2xl overflow-hidden bg-white p-6 hover:shadow transition-shadow">
                                     <div className="flex flex-col md:flex-row items-center justify-between gap-6">
                                         
                                         {/* Home Team */}
@@ -413,7 +413,7 @@ export default function SportsCoachingPage() {
                             </Card>
                         ) : (
                             inventory.map((item) => (
-                                <Card key={item.id} className="border-none shadow-sm rounded-3xl bg-white p-6 hover:shadow transition-shadow">
+                                <Card key={item.id} className="border-none shadow-sm rounded-2xl bg-white p-6 hover:shadow transition-shadow">
                                     <div className="flex items-center justify-between mb-4">
                                         <div className="p-2 bg-emerald-50 rounded-xl text-emerald-600">
                                             <Box className="w-5 h-5" />
@@ -440,7 +440,7 @@ export default function SportsCoachingPage() {
                 <TabsContent value="media" className="animate-in fade-in-50 duration-200">
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                         {media.map((m) => (
-                            <div key={m.id} className="group relative aspect-square rounded-[2rem] overflow-hidden shadow cursor-pointer">
+                            <div key={m.id} className="group relative aspect-square rounded-2xl overflow-hidden shadow cursor-pointer">
                                 <img src={m.url} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" alt={m.caption} />
                                 <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity p-6 flex flex-col justify-end">
                                     <p className="text-white text-[9px] font-black uppercase tracking-widest leading-relaxed">{m.caption}</p>
@@ -450,7 +450,7 @@ export default function SportsCoachingPage() {
                         
                         <button 
                             onClick={() => setShowAddMedia(true)}
-                            className="aspect-square rounded-[2rem] border-2 border-dashed border-slate-200 flex flex-col items-center justify-center gap-3 text-slate-400 hover:bg-slate-50 hover:border-emerald-500 hover:text-emerald-600 transition-all"
+                            className="aspect-square rounded-2xl border-2 border-dashed border-slate-200 flex flex-col items-center justify-center gap-3 text-slate-400 hover:bg-slate-50 hover:border-emerald-500 hover:text-emerald-600 transition-all"
                         >
                             <Plus className="w-8 h-8" />
                             <span className="text-[9px] font-black uppercase tracking-widest">Add Highlight</span>
@@ -462,7 +462,7 @@ export default function SportsCoachingPage() {
             {/* MODAL: Register New Team */}
             {showCreateTeam && (
                 <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                    <Card className="w-full max-w-md border-none shadow-2xl animate-in zoom-in-95 duration-200 bg-white rounded-[2rem] overflow-hidden">
+                    <Card className="w-full max-w-md border-none shadow-2xl animate-in zoom-in-95 duration-200 bg-white rounded-2xl overflow-hidden">
                         <CardHeader className="border-b border-slate-100 pb-4">
                             <CardTitle className="text-lg font-black uppercase tracking-tight italic flex items-center gap-2 text-slate-800">
                                 <Trophy className="w-5 h-5 text-emerald-600" /> Register Athletic Team
@@ -539,7 +539,7 @@ export default function SportsCoachingPage() {
             {/* MODAL: Record Score Results */}
             {showRecordResult && selectedFixture && (
                 <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                    <Card className="w-full max-w-md border-none shadow-2xl animate-in zoom-in-95 duration-200 bg-white rounded-[2rem] overflow-hidden">
+                    <Card className="w-full max-w-md border-none shadow-2xl animate-in zoom-in-95 duration-200 bg-white rounded-2xl overflow-hidden">
                         <CardHeader className="border-b border-slate-100 pb-4">
                             <CardTitle className="text-lg font-black uppercase tracking-tight italic flex items-center gap-2 text-slate-800">
                                 <Calendar className="w-5 h-5 text-emerald-600" /> Record Match Result
@@ -599,7 +599,7 @@ export default function SportsCoachingPage() {
             {/* MODAL: Post Highlight to Gallery */}
             {showAddMedia && (
                 <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                    <Card className="w-full max-w-md border-none shadow-2xl animate-in zoom-in-95 duration-200 bg-white rounded-[2rem] overflow-hidden">
+                    <Card className="w-full max-w-md border-none shadow-2xl animate-in zoom-in-95 duration-200 bg-white rounded-2xl overflow-hidden">
                         <CardHeader className="border-b border-slate-100 pb-4">
                             <CardTitle className="text-lg font-black uppercase tracking-tight italic flex items-center gap-2 text-slate-800">
                                 <ImageIcon className="w-5 h-5 text-emerald-600" /> Post Sports Highlight

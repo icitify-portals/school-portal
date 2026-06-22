@@ -10,7 +10,7 @@ export default function ExamsRecordsAdminPage() {
     const [activeTab, setActiveTab] = useState<'graduating' | 'search'>('graduating');
 
     return (
-        <div className="p-8 max-w-7xl mx-auto space-y-8">
+        <div className="p-8 max-w-[1600px] w-full mx-auto space-y-8">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
                     <h2 className="text-4xl font-black text-slate-900 tracking-tighter flex items-center gap-4">
@@ -51,7 +51,7 @@ export default function ExamsRecordsAdminPage() {
             <div className="pt-4">
                 {activeTab === 'graduating' ? (
                     <div className="space-y-6">
-                        <div className="bg-indigo-50 border border-indigo-100 p-6 rounded-3xl flex items-center gap-6">
+                        <div className="bg-indigo-50 border border-indigo-100 p-6 rounded-2xl flex items-center gap-6">
                             <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-200">
                                 <Users className="w-6 h-6 text-white" />
                             </div>
@@ -64,7 +64,7 @@ export default function ExamsRecordsAdminPage() {
                     </div>
                 ) : (
                     <div className="space-y-6">
-                        <div className="bg-slate-900 p-6 rounded-3xl flex items-center gap-6 text-white shadow-xl">
+                        <div className="bg-slate-900 p-6 rounded-2xl flex items-center gap-6 text-white shadow-xl">
                             <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center backdrop-blur-md">
                                 <Search className="w-6 h-6 text-white" />
                             </div>

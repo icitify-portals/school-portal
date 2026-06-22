@@ -145,7 +145,7 @@ export default function StudentRegistration() {
                     </CardHeader>
                     <CardContent className="p-12 pt-0 space-y-8">
                         {access.hasPendingConcession ? (
-                            <div className="bg-amber-50 p-8 rounded-[2rem] border border-amber-100 flex gap-6 items-center">
+                            <div className="bg-amber-50 p-8 rounded-2xl border border-amber-100 flex gap-6 items-center">
                                 <Clock className="w-8 h-8 text-amber-500 shrink-0" />
                                 <div>
                                     <h4 className="font-black italic uppercase text-amber-900">Request Under Review</h4>
@@ -217,7 +217,7 @@ export default function StudentRegistration() {
                         {activeSession?.currentSemester === '1' ? 'First' : 'Second'} Semester, {activeSession?.name} Session
                     </p>
                 </div>
-                <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-xl shadow-slate-100/50 flex items-center gap-8 min-w-[300px]">
+                <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-xl shadow-slate-100/50 flex items-center gap-8 min-w-[300px]">
                     <div className="space-y-1">
                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Unit Load</p>
                         <h2 className={cn("text-3xl font-black", totalUnits > 24 ? "text-rose-500" : "text-indigo-600")}>
@@ -235,7 +235,7 @@ export default function StudentRegistration() {
             </div>
 
             {activeSession?.isAddDropOpen && (
-                <div className="bg-indigo-50 p-8 rounded-[2rem] border border-indigo-100 flex flex-col md:flex-row justify-between items-center gap-6 animate-in slide-in-from-top-4 duration-500">
+                <div className="bg-indigo-50 p-8 rounded-2xl border border-indigo-100 flex flex-col md:flex-row justify-between items-center gap-6 animate-in slide-in-from-top-4 duration-500">
                     <div className="flex gap-6 items-center">
                         <div className="w-14 h-14 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-100/50">
                             <Plus className="w-8 h-8" />
@@ -345,7 +345,7 @@ export default function StudentRegistration() {
                                 </div>
                             </div>
 
-                            <div className="p-6 bg-white/10 rounded-3xl border border-white/10 space-y-4">
+                            <div className="p-6 bg-white/10 rounded-2xl border border-white/10 space-y-4">
                                 <div className="flex items-center gap-3">
                                     <AlertCircle className="w-5 h-5" />
                                     <h4 className="font-black text-[10px] uppercase tracking-widest">Important Note</h4>
@@ -363,7 +363,7 @@ export default function StudentRegistration() {
 function CourseCard({ course, isSelected, onToggle }: { course: any, isSelected: boolean, onToggle: () => void }) {
     if (course.locked) {
         return (
-            <div className="bg-slate-50 border border-slate-100 p-6 rounded-3xl flex items-center justify-between opacity-60 grayscale cursor-not-allowed">
+            <div className="bg-slate-50 border border-slate-100 p-6 rounded-2xl flex items-center justify-between opacity-60 grayscale cursor-not-allowed">
                 <div className="flex items-center gap-6">
                     <div className="p-4 bg-slate-200 rounded-2xl">
                         <Lock className="w-6 h-6 text-slate-400" />
@@ -384,7 +384,7 @@ function CourseCard({ course, isSelected, onToggle }: { course: any, isSelected:
 
     return (
         <label className={cn(
-            "group flex items-center justify-between p-6 rounded-[2rem] border-2 transition-all cursor-pointer",
+            "group flex items-center justify-between p-6 rounded-2xl border-2 transition-all cursor-pointer",
             isSelected ? "border-indigo-600 bg-indigo-50/50 shadow-lg shadow-indigo-100/50" : "border-slate-100 bg-white hover:border-indigo-200"
         )}>
             <input

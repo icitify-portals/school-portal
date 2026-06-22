@@ -353,7 +353,7 @@ export default function FixedAssetsPage() {
                                 </div>
                                 <div className="text-right">
                                     <p className="text-[10px] font-black uppercase text-slate-400">Book Value</p>
-                                    <p className="text-lg font-bold text-slate-900">₦{bookValue.toLocaleString()}</p>
+                                    <p className="text-lg font-bold text-slate-900">{settings?.base_currency || '₦'}{bookValue.toLocaleString()}</p>
                                 </div>
                             </CardHeader>
                             <CardContent className="p-6">
@@ -366,11 +366,11 @@ export default function FixedAssetsPage() {
                                 <div className="space-y-3 pt-4 border-t border-slate-100">
                                     <div className="flex justify-between text-xs font-medium">
                                         <span className="text-slate-400">Original Cost</span>
-                                        <span className="text-slate-700 font-bold">₦{parseFloat(asset.purchasePrice).toLocaleString()}</span>
+                                        <span className="text-slate-700 font-bold">{settings?.base_currency || '₦'}{parseFloat(asset.purchasePrice).toLocaleString()}</span>
                                     </div>
                                     <div className="flex justify-between text-xs font-medium">
                                         <span className="text-slate-400">Accum. Depreciation</span>
-                                        <span className="text-rose-600 font-bold">- ₦{totalDep.toLocaleString()}</span>
+                                        <span className="text-rose-600 font-bold">- {settings?.base_currency || '₦'}{totalDep.toLocaleString()}</span>
                                     </div>
                                     <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden mt-4">
                                         <div
@@ -436,7 +436,7 @@ export default function FixedAssetsPage() {
 
             {
                 assets.length === 0 && (
-                    <div className="text-center py-20 bg-slate-50/50 rounded-3xl border-2 border-dashed border-slate-200 mt-10">
+                    <div className="text-center py-20 bg-slate-50/50 rounded-2xl border-2 border-dashed border-slate-200 mt-10">
                         <Hammer className="w-12 h-12 text-slate-200 mx-auto mb-4" />
                         <h3 className="text-xl font-bold text-slate-900">No Institutional Assets</h3>
                         <p className="text-slate-500 max-w-[300px] mx-auto mt-2">Start registering buildings, vehicles, and equipment to track their institutional value.</p>

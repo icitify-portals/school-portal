@@ -61,7 +61,7 @@ export default function AdminRefundsPage() {
     };
 
     return (
-        <div className="p-8 max-w-7xl mx-auto">
+        <div className="p-8 max-w-[1600px] w-full mx-auto">
             <div className="flex justify-between items-center mb-10">
                 <div>
                     <h2 className="text-3xl font-bold text-slate-900 tracking-tight flex items-center gap-3">
@@ -116,7 +116,7 @@ export default function AdminRefundsPage() {
                                         <div className="space-y-4">
                                             <div className="bg-white p-4 rounded-xl border border-slate-100">
                                                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Refund Amount</p>
-                                                <p className="text-2xl font-black text-indigo-600">₦{parseFloat(item.request.amount).toLocaleString()}</p>
+                                                <p className="text-2xl font-black text-indigo-600">{settings?.base_currency || '₦'}{parseFloat(item.request.amount).toLocaleString()}</p>
                                             </div>
 
                                             <div className="flex items-center gap-2 text-xs text-slate-500">

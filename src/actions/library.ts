@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { libraryResources, libraryPhysicalCopies, libraryCirculation, libraryPatronMetadata, users, libraryDigitalAssets, libraryFines } from "@/db/schema";
 import { eq, and, or, not, like, sql, desc } from "drizzle-orm";
 import { auth } from "@/auth";
+import { getAIProvider } from "@/lib/ai-service";
 
 // --- CATALOGING ACTIONS ---
 
@@ -377,6 +378,41 @@ export async function calculateAndApplyFines() {
     } catch (error) {
         console.error("Fine calculation failed:", error);
         return { success: false, error: "Failed to process fines" };
+    }
+}
+
+export async function libraryChat(query: string, history: { role: string; content: string }[]) {
+    try {
+        const provider = getAIProvider(process.env.AI_PROVIDER || 'gemini');
+
+        const systemPrompt = `
+        You are "Library AI", an advanced, friendly research librarian and study companion on the school portal.
+        Your goal is to assist students with finding books, summarizing concepts, suggesting research pathways, and mapping topics to exam syllabi (like WAEC, JAMB, NECO).
+        
+        Guidelines:
+        1. Keep responses clear, professional, and encouraging.
+        2. Help students find materials, explain complex terms, and suggest bibliography formats.
+        3. Make responses concise and structured using Markdown.
+        `;
+
+        // Format history for the provider
+        const formattedContext = history.map(msg => 
+            `${msg.role === 'user' ? 'User' : 'Librarian'}: ${msg.content}`
+        ).join('\n');
+
+        const finalPrompt = `
+        Conversation History:
+        ${formattedContext}
+
+        User: ${query}
+        Librarian:
+        `;
+
+        const response = await provider.generateText(finalPrompt, systemPrompt);
+        return { success: true, text: response };
+    } catch (error) {
+        console.error("Library AI Chat Error:", error);
+        return { success: false, error: "Library AI is currently offline. Please try again later." };
     }
 }
 

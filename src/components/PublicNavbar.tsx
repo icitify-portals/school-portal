@@ -53,7 +53,7 @@ export function PublicNavbar() {
                 ? "bg-white/80 backdrop-blur-md border-slate-200 py-3"
                 : "bg-transparent border-transparent py-5"
         )}>
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="max-w-[1600px] w-full mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex justify-between items-center">
                     {/* Logo */}
                     <Link href="/" className="flex items-center gap-2 group">

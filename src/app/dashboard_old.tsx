@@ -259,7 +259,7 @@ export default async function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <Card className="lg:col-span-2 shadow-sm border-none bg-white rounded-3xl overflow-hidden">
+        <Card className="lg:col-span-2 shadow-sm border-none bg-white rounded-2xl overflow-hidden">
           <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-6 flex flex-row items-center justify-between">
             <div>
               <CardTitle className="text-[10px] font-black uppercase tracking-widest text-indigo-600 mb-1">Learning Momentum</CardTitle>
@@ -302,7 +302,7 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="shadow-sm border-none bg-white rounded-3xl overflow-hidden">
+        <Card className="shadow-sm border-none bg-white rounded-2xl overflow-hidden">
           <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-6">
             <CardTitle className="text-[10px] font-black uppercase tracking-widest text-indigo-600 mb-1">Upcoming</CardTitle>
             <CardDescription className="text-xl font-black text-slate-900 uppercase italic">Schedule Summary</CardDescription>

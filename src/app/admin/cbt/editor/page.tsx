@@ -95,7 +95,7 @@ export default function QuizEditor() {
     };
 
     return (
-        <div className="p-8 max-w-5xl mx-auto space-y-6">
+        <div className="p-8 max-w-[1600px] w-full mx-auto space-y-6">
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
                     <Link href="/admin/cbt">
@@ -331,7 +331,7 @@ export default function QuizEditor() {
 
                     <div className="md:col-span-3 space-y-6">
                         {questions.length === 0 && (
-                            <div className="py-20 flex flex-col items-center justify-center text-center bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200">
+                            <div className="py-20 flex flex-col items-center justify-center text-center bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200">
                                 <HelpCircle className="w-12 h-12 text-slate-300 mb-4" />
                                 <h3 className="font-bold text-slate-900">No questions yet</h3>
                                 <p className="text-sm text-slate-500 max-w-xs mt-1">Start building your assessment by selecting a question type from the toolbox.</p>

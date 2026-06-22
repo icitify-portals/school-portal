@@ -65,7 +65,7 @@ export default function InventoryDashboard() {
   };
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-8 bg-slate-50 min-h-screen">
+    <div className="p-8 max-w-[1600px] w-full mx-auto space-y-8 bg-slate-50 min-h-screen">
       <div className="flex justify-between items-end">
         <div className="flex items-center gap-4">
           <div className="w-14 h-14 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-xl shadow-indigo-100">
@@ -90,7 +90,7 @@ export default function InventoryDashboard() {
 
       {/* Critical Stock Alerts */}
       {lowStock.length > 0 && (
-         <div className="bg-rose-50 border border-rose-100 p-6 rounded-3xl flex items-center justify-between animate-in slide-in-from-top-4 duration-500">
+         <div className="bg-rose-50 border border-rose-100 p-6 rounded-2xl flex items-center justify-between animate-in slide-in-from-top-4 duration-500">
             <div className="flex items-center gap-4">
                <div className="w-12 h-12 bg-rose-600 text-white rounded-2xl flex items-center justify-center animate-pulse">
                   <AlertTriangle size={24} />

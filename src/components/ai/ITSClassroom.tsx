@@ -219,7 +219,7 @@ export function ITSClassroom() {
 
                                 <div className="grid grid-cols-2 gap-8 w-full">
                                     {activeQuestion.options.map((opt: string, i: number) => (
-                                        <div key={i} className="relative h-24 bg-white/5 border border-white/10 rounded-3xl overflow-hidden group">
+                                        <div key={i} className="relative h-24 bg-white/5 border border-white/10 rounded-2xl overflow-hidden group">
                                             <div 
                                                 className={cn(
                                                     "absolute inset-y-0 left-0 bg-indigo-500/20 transition-all duration-1000",

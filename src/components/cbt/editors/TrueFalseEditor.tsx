@@ -17,7 +17,7 @@ export function TrueFalseEditor({ question, updateQuestion }: Props) {
                 <button
                     onClick={() => updateQuestion({ correct: 'true' })}
                     className={cn(
-                        "flex flex-col items-center justify-center p-8 rounded-3xl border-2 transition-all gap-3",
+                        "flex flex-col items-center justify-center p-8 rounded-2xl border-2 transition-all gap-3",
                         question.correct === 'true'
                             ? "bg-emerald-50 border-emerald-500 text-emerald-700 shadow-lg scale-[1.02]"
                             : "bg-white border-slate-100 text-slate-400 hover:border-slate-300"
@@ -35,7 +35,7 @@ export function TrueFalseEditor({ question, updateQuestion }: Props) {
                 <button
                     onClick={() => updateQuestion({ correct: 'false' })}
                     className={cn(
-                        "flex flex-col items-center justify-center p-8 rounded-3xl border-2 transition-all gap-3",
+                        "flex flex-col items-center justify-center p-8 rounded-2xl border-2 transition-all gap-3",
                         question.correct === 'false'
                             ? "bg-red-50 border-red-500 text-red-700 shadow-lg scale-[1.02]"
                             : "bg-white border-slate-100 text-slate-400 hover:border-slate-300"

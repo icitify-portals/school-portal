@@ -25,7 +25,7 @@ export default async function LeaderboardPage() {
     const others = leaderboard.slice(3);
 
     return (
-        <div className="p-8 max-w-5xl mx-auto space-y-12 animate-in fade-in duration-700">
+        <div className="p-8 max-w-[1600px] w-full mx-auto space-y-12 animate-in fade-in duration-700">
             {/* Hero Header */}
             <div className="text-center space-y-6">
                 <div className="inline-flex items-center gap-3 px-6 py-2 bg-amber-50 border border-amber-200 rounded-full text-amber-600 font-black uppercase text-[10px] tracking-widest shadow-sm">
@@ -46,7 +46,7 @@ export default async function LeaderboardPage() {
                 {topThree[1] && (
                     <div className="order-2 md:order-1 flex flex-col items-center gap-6 group">
                         <div className="relative">
-                            <div className="w-24 h-24 rounded-[2rem] bg-slate-200 border-4 border-white shadow-2xl flex items-center justify-center text-slate-500 group-hover:scale-110 transition-transform">
+                            <div className="w-24 h-24 rounded-2xl bg-slate-200 border-4 border-white shadow-2xl flex items-center justify-center text-slate-500 group-hover:scale-110 transition-transform">
                                 <Medal className="w-10 h-10" />
                             </div>
                             <div className="absolute -top-3 -right-3 w-10 h-10 bg-slate-400 rounded-full flex items-center justify-center text-white font-black text-xl border-4 border-white">2</div>

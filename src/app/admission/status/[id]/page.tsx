@@ -120,7 +120,7 @@ export default function ApplicantStatusPage() {
                                 </div>
                                 
                                 {data.admissionNotes && (
-                                    <div className="p-6 bg-slate-50 rounded-3xl border border-slate-100 flex gap-4">
+                                    <div className="p-6 bg-slate-50 rounded-2xl border border-slate-100 flex gap-4">
                                         <Info className="w-5 h-5 text-slate-400 shrink-0" />
                                         <p className="text-xs font-bold text-slate-500 leading-relaxed italic">{data.admissionNotes}</p>
                                     </div>
@@ -128,18 +128,27 @@ export default function ApplicantStatusPage() {
 
                                 {data.status === 'admitted' && (
                                     <div className="flex flex-wrap gap-4 pt-4">
-                                        <Button 
-                                            onClick={() => window.open(`/admission/letter/${id}`, '_blank')}
-                                            className="rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-black px-8 py-6 flex gap-3 uppercase text-xs tracking-widest shadow-xl shadow-emerald-100"
-                                        >
-                                            <Download className="w-5 h-5" /> Download Admission Letter
-                                        </Button>
+                                        {(!data.template.requireAcceptanceFee || data.acceptancePaymentStatus === 'paid') ? (
+                                            <Button 
+                                                onClick={() => window.open(`/admission/letter/${id}`, '_blank')}
+                                                className="rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-black px-8 py-6 flex gap-3 uppercase text-xs tracking-widest shadow-xl shadow-emerald-100"
+                                            >
+                                                <Download className="w-5 h-5" /> Download Admission Letter
+                                            </Button>
+                                        ) : (
+                                            <Button 
+                                                disabled
+                                                className="rounded-2xl bg-slate-200 text-slate-400 font-black px-8 py-6 flex gap-3 uppercase text-xs tracking-widest cursor-not-allowed opacity-60"
+                                            >
+                                                <Download className="w-5 h-5 text-slate-300" /> Letter Locked (Acceptance Fee Required)
+                                            </Button>
+                                        )}
                                         {data.template.requireAcceptanceFee && data.acceptancePaymentStatus !== 'paid' ? (
                                             <Button 
                                                 onClick={handleAcceptancePayment}
                                                 className="rounded-2xl bg-slate-900 text-white font-black px-8 py-6 flex gap-3 uppercase text-xs tracking-widest shadow-xl"
                                             >
-                                                <CreditCard className="w-5 h-5" /> Pay Acceptance Fee (₦{parseFloat(data.template.acceptanceFee).toLocaleString()})
+                                                <CreditCard className="w-5 h-5" /> Pay Acceptance Fee ({settings?.base_currency || '₦'}{parseFloat(data.template.acceptanceFee).toLocaleString()})
                                             </Button>
                                         ) : data.template.requireAcceptanceFee && data.acceptancePaymentStatus === 'paid' && !data.admissionNotes?.includes('Matric Number') ? (
                                             <div className="flex flex-col gap-4">

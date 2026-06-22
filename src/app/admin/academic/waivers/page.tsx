@@ -57,7 +57,7 @@ export default function AcademicWaiverConsole() {
   };
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-8 bg-slate-50 min-h-screen">
+    <div className="p-8 max-w-[1600px] w-full mx-auto space-y-8 bg-slate-50 min-h-screen">
       <div className="flex justify-between items-end">
         <div className="flex items-center gap-4">
           <div className="w-14 h-14 bg-rose-600 text-white rounded-2xl flex items-center justify-center shadow-xl shadow-rose-100">
@@ -80,7 +80,7 @@ export default function AcademicWaiverConsole() {
       <div className="grid grid-cols-12 gap-8">
         {/* Active Waivers List */}
         <div className="col-span-12 lg:col-span-8 space-y-6">
-           <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
+           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
               <div className="p-6 border-b border-slate-50 bg-slate-50/30 flex justify-between items-center">
                  <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
                     <History size={20} className="text-rose-600" />
@@ -127,7 +127,7 @@ export default function AcademicWaiverConsole() {
 
         {/* Info & Policy */}
         <div className="col-span-12 lg:col-span-4 space-y-6">
-           <div className="bg-rose-600 rounded-3xl p-8 text-white space-y-6 shadow-xl shadow-rose-100">
+           <div className="bg-rose-600 rounded-2xl p-8 text-white space-y-6 shadow-xl shadow-rose-100">
               <h3 className="text-xl font-bold">Override Authority</h3>
               <div className="space-y-4">
                  <div className="flex gap-4">
@@ -141,7 +141,7 @@ export default function AcademicWaiverConsole() {
               </div>
            </div>
 
-           <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm space-y-4">
+           <div className="bg-white p-8 rounded-2xl border border-slate-100 shadow-sm space-y-4">
               <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
                  <AlertCircle size={14} className="text-amber-500" />
                  Audit Note
@@ -156,7 +156,7 @@ export default function AcademicWaiverConsole() {
       {/* Modal: Grant Waiver */}
       {showGrantForm && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-xl rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+          <div className="bg-white w-full max-w-xl rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
              <div className="p-8 space-y-6">
                 <div className="flex justify-between items-start">
                    <h2 className="text-2xl font-bold text-slate-900">Grant Academic Exemption</h2>

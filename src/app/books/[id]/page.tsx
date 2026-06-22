@@ -60,14 +60,14 @@ export default async function BookDetailsPage({ params }: { params: Promise<{ id
             <JsonLd data={generateBookSchema(resource)} />
 
             {/* Navigation */}
-            <div className="max-w-7xl mx-auto px-6 py-12">
+            <div className="max-w-[1600px] w-full mx-auto px-6 py-12">
                 <Link href="/library" className="group flex items-center gap-2 text-slate-400 hover:text-white transition-colors">
                     <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-1" />
                     <span className="text-sm font-black uppercase tracking-widest">Back to Library</span>
                 </Link>
             </div>
 
-            <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-12 gap-12">
+            <div className="max-w-[1600px] w-full mx-auto px-6 grid grid-cols-1 lg:grid-cols-12 gap-12">
                 {/* Book Cover */}
                 <div className="lg:col-span-4">
                     <div className="aspect-[2/3] rounded-[40px] overflow-hidden shadow-2xl relative group">
@@ -142,7 +142,7 @@ export default async function BookDetailsPage({ params }: { params: Promise<{ id
 
             {/* Recommendations */}
             {recommendations.length > 0 && (
-                <div className="max-w-7xl mx-auto px-6 mt-32 space-y-12">
+                <div className="max-w-[1600px] w-full mx-auto px-6 mt-32 space-y-12">
                     <div className="space-y-1">
                         <h2 className="text-4xl font-black tracking-tight">Expand Your Knowledge</h2>
                         <p className="text-slate-500 font-bold italic">Related resources based on your interest.</p>

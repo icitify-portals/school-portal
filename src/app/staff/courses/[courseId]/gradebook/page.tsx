@@ -67,7 +67,7 @@ export default async function CourseGradebookPage(props: PageProps) {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                <Card className="border-none shadow-sm rounded-3xl bg-white overflow-hidden">
+                <Card className="border-none shadow-sm rounded-2xl bg-white overflow-hidden">
                     <CardHeader className="pb-2">
                         <CardTitle className="text-[10px] font-black uppercase tracking-widest text-slate-400">Total Students</CardTitle>
                     </CardHeader>
@@ -75,7 +75,7 @@ export default async function CourseGradebookPage(props: PageProps) {
                         <p className="text-4xl font-black text-slate-900 uppercase italic leading-none">{students.length}</p>
                     </CardContent>
                 </Card>
-                <Card className="border-none shadow-sm rounded-3xl bg-white overflow-hidden">
+                <Card className="border-none shadow-sm rounded-2xl bg-white overflow-hidden">
                     <CardHeader className="pb-2">
                         <CardTitle className="text-[10px] font-black uppercase tracking-widest text-slate-400">Average Score</CardTitle>
                     </CardHeader>
@@ -85,7 +85,7 @@ export default async function CourseGradebookPage(props: PageProps) {
                         </p>
                     </CardContent>
                 </Card>
-                <Card className="border-none shadow-sm rounded-3xl bg-white overflow-hidden">
+                <Card className="border-none shadow-sm rounded-2xl bg-white overflow-hidden">
                     <CardHeader className="pb-2">
                         <CardTitle className="text-[10px] font-black uppercase tracking-widest text-slate-400">Passing Rate</CardTitle>
                     </CardHeader>
@@ -95,7 +95,7 @@ export default async function CourseGradebookPage(props: PageProps) {
                         </p>
                     </CardContent>
                 </Card>
-                <Card className="border-none shadow-sm rounded-3xl bg-white overflow-hidden">
+                <Card className="border-none shadow-sm rounded-2xl bg-white overflow-hidden">
                     <CardHeader className="pb-2">
                         <CardTitle className="text-[10px] font-black uppercase tracking-widest text-slate-400">At Risk</CardTitle>
                     </CardHeader>

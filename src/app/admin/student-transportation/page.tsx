@@ -164,7 +164,7 @@ export default function StudentTransportation() {
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
+      <div className="max-w-[1600px] w-full mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -289,7 +289,7 @@ export default function StudentTransportation() {
                           <div>
                             <Label>Route Fare</Label>
                             <div className="text-lg font-medium text-gray-900">
-                              ₦{studentDashboard.registration.route.fareAmount}
+                              {settings?.base_currency || '₦'}{studentDashboard.registration.route.fareAmount}
                             </div>
                           </div>
                           <div>
@@ -558,7 +558,7 @@ export default function StudentTransportation() {
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">₦{reg.registration.fareAmount}</div>
+                        <div className="text-sm text-gray-900">{settings?.base_currency || '₦'}{reg.registration.fareAmount}</div>
                         <div className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getPaymentStatusColor(reg.registration.paymentStatus)}`}>
                           {reg.registration.paymentStatus}
                         </div>
@@ -618,7 +618,7 @@ export default function StudentTransportation() {
                       </div>
                       <div className="flex items-center text-sm">
                         <CreditCard className="w-4 h-4 mr-2 text-gray-400" />
-                        <span>Fare: ₦{route.route.fareAmount}</span>
+                        <span>Fare: {settings?.base_currency || '₦'}{route.route.fareAmount}</span>
                       </div>
                     </div>
                     

@@ -90,7 +90,7 @@ export default function SmartBooksPage() {
     );
 
     return (
-        <div className="p-8 max-w-7xl mx-auto space-y-12">
+        <div className="p-8 max-w-[1600px] w-full mx-auto space-y-12">
             {/* Header with Connectivity Status */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                 <div className="space-y-2">
@@ -198,7 +198,7 @@ export default function SmartBooksPage() {
 
             {/* Offline Info Box */}
             <Card className="border-none bg-slate-50 rounded-[2.5rem] p-10 flex flex-col md:flex-row items-center gap-8">
-                <div className="w-20 h-20 bg-white rounded-3xl shadow-xl flex items-center justify-center shrink-0">
+                <div className="w-20 h-20 bg-white rounded-2xl shadow-xl flex items-center justify-center shrink-0">
                     <CheckCircle2 className="w-10 h-10 text-emerald-500" />
                 </div>
                 <div className="space-y-2">

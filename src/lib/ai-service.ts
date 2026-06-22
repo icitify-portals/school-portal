@@ -2,7 +2,7 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import OpenAI from "openai";
 
-export type AIProviderName = 'gemini' | 'openai' | 'deepseek' | 'grok';
+export type AIProviderName = 'gemini' | 'openai' | 'deepseek' | 'grok' | 'openrouter';
 
 export interface AIProvider {
     generateText(prompt: string, systemInstruction?: string): Promise<string>;
@@ -160,13 +160,20 @@ export function getAIProvider(providerName?: string, isInternal: boolean = false
     const provider = providerName || process.env.AI_PROVIDER || 'gemini';
 
     if (provider.toLowerCase() === 'multi' && !isInternal) {
-        return new FallbackAIProvider(['deepseek', 'gemini', 'openai']);
+        return new FallbackAIProvider(['deepseek', 'gemini', 'openai', 'openrouter']);
     }
 
     switch (provider.toLowerCase()) {
         case 'openai':
             if (!process.env.OPENAI_API_KEY) throw new Error("OPENAI_API_KEY is not set");
-            return new OpenAICompatibleProvider(process.env.OPENAI_API_KEY, undefined, "gpt-4o");
+            // Switched from gpt-4o to gpt-4o-mini for significant cost optimization
+            return new OpenAICompatibleProvider(process.env.OPENAI_API_KEY, undefined, "gpt-4o-mini");
+
+        case 'openrouter':
+            if (!process.env.OPENROUTER_API_KEY) throw new Error("OPENROUTER_API_KEY is not set");
+            // You can pass the specific OpenRouter model via an env var, or default to a fast/cheap one like haiku or a free model.
+            const openRouterModel = process.env.OPENROUTER_MODEL || "meta-llama/llama-3-8b-instruct:free";
+            return new OpenAICompatibleProvider(process.env.OPENROUTER_API_KEY, "https://openrouter.ai/api/v1", openRouterModel);
 
         case 'deepseek':
             if (!process.env.DEEPSEEK_API_KEY) throw new Error("DEEPSEEK_API_KEY is not set");

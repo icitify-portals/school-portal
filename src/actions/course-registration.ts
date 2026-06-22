@@ -3,9 +3,10 @@
 import { CourseRegistrationService } from "@/services/CourseRegistrationService";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db/db";
-import { studentCourseRegistrations, courses } from "@/db/schema";
+import { studentCourseRegistrations, courses, students } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { hasRole } from "@/lib/rbac";
+import { sendInAppNotification } from "./notifications";
 
 export async function getAvailableCoursesAction(studentId: number, semester: '1' | '2') {
     try {
@@ -24,6 +25,18 @@ export async function submitCourseRegistrationAction(data: {
 }) {
     try {
         const result = await CourseRegistrationService.submitRegistration(data);
+        
+        const student = await db.select({ userId: students.userId }).from(students).where(eq(students.id, data.studentId)).limit(1);
+        if (student.length > 0 && student[0].userId) {
+            await sendInAppNotification({
+                userId: student[0].userId,
+                title: "Registration Submitted",
+                message: `You have successfully submitted your course registration (${result.totalUnits} units).`,
+                type: "success",
+                link: "/student/courses/registration"
+            });
+        }
+
         revalidatePath("/student/courses/registration");
         return { success: true, totalUnits: result.totalUnits };
     } catch (error) {
@@ -61,6 +74,18 @@ export async function approveStudentRegistrationAction(studentId: number, sessio
 
         const staffId = 1; // Placeholder
         await CourseRegistrationService.approveRegistration(studentId, sessionId, semester, staffId);
+        
+        const student = await db.select({ userId: students.userId }).from(students).where(eq(students.id, studentId)).limit(1);
+        if (student.length > 0 && student[0].userId) {
+            await sendInAppNotification({
+                userId: student[0].userId,
+                title: "Registration Approved",
+                message: `Your course registration has been approved.`,
+                type: "success",
+                link: "/student/courses/registration"
+            });
+        }
+
         revalidatePath("/admin/academic/registrations");
         return { success: true };
     } catch (error) {

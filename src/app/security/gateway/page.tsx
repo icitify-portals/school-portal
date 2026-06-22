@@ -192,7 +192,7 @@ export default function SecurityGateway() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-4">
-      <div className="max-w-7xl mx-auto space-y-6">
+      <div className="max-w-[1600px] w-full mx-auto space-y-6">
         {/* Header */}
         <div className="text-center text-white">
           <div className="flex items-center justify-center gap-3 mb-2">
@@ -298,7 +298,7 @@ export default function SecurityGateway() {
                           {lastScan.finesOwed && lastScan.finesOwed !== "0.00" && (
                             <div className="flex items-center gap-2 text-amber-600">
                               <DollarSign className="w-4 h-4" />
-                              <span className="font-medium">Outstanding Fines: ₦{lastScan.finesOwed}</span>
+                              <span className="font-medium">Outstanding Fines: {settings?.base_currency || '₦'}{lastScan.finesOwed}</span>
                             </div>
                           )}
                         </div>

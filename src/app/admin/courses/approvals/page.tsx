@@ -106,7 +106,7 @@ export default function RegistrationApprovals() {
     const isAllSelected = filtered.length > 0 && selectedIds.size === filtered.length;
 
     return (
-        <div className="p-8 max-w-7xl mx-auto space-y-8">
+        <div className="p-8 max-w-[1600px] w-full mx-auto space-y-8">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                 <div>
                     <h1 className="text-4xl font-black text-slate-900 tracking-tight flex items-center gap-4">
@@ -131,7 +131,7 @@ export default function RegistrationApprovals() {
 
             {/* Batch Action Bar */}
             {selectedIds.size > 0 && (
-                <div className="sticky top-4 z-10 bg-white/80 backdrop-blur-md border border-slate-200 p-4 rounded-3xl shadow-2xl flex items-center justify-between animate-in slide-in-from-top-4 duration-300">
+                <div className="sticky top-4 z-10 bg-white/80 backdrop-blur-md border border-slate-200 p-4 rounded-2xl shadow-2xl flex items-center justify-between animate-in slide-in-from-top-4 duration-300">
                     <div className="flex items-center gap-4">
                         <div className="bg-emerald-100 text-emerald-700 px-4 py-2 rounded-2xl font-black text-xs uppercase tracking-widest">
                             {selectedIds.size} Selected
@@ -202,7 +202,7 @@ export default function RegistrationApprovals() {
 
                         return (
                             <Card key={id} className={cn(
-                                "border-none shadow-sm overflow-hidden hover:shadow-md transition-all rounded-[2rem] bg-white group relative",
+                                "border-none shadow-sm overflow-hidden hover:shadow-md transition-all rounded-2xl bg-white group relative",
                                 isSelected && "ring-2 ring-emerald-500 shadow-xl"
                             )}>
                                 <CardContent className="p-0">

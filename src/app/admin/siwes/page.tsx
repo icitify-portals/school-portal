@@ -51,7 +51,7 @@ export default function AdminSiwesDashboard() {
     }, []);
 
     return (
-        <div className="p-8 max-w-7xl mx-auto space-y-8">
+        <div className="p-8 max-w-[1600px] w-full mx-auto space-y-8">
             <div className="flex justify-between items-center">
                 <div>
                     <h1 className="text-4xl font-black text-slate-900 tracking-tight flex items-center gap-4 uppercase italic">
@@ -67,19 +67,19 @@ export default function AdminSiwesDashboard() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <Card className="border-none shadow-xl rounded-[2rem] bg-indigo-600 text-white p-8 space-y-4">
+                <Card className="border-none shadow-xl rounded-2xl bg-indigo-600 text-white p-8 space-y-4">
                     <p className="text-[10px] font-black uppercase tracking-widest opacity-60">Active Placements</p>
                     <h3 className="text-4xl font-black italic">{placements.length}</h3>
                     <p className="text-[9px] font-bold text-white/60 uppercase tracking-widest italic tracking-tight">Across all programmes</p>
                 </Card>
-                <Card className="border-none shadow-xl rounded-[2rem] bg-white p-8 space-y-4">
+                <Card className="border-none shadow-xl rounded-2xl bg-white p-8 space-y-4">
                     <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Pending Logbooks</p>
                     <h3 className="text-4xl font-black italic text-indigo-600">
                         {placements.reduce((acc, p) => acc + p.logbooks?.filter((l: any) => l.status === 'submitted').length, 0)}
                     </h3>
                     <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest italic">Awaiting Officer Review</p>
                 </Card>
-                <Card className="border-none shadow-xl rounded-[2rem] bg-white p-8 space-y-4">
+                <Card className="border-none shadow-xl rounded-2xl bg-white p-8 space-y-4">
                     <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Company Partners</p>
                     <h3 className="text-4xl font-black italic text-emerald-600">{companies.length}</h3>
                     <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest italic italic">Approved Organizations</p>
@@ -179,7 +179,7 @@ export default function AdminSiwesDashboard() {
                         </div>
                         <div className="space-y-4">
                             {configs.map((conf) => (
-                                <div key={conf.id} className="flex items-center justify-between p-6 rounded-3xl bg-slate-50 border border-slate-100 group hover:border-indigo-200 transition-all">
+                                <div key={conf.id} className="flex items-center justify-between p-6 rounded-2xl bg-slate-50 border border-slate-100 group hover:border-indigo-200 transition-all">
                                     <div className="flex items-center gap-6">
                                         <div className="w-12 h-12 rounded-2xl bg-white shadow-md flex items-center justify-center text-indigo-600 font-black italic uppercase text-xs">
                                             {conf.programme?.code || 'GEN'}

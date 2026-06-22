@@ -37,7 +37,7 @@ export default async function LeadDetailsPage({ params }: { params: { id: string
     }
 
     return (
-        <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+        <div className="p-4 md:p-8 max-w-[1600px] w-full mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
             {/* Header */}
             <div className="flex items-center gap-4">
                 <Link 
@@ -63,7 +63,7 @@ export default async function LeadDetailsPage({ params }: { params: { id: string
                 <div className="space-y-8">
                     <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/50 p-8 space-y-8 relative overflow-hidden">
                         <div className="flex flex-col items-center text-center space-y-4">
-                            <div className="w-24 h-24 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-[2rem] flex items-center justify-center text-white shadow-2xl shadow-indigo-500/20 text-4xl font-black">
+                            <div className="w-24 h-24 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center text-white shadow-2xl shadow-indigo-500/20 text-4xl font-black">
                                 {lead.name[0]}
                             </div>
                             <div>
@@ -165,7 +165,7 @@ export default async function LeadDetailsPage({ params }: { params: { id: string
                                     <div className="absolute left-4 top-2 w-8 h-8 bg-white border-4 border-slate-50 rounded-full flex items-center justify-center z-10 group-hover:border-indigo-100 transition-colors">
                                         <div className="w-2 h-2 bg-slate-400 rounded-full group-hover:bg-indigo-600 transition-colors" />
                                     </div>
-                                    <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-all">
+                                    <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all">
                                         <div className="flex items-center justify-between mb-2">
                                             <div className="flex items-center gap-3">
                                                 <span className="px-3 py-1 bg-slate-100 text-[10px] font-black uppercase tracking-widest text-slate-500 rounded-full">

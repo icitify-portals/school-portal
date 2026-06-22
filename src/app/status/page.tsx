@@ -5,7 +5,7 @@ import { RefreshCw, ArrowRight, UserPlus, FileSearch, HelpCircle } from "lucide-
 
 export default function StatusPage() {
     return (
-        <div className="p-8 max-w-5xl mx-auto">
+        <div className="p-8 max-w-[1600px] w-full mx-auto">
             <h2 className="text-3xl font-bold text-slate-900 tracking-tight mb-4">Request Status & Changes</h2>
             <p className="text-slate-500 mb-10">Manage your academic lifecycle and departmental changes.</p>
 

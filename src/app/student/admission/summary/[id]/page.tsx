@@ -155,7 +155,7 @@ export default async function ApplicationSummaryPage({ params }: { params: Promi
                             <div className="flex items-center gap-4">
                                 <div className="text-right">
                                     <p className="text-[10px] uppercase font-bold text-slate-500">Amount Paid</p>
-                                    <p className="text-xl font-black text-white">₦{Number(session?.applicationFee).toLocaleString()}</p>
+                                    <p className="text-xl font-black text-white">{settings?.base_currency || '₦'}{Number(session?.applicationFee).toLocaleString()}</p>
                                 </div>
                                 <div className="h-10 w-[1px] bg-slate-800 hidden md:block" />
                                 <div className="px-3 py-1 bg-emerald-500 text-white text-[10px] font-black rounded-lg">

@@ -135,15 +135,20 @@ export async function getBrandingSettings() {
     const portalName = await getSettingByKey('portal_name') || 'Academic Portal';
     const portalLogo = await getSettingByKey('portal_logo') || '';
     const schoolMotto = await getSettingByKey('school_motto') || '';
+    const schoolAddress = await getSettingByKey('school_address') || '';
+    const schoolBillNote = await getSettingByKey('school_bill_note') || '';
 
     return {
         portalName,
         portalLogo,
         schoolMotto,
+        schoolAddress,
+        schoolBillNote,
         // Legacy/Alternative keys for compatibility with various UI components
         INST_NAME: portalName,
         INST_LOGO: portalLogo,
         INST_MOTTO: schoolMotto,
+        INST_ADDRESS: schoolAddress,
         COLOR_PRIMARY: await getSettingByKey('primary_color') || await getSettingByKey('c_o_l_o_r__p_r_i_m_a_r_y') || '#4f46e5',
         COLOR_SECONDARY: await getSettingByKey('secondary_color') || await getSettingByKey('c_o_l_o_r__s_e_c_o_n_d_a_r_y') || '#0f172a',
         COLOR_ACCENT: await getSettingByKey('accent_color') || await getSettingByKey('c_o_l_o_r__a_c_c_e_n_t') || '#6366f1',

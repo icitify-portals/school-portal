@@ -100,7 +100,7 @@ export function AccountManagementModal({ user, onClose, onUpdate }: AccountManag
 
     return (
         <Dialog open={!!user} onOpenChange={(open) => !open && onClose()}>
-            <DialogContent className="sm:max-w-[500px] border-none shadow-2xl p-0 overflow-hidden bg-white rounded-3xl">
+            <DialogContent className="sm:max-w-[500px] border-none shadow-2xl p-0 overflow-hidden bg-white rounded-2xl">
                 <div className="bg-slate-900 p-6 text-white relative">
                     <DialogHeader>
                         <DialogTitle className="text-2xl font-black italic uppercase tracking-tight flex items-center gap-3">

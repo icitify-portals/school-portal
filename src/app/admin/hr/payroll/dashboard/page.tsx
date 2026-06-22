@@ -62,7 +62,7 @@ export default function PayrollDashboard() {
   const paidCount = logs.filter(l => l.status === 'paid').length;
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-8 bg-slate-50 min-h-screen">
+    <div className="p-8 max-w-[1600px] w-full mx-auto space-y-8 bg-slate-50 min-h-screen">
       <div className="flex justify-between items-end">
         <div className="flex items-center gap-4">
           <div className="w-14 h-14 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-xl shadow-indigo-100">
@@ -113,7 +113,7 @@ export default function PayrollDashboard() {
            { label: 'Payments Disbursed', value: paidCount, icon: CheckCircle2, color: 'text-sky-600', bg: 'bg-sky-50' },
            { label: 'Pending Approval', value: logs.length - paidCount, icon: Clock, color: 'text-amber-600', bg: 'bg-amber-50' }
          ].map((stat, i) => (
-            <div key={i} className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex items-center gap-4">
+            <div key={i} className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-4">
                <div className={`w-12 h-12 ${stat.bg} ${stat.color} rounded-2xl flex items-center justify-center`}>
                   <stat.icon size={24} />
                </div>
@@ -171,7 +171,7 @@ export default function PayrollDashboard() {
                                 </div>
                              </td>
                              <td className="px-8 py-6 font-black text-slate-900 text-lg">
-                                ₦{parseFloat(item.netPay).toLocaleString()}
+                                {settings?.base_currency || '₦'}{parseFloat(item.netPay).toLocaleString()}
                              </td>
                              <td className="px-8 py-6">
                                 <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
@@ -200,7 +200,7 @@ export default function PayrollDashboard() {
                       </div>
                       <div>
                          <div className="text-xs font-bold text-slate-400 uppercase tracking-widest">Awaiting Institutional Authorization</div>
-                         <div className="text-lg font-bold">Total Disbursable: ₦{totalPayroll.toLocaleString()}</div>
+                         <div className="text-lg font-bold">Total Disbursable: {settings?.base_currency || '₦'}{totalPayroll.toLocaleString()}</div>
                       </div>
                    </div>
                    <button 

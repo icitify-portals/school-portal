@@ -142,7 +142,7 @@ export default function StudentEvaluationsPage() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Left Panel: List of teachers to evaluate */}
                 <div className="lg:col-span-1 space-y-6">
-                    <div className="bg-slate-900 text-white rounded-3xl p-6 shadow-xl">
+                    <div className="bg-slate-900 text-white rounded-2xl p-6 shadow-xl">
                         <h3 className="font-black text-sm uppercase tracking-widest text-indigo-300 leading-none mb-1">Evaluating List</h3>
                         <p className="text-white/50 text-xs">Classes & teachers awaiting feedback this term</p>
                     </div>
@@ -154,7 +154,7 @@ export default function StudentEvaluationsPage() {
                                     key={item.courseId}
                                     onClick={() => handleSelectEval(item)}
                                     className={cn(
-                                        "w-full text-left p-6 rounded-3xl border transition-all duration-300 flex items-center justify-between gap-4",
+                                        "w-full text-left p-6 rounded-2xl border transition-all duration-300 flex items-center justify-between gap-4",
                                         selectedEval?.courseId === item.courseId
                                             ? "bg-indigo-600 text-white border-indigo-700 shadow-xl shadow-indigo-100"
                                             : "bg-white hover:bg-slate-50 border-slate-100 hover:border-slate-200 shadow-sm"
@@ -186,7 +186,7 @@ export default function StudentEvaluationsPage() {
                             ))}
                         </div>
                     ) : (
-                        <div className="bg-emerald-50 border border-emerald-100 p-8 rounded-3xl text-center space-y-4">
+                        <div className="bg-emerald-50 border border-emerald-100 p-8 rounded-2xl text-center space-y-4">
                             <CheckCircle className="w-12 h-12 text-emerald-600 mx-auto" />
                             <div>
                                 <h4 className="font-black text-emerald-900 tracking-tight">All Evaluated!</h4>
@@ -199,7 +199,7 @@ export default function StudentEvaluationsPage() {
                 {/* Right Panel: Interactive Evaluation Form */}
                 <div className="lg:col-span-2">
                     {selectedEval ? (
-                        <div className="bg-white border border-slate-100 rounded-3xl shadow-xl shadow-slate-100/50 overflow-hidden animate-in slide-in-from-right-6 duration-500">
+                        <div className="bg-white border border-slate-100 rounded-2xl shadow-xl shadow-slate-100/50 overflow-hidden animate-in slide-in-from-right-6 duration-500">
                             {/* Form Header */}
                             <div className="p-8 bg-slate-900 text-white flex justify-between items-center">
                                 <div>

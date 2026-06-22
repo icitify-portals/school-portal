@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import { 
     Loader2, 
     Settings2, 
@@ -15,7 +16,8 @@ import {
     ArrowRightLeft,
     Plus,
     Building2,
-    Link
+    Link,
+    Lock
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { 
@@ -217,7 +219,7 @@ export default function BursarySettingsPage() {
     ];
 
     return (
-        <div className="p-8 max-w-5xl mx-auto space-y-8">
+        <div className="p-8 max-w-[1600px] w-full mx-auto space-y-8">
             <div className="mb-8">
                 <h2 className="text-3xl font-bold text-slate-900 tracking-tight flex items-center gap-3">
                     <Settings2 className="w-8 h-8 text-indigo-600 animate-pulse" />
@@ -227,6 +229,69 @@ export default function BursarySettingsPage() {
             </div>
 
             <div className="grid grid-cols-1 gap-6">
+                {/* 0. GLOBAL FINANCIAL & CURRENCY */}
+                <Card className="border border-slate-100 shadow-sm rounded-2xl overflow-hidden">
+                    <CardHeader className="bg-slate-50/50 border-b border-slate-100">
+                        <CardTitle className="text-base font-bold text-slate-800">Global Financial & Currency</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-6 pt-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="space-y-2">
+                                <label className="text-sm font-bold text-slate-700">Base Currency</label>
+                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tight">The default currency for the institution</p>
+                                <select
+                                    className="w-full px-4 py-2.5 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 text-sm bg-white"
+                                    value={settings['base_currency'] || "NGN"}
+                                    onChange={(e) => handleSave('base_currency', e.target.value)}
+                                >
+                                    <option value="NGN">Nigerian Naira (NGN)</option>
+                                    <option value="USD">US Dollar (USD)</option>
+                                    <option value="EUR">Euro (EUR)</option>
+                                    <option value="GBP">British Pound (GBP)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                {/* 0.5. FINANCIAL LOCKING RULES */}
+                <Card className="border border-slate-100 shadow-sm rounded-2xl overflow-hidden">
+                    <CardHeader className="bg-slate-50/50 border-b border-slate-100 flex flex-row items-center justify-between">
+                        <CardTitle className="text-base font-bold text-slate-800 flex items-center gap-2">
+                            <Lock className="w-5 h-5 text-rose-500" />
+                            Financial Locking Rules
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-6 pt-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="space-y-2">
+                                <label className="text-sm font-bold text-slate-700">Lock Type</label>
+                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tight">How to restrict owing students</p>
+                                <select
+                                    className="w-full px-4 py-2.5 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 text-sm bg-white"
+                                    value={settings['financial_lock_type'] || "soft"}
+                                    onChange={(e) => handleSave('financial_lock_type', e.target.value)}
+                                >
+                                    <option value="soft">Soft Lock (Warning Banner, allow navigation)</option>
+                                    <option value="hard">Hard Lock (Force Redirect to Payment Page)</option>
+                                </select>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-sm font-bold text-slate-700">Lock Threshold Amount</label>
+                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tight">Amount of debt before lock triggers (0 = any debt)</p>
+                                <input
+                                    type="number"
+                                    className="w-full px-4 py-2.5 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 text-sm bg-white"
+                                    placeholder="e.g. 0"
+                                    defaultValue={settings['financial_lock_threshold'] || "0"}
+                                    onBlur={(e) => handleSave('financial_lock_threshold', e.target.value)}
+                                />
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+
                 {/* 1. PAYMENT CONFIGURATION CARD */}
                 <Card className="border border-slate-100 shadow-sm rounded-2xl overflow-hidden">
                     <CardHeader className="bg-slate-50/50 border-b border-slate-100">
@@ -274,6 +339,59 @@ export default function BursarySettingsPage() {
                     </CardContent>
                 </Card>
 
+                {/* PART PAYMENT CONFIGURATION CARD */}
+                <Card className="border border-slate-100 shadow-sm rounded-2xl overflow-hidden bg-slate-50/10">
+                    <CardHeader className="bg-slate-50/50 border-b border-slate-100">
+                        <CardTitle className="text-base font-bold text-slate-800 flex items-center gap-2">
+                            <CreditCard className="w-5 h-5 text-indigo-500" />
+                            Installment & Part Payment Policy Defaults
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-6 pt-6">
+                        <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
+                            <div>
+                                <p className="font-bold text-slate-900">Enable Installment Payments</p>
+                                <p className="text-sm text-slate-500">Allow students to make partial fee payments by default</p>
+                            </div>
+                            <Button
+                                onClick={() => handleSave('part_payment_enabled', settings['part_payment_enabled'] === 'false' ? 'true' : 'false')}
+                                variant={settings['part_payment_enabled'] !== 'false' ? 'default' : 'outline'}
+                                className={cn("font-semibold rounded-lg", settings['part_payment_enabled'] !== 'false' ? 'bg-indigo-600 text-white hover:bg-indigo-700' : '')}
+                            >
+                                {settings['part_payment_enabled'] !== 'false' ? 'Enabled' : 'Disabled'}
+                            </Button>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="space-y-2">
+                                <label className="text-sm font-bold text-slate-700">Default Minimum Initial Installment (%)</label>
+                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tight">Minimum percentage required for the first payment</p>
+                                <input
+                                    type="number"
+                                    min="1"
+                                    max="100"
+                                    className="w-full px-4 py-2.5 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 text-sm bg-white"
+                                    placeholder="e.g. 60"
+                                    defaultValue={settings['min_part_payment_percentage'] || "60"}
+                                    onBlur={(e) => handleSave('min_part_payment_percentage', e.target.value)}
+                                />
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-sm font-bold text-slate-700">Default Minimum Flat Amount (₦)</label>
+                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tight">Enforced minimum flat currency amount threshold</p>
+                                <input
+                                    type="number"
+                                    className="w-full px-4 py-2.5 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 text-sm bg-white"
+                                    placeholder="e.g. 5000"
+                                    defaultValue={settings['min_part_payment_amount'] || "5000"}
+                                    onBlur={(e) => handleSave('min_part_payment_amount', e.target.value)}
+                                />
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+
                 {/* 2. SPLIT PAYMENT GATEWAY bearer RULES */}
                 <Card className="border border-slate-100 shadow-sm rounded-2xl overflow-hidden bg-slate-50/10">
                     <CardHeader className="bg-slate-50/50 border-b border-slate-100 flex flex-row justify-between items-center">
@@ -288,12 +406,12 @@ export default function BursarySettingsPage() {
                                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Active Payment Gateway</label>
                                 <select
                                     className="w-full px-4 py-2 rounded-lg border border-slate-200 h-11 text-sm focus:ring-2 focus:ring-indigo-500 bg-white"
-                                    value={settings['active_payment_gateway'] || "paystack"}
+                                    value={settings['active_payment_gateway'] || "remita"}
                                     onChange={(e) => handleSave('active_payment_gateway', e.target.value)}
                                 >
-                                    <option value="paystack">Paystack API (Subaccounts)</option>
-                                    <option value="flutterwave">Flutterwave API (Subaccounts)</option>
-                                    <option value="remita">Remita API (Dynamic Line Items)</option>
+                                    {(settings['gateway_remita_active'] !== "false") && <option value="remita">Remita API (Dynamic Line Items)</option>}
+                                    {(settings['gateway_paystack_active'] === "true") && <option value="paystack">Paystack API (Subaccounts)</option>}
+                                    {(settings['gateway_flutterwave_active'] === "true") && <option value="flutterwave">Flutterwave API (Subaccounts)</option>}
                                 </select>
                             </div>
 
@@ -313,11 +431,66 @@ export default function BursarySettingsPage() {
                             </div>
                         </div>
 
+                        {/* Gateway Enable/Disable Toggles */}
+                        <div className="flex gap-4 p-4 bg-white rounded-xl border border-slate-200">
+                            <div className="flex items-center gap-2">
+                                <Switch 
+                                    checked={settings['gateway_remita_active'] !== "false"}
+                                    onCheckedChange={(c) => handleSave('gateway_remita_active', c ? "true" : "false")}
+                                />
+                                <span className="text-sm font-bold text-slate-700">Remita</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <Switch 
+                                    checked={settings['gateway_paystack_active'] === "true"}
+                                    onCheckedChange={(c) => handleSave('gateway_paystack_active', c ? "true" : "false")}
+                                />
+                                <span className="text-sm font-bold text-slate-700">Paystack</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <Switch 
+                                    checked={settings['gateway_flutterwave_active'] === "true"}
+                                    onCheckedChange={(c) => handleSave('gateway_flutterwave_active', c ? "true" : "false")}
+                                />
+                                <span className="text-sm font-bold text-slate-700">Flutterwave</span>
+                            </div>
+                        </div>
+
+                        {/* Installment Payment Rules */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 bg-white rounded-xl border border-slate-200">
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Allow Installment Payments</label>
+                                <div className="flex items-center gap-2 mt-2">
+                                    <Switch 
+                                        checked={settings['allow_installment_payments'] === "true"}
+                                        onCheckedChange={(c) => handleSave('allow_installment_payments', c ? "true" : "false")}
+                                    />
+                                    <span className="text-sm font-bold text-slate-700">Enable part-payments for students</span>
+                                </div>
+                            </div>
+                            
+                            {settings['allow_installment_payments'] === "true" && (
+                                <div className="space-y-2">
+                                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Minimum Initial Installment (%)</label>
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        max="100"
+                                        className="w-full px-4 py-2 rounded-lg border border-slate-200 h-11 text-sm focus:ring-2 focus:ring-indigo-500 bg-white"
+                                        value={settings['minimum_installment_percentage'] || "60"}
+                                        onChange={(e) => handleSave('minimum_installment_percentage', e.target.value)}
+                                        placeholder="e.g. 60"
+                                    />
+                                    <p className="text-xs text-slate-500 mt-1">Students cannot pay less than this percentage on their first installment.</p>
+                                </div>
+                            )}
+                        </div>
+
                         {/* Default Main school commercial bank configuration */}
                         <div className="bg-slate-50 rounded-2xl p-6 border border-slate-200/60 space-y-4">
                             <h4 className="text-sm font-bold text-slate-700 flex items-center gap-2">
-                                <Building2 className="w-4 h-4 text-indigo-500" />
-                                Primary School Default Bank Account
+                                <Landmark className="w-4 h-4 text-indigo-500" />
+                                Primary Default Bank Account
                             </h4>
                             <p className="text-xs text-slate-400 leading-normal">
                                 Used as the fallback settlement bank account for unallocated splits and default fee absorbs.
@@ -545,7 +718,7 @@ export default function BursarySettingsPage() {
                                                     {item.category}
                                                 </Badge>
                                             </td>
-                                            <td className="p-4 font-mono text-slate-700">₦{parseFloat(item.defaultAmount).toLocaleString()}</td>
+                                            <td className="p-4 font-mono text-slate-700">{settings?.base_currency || '₦'}{parseFloat(item.defaultAmount).toLocaleString()}</td>
                                             <td className="p-4">
                                                 <select
                                                     className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs focus:ring-1 focus:ring-indigo-500 bg-white outline-none w-full max-w-xs"
@@ -577,31 +750,45 @@ export default function BursarySettingsPage() {
                         </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-6 pt-6">
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                             {[
                                 { id: 'modern', name: 'Modern', desc: 'Sleek, colorful, and highly premium look.' },
                                 { id: 'classic', name: 'Classic', desc: 'Traditional official style with formal borders.' },
                                 { id: 'minimalist', name: 'Minimalist', desc: 'Clean, simple, and high readability.' },
+                                { id: 'heritage', name: 'Heritage Classic', desc: 'Nigerian federal style paper receipt with spelled-out amounts.' }
                             ].map((tpl) => (
-                                <button
+                                <div
                                     key={tpl.id}
                                     onClick={() => handleSave('receipt_template', tpl.id)}
+                                    role="button"
+                                    tabIndex={0}
                                     className={cn(
-                                        "p-4 rounded-2xl border-2 transition-all text-left group",
+                                        "p-4 rounded-2xl border-2 transition-all text-left group cursor-pointer",
                                         settings['receipt_template'] === tpl.id
                                             ? "border-indigo-600 bg-white shadow-md shadow-indigo-100"
                                             : "border-slate-100 bg-slate-50/50 hover:border-slate-200"
                                     )}
                                 >
-                                    <div className={cn(
-                                        "w-8 h-8 rounded-lg mb-3 flex items-center justify-center transition-colors",
-                                        settings['receipt_template'] === tpl.id ? "bg-indigo-600 text-white" : "bg-slate-200 text-slate-400 group-hover:bg-slate-300"
-                                    )}>
-                                        <FileText className="w-4 h-4" />
+                                    <div className="flex justify-between items-start mb-3">
+                                        <div className={cn(
+                                            "w-8 h-8 rounded-lg flex items-center justify-center transition-colors",
+                                            settings['receipt_template'] === tpl.id ? "bg-indigo-600 text-white" : "bg-slate-200 text-slate-400 group-hover:bg-slate-300"
+                                        )}>
+                                            <FileText className="w-4 h-4" />
+                                        </div>
+                                        <button 
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                window.open(`/student/finance/receipt-preview?template=${tpl.id}`, '_blank');
+                                            }}
+                                            className="flex items-center gap-1 text-[10px] font-bold text-slate-500 bg-white border border-slate-200 px-2 py-1 rounded hover:bg-slate-100 hover:text-indigo-600 transition-colors"
+                                        >
+                                            <Eye className="w-3 h-3" /> Preview
+                                        </button>
                                     </div>
                                     <p className="font-bold text-slate-900 mb-1">{tpl.name}</p>
                                     <p className="text-[10px] text-slate-500 leading-tight">{tpl.desc}</p>
-                                </button>
+                                </div>
                             ))}
                         </div>
                     </CardContent>
@@ -709,44 +896,6 @@ export default function BursarySettingsPage() {
                     </CardContent>
                 </Card>
 
-                {/* 9. AI & INSTITUTIONAL INTELLIGENCE CARD */}
-                <Card className="border border-slate-100 shadow-sm rounded-2xl overflow-hidden bg-indigo-50/30">
-                    <CardHeader className="bg-slate-50/50 border-b border-slate-100">
-                        <CardTitle className="text-base font-bold text-slate-800 flex items-center gap-2 text-indigo-900">
-                            <Sparkles className="w-5 h-5 text-indigo-500" />
-                            AI & Institutional Intelligence Config
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4 pt-6">
-                        <div className="space-y-2">
-                            <label className="text-sm font-bold text-slate-700">Google Gemini API Key</label>
-                            <p className="text-xs text-slate-500 mb-3">Required for Intelligent OCR (Invoice Scanning) and Bursary-Bot. Get your key from Google AI Studio.</p>
-                            <div className="flex gap-4 relative">
-                                <input
-                                    type={showApiKey['gemini_api_key'] ? "text" : "password"}
-                                    className="flex-1 px-4 py-2.5 pr-12 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 text-sm bg-white"
-                                    placeholder="Enter your Gemini API key..."
-                                    defaultValue={settings['gemini_api_key']}
-                                    onBlur={(e) => handleSave('gemini_api_key', e.target.value)}
-                                />
-                                <button
-                                    type="button"
-                                    onClick={() => setShowApiKey(prev => ({ ...prev, gemini_api_key: !prev.gemini_api_key }))}
-                                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
-                                >
-                                    {showApiKey['gemini_api_key'] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                                </button>
-                            </div>
-                        </div>
-
-                        <div className="p-4 bg-white/60 border border-indigo-100 rounded-xl flex gap-3 items-center">
-                            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                            <p className="text-[10px] font-bold text-indigo-800 uppercase tracking-widest">
-                                AI Status: {settings['gemini_api_key'] ? 'Configured & Ready' : 'Awaiting Integration'}
-                            </p>
-                        </div>
-                    </CardContent>
-                </Card>
             </div>
         </div>
     );

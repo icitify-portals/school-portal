@@ -29,7 +29,7 @@ export default async function CurriculumDashboard() {
     ];
 
     return (
-        <div className="p-8 max-w-7xl mx-auto space-y-10 animate-in fade-in duration-700">
+        <div className="p-8 max-w-[1600px] w-full mx-auto space-y-10 animate-in fade-in duration-700">
             {/* Header */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
                 <div className="space-y-4">
@@ -53,7 +53,7 @@ export default async function CurriculumDashboard() {
             {/* Stats Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 {stats.map((stat, i) => (
-                    <Card key={i} className="border-none shadow-xl shadow-slate-200/50 rounded-3xl overflow-hidden group hover:scale-[1.02] transition-all bg-white">
+                    <Card key={i} className="border-none shadow-xl shadow-slate-200/50 rounded-2xl overflow-hidden group hover:scale-[1.02] transition-all bg-white">
                         <CardContent className="p-8 flex items-center gap-6">
                             <div className={cn("p-4 rounded-2xl", stat.bg)}>
                                 <stat.icon className={cn("w-6 h-6", stat.color)} />
@@ -84,10 +84,10 @@ export default async function CurriculumDashboard() {
 
                 <div className="grid grid-cols-1 gap-4">
                     {frameworks.map((fw) => (
-                        <Card key={fw.id} className="border border-slate-100 shadow-xl shadow-slate-200/40 rounded-[2.5rem] overflow-hidden group hover:border-indigo-200 transition-all">
+                        <Card key={fw.id} className="border border-slate-100 shadow-sm hover:shadow-md transition-shadow rounded-[2.5rem] overflow-hidden group hover:border-indigo-200 transition-all">
                             <CardContent className="p-0">
                                 <div className="flex flex-col md:flex-row items-center p-8 gap-8">
-                                    <div className="w-20 h-20 bg-slate-900 rounded-[2rem] flex items-center justify-center text-white shrink-0 shadow-2xl">
+                                    <div className="w-20 h-20 bg-slate-900 rounded-2xl flex items-center justify-center text-white shrink-0 shadow-2xl">
                                         <FileText className="w-10 h-10" />
                                     </div>
                                     <div className="flex-1 space-y-2">

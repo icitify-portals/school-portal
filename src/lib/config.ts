@@ -66,6 +66,16 @@ export const config = {
         password: process.env.CROSSREF_PASSWORD,
         prefix: process.env.CROSSREF_PREFIX || '10.xxxx',
         role: process.env.CROSSREF_ROLE || 'member'
+    },
+    
+    altcha: {
+        enabled: process.env.ALTCHA_ENABLED === 'true' || false, // disabled by default until explicitly enabled
+        hmacKey: process.env.ALTCHA_HMAC_KEY || 'ExampleHMACKeyForPoWSpamValidation12345',
+    },
+
+    ojs: {
+        repositoryId: process.env.OJS_REPOSITORY_ID || 'ojs2.localhost',
+        maxRecords: parseInt(process.env.OJS_MAX_RECORDS || '100'),
     }
 };
 

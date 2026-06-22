@@ -6,7 +6,8 @@ import {
     enrollments, results, academicSessions, semesterSummaries, courses,
     institutionalUnits, studentGroups, annualSummaries,
     affectiveTraits, behavioralScores, reportRemarks, studentVitals,
-    systemAuditLogs, componentResults, courseComponents, quranMemorizationLogs
+    systemAuditLogs, componentResults, courseComponents, quranMemorizationLogs,
+    reportCardRubrics
 } from "@/db/schema";
 import { eq, and, sql, desc, or, inArray } from "drizzle-orm";
 import { auth } from "@/auth";
@@ -609,6 +610,7 @@ export async function getResultFilterMetadata() {
         const sessions = await db.select().from(academicSessions).orderBy(desc(academicSessions.name));
         const groups = await db.select().from(studentGroups).orderBy(studentGroups.level, studentGroups.name);
         const depts = await db.select().from(departments).orderBy(departments.name);
+        const rubrics = await db.select().from(reportCardRubrics).orderBy(reportCardRubrics.name);
         
         // Extract unique levels
         const levels = Array.from(new Set(groups.map(g => g.level))).sort((a, b) => (a as number) - (b as number));
@@ -619,7 +621,8 @@ export async function getResultFilterMetadata() {
                 sessions,
                 groups,
                 levels,
-                departments: depts
+                departments: depts,
+                rubrics
             }
         };
     } catch (error) {

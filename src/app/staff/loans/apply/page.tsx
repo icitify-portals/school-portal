@@ -68,7 +68,7 @@ export default function LoanApplicationPage() {
 
   if (step === 'select') {
     return (
-      <div className="p-8 max-w-5xl mx-auto space-y-10">
+      <div className="p-8 max-w-[1600px] w-full mx-auto space-y-10">
         <div className="text-center space-y-2">
           <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight">Staff Credit Facilities</h1>
           <p className="text-slate-500 text-lg">Select a loan product to begin your application</p>
@@ -83,7 +83,7 @@ export default function LoanApplicationPage() {
                 setStep('form');
                 setFormData({ months: template.repaymentPeriodMax });
               }}
-              className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm hover:shadow-xl hover:border-indigo-200 transition-all cursor-pointer group relative overflow-hidden"
+              className="bg-white p-8 rounded-2xl border border-slate-100 shadow-sm hover:shadow-xl hover:border-indigo-200 transition-all cursor-pointer group relative overflow-hidden"
             >
               <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
                 {getIcon(template.category)}
@@ -127,7 +127,7 @@ export default function LoanApplicationPage() {
           Back to Loan Selection
         </button>
 
-        <div className="bg-white rounded-3xl shadow-xl border border-slate-100 overflow-hidden">
+        <div className="bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden">
           <div className="bg-indigo-600 p-8 text-white">
             <h2 className="text-3xl font-bold">{selectedTemplate.name}</h2>
             <p className="opacity-80 mt-1">{selectedTemplate.description}</p>
@@ -146,7 +146,7 @@ export default function LoanApplicationPage() {
                 />
                 <div className="flex items-center gap-1 text-xs text-slate-400">
                   <Info size={12} />
-                  Max: ₦{parseFloat(selectedTemplate.maxAmount).toLocaleString()}
+                  Max: {settings?.base_currency || '₦'}{parseFloat(selectedTemplate.maxAmount).toLocaleString()}
                 </div>
               </div>
 

@@ -21,7 +21,7 @@ export default async function SessionSettingsPage({ params }: { params: Promise<
     }
 
     return (
-        <div className="p-6 max-w-5xl mx-auto space-y-6">
+        <div className="p-6 max-w-[1600px] w-full mx-auto space-y-6">
             <div className="flex items-center gap-4">
                 <Link href="/admin/admission/sessions">
                     <Button variant="ghost" size="icon">

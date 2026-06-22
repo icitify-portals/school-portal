@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 
 export default function ExamSlotsPage() {
     return (
-        <div className="p-6 md:p-10 max-w-7xl mx-auto space-y-10">
+        <div className="p-6 md:p-10 max-w-[1600px] w-full mx-auto space-y-10">
             <ExamSlotManager />
         </div>
     );

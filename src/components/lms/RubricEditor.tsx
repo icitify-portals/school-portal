@@ -116,7 +116,7 @@ export default function RubricEditor({ courseId }: { courseId?: number }) {
     };
 
     return (
-        <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div className="max-w-[1600px] w-full mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="flex justify-between items-center sticky top-0 bg-slate-50/80 backdrop-blur-sm p-4 rounded-xl z-20 shadow-sm border border-slate-200/50">
                 <div className="flex-1 mr-8">
                     <Input

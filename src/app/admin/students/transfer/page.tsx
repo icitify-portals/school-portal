@@ -170,7 +170,7 @@ export default function StudentTransferPage() {
                             </div>
                         </div>
 
-                        <div className="mt-8 p-6 bg-slate-100 rounded-[2rem] border border-slate-200 border-dashed">
+                        <div className="mt-8 p-6 bg-slate-100 rounded-2xl border border-slate-200 border-dashed">
                             <div className="flex items-start gap-4">
                                 <Info className="w-5 h-5 text-indigo-600 mt-1 shrink-0" />
                                 <div className="text-[11px] text-slate-600 font-bold leading-relaxed italic">

@@ -43,7 +43,7 @@ export default function ExamsRecordsTranscriptPage() {
     if (!transcriptData) {
         return (
             <div className="min-h-screen bg-slate-50 p-8 flex flex-col items-center justify-center">
-                <div className="bg-white p-12 rounded-3xl shadow-sm border border-slate-100 text-center max-w-md">
+                <div className="bg-white p-12 rounded-2xl shadow-sm border border-slate-100 text-center max-w-md">
                     <p className="text-red-500 font-bold mb-4">Record not found or access denied.</p>
                     <Button onClick={() => router.back()} variant="outline" className="rounded-xl">Go Back</Button>
                 </div>
@@ -79,7 +79,7 @@ export default function ExamsRecordsTranscriptPage() {
                     </div>
                 </div>
 
-                <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex items-center gap-6 no-print">
+                <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-6 no-print">
                     <div className="w-14 h-14 bg-emerald-50 rounded-2xl flex items-center justify-center">
                         <ShieldCheck className="w-7 h-7 text-emerald-600" />
                     </div>

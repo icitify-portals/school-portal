@@ -58,7 +58,7 @@ export default function CohortManagementPage() {
     };
 
     return (
-        <div className="p-8 max-w-7xl mx-auto space-y-8">
+        <div className="p-8 max-w-[1600px] w-full mx-auto space-y-8">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <h1 className="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-3">
@@ -110,13 +110,13 @@ export default function CohortManagementPage() {
                     {loading ? (
                         <div className="flex justify-center p-12"><Loader2 className="w-6 h-6 animate-spin text-slate-300" /></div>
                     ) : cohorts.length === 0 ? (
-                        <div className="p-8 text-center text-slate-400 bg-white rounded-3xl border-2 border-dashed border-slate-100 italic text-sm">No cohorts created yet.</div>
+                        <div className="p-8 text-center text-slate-400 bg-white rounded-2xl border-2 border-dashed border-slate-100 italic text-sm">No cohorts created yet.</div>
                     ) : cohorts.map(cohort => (
                         <div
                             key={cohort.id}
                             onClick={() => setSelectedCohort(cohort)}
                             className={cn(
-                                "p-5 rounded-3xl cursor-pointer transition-all border-2 flex items-center justify-between",
+                                "p-5 rounded-2xl cursor-pointer transition-all border-2 flex items-center justify-between",
                                 selectedCohort?.id === cohort.id
                                     ? "bg-indigo-50 border-indigo-600 shadow-md"
                                     : "bg-white border-transparent hover:border-slate-100"
@@ -196,7 +196,7 @@ export default function CohortManagementPage() {
                             </CardContent>
                         </Card>
                     ) : (
-                        <div className="h-full flex flex-col items-center justify-center bg-slate-50/50 rounded-3xl border-2 border-dashed border-slate-100 p-20 text-center opacity-40">
+                        <div className="h-full flex flex-col items-center justify-center bg-slate-50/50 rounded-2xl border-2 border-dashed border-slate-100 p-20 text-center opacity-40">
                             <Layers className="w-20 h-20 text-slate-200 mb-6" />
                             <p className="text-sm font-black uppercase tracking-widest text-slate-400">Select a cohort to manage its members</p>
                         </div>

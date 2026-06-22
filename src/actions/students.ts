@@ -2,29 +2,76 @@
 "use server";
 
 import { db } from "@/db/db";
-import { users, students, programmes, userRoles, roles, courses, enrollments, quizAttempts, quizResponses, quizQuestions, lessonNotes, quizzes } from "@/db/schema";
+import { users, students, programmes, userRoles, roles, courses, enrollments, quizAttempts, quizResponses, quizQuestions, lessonNotes, quizzes, staffProfiles, departments, systemAuditLogs } from "@/db/schema";
 import { eq, inArray, sql, or, like, and, desc } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
 import { auth } from "@/auth";
 import { generateMatricNumber } from "@/actions/matriculation";
 
-export async function getStudents(options: { search?: string, page?: number, pageSize?: number } = {}) {
+export async function getStudents(options: { search?: string, page?: number, pageSize?: number, level?: number } = {}) {
     try {
-        const { search = "", page = 1, pageSize = 10 } = options;
+        const { search = "", page = 1, pageSize = 10, level } = options;
         const offset = (page - 1) * pageSize;
-
         const searchPattern = `%${search}%`;
+
+        // Enforce role-based department and faculty scopes
+        const session = await auth();
+        const userRole = (session?.user as any)?.role?.toLowerCase() || "";
+        const actorId = session?.user?.id ? parseInt(session.user.id) : null;
+
+        let scopeCondition: any = undefined;
+
+        if (userRole === "hod" && actorId) {
+            const [profile] = await db.select({ departmentId: staffProfiles.departmentId })
+                .from(staffProfiles)
+                .where(eq(staffProfiles.userId, actorId))
+                .limit(1);
+            const hodDeptId = profile?.departmentId;
+            if (!hodDeptId) {
+                return { success: true, data: [], totalCount: 0 };
+            }
+            scopeCondition = eq(students.deptId, hodDeptId);
+        } else if (userRole === "dean" && actorId) {
+            const [profile] = await db.select({ facultyId: departments.facultyId })
+                .from(staffProfiles)
+                .leftJoin(departments, eq(staffProfiles.departmentId, departments.id))
+                .where(eq(staffProfiles.userId, actorId))
+                .limit(1);
+            const deanFacultyId = profile?.facultyId;
+            if (!deanFacultyId) {
+                return { success: true, data: [], totalCount: 0 };
+            }
+            const depts = await db.select({ id: departments.id })
+                .from(departments)
+                .where(eq(departments.facultyId, deanFacultyId));
+            const deanDeptIds = depts.map(d => d.id);
+            if (deanDeptIds.length === 0) {
+                return { success: true, data: [], totalCount: 0 };
+            }
+            scopeCondition = inArray(students.deptId, deanDeptIds);
+        } else if (!["superadmin", "admin", "dvc", "bursar", "registrar", "librarian"].includes(userRole)) {
+            // Unauthorized roles see nothing
+            return { success: true, data: [], totalCount: 0 };
+        }
+
+        const countConditions = [
+            level !== undefined && level !== null ? eq(students.currentLevel, level) : undefined,
+            search ? or(
+                like(users.name, searchPattern),
+                like(users.email, searchPattern),
+                like(students.matricNumber, searchPattern)
+            ) : undefined,
+            scopeCondition
+        ].filter(Boolean);
+
+        const countWhere = countConditions.length > 0 ? and(...countConditions) : undefined;
 
         // 1. Get total count
         const [countRes] = await db.select({ count: sql<number>`count(*)` })
             .from(students)
             .innerJoin(users, eq(students.userId, users.id))
-            .where(search ? or(
-                like(users.name, searchPattern),
-                like(users.email, searchPattern),
-                like(students.matricNumber, searchPattern)
-            ) : undefined);
+            .where(countWhere);
         const totalCount = countRes?.count || 0;
 
         // 2. Fetch paginated data
@@ -36,11 +83,7 @@ export async function getStudents(options: { search?: string, page?: number, pag
             .from(students)
             .innerJoin(users, eq(students.userId, users.id))
             .leftJoin(programmes, eq(students.programmeId, programmes.id))
-            .where(search ? or(
-                like(users.name, searchPattern),
-                like(users.email, searchPattern),
-                like(students.matricNumber, searchPattern)
-            ) : undefined)
+            .where(countWhere)
             .limit(pageSize)
             .offset(offset);
 
@@ -61,6 +104,13 @@ export async function getStudents(options: { search?: string, page?: number, pag
 
 export async function approveStudent(userId: number, inputMatricNumber?: string) {
     try {
+        const session = await auth();
+        const actorRole = (session?.user as any)?.role?.toLowerCase() || "";
+        const actorId = session?.user?.id ? parseInt(session.user.id) : null;
+        if (!['superadmin', 'admin', 'dvc', 'bursar', 'registrar'].includes(actorRole)) {
+            return { success: false, error: "Unauthorized: Only superadmin, vice chancellor, bursar, and registrar can edit." };
+        }
+
         const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
         if (!user) return { success: false, error: "User not found" };
 
@@ -100,6 +150,16 @@ export async function approveStudent(userId: number, inputMatricNumber?: string)
             .set({ matricNumber: finalMatricToSave, barcode })
             .where(eq(students.userId, userId));
 
+        if (actorId) {
+            await db.insert(systemAuditLogs).values({
+                actorId,
+                action: 'APPROVE_STUDENT',
+                targetId: userId.toString(),
+                details: JSON.stringify({ matricNumber: finalMatricToSave, timestamp: new Date() }),
+                status: 'success'
+            });
+        }
+
         revalidatePath("/admin/students");
         return { success: true };
     } catch (error) {
@@ -110,6 +170,13 @@ export async function approveStudent(userId: number, inputMatricNumber?: string)
 
 export async function bulkImportStudents(data: any[]) {
     try {
+        const session = await auth();
+        const actorRole = (session?.user as any)?.role?.toLowerCase() || "";
+        const actorId = session?.user?.id ? parseInt(session.user.id) : null;
+        if (!['superadmin', 'admin', 'dvc', 'bursar', 'registrar'].includes(actorRole)) {
+            return { success: false, error: "Unauthorized: Only superadmin, vice chancellor, bursar, and registrar can edit." };
+        }
+
         const passwordHash = await bcrypt.hash("welcome123", 10);
 
         // 1. Get the 'student' role ID
@@ -167,6 +234,16 @@ export async function bulkImportStudents(data: any[]) {
             }
         });
 
+        if (actorId) {
+            await db.insert(systemAuditLogs).values({
+                actorId,
+                action: 'BULK_IMPORT_STUDENTS',
+                targetId: 'SYSTEM',
+                details: JSON.stringify({ count: data.length, timestamp: new Date() }),
+                status: 'success'
+            });
+        }
+
         revalidatePath("/admin/students");
         return { success: true, message: `Successfully processed ${data.length} records.` };
     } catch (error) {
@@ -177,9 +254,30 @@ export async function bulkImportStudents(data: any[]) {
 
 export async function getStudentByUserId(userId: number) {
     try {
-        const student = await db.select().from(students).where(eq(students.userId, userId)).limit(1);
-        if (!student.length) return null;
-        return student[0];
+        let studentRows = await db.select().from(students).where(eq(students.userId, userId)).limit(1);
+        
+        if (studentRows.length === 0) {
+            const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+            if (user && user.role === 'student') {
+                const admissionYear = new Date().getFullYear();
+                const matricNumber = `STU/${admissionYear}/${Math.floor(1000 + Math.random() * 9000)}`;
+                const barcode = `${user.name} | ${matricNumber}`;
+
+                await db.insert(students).values({
+                    userId,
+                    matricNumber,
+                    currentLevel: 100,
+                    admissionYear,
+                    barcode,
+                    status: 'active'
+                });
+
+                studentRows = await db.select().from(students).where(eq(students.userId, userId)).limit(1);
+            }
+        }
+
+        if (!studentRows.length) return null;
+        return studentRows[0];
     } catch (error) {
         console.error("Failed to fetch student profile:", error);
         return null;
@@ -349,5 +447,16 @@ export async function getPersonalizedRecommendations() {
     } catch (error) {
         console.error("Recommendations Error:", error);
         return { success: false, error: "Failed to load recommendations" };
+    }
+}
+
+export async function toggleFinancialLock(studentId: number, status: boolean) {
+    try {
+        await db.update(students).set({ isFinanciallyLocked: status }).where(eq(students.id, studentId));
+        revalidatePath("/admin/students");
+        return { success: true };
+    } catch (error) {
+        console.error(error);
+        return { success: false, error: "Failed to update financial lock status." };
     }
 }

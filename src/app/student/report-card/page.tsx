@@ -1,13 +1,14 @@
 
 import { getK12ReportData } from "@/actions/results";
 import { db } from "@/db/db";
-import { academicSessions, students } from "@/db/schema";
+import { academicSessions, students, institutionalUnits } from "@/db/schema";
 import { auth } from "@/auth";
 import { eq } from "drizzle-orm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Printer, Download, School, User, CalendarDays, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { redirect } from "next/navigation";
 
 export default async function StudentReportCardPage({ 
     searchParams 
@@ -19,6 +20,14 @@ export default async function StudentReportCardPage({
 
     const [student] = await db.select().from(students).where(eq(students.userId, parseInt(sessionToken.user.id))).limit(1);
     if (!student) return <div>Student profile not found</div>;
+
+    // Academic tier guard: redirect tertiary students to transcript
+    if (student.unitId) {
+        const [unit] = await db.select().from(institutionalUnits).where(eq(institutionalUnits.id, student.unitId)).limit(1);
+        if (unit && unit.academicTier !== 'k12') {
+            redirect("/student/transcript");
+        }
+    }
 
     const [currentSession] = await db.select().from(academicSessions).where(eq(academicSessions.isCurrent, true)).limit(1);
     
@@ -36,7 +45,7 @@ export default async function StudentReportCardPage({
         : 0;
 
     return (
-        <div className="p-8 max-w-5xl mx-auto space-y-8 print:p-0 print:m-0">
+        <div className="p-8 max-w-[1600px] w-full mx-auto space-y-8 print:p-0 print:m-0">
             {/* Header Actions */}
             <div className="flex justify-between items-center print:hidden">
                 <div>

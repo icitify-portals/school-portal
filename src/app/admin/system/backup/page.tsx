@@ -68,7 +68,7 @@ export default function BackupPage() {
                 <Button 
                     onClick={handleBackup}
                     disabled={loading}
-                    className="rounded-[2rem] bg-indigo-600 hover:bg-indigo-700 text-white font-black px-12 py-8 flex gap-3 uppercase text-xs tracking-widest shadow-2xl shadow-indigo-100 transition-all active:scale-95"
+                    className="rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black px-12 py-8 flex gap-3 uppercase text-xs tracking-widest shadow-2xl shadow-indigo-100 transition-all active:scale-95"
                 >
                     {loading ? <RefreshCw className="w-5 h-5 animate-spin" /> : <Database className="w-5 h-5" />}
                     Generate New Backup
@@ -91,7 +91,7 @@ export default function BackupPage() {
                             </div>
                         </CardHeader>
                         <CardContent className="p-12 space-y-10">
-                            <div className="flex items-center justify-between p-6 bg-slate-50 rounded-3xl border border-slate-100">
+                            <div className="flex items-center justify-between p-6 bg-slate-50 rounded-2xl border border-slate-100">
                                 <div className="space-y-1">
                                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Backup Folder ID</p>
                                     <p className="text-sm font-black text-slate-900 font-mono">1Xy2Z...BackupFolder</p>
@@ -107,7 +107,7 @@ export default function BackupPage() {
                                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">AWS S3 Status</label>
                                         <span className="px-2 py-0.5 bg-emerald-50 text-emerald-600 rounded text-[9px] font-black uppercase tracking-widest">Active</span>
                                     </div>
-                                    <div className="p-6 bg-slate-50 rounded-3xl border border-slate-100 flex justify-between items-center group">
+                                    <div className="p-6 bg-slate-50 rounded-2xl border border-slate-100 flex justify-between items-center group">
                                         <span className="text-sm font-bold text-slate-600 italic">Bucket: {process.env.AWS_S3_BUCKET || "school-backups"}</span>
                                         <Copy 
                                             className="w-4 h-4 text-slate-300 cursor-pointer hover:text-indigo-600 transition-colors opacity-0 group-hover:opacity-100" 
@@ -120,7 +120,7 @@ export default function BackupPage() {
                                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Wasabi Status</label>
                                         <span className="px-2 py-0.5 bg-emerald-50 text-emerald-600 rounded text-[9px] font-black uppercase tracking-widest">Active</span>
                                     </div>
-                                    <div className="p-6 bg-slate-50 rounded-3xl border border-slate-100 flex justify-between items-center group">
+                                    <div className="p-6 bg-slate-50 rounded-2xl border border-slate-100 flex justify-between items-center group">
                                         <span className="text-sm font-bold text-slate-600 italic">Bucket: {process.env.WASABI_BUCKET || "school-backups-wasabi"}</span>
                                         <Copy 
                                             className="w-4 h-4 text-slate-300 cursor-pointer hover:text-indigo-600 transition-colors opacity-0 group-hover:opacity-100" 

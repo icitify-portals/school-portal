@@ -510,3 +510,52 @@ export async function getDepartmentCourses(deptId: number) {
         return [];
     }
 }
+
+export async function getFacultySubmissions(facultyId: number) {
+    try {
+        const [session] = await db.select().from(academicSessions).where(eq(academicSessions.isCurrent, true)).limit(1);
+        if (!session) return [];
+
+        const depts = await db.select().from(departments).where(eq(departments.facultyId, facultyId));
+        if (depts.length === 0) return [];
+
+        const deptIds = depts.map(d => d.id);
+
+        const rows = await db.select({
+            submission: timetableSubmissions,
+            department: departments,
+            submittedBy: users
+        })
+            .from(timetableSubmissions)
+            .innerJoin(departments, eq(timetableSubmissions.deptId, departments.id))
+            .leftJoin(users, eq(timetableSubmissions.submittedById, users.id))
+            .where(and(
+                inArray(timetableSubmissions.deptId, deptIds),
+                eq(timetableSubmissions.sessionId, session.id),
+                eq(timetableSubmissions.semester, session.currentSemester === '1' ? '1' : '2')
+            ));
+
+        return rows;
+    } catch (error) {
+        console.error("Failed to fetch faculty submissions:", error);
+        return [];
+    }
+}
+
+export async function getFacultyDepartments(facultyId: number) {
+    try {
+        return await db.select({
+            id: departments.id,
+            name: departments.name,
+            code: departments.code,
+            unitId: departments.unitId
+        })
+            .from(departments)
+            .where(eq(departments.facultyId, facultyId));
+    } catch (error) {
+        console.error("Failed to fetch faculty departments:", error);
+        return [];
+    }
+}
+
+

@@ -50,7 +50,7 @@ export default function HostelSettingsForm({ hostelId, initialSettings }: {
     return (
         <form onSubmit={handleSubmit} className="space-y-6 animate-in slide-in-from-bottom-5 duration-700">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Card className="border-none shadow-lg bg-white rounded-3xl overflow-hidden">
+                <Card className="border-none shadow-lg bg-white rounded-2xl overflow-hidden">
                     <CardHeader className="bg-indigo-50/50 border-b border-indigo-100/50 pb-4">
                         <CardTitle className="text-sm font-black text-indigo-900 uppercase tracking-widest flex items-center gap-2">
                             <Clock className="w-4 h-4" /> Payment Window
@@ -70,7 +70,7 @@ export default function HostelSettingsForm({ hostelId, initialSettings }: {
                     </CardContent>
                 </Card>
 
-                <Card className="border-none shadow-lg bg-white rounded-3xl overflow-hidden">
+                <Card className="border-none shadow-lg bg-white rounded-2xl overflow-hidden">
                     <CardHeader className="bg-slate-50 border-b border-slate-100 pb-4">
                         <CardTitle className="text-sm font-black text-slate-900 uppercase tracking-widest flex items-center gap-2">
                             <Target className="w-4 h-4" /> Allocation Policy
@@ -108,7 +108,7 @@ export default function HostelSettingsForm({ hostelId, initialSettings }: {
                 <Card className="border-2 border-dashed border-red-100 bg-red-50/30 rounded-[2.5rem] overflow-hidden">
                     <div className="p-8 flex flex-col md:flex-row items-center justify-between gap-6">
                         <div className="flex items-center gap-6">
-                            <div className="w-16 h-16 bg-red-100 rounded-3xl flex items-center justify-center shrink-0">
+                            <div className="w-16 h-16 bg-red-100 rounded-2xl flex items-center justify-center shrink-0">
                                 <ShieldAlert className="w-8 h-8 text-red-600" />
                             </div>
                             <div className="space-y-1">

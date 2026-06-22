@@ -64,7 +64,7 @@ export default function AdminAdmissionPage() {
     );
 
     return (
-        <div className="p-8 max-w-7xl mx-auto space-y-8">
+        <div className="p-8 max-w-[1600px] w-full mx-auto space-y-8">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                 <div>
                     <h1 className="text-4xl font-black text-slate-900 flex items-center gap-4 italic">
@@ -124,7 +124,7 @@ export default function AdminAdmissionPage() {
             )}
 
             <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-5 gap-6">
-                <Card className="border-none shadow-sm bg-indigo-50/50 rounded-3xl p-6">
+                <Card className="border-none shadow-sm bg-indigo-50/50 rounded-2xl p-6">
                     <div className="flex items-center gap-4">
                         <div className="p-3 bg-indigo-100 rounded-2xl text-indigo-600">
                             <Users className="w-6 h-6" />
@@ -135,7 +135,7 @@ export default function AdminAdmissionPage() {
                         </div>
                     </div>
                 </Card>
-                <Card className="border-none shadow-sm bg-emerald-50/50 rounded-3xl p-6">
+                <Card className="border-none shadow-sm bg-emerald-50/50 rounded-2xl p-6">
                     <div className="flex items-center gap-4">
                         <div className="p-3 bg-emerald-100 rounded-2xl text-emerald-600">
                             <CheckCircle className="w-6 h-6" />
@@ -146,7 +146,7 @@ export default function AdminAdmissionPage() {
                         </div>
                     </div>
                 </Card>
-                <Card className="border-none shadow-sm bg-emerald-50/50 rounded-3xl p-6">
+                <Card className="border-none shadow-sm bg-emerald-50/50 rounded-2xl p-6">
                     <div className="flex items-center gap-4">
                         <div className="p-3 bg-emerald-100 rounded-2xl text-emerald-600">
                             <CheckCircle className="w-6 h-6" />
@@ -157,7 +157,7 @@ export default function AdminAdmissionPage() {
                         </div>
                     </div>
                 </Card>
-                <Card className="border-none shadow-sm bg-rose-50/50 rounded-3xl p-6">
+                <Card className="border-none shadow-sm bg-rose-50/50 rounded-2xl p-6">
                     <div className="flex items-center gap-4">
                         <div className="p-3 bg-rose-100 rounded-2xl text-rose-600">
                             <XCircle className="w-6 h-6" />
@@ -168,7 +168,7 @@ export default function AdminAdmissionPage() {
                         </div>
                     </div>
                 </Card>
-                <Card className="border-none shadow-sm bg-amber-50/50 rounded-3xl p-6">
+                <Card className="border-none shadow-sm bg-amber-50/50 rounded-2xl p-6">
                     <div className="flex items-center gap-4">
                         <div className="p-3 bg-amber-100 rounded-2xl text-amber-600">
                             <AlertCircle className="w-6 h-6" />

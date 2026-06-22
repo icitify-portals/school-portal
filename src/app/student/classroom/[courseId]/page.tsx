@@ -137,6 +137,10 @@ export default async function StudentClassroomPage(props: PageProps) {
             studentId={student.id}
             initialContent={contentResult.content as any}
             courseTitle={course.name}
+            courseFormat={course.courseFormat || 'topics'}
+            courseStartDate={course.courseStartDate || undefined}
+            flowControl={course.flowControl || 'open'}
+            minPassingScore={course.minPassingScore || 75}
         />
     );
 }

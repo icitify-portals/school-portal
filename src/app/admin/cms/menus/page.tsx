@@ -303,7 +303,7 @@ export default function MenuBuilder() {
 
             {/* Upsert Dialog */}
             <Dialog open={isAdding || !!editingItem} onOpenChange={(open) => { if (!open) { setIsAdding(false); setEditingItem(null); } }}>
-                <DialogContent className="rounded-3xl max-w-2xl overflow-hidden p-0 gap-0 border-none">
+                <DialogContent className="rounded-2xl max-w-2xl overflow-hidden p-0 gap-0 border-none">
                     <DialogHeader className="p-6 bg-slate-900 text-white">
                         <DialogTitle className="text-xl font-bold italic uppercase tracking-tighter">
                             {editingItem ? "Refine Navigation Item" : "New Navigation Item"}

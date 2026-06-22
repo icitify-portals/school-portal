@@ -29,7 +29,7 @@ export default async function StaffCoursesPage() {
         .groupBy(courses.id);
 
     return (
-        <div className="p-8 max-w-7xl mx-auto">
+        <div className="p-8 max-w-[1600px] w-full mx-auto">
             <div className="flex justify-between items-center mb-8">
                 <div>
                     <h1 className="text-3xl font-bold text-slate-800">Course Management</h1>

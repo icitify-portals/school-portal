@@ -161,7 +161,7 @@ export default function ApplicantDocumentsPage() {
   };
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-8">
+    <div className="p-8 max-w-[1600px] w-full mx-auto space-y-8">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
         <div>
@@ -181,7 +181,7 @@ export default function ApplicantDocumentsPage() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card className="border-none shadow-sm bg-slate-50/50 rounded-3xl p-6">
+        <Card className="border-none shadow-sm bg-slate-50/50 rounded-2xl p-6">
           <div className="flex items-center gap-4">
             <div className="p-3 bg-slate-100 rounded-2xl text-slate-600">
               <FileText className="w-6 h-6" />
@@ -192,7 +192,7 @@ export default function ApplicantDocumentsPage() {
             </div>
           </div>
         </Card>
-        <Card className="border-none shadow-sm bg-amber-50/50 rounded-3xl p-6">
+        <Card className="border-none shadow-sm bg-amber-50/50 rounded-2xl p-6">
           <div className="flex items-center gap-4">
             <div className="p-3 bg-amber-100 rounded-2xl text-amber-600">
               <Clock className="w-6 h-6" />
@@ -203,7 +203,7 @@ export default function ApplicantDocumentsPage() {
             </div>
           </div>
         </Card>
-        <Card className="border-none shadow-sm bg-emerald-50/50 rounded-3xl p-6">
+        <Card className="border-none shadow-sm bg-emerald-50/50 rounded-2xl p-6">
           <div className="flex items-center gap-4">
             <div className="p-3 bg-emerald-100 rounded-2xl text-emerald-600">
               <CheckCircle2 className="w-6 h-6" />
@@ -214,7 +214,7 @@ export default function ApplicantDocumentsPage() {
             </div>
           </div>
         </Card>
-        <Card className="border-none shadow-sm bg-rose-50/50 rounded-3xl p-6">
+        <Card className="border-none shadow-sm bg-rose-50/50 rounded-2xl p-6">
           <div className="flex items-center gap-4">
             <div className="p-3 bg-rose-100 rounded-2xl text-rose-600">
               <XCircle className="w-6 h-6" />
@@ -383,7 +383,7 @@ export default function ApplicantDocumentsPage() {
       {/* Reject Modal */}
       {showRejectModal && selectedDocument && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <Card className="w-full max-w-md border-none shadow-2xl rounded-[2rem]">
+          <Card className="w-full max-w-md border-none shadow-2xl rounded-2xl">
             <CardHeader>
               <CardTitle className="flex items-center gap-3 text-rose-600">
                 <XCircle className="w-5 h-5" />

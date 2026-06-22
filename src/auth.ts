@@ -159,7 +159,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             ? [Google({
                 clientId: process.env.GOOGLE_CLIENT_ID,
                 clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-                allowDangerousEmailAccountLinking: true,
+                allowDangerousEmailAccountLinking: false, // Security: Do not allow hijacking via external OAuth providers
             })]
             : []),
 
@@ -168,7 +168,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             ? [MicrosoftEntraID({
                 clientId: process.env.MS_CLIENT_ID,
                 clientSecret: process.env.MS_CLIENT_SECRET,
-                allowDangerousEmailAccountLinking: true,
+                allowDangerousEmailAccountLinking: false, // Security: Do not allow hijacking via external OAuth providers
             })]
             : []),
     ],

@@ -3,8 +3,10 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { MessageSquare, Send, X, Bot, Sparkles } from "lucide-react";
+import { MessageSquare, Send, X, Bot, Sparkles, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { libraryChat } from "@/actions/library";
+import { toast } from "sonner";
 
 export default function LibraryChatBot() {
     const [isOpen, setIsOpen] = useState(false);
@@ -12,20 +14,38 @@ export default function LibraryChatBot() {
         { role: "assistant", content: "Hi! I'm your Intelligent Library Assistant. Need help finding a book or preparing for an exam?" }
     ]);
     const [input, setInput] = useState("");
+    const [isLoading, setIsLoading] = useState(false);
 
-    const handleSend = () => {
-        if (!input.trim()) return;
-        const newMessages = [...messages, { role: "user", content: input }];
+    const handleSend = async () => {
+        if (!input.trim() || isLoading) return;
+        
+        const userMsg = { role: "user", content: input };
+        const newMessages = [...messages, userMsg];
         setMessages(newMessages);
         setInput("");
+        setIsLoading(true);
 
-        // Simulated AI Response
-        setTimeout(() => {
+        try {
+            // Call actual Server Action
+            const result = await libraryChat(input, messages);
+            if (result.success && result.text) {
+                setMessages(prev => [...prev, { role: "assistant", content: result.text }]);
+            } else {
+                toast.error(result.error || "Failed to query library AI.");
+                setMessages(prev => [...prev, { 
+                    role: "assistant", 
+                    content: "Sorry, I ran into an error while processing your request. Please try again." 
+                }]);
+            }
+        } catch (err) {
+            toast.error("AI service currently unavailable.");
             setMessages(prev => [...prev, { 
                 role: "assistant", 
-                content: `I've found 3 resources that match your request for "${input}". You can find them in the 'Curriculum Favorites' section of your dashboard.` 
+                content: "I'm offline. Please check your network connection." 
             }]);
-        }, 1000);
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (
@@ -62,7 +82,7 @@ export default function LibraryChatBot() {
                     <div className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-hide">
                         {messages.map((m, i) => (
                             <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                <div className={`max-w-[80%] p-4 rounded-3xl text-sm font-bold leading-relaxed ${
+                                <div className={`max-w-[80%] p-4 rounded-2xl text-sm font-bold leading-relaxed whitespace-pre-wrap ${
                                     m.role === 'user' 
                                     ? 'bg-indigo-600 text-white rounded-tr-none' 
                                     : 'bg-slate-800 text-slate-200 rounded-tl-none border border-slate-700'
@@ -71,6 +91,15 @@ export default function LibraryChatBot() {
                                 </div>
                             </div>
                         ))}
+                        {isLoading && (
+                            <div className="flex justify-start">
+                                <div className="max-w-[80%] p-4 rounded-2xl rounded-tl-none bg-slate-800 border border-slate-700 text-slate-400 font-bold text-sm flex items-center gap-1.5">
+                                    <span className="h-2 w-2 bg-indigo-500 rounded-full animate-bounce [animation-delay:-0.3s]" />
+                                    <span className="h-2 w-2 bg-indigo-500 rounded-full animate-bounce [animation-delay:-0.15s]" />
+                                    <span className="h-2 w-2 bg-indigo-500 rounded-full animate-bounce" />
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     <div className="p-6 bg-slate-950/50 border-t border-slate-800 flex gap-2">
@@ -78,11 +107,16 @@ export default function LibraryChatBot() {
                             value={input}
                             onChange={(e) => setInput(e.target.value)}
                             onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                            placeholder="Type your request..." 
-                            className="h-14 rounded-2xl bg-slate-900 border-none px-6 font-bold text-white placeholder:text-slate-600 focus-visible:ring-1 focus-visible:ring-indigo-500"
+                            placeholder={isLoading ? "Library AI is thinking..." : "Type your request..."}
+                            disabled={isLoading}
+                            className="h-14 rounded-2xl bg-slate-900 border-none px-6 font-bold text-white placeholder:text-slate-600 focus-visible:ring-1 focus-visible:ring-indigo-500 disabled:opacity-50"
                         />
-                        <Button onClick={handleSend} className="h-14 w-14 rounded-2xl bg-indigo-600 hover:bg-indigo-700 shadow-lg shrink-0">
-                            <Send className="h-5 w-5" />
+                        <Button 
+                            onClick={handleSend} 
+                            disabled={isLoading || !input.trim()}
+                            className="h-14 w-14 rounded-2xl bg-indigo-600 hover:bg-indigo-700 shadow-lg shrink-0"
+                        >
+                            {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
                         </Button>
                     </div>
                 </div>

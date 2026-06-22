@@ -76,7 +76,7 @@ export default function StudentSportsHub() {
     );
 
     return (
-        <div className="p-8 max-w-7xl mx-auto space-y-10 bg-slate-50/30 min-h-screen">
+        <div className="p-8 max-w-[1600px] w-full mx-auto space-y-10 bg-slate-50/30 min-h-screen">
             {/* Header banner */}
             <div className="relative overflow-hidden rounded-[2.5rem] bg-gradient-to-r from-slate-900 via-slate-800 to-emerald-950 p-8 md:p-12 shadow-2xl text-white">
                 <div className="absolute right-0 top-0 w-1/3 h-full opacity-10 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-white via-transparent to-transparent pointer-events-none" />
@@ -180,7 +180,7 @@ export default function StudentSportsHub() {
                             </Card>
                         ) : (
                             fixtures.map((f) => (
-                                <Card key={f.fixture.id} className="border-none shadow-sm rounded-3xl overflow-hidden bg-white p-6 hover:shadow transition-shadow">
+                                <Card key={f.fixture.id} className="border-none shadow-sm rounded-2xl overflow-hidden bg-white p-6 hover:shadow transition-shadow">
                                     <div className="flex flex-col md:flex-row items-center justify-between gap-6">
                                         
                                         {/* Home Team (FSS) */}
@@ -255,7 +255,7 @@ export default function StudentSportsHub() {
                             </Card>
                         ) : (
                             media.map((m) => (
-                                <div key={m.id} className="group relative aspect-square rounded-[2rem] overflow-hidden shadow cursor-pointer bg-slate-900 border border-slate-100">
+                                <div key={m.id} className="group relative aspect-square rounded-2xl overflow-hidden shadow cursor-pointer bg-slate-900 border border-slate-100">
                                     <img src={m.url} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" alt={m.caption} />
                                     <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-900/40 to-transparent opacity-90 p-6 flex flex-col justify-end">
                                         <span className="px-2 py-0.5 bg-emerald-500 text-white rounded text-[7px] font-black uppercase tracking-widest self-start mb-2">

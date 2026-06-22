@@ -96,7 +96,7 @@ export default function MaintenanceDashboard() {
                     { label: 'Resolved', count: requests.filter(r => r.status === 'resolved').length, color: 'text-emerald-600', bg: 'bg-emerald-50' },
                     { label: 'Total Requests', count: requests.length, color: 'text-slate-600', bg: 'bg-slate-50' },
                 ].map((stat, i) => (
-                    <Card key={i} className={cn("p-6 border-none shadow-sm rounded-[2rem]", stat.bg)}>
+                    <Card key={i} className={cn("p-6 border-none shadow-sm rounded-2xl", stat.bg)}>
                         <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">{stat.label}</p>
                         <p className={cn("text-3xl font-black", stat.color)}>{stat.count}</p>
                     </Card>

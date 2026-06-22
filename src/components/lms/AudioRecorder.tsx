@@ -83,7 +83,7 @@ export default function AudioRecorder({ onRecordingComplete }: AudioRecorderProp
     };
 
     return (
-        <div className="p-8 bg-white rounded-3xl border border-slate-100 shadow-sm flex flex-col items-center justify-center text-center space-y-6">
+        <div className="p-8 bg-white rounded-2xl border border-slate-100 shadow-sm flex flex-col items-center justify-center text-center space-y-6">
             <div className={`h-24 w-24 rounded-full flex items-center justify-center transition-all ${isRecording ? 'bg-rose-50 animate-pulse' : 'bg-slate-50'}`}>
                 <Mic className={`w-10 h-10 ${isRecording ? 'text-rose-500' : 'text-slate-400'}`} />
             </div>

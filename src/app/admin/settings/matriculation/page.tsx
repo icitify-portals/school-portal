@@ -87,7 +87,7 @@ export default function MatriculationSettingsPage() {
     if (loading && settings.length === 0) return <div className="p-8 flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-indigo-600" /></div>;
 
     return (
-        <div className="p-8 max-w-7xl mx-auto space-y-8">
+        <div className="p-8 max-w-[1600px] w-full mx-auto space-y-8">
             <div>
                 <h1 className="text-3xl font-black text-slate-900 tracking-tight">Matriculation Generator Config</h1>
                 <p className="text-slate-500 font-medium mt-2">Manage dynamic formats for student matriculation numbers.</p>

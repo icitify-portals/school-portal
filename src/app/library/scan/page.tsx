@@ -98,7 +98,7 @@ export default function ScanToBorrowPage() {
                     <p className="text-slate-400 font-medium">Point your camera at the book barcode</p>
                 </div>
 
-                <Card className="bg-slate-900 border-slate-800 overflow-hidden rounded-[2rem]">
+                <Card className="bg-slate-900 border-slate-800 overflow-hidden rounded-2xl">
                     <CardContent className="p-0">
                         {status === "idle" && (
                             <div id="reader" className="w-full overflow-hidden" />

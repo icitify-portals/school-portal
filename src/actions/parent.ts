@@ -124,6 +124,7 @@ export async function getChildDetailedData(studentId: number) {
             matricNumber: students.matricNumber,
             currentLevel: students.currentLevel,
             unitName: institutionalUnits.name,
+            academicTier: institutionalUnits.academicTier,
             programmeName: programmes.name,
             deptName: departments.name,
         })

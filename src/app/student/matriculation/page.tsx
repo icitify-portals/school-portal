@@ -129,7 +129,7 @@ export default function MatriculationOathPortal() {
   if (loading) return <div className="p-20 flex justify-center"><Loader2 className="animate-spin text-indigo-600" size={48} /></div>;
 
   return (
-    <div className="p-8 max-w-5xl mx-auto space-y-8 bg-slate-50 min-h-screen">
+    <div className="p-8 max-w-[1600px] w-full mx-auto space-y-8 bg-slate-50 min-h-screen">
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-4">
           <div className="w-14 h-14 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-xl shadow-indigo-100">
@@ -170,7 +170,7 @@ export default function MatriculationOathPortal() {
                    <h2 className="text-3xl font-black text-slate-900 tracking-tight">Oath Record Locked</h2>
                    <p className="text-slate-500 font-medium max-w-md mx-auto">You have successfully signed the institutional register. Your official status as a student of {institutionName} is now legally recorded.</p>
                 </div>
-                <div className="p-6 bg-slate-50 rounded-3xl border border-slate-100 inline-block">
+                <div className="p-6 bg-slate-50 rounded-2xl border border-slate-100 inline-block">
                    <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Digital Receipt</div>
                    <div className="font-mono text-sm text-indigo-600">SGU-REG-MAT-{studentId}-SESSION-1</div>
                 </div>

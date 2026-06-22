@@ -18,7 +18,7 @@ export default async function StudentTimetablePage() {
     const deptSettings = await getDepartmentSettings(student.deptId!);
 
     return (
-        <div className="p-8 pb-20 max-w-7xl mx-auto">
+        <div className="p-8 pb-20 max-w-[1600px] w-full mx-auto">
             <div className="mb-10">
                 <h1 className="text-4xl font-black text-slate-900 tracking-tight italic uppercase">My Timetable</h1>
                 <p className="text-slate-500 mt-2 font-medium">Your personalized weekly schedule based on enrolled courses</p>

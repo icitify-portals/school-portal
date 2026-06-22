@@ -64,7 +64,7 @@ export default function AdmissionSlipPage() {
                     <div className="p-12 space-y-12">
                         <div className="flex gap-12 items-start">
                             {/* Photo */}
-                            <div className="w-48 h-56 bg-slate-50 border-2 border-slate-100 rounded-[2rem] overflow-hidden flex-shrink-0 relative">
+                            <div className="w-48 h-56 bg-slate-50 border-2 border-slate-100 rounded-2xl overflow-hidden flex-shrink-0 relative">
                                 {data.applicantPhoto ? (
                                     <img src={data.applicantPhoto} alt="Applicant" className="w-full h-full object-cover" />
                                 ) : (

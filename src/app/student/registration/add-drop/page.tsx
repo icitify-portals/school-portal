@@ -82,7 +82,7 @@ export default function StudentAddDropPage() {
             <div className="p-8 max-w-4xl mx-auto">
                 <Card className="border-none shadow-2xl rounded-[3rem] overflow-hidden bg-rose-50">
                     <CardContent className="p-12 text-center space-y-6">
-                        <div className="w-20 h-20 bg-rose-100 text-rose-600 rounded-[2rem] flex items-center justify-center mx-auto shadow-lg shadow-rose-100">
+                        <div className="w-20 h-20 bg-rose-100 text-rose-600 rounded-2xl flex items-center justify-center mx-auto shadow-lg shadow-rose-100">
                             <Clock className="w-10 h-10" />
                         </div>
                         <h2 className="text-3xl font-black text-rose-900 italic uppercase">Add/Drop Window Closed</h2>
@@ -107,7 +107,7 @@ export default function StudentAddDropPage() {
     );
 
     return (
-        <div className="p-8 max-w-7xl mx-auto space-y-8">
+        <div className="p-8 max-w-[1600px] w-full mx-auto space-y-8">
             <header>
                 <h1 className="text-4xl font-black text-slate-900 flex items-center gap-4 italic uppercase">
                     <BookOpen className="w-10 h-10 text-indigo-600" />
@@ -139,7 +139,7 @@ export default function StudentAddDropPage() {
                         {filteredCourses.map((course) => {
                             const isRegistered = registeredCourses.some(r => r.courseId === course.id);
                             return (
-                                <div key={course.id} className="p-6 bg-slate-50 rounded-[2rem] border border-slate-100 flex justify-between items-center transition-all hover:shadow-lg hover:scale-[1.01]">
+                                <div key={course.id} className="p-6 bg-slate-50 rounded-2xl border border-slate-100 flex justify-between items-center transition-all hover:shadow-lg hover:scale-[1.01]">
                                     <div>
                                         <p className="text-[10px] font-black uppercase tracking-widest text-indigo-500 mb-1">{course.code}</p>
                                         <h3 className="font-black text-slate-900 italic">{course.name}</h3>
@@ -176,7 +176,7 @@ export default function StudentAddDropPage() {
                                 <p className="text-center py-8 text-slate-400 font-bold italic">No courses registered for this semester</p>
                             )}
                             {registeredCourses.map((reg) => (
-                                <div key={reg.id} className="p-6 bg-white rounded-[2rem] border-2 border-slate-100 flex justify-between items-center">
+                                <div key={reg.id} className="p-6 bg-white rounded-2xl border-2 border-slate-100 flex justify-between items-center">
                                     <div>
                                         <p className="text-[10px] font-black uppercase tracking-widest text-indigo-500 mb-1">{reg.course?.code}</p>
                                         <h3 className="font-black text-slate-900 italic">{reg.course?.name}</h3>
@@ -206,7 +206,7 @@ export default function StudentAddDropPage() {
                             </CardHeader>
                             <CardContent className="p-6 space-y-4">
                                 {student.addDropRequests.filter((r: any) => r.status === 'pending').map((req: any) => (
-                                    <div key={req.id} className="p-6 bg-amber-50 rounded-[2rem] border border-amber-100 flex justify-between items-center">
+                                    <div key={req.id} className="p-6 bg-amber-50 rounded-2xl border border-amber-100 flex justify-between items-center">
                                         <div>
                                             <p className="text-[10px] font-black uppercase tracking-widest text-amber-600 mb-1">
                                                 Request: {req.type.toUpperCase()}

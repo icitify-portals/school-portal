@@ -52,7 +52,7 @@ export default async function TeacherNotesPage() {
     };
 
     return (
-        <div className="p-8 max-w-7xl mx-auto space-y-10 bg-slate-50/30 min-h-screen animate-in fade-in duration-700">
+        <div className="p-8 max-w-[1600px] w-full mx-auto space-y-10 bg-slate-50/30 min-h-screen animate-in fade-in duration-700">
             {/* Header Section */}
             <div className="flex flex-col md:flex-row justify-between items-end gap-6">
                 <div className="space-y-2">
@@ -66,7 +66,7 @@ export default async function TeacherNotesPage() {
                 
                 <div className="flex gap-4">
                     <Link href="/staff/notes/new">
-                        <Button className="h-14 px-8 rounded-3xl bg-indigo-600 hover:bg-indigo-700 shadow-2xl shadow-indigo-200 gap-3 group transition-all">
+                        <Button className="h-14 px-8 rounded-2xl bg-indigo-600 hover:bg-indigo-700 shadow-2xl shadow-indigo-200 gap-3 group transition-all">
                             <PlusCircle className="w-5 h-5 group-hover:rotate-90 transition-transform" />
                             <span className="font-black uppercase tracking-tight">Draft New Note</span>
                         </Button>
@@ -82,7 +82,7 @@ export default async function TeacherNotesPage() {
                     { label: "Awaiting Action", value: stats.pending, icon: Clock, color: "text-amber-600", bg: "bg-amber-50/50" },
                     { label: "Needs Correction", value: stats.rejected, icon: XCircle, color: "text-rose-600", bg: "bg-rose-50/50" },
                 ].map((stat) => (
-                    <Card key={stat.label} className={cn("border-none shadow-sm rounded-[2rem]", stat.bg)}>
+                    <Card key={stat.label} className={cn("border-none shadow-sm rounded-2xl", stat.bg)}>
                         <CardContent className="p-6">
                             <div className="flex justify-between items-start">
                                 <div className="space-y-1">
@@ -111,7 +111,7 @@ export default async function TeacherNotesPage() {
                     {notes.map((note) => (
                         <Card key={note.id} className="group border-none shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all rounded-[2.5rem] bg-white overflow-hidden">
                             <Link href={`/staff/notes/edit/${note.id}`} className="flex items-center p-6 gap-6">
-                                <div className="h-16 w-16 bg-slate-50 rounded-3xl flex items-center justify-center shrink-0 group-hover:bg-indigo-600 transition-colors">
+                                <div className="h-16 w-16 bg-slate-50 rounded-2xl flex items-center justify-center shrink-0 group-hover:bg-indigo-600 transition-colors">
                                     <BookOpenCheck className="w-8 h-8 text-slate-300 group-hover:text-white transition-colors" />
                                 </div>
                                 

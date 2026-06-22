@@ -124,3 +124,16 @@ export async function deleteAcademicSession(id: number) {
         return { success: false, error: "Failed to delete session" };
     }
 }
+export async function updateAcademicSession(id: number, data: { name?: string; startDate?: string; endDate?: string; status?: string }) {
+    try {
+        const updateData: any = { ...data };
+        if (data.startDate) updateData.startDate = new Date(data.startDate);
+        if (data.endDate) updateData.endDate = new Date(data.endDate);
+        
+        await db.update(academicSessions).set(updateData).where(eq(academicSessions.id, id));
+        revalidatePath("/admin/settings/portal");
+        return { success: true };
+    } catch (error) {
+        return { success: false, error: "Failed to update session" };
+    }
+}

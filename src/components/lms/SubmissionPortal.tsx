@@ -79,7 +79,7 @@ export default function SubmissionPortal({ assignment, studentId, submission, on
 
     if (isClosed && !submission) {
         return (
-            <div className="p-12 bg-rose-50 rounded-3xl border border-rose-100 text-center flex flex-col items-center">
+            <div className="p-12 bg-rose-50 rounded-2xl border border-rose-100 text-center flex flex-col items-center">
                 <AlertCircle className="w-12 h-12 text-rose-500 mb-4" />
                 <h3 className="text-xl font-bold text-rose-800">Submission Closed</h3>
                 <p className="text-rose-600/80 max-w-xs mt-2">The deadline for this assignment has passed and no more submissions are accepted.</p>
@@ -89,7 +89,7 @@ export default function SubmissionPortal({ assignment, studentId, submission, on
 
     return (
         <div className="space-y-6">
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
                 <div className="p-2 bg-slate-50 border-b border-slate-100">
                     <TabsList className="bg-transparent border-none flex flex-wrap justify-start h-auto gap-1">
                         {allowedTypes.includes('file') && (

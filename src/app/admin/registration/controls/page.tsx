@@ -65,7 +65,7 @@ export default function RegistrationControlsPage() {
     const session = sessions.find(s => s.id === Number(selectedSessionId));
 
     return (
-        <div className="p-8 max-w-5xl mx-auto space-y-8 pb-20">
+        <div className="p-8 max-w-[1600px] w-full mx-auto space-y-8 pb-20">
             <header className="flex justify-between items-center bg-white p-8 rounded-[2.5rem] shadow-xl border border-slate-100">
                 <div>
                     <h1 className="text-4xl font-black text-slate-900 flex items-center gap-4 italic uppercase tracking-tight">
@@ -99,7 +99,7 @@ export default function RegistrationControlsPage() {
                         </Badge>
                     </CardHeader>
                     <CardContent className="p-10">
-                        <div className="bg-slate-50 p-8 rounded-[2rem] border border-dashed border-slate-200 flex gap-6 items-center">
+                        <div className="bg-slate-50 p-8 rounded-2xl border border-dashed border-slate-200 flex gap-6 items-center">
                             <div className={cn(
                                 "p-6 rounded-[1.5rem] shadow-2xl transition-all",
                                 session?.isRegistrationOpen ? "bg-emerald-500 text-white" : "bg-rose-500 text-white"

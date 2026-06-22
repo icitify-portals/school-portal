@@ -28,7 +28,7 @@ export function AnnouncementBanner() {
             latest.priority === 'high' ? "bg-rose-600" :
                 latest.priority === 'low' ? "bg-slate-800" : "bg-indigo-600"
         )}>
-            <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
+            <div className="max-w-[1600px] w-full mx-auto flex items-center justify-between gap-4">
                 <div className="flex items-center gap-3 overflow-hidden">
                     <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center shrink-0">
                         <Megaphone className="w-4 h-4" />

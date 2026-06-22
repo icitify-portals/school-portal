@@ -99,7 +99,7 @@ export default function HostelInventoryManagement({ hostelId }: { hostelId: numb
             </div>
 
             {showForm && (
-                <Card className="border-none shadow-2xl bg-white overflow-hidden rounded-[2rem] border border-slate-100 p-8">
+                <Card className="border-none shadow-2xl bg-white overflow-hidden rounded-2xl border border-slate-100 p-8">
                     <form onSubmit={handleSubmit} className="space-y-6 max-w-2xl mx-auto">
                         <div className="flex justify-between items-center mb-4">
                             <h4 className="text-lg font-black text-slate-800">{editingItem ? "Update Asset" : "Define New Asset"}</h4>
@@ -199,7 +199,7 @@ export default function HostelInventoryManagement({ hostelId }: { hostelId: numb
                 ))}
 
                 {items.length === 0 && !showForm && (
-                    <div className="md:col-span-3 py-20 bg-slate-50/50 rounded-[2rem] border-2 border-dashed border-slate-200 flex flex-col items-center justify-center text-center space-y-3">
+                    <div className="md:col-span-3 py-20 bg-slate-50/50 rounded-2xl border-2 border-dashed border-slate-200 flex flex-col items-center justify-center text-center space-y-3">
                         <Info className="w-10 h-10 text-slate-200" />
                         <div className="space-y-1">
                             <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Empty Registry</p>

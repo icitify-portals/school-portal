@@ -41,7 +41,7 @@ export default function ReviewerWorkspace() {
     if (!article) return <div className="p-20 text-center font-black italic text-indigo-600 animate-pulse">Initializing Workspace...</div>;
 
     return (
-        <div className="max-w-7xl mx-auto py-10 px-4">
+        <div className="max-w-[1600px] w-full mx-auto py-10 px-4">
             <div className="flex flex-col md:flex-row gap-10 items-start">
                 {/* Left Side: Article Preview */}
                 <div className="flex-1 space-y-8">
@@ -59,7 +59,7 @@ export default function ReviewerWorkspace() {
                         </CardHeader>
                         <CardContent className="p-8 space-y-6">
                             {article.files?.map((file: any) => (
-                                <div key={file.id} className="flex items-center justify-between p-6 bg-slate-50 rounded-3xl group hover:bg-indigo-50 transition-colors">
+                                <div key={file.id} className="flex items-center justify-between p-6 bg-slate-50 rounded-2xl group hover:bg-indigo-50 transition-colors">
                                     <div className="flex items-center">
                                         <div className="h-12 w-12 bg-white rounded-2xl flex items-center justify-center mr-4 shadow-sm">
                                             <FileText className="text-indigo-600 h-6 w-6" />
@@ -106,7 +106,7 @@ export default function ReviewerWorkspace() {
                             <div className="space-y-3">
                                 <Label className="text-xs font-black uppercase tracking-widest text-indigo-600">Comments for Authors</Label>
                                 <Textarea 
-                                    className="min-h-[150px] rounded-3xl border-none shadow-sm bg-white p-6 font-medium italic"
+                                    className="min-h-[150px] rounded-2xl border-none shadow-sm bg-white p-6 font-medium italic"
                                     placeholder="Constructive feedback for the researchers..."
                                     value={commentsAuthor}
                                     onChange={(e) => setCommentsAuthor(e.target.value)}
@@ -116,7 +116,7 @@ export default function ReviewerWorkspace() {
                             <div className="space-y-3">
                                 <Label className="text-xs font-black uppercase tracking-widest text-indigo-600">Confidential Comments for Editor</Label>
                                 <Textarea 
-                                    className="min-h-[100px] rounded-3xl border-none shadow-sm bg-white p-6 font-medium italic"
+                                    className="min-h-[100px] rounded-2xl border-none shadow-sm bg-white p-6 font-medium italic"
                                     placeholder="Internal notes not visible to authors..."
                                     value={commentsEditor}
                                     onChange={(e) => setCommentsEditor(e.target.value)}

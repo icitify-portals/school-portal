@@ -71,7 +71,7 @@ export default async function CategoryLandingPage({ params }: { params: Promise<
             </div>
 
             {/* SEO Keyword Cloud (UX and Crawler benefit) */}
-            <div className="max-w-7xl mx-auto px-6 py-12 flex flex-wrap justify-center gap-4">
+            <div className="max-w-[1600px] w-full mx-auto px-6 py-12 flex flex-wrap justify-center gap-4">
                 {longTailSuggestions.map((kw, i) => (
                     <Badge key={i} variant="outline" className="border-slate-800 text-slate-500 font-bold hover:text-indigo-400 transition-colors cursor-default">
                         #{kw.replace(/\s+/g, '')}
@@ -80,7 +80,7 @@ export default async function CategoryLandingPage({ params }: { params: Promise<
             </div>
 
             {/* Results Grid */}
-            <div className="max-w-7xl mx-auto px-6 mt-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <div className="max-w-[1600px] w-full mx-auto px-6 mt-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                 {resources.map((book, i) => (
                     <Link href={`/books/${book.id}`} key={i} className="group">
                         <div className="p-8 bg-slate-900/50 rounded-[40px] border border-slate-800 hover:border-indigo-500/50 transition-all flex gap-6 items-center h-full relative overflow-hidden">

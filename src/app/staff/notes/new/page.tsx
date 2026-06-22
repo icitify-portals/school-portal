@@ -40,7 +40,7 @@ export default async function NewLessonNotePage() {
     const tier = await getStaffTier(staff.id);
 
     return (
-        <div className="p-8 max-w-7xl mx-auto space-y-8 bg-slate-50/30 min-h-screen">
+        <div className="p-8 max-w-[1600px] w-full mx-auto space-y-8 bg-slate-50/30 min-h-screen">
             <header className="space-y-1">
                 <h1 className="text-4xl font-black tracking-tight text-slate-900 group">
                     Draft New <span className="text-indigo-600 italic">Lesson Note</span>

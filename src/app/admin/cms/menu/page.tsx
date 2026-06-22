@@ -139,7 +139,7 @@ export default function MenuManagerPage() {
                             <RefreshCw className="w-8 h-8 text-indigo-600 animate-spin" />
                         </div>
                     ) : menus.length === 0 ? (
-                        <Card className="p-12 text-center border-dashed border-2 border-slate-200 rounded-3xl">
+                        <Card className="p-12 text-center border-dashed border-2 border-slate-200 rounded-2xl">
                             <Globe className="w-12 h-12 text-slate-300 mx-auto mb-4" />
                             <p className="text-slate-400 font-medium">No menu items for this locale yet.</p>
                         </Card>
@@ -171,7 +171,7 @@ export default function MenuManagerPage() {
 
                 <div className="space-y-6">
                     {editingItem ? (
-                        <Card className="p-6 rounded-3xl shadow-xl border-slate-100 sticky top-8">
+                        <Card className="p-6 rounded-2xl shadow-xl border-slate-100 sticky top-8">
                             <h3 className="text-lg font-black mb-6 flex items-center gap-2 uppercase tracking-tighter">
                                 <Settings className="w-5 h-5 text-indigo-600" />
                                 Menu Settings
@@ -222,7 +222,7 @@ export default function MenuManagerPage() {
                             </div>
                         </Card>
                     ) : (
-                        <div className="p-8 text-center border-2 border-dashed border-slate-200 rounded-3xl">
+                        <div className="p-8 text-center border-2 border-dashed border-slate-200 rounded-2xl">
                             <Settings className="w-8 h-8 text-slate-200 mx-auto mb-2" />
                             <p className="text-xs text-slate-400 font-black uppercase tracking-widest">Select an item to edit</p>
                         </div>

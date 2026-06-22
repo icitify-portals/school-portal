@@ -183,7 +183,7 @@ export default function PageEditorForm({ initialData }: { initialData?: any }) {
 
     return (
         <div className="p-4 sm:p-6 lg:p-8 bg-slate-50 min-h-screen">
-            <div className="max-w-5xl mx-auto space-y-6">
+            <div className="max-w-[1600px] w-full mx-auto space-y-6">
                 {/* Header Actions */}
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
@@ -546,7 +546,7 @@ export default function PageEditorForm({ initialData }: { initialData?: any }) {
 
                                     <TabsContent value="locales" className="mt-0 space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
                                         <div className="space-y-6">
-                                            <Card className="rounded-[2rem] border-none shadow-xl shadow-indigo-50/50 bg-indigo-600 text-white overflow-hidden relative">
+                                            <Card className="rounded-2xl border-none shadow-xl shadow-indigo-50/50 bg-indigo-600 text-white overflow-hidden relative">
                                                 <CardContent className="p-8 relative z-10 space-y-6">
                                                     <div className="space-y-2">
                                                         <Badge className="bg-white/20 text-white border-none uppercase tracking-widest text-[10px] py-1 px-3 shadow-none">

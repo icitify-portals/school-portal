@@ -20,7 +20,7 @@ export default function KioskPage() {
             <GateKiosk />
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 w-full max-w-4xl">
-                <div className="flex items-center gap-4 bg-white p-6 rounded-[2rem] shadow-xl border border-slate-50">
+                <div className="flex items-center gap-4 bg-white p-6 rounded-2xl shadow-xl border border-slate-50">
                     <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
                         <LogIn className="w-6 h-6" />
                     </div>
@@ -29,7 +29,7 @@ export default function KioskPage() {
                         <p className="font-bold text-slate-900">Scan QR Code</p>
                     </div>
                 </div>
-                <div className="flex items-center gap-4 bg-white p-6 rounded-[2rem] shadow-xl border border-slate-50">
+                <div className="flex items-center gap-4 bg-white p-6 rounded-2xl shadow-xl border border-slate-50">
                     <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center">
                         <Clock className="w-6 h-6" />
                     </div>
@@ -38,7 +38,7 @@ export default function KioskPage() {
                         <p className="font-bold text-slate-900">Wait for Confirmation</p>
                     </div>
                 </div>
-                <div className="flex items-center gap-4 bg-white p-6 rounded-[2rem] shadow-xl border border-slate-50">
+                <div className="flex items-center gap-4 bg-white p-6 rounded-2xl shadow-xl border border-slate-50">
                     <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center">
                         <LogOut className="w-6 h-6" />
                     </div>

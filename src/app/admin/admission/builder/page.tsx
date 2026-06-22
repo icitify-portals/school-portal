@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { getFormTemplates, saveFormTemplate } from "@/actions/admission_v2";
+import { getFeeStructures } from "@/actions/bursary";
 import { seedAdmissionTemplates } from "@/actions/admission_seeder";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -24,6 +25,7 @@ import { Sparkles, Database } from "lucide-react";
 
 export default function AdmissionBuilderPage() {
     const [templates, setTemplates] = useState<any[]>([]);
+    const [feeStructures, setFeeStructures] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [seeding, setSeeding] = useState(false);
     const [search, setSearch] = useState("");
@@ -46,24 +48,35 @@ export default function AdmissionBuilderPage() {
         slug: "",
         startDate: new Date().toISOString().split('T')[0],
         endDate: new Date().toISOString().split('T')[0],
+        feeStructureId: "",
         applicationFee: "0"
     });
 
     useEffect(() => {
-        fetchTemplates();
+        fetchData();
     }, []);
 
-    const fetchTemplates = async () => {
+    const fetchData = async () => {
         setLoading(true);
+        const [templatesData, structuresData] = await Promise.all([
+            getFormTemplates(),
+            getFeeStructures()
+        ]);
+        setTemplates(templatesData);
+        setFeeStructures(structuresData);
+        setLoading(false);
+    };
+
+    const fetchTemplates = async () => {
         const data = await getFormTemplates();
         setTemplates(data);
-        setLoading(false);
     };
 
     const handleCreate = async (e: React.FormEvent) => {
         e.preventDefault();
         const res = await saveFormTemplate({
             ...newData,
+            feeStructureId: newData.feeStructureId ? parseInt(newData.feeStructureId) : null,
             startDate: new Date(newData.startDate),
             endDate: new Date(newData.endDate),
             applicationFee: parseFloat(newData.applicationFee),
@@ -81,7 +94,7 @@ export default function AdmissionBuilderPage() {
     );
 
     return (
-        <div className="p-8 max-w-7xl mx-auto space-y-8">
+        <div className="p-8 max-w-[1600px] w-full mx-auto space-y-8">
             <div className="flex justify-between items-center">
                 <div>
                     <h1 className="text-4xl font-black text-slate-900 flex items-center gap-4 italic">
@@ -111,7 +124,7 @@ export default function AdmissionBuilderPage() {
             <div className="relative">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                 <input 
-                    className="w-full pl-12 pr-4 py-6 rounded-3xl border-none shadow-sm focus:ring-2 focus:ring-indigo-500 bg-white font-bold text-lg"
+                    className="w-full pl-12 pr-4 py-6 rounded-2xl border-none shadow-sm focus:ring-2 focus:ring-indigo-500 bg-white font-bold text-lg"
                     placeholder="Search templates by name or URL slug..."
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
@@ -165,7 +178,7 @@ export default function AdmissionBuilderPage() {
                                 <div className="flex items-center justify-between pt-4 border-t border-slate-50">
                                     <div className="flex flex-col">
                                         <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Fee</p>
-                                        <p className="text-lg font-black text-slate-900">₦{template.applicationFee.toLocaleString()}</p>
+                                        <p className="text-lg font-black text-slate-900">{settings?.base_currency || '₦'}{template.applicationFee.toLocaleString()}</p>
                                     </div>
                                     <Link href={`/admin/admission/builder/${template.id}`}>
                                         <Button className="rounded-2xl bg-slate-900 hover:bg-indigo-600 text-white font-black px-6 py-4 flex gap-2 transition-all">
@@ -244,6 +257,43 @@ export default function AdmissionBuilderPage() {
                                     </div>
                                 </div>
                                 <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">Payment Structure</label>
+                                    <select 
+                                        className="w-full bg-slate-50 border-none rounded-2xl px-6 py-4 font-bold outline-none focus:ring-2 focus:ring-indigo-500 appearance-none"
+                                        value={newData.feeStructureId}
+                                        onChange={(e) => {
+                                            const selectedId = e.target.value;
+                                            const selectedStruct = feeStructures.find(fs => fs.id.toString() === selectedId);
+                                            setNewData({
+                                                ...newData, 
+                                                feeStructureId: selectedId,
+                                                applicationFee: selectedStruct ? selectedStruct.totalAmount.toString() : "0"
+                                            });
+                                        }}
+                                        required
+                                    >
+                                        <option value="">Select Bursary Fee Structure...</option>
+                                        {feeStructures.map(fs => (
+                                            <option key={fs.id} value={fs.id}>{fs.name} (₦{parseFloat(fs.totalAmount).toLocaleString()})</option>
+                                        ))}
+                                    </select>
+                                    <p className="text-[9px] font-bold text-slate-500 px-1">Links to Remita Split Payment Engine</p>
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">Intake Flow Configuration</label>
+                                    <select 
+                                        className="w-full bg-slate-50 border-none rounded-2xl px-6 py-4 font-bold outline-none focus:ring-2 focus:ring-indigo-500 appearance-none"
+                                        value={newData.flowType || "form_first"}
+                                        onChange={(e) => setNewData({...newData, flowType: e.target.value})}
+                                        required
+                                    >
+                                        <option value="form_first">Form First (Pay before submission)</option>
+                                        <option value="payment_first">Payment First (Pay before filling form)</option>
+                                        <option value="free_form">Free Form (No payment required)</option>
+                                    </select>
+                                    <p className="text-[9px] font-bold text-slate-500 px-1">Controls the applicant portal experience</p>
+                                </div>
+                                <div className="space-y-2 hidden">
                                     <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">Application Fee (₦)</label>
                                     <input 
                                         type="number"
@@ -251,7 +301,6 @@ export default function AdmissionBuilderPage() {
                                         placeholder="0.00"
                                         value={newData.applicationFee}
                                         onChange={(e) => setNewData({...newData, applicationFee: e.target.value})}
-                                        required
                                     />
                                 </div>
                                 <div className="flex gap-4 pt-4">

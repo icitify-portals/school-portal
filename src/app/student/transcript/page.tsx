@@ -6,6 +6,10 @@ import { TranscriptFilters } from "@/components/academics/TranscriptFilters";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Info, FileText } from "lucide-react";
 import React from "react";
+import { db } from "@/db/db";
+import { eq } from "drizzle-orm";
+import { students, institutionalUnits } from "@/db/schema";
+import { redirect } from "next/navigation";
 
 export default async function StudentTranscriptPage(props: {
     searchParams: Promise<{ sessionId?: string, semester?: string }>
@@ -14,6 +18,16 @@ export default async function StudentTranscriptPage(props: {
     const session = await auth();
     if (!session?.user || (session.user as any).role !== 'student') {
         return <div className="p-8">Unauthorized</div>;
+    }
+
+    const userId = parseInt(session.user.id);
+    const [student] = await db.select().from(students).where(eq(students.userId, userId)).limit(1);
+    
+    if (student && student.unitId) {
+        const [unit] = await db.select().from(institutionalUnits).where(eq(institutionalUnits.id, student.unitId)).limit(1);
+        if (unit && unit.academicTier === 'k12') {
+            redirect("/student/report-card");
+        }
     }
 
     const sessionId = searchParams.sessionId ? parseInt(searchParams.sessionId) : undefined;

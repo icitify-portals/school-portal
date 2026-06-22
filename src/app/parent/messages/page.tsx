@@ -21,7 +21,7 @@ export default async function ParentMessagesPage() {
     const conversations = await getConversations();
 
     return (
-        <div className="p-8 max-w-7xl mx-auto space-y-8 h-[calc(100vh-120px)] flex flex-col">
+        <div className="p-8 max-w-[1600px] w-full mx-auto space-y-8 h-[calc(100vh-120px)] flex flex-col">
             <div className="flex justify-between items-end">
                 <div>
                     <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Parent-Teacher <span className="text-indigo-600">Sync</span></h1>
@@ -91,7 +91,7 @@ export default async function ParentMessagesPage() {
                 {/* Message View (Mocked placeholder) */}
                 <Card className="lg:col-span-2 border-none shadow-xl shadow-slate-200/50 rounded-[2.5rem] overflow-hidden flex flex-col bg-white">
                     <div className="flex-1 flex flex-col items-center justify-center text-center p-12 bg-slate-50/30">
-                        <div className="w-20 h-20 bg-white rounded-3xl shadow-xl flex items-center justify-center text-indigo-600 mb-6">
+                        <div className="w-20 h-20 bg-white rounded-2xl shadow-xl flex items-center justify-center text-indigo-600 mb-6">
                             <MessageSquare className="w-10 h-10" />
                         </div>
                         <h2 className="text-2xl font-black text-slate-900">Select a conversation</h2>

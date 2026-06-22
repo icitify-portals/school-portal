@@ -92,7 +92,7 @@ export default function EditAdmissionPage() {
                             <CreditCard className="w-4 h-4" /> Administrative Fine Required
                         </p>
                         <p className="text-sm font-bold text-amber-900 leading-relaxed italic">
-                            To re-open your application for editing, you must pay an administrative fine of <span className="font-black">₦{access.fineAmount.toLocaleString()}</span>. 
+                            To re-open your application for editing, you must pay an administrative fine of <span className="font-black">{settings?.base_currency || '₦'}{access.fineAmount.toLocaleString()}</span>. 
                             This will grant you a <span className="font-black">24-hour window</span> to make changes.
                         </p>
                     </div>

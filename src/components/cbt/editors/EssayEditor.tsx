@@ -42,7 +42,7 @@ export function EssayEditor({ question, updateQuestion }: Props) {
             )}
 
             {!question.aiGradingEnabled && (
-                <div className="p-8 text-center bg-slate-50 border border-slate-200 rounded-3xl border-dashed">
+                <div className="p-8 text-center bg-slate-50 border border-slate-200 rounded-2xl border-dashed">
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-loose">
                         AI Grading is currently disabled.<br />
                         Questions will require manual manual score entry by teachers.

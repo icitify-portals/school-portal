@@ -87,7 +87,7 @@ export default function CriteriaPage() {
     };
 
     return (
-        <div className="p-6 md:p-10 max-w-5xl mx-auto space-y-8">
+        <div className="p-6 md:p-10 max-w-[1600px] w-full mx-auto space-y-8">
             {/* Header */}
             <div className="flex items-center gap-3">
                 <div className="p-3 bg-gradient-to-br from-orange-500 to-amber-600 rounded-2xl shadow-lg shadow-orange-200">
@@ -104,7 +104,7 @@ export default function CriteriaPage() {
             </div>
 
             {/* University Defaults */}
-            <Card className="border-none shadow-lg rounded-[2rem] bg-gradient-to-br from-slate-50 to-slate-100 overflow-hidden">
+            <Card className="border-none shadow-lg rounded-2xl bg-gradient-to-br from-slate-50 to-slate-100 overflow-hidden">
                 <CardContent className="p-5">
                     <div className="flex items-center gap-2 mb-3">
                         <Shield className="w-4 h-4 text-slate-600" />
@@ -129,7 +129,7 @@ export default function CriteriaPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {/* Department List */}
-                <Card className="border-none shadow-xl rounded-[2rem] bg-white overflow-hidden">
+                <Card className="border-none shadow-xl rounded-2xl bg-white overflow-hidden">
                     <CardContent className="p-4 space-y-2">
                         <h3 className="font-black text-xs uppercase tracking-widest text-slate-500 mb-3 flex items-center gap-2">
                             <BookOpen className="w-4 h-4" /> Departments
@@ -160,7 +160,7 @@ export default function CriteriaPage() {
                 <div className="md:col-span-2 space-y-4">
                     {selectedDept ? (
                         <>
-                            <Card className="border-none shadow-xl rounded-[2rem] bg-white overflow-hidden">
+                            <Card className="border-none shadow-xl rounded-2xl bg-white overflow-hidden">
                                 <CardContent className="p-6 space-y-5">
                                     <div className="flex items-center justify-between">
                                         <h3 className="font-black text-sm uppercase tracking-widest text-slate-700">
@@ -204,7 +204,7 @@ export default function CriteriaPage() {
                             </Card>
 
                             {/* Additional Rules */}
-                            <Card className="border-none shadow-xl rounded-[2rem] bg-white overflow-hidden">
+                            <Card className="border-none shadow-xl rounded-2xl bg-white overflow-hidden">
                                 <CardContent className="p-6 space-y-4">
                                     <div className="flex items-center justify-between">
                                         <h3 className="font-black text-sm uppercase tracking-widest text-slate-700">
@@ -280,7 +280,7 @@ export default function CriteriaPage() {
                             </Button>
                         </>
                     ) : (
-                        <Card className="border-none shadow-xl rounded-[2rem] bg-slate-50">
+                        <Card className="border-none shadow-xl rounded-2xl bg-slate-50">
                             <CardContent className="p-10 text-center">
                                 <Settings2 className="w-12 h-12 text-slate-300 mx-auto mb-3" />
                                 <h3 className="text-lg font-black text-slate-900 uppercase">Select a Department</h3>

@@ -12,7 +12,7 @@ import {
 
 export default function K12SettingsPage() {
     return (
-        <div className="p-8 max-w-7xl mx-auto space-y-8 min-h-screen bg-[#F8FAFC]">
+        <div className="p-8 max-w-[1600px] w-full mx-auto space-y-8 min-h-screen bg-[#F8FAFC]">
             <div className="flex flex-col gap-2">
                 <div className="flex items-center gap-3">
                     <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-200">

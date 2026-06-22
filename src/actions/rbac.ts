@@ -2,9 +2,10 @@
 "use server";
 
 import { db } from "@/db/db";
-import { roles, permissions, rolePermissions, userRoles, users } from "@/db/schema";
+import { roles, permissions, rolePermissions, userRoles, users, systemAuditLogs } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { auth } from "@/auth";
 
 // --- Role Management ---
 export async function getAllRoles() {
@@ -128,7 +129,25 @@ export async function getUsersWithRoles() {
 
 export async function assignRoleToUser(userId: number, roleId: number) {
     try {
+        const session = await auth();
+        const actorRole = (session?.user as any)?.role?.toLowerCase() || "";
+        const actorId = session?.user?.id ? parseInt(session.user.id) : null;
+        if (!['superadmin', 'admin', 'dvc', 'bursar', 'registrar'].includes(actorRole)) {
+            return { success: false, error: "Unauthorized: Only superadmin, vice chancellor, bursar, and registrar can edit." };
+        }
+
         await db.insert(userRoles).values({ userId, roleId });
+
+        if (actorId) {
+            await db.insert(systemAuditLogs).values({
+                actorId,
+                action: 'ASSIGN_ROLE_TO_USER',
+                targetId: userId.toString(),
+                details: JSON.stringify({ roleId, timestamp: new Date() }),
+                status: 'success'
+            });
+        }
+
         revalidatePath("/admin/rbac");
         return { success: true };
     } catch (error) {
@@ -139,12 +158,30 @@ export async function assignRoleToUser(userId: number, roleId: number) {
 
 export async function removeRoleFromUser(userId: number, roleId: number) {
     try {
+        const session = await auth();
+        const actorRole = (session?.user as any)?.role?.toLowerCase() || "";
+        const actorId = session?.user?.id ? parseInt(session.user.id) : null;
+        if (!['superadmin', 'admin', 'dvc', 'bursar', 'registrar'].includes(actorRole)) {
+            return { success: false, error: "Unauthorized: Only superadmin, vice chancellor, bursar, and registrar can edit." };
+        }
+
         await db.delete(userRoles).where(
             and(
                 eq(userRoles.userId, userId),
                 eq(userRoles.roleId, roleId)
             )
         );
+
+        if (actorId) {
+            await db.insert(systemAuditLogs).values({
+                actorId,
+                action: 'REMOVE_ROLE_FROM_USER',
+                targetId: userId.toString(),
+                details: JSON.stringify({ roleId, timestamp: new Date() }),
+                status: 'success'
+            });
+        }
+
         revalidatePath("/admin/rbac");
         return { success: true };
     } catch (error) {
@@ -162,6 +199,18 @@ export async function initializeDefaultRoles() {
         { name: "Student", description: "Course participation and learning" },
         { name: "Health Administrator", description: "Management of student medical records and clearances" },
         { name: "Deputy Vice Chancellor", description: "High-level institutional monitoring and oversight" },
+        // First-class School Administrative Roles
+        { name: "Bursar", description: "Chief Financial Officer of the School/Bursary" },
+        { name: "Registrar", description: "Custodian of Admissions and Student Academic Records" },
+        { name: "Librarian", description: "Manager of the Library Resources Catalog and Journal Portal" },
+        // OJS Specific Granular Roles
+        { name: "Journal Manager", description: "Manages journal configurations, privacy statements, and APC fees" },
+        { name: "Journal Editor", description: "Full control over submissions, peer reviews, copyediting, and production" },
+        { name: "Section Editor", description: "Manages submission, peer review, and copyediting for a specific section" },
+        { name: "Production Editor", description: "Manages copyediting and publication stage of journal galleys" },
+        { name: "Reviewer", description: "Conducts blind peer-reviews and submits recommendations" },
+        { name: "Author", description: "Submits manuscripts and uploads revision files" },
+        { name: "Subscription Manager", description: "Manages journal reader subscriptions" },
     ];
 
     const defaultPermissions = [
@@ -174,6 +223,20 @@ export async function initializeDefaultRoles() {
         { name: "system.dashboard.view", description: "View institutional dashboard", category: "System" },
         { name: "finance.summary.view", description: "View financial summaries", category: "Finance" },
         { name: "academic.stats.view", description: "View academic statistics", category: "Academic" },
+        // Administrative Roles Permissions
+        { name: "finance.manage", description: "Manage billing, payment gateways, and tuition fees", category: "Finance" },
+        { name: "finance.view", description: "View bursary transactions and payment stats", category: "Finance" },
+        { name: "admission.manage", description: "Manage applicant document builders and admissions", category: "Admission" },
+        { name: "academic.manage", description: "Manage cohorts, programs, and classroom structures", category: "Academic" },
+        { name: "library.manage", description: "Manage library catalog, circulation, and overdue books fines", category: "Library" },
+        // OJS-Inspired Granular Permissions
+        { name: "journal.manage", description: "Manage journal configurations, privacy statements, and APC fees", category: "Journal" },
+        { name: "journal.edit", description: "Edit issues and manage manuscript submission pipelines", category: "Journal" },
+        { name: "journal.submit", description: "Submit articles and manuscripts as author", category: "Journal" },
+        { name: "journal.review", description: "Review manuscripts and submit peer review recommendations", category: "Journal" },
+        { name: "journal.copyedit", description: "Copyedit manuscripts and format galley indexes", category: "Journal" },
+        { name: "journal.production", description: "Publish journal issues and galleys to public records", category: "Journal" },
+        { name: "journal.subscribe", description: "Manage user journal reading subscriptions", category: "Journal" },
     ];
 
     try {
@@ -193,36 +256,43 @@ export async function initializeDefaultRoles() {
             }
         }
 
-        // 3. Assign Health Admin Permissions
-        const [healthRole] = await db.select().from(roles).where(eq(roles.name, "Health Administrator")).limit(1);
-        if (healthRole) {
-            const healthPerms = await db.select().from(permissions).where(eq(permissions.category, "Health"));
-            for (const perm of healthPerms) {
-                const existing = await db.select().from(rolePermissions).where(
-                    and(eq(rolePermissions.roleId, healthRole.id), eq(rolePermissions.permissionId, perm.id))
-                ).limit(1);
-                if (existing.length === 0) {
-                    await db.insert(rolePermissions).values({ roleId: healthRole.id, permissionId: perm.id });
-                }
-            }
-        }
-
-        // 4. Assign DVC Permissions
-        const [dvcRole] = await db.select().from(roles).where(eq(roles.name, "Deputy Vice Chancellor")).limit(1);
-        if (dvcRole) {
-            const dvcPermNames = ["system.dashboard.view", "finance.summary.view", "academic.stats.view"];
-            const dvcPerms = await db.select().from(permissions);
-            for (const perm of dvcPerms) {
-                if (dvcPermNames.includes(perm.name)) {
-                    const existing = await db.select().from(rolePermissions).where(
-                        and(eq(rolePermissions.roleId, dvcRole.id), eq(rolePermissions.permissionId, perm.id))
-                    ).limit(1);
-                    if (existing.length === 0) {
-                        await db.insert(rolePermissions).values({ roleId: dvcRole.id, permissionId: perm.id });
+        // 3. Helper to assign list of permission names to a specific role
+        const assignPermissionsToRole = async (roleName: string, permNames: string[]) => {
+            const [roleRecord] = await db.select().from(roles).where(eq(roles.name, roleName)).limit(1);
+            if (roleRecord) {
+                const matchedPerms = await db.select().from(permissions);
+                for (const perm of matchedPerms) {
+                    if (permNames.includes(perm.name)) {
+                        const existing = await db.select().from(rolePermissions).where(
+                            and(eq(rolePermissions.roleId, roleRecord.id), eq(rolePermissions.permissionId, perm.id))
+                        ).limit(1);
+                        if (existing.length === 0) {
+                            await db.insert(rolePermissions).values({ roleId: roleRecord.id, permissionId: perm.id });
+                        }
                     }
                 }
             }
-        }
+        };
+
+        // 4. Bind Health Admin Permissions
+        await assignPermissionsToRole("Health Administrator", ["health.view", "health.verify", "health.record_vitals", "health.manage_status"]);
+
+        // 5. Bind DVC Permissions
+        await assignPermissionsToRole("Deputy Vice Chancellor", ["system.dashboard.view", "finance.summary.view", "academic.stats.view"]);
+
+        // 6. Bind first-class School Admin Roles Permissions
+        await assignPermissionsToRole("Bursar", ["finance.manage", "finance.view", "finance.summary.view"]);
+        await assignPermissionsToRole("Registrar", ["admission.manage", "academic.manage", "academic.stats.view"]);
+        await assignPermissionsToRole("Librarian", ["library.manage", "journal.manage", "journal.edit", "journal.submit"]);
+
+        // 7. Bind OJS granular permissions
+        await assignPermissionsToRole("Journal Manager", ["journal.manage", "journal.subscribe"]);
+        await assignPermissionsToRole("Journal Editor", ["journal.manage", "journal.edit", "journal.submit", "journal.review", "journal.copyedit", "journal.production"]);
+        await assignPermissionsToRole("Section Editor", ["journal.edit", "journal.submit", "journal.review", "journal.copyedit"]);
+        await assignPermissionsToRole("Production Editor", ["journal.copyedit", "journal.production"]);
+        await assignPermissionsToRole("Reviewer", ["journal.review"]);
+        await assignPermissionsToRole("Author", ["journal.submit"]);
+        await assignPermissionsToRole("Subscription Manager", ["journal.subscribe"]);
 
         revalidatePath("/admin/rbac");
         return { success: true };

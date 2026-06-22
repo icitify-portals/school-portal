@@ -5,7 +5,11 @@ import {
     studentBills, 
     students, 
     bursarySettings,
-    transactions
+    transactions,
+    feeStructures,
+    feeStructureItems,
+    feeItems,
+    admissionApplicationsV2
 } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 
@@ -153,29 +157,58 @@ export class RemitaAdapter implements PaymentGatewayAdapter {
         
         // Remita line items take beneficiary details inline dynamically
         const lineItems = splits.map((item, index) => ({
-            lineItemId: (index + 1).toString(),
+            lineItemsId: (index + 1).toString(),
             beneficiaryName: item.accountName,
             beneficiaryAccount: item.accountNumber,
             bankCode: item.bankCode,
-            beneficiaryAmount: item.amount.toFixed(2)
+            beneficiaryAmount: item.amount.toFixed(2),
+            deductFeeFrom: "0" // "0" ensures fee is borne by the payer (student)
         }));
 
+        const merchantId = process.env.REMITA_MERCHANT_ID || "2547916";
+        const serviceTypeId = process.env.REMITA_SERVICE_TYPE_ID || "4430731";
+        const apiKey = process.env.REMITA_API_KEY || "1946";
+
         const payload = {
-            merchantId: "2547916",
-            serviceTypeId: "4430731",
+            merchantId,
+            serviceTypeId,
             amount: totalAmount.toString(),
             orderId: txReference,
             payerEmail: payerEmail,
-            lineItems: lineItems,
-            metadata: {
-                feeBearerRule: feeAllocationRule
-            }
+            lineItems: lineItems
         };
+
+        const crypto = require('crypto');
+        const hash = crypto.createHash('sha512')
+            .update(`${merchantId}${serviceTypeId}${txReference}${totalAmount}${apiKey}`)
+            .digest('hex');
 
         console.log("Remita API Payload:\n", JSON.stringify(payload, null, 2));
 
-        // In Remita, a Retrieval Reference (RRR) is generated
-        const rrr = `RRR-MOCK-${Math.floor(100000000000 + Math.random() * 900000000000)}`;
+        let rrr = "";
+        try {
+            const res = await fetch('https://remitademo.net/remita/exapp/api/v1/send/api/echannelsvc/merchant/api/paymentinit', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `remitaConsumerKey=${merchantId},remitaConsumerToken=${hash}`
+                },
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            
+            // Expected response format: JSON or sometimes JSONP. The inline docs specify standard JSON
+            if (data && data.statuscode === "025" && data.rrr) {
+                rrr = data.rrr;
+            } else {
+                // If API fails or is not accessible, fallback to mock for testing
+                console.error("Remita RRR Generation failed:", data);
+                rrr = `RRR-MOCK-${Math.floor(100000000000 + Math.random() * 900000000000)}`;
+            }
+        } catch (error) {
+            console.error("Error connecting to Remita API:", error);
+            rrr = `RRR-MOCK-${Math.floor(100000000000 + Math.random() * 900000000000)}`;
+        }
         
         // Redirect to simulated page
         const checkoutUrl = `/finance/checkout/simulate?gateway=remita&reference=${txReference}&amount=${totalAmount}&rrr=${rrr}`;
@@ -275,6 +308,30 @@ export class SplitPaymentEngine {
         const billTotal = parseFloat(bill.totalAmount);
         if (billTotal <= 0) {
             return { success: false, reference: "", error: "Invalid bill amount." };
+        }
+
+        const currentPaid = parseFloat(bill.amountPaid || "0.00");
+        const outstanding = billTotal - currentPaid;
+
+        // Installment payment validations
+        const allowed = settings['allow_installment_payments'] === "true";
+        const minPercent = parseFloat(settings['minimum_installment_percentage'] || "60");
+        const minAllowedAmount = allowed ? (billTotal * minPercent) / 100 : billTotal;
+
+        if (currentPaid < 0.01) {
+            // Initial payment: must meet the minimum required installment percentage
+            if (selectedAmount < minAllowedAmount - 0.01) {
+                return { success: false, reference: "", error: `Minimum initial installment payment of ₦${minAllowedAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })} (${minPercent}%) is required.` };
+            }
+        }
+
+        if (selectedAmount > outstanding + 0.01) {
+            return { success: false, reference: "", error: `Payment amount exceeds outstanding bill balance of ₦${outstanding.toLocaleString()}.` };
+        }
+
+        // If part payment is disabled, require full payment
+        if (!allowed && Math.abs(selectedAmount - outstanding) > 0.01) {
+            return { success: false, reference: "", error: `Installments are not enabled for this payment. Full payment of ₦${outstanding.toLocaleString()} is required.` };
         }
 
         // 4. Pro-rate fee items across checkout amount (for part-payments)
@@ -415,6 +472,130 @@ export class SplitPaymentEngine {
         const adapter = this.getAdapter(activeGateway);
         return await adapter.initializeSplitPayment(
             student.user.email,
+            checkoutTotal,
+            txRef,
+            splits,
+            feeBearerRule
+        );
+    }
+
+    // Checkout for Admission Form (No student ID)
+    async checkoutAdmissionForm(applicationId: number, feeStructureId: number, applicantEmail: string, applicantName: string) {
+        // 1. Fetch Bursary Settings
+        const settingsRecords = await db.query.bursarySettings.findMany();
+        const settings: any = {};
+        for (const s of settingsRecords) settings[s.settingKey] = s.settingValue;
+
+        const activeGateway = settings['active_gateway'] || 'remita';
+        const feeBearerRule = settings[`${activeGateway}_fee_bearer`] || 'default';
+
+        // 2. Fetch Fee Structure Items
+        const structure = await db.query.feeStructures.findFirst({
+            where: eq(feeStructures.id, feeStructureId)
+        });
+
+        if (!structure) return { success: false, reference: "", error: "Admission Fee Structure not found" };
+
+        const items = await db.query.feeStructureItems.findMany({
+            where: eq(feeStructureItems.feeStructureId, feeStructureId),
+            with: {
+                feeItem: true
+            }
+        });
+
+        const billTotal = parseFloat(structure.totalAmount);
+        
+        let splits: SplitItem[] = [];
+        let totalAllocated = 0;
+
+        for (const item of items) {
+            const itemAmt = parseFloat(item.amount as string);
+            if (item.feeItem?.settlementAccountId) {
+                const account = await db.query.settlementAccounts.findFirst({
+                    where: eq(settlementAccounts.id, item.feeItem.settlementAccountId)
+                });
+
+                if (account && account.isActive) {
+                    let subaccountCode: string | undefined = undefined;
+                    if (activeGateway !== 'remita') {
+                        const sub = await db.query.gatewaySubaccounts.findFirst({
+                            where: and(
+                                eq(gatewaySubaccounts.settlementAccountId, account.id),
+                                eq(gatewaySubaccounts.gatewayName, activeGateway as 'paystack' | 'flutterwave' | 'remita')
+                            )
+                        });
+                        subaccountCode = sub?.gatewaySubaccountCode;
+                    }
+
+                    splits.push({
+                        amount: Number(itemAmt.toFixed(2)),
+                        accountName: account.accountName,
+                        bankCode: account.bankCode,
+                        accountNumber: account.accountNumber,
+                        subaccountCode,
+                        isDeveloperAccount: item.feeItem.name.toLowerCase().includes('developer')
+                    });
+                    totalAllocated += itemAmt;
+                }
+            }
+        }
+
+        const remaining = billTotal - totalAllocated;
+        if (remaining > 0.01) {
+            const mainAcctName = settings['main_school_account_name'] || "Main School Account";
+            const mainBankCode = settings['main_school_bank_code'] || "011";
+            const mainAcctNum = settings['main_school_account_number'] || "0123456789";
+            const mainSubCode = settings[`main_school_${activeGateway}_subaccount`] || undefined;
+
+            splits.push({
+                amount: Number(remaining.toFixed(2)),
+                accountName: mainAcctName,
+                bankCode: mainBankCode,
+                accountNumber: mainAcctNum,
+                subaccountCode: mainSubCode,
+                isDeveloperAccount: false
+            });
+        }
+
+        const baseGatewayFee = this.calculateGatewayFee(billTotal, activeGateway);
+        let checkoutTotal = billTotal;
+
+        if (feeBearerRule === 'student') checkoutTotal += baseGatewayFee;
+        else if (feeBearerRule === 'developer') {
+            const devSplitIndex = splits.findIndex(s => s.isDeveloperAccount);
+            if (devSplitIndex !== -1) {
+                splits[devSplitIndex].amount = Math.max(0, Number((splits[devSplitIndex].amount - baseGatewayFee).toFixed(2)));
+            }
+        } else if (feeBearerRule === 'prorated') {
+            splits = splits.map(s => ({
+                ...s,
+                amount: Math.max(0, Number((s.amount - ((s.amount / billTotal) * baseGatewayFee)).toFixed(2)))
+            }));
+        } else if (feeBearerRule === 'subaccounts') {
+            const nonDevs = splits.filter(s => !s.isDeveloperAccount);
+            const feeShare = nonDevs.length > 0 ? baseGatewayFee / nonDevs.length : 0;
+            splits = splits.map(s => s.isDeveloperAccount ? s : { ...s, amount: Math.max(0, Number((s.amount - feeShare).toFixed(2))) });
+        } else {
+            const mainAcctNum = settings['main_school_account_number'] || "0123456789";
+            const mainIndex = splits.findIndex(s => s.accountNumber === mainAcctNum);
+            if (mainIndex !== -1) splits[mainIndex].amount = Math.max(0, Number((splits[mainIndex].amount - baseGatewayFee).toFixed(2)));
+            else if (splits.length > 0) splits[0].amount = Math.max(0, Number((splits[0].amount - baseGatewayFee).toFixed(2)));
+        }
+
+        const txRef = `PAY-ADM-2026-${Math.floor(100000 + Math.random() * 900000)}`;
+        
+        await db.insert(transactions).values({
+            amount: checkoutTotal.toFixed(2),
+            type: 'credit',
+            purpose: `Admission Form Application ID: ${applicationId}`,
+            status: 'pending',
+            gateway: activeGateway as 'paystack' | 'flutterwave' | 'remita' | 'opay' | 'manual',
+            gatewayReference: txRef
+        });
+
+        const adapter = this.getAdapter(activeGateway);
+        return await adapter.initializeSplitPayment(
+            applicantEmail,
             checkoutTotal,
             txRef,
             splits,

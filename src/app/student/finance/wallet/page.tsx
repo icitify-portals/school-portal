@@ -90,20 +90,21 @@ export default function StudentWalletPortal() {
     }
   }, [session, resolveStudent]);
 
-  const triggerSimulatedTopUp = async (amount: number) => {
+  const triggerTopUp = async (amount: number) => {
     if (!student || amount <= 0) return;
     setToppingUp(true);
-    const res = await simulateTopUpAction(student.id, amount);
-    if (res.success) {
-      setTopUpSuccess(true);
-      setTimeout(async () => {
-        await loadWallet(student.id);
-        setIsTopUpOpen(false);
-        setTopUpSuccess(false);
-        setCustomAmount("");
-      }, 1500);
+    
+    // Call the real Remita Wallet Topup Action
+    const { initializeWalletTopUp } = await import('@/actions/wallet');
+    const res = await initializeWalletTopUp(amount, 'remita');
+    
+    if (res.success && res.checkoutUrl) {
+      // Redirect to the Remita Checkout Gateway
+      window.location.href = res.checkoutUrl;
+    } else {
+      alert(res.error || "Failed to initialize top-up");
+      setToppingUp(false);
     }
-    setToppingUp(false);
   };
 
   if (loading) {
@@ -118,7 +119,7 @@ export default function StudentWalletPortal() {
   const availableBalance = parseFloat(data?.balance || "0").toLocaleString();
 
   return (
-    <div className="p-8 max-w-5xl mx-auto space-y-8 bg-slate-50 min-h-screen">
+    <div className="p-8 max-w-[1600px] w-full mx-auto space-y-8 bg-slate-50 min-h-screen">
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-6">
         <div className="flex items-center gap-4">
@@ -148,7 +149,7 @@ export default function StudentWalletPortal() {
                     <div className="text-[10px] font-black text-indigo-200 uppercase tracking-widest flex items-center gap-1.5">
                       <Sparkles className="w-3.5 h-3.5" /> Available Wallet Balance
                     </div>
-                    <div className="text-5xl font-black tracking-tight">₦{availableBalance}</div>
+                    <div className="text-5xl font-black tracking-tight">{settings?.base_currency || '₦'}{availableBalance}</div>
                  </div>
                  <div className="p-3.5 bg-white/10 rounded-2xl backdrop-blur-md">
                     <TrendingUp size={24} />
@@ -236,7 +237,7 @@ export default function StudentWalletPortal() {
                                 </div>
                              </div>
                              <div className={`text-lg font-black ${tx.type === 'credit' ? 'text-emerald-600' : 'text-slate-900'}`}>
-                                {tx.type === 'credit' ? '+' : '-'}₦{parseFloat(tx.amount).toLocaleString()}
+                                {tx.type === 'credit' ? '+' : '-'}{settings?.base_currency || '₦'}{parseFloat(tx.amount).toLocaleString()}
                              </div>
                           </div>
                        ))}
@@ -302,7 +303,7 @@ export default function StudentWalletPortal() {
                           onClick={() => setCustomAmount(amt.toString())}
                           className="py-2.5 px-3 bg-slate-50 hover:bg-indigo-50 hover:text-indigo-600 rounded-xl border border-slate-100 hover:border-indigo-200 text-xs font-extrabold transition-all text-slate-700"
                         >
-                          ₦{amt.toLocaleString()}
+                          {settings?.base_currency || '₦'}{amt.toLocaleString()}
                         </button>
                       ))}
                     </div>
@@ -330,7 +331,7 @@ export default function StudentWalletPortal() {
                   </div>
 
                   <Button
-                    onClick={() => triggerSimulatedTopUp(parseFloat(customAmount))}
+                    onClick={() => triggerTopUp(parseFloat(customAmount))}
                     disabled={toppingUp || !customAmount || parseFloat(customAmount) <= 0}
                     className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black h-12 rounded-2xl shadow-lg shadow-indigo-100 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:pointer-events-none"
                   >

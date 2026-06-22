@@ -115,7 +115,7 @@ export default function HRSettingsPage() {
                             </div>
                         </div>
 
-                        <div className="p-6 bg-indigo-50 rounded-3xl border border-indigo-100 flex items-start gap-4">
+                        <div className="p-6 bg-indigo-50 rounded-2xl border border-indigo-100 flex items-start gap-4">
                             <div className="bg-white p-3 rounded-2xl shadow-sm">
                                 <Mail className="w-6 h-6 text-indigo-600" />
                             </div>
@@ -162,7 +162,7 @@ export default function HRSettingsPage() {
                     <Button
                         type="submit"
                         disabled={isSaving}
-                        className="w-full bg-slate-900 hover:bg-black py-8 rounded-3xl font-black uppercase text-sm tracking-[0.3em] shadow-2xl shadow-slate-200 transition-all flex items-center justify-center gap-3"
+                        className="w-full bg-slate-900 hover:bg-black py-8 rounded-2xl font-black uppercase text-sm tracking-[0.3em] shadow-2xl shadow-slate-200 transition-all flex items-center justify-center gap-3"
                     >
                         {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
                         Authorize & Save Configuration

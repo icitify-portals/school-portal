@@ -132,7 +132,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ journa
                 </TabsList>
 
                 <TabsContent value="abstract" className="space-y-6">
-                    <Card className="border-none shadow-none bg-slate-50 rounded-3xl p-8">
+                    <Card className="border-none shadow-none bg-slate-50 rounded-2xl p-8">
                         <CardHeader className="p-0 mb-4">
                             <CardTitle className="text-sm font-black uppercase text-indigo-600 tracking-widest flex items-center">
                                 <Award className="mr-2 h-4 w-4" /> Executive Summary
@@ -156,7 +156,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ journa
                 </TabsContent>
 
                 <TabsContent value="details">
-                     <Card className="border-slate-100 shadow-sm rounded-3xl overflow-hidden">
+                     <Card className="border-slate-100 shadow-sm rounded-2xl overflow-hidden">
                         <CardHeader className="bg-slate-50 border-b">
                             <CardTitle>Bibliographic Information</CardTitle>
                         </CardHeader>

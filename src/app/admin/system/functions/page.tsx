@@ -81,7 +81,7 @@ export default function SchoolFunctionEditor() {
   };
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-8 bg-slate-50 min-h-screen">
+    <div className="p-8 max-w-[1600px] w-full mx-auto space-y-8 bg-slate-50 min-h-screen">
       <div className="flex justify-between items-end">
         <div className="flex items-center gap-4">
           <div className="w-14 h-14 bg-slate-900 text-emerald-400 rounded-2xl flex items-center justify-center shadow-xl font-mono border-2 border-emerald-400/20">
@@ -103,7 +103,7 @@ export default function SchoolFunctionEditor() {
       <div className="grid grid-cols-12 gap-8">
         {/* Sidebar: Function List */}
         <div className="col-span-12 lg:col-span-3 space-y-6">
-          <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 space-y-6">
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 space-y-6">
             <div className="space-y-4">
               <h2 className="text-sm font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
                 <Database size={14} />
@@ -160,7 +160,7 @@ export default function SchoolFunctionEditor() {
         {/* Main: Editor Area */}
         <div className="col-span-12 lg:col-span-9 space-y-6">
           {selectedProp ? (
-            <div className="bg-white rounded-3xl border border-slate-100 shadow-xl overflow-hidden flex flex-col min-h-[70vh]">
+            <div className="bg-white rounded-2xl border border-slate-100 shadow-xl overflow-hidden flex flex-col min-h-[70vh]">
               {/* Toolbar */}
               <div className="bg-slate-900 p-4 flex justify-between items-center border-b border-slate-800">
                 <div className="flex items-center gap-3">
@@ -240,7 +240,7 @@ export default function SchoolFunctionEditor() {
               </div>
             </div>
           ) : (
-            <div className="bg-white p-20 rounded-3xl border-2 border-dashed border-slate-200 flex flex-col items-center justify-center text-center space-y-4 opacity-50 h-full">
+            <div className="bg-white p-20 rounded-2xl border-2 border-dashed border-slate-200 flex flex-col items-center justify-center text-center space-y-4 opacity-50 h-full">
               <div className="w-24 h-24 bg-slate-100 rounded-full flex items-center justify-center text-slate-400 animate-pulse">
                 <Code2 size={48} />
               </div>

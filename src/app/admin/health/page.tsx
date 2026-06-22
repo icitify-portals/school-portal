@@ -64,7 +64,7 @@ function HealthDashboardContent() {
     };
 
     return (
-        <div className="p-8 max-w-7xl mx-auto space-y-8">
+        <div className="p-8 max-w-[1600px] w-full mx-auto space-y-8">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                 <div>
                     <h2 className="text-4xl font-black text-slate-900 tracking-tight flex items-center gap-4 uppercase italic">
@@ -87,24 +87,24 @@ function HealthDashboardContent() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                <Card className="border-none shadow-xl rounded-[2rem] bg-indigo-600 text-white p-8 space-y-4">
+                <Card className="border-none shadow-xl rounded-2xl bg-indigo-600 text-white p-8 space-y-4">
                     <p className="text-[10px] font-black uppercase tracking-widest opacity-60">Avg. Medical Clearance</p>
                     <h3 className="text-4xl font-black italic">{stats ? Math.round((stats.clearedCount / (stats.clearedCount + stats.flaggedCount + 1)) * 100) : '0'}%</h3>
                     <div className="h-1 w-full bg-white/20 rounded-full overflow-hidden">
                         <div className="h-full bg-white w-4/5" />
                     </div>
                 </Card>
-                <Card className="border-none shadow-xl rounded-[2rem] bg-white p-8 space-y-4">
+                <Card className="border-none shadow-xl rounded-2xl bg-white p-8 space-y-4">
                     <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Flagged Cases</p>
                     <h3 className="text-4xl font-black italic text-rose-500">{stats?.flaggedCount || '0'}</h3>
                     <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest italic">Requires Officer Review</p>
                 </Card>
-                <Card className="border-none shadow-xl rounded-[2rem] bg-white p-8 space-y-4 border-2 border-emerald-500/20">
+                <Card className="border-none shadow-xl rounded-2xl bg-white p-8 space-y-4 border-2 border-emerald-500/20">
                     <p className="text-[10px] font-black uppercase tracking-widest text-emerald-600">Pending Appointments</p>
                     <h3 className="text-4xl font-black italic text-emerald-600">{stats?.pendingAppointments || '0'}</h3>
                     <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest italic">Action Required</p>
                 </Card>
-                <Card className="border-none shadow-xl rounded-[2rem] bg-white p-8 space-y-4">
+                <Card className="border-none shadow-xl rounded-2xl bg-white p-8 space-y-4">
                     <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Total Cleared</p>
                     <h3 className="text-4xl font-black italic text-indigo-600">{stats?.clearedCount || '0'}</h3>
                     <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest italic">Full Medical Pass</p>

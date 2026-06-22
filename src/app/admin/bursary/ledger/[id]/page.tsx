@@ -78,7 +78,7 @@ export default function AdminStudentLedgerPage() {
     }
 
     return (
-        <div className="p-8 max-w-7xl mx-auto space-y-8 print:p-0">
+        <div className="p-8 max-w-[1600px] w-full mx-auto space-y-8 print:p-0">
             {/* Header: Hidden on Print */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 print:hidden">
                 <div className="flex items-center gap-4">
@@ -143,7 +143,7 @@ export default function AdminStudentLedgerPage() {
                             "text-2xl font-black mt-2",
                             (summary?.outstandingBalance || 0) > 0 ? "text-red-600" : "text-green-600"
                         )}>
-                            ₦{summary?.outstandingBalance?.toLocaleString() || "0.00"}
+                            {settings?.base_currency || '₦'}{summary?.outstandingBalance?.toLocaleString() || "0.00"}
                         </h3>
                     </CardContent>
                 </Card>
@@ -153,7 +153,7 @@ export default function AdminStudentLedgerPage() {
                     <CardContent className="p-6">
                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Wallet Credit</p>
                         <h3 className="text-2xl font-black mt-2 text-slate-900">
-                            ₦{summary?.walletBalance?.toLocaleString() || "0.00"}
+                            {settings?.base_currency || '₦'}{summary?.walletBalance?.toLocaleString() || "0.00"}
                         </h3>
                     </CardContent>
                 </Card>
@@ -163,7 +163,7 @@ export default function AdminStudentLedgerPage() {
                     <CardContent className="p-6">
                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Paid (Till Date)</p>
                         <h3 className="text-2xl font-black mt-2 text-slate-900">
-                            ₦{summary?.totalPaid?.toLocaleString() || "0.00"}
+                            {settings?.base_currency || '₦'}{summary?.totalPaid?.toLocaleString() || "0.00"}
                         </h3>
                     </CardContent>
                 </Card>
@@ -227,16 +227,16 @@ export default function AdminStudentLedgerPage() {
                                         </td>
                                         <td className="px-8 py-4">
                                             {parseFloat(entry.debit) > 0 ? (
-                                                <span className="text-sm font-bold text-red-600">₦{parseFloat(entry.debit).toLocaleString()}</span>
+                                                <span className="text-sm font-bold text-red-600">{settings?.base_currency || '₦'}{parseFloat(entry.debit).toLocaleString()}</span>
                                             ) : "-"}
                                         </td>
                                         <td className="px-8 py-4">
                                             {parseFloat(entry.credit) > 0 ? (
-                                                <span className="text-sm font-bold text-green-600">₦{parseFloat(entry.credit).toLocaleString()}</span>
+                                                <span className="text-sm font-bold text-green-600">{settings?.base_currency || '₦'}{parseFloat(entry.credit).toLocaleString()}</span>
                                             ) : "-"}
                                         </td>
                                         <td className="px-8 py-4 font-black text-slate-900 border-l border-slate-50">
-                                            ₦{parseFloat(entry.balance).toLocaleString()}
+                                            {settings?.base_currency || '₦'}{parseFloat(entry.balance).toLocaleString()}
                                         </td>
                                         <td className="px-8 py-4 text-right print:hidden">
                                             <span className="text-[10px] font-mono text-slate-400 bg-slate-50 px-2 py-1 rounded">

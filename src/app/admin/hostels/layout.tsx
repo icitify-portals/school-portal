@@ -16,7 +16,7 @@ export default function HostelAdminLayout({ children }: { children: React.ReactN
     const pathname = usePathname();
 
     return (
-        <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-8 relative">
+        <div className="p-4 md:p-8 max-w-[1600px] w-full mx-auto space-y-8 relative">
             <div>
                 <h2 className="text-3xl font-bold text-slate-900 tracking-tight">Hostel Management</h2>
                 <p className="text-slate-500 mt-1">Manage campus accommodations and student bed allocations</p>

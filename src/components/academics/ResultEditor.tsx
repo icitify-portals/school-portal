@@ -83,7 +83,7 @@ export function ResultEditor({ isOpen, onClose, onSuccess, result }: ResultEdito
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="max-w-2xl bg-white rounded-3xl overflow-hidden border-none shadow-2xl p-0">
+            <DialogContent className="max-w-2xl bg-white rounded-2xl overflow-hidden border-none shadow-2xl p-0">
                 <div className="bg-slate-900 p-8 text-white relative">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-3 text-2xl font-black tracking-tight">
@@ -122,7 +122,7 @@ export function ResultEditor({ isOpen, onClose, onSuccess, result }: ResultEdito
                             </div>
                         </div>
 
-                        <div className="p-5 bg-indigo-600 rounded-3xl text-white flex justify-between items-center shadow-lg shadow-indigo-100">
+                        <div className="p-5 bg-indigo-600 rounded-2xl text-white flex justify-between items-center shadow-lg shadow-indigo-100">
                             <span className="text-[10px] font-black uppercase tracking-widest opacity-70">Total Weighted Score</span>
                             <span className="text-4xl font-black">{(parseFloat(caScore || "0") + parseFloat(examScore || "0")).toFixed(2)}</span>
                         </div>

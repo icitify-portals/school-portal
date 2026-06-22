@@ -58,7 +58,7 @@ export default function HostelPage() {
     }
 
     return (
-        <div className="p-8 max-w-5xl mx-auto space-y-8">
+        <div className="p-8 max-w-[1600px] w-full mx-auto space-y-8">
             <div className="flex justify-between items-end">
                 <div>
                     <h2 className="text-3xl font-black text-slate-900 tracking-tight">Hostel Accommodation</h2>
@@ -73,7 +73,7 @@ export default function HostelPage() {
 
             {allocation ? (
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    <Card className="lg:col-span-2 border-none shadow-xl shadow-slate-200/50 overflow-hidden rounded-[2rem]">
+                    <Card className="lg:col-span-2 border-none shadow-xl shadow-slate-200/50 overflow-hidden rounded-2xl">
                         <div className="bg-gradient-to-r from-indigo-600 to-violet-700 h-40 flex items-center px-10 text-white relative">
                             <div className="z-10">
                                 <Badge className="bg-white/20 text-white border-none mb-2 uppercase tracking-widest text-[10px] font-black">
@@ -106,7 +106,7 @@ export default function HostelPage() {
                                         </div>
                                     </div>
                                 </div>
-                                <div className="bg-slate-50/50 rounded-3xl p-8 border border-slate-100">
+                                <div className="bg-slate-50/50 rounded-2xl p-8 border border-slate-100">
                                     <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-6">Roommate Overview</h4>
                                     <div className="space-y-4">
                                         {["Occupant 1", "Occupant 2", "Occupant 3"].map(name => (
@@ -123,7 +123,7 @@ export default function HostelPage() {
                         </CardContent>
                     </Card>
 
-                    <Card className="border-none shadow-xl shadow-slate-200/50 rounded-[2rem] h-fit overflow-hidden">
+                    <Card className="border-none shadow-xl shadow-slate-200/50 rounded-2xl h-fit overflow-hidden">
                         <CardHeader className="bg-slate-50/50 pb-6">
                             <CardTitle className="text-lg font-black text-slate-900">Session Details</CardTitle>
                         </CardHeader>
@@ -156,7 +156,7 @@ export default function HostelPage() {
                 <div className="max-w-3xl mx-auto">
                     <Card className="border-none bg-white shadow-2xl shadow-indigo-100/50 rounded-[2.5rem] overflow-hidden">
                         <CardContent className="flex flex-col items-center justify-center py-20 text-center px-10">
-                            <div className="w-24 h-24 bg-indigo-50 rounded-[2rem] flex items-center justify-center mb-6 rotate-3">
+                            <div className="w-24 h-24 bg-indigo-50 rounded-2xl flex items-center justify-center mb-6 rotate-3">
                                 <Home className="w-10 h-10 text-indigo-600" />
                             </div>
                             <h3 className="text-3xl font-black text-slate-900 tracking-tight">Apply for Housing</h3>
@@ -170,7 +170,7 @@ export default function HostelPage() {
                                         Apply for Accommodation
                                     </Button>
                                 </DialogTrigger>
-                                <DialogContent className="max-w-md rounded-3xl border-none shadow-2xl">
+                                <DialogContent className="max-w-md rounded-2xl border-none shadow-2xl">
                                     <DialogHeader>
                                         <DialogTitle className="text-2xl font-black">Select a Hall</DialogTitle>
                                         <DialogDescription className="font-medium">

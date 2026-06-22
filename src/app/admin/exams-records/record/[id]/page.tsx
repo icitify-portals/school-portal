@@ -8,7 +8,7 @@ export default async function StudentRecordPage({ params }: { params: Promise<{ 
     const studentId = parseInt(id);
 
     return (
-        <div className="p-8 max-w-7xl mx-auto space-y-6">
+        <div className="p-8 max-w-[1600px] w-full mx-auto space-y-6">
             <div className="flex items-center gap-4">
                 <Link href="/admin/exams-records">
                     <Button variant="ghost" size="icon" className="rounded-full">
@@ -21,7 +21,7 @@ export default async function StudentRecordPage({ params }: { params: Promise<{ 
                 </div>
             </div>
 
-            <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
                 <div className="p-8 md:p-12">
                     <AcademicRecordPrintout studentId={studentId} />
                 </div>

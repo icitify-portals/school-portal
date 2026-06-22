@@ -70,14 +70,14 @@ export default function PublicJobBoardPage() {
                     <Building2 className="w-96 h-96 absolute -bottom-10 -right-10" />
                     <GraduationCap className="w-64 h-64 absolute -top-10 -left-10" />
                 </div>
-                <div className="max-w-5xl mx-auto text-center relative z-10">
+                <div className="max-w-[1600px] w-full mx-auto text-center relative z-10">
                     <h1 className="text-5xl font-black tracking-tight mb-6 italic">Join Our Institutional Legacy</h1>
                     <p className="text-xl text-slate-400 font-medium max-w-2xl mx-auto">Explore vacancies across faculties and administrative departments. Help us shape the future of education.</p>
                 </div>
             </div>
 
             {/* List Section */}
-            <div className="max-w-5xl mx-auto py-16 px-4">
+            <div className="max-w-[1600px] w-full mx-auto py-16 px-4">
                 <div className="flex justify-between items-center mb-10">
                     <h2 className="text-2xl font-black text-slate-900 tracking-tight uppercase italic border-l-4 border-indigo-600 pl-4">Open Positions</h2>
                     <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-xl border border-slate-200">
@@ -119,7 +119,7 @@ export default function PublicJobBoardPage() {
                             </Card>
                         ))}
                         {vacancies.length === 0 && (
-                            <div className="text-center py-20 bg-white rounded-3xl border-2 border-dashed border-slate-200">
+                            <div className="text-center py-20 bg-white rounded-2xl border-2 border-dashed border-slate-200">
                                 <Briefcase className="w-12 h-12 text-slate-200 mx-auto mb-4" />
                                 <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">No active vacancies at this time.</p>
                             </div>

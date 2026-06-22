@@ -138,7 +138,7 @@ export default function ExamSlotManager() {
 
             {/* Form Card */}
             {isEditing && (
-                <Card className="border-none shadow-2xl shadow-indigo-100/50 rounded-[2rem] overflow-hidden animate-in zoom-in-95 duration-300">
+                <Card className="border-none shadow-2xl shadow-indigo-100/50 rounded-2xl overflow-hidden animate-in zoom-in-95 duration-300">
                     <CardHeader className="bg-slate-900 text-white p-8">
                         <div className="flex justify-between items-center">
                             <CardTitle className="text-xl font-black uppercase tracking-widest flex items-center gap-3">
@@ -239,7 +239,7 @@ export default function ExamSlotManager() {
                                             type="button"
                                             onClick={() => setFormData({...formData, type: t as any})}
                                             className={cn(
-                                                "flex-1 p-6 rounded-[2rem] border-2 transition-all flex items-center justify-between group",
+                                                "flex-1 p-6 rounded-2xl border-2 transition-all flex items-center justify-between group",
                                                 formData.type === t ? "border-indigo-600 bg-indigo-50/50" : "border-slate-100 bg-white hover:border-slate-200"
                                             )}
                                         >

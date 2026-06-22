@@ -2,10 +2,11 @@
 "use server";
 
 import { db } from "@/db/db";
-import { users, students, staffProfiles, userRoles, roles, departments, faculties, academicSessions } from "@/db/schema";
+import { users, students, staffProfiles, userRoles, roles, departments, faculties, academicSessions, systemAuditLogs } from "@/db/schema";
 import { eq, sql, or, and, like, desc } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
+import { auth } from "@/auth";
 
 export async function bulkImportUsers(data: any[]) {
     try {
@@ -142,12 +143,29 @@ export async function getAllUsers(options: { search?: string, page?: number, pag
 
 export async function resetUserPassword(userId: number, newPassword?: string) {
     try {
+        const session = await auth();
+        const actorRole = (session?.user as any)?.role?.toLowerCase() || "";
+        const actorId = session?.user?.id ? parseInt(session.user.id) : null;
+        if (!['superadmin', 'admin', 'dvc', 'bursar', 'registrar'].includes(actorRole)) {
+            return { success: false, error: "Unauthorized: Only superadmin, vice chancellor, bursar, and registrar can edit." };
+        }
+
         const passwordToSet = newPassword || "welcome123";
         const passwordHash = await bcrypt.hash(passwordToSet, 10);
 
         await db.update(users).set({
             password: passwordHash
         }).where(eq(users.id, userId));
+
+        if (actorId) {
+            await db.insert(systemAuditLogs).values({
+                actorId,
+                action: 'RESET_PASSWORD',
+                targetId: userId.toString(),
+                details: JSON.stringify({ userId, timestamp: new Date() }),
+                status: 'success'
+            });
+        }
 
         revalidatePath("/admin/users");
         return { success: true, message: `Password reset successfully to: ${passwordToSet}` };
@@ -159,9 +177,26 @@ export async function resetUserPassword(userId: number, newPassword?: string) {
 
 export async function updateUserStatus(userId: number, status: 'active' | 'suspended') {
     try {
+        const session = await auth();
+        const actorRole = (session?.user as any)?.role?.toLowerCase() || "";
+        const actorId = session?.user?.id ? parseInt(session.user.id) : null;
+        if (!['superadmin', 'admin', 'dvc', 'bursar', 'registrar'].includes(actorRole)) {
+            return { success: false, error: "Unauthorized: Only superadmin, vice chancellor, bursar, and registrar can edit." };
+        }
+
         await db.update(users).set({
             status
         }).where(eq(users.id, userId));
+
+        if (actorId) {
+            await db.insert(systemAuditLogs).values({
+                actorId,
+                action: 'UPDATE_USER_STATUS',
+                targetId: userId.toString(),
+                details: JSON.stringify({ userId, status, timestamp: new Date() }),
+                status: 'success'
+            });
+        }
 
         revalidatePath("/admin/users");
         revalidatePath("/admin/students");

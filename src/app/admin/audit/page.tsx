@@ -41,7 +41,7 @@ export default function AuditDashboard() {
   ];
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-8 bg-slate-50 min-h-screen">
+    <div className="p-8 max-w-[1600px] w-full mx-auto space-y-8 bg-slate-50 min-h-screen">
       {/* Header */}
       <div className="flex justify-between items-end">
         <div>
@@ -153,7 +153,7 @@ export default function AuditDashboard() {
                       <div className="text-slate-400 text-xs line-clamp-1">Operational expenditure verification</div>
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <div className="text-slate-900 font-bold text-lg">₦{parseFloat(item.totalSpent).toLocaleString()}</div>
+                      <div className="text-slate-900 font-bold text-lg">{settings?.base_currency || '₦'}{parseFloat(item.totalSpent).toLocaleString()}</div>
                       <div className="text-emerald-500 text-xs font-medium">Verified Receipts: Yes</div>
                     </td>
                     <td className="px-6 py-4 text-center">

@@ -11,6 +11,7 @@ import {
 import { eq, and, desc, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
+import { sendInAppNotification } from "./notifications";
 
 export async function getStaffProfileByUserId(userId: number) {
     const profile = await db.select({
@@ -24,7 +25,41 @@ export async function getStaffProfileByUserId(userId: number) {
         .where(eq(staffProfiles.userId, userId))
         .limit(1);
 
-    if (!profile[0]) return null;
+    if (!profile[0]) {
+        // Auto-heal/Self-initialize staff profile if the user has an allowed role (staff, admin, superadmin, developer)
+        const [usr] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+        if (usr && ['staff', 'superadmin', 'admin', 'icitify_dev', 'bursar', 'registrar', 'librarian', 'hod', 'dean'].includes(usr.role)) {
+            await db.insert(staffProfiles).values({
+                userId,
+                staffId: "STF/" + Math.floor(1000 + Math.random() * 9000),
+                jobTitle: ['bursar', 'registrar', 'librarian'].includes(usr.role) ? usr.role.toUpperCase() + " Admin" : usr.role === 'staff' ? "Lecturer I" : "Administrator (" + usr.role + ")",
+                rank: ['bursar', 'registrar', 'librarian'].includes(usr.role) ? "Administrative Staff" : usr.role === 'staff' ? "Academic Staff" : "Management Staff",
+                gradeLevel: "L1",
+                isActive: true
+            });
+
+            // Re-fetch the newly created profile
+            const newProfile = await db.select({
+                staff: staffProfiles,
+                department: departments,
+                user: users
+            })
+                .from(staffProfiles)
+                .leftJoin(departments, eq(staffProfiles.departmentId, departments.id))
+                .leftJoin(users, eq(staffProfiles.userId, users.id))
+                .where(eq(staffProfiles.userId, userId))
+                .limit(1);
+
+            if (newProfile[0]) {
+                return {
+                    ...newProfile[0].staff,
+                    department: newProfile[0].department,
+                    user: newProfile[0].user
+                };
+            }
+        }
+        return null;
+    }
     return {
         ...profile[0].staff,
         department: profile[0].department,
@@ -47,11 +82,24 @@ export async function getLeaveBalances(staffId: number) {
         const [newBalance] = await db.insert(leaveBalances).values({
             staffId,
             year: currentYear,
+            annual: 20,
+            sick: 10,
+            maternity: 90,
+            study: 15,
+            casual: 5
         });
         const created = await db.select().from(leaveBalances).where(eq(leaveBalances.id, newBalance.insertId)).limit(1);
         return created[0];
     }
-    return balance[0];
+    
+    return {
+        ...balance[0],
+        annual: balance[0].annual ?? 20,
+        sick: balance[0].sick ?? 10,
+        maternity: balance[0].maternity ?? 90,
+        study: balance[0].study ?? 15,
+        casual: balance[0].casual ?? 5
+    };
 }
 
 export async function submitLeaveRequest(data: {
@@ -74,6 +122,14 @@ export async function submitLeaveRequest(data: {
             endDate: new Date(data.endDate),
             reason: data.reason,
             status: 'pending'
+        });
+
+        await sendInAppNotification({
+            userId: parseInt(session.user.id),
+            title: "Leave Request Submitted",
+            message: `Your ${data.type} leave request has been submitted and is pending approval.`,
+            type: "success",
+            link: "/staff/dashboard"
         });
 
         revalidatePath("/staff/dashboard");
@@ -146,6 +202,23 @@ export async function updateLeaveStatus(requestId: number, status: 'approved' | 
                     .where(eq(leaveBalances.id, (balance as any).id));
             }
         });
+
+        // 3. Send Notification
+        const [requestDetails] = await db.select({ userId: staffProfiles.userId })
+            .from(leaveRequests)
+            .innerJoin(staffProfiles, eq(leaveRequests.staffId, staffProfiles.id))
+            .where(eq(leaveRequests.id, requestId))
+            .limit(1);
+
+        if (requestDetails?.userId) {
+            await sendInAppNotification({
+                userId: requestDetails.userId,
+                title: "Leave Request Update",
+                message: `Your leave request has been ${status}. ${comments ? `Comments: ${comments}` : ''}`,
+                type: status === 'approved' ? "success" : "error",
+                link: "/staff/dashboard"
+            });
+        }
 
         revalidatePath("/admin/hr/leave");
         revalidatePath("/staff/dashboard");

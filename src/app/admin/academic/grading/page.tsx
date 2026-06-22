@@ -60,7 +60,7 @@ export default function GradingSystemConfigurator() {
   };
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-8 bg-slate-50 min-h-screen">
+    <div className="p-8 max-w-[1600px] w-full mx-auto space-y-8 bg-slate-50 min-h-screen">
       <div className="flex justify-between items-end">
         <div className="flex items-center gap-4">
           <div className="w-14 h-14 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-xl shadow-indigo-100">
@@ -76,7 +76,7 @@ export default function GradingSystemConfigurator() {
       <div className="grid grid-cols-12 gap-8">
         {/* Left: General Settings */}
         <div className="col-span-12 lg:col-span-4 space-y-6">
-          <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-8 space-y-6">
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-8 space-y-6">
             <h2 className="text-sm font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
               <Settings2 size={14} />
               System Properties
@@ -143,7 +143,7 @@ export default function GradingSystemConfigurator() {
 
         {/* Right: Grade Definitions */}
         <div className="col-span-12 lg:col-span-8 space-y-6">
-          <div className="bg-white rounded-3xl border border-slate-100 shadow-xl overflow-hidden">
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-xl overflow-hidden">
             <div className="p-8 border-b border-slate-50 bg-slate-50/50 flex justify-between items-center">
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 bg-white rounded-2xl border border-slate-200 flex items-center justify-center text-indigo-600">

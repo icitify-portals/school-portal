@@ -155,7 +155,7 @@ export function AIVoiceCoach() {
                 </div>
 
                 {/* AI Chat Bubble */}
-                <div className="bg-indigo-50/50 p-6 rounded-[2rem] border border-indigo-100 relative">
+                <div className="bg-indigo-50/50 p-6 rounded-2xl border border-indigo-100 relative">
                     <div className="absolute -top-3 left-8 bg-indigo-600 text-white px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest">AI Response</div>
                     <p className="text-sm font-medium text-slate-700 leading-relaxed italic">
                         {aiResponse}

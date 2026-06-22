@@ -12,7 +12,8 @@ export default function AISettingsPage() {
     const [settings, setSettings] = useState({
         OPENAI_API_KEY: "",
         GEMINI_API_KEY: "",
-        DEEPSEEK_API_KEY: ""
+        DEEPSEEK_API_KEY: "",
+        OPENROUTER_API_KEY: ""
     });
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -57,7 +58,7 @@ export default function AISettingsPage() {
 
             <div className="grid grid-cols-1 gap-6">
                 {/* Information Alert */}
-                <div className="bg-amber-50 border border-amber-200 p-6 rounded-[2rem] flex gap-4 items-start">
+                <div className="bg-amber-50 border border-amber-200 p-6 rounded-2xl flex gap-4 items-start">
                     <Info className="w-6 h-6 text-amber-600 shrink-0 mt-1" />
                     <div>
                         <p className="font-bold text-amber-900 text-sm italic">Academic Integrity & Automation</p>
@@ -161,6 +162,40 @@ export default function AISettingsPage() {
                                 />
                                 <Button
                                     onClick={() => handleSave('DEEPSEEK_API_KEY')}
+                                    disabled={saving}
+                                    className="px-8 rounded-2xl bg-indigo-600 hover:bg-indigo-700 font-black h-[52px]"
+                                >
+                                    {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                                </Button>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                {/* OpenRouter Section */}
+                <Card className="border-none shadow-xl rounded-[2.5rem] overflow-hidden">
+                    <CardHeader className="bg-slate-900 text-white p-6 flex flex-row items-center gap-4">
+                        <div className="p-3 bg-white/10 rounded-2xl backdrop-blur-md">
+                            <Key className="w-6 h-6 text-fuchsia-400" />
+                        </div>
+                        <div>
+                            <CardTitle className="text-xl font-black italic uppercase">OpenRouter API</CardTitle>
+                            <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest">Unified access to Meta Llama, Anthropic & more</p>
+                        </div>
+                    </CardHeader>
+                    <CardContent className="p-8 space-y-4">
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">API Secret Key</label>
+                            <div className="flex gap-3">
+                                <Input
+                                    type="password"
+                                    placeholder="Enter your OpenRouter API key"
+                                    value={settings.OPENROUTER_API_KEY}
+                                    onChange={(e) => setSettings({ ...settings, OPENROUTER_API_KEY: e.target.value })}
+                                    className="rounded-2xl border-slate-200 py-6 font-mono"
+                                />
+                                <Button
+                                    onClick={() => handleSave('OPENROUTER_API_KEY')}
                                     disabled={saving}
                                     className="px-8 rounded-2xl bg-indigo-600 hover:bg-indigo-700 font-black h-[52px]"
                                 >

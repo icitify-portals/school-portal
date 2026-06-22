@@ -46,7 +46,7 @@ export default function LibraryAdminPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                 {/* Fine Calculation Card */}
-                <Card className="border-none shadow-xl shadow-slate-200/50 rounded-[2rem] overflow-hidden">
+                <Card className="border-none shadow-xl shadow-slate-200/50 rounded-2xl overflow-hidden">
                     <CardHeader className="bg-rose-500 text-white p-8">
                         <CardTitle className="flex items-center gap-2 italic uppercase tracking-tight text-xl">
                             <AlertTriangle className="w-6 h-6" />
@@ -69,7 +69,7 @@ export default function LibraryAdminPage() {
                 </Card>
 
                 {/* Circulation Card */}
-                <Card className="border-none shadow-xl shadow-slate-200/50 rounded-[2rem] overflow-hidden">
+                <Card className="border-none shadow-xl shadow-slate-200/50 rounded-2xl overflow-hidden">
                     <CardHeader className="bg-indigo-600 text-white p-8">
                         <CardTitle className="flex items-center gap-2 italic uppercase tracking-tight text-xl">
                             <ArrowRightLeft className="w-6 h-6" />
@@ -91,7 +91,7 @@ export default function LibraryAdminPage() {
                 </Card>
 
                 {/* Inventory Card */}
-                <Card className="border-none shadow-xl shadow-slate-200/50 rounded-[2rem] overflow-hidden">
+                <Card className="border-none shadow-xl shadow-slate-200/50 rounded-2xl overflow-hidden">
                     <CardHeader className="bg-slate-900 text-white p-8">
                         <CardTitle className="flex items-center gap-2 italic uppercase tracking-tight text-xl">
                             <Book className="w-6 h-6" />

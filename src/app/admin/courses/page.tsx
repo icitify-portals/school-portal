@@ -177,7 +177,7 @@ export default function CoursesPage() {
     };
 
     return (
-        <div className="p-8 max-w-7xl mx-auto">
+        <div className="p-8 max-w-[1600px] w-full mx-auto">
             <div className="flex justify-between items-center mb-8">
                 <div>
                     <h2 className="text-3xl font-bold text-slate-900 tracking-tight flex items-center gap-3">

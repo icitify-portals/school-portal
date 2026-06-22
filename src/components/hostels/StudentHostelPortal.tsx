@@ -58,7 +58,7 @@ export default function StudentHostelPortal({
                     <TabsContent value="overview" className="space-y-8 outline-none mt-0">
                         <div className="bg-white p-8 rounded-[2.5rem] shadow-xl border border-slate-100 flex flex-col md:flex-row items-center gap-8">
                             <div className={cn(
-                                "w-20 h-20 rounded-3xl flex items-center justify-center shadow-lg transition-all duration-500",
+                                "w-20 h-20 rounded-2xl flex items-center justify-center shadow-lg transition-all duration-500",
                                 application.status === 'allocated' ? "bg-emerald-600 text-white" : "bg-indigo-600 text-white"
                             )}>
                                 <Home className="w-10 h-10" />
@@ -112,7 +112,7 @@ export default function StudentHostelPortal({
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <Card className="p-6 border-none shadow-sm bg-indigo-50/50 rounded-3xl space-y-4">
+                            <Card className="p-6 border-none shadow-sm bg-indigo-50/50 rounded-2xl space-y-4">
                                 <h4 className="font-black text-indigo-900 uppercase tracking-widest text-xs flex items-center gap-2">
                                     <Clock className="w-4 h-4" /> Deadlines & Expiry
                                 </h4>
@@ -130,7 +130,7 @@ export default function StudentHostelPortal({
                                 </div>
                             </Card>
 
-                            <Card className="p-6 border-none shadow-sm bg-slate-50 rounded-3xl space-y-4">
+                            <Card className="p-6 border-none shadow-sm bg-slate-50 rounded-2xl space-y-4">
                                 <h4 className="font-black text-slate-900 uppercase tracking-widest text-xs flex items-center gap-2">
                                     <Info className="w-4 h-4" /> Hall Information
                                 </h4>
@@ -175,7 +175,7 @@ export default function StudentHostelPortal({
                             Apply for a bed space in our residential halls. {isPriority ? "Priority status detected: You are eligible for earlier consideration." : "Applications are processed on a first-come, first-served basis."}
                         </p>
                     </div>
-                    <div className="bg-white/10 backdrop-blur-md p-6 rounded-3xl border border-white/10 text-center min-w-[200px]">
+                    <div className="bg-white/10 backdrop-blur-md p-6 rounded-2xl border border-white/10 text-center min-w-[200px]">
                         <p className="text-[10px] font-black uppercase tracking-[0.2em] mb-1">Your Eligibility</p>
                         <p className="text-2xl font-black">{studentLevel} LEVEL</p>
                         <Badge variant={isPriority ? "success" : "secondary"} className="mt-2 text-[9px] font-black uppercase tracking-widest">

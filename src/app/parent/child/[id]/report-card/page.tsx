@@ -2,9 +2,23 @@ import { getK12ReportData } from "@/actions/results";
 import { getCurrentSession } from "@/actions/portal";
 import { AlertCircle } from "lucide-react";
 import ReportCardUI from "./ReportCardUI";
+import { db } from "@/db/db";
+import { eq } from "drizzle-orm";
+import { students, institutionalUnits } from "@/db/schema";
+import { redirect } from "next/navigation";
 
 export default async function ChildReportCardPage({ params }: { params: { id: string } }) {
     const studentId = parseInt(params.id);
+    
+    // Academic tier guard: redirect tertiary students to transcript
+    const [student] = await db.select().from(students).where(eq(students.id, studentId)).limit(1);
+    if (student && student.unitId) {
+        const [unit] = await db.select().from(institutionalUnits).where(eq(institutionalUnits.id, student.unitId)).limit(1);
+        if (unit && unit.academicTier !== 'k12') {
+            redirect(`/parent/child/${studentId}/transcript`);
+        }
+    }
+
     const activeSession = await getCurrentSession();
     
     if (!activeSession) return <div>No active session</div>;

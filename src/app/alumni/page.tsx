@@ -73,7 +73,7 @@ export default function AlumniPortalPage() {
                         <p className="text-slate-500 font-medium mt-2">Connect with your alma mater and showcase your professional journey.</p>
                     </div>
 
-                    <Card className="border-none shadow-xl shadow-slate-200/50 rounded-[2rem] overflow-hidden">
+                    <Card className="border-none shadow-xl shadow-slate-200/50 rounded-2xl overflow-hidden">
                         <CardHeader className="bg-slate-900 text-white p-10">
                             <CardTitle className="text-2xl font-black italic">Your Alumni Identity</CardTitle>
                             <CardDescription className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Verify your status and update your current role</CardDescription>
@@ -140,7 +140,7 @@ export default function AlumniPortalPage() {
 
                 {/* Sidebar Stats/Actions */}
                 <div className="space-y-8">
-                    <Card className="border-none shadow-xl shadow-slate-200/50 rounded-[2rem] bg-indigo-600 text-white p-8">
+                    <Card className="border-none shadow-xl shadow-slate-200/50 rounded-2xl bg-indigo-600 text-white p-8">
                         <div className="space-y-6">
                             <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center">
                                 <Award className="w-8 h-8" />
@@ -157,7 +157,7 @@ export default function AlumniPortalPage() {
                         </div>
                     </Card>
 
-                    <Card className="border-none shadow-xl shadow-slate-200/50 rounded-[2rem] p-8 space-y-6">
+                    <Card className="border-none shadow-xl shadow-slate-200/50 rounded-2xl p-8 space-y-6">
                         <h4 className="text-sm font-black uppercase tracking-widest text-slate-400">Quick Actions</h4>
                         <div className="grid gap-3">
                             <Button variant="outline" className="h-14 rounded-2xl border-slate-100 justify-start px-6 font-bold gap-3">

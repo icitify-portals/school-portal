@@ -47,7 +47,7 @@ export default function ResultComputationDashboard() {
   }
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-8 bg-slate-50 min-h-screen">
+    <div className="p-8 max-w-[1600px] w-full mx-auto space-y-8 bg-slate-50 min-h-screen">
       <div className="flex justify-between items-end">
         <div className="flex items-center gap-4">
           <div className="w-14 h-14 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-xl shadow-indigo-100">
@@ -91,7 +91,7 @@ export default function ResultComputationDashboard() {
                 { label: 'Credits Registered', value: resultData.summary.tcr, icon: FileSpreadsheet, color: 'text-amber-600', bg: 'bg-amber-50' },
                 { label: 'Credits Earned', value: resultData.summary.tce, icon: CheckCircle2, color: 'text-rose-600', bg: 'bg-rose-50' }
               ].map((stat, i) => (
-                <div key={i} className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex items-center gap-4">
+                <div key={i} className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-4">
                    <div className={`w-12 h-12 ${stat.bg} ${stat.color} rounded-2xl flex items-center justify-center`}>
                       <stat.icon size={24} />
                    </div>
@@ -104,7 +104,7 @@ export default function ResultComputationDashboard() {
            </div>
         ) : (
            <div className="col-span-12 p-20 bg-white rounded-[40px] border border-slate-100 text-center space-y-6 shadow-sm">
-              <div className="w-20 h-20 bg-slate-50 text-slate-200 rounded-3xl flex items-center justify-center mx-auto">
+              <div className="w-20 h-20 bg-slate-50 text-slate-200 rounded-2xl flex items-center justify-center mx-auto">
                  <Calculator size={40} />
               </div>
               <div className="space-y-2">
@@ -117,7 +117,7 @@ export default function ResultComputationDashboard() {
         {/* Course-by-Course Analysis */}
         {resultData?.marks && (
            <div className="col-span-12 lg:col-span-8 space-y-6">
-              <div className="bg-white rounded-3xl border border-slate-100 shadow-xl overflow-hidden">
+              <div className="bg-white rounded-2xl border border-slate-100 shadow-xl overflow-hidden">
                  <div className="p-6 border-b border-slate-50 bg-slate-50/30 flex justify-between items-center">
                     <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
                        <FileSpreadsheet size={20} className="text-indigo-600" />
@@ -178,7 +178,7 @@ export default function ResultComputationDashboard() {
 
         {/* Sidebar: Institutional Governance */}
         <div className="col-span-12 lg:col-span-4 space-y-6">
-           <div className="bg-slate-900 rounded-3xl p-8 text-white space-y-6 shadow-xl shadow-indigo-100">
+           <div className="bg-slate-900 rounded-2xl p-8 text-white space-y-6 shadow-xl shadow-indigo-100">
               <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center text-indigo-400">
                  <ShieldCheck size={24} />
               </div>
@@ -196,7 +196,7 @@ export default function ResultComputationDashboard() {
               </div>
            </div>
 
-           <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm space-y-4">
+           <div className="bg-white p-8 rounded-2xl border border-slate-100 shadow-sm space-y-4">
               <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
                  <AlertCircle size={14} className="text-amber-500" />
                  Computation Logic

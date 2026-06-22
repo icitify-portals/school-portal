@@ -68,7 +68,7 @@ export default function PayrollReconciliationDashboard() {
   }
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-8 bg-slate-50 min-h-screen">
+    <div className="p-8 max-w-[1600px] w-full mx-auto space-y-8 bg-slate-50 min-h-screen">
       <div className="flex justify-between items-end">
         <div className="flex items-center gap-4">
           <div className="w-14 h-14 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-xl shadow-indigo-100">
@@ -91,7 +91,7 @@ export default function PayrollReconciliationDashboard() {
       <div className="grid grid-cols-12 gap-8">
         {/* Main Feed: Reconciliation History */}
         <div className="col-span-12 lg:col-span-8 space-y-6">
-          <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
             <div className="p-6 border-b border-slate-50 flex justify-between items-center">
               <h2 className="text-lg font-bold text-slate-800">Recent Reconciliation Audits</h2>
               <div className="text-xs font-bold text-slate-400 uppercase tracking-widest">History</div>
@@ -143,7 +143,7 @@ export default function PayrollReconciliationDashboard() {
         {/* Sidebar: Details / Summary */}
         <div className="col-span-12 lg:col-span-4 space-y-6">
           {selectedLog ? (
-            <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-xl space-y-8 animate-in fade-in slide-in-from-right-4">
+            <div className="bg-white p-8 rounded-2xl border border-slate-100 shadow-xl space-y-8 animate-in fade-in slide-in-from-right-4">
               <div className="space-y-2">
                 <div className={`w-fit px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest ${
                   selectedLog.status === 'matched' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'
@@ -156,11 +156,11 @@ export default function PayrollReconciliationDashboard() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
                   <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Expected</div>
-                  <div className="text-lg font-bold text-slate-900">₦{parseFloat(selectedLog.totalExpected).toLocaleString()}</div>
+                  <div className="text-lg font-bold text-slate-900">{settings?.base_currency || '₦'}{parseFloat(selectedLog.totalExpected).toLocaleString()}</div>
                 </div>
                 <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
                   <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Actual</div>
-                  <div className="text-lg font-bold text-slate-900">₦{parseFloat(selectedLog.totalActual).toLocaleString()}</div>
+                  <div className="text-lg font-bold text-slate-900">{settings?.base_currency || '₦'}{parseFloat(selectedLog.totalActual).toLocaleString()}</div>
                 </div>
               </div>
 
@@ -174,7 +174,7 @@ export default function PayrollReconciliationDashboard() {
                     <div key={i} className="p-3 bg-rose-50/50 border border-rose-100 rounded-xl space-y-1">
                       <div className="flex justify-between items-start">
                         <span className="text-[10px] font-bold text-rose-700 uppercase tracking-widest">{d.type}</span>
-                        {d.diff && <span className="text-[10px] font-bold text-rose-600">₦{d.diff.toLocaleString()} diff</span>}
+                        {d.diff && <span className="text-[10px] font-bold text-rose-600">{settings?.base_currency || '₦'}{d.diff.toLocaleString()} diff</span>}
                       </div>
                       <div className="text-sm font-bold text-slate-900">{d.name || d.email}</div>
                       <div className="text-xs text-slate-500">{d.reason || `Expected ₦${d.expected?.toLocaleString()}, but paid ₦${d.actual?.toLocaleString()}`}</div>
@@ -192,7 +192,7 @@ export default function PayrollReconciliationDashboard() {
               </button>
             </div>
           ) : (
-            <div className="bg-white p-12 rounded-3xl border-2 border-dashed border-slate-200 text-center space-y-4 opacity-50">
+            <div className="bg-white p-12 rounded-2xl border-2 border-dashed border-slate-200 text-center space-y-4 opacity-50">
               <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto text-slate-400">
                 <Search size={32} />
               </div>
@@ -208,7 +208,7 @@ export default function PayrollReconciliationDashboard() {
       {/* Modal: New Reconciliation */}
       {showUpload && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+          <div className="bg-white w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
             <div className="p-8 space-y-6">
               <div className="flex justify-between items-start">
                 <div className="space-y-1">

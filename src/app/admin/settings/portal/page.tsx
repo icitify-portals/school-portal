@@ -29,7 +29,8 @@ import {
     toggleRegistration,
     toggleAddDrop,
     deleteAcademicSession,
-    setCurrentSemester
+    setCurrentSemester,
+    updateAcademicSession
 } from "@/actions/portal";
 import { getBrandingSettings, updateBrandingSettings } from "@/actions/settings";
 import { uploadFile } from "@/actions/upload";
@@ -47,6 +48,8 @@ export default function PortalSettingsPage() {
     const [isUploadingLogo, setIsUploadingLogo] = useState(false);
     const [logoMode, setLogoMode] = useState<'url' | 'upload'>('url');
     const [showAddModal, setShowAddModal] = useState(false);
+    const [showEditModal, setShowEditModal] = useState(false);
+    const [editingSession, setEditingSession] = useState<any>(null);
 
     // Form state
     const [formData, setFormData] = useState({
@@ -131,6 +134,22 @@ export default function PortalSettingsPage() {
         setIsSubmitting(false);
     };
 
+    const handleEdit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsSubmitting(true);
+        const res = await updateAcademicSession(editingSession.id, formData);
+        if (res.success) {
+            toast.success("Academic Session updated");
+            setShowEditModal(false);
+            setEditingSession(null);
+            setFormData({ name: "", startDate: "", endDate: "", isCurrent: false, currentSemester: '1', status: 'planned' });
+            loadData();
+        } else {
+            toast.error(res.error || "Failed to update session");
+        }
+        setIsSubmitting(false);
+    };
+
     const handleSetCurrent = async (id: number, name: string) => {
         if (!confirm(`Are you sure you want to set ${name} as the current academic session? This will affect all student records.`)) return;
 
@@ -189,7 +208,7 @@ export default function PortalSettingsPage() {
     if (loading) return <div className="p-20 text-center"><Loader2 className="w-10 h-10 animate-spin mx-auto text-indigo-500" /></div>;
 
     return (
-        <div className="p-8 max-w-7xl mx-auto space-y-8">
+        <div className="p-8 max-w-[1600px] w-full mx-auto space-y-8">
             <header className="flex justify-between items-center">
                 <div>
                     <h1 className="text-4xl font-black text-slate-900 flex items-center gap-4 italic uppercase">
@@ -201,7 +220,7 @@ export default function PortalSettingsPage() {
             </header>
 
             <Tabs.Root defaultValue="sessions" className="space-y-8">
-                <Tabs.List className="flex bg-slate-100/50 p-1.5 rounded-[2rem] w-fit">
+                <Tabs.List className="flex bg-slate-100/50 p-1.5 rounded-2xl w-fit">
                     <Tabs.Trigger
                         value="sessions"
                         className="px-8 py-3 rounded-[1.5rem] text-xs font-black uppercase tracking-widest transition-all data-[state=active]:bg-white data-[state=active]:shadow-xl data-[state=active]:text-indigo-600 text-slate-400 flex items-center gap-2"
@@ -267,6 +286,24 @@ export default function PortalSettingsPage() {
                                             </Button>
                                         )}
                                         <Button
+                                            onClick={() => {
+                                                setEditingSession(s);
+                                                setFormData({
+                                                    name: s.name,
+                                                    startDate: s.startDate ? new Date(s.startDate).toISOString().split('T')[0] : "",
+                                                    endDate: s.endDate ? new Date(s.endDate).toISOString().split('T')[0] : "",
+                                                    isCurrent: s.isCurrent,
+                                                    currentSemester: s.currentSemester,
+                                                    status: s.status
+                                                });
+                                                setShowEditModal(true);
+                                            }}
+                                            variant="ghost"
+                                            className="text-white hover:bg-white/10 font-black rounded-xl"
+                                        >
+                                            Edit
+                                        </Button>
+                                        <Button
                                             onClick={() => handleSemesterToggle(s.id, s.currentSemester, s.name)}
                                             className={cn(
                                                 "rounded-xl font-black border-none",
@@ -309,7 +346,7 @@ export default function PortalSettingsPage() {
 
                                 <CardContent className="p-8 bg-white">
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                        <div className="p-6 bg-slate-50 rounded-[2rem] border border-slate-100 flex flex-col items-center text-center space-y-2">
+                                        <div className="p-6 bg-slate-50 rounded-2xl border border-slate-100 flex flex-col items-center text-center space-y-2">
                                             <div className={cn(
                                                 "w-12 h-12 rounded-2xl flex items-center justify-center",
                                                 s.isCurrent ? "bg-indigo-100 text-indigo-600" : "bg-slate-200 text-slate-500"
@@ -320,7 +357,7 @@ export default function PortalSettingsPage() {
                                             <p className="font-black text-slate-900 italic">{s.isCurrent ? "Primary Session" : "Standby"}</p>
                                         </div>
 
-                                        <div className="p-6 bg-slate-50 rounded-[2rem] border border-slate-100 flex flex-col items-center text-center space-y-2">
+                                        <div className="p-6 bg-slate-50 rounded-2xl border border-slate-100 flex flex-col items-center text-center space-y-2">
                                             <div className={cn(
                                                 "w-12 h-12 rounded-2xl flex items-center justify-center",
                                                 s.isRegistrationOpen ? "bg-emerald-100 text-emerald-600" : "bg-rose-100 text-rose-600"
@@ -331,7 +368,7 @@ export default function PortalSettingsPage() {
                                             <p className="font-black text-slate-900 italic">{s.isRegistrationOpen ? "Authorized" : "Revoked"}</p>
                                         </div>
 
-                                        <div className="p-6 bg-slate-50 rounded-[2rem] border border-slate-100 flex flex-col items-center text-center space-y-2">
+                                        <div className="p-6 bg-slate-50 rounded-2xl border border-slate-100 flex flex-col items-center text-center space-y-2">
                                             <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center">
                                                 <Archive className="w-6 h-6" />
                                             </div>
@@ -471,7 +508,7 @@ export default function PortalSettingsPage() {
                                         </div>
                                     </div>
 
-                                    <div className="p-8 bg-slate-50 rounded-[2rem] border border-slate-100 flex flex-col items-center justify-center text-center gap-4">
+                                    <div className="p-8 bg-slate-50 rounded-2xl border border-slate-100 flex flex-col items-center justify-center text-center gap-4">
                                         <div
                                             className="w-20 h-20 rounded-[1.5rem] shadow-xl flex items-center justify-center text-white"
                                             style={{ backgroundColor: branding.COLOR_PRIMARY }}
@@ -586,6 +623,86 @@ export default function PortalSettingsPage() {
                                             className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-black py-6 rounded-2xl uppercase text-[10px] tracking-widest"
                                         >
                                             {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Create Session"}
+                                        </Button>
+                                    </div>
+                                </form>
+                            </CardContent>
+                        </Card>
+                    </div>
+                )
+            }
+
+            {/* Edit Session Modal */}
+            {
+                showEditModal && (
+                    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                        <Card className="w-full max-w-md border-none shadow-2xl rounded-[3rem] overflow-hidden animate-in fade-in zoom-in duration-300">
+                            <CardHeader className="bg-slate-900 text-white p-8">
+                                <CardTitle className="text-2xl font-black italic uppercase">Edit Session</CardTitle>
+                            </CardHeader>
+                            <CardContent className="p-8 space-y-6">
+                                <form onSubmit={handleEdit} className="space-y-4">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">Session Name</label>
+                                        <Input
+                                            placeholder="2024/2025"
+                                            className="rounded-2xl border-slate-200 py-6 font-bold"
+                                            value={formData.name}
+                                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                            required
+                                        />
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">Start Date</label>
+                                            <Input
+                                                type="date"
+                                                className="rounded-2xl border-slate-200 py-6 font-bold"
+                                                value={formData.startDate}
+                                                onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">End Date</label>
+                                            <Input
+                                                type="date"
+                                                className="rounded-2xl border-slate-200 py-6 font-bold"
+                                                value={formData.endDate}
+                                                onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">Status</label>
+                                        <select
+                                            className="w-full p-4 rounded-2xl border border-slate-200 font-bold text-sm bg-white"
+                                            value={formData.status}
+                                            onChange={(e) => setFormData({ ...formData, status: e.target.value as 'planned' | 'active' | 'archived' })}
+                                        >
+                                            <option value="planned">Planned</option>
+                                            <option value="active">Active</option>
+                                            <option value="archived">Archived</option>
+                                        </select>
+                                    </div>
+
+                                    <div className="flex gap-4 pt-4">
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            onClick={() => {
+                                                setShowEditModal(false);
+                                                setEditingSession(null);
+                                            }}
+                                            className="flex-1 font-black py-6 rounded-2xl uppercase text-[10px] tracking-widest"
+                                        >
+                                            Cancel
+                                        </Button>
+                                        <Button
+                                            type="submit"
+                                            disabled={isSubmitting}
+                                            className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-black py-6 rounded-2xl uppercase text-[10px] tracking-widest"
+                                        >
+                                            {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Save Changes"}
                                         </Button>
                                     </div>
                                 </form>

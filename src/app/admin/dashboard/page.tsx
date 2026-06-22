@@ -76,28 +76,28 @@ export default async function AdminDashboardPage() {
         { name: "Active Admissions", value: statsData[6][0]?.value.toString() || "0", icon: UserCheck, color: "text-purple-600", bg: "bg-purple-50", href: "/admin/admission" },
     ];
     return (
-        <div className="p-8">
+        <div className="p-5 md:p-6 max-w-[1600px] w-full mx-auto space-y-6">
             {!activeAcademicSession && (
-                <div className="mb-8 p-4 bg-rose-50 border border-rose-200 rounded-2xl flex items-center gap-4 text-rose-700 animate-pulse">
-                    <AlertCircle className="w-6 h-6 flex-shrink-0" />
+                <div className="p-4 bg-rose-50 border border-rose-200 rounded-2xl flex items-center gap-4 text-rose-700 animate-pulse">
+                    <AlertCircle className="w-5 h-5 flex-shrink-0" />
                     <div>
                         <p className="font-black uppercase text-xs tracking-widest">System Warning: Primary Session Missing</p>
                         <p className="text-sm font-medium">No academic session is currently set as "Primary". This may prevent students from registering or viewing portal data. <Link href="/admin/settings/portal" className="underline font-black">Fix now</Link></p>
                     </div>
                 </div>
             )}
-            <div className="flex justify-between items-center mb-10">
+            <div className="flex justify-between items-center">
                 <div>
-                    <h2 className="text-3xl font-bold text-slate-900 tracking-tight">Admin Overview</h2>
-                    <p className="text-slate-500 mt-1">System-wide monitoring and management</p>
+                    <h2 className="text-3xl font-black text-slate-900 tracking-tight">Admin Overview</h2>
+                    <p className="text-slate-500 font-medium text-sm mt-1">System-wide monitoring and management</p>
                 </div>
-                <div className="px-4 py-2 bg-indigo-50 text-indigo-700 rounded-full border border-indigo-100 flex items-center gap-2">
+                <div className="px-3 py-1.5 bg-indigo-50 text-indigo-700 rounded-full border border-indigo-100 flex items-center gap-2">
                     <TrendingUp className="w-4 h-4" />
-                    <span className="text-sm font-semibold">System Stable</span>
+                    <span className="text-xs font-bold uppercase tracking-widest">System Stable</span>
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6 mb-10">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
                 {adminStats.map((stat) => {
                     const CardElement = (
                         <Card className="border-none shadow-sm hover:shadow-md transition-shadow h-full">
@@ -125,9 +125,9 @@ export default async function AdminDashboardPage() {
                 })}
             </div>
 
-            <div className="mb-10">
-                <h3 className="text-xs font-black uppercase tracking-widest text-slate-400 mb-6 px-1">Management Hub</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div>
+                <h3 className="text-xs font-black uppercase tracking-widest text-slate-400 mb-4 px-1">Management Hub</h3>
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                     {[
                         { title: "User Management", desc: "Manage all users & bulk import", href: "/admin/users", icon: Users, color: "bg-blue-600" },
                         { title: "Admission Desk", desc: "Screening & applications", href: "/admin/admission", icon: UserCheck, color: "bg-emerald-600" },
@@ -168,8 +168,8 @@ export default async function AdminDashboardPage() {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <Card className="shadow-sm border-none">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <Card className="shadow-sm border border-slate-100 rounded-2xl">
                     <CardHeader>
                         <CardTitle className="text-lg">Recent System Activity</CardTitle>
                     </CardHeader>
@@ -199,7 +199,7 @@ export default async function AdminDashboardPage() {
                     </CardContent>
                 </Card>
 
-                <Card className="shadow-sm border-none">
+                <Card className="shadow-sm border border-slate-100 rounded-2xl">
                     <CardHeader>
                         <CardTitle className="text-lg">Database Health</CardTitle>
                     </CardHeader>

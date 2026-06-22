@@ -135,11 +135,11 @@ export default function StudentClearancePage() {
                                 <div className="grid grid-cols-2 gap-4 mt-6">
                                     <div className="p-4 bg-slate-50 rounded-2xl">
                                         <p className="text-[10px] font-bold uppercase text-slate-400 mb-1">Total Bill</p>
-                                        <p className="text-lg font-black text-slate-900">₦{Number(stats?.totalDebit).toLocaleString()}</p>
+                                        <p className="text-lg font-black text-slate-900">{settings?.base_currency || '₦'}{Number(stats?.totalDebit).toLocaleString()}</p>
                                     </div>
                                     <div className="p-4 bg-slate-50 rounded-2xl">
                                         <p className="text-[10px] font-bold uppercase text-slate-400 mb-1">Total Paid</p>
-                                        <p className="text-lg font-black text-emerald-600">₦{Number(stats?.totalCredit).toLocaleString()}</p>
+                                        <p className="text-lg font-black text-emerald-600">{settings?.base_currency || '₦'}{Number(stats?.totalCredit).toLocaleString()}</p>
                                     </div>
                                 </div>
                             </div>
@@ -152,7 +152,7 @@ export default function StudentClearancePage() {
                             <div>
                                 <p className="text-sm font-bold text-amber-900 mb-1">Attention Required</p>
                                 <p className="text-xs text-amber-700 leading-relaxed font-medium">
-                                    You need to pay at least **₦{(stats?.totalDebit * (stats?.threshold / 100) - stats?.totalCredit).toLocaleString()}** more to reach the {stats?.threshold}% clearance threshold.
+                                    You need to pay at least **{settings?.base_currency || '₦'}{(stats?.totalDebit * (stats?.threshold / 100) - stats?.totalCredit).toLocaleString()}** more to reach the {stats?.threshold}% clearance threshold.
                                 </p>
                                 <Link href="/student/finance">
                                     <Button variant="link" className="p-0 h-auto text-amber-800 font-black uppercase text-[10px] tracking-widest mt-2 gap-1">
@@ -168,7 +168,7 @@ export default function StudentClearancePage() {
                 <div className="space-y-6">
                     {isCleared ? (
                         <div className="bg-white p-2 rounded-[2.5rem] shadow-2xl border border-slate-100 rotate-1">
-                            <div className="border-[6px] border-emerald-600 rounded-[2rem] p-8 relative overflow-hidden">
+                            <div className="border-[6px] border-emerald-600 rounded-2xl p-8 relative overflow-hidden">
                                 <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-50 rounded-bl-full opacity-50" />
 
                                 <div className="flex items-center gap-3 mb-10 relative">

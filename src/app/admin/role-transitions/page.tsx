@@ -193,7 +193,7 @@ export default function RoleTransitionsPage() {
   };
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-8">
+    <div className="p-8 max-w-[1600px] w-full mx-auto space-y-8">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
         <div>
@@ -222,7 +222,7 @@ export default function RoleTransitionsPage() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card className="border-none shadow-sm bg-slate-50/50 rounded-3xl p-6">
+        <Card className="border-none shadow-sm bg-slate-50/50 rounded-2xl p-6">
           <div className="flex items-center gap-4">
             <div className="p-3 bg-slate-100 rounded-2xl text-slate-600">
               <Users className="w-6 h-6" />
@@ -233,7 +233,7 @@ export default function RoleTransitionsPage() {
             </div>
           </div>
         </Card>
-        <Card className="border-none shadow-sm bg-amber-50/50 rounded-3xl p-6">
+        <Card className="border-none shadow-sm bg-amber-50/50 rounded-2xl p-6">
           <div className="flex items-center gap-4">
             <div className="p-3 bg-amber-100 rounded-2xl text-amber-600">
               <GraduationCap className="w-6 h-6" />
@@ -244,7 +244,7 @@ export default function RoleTransitionsPage() {
             </div>
           </div>
         </Card>
-        <Card className="border-none shadow-sm bg-indigo-50/50 rounded-3xl p-6">
+        <Card className="border-none shadow-sm bg-indigo-50/50 rounded-2xl p-6">
           <div className="flex items-center gap-4">
             <div className="p-3 bg-indigo-100 rounded-2xl text-indigo-600">
               <BookOpen className="w-6 h-6" />
@@ -255,7 +255,7 @@ export default function RoleTransitionsPage() {
             </div>
           </div>
         </Card>
-        <Card className="border-none shadow-sm bg-emerald-50/50 rounded-3xl p-6">
+        <Card className="border-none shadow-sm bg-emerald-50/50 rounded-2xl p-6">
           <div className="flex items-center gap-4">
             <div className="p-3 bg-emerald-100 rounded-2xl text-emerald-600">
               <UserCheck className="w-6 h-6" />
@@ -367,7 +367,7 @@ export default function RoleTransitionsPage() {
       {/* Manual Transition Modal */}
       {showTransitionModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <Card className="w-full max-w-2xl border-none shadow-2xl rounded-[2rem] max-h-[90vh] overflow-y-auto">
+          <Card className="w-full max-w-2xl border-none shadow-2xl rounded-2xl max-h-[90vh] overflow-y-auto">
             <CardHeader>
               <CardTitle className="flex items-center gap-3">
                 <UserCheck className="w-5 h-5" />
