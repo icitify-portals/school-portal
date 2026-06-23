@@ -22,7 +22,7 @@ export default async function HRPayrollPage() {
             <div className="flex justify-between items-center">
                 <div>
                     <h1 className="text-4xl font-black text-slate-900 tracking-tight">Financial Engine: Payroll</h1>
-                    <p className="text-slate-500 mt-1 italic">Process monthly staff compensation with automated Ledger posting.</p>
+                    <p className="text-slate-500 mt-1 italic">Generate monthly payroll batches for Finance approval.</p>
                 </div>
             </div>
 
@@ -67,7 +67,7 @@ export default async function HRPayrollPage() {
 
                             <button className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 py-5 rounded-2xl font-black text-xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl shadow-blue-900/40 flex items-center justify-center gap-3">
                                 <Play className="w-6 h-6 fill-white" />
-                                DISBURSE PAYROLL
+                                GENERATE PAYROLL BATCH
                             </button>
                         </form>
 
@@ -76,8 +76,7 @@ export default async function HRPayrollPage() {
                                 <Database className="w-5 h-5 text-blue-400" />
                             </div>
                             <p className="text-xs text-slate-400 leading-relaxed italic">
-                                * Warning: Executing this engine will auto-generate {staff.length} Journal Entries
-                                and post them to the General Ledger as "Payroll Disbursement".
+                                * Notice: Executing this engine will generate a pending batch for {staff.length} staff members. It will be sent to Finance for approval and disbursement.
                             </p>
                         </div>
                     </div>

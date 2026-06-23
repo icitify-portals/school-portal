@@ -92,3 +92,26 @@ export async function resetPasswordWithToken(token: string, password: string) {
         return { success: false, error: "An unexpected error occurred. Please try again later." };
     }
 }
+
+import { auth } from '@/auth';
+
+export async function changePasswordForced(password: string) {
+    try {
+        const session = await auth();
+        if (!session?.user?.id) return { success: false, error: 'Unauthorized' };
+
+        const userId = parseInt(session.user.id);
+        const passwordHash = await bcrypt.hash(password, 10);
+
+        await db.update(users).set({
+            password: passwordHash,
+            requiresPasswordChange: false
+        }).where(eq(users.id, userId));
+
+        return { success: true, message: 'Password changed successfully.' };
+    } catch (error) {
+        console.error('Forced Change Password Error:', error);
+        return { success: false, error: 'An unexpected error occurred. Please try again.' };
+    }
+}
+

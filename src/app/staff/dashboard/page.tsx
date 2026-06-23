@@ -34,6 +34,7 @@ import {
     submitLeaveRequest,
     getMyLeaveRequests
 } from "@/actions/hr_leave";
+import { clockIn, clockOut, getTodayAttendance } from "@/actions/hr_attendance";
 import { useSession } from "next-auth/react";
 import {
     getLecturerDashboardStats,
@@ -59,6 +60,7 @@ export default function StaffDashboardPage() {
     const [showLeaveForm, setShowLeaveForm] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isStartingClass, setIsStartingClass] = useState(null as string | null);
+    const [todayAttendance, setTodayAttendance] = useState(null as any);
 
     // Role-specific states
     const [isHOD, setIsHODState] = useState(false);
@@ -87,16 +89,18 @@ export default function StaffDashboardPage() {
 
         if (prof) {
             setProfile(prof);
-            const [balData, reqData, lStats, kData] = await Promise.all([
+            const [balData, reqData, lStats, kData, attData] = await Promise.all([
                 getLeaveBalances(prof.id),
                 getMyLeaveRequests(),
                 getLecturerDashboardStats(prof.id),
-                getTeacherDashboardData(prof.id)
+                getTeacherDashboardData(prof.id),
+                getTodayAttendance()
             ]);
             setBalances(balData);
             setRequests(reqData);
             setLecturerStats(lStats);
             setK12Data(kData);
+            setTodayAttendance(attData);
 
             // Role Checks
             if (prof.departmentId) {
@@ -120,6 +124,18 @@ export default function StaffDashboardPage() {
             }
         }
         setLoading(false);
+    };
+
+    const handleClockInOut = async (type: 'in' | 'out') => {
+        setIsSubmitting(true);
+        const res = type === 'in' ? await clockIn() : await clockOut();
+        if (res.success) {
+            toast.success(`Successfully clocked ${type}.`);
+            fetchData();
+        } else {
+            toast.error(res.error);
+        }
+        setIsSubmitting(false);
     };
 
     const handleLeaveSubmit = async (e: React.FormEvent) => {
@@ -216,6 +232,28 @@ export default function StaffDashboardPage() {
                 </div>
 
                 <div className="flex items-center gap-2 flex-wrap">
+                    {!todayAttendance?.clockIn ? (
+                        <Button 
+                            onClick={() => handleClockInOut('in')}
+                            disabled={isSubmitting}
+                            variant="default" className="bg-emerald-500 hover:bg-emerald-400 text-white rounded-xl text-xs font-bold uppercase tracking-wider h-10 px-6 flex items-center gap-2 shadow-lg shadow-emerald-500/20">
+                            <Clock className="w-4 h-4" />
+                            Clock In (Campus IP Only)
+                        </Button>
+                    ) : !todayAttendance?.clockOut ? (
+                        <Button 
+                            onClick={() => handleClockInOut('out')}
+                            disabled={isSubmitting}
+                            variant="destructive" className="rounded-xl text-xs font-bold uppercase tracking-wider h-10 px-6 flex items-center gap-2 shadow-lg">
+                            <Clock className="w-4 h-4" />
+                            Clock Out
+                        </Button>
+                    ) : (
+                        <div className="bg-white/10 px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 text-emerald-300">
+                            <CheckCircle className="w-4 h-4" />
+                            Attendance Logged
+                        </div>
+                    )}
                     <Button variant="outline" className="bg-white/15 border-white/20 hover:bg-white/25 text-white rounded-xl text-xs font-bold uppercase tracking-wider h-10 px-4 flex items-center gap-2 shadow-md">
                         <Smartphone className="w-4 h-4 text-emerald-300" />
                         Digital ID

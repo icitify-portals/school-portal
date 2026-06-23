@@ -12,7 +12,10 @@ import {
     chartOfAccounts,
     userRoles,
     roles,
-    systemAuditLogs
+    systemAuditLogs,
+    departmentHeads,
+    payrollDeductionRules,
+    staffAttendance
 } from "@/db/schema";
 import { eq, and, desc, sql, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
@@ -199,16 +202,22 @@ export async function getSalaryStructures() {
 export async function processPayroll(month: number, year: number) {
     try {
         await ensureHRStaff();
+        const session = await auth();
+        const actorId = session?.user?.id ? parseInt(session.user.id) : null;
+
         const profiles = await db.select().from(staffProfiles).where(eq(staffProfiles.isActive, true));
         const allUsers = await db.select().from(users);
         const structures = await getSalaryStructures();
-        const settings = await getBursarySettings();
-        const bankAcc = settings['gl_cash_bank_account'];
-        const expenseAcc = settings['gl_salary_expense_account'];
+        const rules = await db.select().from(payrollDeductionRules);
+        
+        // Find absent days for the month
+        const attendance = await db.select().from(staffAttendance).where(
+            and(
+                // We should filter by month/year, but for simplicity we fetch all and filter in memory
+                // or just leave it if there's no easy date extraction in Drizzle SQLite without raw SQL
+            )
+        ); // Will optimize in memory
 
-        if (!bankAcc || !expenseAcc) {
-            return { success: false, error: "GL accounts for payroll are not configured in Bursary Settings." };
-        }
 
         const batchId = uuidv4();
         const logs: { staff: string, amount: number }[] = [];
@@ -220,76 +229,83 @@ export async function processPayroll(month: number, year: number) {
                 const structure = structures.find(s => s.gradeLevel === profile.gradeLevel);
                 if (!structure) continue; // Skip if no salary structure defined for this level
 
-                const netPay = parseFloat(structure.basePay) + parseFloat(structure.allowances || "0") - parseFloat(structure.deductions || "0");
+                let basePay = parseFloat(structure.basePay);
+                let allowances = parseFloat(structure.allowances || "0");
+                let standardDeductions = parseFloat(structure.deductions || "0");
 
-                // 1. Log Employee Payroll
+                // Unpaid Leave Deduction (Absent Days)
+                const monthAttendance = attendance.filter(a => {
+                    const d = new Date(a.date);
+                    return d.getMonth() + 1 === month && d.getFullYear() === year && a.staffId === profile.id;
+                });
+                const absentDays = monthAttendance.filter(a => a.status === 'absent').length;
+                // Assuming 22 working days
+                const dailyRate = basePay / 22;
+                const unpaidLeaveDeduction = absentDays * dailyRate;
+
+                // Statutory Deductions (PAYE, Pension)
+                let statutoryDeductions = 0;
+                for (const rule of rules) {
+                    if (rule.type === 'percentage') {
+                        statutoryDeductions += (basePay * parseFloat(rule.value as string)) / 100;
+                    } else {
+                        statutoryDeductions += parseFloat(rule.value as string);
+                    }
+                }
+
+                const totalDeductions = standardDeductions + unpaidLeaveDeduction + statutoryDeductions;
+                const netPay = basePay + allowances - totalDeductions;
+
+                // 1. Log Employee Payroll (Pending Approval)
                 await tx.insert(payrollLogs).values({
                     staffId: profile.id,
                     month,
                     year,
                     basePay: structure.basePay,
-                    allowances: structure.allowances || "0.00",
-                    deductions: structure.deductions || "0.00",
+                    allowances: allowances.toFixed(2),
+                    deductions: totalDeductions.toFixed(2),
                     netPay: netPay.toFixed(2),
-                    status: 'paid',
-                    ledgerBatchId: batchId,
-                    paidAt: new Date()
-                });
-
-                // 2. Automated GL Posting
-                await tx.insert(generalLedger).values({
-                    accountId: parseInt(expenseAcc),
-                    description: `Payroll Disbursement: ${month}/${year} (Staff: ${profile.jobTitle})`,
-                    debit: netPay.toFixed(2),
-                    credit: "0.00",
-                    batchId,
-                    recordedBy: 1 // System
-                });
-
-                await tx.insert(generalLedger).values({
-                    accountId: parseInt(bankAcc),
-                    description: `Payroll Disbursement: ${month}/${year} (Staff: ${profile.jobTitle})`,
-                    debit: "0.00",
-                    credit: netPay.toFixed(2),
-                    batchId,
-                    recordedBy: 1 // System
+                    status: 'pending_approval',
+                    ledgerBatchId: batchId
                 });
 
                 logs.push({ staff: profile.jobTitle, amount: netPay });
-
-                // Add to email queue
-                const user = allUsers.find((u: any) => u.id === profile.userId);
-                if (user?.email) {
-                    emailQueue.push({
-                        to: user.email,
-                        name: user.name!,
-                        amount: netPay.toFixed(2),
-                        month,
-                        year
-                    });
-                }
             }
         });
+
+        // 3. Send Notification to Finance
+        const financeUsers = allUsers.filter(u => u.role === 'bursar' || u.role === 'admin' || u.role === 'superadmin');
+        for (const user of financeUsers) {
+            if (user.email) {
+                emailQueue.push({
+                    to: user.email,
+                    name: user.name!,
+                    amount: "0", // Not used in this email template but keeping structure
+                    month,
+                    year
+                });
+            }
+        }
 
         // 3. Send Emails (Non-blocking / After transaction)
         for (const mail of emailQueue) {
             const html = `
                 <div style="font-family: sans-serif; max-width: 600px; margin: auto; border: 1px solid #eee; padding: 40px; border-radius: 10px;">
-                    <h2 style="color: #4f46e5; margin-bottom: 20px;">Monthly Payslip: ${mail.month}/${mail.year}</h2>
+                    <h2 style="color: #4f46e5; margin-bottom: 20px;">Payroll Approval Required: ${mail.month}/${mail.year}</h2>
                     <p>Hello <strong>${mail.name}</strong>,</p>
-                    <p>Your salary for <strong>${mail.month}/${mail.year}</strong> has been processed successfully.</p>
+                    <p>The HR Department has generated the payroll batch for <strong>${mail.month}/${mail.year}</strong>.</p>
                     <div style="background: #f9fafb; padding: 20px; border-radius: 8px; margin: 20px 0;">
-                        <p style="margin: 0; font-size: 14px; color: #6b7280;">Net Salary Disbursed</p>
-                        <h1 style="margin: 0; color: #111827;">\u20a6${mail.amount}</h1>
+                        <p style="margin: 0; font-size: 14px; color: #6b7280;">Action Required</p>
+                        <h3 style="margin: 0; color: #111827;">Please review and approve the batch to disburse funds.</h3>
                     </div>
-                    <p style="font-size: 14px; color: #6b7280;">You can view and download your full breakdown from the staff portal.</p>
+                    <p style="font-size: 14px; color: #6b7280;">You can view the breakdown and authorize payments from the Finance Portal.</p>
                     <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;" />
                     <p style="font-size: 12px; color: #9ca3af; text-align: center;">${hrSettings['institutional_name'] || 'Institutional School Portal'} | HR Department</p>
                 </div>
             `;
             await sendEmail(
                 mail.to,
-                `Your Payslip for ${mail.month}/${mail.year}`,
+                `Action Required: Approve Payroll ${mail.month}/${mail.year}`,
                 html,
                 hrSettings['sender_email'],
                 hrSettings['resend_api_key']
@@ -327,6 +343,7 @@ export async function bulkImportStaff(data: any[]) {
                     name,
                     email,
                     password: passwordHash,
+                    requiresPasswordChange: true,
                     role: 'staff'
                 });
 
@@ -370,6 +387,41 @@ export async function bulkImportStaff(data: any[]) {
     } catch (error) {
         console.error("Staff Bulk Import Error:", error);
         return { success: false, error: "Failed to process bulk import. Ensure email and staff IDs are unique." };
+    }
+}
+
+
+export async function getDeductionRules() {
+    try {
+        const rules = await db.select().from(payrollDeductionRules);
+        return { success: true, data: rules };
+    } catch (error) {
+        return { success: false, error: 'Failed to fetch rules' };
+    }
+}
+
+export async function saveDeductionRule(data: { name: string, type: 'fixed' | 'percentage', value: number, category: string }) {
+    try {
+        await db.insert(payrollDeductionRules).values({
+            name: data.name,
+            type: data.type,
+            value: data.value.toString(),
+            category: data.category
+        });
+        revalidatePath('/admin/hr/payroll');
+        return { success: true };
+    } catch (error) {
+        return { success: false, error: 'Failed to save rule' };
+    }
+}
+
+export async function deleteDeductionRule(id: number) {
+    try {
+        await db.delete(payrollDeductionRules).where(eq(payrollDeductionRules.id, id));
+        revalidatePath('/admin/hr/payroll');
+        return { success: true };
+    } catch (error) {
+        return { success: false, error: 'Failed to delete rule' };
     }
 }
 

@@ -15,6 +15,7 @@ export const authConfig = {
                 token.roles = (user as any).roles;
                 token.permissions = (user as any).permissions;
                 token.schoolPortalId = (user as any).schoolPortalId;
+                token.requiresPasswordChange = (user as any).requiresPasswordChange;
             }
             return token;
         },
@@ -26,6 +27,7 @@ export const authConfig = {
                 (session.user as any).roles = token.roles;
                 (session.user as any).permissions = token.permissions;
                 (session.user as any).schoolPortalId = token.schoolPortalId;
+                (session.user as any).requiresPasswordChange = token.requiresPasswordChange;
             }
             return session;
         },
@@ -50,6 +52,17 @@ export const authConfig = {
 
             // Require authentication for all other pages
             if (!isLoggedIn) return false;
+
+            // Forced Password Change logic
+            const requiresPasswordChange = (auth?.user as any)?.requiresPasswordChange;
+            const isChangePasswordPage = nextUrl.pathname === "/change-password";
+
+            if (requiresPasswordChange && !isChangePasswordPage) {
+                return Response.redirect(new URL("/change-password", nextUrl));
+            }
+            if (!requiresPasswordChange && isChangePasswordPage) {
+                return Response.redirect(new URL("/", nextUrl));
+            }
 
             // Check role permissions for admin pages
             const userRole = (auth?.user as any)?.role?.toLowerCase();

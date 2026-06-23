@@ -8,6 +8,7 @@ export const users = mysqlTable('users', {
   name: varchar('name', { length: 255 }).notNull(),
   email: varchar('email', { length: 255 }).unique().notNull(),
   password: varchar('password', { length: 255 }).notNull(),
+  requiresPasswordChange: boolean('requires_password_change').default(false),
   role: mysqlEnum('role', ['admin', 'staff', 'student', 'dvc', 'healthadmin', 'applicant', 'fresher', 'superadmin', 'parent', 'icitify_dev', 'bursar', 'registrar', 'librarian', 'hod', 'dean', 'admission_officer']).default('student'),
   status: mysqlEnum('status', ['active', 'suspended', 'withdrawn', 'graduated', 'rusticated']).default('active'),
   phone: varchar('phone', { length: 20 }),
@@ -1360,7 +1361,7 @@ export const payrollLogs = mysqlTable('payroll_logs', {
   allowances: decimal('allowances', { precision: 12, scale: 2 }).notNull(),
   deductions: decimal('deductions', { precision: 12, scale: 2 }).notNull(),
   netPay: decimal('net_pay', { precision: 12, scale: 2 }).notNull(),
-  status: mysqlEnum('status', ['draft', 'paid', 'failed']).default('draft'),
+  status: mysqlEnum('status', ['draft', 'pending_approval', 'approved', 'paid', 'failed']).default('draft'),
   ledgerBatchId: varchar('ledger_batch_id', { length: 50 }),
   paidAt: datetime('paid_at'),
 });
@@ -6249,3 +6250,41 @@ export const documentForms = mysqlTable('document_forms', { id: int('id').primar
 export const documentPricingRules = mysqlTable('document_pricing_rules', { id: int('id').primaryKey().autoincrement() });
 export const documentTypes = mysqlTable('document_types', { id: int('id').primaryKey().autoincrement() });
 
+
+export const staffAttendance = mysqlTable('staff_attendance', {
+  id: int('id').autoincrement().primaryKey(),
+  staffId: int('staff_id').references(() => staffProfiles.id).notNull(),
+  date: date('date').notNull(),
+  clockIn: datetime('clock_in'),
+  clockOut: datetime('clock_out'),
+  clockInIp: varchar('clock_in_ip', { length: 45 }),
+  clockOutIp: varchar('clock_out_ip', { length: 45 }),
+  status: mysqlEnum('status', ['present', 'absent', 'late', 'half_day']).default('present'),
+});
+
+export const staffAttendanceRelations = relations(staffAttendance, ({ one }) => ({
+  staff: one(staffProfiles, {
+    fields: [staffAttendance.staffId],
+    references: [staffProfiles.id],
+  }),
+}));
+
+
+export const academicCarryOvers = mysqlTable('academic_carry_overs', {
+  id: int('id').autoincrement().primaryKey(),
+  studentId: int('student_id').references(() => students.id).notNull(),
+  courseId: int('course_id').references(() => courses.id).notNull(),
+  sessionId: int('session_id').references(() => academicSessions.id).notNull(),
+  semester: mysqlEnum('semester', ['1', '2']).notNull(),
+  status: mysqlEnum('status', ['pending', 'registered', 'passed', 'failed']).default('pending'),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const payrollDeductionRules = mysqlTable('payroll_deduction_rules', {
+  id: int('id').autoincrement().primaryKey(),
+  name: varchar('name', { length: 255 }).notNull(),
+  type: mysqlEnum('type', ['fixed', 'percentage']).notNull(),
+  value: varchar('value', { length: 50 }).notNull(),
+  category: varchar('category', { length: 100 }).notNull(),
+  createdAt: timestamp('created_at').defaultNow(),
+});

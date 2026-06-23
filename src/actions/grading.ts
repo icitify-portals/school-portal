@@ -15,6 +15,7 @@ import {
     students,
     jambCandidates,
     users,
+    academicCarryOvers,
 } from "@/db/schema";
 import { NotificationService } from "@/services/NotificationService";
 import { eq, and, asc, desc, sql } from "drizzle-orm";
@@ -143,6 +144,39 @@ export async function publishCourseResults(courseId: number, sessionId: number, 
                 .where(eq(results.enrollmentId, enr.id));
 
             await GradingService.summarizeSemester(enr.studentId as number, sessionId, semester as '1' | '2');
+
+            // --- Carry Over Logic ---
+            const [finalResult] = await db.select().from(results).where(eq(results.enrollmentId, enr.id)).limit(1);
+            if (finalResult && enr.courseCode) { // Ensure course exists
+                if (finalResult.grade === 'F') {
+                    // Check if already a carry over
+                    const [existing] = await db.select().from(academicCarryOvers).where(and(
+                        eq(academicCarryOvers.studentId, enr.studentId as number),
+                        eq(academicCarryOvers.courseId, courseId),
+                        eq(academicCarryOvers.status, 'pending')
+                    )).limit(1);
+
+                    if (!existing) {
+                        await db.insert(academicCarryOvers).values({
+                            studentId: enr.studentId as number,
+                            courseId: courseId,
+                            failedSessionId: sessionId,
+                            semester: semester as '1' | '2',
+                            status: 'pending'
+                        });
+                    }
+                } else if (finalResult.grade && finalResult.grade !== 'F') {
+                    // Cleared a carry over
+                    await db.update(academicCarryOvers)
+                        .set({ status: 'cleared' })
+                        .where(and(
+                            eq(academicCarryOvers.studentId, enr.studentId as number),
+                            eq(academicCarryOvers.courseId, courseId),
+                            eq(academicCarryOvers.status, 'registered') // Or pending
+                        ));
+                }
+            }
+            // ------------------------
 
             // Send WhatsApp Alert
             if (enr.phone) {

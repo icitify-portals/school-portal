@@ -15,7 +15,8 @@ import {
     addDropRequests,
     staffProfiles,
     registrationLevelControls,
-    registrationConcessions
+    registrationConcessions,
+    academicCarryOvers
 } from "@/db/schema";
 import { eq, and, inArray, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
@@ -78,6 +79,31 @@ export async function validateRegistration(studentId: number, courseIds: number[
         }
 
         const isAnnual = session?.registrationType === 'annual';
+
+        // 2.5 Enforce Carry-Overs
+        const pendingCarryOvers = await db.select().from(academicCarryOvers).where(and(
+            eq(academicCarryOvers.studentId, studentId),
+            eq(academicCarryOvers.status, 'pending'),
+            eq(academicCarryOvers.semester, semester.toString() as '1' | '2') // Semester matching
+        ));
+
+        if (pendingCarryOvers.length > 0) {
+            const requestedCourseIds = new Set(courseIds);
+            const missingCarryOvers = pendingCarryOvers.filter(co => !requestedCourseIds.has(co.courseId));
+            
+            if (missingCarryOvers.length > 0) {
+                // Fetch names of missing carry overs for a better error message
+                const missingCourses = await db.select({ code: courses.code })
+                    .from(courses)
+                    .where(inArray(courses.id, missingCarryOvers.map(co => co.courseId)));
+                const missingCodes = missingCourses.map(c => c.code).join(', ');
+                
+                return {
+                    success: false,
+                    error: `You have unresolved carry-over courses for this semester that you must register for: ${missingCodes}`
+                };
+            }
+        }
 
         // 3. Fetch Course Details
         const selectedCourses = await db.select().from(courses).where(inArray(courses.id, courseIds));

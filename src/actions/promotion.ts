@@ -4,7 +4,7 @@ import { auth } from "@/auth";
 import { db } from "@/db/db";
 import {
     students, users, programmes, departments, academicSessions,
-    semesterSummaries, promotionCriteria, promotionLogs, enrollments, results, courses
+    semesterSummaries, promotionCriteria, promotionLogs, enrollments, results, courses, academicCarryOvers
 } from "@/db/schema";
 import { eq, and, desc, sql, count, sum, or } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
@@ -327,21 +327,38 @@ export async function runPromotion(sessionId: number, targetSessionId: number, o
                     break;
 
                 case 'graduated':
-                    await db.update(students)
-                        .set({
-                            status: 'graduated',
-                            currentLevel: evaluation.currentLevel,
-                        })
-                        .where(eq(students.id, evaluation.studentId));
-                    // Also update user status
-                    const [graduatingStudent] = await db.select({ userId: students.userId })
-                        .from(students).where(eq(students.id, evaluation.studentId)).limit(1);
-                    if (graduatingStudent?.userId) {
-                        await db.update(users)
-                            .set({ status: 'graduated' })
-                            .where(eq(users.id, graduatingStudent.userId));
+                    const [pendingCarryOver] = await db.select().from(academicCarryOvers).where(and(
+                        eq(academicCarryOvers.studentId, evaluation.studentId),
+                        eq(academicCarryOvers.status, 'pending')
+                    )).limit(1);
+
+                    if (pendingCarryOver) {
+                        await db.update(students)
+                            .set({
+                                academicStatus: 'spill_over',
+                                spillOverSessionCount: sql`spill_over_session_count + 1`,
+                                currentLevel: evaluation.currentLevel, // Stay at final year level
+                            })
+                            .where(eq(students.id, evaluation.studentId));
+                        repeated++; // treat as retained/repeated logically for counts
+                    } else {
+                        await db.update(students)
+                            .set({
+                                status: 'graduated',
+                                academicStatus: 'graduated',
+                                currentLevel: evaluation.currentLevel,
+                            })
+                            .where(eq(students.id, evaluation.studentId));
+                        // Also update user status
+                        const [graduatingStudent] = await db.select({ userId: students.userId })
+                            .from(students).where(eq(students.id, evaluation.studentId)).limit(1);
+                        if (graduatingStudent?.userId) {
+                            await db.update(users)
+                                .set({ status: 'graduated' })
+                                .where(eq(users.id, graduatingStudent.userId));
+                        }
+                        graduated++;
                     }
-                    graduated++;
                     break;
 
                 case 'withdrawn':

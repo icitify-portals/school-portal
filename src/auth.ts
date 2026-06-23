@@ -150,6 +150,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                     roles: roleNames,
                     permissions: permissionNames,
                     schoolPortalId: (user as any).schoolPortalId,
+                    requiresPasswordChange: (user as any).requiresPasswordChange,
                 };
             },
         }),
@@ -213,6 +214,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                         token.role = dbUser.role;
                         token.status = dbUser.status;
                         token.schoolPortalId = (dbUser as any).schoolPortalId;
+                        token.requiresPasswordChange = (dbUser as any).requiresPasswordChange;
 
                         const { roleNames, permissionNames } = await fetchUserRolesAndPermissions(dbUser.id);
                         token.roles = roleNames;

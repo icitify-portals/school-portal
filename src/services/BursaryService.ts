@@ -8,6 +8,8 @@ import {
     students,
     feeAllocations,
     feeStructureItems,
+    feeStructures,
+    feeItems,
     studentBills,
     studentBillItems,
     studentLedger,
@@ -120,54 +122,75 @@ export class BursaryService {
 
             // 2. Resolve applicable fee structure
             let allocation = null;
+            let directFeeStructureId = null;
 
-            // Student-specific
-            const [specificAlloc] = await tx.select()
-                .from(feeAllocations)
-                .where(and(
-                    eq(feeAllocations.studentId, studentId),
-                    eq(feeAllocations.sessionId, sessionId)
-                ))
-                .limit(1);
-            allocation = specificAlloc;
+            if (student.academicStatus === 'spill_over') {
+                // If spill over, find a spill over structure directly
+                const [spillOverStruct] = await tx.select()
+                    .from(feeStructures)
+                    .where(and(
+                        eq(feeStructures.isSpillOver, true),
+                        eq(feeStructures.status, 'approved'),
+                        eq(feeStructures.level, student.currentLevel || 100)
+                    ))
+                    .limit(1);
+                
+                if (spillOverStruct) {
+                    directFeeStructureId = spillOverStruct.id;
+                }
+            }
 
-            // Programme-specific
-            if (!allocation && student.programmeId) {
-                const [progAlloc] = await tx.select()
+            if (!directFeeStructureId) {
+                // Student-specific
+                const [specificAlloc] = await tx.select()
                     .from(feeAllocations)
                     .where(and(
-                        eq(feeAllocations.programmeId, student.programmeId),
+                        eq(feeAllocations.studentId, studentId),
                         eq(feeAllocations.sessionId, sessionId)
                     ))
                     .limit(1);
-                allocation = progAlloc;
+                allocation = specificAlloc;
+
+                // Programme-specific
+                if (!allocation && student.programmeId) {
+                    const [progAlloc] = await tx.select()
+                        .from(feeAllocations)
+                        .where(and(
+                            eq(feeAllocations.programmeId, student.programmeId),
+                            eq(feeAllocations.sessionId, sessionId)
+                        ))
+                        .limit(1);
+                    allocation = progAlloc;
+                }
+
+                // Department-specific
+                if (!allocation && student.departmentId) {
+                    const [deptAlloc] = await tx.select()
+                        .from(feeAllocations)
+                        .where(and(
+                            eq(feeAllocations.deptId, student.departmentId),
+                            eq(feeAllocations.sessionId, sessionId)
+                        ))
+                        .limit(1);
+                    allocation = deptAlloc;
+                }
+
+                // Default level/general fallback
+                if (!allocation) {
+                    const [levelAlloc] = await tx.select()
+                        .from(feeAllocations)
+                        .where(and(
+                            eq(feeAllocations.sessionId, sessionId),
+                            sql`faculty_id IS NULL AND dept_id IS NULL AND programme_id IS NULL AND student_id IS NULL`
+                        ))
+                        .limit(1);
+                    allocation = levelAlloc;
+                }
             }
 
-            // Department-specific
-            if (!allocation && student.departmentId) {
-                const [deptAlloc] = await tx.select()
-                    .from(feeAllocations)
-                    .where(and(
-                        eq(feeAllocations.deptId, student.departmentId),
-                        eq(feeAllocations.sessionId, sessionId)
-                    ))
-                    .limit(1);
-                allocation = deptAlloc;
-            }
+            const targetStructureId = directFeeStructureId || allocation?.feeStructureId;
 
-            // Default level/general fallback
-            if (!allocation) {
-                const [levelAlloc] = await tx.select()
-                    .from(feeAllocations)
-                    .where(and(
-                        eq(feeAllocations.sessionId, sessionId),
-                        sql`faculty_id IS NULL AND dept_id IS NULL AND programme_id IS NULL AND student_id IS NULL`
-                    ))
-                    .limit(1);
-                allocation = levelAlloc;
-            }
-
-            if (!allocation) {
+            if (!targetStructureId) {
                 throw new Error("No applicable fee structure allocated for this student this session.");
             }
 
@@ -179,7 +202,7 @@ export class BursaryService {
             })
                 .from(feeStructureItems)
                 .innerJoin(feeItems, eq(feeStructureItems.feeItemId, feeItems.id))
-                .where(eq(feeStructureItems.feeStructureId, allocation.feeStructureId));
+                .where(eq(feeStructureItems.feeStructureId, targetStructureId));
 
             if (items.length === 0) {
                 throw new Error("Resolved fee structure contains no fee items.");

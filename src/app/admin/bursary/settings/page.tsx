@@ -216,6 +216,10 @@ export default function BursarySettingsPage() {
         { label: "Tuition Revenue Account (Revenue)", key: "gl_tuition_revenue_account", category: "revenue" },
         { label: "General Expense Account (Expense)", key: "gl_general_expense_account", category: "expense" },
         { label: "External Funds Account (Revenue)", key: "gl_external_revenue_account", category: "revenue" },
+        { label: "Salary Expense Account (Expense)", key: "gl_salary_expense_account", category: "expense" },
+        { label: "PAYE Liability Account (Liability)", key: "gl_paye_liability_account", category: "liability" },
+        { label: "Pension Liability Account (Liability)", key: "gl_pension_liability_account", category: "liability" },
+        { label: "Other Payroll Deductions (Liability)", key: "gl_other_payroll_liability_account", category: "liability" },
     ];
 
     return (

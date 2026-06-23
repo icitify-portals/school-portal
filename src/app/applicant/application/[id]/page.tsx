@@ -379,7 +379,7 @@ export default function StatefulApplicationPage() {
                                                 {field.label} {field.isRequired && <span className="text-rose-500">*</span>}
                                             </label>
                                             
-                                            {field.type === 'text' || field.type === 'email' || field.type === 'phone' || field.type === 'number' || field.type === 'date' ? (
+                                            {field.type === 'text' || field.type === 'email' || field.type === 'phone' || field.type === 'number' || field.type === 'date' || field.type === 'time' || field.type === 'url' ? (
                                                 <input 
                                                     type={field.type} readOnly={isSystemLocked}
                                                     className={cn(
@@ -464,9 +464,68 @@ export default function StatefulApplicationPage() {
                                             ) : field.type === 'textarea' ? (
                                                 <textarea 
                                                     className="w-full bg-white border border-gray-300 rounded-xl px-4 py-3 font-medium text-gray-900 min-h-[100px] focus:ring-2 focus:ring-[#1a5b3a] focus:border-transparent outline-none transition-all"
-                                                    placeholder={field.placeholder} required={field.isRequired}
+                                                    placeholder={field.placeholder} required={field.isRequired && !isSystemLocked} readOnly={isSystemLocked}
                                                     value={formData[field.label] || ""} onChange={(e) => handleInputChange(field.label, e.target.value)}
                                                 />
+                                            ) : field.type === 'radio' ? (
+                                                <div className="space-y-2 mt-2">
+                                                    {field.options?.split(',').map((opt: string) => (
+                                                        <label key={opt} className="flex items-center space-x-3 cursor-pointer">
+                                                            <input 
+                                                                type="radio" 
+                                                                name={field.label}
+                                                                value={opt.trim()}
+                                                                checked={formData[field.label] === opt.trim()}
+                                                                onChange={(e) => handleInputChange(field.label, e.target.value)}
+                                                                disabled={isSystemLocked}
+                                                                required={field.isRequired && !formData[field.label] && !isSystemLocked}
+                                                                className="w-5 h-5 text-[#1a5b3a] focus:ring-[#1a5b3a] border-gray-300"
+                                                            />
+                                                            <span className="text-gray-700">{opt.trim()}</span>
+                                                        </label>
+                                                    ))}
+                                                </div>
+                                            ) : field.type === 'checkbox' ? (
+                                                <label className="flex items-center space-x-3 cursor-pointer mt-2">
+                                                    <input 
+                                                        type="checkbox"
+                                                        checked={formData[field.label] === true || formData[field.label] === 'true'}
+                                                        onChange={(e) => handleInputChange(field.label, e.target.checked)}
+                                                        disabled={isSystemLocked}
+                                                        required={field.isRequired && !isSystemLocked}
+                                                        className="w-5 h-5 text-[#1a5b3a] focus:ring-[#1a5b3a] rounded border-gray-300"
+                                                    />
+                                                    <span className="text-gray-700">{field.placeholder || "Yes"}</span>
+                                                </label>
+                                            ) : field.type === 'checkbox_group' ? (
+                                                <div className="space-y-2 mt-2">
+                                                    {field.options?.split(',').map((opt: string) => {
+                                                        const currentValues = Array.isArray(formData[field.label]) ? formData[field.label] : [];
+                                                        const isChecked = currentValues.includes(opt.trim());
+                                                        return (
+                                                            <label key={opt} className="flex items-center space-x-3 cursor-pointer">
+                                                                <input 
+                                                                    type="checkbox"
+                                                                    value={opt.trim()}
+                                                                    checked={isChecked}
+                                                                    onChange={(e) => {
+                                                                        const val = e.target.value;
+                                                                        let newValues = [...currentValues];
+                                                                        if (e.target.checked) {
+                                                                            newValues.push(val);
+                                                                        } else {
+                                                                            newValues = newValues.filter(v => v !== val);
+                                                                        }
+                                                                        handleInputChange(field.label, newValues);
+                                                                    }}
+                                                                    disabled={isSystemLocked}
+                                                                    className="w-5 h-5 text-[#1a5b3a] focus:ring-[#1a5b3a] rounded border-gray-300"
+                                                                />
+                                                                <span className="text-gray-700">{opt.trim()}</span>
+                                                            </label>
+                                                        );
+                                                    })}
+                                                </div>
                                             ) : null}
                                         </div>
                                     );

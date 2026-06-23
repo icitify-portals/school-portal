@@ -21,7 +21,11 @@ import {
     Hash,
     Mail,
     Phone,
-    Layout
+    Layout,
+    CheckSquare,
+    CircleDot,
+    Clock,
+    LinkIcon
 } from "lucide-react";
 import Link from "next/link";
 import { 
@@ -49,6 +53,11 @@ const FIELD_TYPES = [
     { label: "Number", value: "number", icon: Hash },
     { label: "Email", value: "email", icon: Mail },
     { label: "Phone", value: "phone", icon: Phone },
+    { label: "Time", value: "time", icon: Clock },
+    { label: "URL", value: "url", icon: LinkIcon },
+    { label: "Radio Buttons", value: "radio", icon: CircleDot },
+    { label: "Checkbox (Single)", value: "checkbox", icon: CheckSquare },
+    { label: "Checkbox Group", value: "checkbox_group", icon: CheckSquare },
     { label: "File Upload", value: "file", icon: FileUp },
     { label: "O-Level Result Grid", value: "olevel_result", icon: Layout },
 ];
