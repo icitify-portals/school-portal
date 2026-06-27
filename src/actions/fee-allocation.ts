@@ -4,10 +4,10 @@ import { db } from "@/db/db";
 import { feeItems, chartOfAccounts, feeAllocationRules } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import { hasRole } from "@/lib/rbac";
+import { hasRole, hasPermission } from "@/lib/rbac";
 
 async function ensureFinanceAccess() {
-    const isBursar = await hasRole("bursar") || await hasRole("superadmin");
+    const isBursar = await hasPermission("finance.fee.manage") || await hasRole("bursar") || await hasRole("superadmin");
     if (!isBursar) throw new Error("Unauthorized: Finance access required");
 }
 

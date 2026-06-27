@@ -14,8 +14,49 @@ const securityHeaders = [
   {
     key: 'Referrer-Policy',
     value: 'strict-origin-when-cross-origin'
-  }
+  },
+  // SECURITY FIX M-4: Content-Security-Policy
+  // 'unsafe-inline' for styles is required because the app uses inline styles
+  // via Next.js SSR, TailwindCSS, and CSS template rendering.
+  // 'unsafe-inline' for scripts is NOT set — scripts must originate from 'self' or CDNs listed.
+  {
+    key: 'Content-Security-Policy',
+    value: [
+      "default-src 'self'",
+      // Allow inline scripts only via nonce (Next.js injects a nonce). Fallback to 'self'.
+      "script-src 'self' 'unsafe-eval'",
+      // Styles: inline allowed (required for Tailwind / template CSS injection)
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+      // Fonts
+      "font-src 'self' https://fonts.gstatic.com data:",
+      // Images: allow self, data URIs, and common external image hosts
+      "img-src 'self' data: blob: https://images.unsplash.com https://*.unsplash.com https://cloudflare-ipfs.com",
+      // Media (video/audio)
+      "media-src 'self' blob:",
+      // API + WebSocket connections
+      "connect-src 'self' wss: ws: https://api.paystack.co https://api.flutterwave.com https://*.livekit.cloud",
+      // Frames: disallow all (iframes used only for PDFs via object src)
+      "frame-src 'self'",
+      // Objects (PDF iframe fallback)
+      "object-src 'none'",
+      // Form submissions only to self
+      "form-action 'self'",
+      // Block all mixed content
+      "upgrade-insecure-requests",
+    ].join('; ')
+  },
+  // Block Adobe Flash cross-domain policies
+  {
+    key: 'X-Permitted-Cross-Domain-Policies',
+    value: 'none'
+  },
+  // Restrict browser feature access
+  {
+    key: 'Permissions-Policy',
+    value: 'camera=(), microphone=(self), geolocation=(), payment=(self), usb=()'
+  },
 ];
+
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {

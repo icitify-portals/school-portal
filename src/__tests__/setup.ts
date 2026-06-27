@@ -1,11 +1,45 @@
 import { vi } from 'vitest';
 import '@testing-library/jest-dom';
 
+// Set mock environment variables
+process.env.ENCRYPTION_KEY = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+
 // Mock NextAuth
+const mockAuth = vi.fn(async () => ({ 
+  user: { id: '1', name: 'Admin User', email: 'admin@school.com', role: 'admin' } 
+}));
+
 vi.mock('@/auth', () => ({
-  auth: vi.fn(),
+  auth: mockAuth,
   signIn: vi.fn(),
   signOut: vi.fn(),
+}));
+
+// Mock Next.js Cache functions
+vi.mock('next/cache', () => ({
+  revalidatePath: vi.fn(),
+  revalidateTag: vi.fn(),
+}));
+
+// Mock RBAC permissions dynamically based on the mocked session user
+vi.mock('@/lib/rbac', () => ({
+  hasPermission: vi.fn(async (permission: string) => {
+    const session = await mockAuth();
+    if (!session?.user) return false;
+    const user = session.user as any;
+    if (user.role === 'admin' || user.role === 'superadmin') return true;
+    if (user.permissions?.includes(permission)) return true;
+    return false;
+  }),
+  hasRole: vi.fn(async (role: string) => {
+    const session = await mockAuth();
+    if (!session?.user) return false;
+    const user = session.user as any;
+    if (user.role === role) return true;
+    if (user.roles?.includes(role)) return true;
+    if (user.role === 'admin' || user.role === 'superadmin') return true;
+    return false;
+  }),
 }));
 
 // Mock Drizzle DB

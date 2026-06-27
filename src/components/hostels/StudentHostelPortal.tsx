@@ -8,7 +8,7 @@ import {
     AlertCircle, Landmark, Sparkles, Building, Loader2
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { applyForHostel } from "@/actions/hostels";
+import { applyForHostel, processHostelPayment } from "@/actions/hostels";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import MaintenanceReporting from "./MaintenanceReporting";
@@ -18,13 +18,16 @@ import { Wrench } from "lucide-react";
 export default function StudentHostelPortal({
     availableHostels,
     application,
-    studentLevel
+    studentLevel,
+    hostelSettings
 }: {
     availableHostels: any[],
     application: any,
-    studentLevel: number
+    studentLevel: number,
+    hostelSettings?: any
 }) {
     const [applying, setApplying] = useState<number | null>(null);
+    const [paying, setPaying] = useState(false);
 
     const handleApply = async (hostelId: number) => {
         setApplying(hostelId);
@@ -36,6 +39,18 @@ export default function StudentHostelPortal({
             toast.error(res.error);
         }
         setApplying(null);
+    };
+
+    const handlePayment = async () => {
+        setPaying(true);
+        const res = await processHostelPayment(application.id);
+        if (res.success) {
+            toast.success("Payment processed successfully via Remita!");
+            window.location.reload();
+        } else {
+            toast.error(res.error);
+        }
+        setPaying(false);
     };
 
     const isPriority = studentLevel === 100 || studentLevel >= 400; // Simplified final year check
@@ -112,23 +127,51 @@ export default function StudentHostelPortal({
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <Card className="p-6 border-none shadow-sm bg-indigo-50/50 rounded-2xl space-y-4">
-                                <h4 className="font-black text-indigo-900 uppercase tracking-widest text-xs flex items-center gap-2">
-                                    <Clock className="w-4 h-4" /> Deadlines & Expiry
-                                </h4>
-                                <div className="space-y-3">
-                                    <div className="flex justify-between items-center py-2 border-b border-indigo-100/50">
-                                        <span className="text-xs font-bold text-slate-500">Applied Date</span>
-                                        <span className="text-sm font-black text-indigo-900">{format(new Date(application.appliedAt), 'MMM dd, yyyy')}</span>
+                            {(!hostelSettings || hostelSettings.paymentMode === 'standalone') ? (
+                                <Card className="p-6 border-none shadow-sm bg-indigo-50/50 rounded-2xl space-y-4">
+                                    <h4 className="font-black text-indigo-900 uppercase tracking-widest text-xs flex items-center gap-2">
+                                        <Clock className="w-4 h-4" /> Deadlines & Expiry
+                                    </h4>
+                                    <div className="space-y-3">
+                                        <div className="flex justify-between items-center py-2 border-b border-indigo-100/50">
+                                            <span className="text-xs font-bold text-slate-500">Applied Date</span>
+                                            <span className="text-sm font-black text-indigo-900">{format(new Date(application.appliedAt), 'MMM dd, yyyy')}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center py-2">
+                                            <span className="text-xs font-bold text-slate-500">Payment Deadline</span>
+                                            <span className="text-sm font-black text-red-600">
+                                                {application.paymentDeadline ? format(new Date(application.paymentDeadline), 'MMM dd, HH:mm') : '---'}
+                                            </span>
+                                        </div>
                                     </div>
-                                    <div className="flex justify-between items-center py-2">
-                                        <span className="text-xs font-bold text-slate-500">Payment Deadline</span>
-                                        <span className="text-sm font-black text-red-600">
-                                            {application.paymentDeadline ? format(new Date(application.paymentDeadline), 'MMM dd, HH:mm') : '---'}
-                                        </span>
+                                    {application.paymentStatus === 'unpaid' && application.status === 'allocated' && (
+                                        <Button 
+                                            onClick={handlePayment} 
+                                            disabled={paying}
+                                            className="w-full mt-4 h-12 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-lg font-black tracking-widest uppercase text-[10px]"
+                                        >
+                                            {paying ? <Loader2 className="w-4 h-4 animate-spin" /> : `Pay Hostel Fee (₦${hostelSettings?.hostelFee || '0.00'})`}
+                                        </Button>
+                                    )}
+                                    {application.paymentStatus === 'paid' && (
+                                        <div className="w-full mt-4 h-12 bg-emerald-100 text-emerald-700 flex items-center justify-center rounded-xl font-black tracking-widest uppercase text-[10px] gap-2">
+                                            <CheckCircle className="w-4 h-4" /> Paid Successfully
+                                        </div>
+                                    )}
+                                </Card>
+                            ) : (
+                                <Card className="p-6 border-none shadow-sm bg-indigo-50/50 rounded-2xl space-y-4 flex flex-col justify-center text-center">
+                                    <div className="w-12 h-12 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mx-auto">
+                                        <CheckCircle className="w-6 h-6" />
                                     </div>
-                                </div>
-                            </Card>
+                                    <h4 className="font-black text-indigo-900 uppercase tracking-widest text-xs">
+                                        Bundled Fee Allocation
+                                    </h4>
+                                    <p className="text-xs font-bold text-slate-500">
+                                        Your hostel bed space is secured. The hostel fee is bundled with your main tuition invoice. Please ensure your tuition is paid to retain this room.
+                                    </p>
+                                </Card>
+                            )}
 
                             <Card className="p-6 border-none shadow-sm bg-slate-50 rounded-2xl space-y-4">
                                 <h4 className="font-black text-slate-900 uppercase tracking-widest text-xs flex items-center gap-2">

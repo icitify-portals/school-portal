@@ -5,6 +5,7 @@ import { systemSettings, systemModules } from "@/db/schema";
 import { eq, inArray } from "drizzle-orm";
 import { auth } from "@/auth";
 import { revalidatePath } from "next/cache";
+import { hasPermission, hasRole } from "@/lib/rbac";
 
 export interface SystemSetting {
     key: string;
@@ -127,10 +128,9 @@ export async function getLiveKitCredentials() {
 
 
 export async function updateSystemSetting(key: string, value: string) {
-    const session = await auth();
-    const user = session?.user as any;
-    if (!user || user.role !== 'admin') {
-        return { success: false, error: "Unauthorized" };
+    const allowed = await hasPermission("system.settings.manage") || await hasRole("admin") || await hasRole("superadmin");
+    if (!allowed) {
+        return { success: false, error: "Unauthorized: Insufficient permissions to update system settings" };
     }
 
     // Check if exists

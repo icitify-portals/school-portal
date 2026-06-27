@@ -10,7 +10,8 @@ import {
     attendance,
     students,
     enrollments,
-    academicSessions
+    academicSessions,
+    curriculumTopics
 } from "@/db/schema";
 import { eq, and, sql } from "drizzle-orm";
 
@@ -72,5 +73,22 @@ export async function bridgeITSAttendanceToPortal(sessionId: number) {
         return { success: true, processedCount: visionData.studentCount };
     } catch (error) {
         return { success: false };
+    }
+}
+
+export async function getOfflineReadyLessons() {
+    try {
+        const results = await db.select({
+            lesson: lessons,
+            topicTitle: curriculumTopics.title,
+        })
+        .from(lessons)
+        .leftJoin(curriculumTopics, eq(lessons.topicId, curriculumTopics.id))
+        .where(eq(lessons.isOfflineReady, true));
+        
+        return results;
+    } catch (error) {
+        console.error("Failed to fetch offline ready lessons:", error);
+        return [];
     }
 }

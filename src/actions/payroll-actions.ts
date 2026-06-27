@@ -2,14 +2,14 @@
 
 import { PayrollService } from "@/services/PayrollService";
 import { revalidatePath } from "next/cache";
-import { hasRole } from "@/lib/rbac";
+import { hasRole, hasPermission } from "@/lib/rbac";
 import { db } from "@/db/db";
 import { payrollLogs, users, staffProfiles } from "@/db/schema";
 import { eq, and, desc } from "drizzle-orm";
 
 export async function generateMonthlyPayrollAction(month: number, year: number) {
     try {
-        const isAuth = await hasRole("admin") || await hasRole("superadmin") || await hasRole("bursar") || await hasRole("hr");
+        const isAuth = await hasPermission("finance.payroll.run") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("bursar") || await hasRole("hr");
         if (!isAuth) throw new Error("Unauthorized: HR/Bursar access required");
 
         const result = await PayrollService.generatePayroll(month, year);
@@ -22,7 +22,7 @@ export async function generateMonthlyPayrollAction(month: number, year: number) 
 
 export async function approvePayrollAction(month: number, year: number) {
     try {
-        const isAuth = await hasRole("admin") || await hasRole("superadmin") || await hasRole("bursar");
+        const isAuth = await hasPermission("finance.payroll.approve") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("bursar");
         if (!isAuth) throw new Error("Unauthorized: Financial clearance required");
 
         const adminId = 1; // Placeholder
@@ -36,7 +36,7 @@ export async function approvePayrollAction(month: number, year: number) {
 
 export async function getPayrollLogsAction(month: number, year: number) {
     try {
-        const isAuth = await hasRole("admin") || await hasRole("superadmin") || await hasRole("hr");
+        const isAuth = await hasPermission("finance.payroll.run") || await hasPermission("finance.payroll.approve") || await hasPermission("hr.staff.view") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("hr");
         if (!isAuth) throw new Error("Unauthorized");
 
         const logs = await db.select({

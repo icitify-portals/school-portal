@@ -1,10 +1,10 @@
 import { auth } from "@/auth";
 import { db } from "@/db/db";
 import {
-    hostels, hostelApplications, students,
-    academicSessions, users, hostelRooms
+    hostels, hostelRooms, hostelBlocks, hostelApplications,
+    students, users, academicSessions, hostelSettings
 } from "@/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, sql, or } from "drizzle-orm";
 import StudentHostelPortal from "@/components/hostels/StudentHostelPortal";
 import { Landmark } from "lucide-react";
 
@@ -63,6 +63,15 @@ export default async function StudentHostelPage() {
             or(eq(hostels.type, student.gender === 'male' ? 'male' : 'female'), eq(hostels.type, 'mixed'))
         ));
 
+    // Fetch hostel settings to get paymentMode and hostelFee
+    let settings = null;
+    if (application && application.hostelId) {
+        const hSettings = await db.select().from(hostelSettings).where(eq(hostelSettings.hostelId, application.hostelId)).limit(1);
+        if (hSettings.length > 0) {
+            settings = hSettings[0];
+        }
+    }
+
     return (
         <div className="p-8 max-w-[1600px] w-full mx-auto space-y-8">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
@@ -79,6 +88,7 @@ export default async function StudentHostelPage() {
                 availableHostels={availableHostels}
                 application={application}
                 studentLevel={student.currentLevel || 100}
+                hostelSettings={settings}
             />
         </div>
     );

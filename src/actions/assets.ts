@@ -4,11 +4,11 @@ import { db } from "@/db/db";
 import { fixedAssets, depreciationLogs, chartOfAccounts, assetMaintenanceLogs, users } from "@/db/schema";
 import { eq, desc, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import { hasRole } from "@/lib/rbac";
+import { hasRole, hasPermission } from "@/lib/rbac";
 import { recordTransaction } from "./accounting";
 
 async function ensureAssetManager() {
-    const isBursar = await hasRole("bursar");
+    const isBursar = await hasPermission("finance.ledger.manage") || await hasRole("bursar");
     const isAdmin = await hasRole("admin");
     if (!isBursar && !isAdmin) throw new Error("Unauthorized: Asset management requires Bursar/Admin role");
 }

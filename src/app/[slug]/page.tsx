@@ -1,5 +1,6 @@
 import { getPageBySlug } from "@/actions/cms";
 import { notFound } from "next/navigation";
+import { sanitizeRichContent } from "@/lib/sanitizer";
 import { Metadata } from "next";
 import { cookies } from "next/headers";
 
@@ -74,12 +75,20 @@ export default async function CMSPage({ params }: { params: Promise<{ slug: stri
                 type="application/ld+json"
                 dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
             />
-            {page.structuredData && (
-                <script
-                    type="application/ld+json"
-                    dangerouslySetInnerHTML={{ __html: page.structuredData }}
-                />
-            )}
+            {page.structuredData && (() => {
+                    try {
+                        // SECURITY FIX H-2b: Re-parse and re-serialize structuredData to
+                        // prevent raw HTML/script injection via the ld+json script tag.
+                        const parsedData = JSON.parse(page.structuredData);
+                        return (
+                            <script
+                                type="application/ld+json"
+                                dangerouslySetInnerHTML={{ __html: JSON.stringify(parsedData) }}
+                            />
+                        );
+                    } catch { return null; }
+                })()
+            }
             
             {/* Header / Hero for the page */}
             <div className="bg-slate-900 pt-32 pb-20 text-center px-4 relative overflow-hidden">
@@ -96,7 +105,7 @@ export default async function CMSPage({ params }: { params: Promise<{ slug: stri
             <main className="max-w-4xl mx-auto px-4 py-16 sm:py-24">
                 <article
                     className="prose prose-slate prose-lg lg:prose-xl max-w-none prose-headings:font-black prose-headings:uppercase prose-headings:italic prose-a:text-indigo-600 prose-img:rounded-2xl prose-img:shadow-xl"
-                    dangerouslySetInnerHTML={{ __html: page.content || "" }}
+                    dangerouslySetInnerHTML={{ __html: sanitizeRichContent(page.content || "") }}
                 />
             </main>
         </div>

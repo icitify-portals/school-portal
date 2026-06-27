@@ -4,9 +4,11 @@ import { useState, useEffect, useCallback } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Users, CheckCircle, Loader2, Search, FileUp, X, FileText, ShieldAlert } from "lucide-react";
+import { Users, CheckCircle, Loader2, Search, FileUp, X, FileText, ShieldAlert, QrCode } from "lucide-react";
 import { getStudents, approveStudent, bulkImportStudents, toggleFinancialLock } from "@/actions/students";
 import { impersonateUser } from "@/actions/impersonation";
+import { generateIdentityQRCodeAction } from "@/actions/utility-actions";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { UniversalImporter } from "@/components/UniversalImporter";
 import { StudentSeeder } from "@/components/StudentSeeder";
 import { DataTablePagination } from "@/components/DataTablePagination";
@@ -20,12 +22,17 @@ function StudentsPageContent() {
     const pathname = usePathname();
     const searchParams = useSearchParams();
     const { isK12 } = useBranch();
+    const settings = { base_currency: '₦' };
 
     const [students, setStudents] = useState<any[]>([]);
     const [totalCount, setTotalCount] = useState(0);
     const [loading, setLoading] = useState(true);
     const [showImporter, setShowImporter] = useState(false);
     const [selectedUser, setSelectedUser] = useState<any | null>(null);
+
+    const [qrStudent, setQrStudent] = useState<any | null>(null);
+    const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
+    const [qrLoading, setQrLoading] = useState(false);
 
     const page = parseInt(searchParams.get("page") || "1");
     const pageSize = parseInt(searchParams.get("pageSize") || "10");
@@ -88,6 +95,28 @@ function StudentsPageContent() {
             } else {
                 alert(res.error);
             }
+        }
+    };
+
+    const handleViewQR = async (student: any) => {
+        setQrStudent(student);
+        setQrLoading(true);
+        setQrDataUrl(null);
+        try {
+            // Student ID QR format: std:<matricNumber || admissionNumber || studentId>
+            const idVal = student.matricNumber || student.admissionNumber || student.id;
+            const res = await generateIdentityQRCodeAction(`std:${idVal}`);
+            if (res.success && res.dataUrl) {
+                setQrDataUrl(res.dataUrl);
+            } else {
+                alert(res.error || "Failed to generate ID QR");
+                setQrStudent(null);
+            }
+        } catch (error: any) {
+            alert(error.message || "An unexpected error occurred");
+            setQrStudent(null);
+        } finally {
+            setQrLoading(false);
         }
     };
 
@@ -244,6 +273,15 @@ function StudentsPageContent() {
                                             <Button
                                                 variant="ghost"
                                                 size="sm"
+                                                onClick={() => handleViewQR(s)}
+                                                className="h-8 w-8 p-0 rounded-lg text-indigo-600 hover:bg-indigo-50"
+                                                title="View Student QR ID"
+                                            >
+                                                <QrCode className="w-4 h-4" />
+                                            </Button>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
                                                 onClick={() => setSelectedUser(s.user)}
                                                 className="h-8 px-3 text-xs gap-1 rounded-lg border-slate-200 text-slate-600 hover:bg-slate-100"
                                                 title="Account Management"
@@ -288,6 +326,70 @@ function StudentsPageContent() {
                 onClose={() => setSelectedUser(null)}
                 onUpdate={fetchStudents}
             />
+
+            {/* Student ID QR Modal */}
+            <Dialog open={!!qrStudent} onOpenChange={(open) => {
+                if (!open) {
+                    setQrStudent(null);
+                    setQrDataUrl(null);
+                }
+            }}>
+                <DialogContent className="border-none shadow-2xl rounded-[2.5rem] bg-white max-w-sm p-8">
+                    <DialogHeader className="text-center space-y-3">
+                        <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center mx-auto">
+                            <QrCode className="w-6 h-6 animate-pulse" />
+                        </div>
+                        <DialogTitle className="text-2xl font-black uppercase italic tracking-tight text-slate-900">
+                            Student QR ID
+                        </DialogTitle>
+                        <DialogDescription className="text-slate-400 font-medium text-xs">
+                            Verify student identity using this secure QR code.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="flex flex-col items-center justify-center py-6 space-y-4">
+                        {qrLoading ? (
+                            <div className="flex flex-col items-center justify-center space-y-2 h-48">
+                                <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
+                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Generating ID Code...</span>
+                            </div>
+                        ) : qrDataUrl ? (
+                            <>
+                                <div className="bg-slate-50 p-6 rounded-[2rem] border border-slate-100 shadow-inner">
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img src={qrDataUrl} alt="Student QR ID Card" className="w-48 h-48 mix-blend-multiply" />
+                                </div>
+                                {qrStudent && (
+                                    <div className="text-center space-y-1">
+                                        <p className="font-black text-slate-900 uppercase italic text-sm">{qrStudent.user?.name}</p>
+                                        <p className="text-[9px] font-black text-indigo-600 uppercase tracking-widest">
+                                            {qrStudent.matricNumber ? `MATRIC: ${qrStudent.matricNumber}` : `ID: ${qrStudent.id}`}
+                                        </p>
+                                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest italic">{qrStudent.programme?.name || "Not Assigned"}</p>
+                                    </div>
+                                )}
+                            </>
+                        ) : (
+                            <div className="text-center text-rose-500 py-6 text-sm font-bold flex flex-col items-center gap-2">
+                                <ShieldAlert className="w-8 h-8" />
+                                Failed to generate QR code.
+                            </div>
+                        )}
+                    </div>
+
+                    <DialogFooter className="pt-2">
+                        <Button
+                            onClick={() => {
+                                setQrStudent(null);
+                                setQrDataUrl(null);
+                            }}
+                            className="w-full bg-slate-900 hover:bg-black text-white h-12 rounded-xl font-black uppercase tracking-widest text-xs transition-all shadow-xl shadow-slate-100"
+                        >
+                            Close
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

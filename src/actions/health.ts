@@ -4,6 +4,7 @@ import { db } from "@/db/db";
 import { healthRecords, studentVitals, students, users, medicalAppointments, attendance } from "@/db/schema";
 import { eq, and, desc, count } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { hasPermission, hasRole } from "@/lib/rbac";
 
 export async function getStudentHealthData(studentId: number) {
     try {
@@ -83,6 +84,9 @@ export async function updateAppointmentStatus(
     prescriptions?: string
 ) {
     try {
+        const allowed = await hasPermission("health.records.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("medical_officer");
+        if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to update appointment status" };
+
         await db.update(medicalAppointments)
             .set({ status, notes, doctorNotes, prescriptions })
             .where(eq(medicalAppointments.id, appointmentId));
@@ -108,6 +112,9 @@ export async function updateHealthRegistration(studentId: number, data: {
     doctorPhone?: string,
 }) {
     try {
+        const allowed = await hasPermission("health.records.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("medical_officer");
+        if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to update health registration" };
+
         await db.update(students).set(data).where(eq(students.id, studentId));
         revalidatePath("/student/health");
         revalidatePath(`/admin/students/${studentId}`);
@@ -126,6 +133,9 @@ export async function uploadHealthReport(data: {
     description?: string
 }) {
     try {
+        const allowed = await hasPermission("health.records.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("medical_officer");
+        if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to upload health reports" };
+
         await db.insert(healthRecords).values({
             ...data,
             status: 'pending',
@@ -171,6 +181,9 @@ export async function recordStudentVitals(data: {
     notes?: string
 }) {
     try {
+        const allowed = await hasPermission("health.records.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("medical_officer");
+        if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to record vitals" };
+
         await db.insert(studentVitals).values(data as any);
 
         // Update student status if flagged in notes or vitals
@@ -188,6 +201,9 @@ export async function recordStudentVitals(data: {
 
 export async function updateHealthStatus(studentId: number, status: 'pending' | 'cleared' | 'flagged', notes?: string) {
     try {
+        const allowed = await hasPermission("health.records.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("medical_officer");
+        if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to update health status" };
+
         await db.update(students).set({
             healthStatus: status,
             healthNotes: notes
@@ -202,6 +218,9 @@ export async function updateHealthStatus(studentId: number, status: 'pending' | 
 
 export async function verifyHealthReport(reportId: number, verifierId: number, status: 'verified' | 'rejected', reason?: string) {
     try {
+        const allowed = await hasPermission("health.records.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("medical_officer");
+        if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to verify health reports" };
+
         await db.update(healthRecords).set({
             status,
             verifiedBy: verifierId,
@@ -218,6 +237,9 @@ export async function verifyHealthReport(reportId: number, verifierId: number, s
 
 export async function approveSickLeave(appointmentId: number, studentId: number, notes?: string) {
     try {
+        const allowed = await hasPermission("health.excusat.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("medical_officer");
+        if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to approve sick leave" };
+
         // First update the appointment status to approved
         await db.update(medicalAppointments)
             .set({ status: 'approved', doctorNotes: notes || 'Sick leave approved' })

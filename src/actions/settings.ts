@@ -6,6 +6,7 @@ import { eq, and, inArray } from "drizzle-orm";
 import { encrypt, decrypt } from "@/lib/encryption";
 import { auth } from "@/auth";
 import { revalidatePath } from "next/cache";
+import { hasPermission, hasRole } from "@/lib/rbac";
 
 const DEFAULT_SETTINGS: Record<string, string> = {
     "module.live_classes": "true",
@@ -32,6 +33,9 @@ const DEFAULT_SETTINGS: Record<string, string> = {
  */
 
 export async function updateTerminology(unitId: number, key: string, value: string) {
+    const allowed = await hasPermission("system.settings.manage") || await hasRole("admin") || await hasRole("superadmin");
+    if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions" };
+
     try {
         const fullKey = `unit_${unitId}_${key}`;
         return await updateSystemSetting(fullKey, value, 'terminology');
@@ -78,6 +82,9 @@ export async function getSettingByKey(key: string) {
 }
 
 export async function updateSystemSetting(key: string, value: string, group: string = 'general', isEncrypted: boolean = false) {
+    const allowed = await hasPermission("system.settings.manage") || await hasRole("admin") || await hasRole("superadmin");
+    if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions" };
+
     try {
         const finalValue = isEncrypted ? encrypt(value) : value;
 
@@ -121,6 +128,9 @@ export async function getIDCardSettings() {
 }
 
 export async function updateIDCardSettings(data: any) {
+    const allowed = await hasPermission("system.settings.manage") || await hasRole("admin") || await hasRole("superadmin");
+    if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions" };
+
     try {
         await updateSystemSetting('id_card_enabled', data.enabled.toString(), 'id_card');
         await updateSystemSetting('id_card_student_window', data.studentWindow, 'id_card');
@@ -137,6 +147,7 @@ export async function getBrandingSettings() {
     const schoolMotto = await getSettingByKey('school_motto') || '';
     const schoolAddress = await getSettingByKey('school_address') || '';
     const schoolBillNote = await getSettingByKey('school_bill_note') || '';
+    const homepagePageId = await getSettingByKey('cms_homepage_page_id') || 'default';
 
     return {
         portalName,
@@ -144,11 +155,13 @@ export async function getBrandingSettings() {
         schoolMotto,
         schoolAddress,
         schoolBillNote,
+        homepagePageId,
         // Legacy/Alternative keys for compatibility with various UI components
         INST_NAME: portalName,
         INST_LOGO: portalLogo,
         INST_MOTTO: schoolMotto,
         INST_ADDRESS: schoolAddress,
+        HOMEPAGE_PAGE_ID: homepagePageId,
         COLOR_PRIMARY: await getSettingByKey('primary_color') || await getSettingByKey('c_o_l_o_r__p_r_i_m_a_r_y') || '#4f46e5',
         COLOR_SECONDARY: await getSettingByKey('secondary_color') || await getSettingByKey('c_o_l_o_r__s_e_c_o_n_d_a_r_y') || '#0f172a',
         COLOR_ACCENT: await getSettingByKey('accent_color') || await getSettingByKey('c_o_l_o_r__a_c_c_e_n_t') || '#6366f1',
@@ -161,6 +174,9 @@ export async function getBrandingSettings() {
 }
 
 export async function updateBrandingSettings(data: any) {
+    const allowed = await hasPermission("system.settings.manage") || await hasRole("admin") || await hasRole("superadmin");
+    if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions" };
+
     try {
         for (const [key, value] of Object.entries(data)) {
             // Map common aliases to canonical DB keys
@@ -175,6 +191,7 @@ export async function updateBrandingSettings(data: any) {
             else if (key === 'SIDEBAR_STYLE' || key === 'sidebarStyle') dbKey = 'sidebar_style';
             else if (key === 'LAYOUT_DENSITY' || key === 'layoutDensity') dbKey = 'layout_density';
             else if (key === 'DARK_MODE_DEFAULT' || key === 'darkModeDefault') dbKey = 'dark_mode_default';
+            else if (key === 'HOMEPAGE_PAGE_ID' || key === 'homepagePageId') dbKey = 'cms_homepage_page_id';
             else {
                 // CamelCase/PascalCase to snake_case converter
                 dbKey = key
@@ -202,6 +219,9 @@ export async function getAttendanceSettings() {
 }
 
 export async function updateAttendanceSettings(data: any) {
+    const allowed = await hasPermission("system.settings.manage") || await hasRole("admin") || await hasRole("superadmin");
+    if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions" };
+
     try {
         for (const [key, value] of Object.entries(data)) {
             const dbKey = "attendance_" + key.replace(/([A-Z])/g, "_$1").toLowerCase();
@@ -230,6 +250,9 @@ export async function getLeaderboardMetrics() {
 }
 
 export async function updateLeaderboardMetrics(data: any) {
+    const allowed = await hasPermission("system.settings.manage") || await hasRole("admin") || await hasRole("superadmin");
+    if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions" };
+
     try {
         await updateSystemSetting('leaderboard_cert_weight', data.certWeight.toString(), 'leaderboard');
         await updateSystemSetting('leaderboard_badge_weight', data.badgeWeight.toString(), 'leaderboard');
@@ -313,6 +336,9 @@ export async function getLiveKitCredentials() {
 }
 
 export async function toggleModule(moduleName: string, isEnabled: boolean) {
+    const allowed = await hasPermission("system.settings.manage") || await hasRole("admin") || await hasRole("superadmin");
+    if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions" };
+
     return updateSystemSetting(`module.${moduleName}`, String(isEnabled), 'module');
 }
 
@@ -332,6 +358,9 @@ export async function updateSchoolSchedule(data: {
     nextTermStart: string;
     unitId?: number;
 }) {
+    const allowed = await hasPermission("system.settings.manage") || await hasRole("admin") || await hasRole("superadmin");
+    if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions" };
+
     try {
         const { sessionId, term, daysOpen, termStart, termEnd, nextTermStart, unitId } = data;
         
@@ -376,6 +405,9 @@ export async function addClassOrArm(data: {
     level: number;
     description?: string;
 }) {
+    const allowed = await hasPermission("system.settings.manage") || await hasRole("admin") || await hasRole("superadmin");
+    if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions" };
+
     try {
         await db.insert(studentGroups).values(data);
         revalidatePath("/admin/settings");
@@ -386,6 +418,9 @@ export async function addClassOrArm(data: {
 }
 
 export async function deleteStudentGroup(id: number) {
+    const allowed = await hasPermission("system.settings.manage") || await hasRole("admin") || await hasRole("superadmin");
+    if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions" };
+
     try {
         await db.delete(studentGroups).where(eq(studentGroups.id, id));
         revalidatePath("/admin/settings");

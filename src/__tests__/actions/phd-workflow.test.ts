@@ -173,12 +173,22 @@ describe('PhD Workflow Server Actions', () => {
 
     describe('submitCorrectedThesisAction', () => {
         it('should throw plagiarism index error if Turnitin score exceeds setting threshold', async () => {
-            (db.select as any).mockReturnValue({
-                from: vi.fn(() => ({
-                    where: vi.fn(() => ({
-                        limit: vi.fn().mockResolvedValue([{ settingKey: 'phd_plagiarism_limit', settingValue: '15' }])
-                    }))
-                }))
+            let callCount = 0;
+            (db.select as any).mockImplementation(() => {
+                const count = callCount++;
+                const results = [
+                    [{ id: 1, studentId: 10 }],
+                    [{ id: 10, userId: 1 }],
+                    [{ settingKey: 'phd_plagiarism_limit', settingValue: '15' }]
+                ];
+                const data = results[count] || [];
+                const chain: any = {
+                    where: vi.fn(() => Object.assign(data, chain)),
+                    limit: vi.fn().mockResolvedValue(data)
+                };
+                return {
+                    from: vi.fn(() => Object.assign(data, chain))
+                };
             });
 
             const result = await submitCorrectedThesisAction(1, 'http://s3.pdf', 'http://s3-turnitin.pdf', 25);
@@ -187,12 +197,22 @@ describe('PhD Workflow Server Actions', () => {
         });
 
         it('should save corrected version successfully if Turnitin score is within limit', async () => {
-            (db.select as any).mockReturnValue({
-                from: vi.fn(() => ({
-                    where: vi.fn(() => ({
-                        limit: vi.fn().mockResolvedValue([{ settingKey: 'phd_plagiarism_limit', settingValue: '15' }])
-                    }))
-                }))
+            let callCount = 0;
+            (db.select as any).mockImplementation(() => {
+                const count = callCount++;
+                const results = [
+                    [{ id: 1, studentId: 10 }],
+                    [{ id: 10, userId: 1 }],
+                    [{ settingKey: 'phd_plagiarism_limit', settingValue: '15' }]
+                ];
+                const data = results[count] || [];
+                const chain: any = {
+                    where: vi.fn(() => Object.assign(data, chain)),
+                    limit: vi.fn().mockResolvedValue(data)
+                };
+                return {
+                    from: vi.fn(() => Object.assign(data, chain))
+                };
             });
 
             (db.insert as any).mockReturnValue({

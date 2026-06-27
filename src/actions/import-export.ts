@@ -4,6 +4,7 @@ import * as xlsx from "xlsx";
 import { db } from "@/db/db";
 import { faculties, departments, programmes, courses, users, staffProfiles, institutionalUnits } from "@/db/schema";
 import { auth } from "@/auth";
+import { hasPermission, hasRole } from "@/lib/rbac";
 import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 
@@ -79,6 +80,8 @@ const ENTITY_CONFIG: Record<ImportExportEntity, EntityDefinition> = {
  */
 export async function downloadTemplate(entity: ImportExportEntity): Promise<{ success: boolean; data?: string; error?: string }> {
     try {
+        const allowed = await hasPermission("system.import_export.manage") || await hasRole("admin") || await hasRole("superadmin");
+        if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to download templates" };
         const session = await auth();
         if ((session?.user as any)?.role !== 'admin') return { success: false, error: "Unauthorized" };
 
@@ -112,6 +115,8 @@ export async function downloadTemplate(entity: ImportExportEntity): Promise<{ su
  */
 export async function exportData(entity: ImportExportEntity): Promise<{ success: boolean; data?: string; error?: string }> {
     try {
+        const allowed = await hasPermission("system.import_export.manage") || await hasRole("admin") || await hasRole("superadmin");
+        if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to export data" };
         const session = await auth();
         if ((session?.user as any)?.role !== 'admin') return { success: false, error: "Unauthorized" };
 
@@ -196,6 +201,8 @@ export async function exportData(entity: ImportExportEntity): Promise<{ success:
  */
 export async function importData(entity: ImportExportEntity, base64Data: string): Promise<{ success: boolean; inserted?: number; errors?: string[] }> {
     try {
+        const allowed = await hasPermission("system.import_export.manage") || await hasRole("admin") || await hasRole("superadmin");
+        if (!allowed) return { success: false, errors: ["Unauthorized: Insufficient permissions to import data"] };
         const session = await auth();
         if ((session?.user as any)?.role !== 'admin') return { success: false, errors: ["Unauthorized"] };
 

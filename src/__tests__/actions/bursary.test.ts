@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { getStudentFinancialSummary } from '../../actions/bursary';
+import { getStudentFinancialSummary, getFinancialReports } from '../../actions/bursary';
 import { db } from '@/db/db';
 import { auth } from '@/auth';
 
@@ -8,17 +8,28 @@ describe('Bursary Actions', () => {
     vi.clearAllMocks();
   });
 
-  describe('getStudentFinancialSummary', () => {
-    it('should return empty stats if student not found', async () => {
+  describe('getFinancialReports', () => {
+    it('should return empty stats if no transactions exist', async () => {
       (db.select as any).mockReturnValue({
           from: vi.fn(() => ({
-              where: vi.fn().mockResolvedValue([])
+              leftJoin: vi.fn(() => ({
+                  leftJoin: vi.fn(() => ({
+                      leftJoin: vi.fn(() => ({
+                          where: vi.fn(() => ({
+                              orderBy: vi.fn().mockResolvedValue([])
+                          }))
+                      }))
+                  }))
+              }))
           }))
       });
-      const result = await getStudentFinancialSummary(1);
+      const result = await getFinancialReports({});
       expect(result.stats.totalCollections).toBe(0);
       expect(result.transactions).toHaveLength(0);
     });
+  });
+
+  describe('getStudentFinancialSummary', () => {
 
     it('should calculate balance correctly from invoices and payments', async () => {
       (auth as any).mockResolvedValue({ user: { id: '1', role: 'student' } });

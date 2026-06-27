@@ -5,24 +5,33 @@ import { disciplinaryRecords, staffTraining, exitRecords, staffProfiles, users }
 import { eq, desc, and } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
+import { hasPermission, hasRole } from "@/lib/rbac";
 
 // --- DISCIPLINARY RECORDS ---
 export async function getDisciplinaryRecords(staffId?: number) {
-    let query = db.select({
-        record: disciplinaryRecords,
-        staff: staffProfiles,
-        user: users,
-    })
-        .from(disciplinaryRecords)
-        .innerJoin(staffProfiles, eq(disciplinaryRecords.staffId, staffProfiles.id))
-        .innerJoin(users, eq(staffProfiles.userId, users.id))
-        .$dynamic();
+    try {
+        const allowed = await hasPermission("hr.relations.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("hr_officer");
+        if (!allowed) return [];
 
-    if (staffId) {
-        query = query.where(eq(disciplinaryRecords.staffId, staffId));
+        let query = db.select({
+            record: disciplinaryRecords,
+            staff: staffProfiles,
+            user: users,
+        })
+            .from(disciplinaryRecords)
+            .innerJoin(staffProfiles, eq(disciplinaryRecords.staffId, staffProfiles.id))
+            .innerJoin(users, eq(staffProfiles.userId, users.id))
+            .$dynamic();
+
+        if (staffId) {
+            query = query.where(eq(disciplinaryRecords.staffId, staffId));
+        }
+
+        return await query.orderBy(desc(disciplinaryRecords.incidentDate));
+    } catch (error) {
+        console.error("Get disciplinary records error:", error);
+        return [];
     }
-
-    return await query.orderBy(desc(disciplinaryRecords.incidentDate));
 }
 
 export async function logDisciplinaryAction(data: any) {
@@ -30,6 +39,9 @@ export async function logDisciplinaryAction(data: any) {
     if (!session?.user?.id) return { success: false, error: "Unauthorized" };
 
     try {
+        const allowed = await hasPermission("hr.relations.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("hr_officer");
+        if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to log disciplinary actions" };
+
         await db.insert(disciplinaryRecords).values({
             ...data,
             recordedBy: parseInt(session.user.id),
@@ -45,25 +57,36 @@ export async function logDisciplinaryAction(data: any) {
 
 // --- STAFF TRAINING ---
 export async function getStaffTraining(staffId?: number) {
-    let query = db.select({
-        training: staffTraining,
-        staff: staffProfiles,
-        user: users,
-    })
-        .from(staffTraining)
-        .innerJoin(staffProfiles, eq(staffTraining.staffId, staffProfiles.id))
-        .innerJoin(users, eq(staffProfiles.userId, users.id))
-        .$dynamic();
+    try {
+        const allowed = await hasPermission("hr.relations.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("hr_officer");
+        if (!allowed) return [];
 
-    if (staffId) {
-        query = query.where(eq(staffTraining.staffId, staffId));
+        let query = db.select({
+            training: staffTraining,
+            staff: staffProfiles,
+            user: users,
+        })
+            .from(staffTraining)
+            .innerJoin(staffProfiles, eq(staffTraining.staffId, staffProfiles.id))
+            .innerJoin(users, eq(staffProfiles.userId, users.id))
+            .$dynamic();
+
+        if (staffId) {
+            query = query.where(eq(staffTraining.staffId, staffId));
+        }
+
+        return await query.orderBy(desc(staffTraining.completionDate));
+    } catch (error) {
+        console.error("Get staff training error:", error);
+        return [];
     }
-
-    return await query.orderBy(desc(staffTraining.completionDate));
 }
 
 export async function registerTraining(data: any) {
     try {
+        const allowed = await hasPermission("hr.relations.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("hr_officer");
+        if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to register training" };
+
         await db.insert(staffTraining).values({
             ...data,
             completionDate: data.completionDate ? new Date(data.completionDate) : null,
@@ -83,6 +106,9 @@ export async function verifyStaffTraining(id: number, status: 'verified' | 'reje
     if (!session?.user?.id) return { success: false, error: "Unauthorized" };
 
     try {
+        const allowed = await hasPermission("hr.relations.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("hr_officer");
+        if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to verify training" };
+
         await db.update(staffTraining)
             .set({
                 status,
@@ -100,25 +126,34 @@ export async function verifyStaffTraining(id: number, status: 'verified' | 'reje
 
 // --- EXIT MANAGEMENT ---
 export async function getExitRecords() {
-    return await db.select({
-        record: exitRecords,
-        staff: staffProfiles,
-        user: users,
-    })
-        .from(exitRecords)
-        .innerJoin(staffProfiles, eq(exitRecords.staffId, staffProfiles.id))
-        .innerJoin(users, eq(staffProfiles.userId, users.id))
-        .orderBy(desc(exitRecords.lastWorkingDay));
+    try {
+        const allowed = await hasPermission("hr.relations.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("hr_officer");
+        if (!allowed) return [];
+
+        return await db.select({
+            record: exitRecords,
+            staff: staffProfiles,
+            user: users,
+        })
+            .from(exitRecords)
+            .innerJoin(staffProfiles, eq(exitRecords.staffId, staffProfiles.id))
+            .innerJoin(users, eq(staffProfiles.userId, users.id))
+            .orderBy(desc(exitRecords.lastWorkingDay));
+    } catch (error) {
+        console.error("Get exit records error:", error);
+        return [];
+    }
 }
 
 export async function initiateExitWorkflow(data: any) {
     try {
+        const allowed = await hasPermission("hr.relations.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("hr_officer");
+        if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to initiate exit workflow" };
+
         await db.insert(exitRecords).values({
             ...data,
             lastWorkingDay: new Date(data.lastWorkingDay),
         });
-        // Mark staff as inactive when exit is initiated? Or only when completed?
-        // For now, just log the record.
         revalidatePath("/admin/hr/relations");
         return { success: true };
     } catch (error) {
@@ -129,6 +164,9 @@ export async function initiateExitWorkflow(data: any) {
 
 export async function updateExitStatus(id: number, status: any, clearanceStatus?: any) {
     try {
+        const allowed = await hasPermission("hr.relations.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("hr_officer");
+        if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to update exit status" };
+
         const updateData: any = { status };
         if (clearanceStatus) updateData.clearanceStatus = clearanceStatus;
 

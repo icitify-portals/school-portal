@@ -10,6 +10,7 @@ import {
 import { eq, and, desc, aliasedTable } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
+import { hasPermission, hasRole } from "@/lib/rbac";
 
 export async function getKPIs() {
     return await db.select().from(performanceKpis).orderBy(performanceKpis.category);
@@ -22,6 +23,9 @@ export async function createKPI(data: {
     category: 'teaching' | 'research' | 'administration' | 'general';
 }) {
     try {
+        const allowed = await hasPermission("hr.performance.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("hr_officer");
+        if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to manage KPIs" };
+
         await db.insert(performanceKpis).values(data);
         revalidatePath("/admin/hr/performance");
         return { success: true };
@@ -36,6 +40,9 @@ export async function initiateAppraisal(staffId: number, year: number, period: '
     if (!session?.user?.id) return { success: false, error: "Unauthorized" };
 
     try {
+        const allowed = await hasPermission("hr.performance.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("hr_officer");
+        if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to initiate appraisals" };
+
         // Check if appraisal already exists for this period
         const existing = await db.select()
             .from(performanceReviews)
@@ -65,25 +72,33 @@ export async function initiateAppraisal(staffId: number, year: number, period: '
 }
 
 export async function getStaffReviews(staffId?: number) {
-    const reviewers = aliasedTable(users, "reviewers");
+    try {
+        const allowed = await hasPermission("hr.performance.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("hr_officer");
+        if (!allowed) return [];
 
-    let query = db.select({
-        review: performanceReviews,
-        staff: staffProfiles,
-        staffUser: users,
-        reviewer: reviewers
-    })
-        .from(performanceReviews)
-        .innerJoin(staffProfiles, eq(performanceReviews.staffId, staffProfiles.id))
-        .innerJoin(users, eq(staffProfiles.userId, users.id))
-        .innerJoin(reviewers, eq(performanceReviews.reviewerId, reviewers.id));
+        const reviewers = aliasedTable(users, "reviewers");
 
-    if (staffId) {
-        // @ts-ignore
-        query = query.where(eq(performanceReviews.staffId, staffId));
+        let query = db.select({
+            review: performanceReviews,
+            staff: staffProfiles,
+            staffUser: users,
+            reviewer: reviewers
+        })
+            .from(performanceReviews)
+            .innerJoin(staffProfiles, eq(performanceReviews.staffId, staffProfiles.id))
+            .innerJoin(users, eq(staffProfiles.userId, users.id))
+            .innerJoin(reviewers, eq(performanceReviews.reviewerId, reviewers.id));
+
+        if (staffId) {
+            // @ts-ignore
+            query = query.where(eq(performanceReviews.staffId, staffId));
+        }
+
+        return await query.orderBy(desc(performanceReviews.createdAt));
+    } catch (error) {
+        console.error("Get reviews error:", error);
+        return [];
     }
-
-    return await query.orderBy(desc(performanceReviews.createdAt));
 }
 
 export async function submitReview(reviewId: number, data: {
@@ -93,6 +108,9 @@ export async function submitReview(reviewId: number, data: {
     finalize: boolean;
 }) {
     try {
+        const allowed = await hasPermission("hr.performance.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("hr_officer");
+        if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to submit reviews" };
+
         await db.update(performanceReviews)
             .set({
                 ratings: JSON.stringify(data.ratings),

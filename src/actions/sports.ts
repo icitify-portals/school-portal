@@ -4,6 +4,7 @@ import { db } from "@/db/db";
 import { sportsTeams, sportsTeamMembers, sportsFixtures, sportsInventory, sportsMedia, users } from "@/db/schema";
 import { eq, and, desc } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { hasPermission, hasRole } from "@/lib/rbac";
 
 /**
  * Team Management
@@ -29,6 +30,9 @@ export async function getSportsTeams(unitId: number) {
 
 export async function createSportsTeam(data: any) {
     try {
+        const allowed = await hasPermission("sports.teams.manage") || await hasRole("admin") || await hasRole("superadmin");
+        if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to create sports team" };
+
         await db.insert(sportsTeams).values(data);
         revalidatePath("/admin/sports");
         return { success: true };
@@ -39,6 +43,9 @@ export async function createSportsTeam(data: any) {
 
 export async function updateSportsTeam(id: number, data: any) {
     try {
+        const allowed = await hasPermission("sports.teams.manage") || await hasRole("admin") || await hasRole("superadmin");
+        if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to update sports team" };
+
         await db.update(sportsTeams).set(data).where(eq(sportsTeams.id, id));
         revalidatePath("/admin/sports");
         return { success: true };
@@ -90,6 +97,9 @@ export async function getSportsFixtures(unitId: number) {
 
 export async function updateMatchResult(id: number, data: any) {
     try {
+        const allowed = await hasPermission("sports.fixtures.manage") || await hasRole("admin") || await hasRole("superadmin");
+        if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to update match result" };
+
         await db.update(sportsFixtures)
             .set({ ...data, status: 'completed' })
             .where(eq(sportsFixtures.id, id));
@@ -129,6 +139,9 @@ export async function getSportsMedia(unitId: number) {
 
 export async function addSportsMedia(data: any) {
     try {
+        const allowed = await hasPermission("sports.teams.manage") || await hasRole("admin") || await hasRole("superadmin");
+        if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to add sports media" };
+
         await db.insert(sportsMedia).values(data);
         revalidatePath("/admin/cms/sports");
         return { success: true };

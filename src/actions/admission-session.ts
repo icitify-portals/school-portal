@@ -1,10 +1,10 @@
-
 'use server';
 
 import { db } from "@/db";
 import { admissionSessions } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { hasPermission, hasRole } from "@/lib/rbac";
 
 export async function getAdmissionSessions() {
     try {
@@ -28,6 +28,9 @@ export async function getAdmissionSession(id: number) {
 
 export async function upsertAdmissionSession(data: any) {
     try {
+        const allowed = await hasPermission("admission.sessions.manage") || await hasRole("admin") || await hasRole("superadmin");
+        if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to manage admission sessions" };
+
         if (data.id) {
             await db.update(admissionSessions)
                 .set({
@@ -54,6 +57,9 @@ export async function upsertAdmissionSession(data: any) {
 
 export async function toggleSessionStatus(id: number, isActive: boolean) {
     try {
+        const allowed = await hasPermission("admission.sessions.manage") || await hasRole("admin") || await hasRole("superadmin");
+        if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to manage admission sessions" };
+
         await db.update(admissionSessions)
             .set({ isActive })
             .where(eq(admissionSessions.id, id));

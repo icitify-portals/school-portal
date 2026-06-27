@@ -5,6 +5,7 @@ import { db } from "@/db/db";
 import { faculties } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { hasPermission, hasRole } from "@/lib/rbac";
 
 export async function getFaculties() {
     try {
@@ -17,6 +18,9 @@ export async function getFaculties() {
 
 export async function createFaculty(name: string, code: string) {
     try {
+        const allowed = await hasPermission("academic.faculties.manage") || await hasRole("admin") || await hasRole("superadmin");
+        if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to create faculty" };
+
         await db.insert(faculties).values({ name, code });
         revalidatePath("/admin/faculties");
         revalidatePath("/admin/departments");
@@ -29,6 +33,9 @@ export async function createFaculty(name: string, code: string) {
 
 export async function deleteFaculty(id: number) {
     try {
+        const allowed = await hasPermission("academic.faculties.manage") || await hasRole("admin") || await hasRole("superadmin");
+        if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to delete faculty" };
+
         await db.delete(faculties).where(eq(faculties.id, id));
         revalidatePath("/admin/faculties");
         return { success: true };
@@ -40,6 +47,9 @@ export async function deleteFaculty(id: number) {
 
 export async function bulkImportFaculties(data: any[]) {
     try {
+        const allowed = await hasPermission("academic.faculties.manage") || await hasRole("admin") || await hasRole("superadmin");
+        if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to import faculties" };
+
         await db.transaction(async (tx) => {
             for (const row of data) {
                 const { name, code } = row;

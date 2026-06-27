@@ -3,9 +3,9 @@ import { z } from 'zod';
 
 // QR Data Schema Validation
 export const QRPassSchema = z.object({
-  type: z.enum(['library_book', 'visitor_pass', 'student_gate', 'staff_gate', 'transport_pass']),
+  type: z.enum(['library_book', 'visitor_pass', 'student_gate', 'staff_gate', 'transport_pass', 'vehicle_pass']),
   entityId: z.number(),
-  entityType: z.enum(['user', 'library_resource', 'visitor', 'student']),
+  entityType: z.enum(['user', 'library_resource', 'visitor', 'student', 'vehicle']),
   schoolPortalId: z.string().optional(),
   issuedAt: z.number(),
   expiresAt: z.number(),
@@ -23,14 +23,25 @@ export const QRPassSchema = z.object({
   registrationType: z.string().optional(),
   validFrom: z.number().optional(),
   validTo: z.number().optional(),
+  // Vehicle specific fields
+  licensePlate: z.string().optional(),
+  passNumber: z.string().optional(),
 });
 
 export type QRPassData = z.infer<typeof QRPassSchema>;
 
-// JWT Secret Key (should be stored in environment variables)
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || 'your-super-secret-key-change-in-production'
-);
+// SECURITY FIX H-6b: Require JWT_SECRET env var. Never fall back to a known-plaintext
+// default that is visible in source code — anyone with access to the repo could
+// forge a valid QR pass with the old fallback string.
+const jwtSecretRaw = process.env.JWT_SECRET;
+if (!jwtSecretRaw) {
+    throw new Error(
+        "[SECURITY] JWT_SECRET environment variable is not set. " +
+        "Generate a secret with: node -e \"console.log(require('crypto').randomBytes(64).toString('hex'))\" " +
+        "and add it to your .env file as JWT_SECRET=<value>"
+    );
+}
+const JWT_SECRET = new TextEncoder().encode(jwtSecretRaw);
 
 /**
  * Generate a tamper-proof QR pass with JWT signing
@@ -189,6 +200,50 @@ export async function generateStaffGateQR(
     entityType: 'user',
     schoolPortalId,
   });
+}
+
+/**
+ * Generate QR data for vehicle pass
+ */
+export async function generateVehiclePassQR(
+  vehicleId: number,
+  licensePlate: string,
+  passNumber: string
+) {
+  const result = await generateSecureQRPass({
+    type: 'vehicle_pass',
+    entityId: vehicleId,
+    entityType: 'vehicle',
+    licensePlate,
+    passNumber,
+  });
+  
+  // Extend expiration for vehicle passes to 1 year instead of default 24 hours
+  const now = Math.floor(Date.now() / 1000);
+  const oneYearInSeconds = 365 * 24 * 60 * 60;
+  const expiresAtSeconds = now + oneYearInSeconds;
+  
+  const signedData = {
+    type: 'vehicle_pass',
+    entityId: vehicleId,
+    entityType: 'vehicle',
+    licensePlate,
+    passNumber,
+    issuedAt: now,
+    expiresAt: expiresAtSeconds,
+    issuer: 'school-portal-security',
+  };
+
+  const jwt = await new SignJWT(signedData)
+    .setProtectedHeader({ alg: 'HS256' })
+    .setIssuedAt(now)
+    .setExpirationTime(expiresAtSeconds)
+    .sign(JWT_SECRET);
+
+  return {
+    qrData: jwt,
+    expiresAt: new Date(expiresAtSeconds * 1000),
+  };
 }
 
 /**

@@ -1,5 +1,8 @@
 import { getStudentHealthData } from "@/actions/health";
 import { getStudentByUserId } from "@/actions/students";
+import { db } from "@/db/db";
+import { medicalExcusats } from "@/db/schema";
+import { eq, and, lte, gte } from "drizzle-orm";
 import { auth } from "@/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Activity, Thermometer, Weight, HeartPulse, Droplet, User, AlertCircle, CheckCircle2, Clock } from "lucide-react";
@@ -25,12 +28,36 @@ export default async function HealthDashboardPage() {
             health.healthStatus === 'flagged' ? 'bg-red-50 text-red-600 border-red-200' :
                 'bg-amber-50 text-amber-600 border-amber-200';
 
+    const now = new Date();
+    const activeExcusats = await db.select().from(medicalExcusats).where(
+        and(
+            eq(medicalExcusats.studentId, studentData.id),
+            eq(medicalExcusats.status, 'active'),
+            lte(medicalExcusats.startDate, now),
+            gte(medicalExcusats.endDate, now)
+        )
+    ).limit(1);
+    const activeExcusat = activeExcusats[0];
+
     const StatusIcon =
         health.healthStatus === 'cleared' ? CheckCircle2 :
             health.healthStatus === 'flagged' ? AlertCircle : Clock;
 
     return (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {activeExcusat && (
+                <div className="col-span-1 md:col-span-3 bg-red-600 text-white p-6 rounded-xl flex items-center gap-4 shadow-lg animate-in fade-in slide-in-from-top-4">
+                    <AlertCircle className="w-10 h-10 flex-shrink-0" />
+                    <div>
+                        <h2 className="text-xl font-bold tracking-tight">Active Medical Sick Leave</h2>
+                        <p className="text-red-100 font-medium mt-1">
+                            You are currently on an Official Medical Sick Leave from {activeExcusat.startDate.toLocaleDateString()} to {activeExcusat.endDate.toLocaleDateString()}.
+                            Your academic attendances and activities have been excused.
+                        </p>
+                    </div>
+                </div>
+            )}
+
             <Card className={`col-span-1 md:col-span-3 border-2 ${statusColor} shadow-none`}>
                 <CardContent className="p-6 flex items-center justify-between">
                     <div className="flex items-center gap-4">

@@ -2,7 +2,7 @@
 
 import { AuthService } from "@/services/AuthService";
 import { revalidatePath } from "next/cache";
-import { hasRole } from "@/lib/rbac";
+import { hasRole, hasPermission } from "@/lib/rbac";
 
 export async function generateOTPAction() {
     try {
@@ -17,7 +17,7 @@ export async function generateOTPAction() {
 export async function verifyOTPAction(otpId: string, otpCode: string) {
     try {
         const result = await AuthService.verifyOTP(otpId, otpCode);
-        return { success: true, ...result };
+        return { ...result, success: true };
     } catch (error) {
         return { success: false, error: (error as Error).message };
     }
@@ -26,10 +26,10 @@ export async function verifyOTPAction(otpId: string, otpCode: string) {
 export async function registerAsTeacherAction(userId: number, departmentId?: number, otpData?: { id: string, code: string }) {
     try {
         const isSuperAdmin = await hasRole("superadmin");
-        const isItAdmin = await hasRole("it_admin");
+        const isItAdmin = await hasPermission("users.manage") || await hasRole("it_admin");
 
         if (!isSuperAdmin && !isItAdmin) {
-            throw new Error("Unauthorized: Role promotion requires IT Admin or Super Admin clearance.");
+            throw new Error("Unauthorized: Role promotion clearance required.");
         }
 
         // 1. Enforcement: Super Admin skips OTP, others MUST provide it
@@ -40,7 +40,7 @@ export async function registerAsTeacherAction(userId: number, departmentId?: num
 
         const result = await AuthService.registerAsTeacher(userId, departmentId);
         revalidatePath("/admin/users");
-        return { success: true, ...result, bypassed: isSuperAdmin };
+        return { ...result, success: true, bypassed: isSuperAdmin };
     } catch (error) {
         return { success: false, error: (error as Error).message };
     }
@@ -49,7 +49,7 @@ export async function registerAsTeacherAction(userId: number, departmentId?: num
 export async function registerAsStudentAction(userId: number, admissionNumber?: string, otpData?: { id: string, code: string }) {
     try {
         const isSuperAdmin = await hasRole("superadmin");
-        const isItAdmin = await hasRole("it_admin");
+        const isItAdmin = await hasPermission("users.manage") || await hasRole("it_admin");
 
         if (!isSuperAdmin && !isItAdmin) {
             throw new Error("Unauthorized");
@@ -63,7 +63,7 @@ export async function registerAsStudentAction(userId: number, admissionNumber?: 
 
         const result = await AuthService.registerAsStudent(userId, admissionNumber);
         revalidatePath("/admin/users");
-        return { success: true, ...result, bypassed: isSuperAdmin };
+        return { ...result, success: true, bypassed: isSuperAdmin };
     } catch (error) {
         return { success: false, error: (error as Error).message };
     }

@@ -1,5 +1,6 @@
 import { getNewsBySlug, getNews } from "@/actions/cms-publishing";
 import { notFound } from "next/navigation";
+import { sanitizeRichContent } from "@/lib/sanitizer";
 import { Calendar, User, Tag, Clock, ChevronRight, Share2, Facebook, Twitter, Linkedin, Newspaper } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -81,7 +82,8 @@ export default async function NewsArticlePage({ params }: { params: { slug: stri
                             prose-p:text-slate-600 prose-p:leading-relaxed
                             prose-img:rounded-2xl prose-img:shadow-2xl prose-img:border prose-img:border-slate-100"
                         >
-                            <div dangerouslySetInnerHTML={{ __html: article.content }} />
+                            {/* SECURITY FIX H-2c: Sanitize article content before render */}
+                            <div dangerouslySetInnerHTML={{ __html: sanitizeRichContent(article.content) }} />
                         </div>
 
                         {/* Social Share */}

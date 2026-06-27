@@ -1,7 +1,19 @@
 import { NextResponse } from "next/server";
 import { NotificationService } from "@/services/NotificationService";
+import { auth } from "@/auth";
 
 export async function POST(req: Request) {
+    // SECURITY FIX C-2: Debug endpoints must never be accessible in production.
+    if (process.env.NODE_ENV === "production") {
+        return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+
+    // Require an authenticated session even in non-production environments.
+    const session = await auth();
+    if (!session?.user?.id) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     try {
         const { phone, message } = await req.json();
 

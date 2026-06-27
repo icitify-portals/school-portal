@@ -5,6 +5,7 @@ import { db } from "@/db/db";
 import { courses, courseDepartmentSettings, coursePrerequisites, departments } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { hasPermission, hasRole } from "@/lib/rbac";
 
 export async function getCourses() {
     try {
@@ -52,6 +53,9 @@ export async function createCourse(data: {
     parentCourseId?: number | null;
 }) {
     try {
+        const allowed = await hasPermission("academic.courses.manage") || await hasRole("admin") || await hasRole("superadmin");
+        if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to create course" };
+
         const [result] = await db.insert(courses).values({
             ...data,
             isUniversityRequired: data.isUniversityRequired || false,
@@ -75,6 +79,9 @@ export async function addCourseToDepartment(data: {
     level: number;
 }) {
     try {
+        const allowed = await hasPermission("academic.courses.manage") || await hasRole("admin") || await hasRole("superadmin");
+        if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to link course to department" };
+
         await db.insert(courseDepartmentSettings).values(data);
         revalidatePath("/admin/courses");
         return { success: true };
@@ -90,6 +97,9 @@ export async function updateCourseDepartmentSetting(courseId: number, deptId: nu
     level?: number;
 }) {
     try {
+        const allowed = await hasPermission("academic.courses.manage") || await hasRole("admin") || await hasRole("superadmin");
+        if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to update department course setting" };
+
         await db.update(courseDepartmentSettings)
             .set(data)
             .where(and(
@@ -106,6 +116,9 @@ export async function updateCourseDepartmentSetting(courseId: number, deptId: nu
 
 export async function removeCourseFromDepartment(courseId: number, deptId: number) {
     try {
+        const allowed = await hasPermission("academic.courses.manage") || await hasRole("admin") || await hasRole("superadmin");
+        if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to remove course from department" };
+
         await db.delete(courseDepartmentSettings)
             .where(and(
                 eq(courseDepartmentSettings.courseId, courseId),
@@ -121,6 +134,9 @@ export async function removeCourseFromDepartment(courseId: number, deptId: numbe
 
 export async function addPrerequisite(courseId: number, prerequisiteId: number) {
     try {
+        const allowed = await hasPermission("academic.courses.manage") || await hasRole("admin") || await hasRole("superadmin");
+        if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to add course prerequisite" };
+
         await db.insert(coursePrerequisites).values({ courseId, prerequisiteId });
         revalidatePath("/admin/courses");
         return { success: true };
@@ -132,6 +148,9 @@ export async function addPrerequisite(courseId: number, prerequisiteId: number) 
 
 export async function removePrerequisite(courseId: number, prerequisiteId: number) {
     try {
+        const allowed = await hasPermission("academic.courses.manage") || await hasRole("admin") || await hasRole("superadmin");
+        if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to remove course prerequisite" };
+
         await db.delete(coursePrerequisites).where(
             and(eq(coursePrerequisites.courseId, courseId), eq(coursePrerequisites.prerequisiteId, prerequisiteId))
         );
@@ -145,6 +164,9 @@ export async function removePrerequisite(courseId: number, prerequisiteId: numbe
 
 export async function updateCourse(id: number, data: any) {
     try {
+        const allowed = await hasPermission("academic.courses.manage") || await hasRole("admin") || await hasRole("superadmin");
+        if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to update course" };
+
         await db.update(courses).set(data).where(eq(courses.id, id));
         revalidatePath("/admin/courses");
         return { success: true };
@@ -156,6 +178,9 @@ export async function updateCourse(id: number, data: any) {
 
 export async function deleteCourse(id: number) {
     try {
+        const allowed = await hasPermission("academic.courses.manage") || await hasRole("admin") || await hasRole("superadmin");
+        if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to delete course" };
+
         // Dependencies are handled by DB-level references or needs manual cleanup if not cascading
         await db.delete(courses).where(eq(courses.id, id));
         revalidatePath("/admin/courses");
@@ -168,6 +193,9 @@ export async function deleteCourse(id: number) {
 
 export async function bulkImportCourses(data: any[]) {
     try {
+        const allowed = await hasPermission("academic.courses.manage") || await hasRole("admin") || await hasRole("superadmin");
+        if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to import courses" };
+
         await db.transaction(async (tx) => {
             for (const row of data) {
                 const { name, code, creditUnits, description } = row;

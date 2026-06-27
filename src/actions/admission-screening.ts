@@ -3,12 +3,12 @@
 import { db } from "@/db/db";
 import { admissionApplicationsV2, students, users, admissionExamResults } from "@/db/schema";
 import { eq, and, inArray, sql } from "drizzle-orm";
-import { hasRole } from "@/lib/rbac";
+import { hasRole, hasPermission } from "@/lib/rbac";
 import { revalidatePath } from "next/cache";
 
 export async function getApplicantsForScreening() {
     try {
-        const isAdmin = await hasRole("admin") || await hasRole("superadmin");
+        const isAdmin = await hasPermission("admission.screening.view") || await hasPermission("admission.manage") || await hasRole("admin") || await hasRole("superadmin");
         if (!isAdmin) throw new Error("Unauthorized: Admissions access required");
 
         const applicants = await db.select({
@@ -33,7 +33,7 @@ export async function getApplicantsForScreening() {
 
 export async function bulkAdmitApplicants(applicationIds: number[]) {
     try {
-        const isAdmin = await hasRole("admin") || await hasRole("superadmin");
+        const isAdmin = await hasPermission("admission.applicant.admit") || await hasPermission("admission.manage") || await hasRole("admin") || await hasRole("superadmin");
         if (!isAdmin) throw new Error("Unauthorized: Admissions access required");
 
         return await db.transaction(async (tx) => {
@@ -55,7 +55,7 @@ export async function bulkAdmitApplicants(applicationIds: number[]) {
 
 export async function rejectApplicant(applicationId: number, reason: string) {
     try {
-        const isAdmin = await hasRole("admin") || await hasRole("superadmin");
+        const isAdmin = await hasPermission("admission.applicant.admit") || await hasPermission("admission.manage") || await hasRole("admin") || await hasRole("superadmin");
         if (!isAdmin) throw new Error("Unauthorized: Admissions access required");
 
         await db.update(admissionApplicationsV2)

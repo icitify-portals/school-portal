@@ -5,11 +5,11 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/db/db";
 import { resultMarks, semesterSummaries, students, users, courses } from "@/db/schema";
 import { eq, and, desc } from "drizzle-orm";
-import { hasRole } from "@/lib/rbac";
+import { hasRole, hasPermission } from "@/lib/rbac";
 
 export async function computeStudentGPAction(studentId: number, sessionId: number, semester: '1' | '2') {
     try {
-        const isAuth = await hasRole("admin") || await hasRole("superadmin") || await hasRole("hod");
+        const isAuth = await hasPermission("academic.results.compute") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("hod");
         if (!isAuth) throw new Error("Unauthorized: Admissions/HOD access required");
 
         const result = await ResultComputationService.computeSemesterGPA(studentId, sessionId, semester);
@@ -54,7 +54,7 @@ export async function getStudentSemesterResultAction(studentId: number, sessionI
 
 export async function bulkComputeResultsAction(sessionId: number, semester: '1' | '2', studentIds: number[]) {
     try {
-        const isAuth = await hasRole("admin") || await hasRole("superadmin");
+        const isAuth = await hasPermission("academic.results.compute") || await hasRole("admin") || await hasRole("superadmin");
         if (!isAuth) throw new Error("Unauthorized");
 
         for (const id of studentIds) {

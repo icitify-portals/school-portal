@@ -4,9 +4,13 @@ import { db } from "@/db";
 import { staffLoans, cashAdvances, staffProfiles, loanTemplates } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { hasPermission, hasRole } from "@/lib/rbac";
 
 export async function getBursaryStaffLoans() {
     try {
+        const allowed = await hasPermission("finance.loans.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("bursar") || await hasRole("scholarship_officer");
+        if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to view staff loans" };
+
         const loans = await db.query.staffLoans.findMany({
             with: {
                 staff: {
@@ -25,6 +29,9 @@ export async function getBursaryStaffLoans() {
 
 export async function updateLoanStatus(id: number, status: 'approved' | 'rejected' | 'disbursed' | 'completed', userId: number) {
     try {
+        const allowed = await hasPermission("finance.loans.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("bursar") || await hasRole("scholarship_officer");
+        if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to update loan status" };
+
         await db.update(staffLoans).set({ 
             status,
             approvedBy: ['approved', 'disbursed'].includes(status) ? userId : undefined,
@@ -41,6 +48,9 @@ export async function updateLoanStatus(id: number, status: 'approved' | 'rejecte
 
 export async function getBursaryCashAdvances() {
     try {
+        const allowed = await hasPermission("finance.loans.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("bursar") || await hasRole("scholarship_officer");
+        if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to view cash advances" };
+
         const advances = await db.query.cashAdvances.findMany({
             with: {
                 staff: {
@@ -57,6 +67,9 @@ export async function getBursaryCashAdvances() {
 
 export async function updateCashAdvanceStatus(id: number, status: 'approved' | 'rejected' | 'disbursed' | 'retired', approvedAmount?: number) {
     try {
+        const allowed = await hasPermission("finance.loans.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("bursar") || await hasRole("scholarship_officer");
+        if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to update cash advance status" };
+
         const updateData: any = { status };
         if (approvedAmount) {
             updateData.approvedAmount = approvedAmount;

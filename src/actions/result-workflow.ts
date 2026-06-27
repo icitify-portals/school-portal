@@ -2,14 +2,14 @@
 
 import { ResultWorkflowService } from "@/services/ResultWorkflowService";
 import { revalidatePath } from "next/cache";
-import { hasRole } from "@/lib/rbac";
+import { hasRole, hasPermission } from "@/lib/rbac";
 import { db } from "@/db/db";
 import { semesterSummaries, resultComplaints, students, users, faculties, departments, courses } from "@/db/schema";
 import { eq, and, sql } from "drizzle-orm";
 
 export async function approveDepartmentResultsAction(deptId: number, sessionId: number, semester: '1' | '2') {
     try {
-        const isHod = await hasRole("hod") || await hasRole("superadmin");
+        const isHod = await hasPermission("academic.results.approve") || await hasRole("hod") || await hasRole("superadmin");
         if (!isHod) throw new Error("Unauthorized: HOD access required");
         
         // Use a placeholder for the current user ID
@@ -25,7 +25,7 @@ export async function approveDepartmentResultsAction(deptId: number, sessionId: 
 
 export async function approveFacultyResultsAction(facultyId: number, sessionId: number, semester: '1' | '2') {
     try {
-        const isDean = await hasRole("dean") || await hasRole("superadmin");
+        const isDean = await hasPermission("academic.results.approve") || await hasRole("dean") || await hasRole("superadmin");
         if (!isDean) throw new Error("Unauthorized: Dean access required");
         
         const userId = 1; 

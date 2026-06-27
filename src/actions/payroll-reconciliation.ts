@@ -2,13 +2,13 @@
 
 import { PayrollReconciliationService } from "@/services/PayrollReconciliationService";
 import { revalidatePath } from "next/cache";
-import { hasRole } from "@/lib/rbac";
+import { hasRole, hasPermission } from "@/lib/rbac";
 import { db } from "@/db/db";
 import { payrollReconciliationLogs, users } from "@/db/schema";
 import { desc, eq } from "drizzle-orm";
 
 async function ensureBursarAccess() {
-    const isBursar = await hasRole("bursar") || await hasRole("superadmin");
+    const isBursar = await hasPermission("finance.payroll.approve") || await hasRole("bursar") || await hasRole("superadmin");
     if (!isBursar) throw new Error("Unauthorized: Bursary access required");
 }
 

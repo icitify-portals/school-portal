@@ -7,12 +7,38 @@ import {
     phdTheses, 
     phdExaminers, 
     phdDefenses, 
+    phdSupervisors,
     systemSettings, 
     users, 
     students 
 } from "@/db/schema";
 import { eq, and, desc } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { hasPermission, hasRole } from "@/lib/rbac";
+import { auth } from "@/auth";
+
+// ─── Permission helpers ────────────────────────────────────────────────────
+
+/** Admin / superadmin / postgraduate coordinator can perform any management action */
+async function canManagePhd() {
+    return (
+        await hasRole("admin") ||
+        await hasRole("superadmin") ||
+        await hasPermission("phd.supervisors.assign") ||
+        await hasPermission("phd.thesis.review")
+    );
+}
+
+async function requirePermission(permission: string, fallbackRoles: string[] = []) {
+    const permitted = await hasPermission(permission);
+    if (permitted) return true;
+    for (const role of fallbackRoles) {
+        if (await hasRole(role)) return true;
+    }
+    return false;
+}
+
+// ─── Actions ───────────────────────────────────────────────────────────────
 
 export async function assignSupervisorsAction(
     phdApplicationId: number,
@@ -24,6 +50,9 @@ export async function assignSupervisorsAction(
         phone?: string;
     }>
 ) {
+    const allowed = await requirePermission("phd.supervisors.assign", ["admin", "superadmin"]);
+    if (!allowed) return { success: false, error: "Unauthorized: You do not have permission to assign PhD supervisors." };
+
     try {
         const result = await PhdWorkflowService.assignSupervisors(phdApplicationId, supervisors);
         revalidatePath(`/student/phd`);
@@ -35,6 +64,7 @@ export async function assignSupervisorsAction(
 }
 
 export async function submitSupervisorResponseAction(token: string, accepted: boolean) {
+    // Token-based — open to supervisor invitees, no session required
     try {
         const result = await PhdWorkflowService.submitSupervisorResponse(token, accepted);
         return { success: true, data: result };
@@ -44,6 +74,9 @@ export async function submitSupervisorResponseAction(token: string, accepted: bo
 }
 
 export async function verifyCandidacyFeesAction(phdApplicationId: number, sessionId: number) {
+    const allowed = await requirePermission("phd.fees.verify", ["admin", "superadmin", "bursar"]);
+    if (!allowed) return { success: false, error: "Unauthorized: You do not have permission to verify candidacy fees." };
+
     try {
         const result = await PhdWorkflowService.verifyCandidacyFees(phdApplicationId, sessionId);
         revalidatePath(`/student/phd`);
@@ -54,10 +87,22 @@ export async function verifyCandidacyFeesAction(phdApplicationId: number, sessio
 }
 
 export async function uploadInitialThesisAction(phdApplicationId: number, fileUrl: string) {
+    // Only the student owning this application may upload their thesis
+    const session = await auth();
+    if (!session?.user) return { success: false, error: "Unauthorized: You must be logged in." };
+
     try {
         return await db.transaction(async (tx) => {
             const [app] = await tx.select().from(phdApplications).where(eq(phdApplications.id, phdApplicationId)).limit(1);
             if (!app) throw new Error("PhD application not found");
+
+            // Verify the authenticated user owns this application
+            const [student] = await tx.select().from(students)
+                .where(eq(students.id, app.studentId))
+                .limit(1);
+            if (!student || student.userId?.toString() !== session.user!.id) {
+                return { success: false, error: "Unauthorized: This application does not belong to your account." };
+            }
 
             // Insert thesis
             const [inserted] = await tx.insert(phdTheses).values({
@@ -89,6 +134,9 @@ export async function submitThesisReviewAction(
     action: 'approve' | 'reject',
     comment: string
 ) {
+    const allowed = await requirePermission("phd.thesis.review", ["admin", "superadmin"]);
+    if (!allowed) return { success: false, error: "Unauthorized: You do not have permission to review PhD theses." };
+
     try {
         const result = await PhdWorkflowService.submitThesisReview(thesisId, reviewerId, stage, action, comment);
         revalidatePath(`/student/phd`);
@@ -105,8 +153,23 @@ export async function submitCorrectedThesisAction(
     turnitinReportUrl: string,
     turnitinScore: number
 ) {
+    // Only the student owning this application may submit corrections
+    const session = await auth();
+    if (!session?.user) return { success: false, error: "Unauthorized: You must be logged in." };
+
     try {
         return await db.transaction(async (tx) => {
+            // Verify ownership
+            const [app] = await tx.select().from(phdApplications).where(eq(phdApplications.id, phdApplicationId)).limit(1);
+            if (!app) throw new Error("PhD application not found");
+
+            const [student] = await tx.select().from(students)
+                .where(eq(students.id, app.studentId))
+                .limit(1);
+            if (!student || student.userId?.toString() !== session.user!.id) {
+                return { success: false, error: "Unauthorized: This application does not belong to your account." };
+            }
+
             // Retrieve plagiarism threshold from system settings (default is 15%)
             const [limitSetting] = await tx.select()
                 .from(systemSettings)
@@ -152,6 +215,9 @@ export async function scheduleDefenseAction(
     location: string,
     examiners: Array<{ name: string; email: string; type: 'internal' | 'external'; honorarium: number }>
 ) {
+    const allowed = await requirePermission("phd.defense.schedule", ["admin", "superadmin"]);
+    if (!allowed) return { success: false, error: "Unauthorized: You do not have permission to schedule PhD defenses." };
+
     try {
         const result = await PhdWorkflowService.scheduleDefense(phdApplicationId, defenseDate, location, examiners);
         revalidatePath(`/student/phd`);
@@ -163,6 +229,9 @@ export async function scheduleDefenseAction(
 }
 
 export async function recordDefenseResultAction(phdApplicationId: number, status: 'successful' | 'failed') {
+    const allowed = await requirePermission("phd.defense.record_result", ["admin", "superadmin"]);
+    if (!allowed) return { success: false, error: "Unauthorized: You do not have permission to record PhD defense results." };
+
     try {
         return await db.transaction(async (tx) => {
             const [defense] = await tx.select().from(phdDefenses).where(eq(phdDefenses.phdApplicationId, phdApplicationId)).limit(1);
@@ -189,6 +258,9 @@ export async function recordDefenseResultAction(phdApplicationId: number, status
 }
 
 export async function confirmGraduationAction(phdApplicationId: number) {
+    const allowed = await requirePermission("phd.graduation.confirm", ["admin", "superadmin"]);
+    if (!allowed) return { success: false, error: "Unauthorized: Provost-level approval is required to confirm PhD graduations." };
+
     try {
         return await db.transaction(async (tx) => {
             const [defense] = await tx.select().from(phdDefenses).where(eq(phdDefenses.phdApplicationId, phdApplicationId)).limit(1);
@@ -214,6 +286,20 @@ export async function confirmGraduationAction(phdApplicationId: number) {
 }
 
 export async function getPhdCandidateStatusAction(studentId: number) {
+    // The student themselves OR any admin/coordinator can view
+    const session = await auth();
+    if (!session?.user) return { success: false, error: "Unauthorized" };
+
+    const isAdmin = await hasRole("admin") || await hasRole("superadmin") || await hasPermission("phd.applications.view");
+
+    if (!isAdmin) {
+        // Verify this student belongs to the authenticated user
+        const [student] = await db.select().from(students).where(eq(students.id, studentId)).limit(1);
+        if (!student || student.userId?.toString() !== session.user.id) {
+            return { success: false, error: "Unauthorized: You can only view your own PhD status." };
+        }
+    }
+
     try {
         const [app] = await db.select()
             .from(phdApplications)
@@ -243,6 +329,9 @@ export async function getPhdCandidateStatusAction(studentId: number) {
 }
 
 export async function getPhdApplicationsListAction() {
+    const allowed = await requirePermission("phd.applications.view", ["admin", "superadmin"]);
+    if (!allowed) return { success: false, error: "Unauthorized: You do not have permission to view PhD applications." };
+
     try {
         const list = await db.select({
             id: phdApplications.id,

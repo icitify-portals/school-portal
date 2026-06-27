@@ -29,7 +29,9 @@ export async function bulkImportUsers(data: any[]) {
                     name,
                     email,
                     password: passwordHash,
-                    role: (roleName?.toLowerCase() === 'admin' || roleName?.toLowerCase() === 'staff') ? roleName.toLowerCase() : 'student'
+                    role: (roleName?.toLowerCase() === 'admin' || roleName?.toLowerCase() === 'staff') ? roleName.toLowerCase() : 'student',
+                    // SECURITY FIX: Force users to change the default "welcome123" password on first login
+                    requiresPasswordChange: true,
                 });
 
                 const userId = newUser.insertId;
@@ -168,7 +170,9 @@ export async function resetUserPassword(userId: number, newPassword?: string) {
         }
 
         revalidatePath("/admin/users");
-        return { success: true, message: `Password reset successfully to: ${passwordToSet}` };
+        // SECURITY FIX M-2: Never include the password value in a server action response.
+        // The password is never returned to the client — callers receive a generic acknowledgment.
+        return { success: true, message: "Password has been reset. The user will be prompted to change it on next login." };
     } catch (error) {
         console.error("Reset Password Error:", error);
         return { success: false, error: "Failed to reset password." };

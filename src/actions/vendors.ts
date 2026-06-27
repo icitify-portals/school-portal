@@ -4,12 +4,11 @@ import { db } from "@/db/db";
 import { vendors } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import { hasRole } from "@/lib/rbac";
+import { hasRole, hasPermission } from "@/lib/rbac";
 
 async function ensureVendorManagementAccess() {
-    const isBursar = await hasRole("bursar");
-    const isStaff = await hasRole("bursary_staff");
-    if (!isBursar && !isStaff) throw new Error("Unauthorized vendor management access");
+    const isBursar = await hasPermission("finance.vendors.manage") || await hasRole("bursar") || await hasRole("bursary_staff") || await hasRole("admin") || await hasRole("superadmin");
+    if (!isBursar) throw new Error("Unauthorized vendor management access");
 }
 
 export async function getVendors() {

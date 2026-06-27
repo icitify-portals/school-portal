@@ -6,16 +6,25 @@ import { verifyPayment } from '@/actions/payment-gateways';
 
 export async function GET(request: Request) {
     try {
+        // SECURITY FIX C-4: Require CRON_SECRET_KEY to be explicitly configured.
+        // Never fall back to a hardcoded known-plaintext string.
+        const expectedKey = process.env.CRON_SECRET_KEY;
+        if (!expectedKey) {
+            console.error("[CRON] CRON_SECRET_KEY is not configured. Aborting for security.");
+            return NextResponse.json(
+                { message: "Server misconfiguration. Cron endpoint unavailable." },
+                { status: 503 }
+            );
+        }
+
         // Secure the cron endpoint. Require an Authorization header or an API key query param
         const { searchParams } = new URL(request.url);
         const cronKey = searchParams.get('cron_key');
-        
-        // This key should be set in .env. Example: CRON_SECRET_KEY=my_secure_cron_key
-        const expectedKey = process.env.CRON_SECRET_KEY || 'default_insecure_cron_key';
 
-        if (cronKey !== expectedKey) {
+        if (!cronKey || cronKey !== expectedKey) {
             return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
         }
+
 
         // Find all pending transactions
         const pendingTxs = await db.select()

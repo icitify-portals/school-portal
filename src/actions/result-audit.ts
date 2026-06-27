@@ -3,11 +3,11 @@
 import { db } from "@/db/db";
 import { resultEditLogs, users, students, courses, academicSessions } from "@/db/schema";
 import { eq, desc, sql } from "drizzle-orm";
-import { hasRole } from "@/lib/rbac";
+import { hasRole, hasPermission } from "@/lib/rbac";
 
 export async function getResultAuditLogs() {
     try {
-        const isPrincipal = await hasRole("principal") || await hasRole("superadmin");
+        const isPrincipal = await hasPermission("academic.results.audit") || await hasRole("principal") || await hasRole("superadmin");
         if (!isPrincipal) throw new Error("Unauthorized: Audit access required");
 
         const logs = await db.select({

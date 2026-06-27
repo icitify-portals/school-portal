@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/db/db";
 import { transcriptRequests, users, students } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
-import { hasRole } from "@/lib/rbac";
+import { hasRole, hasPermission } from "@/lib/rbac";
 
 export async function submitTranscriptRequestAction(data: any) {
     try {
@@ -40,7 +40,7 @@ export async function getTranscriptRequestsAction() {
 
 export async function approveAndDispatchTranscriptAction(requestId: number) {
     try {
-        const isRegistrar = await hasRole("admin") || await hasRole("superadmin");
+        const isRegistrar = await hasPermission("academic.sign_transcript") || await hasRole("registrar") || await hasRole("admin") || await hasRole("superadmin");
         if (!isRegistrar) throw new Error("Unauthorized: Registrar access required");
         
         const userId = 1; // Current User

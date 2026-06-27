@@ -8,6 +8,7 @@ import {
 } from "@/db/schema";
 import { eq, and, or, sql, desc, count, inArray } from "drizzle-orm";
 import { auth } from "@/auth";
+import { hasPermission, hasRole } from "@/lib/rbac";
 import { revalidatePath } from "next/cache";
 
 /**
@@ -131,6 +132,9 @@ export async function applyForHostel(hostelId: number) {
  * Approve application and set payment deadline
  */
 export async function approveHostelApplication(applicationId: number) {
+    const allowed = await hasPermission("hostel.applications.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("hostel_manager");
+    if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to approve applications" };
+
     const session = await auth();
     if (!session?.user) return { success: false, error: "Unauthorized" };
 
@@ -172,6 +176,9 @@ export async function approveHostelApplication(applicationId: number) {
  * Allocate Room - Optional Dynamic Logic
  */
 export async function allocateStudentToRoom(applicationId: number, roomId: number) {
+    const allowed = await hasPermission("hostel.allocation.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("hostel_manager");
+    if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to allocate room" };
+
     try {
         const [room] = await db.select()
             .from(hostelRooms)
@@ -203,6 +210,9 @@ export async function allocateStudentToRoom(applicationId: number, roomId: numbe
  * Dynamic Allocation Logic
  */
 export async function dynamicAllocateStudent(applicationId: number) {
+    const allowed = await hasPermission("hostel.allocation.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("hostel_manager");
+    if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to allocate room" };
+
     try {
         const [application] = await db.select().from(hostelApplications).where(eq(hostelApplications.id, applicationId)).limit(1);
         if (!application) return { success: false, error: "Application not found" };
@@ -233,6 +243,9 @@ export async function dynamicAllocateStudent(applicationId: number) {
  * Batch Expiry for Nullification
  */
 export async function nullifyExpiredApplications() {
+    const allowed = await hasPermission("hostel.applications.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("hostel_manager");
+    if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to nullify expired applications" };
+
     try {
         const now = new Date();
         await db.update(hostelApplications)
@@ -294,6 +307,9 @@ export async function getHostelSettings(hostelId: number) {
 }
 
 export async function updateHostelSettings(hostelId: number, values: any) {
+    const allowed = await hasPermission("hostel.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("hostel_manager");
+    if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to update hostel settings" };
+
     try {
         const existing = await getHostelSettings(hostelId);
         if (existing) {
@@ -305,6 +321,22 @@ export async function updateHostelSettings(hostelId: number, values: any) {
         return { success: true };
     } catch (error) {
         return { success: false, error: "Failed to update settings" };
+    }
+}
+
+export async function processHostelPayment(applicationId: number) {
+    const session = await auth();
+    if (!session?.user) return { success: false, error: "Unauthorized" };
+
+    try {
+        await db.update(hostelApplications).set({
+            paymentStatus: 'paid'
+        }).where(eq(hostelApplications.id, applicationId));
+
+        revalidatePath('/student/finance');
+        return { success: true };
+    } catch (error) {
+        return { success: false, error: "Payment failed to process" };
     }
 }
 
@@ -421,6 +453,9 @@ export async function updateMaintenanceStatus(id: number, values: {
     resolutionNotes?: string,
     assignedStaffId?: number
 }) {
+    const allowed = await hasPermission("maintenance.request.resolve") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("hostel_manager");
+    if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to resolve maintenance requests" };
+
     const session = await auth();
     if (!session?.user) return { error: "Unauthorized" };
 
@@ -459,6 +494,9 @@ export async function upsertHostelInventoryItem(values: {
     description?: string,
     totalQuantity: number
 }) {
+    const allowed = await hasPermission("inventory.items.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("hostel_manager");
+    if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to manage inventory" };
+
     const session = await auth();
     if (!session?.user) return { error: "Unauthorized" };
 
@@ -502,6 +540,9 @@ export async function assignInventoryToRoom(values: {
     condition: 'excellent' | 'good' | 'fair' | 'poor' | 'broken',
     notes?: string
 }) {
+    const allowed = await hasPermission("inventory.items.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("hostel_manager");
+    if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to manage inventory" };
+
     const session = await auth();
     if (!session?.user) return { error: "Unauthorized" };
 
@@ -529,6 +570,9 @@ export async function assignInventoryToRoom(values: {
 }
 
 export async function deleteRoomInventory(id: number) {
+    const allowed = await hasPermission("inventory.items.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("hostel_manager");
+    if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to manage inventory" };
+
     const session = await auth();
     if (!session?.user) return { error: "Unauthorized" };
 
@@ -545,6 +589,9 @@ export async function deleteRoomInventory(id: number) {
  * Check-in / Check-out Workflow
  */
 export async function checkInApplicant(applicationId: number, notes?: string) {
+    const allowed = await hasPermission("hostel.allocation.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("hostel_manager");
+    if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to check in applicant" };
+
     const session = await auth();
     if (!session?.user) return { error: "Unauthorized" };
 
@@ -565,6 +612,9 @@ export async function checkInApplicant(applicationId: number, notes?: string) {
 }
 
 export async function checkOutApplicant(applicationId: number, notes?: string) {
+    const allowed = await hasPermission("hostel.allocation.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("hostel_manager");
+    if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to check out applicant" };
+
     const session = await auth();
     if (!session?.user) return { error: "Unauthorized" };
 
@@ -606,6 +656,9 @@ export async function checkOutApplicant(applicationId: number, notes?: string) {
  * Hostel Clearance & Session Transition
  */
 export async function clearHostelAllocations(hostelId: number) {
+    const allowed = await hasPermission("hostel.allocation.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("hostel_manager");
+    if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to clear hostel allocations" };
+
     const session = await auth();
     if (!session?.user) return { error: "Unauthorized" };
 
@@ -648,6 +701,9 @@ export async function clearHostelAllocations(hostelId: number) {
  * Admin: Create/Update Hostels
  */
 export async function createHostel(values: any) {
+    const allowed = await hasPermission("hostel.manage") || await hasRole("admin") || await hasRole("superadmin");
+    if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to create hostel" };
+
     const session = await auth();
     if (!session?.user) return { success: false, error: "Unauthorized" };
 
@@ -661,6 +717,9 @@ export async function createHostel(values: any) {
 }
 
 export async function updateHostel(id: number, values: any) {
+    const allowed = await hasPermission("hostel.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("hostel_manager");
+    if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to update hostel" };
+
     const session = await auth();
     if (!session?.user) return { success: false, error: "Unauthorized" };
 
@@ -677,6 +736,9 @@ export async function updateHostel(id: number, values: any) {
  * Admin: Management of Blocks & Rooms
  */
 export async function createHostelBlock(values: any) {
+    const allowed = await hasPermission("hostel.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("hostel_manager");
+    if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to manage blocks" };
+
     try {
         await db.insert(hostelBlocks).values(values);
         revalidatePath('/admin/hostels/buildings');
@@ -687,6 +749,9 @@ export async function createHostelBlock(values: any) {
 }
 
 export async function createHostelRoom(values: any) {
+    const allowed = await hasPermission("hostel.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("hostel_manager");
+    if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to manage rooms" };
+
     try {
         await db.insert(hostelRooms).values(values);
         // Room creation might affect hostel total capacity depending on how it's calculated
@@ -698,6 +763,9 @@ export async function createHostelRoom(values: any) {
 }
 
 export async function updateHostelRoom(id: number, values: any) {
+    const allowed = await hasPermission("hostel.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("hostel_manager");
+    if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to manage rooms" };
+
     try {
         await db.update(hostelRooms).set(values).where(eq(hostelRooms.id, id));
         revalidatePath('/admin/hostels/buildings');
@@ -708,6 +776,9 @@ export async function updateHostelRoom(id: number, values: any) {
 }
 
 export async function deleteHostelRoom(id: number) {
+    const allowed = await hasPermission("hostel.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("hostel_manager");
+    if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to manage rooms" };
+
     try {
         await db.delete(hostelRooms).where(eq(hostelRooms.id, id));
         revalidatePath('/admin/hostels/buildings');
@@ -718,6 +789,9 @@ export async function deleteHostelRoom(id: number) {
 }
 
 export async function rejectHostelApplication(applicationId: number) {
+    const allowed = await hasPermission("hostel.applications.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("hostel_manager");
+    if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to manage applications" };
+
     try {
         await db.update(hostelApplications)
             .set({ status: 'rejected' })
@@ -764,6 +838,9 @@ export async function getAllMaintenanceRequests() {
 }
 
 export async function updateMaintenanceRequest(id: number, values: any) {
+    const allowed = await hasPermission("maintenance.request.resolve") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("hostel_manager");
+    if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to resolve maintenance requests" };
+
     const session = await auth();
     if (!session?.user) return { success: false, error: "Unauthorized" };
 

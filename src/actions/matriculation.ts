@@ -5,6 +5,7 @@ import { db } from "@/db/db";
 import { matriculationSettings, matriculationSequences, departments, faculties, institutionalUnits } from "@/db/schema";
 import { eq, and, isNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { hasPermission, hasRole } from "@/lib/rbac";
 
 export async function getMatriculationSettings() {
     try {
@@ -42,6 +43,9 @@ export async function saveMatriculationSetting(data: {
     deptId?: number;
 }) {
     try {
+        const allowed = await hasPermission("academic.matriculation.manage") || await hasRole("admin") || await hasRole("superadmin");
+        if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to manage matriculation settings" };
+
         if (data.id) {
             await db.update(matriculationSettings).set({
                 nomenclature: data.nomenclature,
@@ -73,6 +77,9 @@ export async function saveMatriculationSetting(data: {
 
 export async function deleteMatriculationSetting(id: number) {
     try {
+        const allowed = await hasPermission("academic.matriculation.manage") || await hasRole("admin") || await hasRole("superadmin");
+        if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to delete matriculation setting" };
+
         // Can't delete if sequences exist, so we delete sequences first
         await db.delete(matriculationSequences).where(eq(matriculationSequences.settingId, id));
         await db.delete(matriculationSettings).where(eq(matriculationSettings.id, id));

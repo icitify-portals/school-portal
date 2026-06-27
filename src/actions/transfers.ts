@@ -1,10 +1,12 @@
 "use server";
 
 import { db } from "@/db/db";
-import { studentCourseTransfers, students, faculties, departments, users, institutionalUnits } from "@/db/schema";
+import { studentCourseTransfers, students, faculties, departments, users, institutionalUnits, programmes, systemSettings, transactions } from "@/db/schema";
 import { eq, and, sql, inArray } from "drizzle-orm";
 import { auth } from "@/auth";
 import { revalidatePath } from "next/cache";
+import { initiatePayment } from "./payment-gateways";
+import { hasPermission, hasRole } from "@/lib/rbac";
 
 export async function submitTransferRequest(data: {
     studentId: number;
@@ -32,13 +34,43 @@ export async function submitTransferRequest(data: {
 
         if (existing) return { success: false, error: "You already have a pending transfer request." };
 
+        // Check Transfer Fee
+        const [feeSetting] = await db.select().from(systemSettings).where(eq(systemSettings.settingKey, 'transfer_fee_amount')).limit(1);
+        const transferFee = feeSetting?.settingValue ? parseFloat(feeSetting.settingValue) : 0;
+        
+        let transactionId = null;
+        let paymentUrl = null;
+        
+        if (transferFee > 0) {
+            const reference = `TRF-${Date.now()}-${data.studentId}`;
+            // Create pending transaction
+            const [txRes] = await db.insert(transactions).values({
+                studentId: data.studentId,
+                amount: transferFee.toString(),
+                type: 'debit',
+                purpose: 'Inter-Departmental Transfer Fee',
+                status: 'pending',
+                gateway: 'remita',
+                gatewayReference: reference
+            });
+            transactionId = txRes.insertId;
+
+            const initRes = await initiatePayment('remita', transferFee, reference, session.user.email || 'student@school.edu.ng');
+            if (!initRes.success) {
+                return { success: false, error: initRes.error || "Failed to initialize payment gateway" };
+            }
+            paymentUrl = initRes.paymentUrl;
+        }
+
         await db.insert(studentCourseTransfers).values({
             ...data,
-            finalStatus: "pending"
+            finalStatus: "pending",
+            feeStatus: transferFee > 0 ? "pending" : "waived",
+            transactionId: transactionId
         });
 
         revalidatePath("/student/transfer");
-        return { success: true };
+        return { success: true, paymentUrl };
     } catch (error) {
         console.error("Transfer submission failed:", error);
         return { success: false, error: "Internal server error" };
@@ -52,6 +84,9 @@ export async function processTransferApproval(
     note?: string
 ) {
     try {
+        const allowed = await hasPermission("students.transfer.approve") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("registrar") || await hasRole("dean") || await hasRole("hod");
+        if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to process transfer approval" };
+
         const session = await auth();
         if (!session?.user?.id) return { success: false, error: "Unauthorized" };
 
@@ -106,6 +141,9 @@ export async function processTransferApproval(
 
 export async function finalizeTransfer(transferId: number) {
     try {
+        const allowed = await hasPermission("students.transfer.approve") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("registrar");
+        if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to finalize transfer" };
+
         const session = await auth();
         if (!session?.user?.id) return { success: false, error: "Unauthorized" };
 
@@ -128,8 +166,6 @@ export async function finalizeTransfer(transferId: number) {
                 .set({
                     deptId: transfer.proposedDeptId,
                     currentLevel: transfer.proposedLevel,
-                    // Note: Faculty is usually derived from Department in our schema via programme, 
-                    // but if students table has programmeId, we should update that too.
                 })
                 .where(eq(students.id, transfer.studentId));
 
@@ -152,45 +188,113 @@ export async function finalizeTransfer(transferId: number) {
 }
 
 export async function getPendingTransfersForStaff(userId: number) {
-    // This logic would fetch transfers where the current user is the HOD/Dean of the relevant unit
-    // Simplified for now: fetch all
-    const results = await db.select({
-        transfer: studentCourseTransfers,
-        student: students,
-        currentDept: departments,
-        proposedDept: departments, // This is tricky with double joins to same table
-        currentFaculty: faculties,
-        proposedFaculty: faculties
-    })
-    .from(studentCourseTransfers)
-    .innerJoin(students, eq(studentCourseTransfers.studentId, students.id))
-    .innerJoin(departments, eq(studentCourseTransfers.currentDeptId, departments.id))
-    .innerJoin(faculties, eq(studentCourseTransfers.currentFacultyId, faculties.id));
+    try {
+        const allowed = await hasPermission("students.transfer.approve") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("registrar") || await hasRole("dean") || await hasRole("hod");
+        if (!allowed) return [];
 
-    // To handle multiple joins to same table (Dept/Faculty), it's often cleaner for MariaDB < 10.10
-    // to just fetch the base and then fetch the related info if the list is small, 
-    // or use aliases in drizzle select. 
-    // Let's use the alias approach or just sequential fetch for clarity in this refactor.
+        const baseTransfers = await db.select().from(studentCourseTransfers);
+        if (baseTransfers.length === 0) return [];
 
-    const baseTransfers = await db.select().from(studentCourseTransfers);
+        const studentIds = Array.from(new Set(baseTransfers.map(t => t.studentId)));
+        const deptIds = Array.from(new Set([...baseTransfers.map(t => t.currentDeptId), ...baseTransfers.map(t => t.proposedDeptId)]));
+        const facultyIds = Array.from(new Set([...baseTransfers.map(t => t.currentFacultyId), ...baseTransfers.map(t => t.proposedFacultyId)]));
+
+        const [allStudents, allDepts, allFaculties] = await Promise.all([
+            db.select().from(students).where(inArray(students.id, studentIds)),
+            db.select().from(departments).where(inArray(departments.id, deptIds)),
+            db.select().from(faculties).where(inArray(faculties.id, facultyIds))
+        ]);
+
+        return baseTransfers.map(t => ({
+            ...t,
+            student: allStudents.find(s => s.id === t.studentId),
+            currentDept: allDepts.find(d => d.id === t.currentDeptId),
+            proposedDept: allDepts.find(d => d.id === t.proposedDeptId),
+            currentFaculty: allFaculties.find(f => f.id === t.currentFacultyId),
+            proposedFaculty: allFaculties.find(f => f.id === t.proposedFacultyId)
+        }));
+    } catch (error) {
+        console.error("Failed to fetch pending transfers:", error);
+        return [];
+    }
+}
+
+export async function getStudentTransferRequests(studentId: number) {
+    const baseTransfers = await db.select().from(studentCourseTransfers).where(eq(studentCourseTransfers.studentId, studentId));
     if (baseTransfers.length === 0) return [];
 
-    const studentIds = Array.from(new Set(baseTransfers.map(t => t.studentId)));
     const deptIds = Array.from(new Set([...baseTransfers.map(t => t.currentDeptId), ...baseTransfers.map(t => t.proposedDeptId)]));
     const facultyIds = Array.from(new Set([...baseTransfers.map(t => t.currentFacultyId), ...baseTransfers.map(t => t.proposedFacultyId)]));
 
-    const [allStudents, allDepts, allFaculties] = await Promise.all([
-        db.select().from(students).where(inArray(students.id, studentIds)),
+    const [allDepts, allFaculties] = await Promise.all([
         db.select().from(departments).where(inArray(departments.id, deptIds)),
         db.select().from(faculties).where(inArray(faculties.id, facultyIds))
     ]);
 
     return baseTransfers.map(t => ({
         ...t,
-        student: allStudents.find(s => s.id === t.studentId),
         currentDept: allDepts.find(d => d.id === t.currentDeptId),
         proposedDept: allDepts.find(d => d.id === t.proposedDeptId),
         currentFaculty: allFaculties.find(f => f.id === t.currentFacultyId),
         proposedFaculty: allFaculties.find(f => f.id === t.proposedFacultyId)
     }));
 }
+
+export async function getStudentTransferPageData(userId: number) {
+    // 1. Get student
+    const [student] = await db.select().from(students).where(eq(students.userId, userId)).limit(1);
+    if (!student) return null;
+
+    // 2. Get active transfer requests
+    const requests = await getStudentTransferRequests(student.id);
+    let activeRequest = requests.find(r => r.finalStatus === "pending");
+
+    // 2.1 Sync Payment Status if pending
+    if (activeRequest && activeRequest.feeStatus === "pending" && activeRequest.transactionId) {
+        const [tx] = await db.select().from(transactions).where(eq(transactions.id, activeRequest.transactionId)).limit(1);
+        if (tx && tx.status === "completed") {
+            await db.update(studentCourseTransfers)
+                .set({ feeStatus: 'paid' })
+                .where(eq(studentCourseTransfers.id, activeRequest.id));
+            activeRequest.feeStatus = 'paid';
+        }
+    }
+
+    // 3. Get faculties and depts
+    const allFaculties = await db.select().from(faculties);
+    const allDepts = await db.select().from(departments);
+
+    // 4. Determine current faculty/dept
+    let currentDept = null;
+    let currentFaculty = null;
+    
+    if (student.deptId) {
+        currentDept = allDepts.find(d => d.id === student.deptId);
+        if (currentDept) {
+            currentFaculty = allFaculties.find(f => f.id === currentDept.facultyId);
+        }
+    } else if (student.programmeId) {
+        const [prog] = await db.select().from(programmes).where(eq(programmes.id, student.programmeId)).limit(1);
+        if (prog?.departmentId) {
+            currentDept = allDepts.find(d => d.id === prog.departmentId);
+            if (currentDept) {
+                currentFaculty = allFaculties.find(f => f.id === currentDept.facultyId);
+            }
+        }
+    }
+
+    // 5. Fetch Transfer Fee Settings
+    const [feeSetting] = await db.select().from(systemSettings).where(eq(systemSettings.settingKey, 'transfer_fee_amount')).limit(1);
+    const transferFee = feeSetting?.settingValue ? parseFloat(feeSetting.settingValue) : 0;
+
+    return {
+        student,
+        currentDept,
+        currentFaculty,
+        activeRequest,
+        faculties: allFaculties,
+        departments: allDepts,
+        transferFee
+    };
+}
+

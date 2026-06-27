@@ -1,6 +1,6 @@
 "use server";
 
-import { exec } from "child_process";
+import { exec, execFile } from "child_process";
 import path from "path";
 import fs from "fs";
 import { promisify } from "util";
@@ -10,7 +10,8 @@ import AdmZip from "adm-zip";
 
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 
-const execPromise = promisify(exec);
+const execFilePromise = promisify(execFile);
+
 
 const BACKUP_DIR = path.join(process.cwd(), "backups");
 const UPLOADS_DIR = path.join(process.cwd(), "public", "uploads");
@@ -82,8 +83,19 @@ export async function runBackup() {
         const dbName = process.env.DB_NAME || "moodledb";
         const dbHost = process.env.DB_HOST || "localhost";
 
-        const dumpCommand = `mysqldump -h ${dbHost} -u ${dbUser} ${dbPass ? `-p${dbPass}` : ""} ${dbName} > "${dbBackupFile}"`;
-        await execPromise(dumpCommand);
+        // SECURITY FIX C-1: Use execFile with an argument array — no shell interpolation.
+        // Environment variable values (dbHost, dbUser, dbPass, dbName) are passed as
+        // discrete arguments and never concatenated into a shell string, preventing
+        // shell injection if any variable were ever sourced from user input.
+        const mysqldumpArgs = [
+            `-h${dbHost}`,
+            `-u${dbUser}`,
+            ...(dbPass ? [`--password=${dbPass}`] : []),
+            `--result-file=${dbBackupFile}`,
+            dbName,
+        ];
+        await execFilePromise("mysqldump", mysqldumpArgs, { shell: false });
+
 
         // 2. File Backup
         const zip = new AdmZip();

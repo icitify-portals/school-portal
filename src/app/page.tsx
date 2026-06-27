@@ -1,9 +1,11 @@
 import { db } from "@/db/db";
-import { cmsHomePageSections, cmsSectionMedia } from "@/db/schema";
+import { cmsHomePageSections, cmsSectionMedia, cmsPages } from "@/db/schema";
 import { eq, asc } from "drizzle-orm";
 import { getHomePageSections } from "@/actions/cms";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
+import { sanitizeRichContent } from "@/lib/sanitizer";
+import { getSettingByKey } from "@/actions/settings";
 import {
     ArrowRight,
     Plus,
@@ -36,6 +38,45 @@ export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
     const session = await auth();
+
+    const homepagePageId = await getSettingByKey("cms_homepage_page_id") || "default";
+
+    if (homepagePageId !== "default") {
+        try {
+            const pageId = parseInt(homepagePageId);
+            if (!isNaN(pageId)) {
+                const page = await db.query.cmsPages.findFirst({
+                    where: eq(cmsPages.id, pageId)
+                });
+                if (page && page.status === "published") {
+                    return (
+                        <div className="min-h-screen bg-white">
+                            {/* Header / Hero for the page */}
+                            <div className="bg-slate-900 pt-32 pb-20 text-center px-4 relative overflow-hidden">
+                                <div className="absolute inset-0 bg-gradient-to-br from-indigo-900/20 via-slate-900 to-slate-950 z-0" />
+                                <div className="max-w-4xl mx-auto relative z-10 space-y-4">
+                                    <h1 className="text-4xl md:text-6xl font-black text-white uppercase italic tracking-tighter">
+                                        {page.title}
+                                    </h1>
+                                    <div className="h-1 w-20 bg-indigo-500 mx-auto rounded-full" />
+                                </div>
+                            </div>
+
+                            {/* Main Content */}
+                            <main className="max-w-4xl mx-auto px-4 py-16 sm:py-24">
+                                <article
+                                    className="prose prose-slate prose-lg lg:prose-xl max-w-none prose-headings:font-black prose-headings:uppercase prose-headings:italic prose-a:text-indigo-600 prose-img:rounded-2xl prose-img:shadow-xl"
+                                    dangerouslySetInnerHTML={{ __html: sanitizeRichContent(page.content || "") }}
+                                />
+                            </main>
+                        </div>
+                    );
+                }
+            }
+        } catch (error) {
+            console.error("Failed to load custom CMS homepage:", error);
+        }
+    }
 
     let sections: any[] = [];
     try {
@@ -180,7 +221,7 @@ function SectionRenderer({ section, session }: { section: any; session: any }) {
                         {content.body && (
                             <div
                                 className="prose prose-slate prose-lg lg:prose-xl mx-auto text-left prose-headings:font-black prose-headings:uppercase prose-headings:italic prose-a:text-emerald-600 font-medium text-slate-600"
-                                dangerouslySetInnerHTML={{ __html: content.body }}
+                                dangerouslySetInnerHTML={{ __html: sanitizeRichContent(content.body) }}
                             />
                         )}
                     </div>

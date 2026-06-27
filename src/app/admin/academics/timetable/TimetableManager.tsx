@@ -81,12 +81,15 @@ export default function TimetableManager({
     const [isLoading, setIsLoading] = useState(false);
     const [showSlotDialog, setShowSlotDialog] = useState(false);
     const [showSettingsDialog, setShowSettingsDialog] = useState(false);
+    const [showVenueDialog, setShowVenueDialog] = useState(false);
     const [showReviewDialog, setShowReviewDialog] = useState(false);
     const [reviewNotes, setReviewNotes] = useState("");
+    const [showAutoScheduleDialog, setShowAutoScheduleDialog] = useState(false);
+    const [preserveExisting, setPreserveExisting] = useState(true);
+    const [isGenerating, setIsGenerating] = useState(false);
     const [newComment, setNewComment] = useState("");
     const [selectedAssignment, setSelectedAssignment] = useState<any>(null);
     const [venues, setVenues] = useState<any[]>([]);
-    const [showVenueDialog, setShowVenueDialog] = useState(false);
     const [newVenue, setNewVenue] = useState({ name: "", capacity: "" });
 
     const times = generateTimeSlots(settings.timetableStart, settings.timetableEnd);
@@ -202,6 +205,20 @@ export default function TimetableManager({
             loadDeptData();
         } else {
             toast.error(res.error || "Failed to request revision");
+        }
+    }
+
+    async function handleAutoSchedule() {
+        setIsGenerating(true);
+        const { generateAutoTimetable } = await import("@/actions/timetable");
+        const res = await generateAutoTimetable(parseInt(deptId), session.id, session.currentSemester === '1' ? '1' : '2', preserveExisting);
+        setIsGenerating(false);
+        if (res.success) {
+            toast.success(res.message || "Auto-scheduled successfully");
+            setShowAutoScheduleDialog(false);
+            loadDeptData();
+        } else {
+            toast.error(res.error || "Failed to auto-schedule");
         }
     }
 
@@ -408,12 +425,20 @@ export default function TimetableManager({
                             </div>
                             <div className="flex gap-4">
                                 {submission.status === 'draft' && (
-                                    <Button
-                                        onClick={handleSubmitForApproval}
-                                        className="bg-indigo-600 hover:bg-indigo-700 text-white font-black px-8 h-12 rounded-xl shadow-xl shadow-indigo-500/20 uppercase text-[10px] tracking-widest"
-                                    >
-                                        Submit for Dean Approval
-                                    </Button>
+                                    <>
+                                        <Button
+                                            onClick={() => setShowAutoScheduleDialog(true)}
+                                            className="bg-indigo-600 hover:bg-indigo-700 text-white font-black px-8 h-12 rounded-xl shadow-xl shadow-indigo-500/20 uppercase text-[10px] tracking-widest"
+                                        >
+                                            <Wand2 className="w-4 h-4 mr-2" /> Auto-Schedule AI
+                                        </Button>
+                                        <Button
+                                            onClick={handleSubmitForApproval}
+                                            className="bg-slate-800 hover:bg-slate-900 text-white font-black px-8 h-12 rounded-xl shadow-xl shadow-slate-900/20 uppercase text-[10px] tracking-widest"
+                                        >
+                                            Submit for Dean Approval
+                                        </Button>
+                                    </>
                                 )}
                                 {submission.status === 'pending_approval' && canApprove && (
                                     <>
@@ -858,6 +883,43 @@ export default function TimetableManager({
                 setNewVenue={setNewVenue}
                 onSave={handleSaveVenue}
             />
+            <Dialog open={showAutoScheduleDialog} onOpenChange={setShowAutoScheduleDialog}>
+                <DialogContent className="sm:max-w-[425px] rounded-3xl border-none shadow-2xl">
+                    <DialogHeader>
+                        <DialogTitle className="text-xl font-black text-slate-900">AI Auto-Scheduler</DialogTitle>
+                        <DialogDescription>
+                            Automatically fill the timetable with optimal slots, avoiding all clashes and constraints.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="py-4 space-y-4">
+                        <div className="flex items-center space-x-2 bg-slate-50 p-4 rounded-xl">
+                            <input 
+                                type="checkbox" 
+                                id="preserve" 
+                                checked={preserveExisting} 
+                                onChange={(e) => setPreserveExisting(e.target.checked)} 
+                                className="w-4 h-4 text-indigo-600 rounded"
+                            />
+                            <label htmlFor="preserve" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                                Preserve existing manually-placed slots
+                            </label>
+                        </div>
+                        <p className="text-xs text-slate-500 px-1">
+                            If checked, the AI will schedule around blocks you've already created. If unchecked, the AI will completely wipe the board and start fresh.
+                        </p>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setShowAutoScheduleDialog(false)} className="rounded-xl">Cancel</Button>
+                        <Button 
+                            onClick={handleAutoSchedule} 
+                            disabled={isGenerating}
+                            className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl"
+                        >
+                            {isGenerating ? "Generating..." : "Generate Timetable"}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

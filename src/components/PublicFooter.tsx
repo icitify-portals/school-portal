@@ -1,17 +1,31 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { ShieldCheck, Facebook, Twitter, Instagram, Linkedin, Mail, Phone, MapPin } from "lucide-react";
+import { getMenusBySlot } from "@/actions/cms";
 
 export function PublicFooter() {
+    const [footerMenus, setFooterMenus] = useState<any[]>([]);
+
+    useEffect(() => {
+        getMenusBySlot('footer').then(res => {
+            if (res.success && res.data) setFooterMenus(res.data);
+        });
+    }, []);
+
+    // Group footer menus: first item is treated as a column group (label = heading, children = links)
+    // If items have children, render as columns. Otherwise render as a flat row.
+    const hasColumns = footerMenus.some(m => m.children && m.children.length > 0);
+
     return (
-        <footer 
+        <footer
             className="text-white pt-20 pb-10"
             style={{ backgroundColor: 'var(--brand-secondary, #0f172a)' }}
         >
             <div className="max-w-[1600px] w-full mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-16">
-                    {/* Brand Section */}
+                    {/* Brand Section — always shown */}
                     <div className="space-y-6">
                         <div className="flex items-center gap-2">
                             <div className="p-2 bg-indigo-600 rounded-xl">
@@ -33,64 +47,99 @@ export function PublicFooter() {
                         </div>
                     </div>
 
-                    {/* Quick Links */}
-                    <div>
-                        <h3 className="text-lg font-bold mb-6 uppercase tracking-widest text-[11px] text-indigo-400">Quick Links</h3>
-                        <ul className="space-y-4 text-sm text-slate-400">
-                            {['About Us', 'Admissions', 'Programmes', 'Student Portal', 'Faculty Support', 'Career Center'].map((link) => (
-                                <li key={link}>
-                                    <Link href="#" className="hover:text-white transition-colors">{link}</Link>
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
+                    {/* CMS-managed footer columns */}
+                    {footerMenus.length > 0 ? (
+                        hasColumns ? (
+                            // Each root item is a column with a heading and child links
+                            footerMenus.slice(0, 3).map(col => (
+                                <div key={col.id}>
+                                    <h3 className="text-lg font-bold mb-6 uppercase tracking-widest text-[11px] text-indigo-400">
+                                        {col.label}
+                                    </h3>
+                                    <ul className="space-y-4 text-sm text-slate-400">
+                                        {col.children?.map((link: any) => (
+                                            <li key={link.id}>
+                                                <Link href={link.href} className="hover:text-white transition-colors">
+                                                    {link.label}
+                                                </Link>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            ))
+                        ) : null
+                    ) : (
+                        // Fallback static columns when no footer CMS menus
+                        <>
+                            <div>
+                                <h3 className="text-lg font-bold mb-6 uppercase tracking-widest text-[11px] text-indigo-400">Quick Links</h3>
+                                <ul className="space-y-4 text-sm text-slate-400">
+                                    {['About Us', 'Admissions', 'Programmes', 'Student Portal', 'Faculty Support', 'Career Center'].map((link) => (
+                                        <li key={link}>
+                                            <Link href="#" className="hover:text-white transition-colors">{link}</Link>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
 
-                    {/* Resources */}
-                    <div>
-                        <h3 className="text-lg font-bold mb-6 uppercase tracking-widest text-[11px] text-indigo-400">Resources</h3>
-                        <ul className="space-y-4 text-sm text-slate-400">
-                            {['Academic Calendar', 'Fees & Payments', 'Library', 'E-Learning', 'Research', 'Alumni'].map((link) => (
-                                <li key={link}>
-                                    <Link href="#" className="hover:text-white transition-colors">{link}</Link>
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
+                            <div>
+                                <h3 className="text-lg font-bold mb-6 uppercase tracking-widest text-[11px] text-indigo-400">Resources</h3>
+                                <ul className="space-y-4 text-sm text-slate-400">
+                                    {['Academic Calendar', 'Fees & Payments', 'Library', 'E-Learning', 'Research', 'Alumni'].map((link) => (
+                                        <li key={link}>
+                                            <Link href="#" className="hover:text-white transition-colors">{link}</Link>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
 
-                    {/* Contact Info */}
-                    <div>
-                        <h3 className="text-lg font-bold mb-6 uppercase tracking-widest text-[11px] text-indigo-400">Contact Us</h3>
-                        <ul className="space-y-6 text-sm">
-                            <li className="flex gap-4">
-                                <div className="p-2 bg-white/5 rounded-lg h-fit text-indigo-400">
-                                    <MapPin className="w-4 h-4" />
-                                </div>
-                                <span className="text-slate-400">123 Education Boulevard, Academic City, State 90210</span>
-                            </li>
-                            <li className="flex gap-4">
-                                <div className="p-2 bg-white/5 rounded-lg h-fit text-indigo-400">
-                                    <Phone className="w-4 h-4" />
-                                </div>
-                                <span className="text-slate-400">+1 (555) 123-4567</span>
-                            </li>
-                            <li className="flex gap-4">
-                                <div className="p-2 bg-white/5 rounded-lg h-fit text-indigo-400">
-                                    <Mail className="w-4 h-4" />
-                                </div>
-                                <span className="text-slate-400">info@schoolportal.edu</span>
-                            </li>
-                        </ul>
-                    </div>
+                            <div>
+                                <h3 className="text-lg font-bold mb-6 uppercase tracking-widest text-[11px] text-indigo-400">Contact Us</h3>
+                                <ul className="space-y-6 text-sm">
+                                    <li className="flex gap-4">
+                                        <div className="p-2 bg-white/5 rounded-lg h-fit text-indigo-400">
+                                            <MapPin className="w-4 h-4" />
+                                        </div>
+                                        <span className="text-slate-400">123 Education Boulevard, Academic City, State 90210</span>
+                                    </li>
+                                    <li className="flex gap-4">
+                                        <div className="p-2 bg-white/5 rounded-lg h-fit text-indigo-400">
+                                            <Phone className="w-4 h-4" />
+                                        </div>
+                                        <span className="text-slate-400">+1 (555) 123-4567</span>
+                                    </li>
+                                    <li className="flex gap-4">
+                                        <div className="p-2 bg-white/5 rounded-lg h-fit text-indigo-400">
+                                            <Mail className="w-4 h-4" />
+                                        </div>
+                                        <span className="text-slate-400">info@schoolportal.edu</span>
+                                    </li>
+                                </ul>
+                            </div>
+                        </>
+                    )}
                 </div>
 
+                {/* Bottom bar */}
                 <div className="border-t border-white/5 pt-10 flex flex-col md:flex-row justify-between items-center gap-6">
                     <p className="text-slate-500 text-xs">
                         &copy; {new Date().getFullYear()} SchoolPortal Management System. All rights reserved.
                     </p>
                     <div className="flex gap-8 text-xs text-slate-500 font-bold uppercase tracking-widest">
-                        <Link href="#" className="hover:text-indigo-400">Privacy Policy</Link>
-                        <Link href="#" className="hover:text-indigo-400">Terms of Service</Link>
-                        <Link href="#" className="hover:text-indigo-400">Cookie Policy</Link>
+                        {/* Flat footer links with no children */}
+                        {footerMenus.filter(m => !m.children?.length).map(item => (
+                            <Link key={item.id} href={item.href} className="hover:text-indigo-400 transition-colors">
+                                {item.label}
+                            </Link>
+                        ))}
+                        {/* Fallback legal links if none set */}
+                        {footerMenus.filter(m => !m.children?.length).length === 0 && (
+                            <>
+                                <Link href="#" className="hover:text-indigo-400">Privacy Policy</Link>
+                                <Link href="#" className="hover:text-indigo-400">Terms of Service</Link>
+                                <Link href="#" className="hover:text-indigo-400">Cookie Policy</Link>
+                            </>
+                        )}
                     </div>
                 </div>
             </div>

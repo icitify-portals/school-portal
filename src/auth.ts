@@ -118,7 +118,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                     const attempts = (user.failedLoginAttempts || 0) + 1;
                     let lockoutUntil = null;
                     if (attempts >= 3) {
-                        lockoutUntil = new Date(Date.now() + 2 * 60 * 1000); // 2 minutes lockout
+                        // SECURITY FIX: Increased from 2 minutes to 15 minutes to resist brute-force attacks
+                        lockoutUntil = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes lockout
                     }
 
                     await db.update(users)
@@ -151,6 +152,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                     permissions: permissionNames,
                     schoolPortalId: (user as any).schoolPortalId,
                     requiresPasswordChange: (user as any).requiresPasswordChange,
+                    twoFactorPending: !!user.twoFactorEnabled,
                 };
             },
         }),
@@ -219,6 +221,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                         const { roleNames, permissionNames } = await fetchUserRolesAndPermissions(dbUser.id);
                         token.roles = roleNames;
                         token.permissions = permissionNames;
+                        token.twoFactorPending = !!dbUser.twoFactorEnabled;
                     }
                 } catch (e) {
                     console.error("OAuth DB lookup error:", e);
@@ -239,9 +242,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                 const impersonatedRole = cookieStore.get("impersonated_role")?.value;
                 const originalAdminId = cookieStore.get("original_admin_id")?.value;
 
-                if (impersonatedId && originalAdminId && token.role === 'admin') {
+                if (impersonatedId && originalAdminId && (token.role === 'admin' || token.role === 'superadmin')) {
                     (session.user as any).impersonating = true;
                     (session.user as any).originalId = originalAdminId;
+                    (session.user as any).originalRole = token.role;
                     (session.user as any).id = impersonatedId;
                     if (impersonatedRole) {
                         (session.user as any).role = impersonatedRole;

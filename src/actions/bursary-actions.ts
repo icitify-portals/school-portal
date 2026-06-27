@@ -2,11 +2,11 @@
 
 import { BursaryService } from "@/services/BursaryService";
 import { revalidatePath } from "next/cache";
-import { hasRole } from "@/lib/rbac";
+import { hasRole, hasPermission } from "@/lib/rbac";
 
 export async function getBursaryOverviewAction() {
     try {
-        const isAuth = await hasRole("admin") || await hasRole("superadmin") || await hasRole("bursar");
+        const isAuth = await hasPermission("finance.dashboard.view") || await hasPermission("finance.ledger.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("bursar");
         if (!isAuth) throw new Error("Unauthorized: Bursary access required");
 
         const data = await BursaryService.getFinancialOverview();
@@ -37,7 +37,7 @@ export async function requestExpenditureAction(data: {
 
 export async function getExpenditureLedgerAction() {
     try {
-        const isAuth = await hasRole("admin") || await hasRole("superadmin") || await hasRole("bursar");
+        const isAuth = await hasPermission("finance.ledger.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("bursar");
         if (!isAuth) throw new Error("Unauthorized");
 
         const data = await BursaryService.getExpenditureLedger();
@@ -49,7 +49,7 @@ export async function getExpenditureLedgerAction() {
 
 export async function approveExpenditureAction(requestId: number) {
     try {
-        const isAuth = await hasRole("admin") || await hasRole("superadmin") || await hasRole("bursar");
+        const isAuth = await hasPermission("finance.expenditure.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("bursar");
         if (!isAuth) throw new Error("Unauthorized");
 
         const adminId = 1; // Current User Placeholder

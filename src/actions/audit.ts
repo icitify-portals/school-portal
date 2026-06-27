@@ -2,14 +2,14 @@
 
 import { AuditService, AuditDecision } from "@/services/AuditService";
 import { revalidatePath } from "next/cache";
-import { hasRole } from "@/lib/rbac";
+import { hasRole, hasPermission } from "@/lib/rbac";
 import { db } from "@/db/db";
 import { activityLogs, users } from "@/db/schema";
 import { headers } from "next/headers";
 import { and, eq, gte, lte, sql, desc } from "drizzle-orm";
 
 async function ensureAuditorAccess() {
-    const isAuditor = await hasRole("auditor");
+    const isAuditor = await hasPermission("audit.logs.view") || await hasPermission("audit.financials.verify") || await hasRole("auditor") || await hasRole("admin") || await hasRole("superadmin");
     if (!isAuditor) throw new Error("Unauthorized access: Internal Audit only");
 }
 

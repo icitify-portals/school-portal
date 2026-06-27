@@ -8,9 +8,20 @@ import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
 import { auth } from "@/auth";
 import { generateMatricNumber } from "@/actions/matriculation";
+import { hasPermission, hasRole } from "@/lib/rbac";
 
 export async function getStudents(options: { search?: string, page?: number, pageSize?: number, level?: number } = {}) {
     try {
+        const allowed = await hasPermission("students.view") || await hasRole("admin") || await hasRole("superadmin");
+        if (!allowed) {
+            // Check if user is HOD/Dean or has relevant roles as fallback
+            const session = await auth();
+            const userRole = (session?.user as any)?.role?.toLowerCase() || "";
+            if (!["hod", "dean"].includes(userRole)) {
+                return { success: true, data: [], totalCount: 0 };
+            }
+        }
+
         const { search = "", page = 1, pageSize = 10, level } = options;
         const offset = (page - 1) * pageSize;
         const searchPattern = `%${search}%`;
@@ -50,9 +61,6 @@ export async function getStudents(options: { search?: string, page?: number, pag
                 return { success: true, data: [], totalCount: 0 };
             }
             scopeCondition = inArray(students.deptId, deanDeptIds);
-        } else if (!["superadmin", "admin", "dvc", "bursar", "registrar", "librarian"].includes(userRole)) {
-            // Unauthorized roles see nothing
-            return { success: true, data: [], totalCount: 0 };
         }
 
         const countConditions = [
@@ -104,12 +112,13 @@ export async function getStudents(options: { search?: string, page?: number, pag
 
 export async function approveStudent(userId: number, inputMatricNumber?: string) {
     try {
-        const session = await auth();
-        const actorRole = (session?.user as any)?.role?.toLowerCase() || "";
-        const actorId = session?.user?.id ? parseInt(session.user.id) : null;
-        if (!['superadmin', 'admin', 'dvc', 'bursar', 'registrar'].includes(actorRole)) {
-            return { success: false, error: "Unauthorized: Only superadmin, vice chancellor, bursar, and registrar can edit." };
+        const allowed = await hasPermission("students.manage") || await hasRole("admin") || await hasRole("superadmin");
+        if (!allowed) {
+            return { success: false, error: "Unauthorized: Insufficient permissions to approve students" };
         }
+
+        const session = await auth();
+        const actorId = session?.user?.id ? parseInt(session.user.id) : null;
 
         const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
         if (!user) return { success: false, error: "User not found" };
@@ -170,13 +179,13 @@ export async function approveStudent(userId: number, inputMatricNumber?: string)
 
 export async function bulkImportStudents(data: any[]) {
     try {
-        const session = await auth();
-        const actorRole = (session?.user as any)?.role?.toLowerCase() || "";
-        const actorId = session?.user?.id ? parseInt(session.user.id) : null;
-        if (!['superadmin', 'admin', 'dvc', 'bursar', 'registrar'].includes(actorRole)) {
-            return { success: false, error: "Unauthorized: Only superadmin, vice chancellor, bursar, and registrar can edit." };
+        const allowed = await hasPermission("students.manage") || await hasRole("admin") || await hasRole("superadmin");
+        if (!allowed) {
+            return { success: false, error: "Unauthorized: Insufficient permissions to import students" };
         }
 
+        const session = await auth();
+        const actorId = session?.user?.id ? parseInt(session.user.id) : null;
         const passwordHash = await bcrypt.hash("welcome123", 10);
 
         // 1. Get the 'student' role ID
@@ -197,7 +206,8 @@ export async function bulkImportStudents(data: any[]) {
                     name,
                     email,
                     password: passwordHash,
-                    role: 'student'
+                    role: 'student',
+                    requiresPasswordChange: true, // SECURITY FIX M-3a: Force password change on first login
                 });
 
                 // Assign granular role if it exists
@@ -452,6 +462,11 @@ export async function getPersonalizedRecommendations() {
 
 export async function toggleFinancialLock(studentId: number, status: boolean) {
     try {
+        const allowed = await hasPermission("finance.lock.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("bursar");
+        if (!allowed) {
+            return { success: false, error: "Unauthorized: Insufficient permissions to modify financial lock" };
+        }
+
         await db.update(students).set({ isFinanciallyLocked: status }).where(eq(students.id, studentId));
         revalidatePath("/admin/students");
         return { success: true };

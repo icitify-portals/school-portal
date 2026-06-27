@@ -1,27 +1,33 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/db/db";
-import { sql } from "drizzle-orm";
 
 // Simple API key validation
 // Keys are stored as PORTAL_API_KEYS env var (comma-separated)
 // In production, use a database table for key management
 
 export async function validateApiKey(request: NextRequest): Promise<{ valid: boolean; error?: string }> {
+    // SECURITY FIX H-4: Accept API keys ONLY via Authorization header.
+    // Query-string keys (?api_key=...) are logged by web servers, CDNs,
+    // and browser history, exposing the key in plain text.
     const authHeader = request.headers.get('authorization');
-    const apiKeyParam = request.nextUrl.searchParams.get('api_key');
-
-    const apiKey = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : apiKeyParam;
+    const apiKey = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
 
     if (!apiKey) {
-        return { valid: false, error: "Missing API key. Use Authorization: Bearer <key> header or ?api_key=<key>" };
+        return {
+            valid: false,
+            error: "Missing API key. Use: Authorization: Bearer <key>",
+        };
     }
 
     const validKeys = (process.env.PORTAL_API_KEYS || '').split(',').map(k => k.trim()).filter(Boolean);
 
+    // SECURITY FIX H-5: Never silently bypass authentication in any NODE_ENV.
+    // If no keys are configured, log a warning and reject all requests.
     if (validKeys.length === 0) {
-        // In dev, allow any non-empty key if no keys configured
-        if (process.env.NODE_ENV === 'development') return { valid: true };
-        return { valid: false, error: "No API keys configured. Set PORTAL_API_KEYS in .env" };
+        console.warn(
+            "[API-AUTH] PORTAL_API_KEYS is not configured. " +
+            "All API requests will be rejected. Set comma-separated keys in .env."
+        );
+        return { valid: false, error: "API access is not configured on this server." };
     }
 
     if (!validKeys.includes(apiKey)) {

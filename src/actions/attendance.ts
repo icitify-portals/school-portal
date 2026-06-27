@@ -2,6 +2,7 @@
 
 import crypto from "crypto";
 import { auth } from "@/auth";
+import { hasPermission, hasRole } from "@/lib/rbac";
 import { NotificationService } from "@/services/NotificationService";
 
 import { db } from "@/db/db";
@@ -248,6 +249,9 @@ export async function markOnlinePresence(sessionId: number, action: 'in' | 'out'
 }
 
 export async function getAttendanceAnalysis() {
+    const allowed = await hasPermission("academic.attendance.view") || await hasRole("admin") || await hasRole("superadmin");
+    if (!allowed) return { error: "Unauthorized: Insufficient permissions to view attendance analysis." };
+
     try {
         const todayStart = new Date();
         todayStart.setHours(0, 0, 0, 0);
@@ -451,6 +455,9 @@ export async function logAttendance(barcode: string) {
 }
 
 export async function generateKioskToken() {
+    const allowed = await hasPermission("academic.attendance.manage") || await hasRole("admin") || await hasRole("superadmin");
+    if (!allowed) return { error: "Unauthorized: Insufficient permissions to generate kiosk token." };
+
     try {
         const token = crypto.randomBytes(32).toString('hex');
         const expiresAt = new Date(Date.now() + 60000); // 1 minute expiry
@@ -791,6 +798,9 @@ export async function getMyExcuses() {
 }
 
 export async function reviewExcuse(excuseId: number, status: 'approved' | 'rejected', notes?: string) {
+    const allowed = await hasPermission("academic.attendance.manage") || await hasRole("admin") || await hasRole("superadmin");
+    if (!allowed) return { error: "Unauthorized: Insufficient permissions to review excuses." };
+
     try {
         const authSession = await auth();
         if (!authSession?.user?.id) return { error: "Unauthorized" };
@@ -812,6 +822,9 @@ export async function reviewExcuse(excuseId: number, status: 'approved' | 'rejec
 }
 
 export async function getPendingExcuses(courseId?: number) {
+    const allowed = await hasPermission("academic.attendance.view") || await hasRole("admin") || await hasRole("superadmin");
+    if (!allowed) return { error: "Unauthorized: Insufficient permissions to view pending excuses." };
+
     try {
         const authSession = await auth();
         if (!authSession?.user) return { error: "Unauthorized" };

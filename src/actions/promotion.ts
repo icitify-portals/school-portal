@@ -8,6 +8,7 @@ import {
 } from "@/db/schema";
 import { eq, and, desc, sql, count, sum, or } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { hasPermission, hasRole } from "@/lib/rbac";
 import { PromotionService } from "@/services/PromotionService";
 
 // --- CRITERIA ---
@@ -53,6 +54,8 @@ export async function saveDepartmentCriteria(deptId: number, data: {
     additionalRules: { field: string; operator: string; value: number; message: string }[];
 }) {
     try {
+        const allowed = await hasPermission("academic.promotion.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("academic_registrar");
+        if (!allowed) return { error: "Unauthorized: Insufficient permissions to save promotion criteria" };
         const session = await auth();
         if (!session?.user) return { error: "Unauthorized" };
 
@@ -251,6 +254,8 @@ async function evaluateStudents(sessionId: number): Promise<StudentEvaluation[]>
 
 export async function getPromotionPreview(sessionId: number) {
     try {
+        const allowed = await hasPermission("academic.promotion.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("academic_registrar");
+        if (!allowed) return { error: "Unauthorized: Insufficient permissions to view promotion preview" };
         const session = await auth();
         if (!session?.user) return { error: "Unauthorized" };
 
@@ -275,6 +280,8 @@ export async function getPromotionPreview(sessionId: number) {
 
 export async function runPromotion(sessionId: number, targetSessionId: number, overrides?: Record<number, { decision: string, reason?: string }>) {
     try {
+        const allowed = await hasPermission("academic.promotion.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("academic_registrar");
+        if (!allowed) return { error: "Unauthorized: Insufficient permissions to run student promotion" };
         const authSession = await auth();
         if (!authSession?.user?.id) return { error: "Unauthorized" };
 
@@ -400,6 +407,8 @@ export async function runPromotion(sessionId: number, targetSessionId: number, o
 
 export async function getPromotionLogs(sessionId?: number) {
     try {
+        const allowed = await hasPermission("academic.promotion.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("academic_registrar") || await hasRole("hod") || await hasRole("dean");
+        if (!allowed) return { error: "Unauthorized: Insufficient permissions to view promotion logs" };
         let logsQuery = db.select({
             id: promotionLogs.id,
             studentName: users.name,
@@ -436,6 +445,8 @@ export async function getPromotionLogs(sessionId?: number) {
 
 export async function generateHodReport(deptId: number, sessionId: number, type: 'non_final_year' | 'final_year') {
     try {
+        const allowed = await hasPermission("academic.promotion.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("academic_registrar") || await hasRole("hod") || await hasRole("dean");
+        if (!allowed) return { error: "Unauthorized: Insufficient permissions to generate HOD promotion reports" };
         const session = await auth();
         if (!session?.user) return { error: "Unauthorized" };
 

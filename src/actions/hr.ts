@@ -19,7 +19,7 @@ import {
 } from "@/db/schema";
 import { eq, and, desc, sql, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import { hasRole } from "@/lib/rbac";
+import { hasRole, hasPermission } from "@/lib/rbac";
 import { v4 as uuidv4 } from 'uuid';
 import { recordTransaction } from "./accounting";
 import { getBursarySettings } from "./bursary";
@@ -31,7 +31,8 @@ import { auth } from "@/auth";
 async function ensureHRStaff() {
     const session = await auth();
     const role = (session?.user as any)?.role?.toLowerCase();
-    if (!['superadmin', 'admin', 'dvc', 'bursar', 'registrar'].includes(role)) {
+    const hasHRManage = await hasPermission("hr.staff.manage") || await hasRole("hr");
+    if (!hasHRManage && !['superadmin', 'admin', 'dvc', 'bursar', 'registrar'].includes(role)) {
         throw new Error("Unauthorized: HR access required (only superadmin, vice chancellor, bursar, registrar are allowed).");
     }
 }
@@ -42,6 +43,8 @@ export async function getStaffProfiles() {
         const session = await auth();
         const userRole = (session?.user as any)?.role?.toLowerCase() || "";
         const actorId = session?.user?.id ? parseInt(session.user.id) : null;
+
+        const hasHRView = await hasPermission("hr.staff.view") || await hasPermission("hr.staff.manage") || await hasRole("hr");
 
         let scopeCondition: any = undefined;
 
@@ -73,7 +76,7 @@ export async function getStaffProfiles() {
                 return [];
             }
             scopeCondition = inArray(staffProfiles.departmentId, deanDeptIds);
-        } else if (!["superadmin", "admin", "dvc", "bursar", "registrar", "librarian"].includes(userRole)) {
+        } else if (!hasHRView && !["superadmin", "admin", "dvc", "bursar", "registrar", "librarian"].includes(userRole)) {
             // Unauthorized roles see nothing
             return [];
         }
@@ -144,6 +147,13 @@ export async function hireStaff(data: {
 // --- LEAVE MANAGEMENT ---
 export async function getLeaveRequests() {
     try {
+        const session = await auth();
+        const userRole = (session?.user as any)?.role?.toLowerCase() || "";
+        const hasLeaveAccess = await hasPermission("hr.leave.manage") || await hasPermission("hr.staff.view") || await hasPermission("hr.staff.manage") || await hasRole("hr");
+        if (!hasLeaveAccess && !['superadmin', 'admin', 'dvc', 'bursar', 'registrar'].includes(userRole)) {
+            return [];
+        }
+
         const requests = await db.select().from(leaveRequests).orderBy(desc(leaveRequests.startDate));
         const profiles = await getStaffProfiles();
         const allUsers = await db.select().from(users);
@@ -167,6 +177,13 @@ export async function submitLeaveRequest(data: {
     reason?: string;
 }) {
     try {
+        const session = await auth();
+        if (!session?.user?.id) return { success: false, error: "Unauthorized" };
+        const userId = parseInt(session.user.id);
+
+        const [staff] = await db.select().from(staffProfiles).where(and(eq(staffProfiles.id, data.staffId), eq(staffProfiles.userId, userId))).limit(1);
+        if (!staff) return { success: false, error: "Unauthorized: Staff ID mismatch" };
+
         await db.insert(leaveRequests).values(data);
         revalidatePath("/admin/hr/leave");
         return { success: true };

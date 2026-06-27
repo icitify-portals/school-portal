@@ -15,6 +15,7 @@ import {
 import { eq, and, inArray, desc } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { TeacherService } from "../services/TeacherService";
+import { hasPermission, hasRole } from "@/lib/rbac";
 
 /**
  * Fetch all students in a class for behavioral/remark entry
@@ -42,6 +43,9 @@ export async function saveBehavioralScores(data: {
     score: number;
     recordedBy: number;
 }[]) {
+    const allowed = await hasPermission("teachers.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("staff");
+    if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to save behavioral scores" };
+
     for (const record of data) {
         // Upsert logic: check if exists, then update or insert
         const [existing] = await db.select().from(behavioralScores)
@@ -79,6 +83,9 @@ export async function saveReportRemarks(data: {
     daysOpen?: number;
     recordedBy: number;
 }) {
+    const allowed = await hasPermission("teachers.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("staff");
+    if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to save report remarks" };
+
     const [existing] = await db.select().from(reportRemarks)
         .where(and(
             eq(reportRemarks.studentId, data.studentId),
@@ -120,6 +127,9 @@ export async function getSchoolSchedule(sessionId: number, term: '1' | '2' | '3'
  * Admin: Update school schedule settings
  */
 export async function updateSchoolSchedule(data: typeof schoolScheduleSettings.$inferInsert) {
+    const allowed = await hasPermission("academic.timetable.manage") || await hasRole("admin") || await hasRole("superadmin");
+    if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to update school schedule" };
+
     const [existing] = await db.select().from(schoolScheduleSettings)
         .where(and(
             eq(schoolScheduleSettings.sessionId, data.sessionId),
@@ -192,6 +202,9 @@ export async function getTeacherDashboardData(staffProfileId: number) {
  * Admin: Manage Trait Definitions
  */
 export async function updateAffectiveTrait(data: typeof affectiveTraits.$inferInsert) {
+    const allowed = await hasPermission("academic.grading.manage") || await hasRole("admin") || await hasRole("superadmin");
+    if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to manage affective traits" };
+
     if (data.id) {
         await db.update(affectiveTraits).set(data).where(eq(affectiveTraits.id, data.id));
     } else {

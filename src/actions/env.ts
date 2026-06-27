@@ -22,14 +22,26 @@ const isSecretKey = (key: string) => {
 
 const getEnvFilePath = () => path.join(process.cwd(), '.env');
 
+// SECURITY FIX C-3: Only superadmin can read/write .env. Admin role is insufficient.
+// Also block impersonation sessions from touching env configuration.
+async function requireSuperAdmin() {
+    const session = await auth();
+    const role = (session?.user as any)?.role;
+    const isImpersonating = (session?.user as any)?.impersonating;
+    if (role !== 'superadmin' || isImpersonating) {
+        return null;
+    }
+    return session;
+}
+
 /**
  * Parses the .env file into key-value pairs
  */
 export async function getEnvVariables(): Promise<{ success: boolean; data?: EnvVar[]; error?: string }> {
     try {
-        const session = await auth();
-        if ((session?.user as any)?.role !== 'admin') {
-            return { success: false, error: 'Unauthorized' };
+        const session = await requireSuperAdmin();
+        if (!session) {
+            return { success: false, error: 'Unauthorized. Superadmin access required.' };
         }
 
         const envPath = getEnvFilePath();
@@ -84,9 +96,9 @@ export async function getEnvVariables(): Promise<{ success: boolean; data?: EnvV
  */
 export async function saveEnvVariables(updates: { key: string; value: string }[]): Promise<{ success: boolean; error?: string }> {
     try {
-        const session = await auth();
-        if ((session?.user as any)?.role !== 'admin') {
-            return { success: false, error: 'Unauthorized' };
+        const session = await requireSuperAdmin();
+        if (!session) {
+            return { success: false, error: 'Unauthorized. Superadmin access required.' };
         }
 
         const envPath = getEnvFilePath();
@@ -146,6 +158,26 @@ export async function saveEnvVariables(updates: { key: string; value: string }[]
 
         const newContent = updatedLines.join('\n');
         await fs.writeFile(envPath, newContent, 'utf8');
+
+        // SECURITY FIX C-3: Audit every .env write so all credential changes are traceable.
+        try {
+            const { db } = await import('@/db/db');
+            const { systemAuditLogs } = await import('@/db/schema');
+            const actorId = session.user?.id ? parseInt(session.user.id as string) : 0;
+            await db.insert(systemAuditLogs).values({
+                actorId,
+                action: 'ENV_FILE_UPDATED',
+                targetId: 'system',
+                details: JSON.stringify({
+                    updatedKeys: updates.map(u => u.key),
+                    timestamp: new Date().toISOString(),
+                }),
+                status: 'success',
+            });
+        } catch (auditErr) {
+            // Non-fatal — log but do not fail the write
+            console.error('Failed to write env audit log:', auditErr);
+        }
 
         return { success: true };
     } catch (e: any) {

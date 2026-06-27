@@ -19,6 +19,8 @@ export default function HostelSettingsForm({ hostelId, initialSettings }: {
     const [settings, setSettings] = useState(initialSettings || {
         paymentWindowDays: 3,
         allocationStrategy: 'manual',
+        paymentMode: 'standalone',
+        hostelFee: '0.00'
     });
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -67,6 +69,51 @@ export default function HostelSettingsForm({ hostelId, initialSettings }: {
                             />
                             <span className="font-bold text-slate-400 uppercase tracking-widest text-[10px]">Standard Days</span>
                         </div>
+                    </CardContent>
+                </Card>
+
+                <Card className="border-none shadow-lg bg-white rounded-2xl overflow-hidden">
+                    <CardHeader className="bg-emerald-50/50 border-b border-emerald-100/50 pb-4">
+                        <CardTitle className="text-sm font-black text-emerald-900 uppercase tracking-widest flex items-center gap-2">
+                            <ShieldAlert className="w-4 h-4" /> Billing Mode
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-6 space-y-4">
+                        <p className="text-xs text-slate-500 font-medium">Select how hostel fees are processed.</p>
+                        <div className="flex bg-slate-100 p-1 rounded-2xl">
+                            <button
+                                type="button"
+                                onClick={() => setSettings({ ...settings, paymentMode: 'standalone' })}
+                                className={cn(
+                                    "flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                                    settings.paymentMode === 'standalone' ? "bg-white text-emerald-600 shadow-sm" : "text-slate-400"
+                                )}
+                            >
+                                Standalone
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setSettings({ ...settings, paymentMode: 'bundled' })}
+                                className={cn(
+                                    "flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                                    settings.paymentMode === 'bundled' ? "bg-white text-emerald-600 shadow-sm" : "text-slate-400"
+                                )}
+                            >
+                                Bundled
+                            </button>
+                        </div>
+                        {settings.paymentMode === 'standalone' && (
+                            <div className="pt-2 animate-in fade-in slide-in-from-top-2">
+                                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block">Hostel Fee (₦)</label>
+                                <input
+                                    type="number"
+                                    step="0.01"
+                                    value={settings.hostelFee}
+                                    onChange={(e) => setSettings({ ...settings, hostelFee: e.target.value })}
+                                    className="w-full h-12 rounded-xl border border-slate-200 px-4 font-black text-lg focus:ring-2 focus:ring-emerald-500 outline-none"
+                                />
+                            </div>
+                        )}
                     </CardContent>
                 </Card>
 

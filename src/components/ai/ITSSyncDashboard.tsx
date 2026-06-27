@@ -16,6 +16,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { offlineManager } from "@/lib/offline-manager";
+import { getOfflineReadyLessons } from "@/actions/its_automation";
 
 export function ITSSyncDashboard() {
     const [syncing, setSyncing] = useState(false);
@@ -36,13 +37,52 @@ export function ITSSyncDashboard() {
     };
 
     const handleSync = async () => {
+        if (!offlineManager) return;
         setSyncing(true);
         setProgress(0);
         
-        // Simulated batch download of lessons
-        for (let i = 1; i <= 5; i++) {
-            setProgress(i * 20);
-            await new Promise(r => setTimeout(r, 800)); // Simulate network latency
+        try {
+            const serverLessons = await getOfflineReadyLessons();
+            if (serverLessons.length === 0) {
+                setSyncing(false);
+                return;
+            }
+
+            for (let i = 0; i < serverLessons.length; i++) {
+                const item = serverLessons[i];
+                const { lesson, topicTitle } = item;
+                
+                let blob = new Blob([""], { type: "text/plain" }); // Fallback empty blob
+                
+                if (lesson.contentUrl) {
+                    try {
+                        // Ensure we append cors proxy or rely on S3/Wasabi CORS config
+                        const response = await fetch(lesson.contentUrl);
+                        if (response.ok) {
+                            blob = await response.blob();
+                        } else {
+                            console.warn("Failed to fetch blob for lesson:", lesson.id, response.statusText);
+                        }
+                    } catch (e) {
+                        console.warn("CORS or Network error fetching lesson:", lesson.id, e);
+                        // Blob remains empty string fallback, allowing metadata to still sync
+                    }
+                }
+                
+                const lessonToSave = {
+                    id: lesson.id,
+                    title: lesson.title,
+                    topicTitle: topicTitle || "Unknown Topic",
+                    type: lesson.type,
+                    aiScript: lesson.aiScript,
+                    contentUrl: lesson.contentUrl
+                };
+                
+                await offlineManager.saveLesson(lessonToSave, blob);
+                setProgress(((i + 1) / serverLessons.length) * 100);
+            }
+        } catch (error) {
+            console.error("Sync failed:", error);
         }
         
         setSyncing(false);

@@ -19,7 +19,8 @@ import {
     X,
     Coins,
     Sparkles,
-    ShieldAlert
+    ShieldAlert,
+    BookOpen
 } from "lucide-react";
 import { 
     getStudentLedger, 
@@ -249,6 +250,14 @@ export default function StudentFinancePage() {
                     <p className="text-slate-500 font-medium mt-1">Manage your digital wallet, outstanding bills, and payment vouchers</p>
                 </div>
                 <div className="flex gap-3">
+                    <Button
+                        variant="outline"
+                        className="gap-2 h-11 px-6 rounded-xl border-slate-200 text-slate-600 hover:text-indigo-600 hover:border-indigo-100 hover:bg-indigo-50 font-bold text-xs transition-all shadow-sm"
+                        onClick={() => router.push("/student/finance/library")}
+                    >
+                        <BookOpen className="w-4 h-4" />
+                        Library Fines
+                    </Button>
                     <Button
                         variant="outline"
                         className="gap-2 h-11 px-6 rounded-xl border-slate-200 text-slate-600 hover:text-indigo-600 hover:border-indigo-100 hover:bg-indigo-50 font-bold text-xs transition-all shadow-sm"

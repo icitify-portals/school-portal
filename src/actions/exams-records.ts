@@ -11,6 +11,7 @@ import {
 } from "@/db/schema";
 import { eq, and, sql, desc, or, inArray } from "drizzle-orm";
 import { auth } from "@/auth";
+import { hasPermission, hasRole } from "@/lib/rbac";
 
 /**
  * Fetches students who are likely in their final year or have graduated.
@@ -26,6 +27,9 @@ export async function getGraduatingStudents(filters?: {
     if (!session?.user) return { success: false, error: "Unauthorized" };
 
     try {
+        const allowed = await hasPermission("academic.results.view") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("academic_registrar");
+        if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to view graduating students" };
+
         const conditions = [
             or(
                 eq(users.status, 'graduated'),
@@ -82,6 +86,16 @@ export async function getStudentAcademicRecord(studentId: number) {
     if (!session?.user) return { success: false, error: "Unauthorized" };
 
     try {
+        const allowed = await hasPermission("academic.results.view") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("academic_registrar") || await hasRole("hod") || await hasRole("dean");
+        if (!allowed) {
+            // Check if user is student requesting their own record
+            const currentUserId = parseInt(session.user.id || "0");
+            const [studentProfile] = await db.select({ id: students.id }).from(students).where(eq(students.userId, currentUserId)).limit(1);
+            if (!studentProfile || studentProfile.id !== studentId) {
+                return { success: false, error: "Unauthorized: Insufficient permissions to view this academic record" };
+            }
+        }
+
         // 1. Student Info with Unit Tier and Class Arm
         const [student] = await db.select({
             id: students.id,
@@ -244,6 +258,9 @@ export async function searchAllStudents(filters: { search?: string; programmeId?
     if (!session?.user) return { success: false, error: "Unauthorized" };
 
     try {
+        const allowed = await hasPermission("academic.results.view") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("academic_registrar") || await hasRole("hod") || await hasRole("dean");
+        if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to search students" };
+
         let query = db.select({
             id: students.id,
             name: users.name,
@@ -300,6 +317,9 @@ export async function getGeneratedResultsForClass(filters: {
     if (!session?.user) return { success: false, error: "Unauthorized" };
 
     try {
+        const allowed = await hasPermission("academic.results.view") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("academic_registrar") || await hasRole("hod") || await hasRole("dean");
+        if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to view class results" };
+
         const conditions = [
             eq(semesterSummaries.sessionId, filters.sessionId),
             eq(semesterSummaries.semester, filters.semester.toString() as any)
@@ -358,6 +378,16 @@ export async function getK12StudentReportData(studentId: number, sessionId: numb
     if (!session?.user) return { success: false, error: "Unauthorized" };
 
     try {
+        const allowed = await hasPermission("academic.results.view") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("academic_registrar") || await hasRole("hod") || await hasRole("dean");
+        if (!allowed) {
+            // Check if user is student requesting their own report
+            const currentUserId = parseInt(session.user.id || "0");
+            const [studentProfile] = await db.select({ id: students.id }).from(students).where(eq(students.userId, currentUserId)).limit(1);
+            if (!studentProfile || studentProfile.id !== studentId) {
+                return { success: false, error: "Unauthorized: Insufficient permissions to view this report" };
+            }
+        }
+
         // 1. Student metadata
         const [student] = await db.select({
             id: students.id,
@@ -607,6 +637,9 @@ export async function getResultFilterMetadata() {
     if (!session?.user) return { success: false, error: "Unauthorized" };
 
     try {
+        const allowed = await hasPermission("academic.results.view") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("academic_registrar") || await hasRole("hod") || await hasRole("dean");
+        if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to view result filter metadata" };
+
         const sessions = await db.select().from(academicSessions).orderBy(desc(academicSessions.name));
         const groups = await db.select().from(studentGroups).orderBy(studentGroups.level, studentGroups.name);
         const depts = await db.select().from(departments).orderBy(departments.name);
@@ -645,6 +678,9 @@ export async function toggleResultLockAction(data: {
     if (!session?.user) return { success: false, error: "Unauthorized" };
 
     try {
+        const allowed = await hasPermission("academic.results.approve") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("academic_registrar");
+        if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to lock/unlock results" };
+
         const targetStatus = data.lock ? 'published' : 'pending';
 
         // Update the semester summary status

@@ -11,6 +11,7 @@ import { getGradingSystemForStudent } from "./grading";
 import { auth } from "@/auth";
 import { revalidatePath } from "next/cache";
 import { GradingService } from "@/services/GradingService";
+import { hasPermission, hasRole } from "@/lib/rbac";
 
 export async function getStudentResults(studentId: number) {
     try {
@@ -112,6 +113,9 @@ export async function getStudentResults(studentId: number) {
 
 export async function submitResult(enrollmentId: number, score: number) {
     try {
+        const allowed = await hasPermission("academic.results.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("academic_registrar");
+        if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to submit result" };
+
         // Find existing result
         const [existing] = await db.select().from(results).where(eq(results.enrollmentId, enrollmentId)).limit(1);
 
@@ -146,6 +150,9 @@ export async function updateResultWithAudit(data: {
     const role = user.role;
 
     try {
+        const allowed = await hasPermission("academic.results.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("academic_registrar");
+        if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to update result" };
+
         // 1. Fetch existing result and its course context with robust joins
         const [existing] = await db.select({
             result: results,
@@ -161,7 +168,7 @@ export async function updateResultWithAudit(data: {
         if (!existing) return { success: false, error: "Result not found" };
 
         // 2. Permission Check
-        if (role !== 'admin' && role !== 'dvc') {
+        if (role !== 'admin' && role !== 'dvc' && role !== 'superadmin' && role !== 'academic_registrar') {
             const [staff] = await db.select({
                 id: staffProfiles.id,
                 deptId: staffProfiles.departmentId,
@@ -265,9 +272,12 @@ export async function updateResultWithAudit(data: {
 export async function getResultAuditLogs(resultId: number) {
     const session = await auth();
     const user = session?.user as any;
-    if (!user || user.role !== 'admin') return { success: false, error: "Unauthorized" };
+    if (!user) return { success: false, error: "Unauthorized" };
 
     try {
+        const allowed = await hasPermission("academic.results.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("academic_registrar") || await hasRole("dvc");
+        if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to view result audit logs" };
+
         const logs = await db.select({
             audit: resultAuditLogs,
             editor: users.name
@@ -285,6 +295,7 @@ export async function getResultAuditLogs(resultId: number) {
 
 export async function getK12ReportData(studentId: number, sessionId: number, term: string) {
     try {
+        const { academicSessions } = await import("@/db/schema");
         const [session] = await db.select().from(academicSessions).where(eq(academicSessions.id, sessionId)).limit(1);
         if (!session) return null;
 

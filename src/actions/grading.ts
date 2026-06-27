@@ -22,6 +22,7 @@ import { eq, and, asc, desc, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { GradingService } from "@/services/GradingService";
 import { auth } from "@/auth";
+import { hasPermission, hasRole } from "@/lib/rbac";
 
 export async function setupGradingConfig(courseId: number, sessionId: number, configs: {
     name: string;
@@ -116,6 +117,9 @@ export async function processSemesterResults(studentId: number, sessionId: numbe
 }
 
 export async function publishCourseResults(courseId: number, sessionId: number, semester: '1' | '2') {
+    const allowed = await hasPermission("academic.results.approve") || await hasRole("admin") || await hasRole("superadmin");
+    if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to publish course results" };
+
     try {
         const [academicSession] = await db.select().from(academicSessions).where(eq(academicSessions.id, sessionId)).limit(1);
         if (!academicSession) throw new Error("Session not found");
@@ -261,6 +265,9 @@ export async function getGradingSystemForStudent(studentId: number) {
 }
 
 export async function createGradingSystem(data: { name: string; scale: number; description?: string }) {
+    const allowed = await hasPermission("academic.grading.manage") || await hasRole("admin") || await hasRole("superadmin");
+    if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to create grading system" };
+
     try {
         await db.insert(gradingSystems).values({
             name: data.name,
@@ -276,6 +283,9 @@ export async function createGradingSystem(data: { name: string; scale: number; d
 }
 
 export async function setGradePoints(systemId: number, points: any[]) {
+    const allowed = await hasPermission("academic.grading.manage") || await hasRole("admin") || await hasRole("superadmin");
+    if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to configure grade points" };
+
     try {
         await db.transaction(async (tx) => {
             await tx.delete(gradePoints).where(eq(gradePoints.gradingSystemId, systemId));
@@ -298,6 +308,9 @@ export async function setGradePoints(systemId: number, points: any[]) {
 }
 
 export async function setDegreeClassifications(systemId: number, classifications: any[]) {
+    const allowed = await hasPermission("academic.grading.manage") || await hasRole("admin") || await hasRole("superadmin");
+    if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to configure degree classifications" };
+
     try {
         await db.transaction(async (tx) => {
             await tx.delete(degreeClassifications).where(eq(degreeClassifications.gradingSystemId, systemId));
@@ -318,6 +331,9 @@ export async function setDegreeClassifications(systemId: number, classifications
 }
 
 export async function assignGradingSystemToSession(sessionId: number, systemId: number) {
+    const allowed = await hasPermission("academic.grading.manage") || await hasRole("admin") || await hasRole("superadmin");
+    if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to assign grading system to session" };
+
     try {
         await db.delete(gradingSystemSessions).where(eq(gradingSystemSessions.sessionId, sessionId));
         await db.insert(gradingSystemSessions).values({
@@ -332,6 +348,9 @@ export async function assignGradingSystemToSession(sessionId: number, systemId: 
 }
 
 export async function seedGradingSystem() {
+    const allowed = await hasPermission("academic.grading.manage") || await hasRole("admin") || await hasRole("superadmin");
+    if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to seed grading system" };
+
     try {
         await db.transaction(async (tx) => {
             const [res] = await tx.insert(gradingSystems).values({

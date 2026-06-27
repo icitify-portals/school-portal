@@ -5,6 +5,7 @@ import { cmsPages, cmsNews, cmsEvents } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { getAIProvider } from "@/lib/ai-service";
 import { auth } from "@/auth";
+import { hasPermission, hasRole } from "@/lib/rbac";
 
 // Supported institution codes (internal to server actions)
 const TARGET_LOCALES = [
@@ -22,11 +23,14 @@ const TARGET_LOCALES = [
     { code: 'ar', name: 'العربية' }
 ];
 
-export async function translateToAllLocales(type: 'page' | 'news' | 'event', sourceId: number, bypassAuth = false) {
-    if (!bypassAuth) {
-        const session = await auth();
-        if (!session) return { success: false, error: "Unauthorized" };
-    }
+export async function translateToAllLocales(type: 'page' | 'news' | 'event', sourceId: number) {
+    // SECURITY FIX M-5: Auth check is unconditional. The bypassAuth parameter has been
+    // removed — it created a path where authentication could be skipped entirely.
+    // Internal callers must operate within an authenticated request context.
+    const isAllowed = type === 'page'
+        ? (await hasPermission("cms.pages.manage") || await hasRole("admin") || await hasRole("superadmin"))
+        : (await hasPermission("cms.content.manage") || await hasRole("admin") || await hasRole("superadmin"));
+    if (!isAllowed) return { success: false, error: "Unauthorized" };
 
     console.log(`[TranslationHub] Starting bulk translation for ${type} ID: ${sourceId}`);
     const provider = getAIProvider(process.env.AI_PROVIDER || 'gemini');

@@ -17,6 +17,7 @@ import { auth } from "@/auth";
 import { revalidatePath } from "next/cache";
 import { encryptMessage } from "@/lib/encryption";
 import { processChatAttachment } from "@/lib/compression";
+import { hasPermission, hasRole } from "@/lib/rbac";
 
 // --- ANNOUNCEMENTS ---
 
@@ -28,6 +29,9 @@ export async function createAnnouncement(data: {
     priority?: 'low' | 'normal' | 'high';
     expiresAt?: Date;
 }) {
+    const allowed = await hasPermission("communication.announcements.manage") || await hasRole("admin") || await hasRole("superadmin");
+    if (!allowed) return { error: "Unauthorized: Insufficient permissions to create announcements" };
+
     const session = await auth();
     if (!session?.user) return { error: "Unauthorized" };
 

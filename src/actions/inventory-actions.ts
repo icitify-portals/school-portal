@@ -3,7 +3,7 @@
 import { InventoryService } from "@/services/InventoryService";
 import { AssetService } from "@/services/AssetService";
 import { revalidatePath } from "next/cache";
-import { hasRole } from "@/lib/rbac";
+import { hasRole, hasPermission } from "@/lib/rbac";
 
 export async function recordInventoryTransactionAction(data: {
     itemId: number,
@@ -13,7 +13,7 @@ export async function recordInventoryTransactionAction(data: {
     notes?: string
 }) {
     try {
-        const isAuth = await hasRole("admin") || await hasRole("superadmin") || await hasRole("store_keeper");
+        const isAuth = await hasPermission("inventory.items.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("store_keeper");
         if (!isAuth) throw new Error("Unauthorized: Store Keeper access required");
 
         const recordedBy = 1; // Current User Placeholder

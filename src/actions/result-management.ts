@@ -3,13 +3,13 @@
 import { db } from "@/db/db";
 import { gradingSystems, gradePoints, documentTemplates, annualSummaries, resultEditLogs, students } from "@/db/schema";
 import { revalidatePath } from "next/cache";
-import { hasRole } from "@/lib/rbac";
+import { hasRole, hasPermission } from "@/lib/rbac";
 import { eq } from "drizzle-orm";
 import { AdmissionLetterService } from "@/services/AdmissionLetterService";
 import { sendInAppNotification } from "./notifications";
 
 async function ensureAdminAccess() {
-    const isAdmin = await hasRole("admin") || await hasRole("superadmin");
+    const isAdmin = await hasPermission("academic.manage") || await hasRole("admin") || await hasRole("superadmin");
     if (!isAdmin) throw new Error("Unauthorized: Academic admin access required");
 }
 
@@ -96,7 +96,7 @@ export async function generateAdmissionLetterAction(applicationId: number) {
 
 export async function approveK12ResultAction(summaryId: number) {
     try {
-        const isPrincipal = await hasRole("principal") || await hasRole("superadmin");
+        const isPrincipal = await hasPermission("academic.results.approve") || await hasRole("principal") || await hasRole("superadmin");
         if (!isPrincipal) throw new Error("Unauthorized: Principal access required");
         
         const userId = 1; 
@@ -126,7 +126,7 @@ export async function editStudentScoreAction(data: {
     reason: string
 }) {
     try {
-        const canEdit = await hasRole("principal") || await hasRole("superadmin");
+        const canEdit = await hasPermission("academic.results.approve") || await hasPermission("academic.results.upload") || await hasRole("principal") || await hasRole("superadmin");
         if (!canEdit) throw new Error("Unauthorized: Edit permissions required");
         
         const userId = 1;

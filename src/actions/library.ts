@@ -1,15 +1,19 @@
 "use server";
 
 import { db } from "@/db";
-import { libraryResources, libraryPhysicalCopies, libraryCirculation, libraryPatronMetadata, users, libraryDigitalAssets, libraryFines } from "@/db/schema";
+import { libraryResources, libraryPhysicalCopies, libraryCirculation, libraryPatronMetadata, users, libraryDigitalAssets, libraryFines, walletTransactions } from "@/db/schema";
 import { eq, and, or, not, like, sql, desc } from "drizzle-orm";
 import { auth } from "@/auth";
 import { getAIProvider } from "@/lib/ai-service";
+import { hasRole, hasPermission } from "@/lib/rbac";
 
 // --- CATALOGING ACTIONS ---
 
 export async function addLibraryResource(data: any) {
     try {
+        const isAuth = await hasPermission("library.catalog.manage") || await hasPermission("library.manage") || await hasRole("librarian") || await hasRole("admin") || await hasRole("superadmin");
+        if (!isAuth) return { success: false, error: "Unauthorized: Library catalog management permission required." };
+
         const [result] = await db.insert(libraryResources).values({
             ...data,
             aiTags: data.aiTags ? JSON.stringify(data.aiTags) : null,
@@ -24,6 +28,9 @@ export async function addLibraryResource(data: any) {
 
 export async function addPhysicalCopy(resourceId: number, barcode: string, shelfLocation?: string) {
     try {
+        const isAuth = await hasPermission("library.catalog.manage") || await hasPermission("library.manage") || await hasRole("librarian") || await hasRole("admin") || await hasRole("superadmin");
+        if (!isAuth) return { success: false, error: "Unauthorized: Library catalog management permission required." };
+
         await db.insert(libraryPhysicalCopies).values({
             resourceId,
             barcode,
@@ -52,6 +59,9 @@ export async function checkoutBook(barcode: string, studentId: number) {
     try {
         const session = await auth();
         if (!session?.user?.id) return { success: false, error: "Unauthorized" };
+
+        const isAuth = await hasPermission("library.circulation.manage") || await hasPermission("library.manage") || await hasRole("librarian") || await hasRole("admin") || await hasRole("superadmin");
+        if (!isAuth) return { success: false, error: "Unauthorized: Library circulation permission required." };
 
         // 1. Find the copy
         const [copy] = await db.select().from(libraryPhysicalCopies)
@@ -124,6 +134,9 @@ export async function checkoutBook(barcode: string, studentId: number) {
 
 export async function returnBook(barcode: string) {
     try {
+        const isAuth = await hasPermission("library.circulation.manage") || await hasPermission("library.manage") || await hasRole("librarian") || await hasRole("admin") || await hasRole("superadmin");
+        if (!isAuth) return { success: false, error: "Unauthorized: Library circulation permission required." };
+
         const [copy] = await db.select().from(libraryPhysicalCopies)
             .where(eq(libraryPhysicalCopies.barcode, barcode))
             .limit(1);
@@ -295,6 +308,9 @@ export async function sendLibraryNotification(userId: number, message: string, t
 
 export async function getLibraryAnalytics() {
     try {
+        const isAuth = await hasPermission("library.analytics.view") || await hasPermission("library.manage") || await hasRole("librarian") || await hasRole("admin") || await hasRole("superadmin");
+        if (!isAuth) throw new Error("Unauthorized");
+
         const totalResources = await db.select({ count: sql<number>`count(*)` }).from(libraryResources);
         const totalCirculation = await db.select({ count: sql<number>`count(*)` }).from(libraryCirculation);
         const activeLoans = await db.select({ count: sql<number>`count(*)` }).from(libraryCirculation).where(eq(libraryCirculation.status, "active"));
@@ -324,6 +340,9 @@ export async function getLibraryAnalytics() {
  */
 export async function calculateAndApplyFines() {
     try {
+        const isAuth = await hasPermission("library.fines.manage") || await hasPermission("library.manage") || await hasRole("librarian") || await hasRole("admin") || await hasRole("superadmin");
+        if (!isAuth) return { success: false, error: "Unauthorized" };
+
         const now = new Date();
         const dailyRate = 50.00;
 
@@ -413,6 +432,135 @@ export async function libraryChat(query: string, history: { role: string; conten
     } catch (error) {
         console.error("Library AI Chat Error:", error);
         return { success: false, error: "Library AI is currently offline. Please try again later." };
+    }
+}
+
+export async function getStudentLibraryResources() {
+    try {
+        const results = await db.select({
+            resource: libraryResources,
+            asset: libraryDigitalAssets,
+            copy: libraryPhysicalCopies
+        })
+        .from(libraryResources)
+        .leftJoin(libraryDigitalAssets, eq(libraryResources.id, libraryDigitalAssets.resourceId))
+        .leftJoin(libraryPhysicalCopies, eq(libraryResources.id, libraryPhysicalCopies.resourceId))
+        .limit(1000);
+
+        const resourceMap = new Map();
+        results.forEach(row => {
+            const res = row.resource;
+            if (!resourceMap.has(res.id)) {
+                resourceMap.set(res.id, {
+                    ...res,
+                    digitalAsset: row.asset,
+                    availableCopies: 0
+                });
+            }
+            if (row.copy && row.copy.status === 'available') {
+                resourceMap.get(res.id).availableCopies++;
+            }
+        });
+        
+        return Array.from(resourceMap.values()).slice(0, 50);
+    } catch (error) {
+        console.error("Failed to fetch student library resources:", error);
+        return [];
+    }
+}
+
+// --- FINANCE INTEGRATION ---
+
+export async function getStudentLibraryFines(studentId?: number) {
+    try {
+        // SECURITY: Always verify the caller owns the data they're requesting
+        const session = await auth();
+        if (!session?.user?.id) return { success: false, fines: [], totalOwed: '0.00', error: "Unauthorized" };
+        
+        const callerId = parseInt(session.user.id);
+        const callerRole = (session.user as any).role?.toLowerCase();
+        const hasFinePermission = await hasPermission("library.fines.manage") || await hasPermission("library.manage");
+        const isAdmin = ["admin", "superadmin", "registrar", "librarian", "bursar"].includes(callerRole) || hasFinePermission;
+        
+        // Non-admins can only access their OWN fines
+        const resolvedStudentId = isAdmin && studentId ? studentId : callerId;
+        if (!isAdmin && studentId && studentId !== callerId) {
+            return { success: false, fines: [], totalOwed: '0.00', error: "Unauthorized: Cannot access another user's fines." };
+        }
+
+        const fines = await db.select({
+            fine: libraryFines,
+            circulation: libraryCirculation,
+            copy: libraryPhysicalCopies,
+            resource: libraryResources
+        })
+        .from(libraryFines)
+        .innerJoin(libraryCirculation, eq(libraryFines.circulationId, libraryCirculation.id))
+        .innerJoin(libraryPhysicalCopies, eq(libraryCirculation.copyId, libraryPhysicalCopies.id))
+        .innerJoin(libraryResources, eq(libraryPhysicalCopies.resourceId, libraryResources.id))
+        .where(and(eq(libraryFines.patronId, resolvedStudentId), eq(libraryFines.status, 'unpaid')));
+
+        const patron = await db.query.libraryPatronMetadata.findFirst({
+            where: eq(libraryPatronMetadata.userId, resolvedStudentId)
+        });
+
+        return {
+            success: true,
+            fines,
+            totalOwed: patron?.totalFinesOwed || '0.00'
+        };
+    } catch (error) {
+        console.error("Failed to fetch library fines:", error);
+        return { success: false, fines: [], totalOwed: '0.00' };
+    }
+}
+
+export async function processLibraryFinePayment() {
+    try {
+        // SECURITY: Auth is mandatory — studentId always comes from session, NOT the client
+        const session = await auth();
+        if (!session?.user?.id) return { success: false, error: "Unauthorized" };
+        const studentId = parseInt(session.user.id);
+
+        // SECURITY: Recompute the actual amount owed server-side — never trust client-supplied amounts
+        const unpaidFines = await db.select({ amount: libraryFines.amount })
+            .from(libraryFines)
+            .where(and(eq(libraryFines.patronId, studentId), eq(libraryFines.status, 'unpaid')));
+        
+        if (unpaidFines.length === 0) {
+            return { success: false, error: "No outstanding fines found." };
+        }
+
+        const actualTotalAmount = unpaidFines.reduce((sum, f) => sum + parseFloat(f.amount?.toString() || '0'), 0);
+
+        await db.transaction(async (tx) => {
+            // 1. Mark all unpaid fines as paid
+            await tx.update(libraryFines)
+                .set({ status: 'paid' })
+                .where(and(eq(libraryFines.patronId, studentId), eq(libraryFines.status, 'unpaid')));
+
+            // 2. Reset the student's total fines owed to 0 in patron metadata
+            await tx.update(libraryPatronMetadata)
+                .set({ totalFinesOwed: '0.00' })
+                .where(eq(libraryPatronMetadata.userId, studentId));
+
+            // 3. Log the payment with the server-computed amount
+            await tx.insert(walletTransactions).values({
+                studentId,
+                amount: actualTotalAmount.toString(),
+                type: 'credit',
+                purpose: 'Library Fines Clearance',
+                status: 'success'
+            });
+        });
+
+        revalidatePath("/student/finance/library");
+        revalidatePath("/student/finance");
+        revalidatePath("/student");
+        return { success: true };
+    } catch (error) {
+        console.error("Failed to process library fine payment:", error);
+        return { success: false, error: "Failed to process payment." };
     }
 }
 

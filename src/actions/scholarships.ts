@@ -5,6 +5,7 @@ import { sponsors, scholarships, studentScholarships, sponsorLedger, students, s
 import { eq, and, desc, sql } from "drizzle-orm";
 import { getCurrentSession } from "./portal";
 import { revalidatePath } from "next/cache";
+import { hasPermission, hasRole } from "@/lib/rbac";
 
 export async function getSponsors() {
     try {
@@ -21,6 +22,9 @@ export async function createSponsor(data: {
     contactEmail?: string;
 }) {
     try {
+        const allowed = await hasPermission("finance.scholarships.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("bursar") || await hasRole("scholarship_officer");
+        if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to create sponsor" };
+
         await db.insert(sponsors).values(data);
         revalidatePath("/admin/bursary/scholarships");
         return { success: true };
@@ -38,6 +42,9 @@ export async function depositSponsorFunds(data: {
     recordedBy: number;
 }) {
     try {
+        const allowed = await hasPermission("finance.scholarships.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("bursar") || await hasRole("scholarship_officer");
+        if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to deposit sponsor funds" };
+
         await db.transaction(async (tx) => {
             // 1. Record in sponsor ledger
             await tx.insert(sponsorLedger).values({
@@ -77,6 +84,9 @@ export async function allocateScholarship(data: {
     sessionId?: number;
 }) {
     try {
+        const allowed = await hasPermission("finance.scholarships.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("bursar") || await hasRole("scholarship_officer");
+        if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to allocate scholarship" };
+
         let sessionId = data.sessionId;
         if (!sessionId) {
             const currentSession = await getCurrentSession();
@@ -102,6 +112,9 @@ export async function allocateScholarship(data: {
 
 export async function disburseScholarship(allocationId: number, recordedBy: number) {
     try {
+        const allowed = await hasPermission("finance.scholarships.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("bursar") || await hasRole("scholarship_officer");
+        if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to disburse scholarship" };
+
         // 1. Get allocation details
         const results = await db.select({
             allocation: studentScholarships,

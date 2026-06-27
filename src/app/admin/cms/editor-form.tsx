@@ -48,7 +48,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { upsertPage, duplicatePage, getMenus, upsertMenu } from "@/actions/cms";
+import { upsertPage, duplicatePage, getMenus, upsertMenu, getPageRevisions, restoreRevision } from "@/actions/cms";
 import TiptapEditor from "@/components/cms/Editor";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -64,6 +64,7 @@ export default function PageEditorForm({ initialData }: { initialData?: any }) {
     const [allMenus, setAllMenus] = useState<any[]>([]);
     const [transLoading, setTransLoading] = useState(false);
     const [isLinked, setIsLinked] = useState(false);
+    const [revisions, setRevisions] = useState<any[]>([]);
     const [formData, setFormData] = useState({
         id: initialData?.id || undefined,
         title: initialData?.title || "",
@@ -93,6 +94,14 @@ export default function PageEditorForm({ initialData }: { initialData?: any }) {
             }
         });
     }, [formData.slug]);
+
+    useEffect(() => {
+        if (formData.id) {
+            getPageRevisions(formData.id).then(res => {
+                if (res.success) setRevisions(res.data);
+            });
+        }
+    }, [formData.id]);
 
     const handleSave = async () => {
         if (!formData.title || !formData.slug) {
@@ -151,6 +160,20 @@ export default function PageEditorForm({ initialData }: { initialData?: any }) {
             toast.error("SEO Audit failed");
         }
         setAuditLoading(false);
+    };
+
+    const handleRestore = async (revId: number) => {
+        if (!formData.id) return;
+        if (!confirm("Are you sure you want to restore this version? Current unsaved changes will be lost.")) return;
+        setLoading(true);
+        const res = await restoreRevision(formData.id, revId);
+        if (res.success) {
+            toast.success("Revision restored successfully!");
+            window.location.reload(); 
+        } else {
+            toast.error(res.error || "Failed to restore");
+            setLoading(false);
+        }
     };
 
     const applyAISet = () => {
@@ -314,11 +337,16 @@ export default function PageEditorForm({ initialData }: { initialData?: any }) {
 
                         <Tabs defaultValue="seo" className="w-full">
                             <Card className="rounded-2xl border-none shadow-sm bg-white overflow-hidden">
-                                <TabsList className="w-full bg-slate-50/50 p-1 h-auto flex rounded-none border-b border-slate-50">
-                                    <TabsTrigger value="seo" className="flex-1 py-3 rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-sm font-bold text-xs uppercase tracking-widest">SEO Optimization</TabsTrigger>
-                                    <TabsTrigger value="locales" className="flex-1 py-3 rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-sm font-bold text-xs uppercase tracking-widest">
+                                <TabsList className="w-full bg-slate-50/50 p-1 h-auto flex rounded-none border-b border-slate-50 overflow-x-auto">
+                                    <TabsTrigger value="seo" className="flex-1 whitespace-nowrap py-3 rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-sm font-bold text-xs uppercase tracking-widest">SEO Optimization</TabsTrigger>
+                                    <TabsTrigger value="locales" className="flex-1 whitespace-nowrap py-3 rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-sm font-bold text-xs uppercase tracking-widest">
                                         <Globe className="w-3 h-3 mr-2" /> Pan-African Hub
                                     </TabsTrigger>
+                                    {formData.id && (
+                                        <TabsTrigger value="history" className="flex-1 whitespace-nowrap py-3 rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-sm font-bold text-xs uppercase tracking-widest">
+                                            <Clock className="w-3 h-3 mr-2" /> History
+                                        </TabsTrigger>
+                                    )}
                                 </TabsList>
                                 <CardContent className="p-6">
                                     <TabsContent value="seo" className="mt-0 space-y-6">
@@ -583,6 +611,54 @@ export default function PageEditorForm({ initialData }: { initialData?: any }) {
                                             </div>
                                         </div>
                                     </TabsContent>
+
+                                    {formData.id && (
+                                        <TabsContent value="history" className="mt-0 space-y-4">
+                                            <div className="bg-amber-50 border border-amber-200 text-amber-800 p-4 rounded-xl flex items-start gap-3">
+                                                <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                                                <div>
+                                                    <h4 className="font-bold text-sm tracking-tight">Version History</h4>
+                                                    <p className="text-xs font-medium opacity-80 mt-1">
+                                                        The system automatically saves a snapshot of your content every time you save. We keep the 10 most recent versions to conserve storage. Restoring a version will immediately overwrite the current live content.
+                                                    </p>
+                                                </div>
+                                            </div>
+
+                                            <div className="space-y-3 mt-6">
+                                                {revisions.length === 0 ? (
+                                                    <div className="text-center py-8 text-slate-400 font-medium text-sm">No revisions found for this page yet.</div>
+                                                ) : (
+                                                    revisions.map((rev: any, idx: number) => (
+                                                        <div key={rev.id} className="flex items-center justify-between p-4 rounded-xl border border-slate-100 hover:border-slate-200 bg-slate-50/50 transition-colors">
+                                                            <div className="flex items-center gap-4">
+                                                                <div className="w-10 h-10 rounded-full bg-white shadow-sm border border-slate-100 flex items-center justify-center font-bold text-slate-400 text-xs">
+                                                                    v{revisions.length - idx}
+                                                                </div>
+                                                                <div>
+                                                                    <div className="flex items-center gap-2">
+                                                                        <span className="font-bold text-sm text-slate-900">{new Date(rev.createdAt).toLocaleString()}</span>
+                                                                        <Badge variant="outline" className={cn("text-[9px] uppercase tracking-widest", rev.statusSnapshot === 'published' ? 'border-emerald-200 text-emerald-600 bg-emerald-50' : '')}>
+                                                                            {rev.statusSnapshot}
+                                                                        </Badge>
+                                                                    </div>
+                                                                    <p className="text-xs text-slate-500 font-medium mt-1">Saved by {rev.savedBy || "System"}</p>
+                                                                </div>
+                                                            </div>
+                                                            <Button 
+                                                                variant="outline" 
+                                                                size="sm" 
+                                                                className="h-8 text-xs font-bold"
+                                                                onClick={() => handleRestore(rev.id)}
+                                                            >
+                                                                Restore
+                                                            </Button>
+                                                        </div>
+                                                    ))
+                                                )}
+                                            </div>
+                                        </TabsContent>
+                                    )}
+
                                 </CardContent>
                             </Card>
                         </Tabs>

@@ -7,7 +7,7 @@ export const authConfig = {
     },
     session: { strategy: "jwt" },
     callbacks: {
-        async jwt({ token, user }) {
+        async jwt({ token, user, trigger, session }) {
             if (user) {
                 token.role = (user as any).role;
                 token.id = user.id;
@@ -16,6 +16,12 @@ export const authConfig = {
                 token.permissions = (user as any).permissions;
                 token.schoolPortalId = (user as any).schoolPortalId;
                 token.requiresPasswordChange = (user as any).requiresPasswordChange;
+                token.twoFactorPending = (user as any).twoFactorPending;
+            }
+            if (trigger === "update" && session) {
+                if (session.twoFactorVerified !== undefined) {
+                    token.twoFactorPending = !session.twoFactorVerified;
+                }
             }
             return token;
         },
@@ -28,6 +34,7 @@ export const authConfig = {
                 (session.user as any).permissions = token.permissions;
                 (session.user as any).schoolPortalId = token.schoolPortalId;
                 (session.user as any).requiresPasswordChange = token.requiresPasswordChange;
+                (session.user as any).twoFactorPending = token.twoFactorPending;
             }
             return session;
         },
@@ -36,22 +43,52 @@ export const authConfig = {
             const isLoginPage = nextUrl.pathname === "/login";
             const isRegisterPage = nextUrl.pathname === "/register";
             const isJobsPage = nextUrl.pathname.startsWith("/jobs");
-            const isApiPage = nextUrl.pathname.startsWith("/api");
             const isAdminPage = nextUrl.pathname.startsWith("/admin");
+            const isTwoFactorPage = nextUrl.pathname === "/login/2fa";
 
-            // Allow public pages without authentication
-            if (isApiPage || isJobsPage) return true;
+            // SECURITY FIX: Only allow specific public API endpoints without authentication.
+            // The old blanket `isApiPage` bypass exposed ALL /api routes publicly.
+            const isPublicApiRoute = 
+                nextUrl.pathname === "/api/auth/callback/google" ||
+                nextUrl.pathname === "/api/auth/callback/microsoft-entra-id" ||
+                nextUrl.pathname.startsWith("/api/auth/") ||     // NextAuth's own routes
+                nextUrl.pathname === "/api/webhooks/remita" ||   // Remita payment webhook
+                nextUrl.pathname === "/api/healthz" ||           // Health check
+                nextUrl.pathname === "/api/push";                // Push notification subscription (pre-auth)
+
+            // Allow public API routes and public pages
+            if (isPublicApiRoute || isJobsPage) return true;
+
+            // If user is logged in, check if 2FA verification is pending
+            const twoFactorPending = (auth?.user as any)?.twoFactorPending;
+
+            if (isLoggedIn && twoFactorPending && !isTwoFactorPage) {
+                return Response.redirect(new URL("/login/2fa", nextUrl));
+            }
 
             // Handle login/register pages
             if (isLoginPage || isRegisterPage) {
-                // If already logged in, redirect to home
-                if (isLoggedIn) return Response.redirect(new URL("/", nextUrl));
+                // If already logged in, redirect to 2FA page if pending, else home
+                if (isLoggedIn) {
+                    if (twoFactorPending) {
+                        return Response.redirect(new URL("/login/2fa", nextUrl));
+                    }
+                    return Response.redirect(new URL("/", nextUrl));
+                }
                 // Allow access to login/register when not logged in
                 return true;
             }
 
             // Require authentication for all other pages
             if (!isLoggedIn) return false;
+
+            if (isTwoFactorPage) {
+                // If on 2FA page but not pending 2FA, redirect to home
+                if (!twoFactorPending) {
+                    return Response.redirect(new URL("/", nextUrl));
+                }
+                return true;
+            }
 
             // Forced Password Change logic
             const requiresPasswordChange = (auth?.user as any)?.requiresPasswordChange;
@@ -68,10 +105,15 @@ export const authConfig = {
             const userRole = (auth?.user as any)?.role?.toLowerCase();
             const allowedAdminPaths = ["/admin/academics", "/admin/students", "/admin/hr", "/admin/exams-records"]; // Paths staff can access
             
-             if (isAdminPage) {
+            const userPermissions = (auth?.user as any)?.permissions || [];
+            const userRoles = (auth?.user as any)?.roles || [];
+            const hasCmsAccess = userPermissions.some((p: string) => p.startsWith("cms.")) || userRoles.includes("CMS Manager");
+
+            if (isAdminPage) {
                 if (userRole === 'admin' || userRole === 'superadmin' || userRole === 'dvc') return true;
+                if (nextUrl.pathname.startsWith("/admin/cms") && hasCmsAccess) return true;
                 if (userRole === 'bursar' && (nextUrl.pathname.startsWith("/admin/bursary") || nextUrl.pathname.startsWith("/admin/students") || nextUrl.pathname.startsWith("/admin/hr"))) return true;
-                if (userRole === 'registrar' && (nextUrl.pathname.startsWith("/admin/admission") || nextUrl.pathname.startsWith("/admin/admissions") || nextUrl.pathname.startsWith("/admin/academics") || nextUrl.pathname.startsWith("/admin/academic") || nextUrl.pathname.startsWith("/admin/students") || nextUrl.pathname.startsWith("/admin/hr") || nextUrl.pathname.startsWith("/admin/exams-records"))) return true;
+                if (userRole === 'registrar' && (nextUrl.pathname.startsWith("/admin/admission") || nextUrl.pathname.startsWith("/admin/admissions") || nextUrl.pathname.startsWith("/admin/academics") || nextUrl.pathname.startsWith("/admin/academic") || nextUrl.pathname.startsWith("/admin/students") || nextUrl.pathname.startsWith("/admin/hr") || nextUrl.pathname.startsWith("/admin/exams-records") || nextUrl.pathname.startsWith("/admin/registrar"))) return true;
                 if (userRole === 'librarian' && (nextUrl.pathname.startsWith("/admin/library") || nextUrl.pathname.startsWith("/admin/journal") || nextUrl.pathname.startsWith("/admin/students") || nextUrl.pathname.startsWith("/admin/hr"))) return true;
                 if (userRole === 'hod' && (nextUrl.pathname.startsWith("/admin/hod") || nextUrl.pathname.startsWith("/admin/academics") || nextUrl.pathname.startsWith("/admin/academic") || nextUrl.pathname.startsWith("/admin/students") || nextUrl.pathname.startsWith("/admin/hr"))) return true;
                 if (userRole === 'dean' && (nextUrl.pathname.startsWith("/admin/dean") || nextUrl.pathname.startsWith("/admin/academics") || nextUrl.pathname.startsWith("/admin/academic") || nextUrl.pathname.startsWith("/admin/students") || nextUrl.pathname.startsWith("/admin/hr"))) return true;

@@ -61,6 +61,7 @@ export async function assignOfficerRole(userId: number, roleId: number, unitId?:
         });
 
         revalidatePath("/admin/settings/officers");
+        revalidatePath("/admin/settings/cms-managers");
         return { success: true };
     } catch (error: any) {
         return { success: false, error: error.message };
@@ -76,6 +77,7 @@ export async function removeOfficerRole(assignmentId: number) {
     try {
         await db.delete(userRoles).where(eq(userRoles.id, assignmentId));
         revalidatePath("/admin/settings/officers");
+        revalidatePath("/admin/settings/cms-managers");
         return { success: true };
     } catch (error: any) {
         return { success: false, error: error.message };
@@ -137,5 +139,25 @@ export async function getInstitutionalUnits() {
     } catch (error) {
         console.error("Error fetching units:", error);
         return [];
+    }
+}
+
+export async function getCmsManagers() {
+    try {
+        const results = await db.select({
+            assignmentId: userRoles.id,
+            user: usersTable,
+            role: roles,
+            profile: staffProfiles
+        })
+        .from(userRoles)
+        .innerJoin(usersTable, eq(userRoles.userId, usersTable.id))
+        .innerJoin(roles, eq(userRoles.roleId, roles.id))
+        .leftJoin(staffProfiles, eq(usersTable.id, staffProfiles.userId))
+        .where(eq(roles.name, 'CMS Manager'));
+
+        return { success: true, managers: results };
+    } catch (error: any) {
+        return { success: false, error: error.message };
     }
 }

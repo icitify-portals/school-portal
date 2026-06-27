@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/db/db";
 import { courseRegistrationWaivers, users, students, courses } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
-import { hasRole } from "@/lib/rbac";
+import { hasRole, hasPermission } from "@/lib/rbac";
 
 export async function grantCourseWaiverAction(data: {
     studentId: number,
@@ -13,7 +13,7 @@ export async function grantCourseWaiverAction(data: {
     reason: string
 }) {
     try {
-        const isAuth = await hasRole("admin") || await hasRole("superadmin") || await hasRole("dean") || await hasRole("hod");
+        const isAuth = await hasPermission("academic.waiver.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("dean") || await hasRole("hod");
         if (!isAuth) throw new Error("Unauthorized: HOD/Dean access required");
 
         const adminId = 1; // Current User Placeholder

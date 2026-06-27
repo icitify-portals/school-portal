@@ -1,28 +1,58 @@
 "use server";
 
 import { db } from "@/db/db";
-import { cmsNews, cmsEvents, cmsPages } from "@/db/schema";
+import { cmsNews, cmsEvents, cmsPages, cmsMedia } from "@/db/schema";
 import { eq, asc, desc, and, or } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { hasPermission, hasRole } from "@/lib/rbac";
 
 // --- NEWS ACTIONS ---
 
 export async function getNews() {
     try {
-        const news = await db.query.cmsNews.findMany({
-            orderBy: [desc(cmsNews.publishedAt), desc(cmsNews.createdAt)]
-        });
+        const news = await db.select({
+            id: cmsNews.id,
+            title: cmsNews.title,
+            slug: cmsNews.slug,
+            teaser: cmsNews.teaser,
+            content: cmsNews.content,
+            featuredImage: cmsMedia.url,
+            featuredImageId: cmsNews.featuredImageId,
+            status: cmsNews.status,
+            publishedAt: cmsNews.publishedAt,
+            createdAt: cmsNews.createdAt,
+            authorId: cmsNews.authorId
+        })
+        .from(cmsNews)
+        .leftJoin(cmsMedia, eq(cmsNews.featuredImageId, cmsMedia.id))
+        .orderBy(desc(cmsNews.publishedAt), desc(cmsNews.createdAt));
         return { success: true, data: news };
     } catch (error) {
+        console.error("Fetch News error", error);
         return { success: false, error: "Failed to fetch news" };
     }
 }
 
 export async function getNewsBySlug(slug: string) {
     try {
-        const item = await db.query.cmsNews.findFirst({
-            where: eq(cmsNews.slug, slug)
-        });
+        const [item] = await db.select({
+            id: cmsNews.id,
+            title: cmsNews.title,
+            slug: cmsNews.slug,
+            teaser: cmsNews.teaser,
+            content: cmsNews.content,
+            featuredImage: cmsMedia.url,
+            featuredImageId: cmsNews.featuredImageId,
+            status: cmsNews.status,
+            publishedAt: cmsNews.publishedAt,
+            createdAt: cmsNews.createdAt,
+            authorId: cmsNews.authorId
+        })
+        .from(cmsNews)
+        .leftJoin(cmsMedia, eq(cmsNews.featuredImageId, cmsMedia.id))
+        .where(eq(cmsNews.slug, slug))
+        .limit(1);
+        
         return { success: true, data: item };
     } catch (error) {
         return { success: false, error: "Failed to fetch news item" };
@@ -31,18 +61,32 @@ export async function getNewsBySlug(slug: string) {
 
 export async function upsertNews(data: any) {
     try {
-        if (data.status === 'published' && !data.publishedAt) {
-            data.publishedAt = new Date();
+        const isAllowed = await hasPermission("cms.content.manage") || await hasRole("admin") || await hasRole("superadmin");
+        if (!isAllowed) return { success: false, error: "Unauthorized" };
+
+        const { id, termIds, category, ...newsData } = data;
+
+        if (newsData.status === 'published' && !newsData.publishedAt) {
+            newsData.publishedAt = new Date();
         }
 
-        if (data.id) {
-            await db.update(cmsNews).set(data).where(eq(cmsNews.id, data.id));
+        let targetId = id;
+        if (id) {
+            await db.update(cmsNews).set(newsData).where(eq(cmsNews.id, id));
         } else {
-            await db.insert(cmsNews).values(data);
+            const [result] = await db.insert(cmsNews).values(newsData);
+            targetId = (result as any).insertId;
         }
+
+        // Handle Taxonomy terms via new API
+        if (targetId && termIds !== undefined) {
+             const { setEntityTerms } = await import("@/actions/cms-taxonomy");
+             await setEntityTerms('news', targetId, termIds);
+        }
+
         revalidatePath("/admin/cms/news");
         revalidatePath("/news");
-        return { success: true };
+        return { success: true, id: targetId };
     } catch (error) {
         console.error("News Save Error:", error);
         return { success: false, error: "Failed to save news" };
@@ -53,9 +97,23 @@ export async function upsertNews(data: any) {
 
 export async function getEvents() {
     try {
-        const events = await db.query.cmsEvents.findMany({
-            orderBy: [desc(cmsEvents.startDate)]
-        });
+        const events = await db.select({
+            id: cmsEvents.id,
+            title: cmsEvents.title,
+            slug: cmsEvents.slug,
+            description: cmsEvents.description,
+            location: cmsEvents.location,
+            startDate: cmsEvents.startDate,
+            endDate: cmsEvents.endDate,
+            isVirtual: cmsEvents.isVirtual,
+            eventLink: cmsEvents.eventLink,
+            featuredImage: cmsMedia.url,
+            featuredImageId: cmsEvents.featuredImageId,
+            status: cmsEvents.status
+        })
+        .from(cmsEvents)
+        .leftJoin(cmsMedia, eq(cmsEvents.featuredImageId, cmsMedia.id))
+        .orderBy(desc(cmsEvents.startDate));
         return { success: true, data: events };
     } catch (error) {
         return { success: false, error: "Failed to fetch events" };
@@ -64,14 +122,27 @@ export async function getEvents() {
 
 export async function upsertEvent(data: any) {
     try {
-        if (data.id) {
-            await db.update(cmsEvents).set(data).where(eq(cmsEvents.id, data.id));
+        const isAllowed = await hasPermission("cms.content.manage") || await hasRole("admin") || await hasRole("superadmin");
+        if (!isAllowed) return { success: false, error: "Unauthorized" };
+
+        const { id, termIds, ...eventData } = data;
+        let targetId = id;
+        
+        if (id) {
+            await db.update(cmsEvents).set(eventData).where(eq(cmsEvents.id, id));
         } else {
-            await db.insert(cmsEvents).values(data);
+            const [result] = await db.insert(cmsEvents).values(eventData);
+            targetId = (result as any).insertId;
         }
+
+        if (targetId && termIds !== undefined) {
+             const { setEntityTerms } = await import("@/actions/cms-taxonomy");
+             await setEntityTerms('event', targetId, termIds);
+        }
+
         revalidatePath("/admin/cms/events");
         revalidatePath("/events");
-        return { success: true };
+        return { success: true, id: targetId };
     } catch (error) {
         console.error("Event Save Error:", error);
         return { success: false, error: "Failed to save event" };
@@ -106,6 +177,8 @@ export async function getReviewQueue() {
 
 export async function approveContent(type: 'page' | 'news' | 'event', id: number) {
     try {
+        const isAllowed = await hasPermission("cms.publishing.approve") || await hasRole("admin") || await hasRole("superadmin");
+        if (!isAllowed) return { success: false, error: "Unauthorized" };
         if (type === 'page') {
             await db.update(cmsPages).set({ status: 'published' }).where(eq(cmsPages.id, id));
             revalidatePath("/admin/cms");
@@ -124,6 +197,8 @@ export async function approveContent(type: 'page' | 'news' | 'event', id: number
 
 export async function rejectContent(type: 'page' | 'news' | 'event', id: number) {
     try {
+        const isAllowed = await hasPermission("cms.publishing.approve") || await hasRole("admin") || await hasRole("superadmin");
+        if (!isAllowed) return { success: false, error: "Unauthorized" };
         if (type === 'page') {
             await db.update(cmsPages).set({ status: 'rejected' }).where(eq(cmsPages.id, id));
         } else if (type === 'news') {

@@ -15,10 +15,20 @@ import {
 } from "@/db/schema";
 import { eq, and, or, isNull, desc, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { auth } from "@/auth";
+import { hasRole, hasPermission } from "@/lib/rbac";
 
 export async function getSiwesEligibility(studentId: number) {
     try {
-        const [student] = await db.select().from(students).where(eq(students.id, studentId)).limit(1);
+        const session = await auth();
+        if (!session?.user?.id) return { success: false, error: "Unauthorized" };
+        const userId = parseInt(session.user.id);
+
+        const isStaff = await hasPermission("siwes.placement.view") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("siwes_coordinator");
+
+        const [student] = await db.select().from(students).where(
+            isStaff ? eq(students.id, studentId) : and(eq(students.id, studentId), eq(students.userId, userId))
+        ).limit(1);
         if (!student) return { success: false, error: "Student not found" };
 
         const programme = student.programmeId ? (await db.select().from(programmes).where(eq(programmes.id, student.programmeId)).limit(1))[0] : null;
@@ -56,6 +66,8 @@ export async function getSiwesEligibility(studentId: number) {
 
 export async function getSiwesCompanies(): Promise<{ success: boolean; data?: any[]; error?: string }> {
     try {
+        const session = await auth();
+        if (!session?.user?.id) return { success: false, error: "Unauthorized" };
         const companies = await db.query.siwesCompanies.findMany({
             where: eq(siwesCompanies.isApproved, true)
         });
@@ -67,6 +79,9 @@ export async function getSiwesCompanies(): Promise<{ success: boolean; data?: an
 
 export async function requestCompany(data: { name: string, address: string, email?: string, phone?: string, addedById: number }) {
     try {
+        const session = await auth();
+        if (!session?.user?.id) return { success: false, error: "Unauthorized" };
+        if (data.addedById !== parseInt(session.user.id)) return { success: false, error: "Unauthorized" };
         await db.insert(siwesCompanies).values({
             ...data,
             isApproved: false
@@ -80,6 +95,13 @@ export async function requestCompany(data: { name: string, address: string, emai
 
 export async function applyToCompany(studentId: number, companyId: number) {
     try {
+        const session = await auth();
+        if (!session?.user?.id) return { success: false, error: "Unauthorized" };
+        const userId = parseInt(session.user.id);
+
+        const [student] = await db.select().from(students).where(and(eq(students.id, studentId), eq(students.userId, userId))).limit(1);
+        if (!student) return { success: false, error: "Unauthorized" };
+
         // Check if student already has an active placement
         const existing = await db.query.siwesPlacements.findFirst({
             where: and(
@@ -107,6 +129,15 @@ export async function applyToCompany(studentId: number, companyId: number) {
 
 export async function uploadAcceptanceLetter(placementId: number, url: string) {
     try {
+        const session = await auth();
+        if (!session?.user?.id) return { success: false, error: "Unauthorized" };
+        const userId = parseInt(session.user.id);
+
+        const [placement] = await db.select().from(siwesPlacements).where(eq(siwesPlacements.id, placementId)).limit(1);
+        if (!placement) return { success: false, error: "Placement not found" };
+
+        const [student] = await db.select().from(students).where(and(eq(students.id, placement.studentId), eq(students.userId, userId))).limit(1);
+        if (!student) return { success: false, error: "Unauthorized" };
         await db.update(siwesPlacements)
             .set({
                 acceptanceLetterUrl: url,
@@ -122,6 +153,15 @@ export async function uploadAcceptanceLetter(placementId: number, url: string) {
 
 export async function submitLogbook(data: { placementId: number, weekNumber: number, activities: string, signedLogbookUrl?: string }) {
     try {
+        const session = await auth();
+        if (!session?.user?.id) return { success: false, error: "Unauthorized" };
+        const userId = parseInt(session.user.id);
+
+        const [placement] = await db.select().from(siwesPlacements).where(eq(siwesPlacements.id, data.placementId)).limit(1);
+        if (!placement) return { success: false, error: "Placement not found" };
+
+        const [student] = await db.select().from(students).where(and(eq(students.id, placement.studentId), eq(students.userId, userId))).limit(1);
+        if (!student) return { success: false, error: "Unauthorized" };
         await db.insert(siwesLogbooks).values({
             ...data,
             status: 'submitted'
@@ -135,6 +175,17 @@ export async function submitLogbook(data: { placementId: number, weekNumber: num
 
 export async function getStudentPlacements(studentId: number): Promise<{ success: boolean; data?: any[]; error?: string }> {
     try {
+        const session = await auth();
+        if (!session?.user?.id) return { success: false, error: "Unauthorized" };
+        const userId = parseInt(session.user.id);
+
+        const isStaff = await hasPermission("siwes.placement.view") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("siwes_coordinator");
+
+        const [student] = await db.select().from(students).where(
+            isStaff ? eq(students.id, studentId) : and(eq(students.id, studentId), eq(students.userId, userId))
+        ).limit(1);
+        if (!student) return { success: false, error: "Unauthorized" };
+
         const basePlacements = await db.select().from(siwesPlacements)
             .where(eq(siwesPlacements.studentId, studentId))
             .orderBy(desc(siwesPlacements.createdAt));
@@ -165,6 +216,8 @@ export async function getStudentPlacements(studentId: number): Promise<{ success
 
 export async function getPlacementsForAdmin(): Promise<{ success: boolean; data?: any[]; error?: string }> {
     try {
+        const isAuth = await hasPermission("siwes.placement.view") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("siwes_coordinator");
+        if (!isAuth) return { success: false, error: "Unauthorized" };
         const basePlacements = await db.select().from(siwesPlacements);
         if (basePlacements.length === 0) return { success: true, data: [] };
 
@@ -215,6 +268,8 @@ export async function assessPlacement(data: {
     centreApprovalStatus: 'pending' | 'approved' | 'rejected'
 }) {
     try {
+        const isAuth = await hasPermission("siwes.placement.assess") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("siwes_coordinator");
+        if (!isAuth) return { success: false, error: "Unauthorized" };
         // Upsert assessment
         const existing = await db.query.siwesAssessments.findFirst({
             where: eq(siwesAssessments.placementId, data.placementId)
@@ -250,6 +305,8 @@ export async function assessPlacement(data: {
 
 export async function addSiwesConfig(data: any): Promise<{ success: boolean; error?: string }> {
     try {
+        const isAuth = await hasPermission("siwes.config.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("siwes_coordinator");
+        if (!isAuth) return { success: false, error: "Unauthorized" };
         await db.insert(siwesConfigs).values(data);
         revalidatePath("/admin/siwes");
         return { success: true };
@@ -260,6 +317,8 @@ export async function addSiwesConfig(data: any): Promise<{ success: boolean; err
 
 export async function getSiwesConfigs(): Promise<{ success: boolean; data?: any[]; error?: string }> {
     try {
+        const isAuth = await hasPermission("siwes.config.manage") || await hasPermission("siwes.placement.view") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("siwes_coordinator");
+        if (!isAuth) return { success: false, error: "Unauthorized" };
         const baseConfigs = await db.select().from(siwesConfigs);
         if (baseConfigs.length === 0) return { success: true, data: [] };
 

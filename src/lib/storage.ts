@@ -161,6 +161,24 @@ class S3StorageProvider implements StorageProvider {
     }
 }
 
+/**
+ * Helper to validate file uploads (size and mime type).
+ */
+export const validateFile = (file: File, options: { maxSizeMB?: number, allowedTypes?: string[] } = {}) => {
+    const { maxSizeMB = 5, allowedTypes = [] } = options;
+    const maxSizeBytes = maxSizeMB * 1024 * 1024;
+
+    if (file.size > maxSizeBytes) {
+        return { valid: false, error: `File size exceeds the limit of ${maxSizeMB}MB.` };
+    }
+
+    if (allowedTypes.length > 0 && !allowedTypes.includes(file.type)) {
+        return { valid: false, error: `File type ${file.type} is not allowed. Allowed types: ${allowedTypes.join(', ')}` };
+    }
+
+    return { valid: true };
+};
+
 // Export the singleton instance based on configuration
 export const storage = config.storage.provider === 's3'
     ? new S3StorageProvider()

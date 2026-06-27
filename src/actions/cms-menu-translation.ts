@@ -5,6 +5,7 @@ import { cmsMenus } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { getAIProvider } from "@/lib/ai-service";
 import { auth } from "@/auth";
+import { hasPermission, hasRole } from "@/lib/rbac";
 
 // Supported institution codes
 const TARGET_LOCALES = [
@@ -23,8 +24,8 @@ const TARGET_LOCALES = [
 ];
 
 export async function translateAllMenus(sourceLocale: string = 'en') {
-    const session = await auth();
-    if (!session) return { success: false, error: "Unauthorized" };
+    const isAllowed = await hasPermission("cms.menus.manage") || await hasRole("admin") || await hasRole("superadmin");
+    if (!isAllowed) return { success: false, error: "Unauthorized" };
 
     try {
         const sourceMenus = await db.query.cmsMenus.findMany({

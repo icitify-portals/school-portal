@@ -155,7 +155,8 @@ export async function commitCapturedData(data: { courses: any[], lecturers: any[
                         name: `${l.firstName} ${l.lastName}`,
                         email: l.email,
                         password: passwordHash,
-                        role: 'staff'
+                        role: 'staff',
+                        requiresPasswordChange: true, // SECURITY FIX M-3b: Force password change on first login
                     });
                     userId = res.insertId;
                 }

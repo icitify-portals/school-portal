@@ -4,12 +4,12 @@ import { db } from "@/db/db";
 import { budgets, expenditureRequests, departments } from "@/db/schema";
 import { eq, and, sql, sum, desc } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import { hasRole } from "@/lib/rbac";
+import { hasRole, hasPermission } from "@/lib/rbac";
 
 import { getCurrentSession } from "./portal";
 
 async function ensureBursar() {
-    const isBursar = await hasRole("bursar");
+    const isBursar = await hasPermission("finance.ledger.manage") || await hasRole("bursar");
     const isAdmin = await hasRole("admin");
     if (!isBursar && !isAdmin) throw new Error("Unauthorized: Only the Bursar or Admin can manage budgets");
 }

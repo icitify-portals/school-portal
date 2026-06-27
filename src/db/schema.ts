@@ -19,6 +19,9 @@ export const users = mysqlTable('users', {
   deletedAt: datetime('deleted_at'),
   officeDescription: text('office_description'), // Description of the user's professional role/office
   dateOfBirth: date('date_of_birth'), // Added for HR Birthday/Occasion tracking
+  twoFactorEnabled: boolean('two_factor_enabled').default(false),
+  twoFactorSecret: text('two_factor_secret'),
+  twoFactorBackupCodes: text('two_factor_backup_codes'),
 });
 
 export const userPermissions = mysqlTable('user_permissions', {
@@ -320,6 +323,38 @@ export const medicalAppointments = mysqlTable('medical_appointments', {
   createdAt: timestamp('created_at').defaultNow(),
 });
 
+export const medicalInventory = mysqlTable('medical_inventory', {
+  id: int('id').autoincrement().primaryKey(),
+  name: varchar('name', { length: 255 }).notNull(),
+  category: mysqlEnum('category', ['drug', 'consumable', 'equipment']).default('drug'),
+  quantity: int('quantity').default(0).notNull(),
+  unit: varchar('unit', { length: 50 }).notNull(), // e.g., 'tablets', 'bottles', 'syringes'
+  expiryDate: datetime('expiry_date'),
+  minThreshold: int('min_threshold').default(10), // For low stock alerts
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const medicalDispensations = mysqlTable('medical_dispensations', {
+  id: int('id').autoincrement().primaryKey(),
+  studentId: int('student_id').references(() => students.id).notNull(),
+  inventoryId: int('inventory_id').references(() => medicalInventory.id).notNull(),
+  appointmentId: int('appointment_id').references(() => medicalAppointments.id),
+  quantityDispensed: int('quantity_dispensed').notNull(),
+  dispensedBy: int('dispensed_by').references(() => users.id).notNull(),
+  dispensedAt: timestamp('dispensed_at').defaultNow(),
+  notes: text('notes'),
+});
+
+export const medicalExcusats = mysqlTable('medical_excusats', {
+  id: int('id').autoincrement().primaryKey(),
+  studentId: int('student_id').references(() => students.id).notNull(),
+  issuedBy: int('issued_by').references(() => users.id).notNull(),
+  startDate: datetime('start_date').notNull(),
+  endDate: datetime('end_date').notNull(),
+  reason: text('reason').notNull(),
+  status: mysqlEnum('status', ['active', 'expired', 'revoked']).default('active'),
+  createdAt: timestamp('created_at').defaultNow(),
+});
 
 // --- SIWES MODULE ---
 export const siwesConfigs = mysqlTable('siwes_configs', {
@@ -2336,6 +2371,34 @@ export const timetableComments = mysqlTable('timetable_comments', {
   createdAt: timestamp('created_at').defaultNow(),
 });
 
+export const examTimetableSubmissions = mysqlTable('exam_timetable_submissions', {
+  id: int('id').autoincrement().primaryKey(),
+  deptId: int('dept_id').references(() => departments.id).notNull(),
+  sessionId: int('session_id').references(() => academicSessions.id).notNull(),
+  semester: mysqlEnum('semester', ['1', '2']).notNull(),
+  status: mysqlEnum('status', ['draft', 'pending_approval', 'approved']).default('draft').notNull(),
+  submittedById: int('submitted_by_id').references(() => users.id),
+  approvedById: int('approved_by_id').references(() => users.id),
+  approvalNotes: text('approval_notes'),
+  updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
+});
+
+export const examTimetableSlots = mysqlTable('exam_timetable_slots', {
+  id: int('id').autoincrement().primaryKey(),
+  courseId: int('course_id').references(() => courses.id).notNull(),
+  examDate: date('exam_date').notNull(),
+  startTime: varchar('start_time', { length: 5 }).notNull(), // HH:mm
+  endTime: varchar('end_time', { length: 5 }).notNull(), // HH:mm
+  venueId: int('venue_id').references(() => venues.id).notNull(),
+});
+
+export const examInvigilators = mysqlTable('exam_invigilators', {
+  id: int('id').autoincrement().primaryKey(),
+  examSlotId: int('exam_slot_id').references(() => examTimetableSlots.id).notNull(),
+  staffId: int('staff_id').references(() => staffProfiles.id).notNull(),
+  role: mysqlEnum('role', ['chief', 'assistant']).default('assistant').notNull(),
+});
+
 export const registrationLevelControlsRelations = relations(registrationLevelControls, ({ one }) => ({
   session: one(academicSessions, {
     fields: [registrationLevelControls.sessionId],
@@ -3387,6 +3450,17 @@ export const issuedCertificates = mysqlTable('issued_certificates', {
 });
 
 // --- CMS MODULE ---
+export const cmsMedia = mysqlTable('cms_media', {
+  id: int('id').autoincrement().primaryKey(),
+  filename: varchar('filename', { length: 255 }).notNull(),
+  url: varchar('url', { length: 500 }).notNull(),
+  mimeType: varchar('mime_type', { length: 100 }),
+  sizeBytes: int('size_bytes'),
+  altText: varchar('alt_text', { length: 255 }),
+  uploaderId: int('uploader_id').references(() => users.id),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
 export const cmsPages = mysqlTable('cms_pages', {
   id: int('id').autoincrement().primaryKey(),
   title: varchar('title', { length: 255 }).notNull(),
@@ -3409,6 +3483,15 @@ export const cmsPages = mysqlTable('cms_pages', {
   slugLocaleUnique: unique('slug_locale_unique').on(table.slug, table.locale),
 }));
 
+export const cmsPageRevisions = mysqlTable('cms_page_revisions', {
+  id: int('id').autoincrement().primaryKey(),
+  pageId: int('page_id').references(() => cmsPages.id).notNull(),
+  contentSnapshot: text('content_snapshot'),
+  statusSnapshot: varchar('status_snapshot', { length: 50 }),
+  savedById: int('saved_by_id').references(() => users.id),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
 export const cmsMenus = mysqlTable('cms_menus', {
   id: int('id').autoincrement().primaryKey(),
   label: varchar('label', { length: 255 }).notNull(),
@@ -3422,16 +3505,17 @@ export const cmsMenus = mysqlTable('cms_menus', {
   isActive: boolean('is_active').default(true),
   locale: varchar('locale', { length: 10 }).default('en').notNull(),
   translationGroupId: int('translation_group_id'),
+  slot: varchar('slot', { length: 50 }).default('primary').notNull(),
+  menuStyle: varchar('menu_style', { length: 50 }).default('dropdown').notNull(),
 });
 
 export const cmsNews = mysqlTable('cms_news', {
   id: int('id').autoincrement().primaryKey(),
   title: varchar('title', { length: 255 }).notNull(),
   slug: varchar('slug', { length: 255 }).notNull(),
-  category: varchar('category', { length: 100 }).notNull(), // Academic, Research, Sports, etc.
   teaser: text('teaser'), // AI-generated short summary
   content: text('content').notNull(),
-  featuredImage: varchar('featured_image', { length: 500 }),
+  featuredImageId: int('featured_image_id').references(() => cmsMedia.id),
   metaTitle: varchar('meta_title', { length: 255 }),
   metaDescription: text('meta_description'),
   keywords: text('keywords'),
@@ -3456,7 +3540,7 @@ export const cmsEvents = mysqlTable('cms_events', {
   endDate: datetime('end_date').notNull(),
   isVirtual: boolean('is_virtual').default(false),
   eventLink: varchar('event_link', { length: 500 }),
-  featuredImage: varchar('featured_image', { length: 500 }),
+  featuredImageId: int('featured_image_id').references(() => cmsMedia.id),
   status: mysqlEnum('status', ['draft', 'published', 'pending_review', 'rejected']).default('draft'),
   authorId: int('author_id').references(() => users.id),
   locale: varchar('locale', { length: 10 }).default('en').notNull(),
@@ -3489,6 +3573,22 @@ export const cmsSectionMedia = mysqlTable('cms_section_media', {
   fileSize: int('file_size'),
   metadata: text('metadata'), // JSON for extra data (duration, dimensions)
   order: int('sort_order').default(0),
+});
+
+export const cmsTerms = mysqlTable('cms_terms', {
+  id: int('id').autoincrement().primaryKey(),
+  vocabulary: varchar('vocabulary', { length: 50 }).notNull(), // e.g., 'news_categories', 'tags'
+  name: varchar('name', { length: 255 }).notNull(),
+  slug: varchar('slug', { length: 255 }).notNull(),
+  parentId: int('parent_id'),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const cmsTermRelationships = mysqlTable('cms_term_relationships', {
+  id: int('id').autoincrement().primaryKey(),
+  termId: int('term_id').references(() => cmsTerms.id).notNull(),
+  entityType: mysqlEnum('entity_type', ['news', 'event', 'page']).notNull(),
+  entityId: int('entity_id').notNull(),
 });
 
 // Alias for backward compatibility if needed, or we just migrate
@@ -3592,9 +3692,21 @@ export const idCardsRelations = relations(idCards, ({ one }) => ({
 }));
 
 // --- CMS RELATIONS ---
-export const cmsPagesRelations = relations(cmsPages, ({ one }) => ({
+export const cmsPagesRelations = relations(cmsPages, ({ one, many }) => ({
   author: one(users, {
     fields: [cmsPages.authorId],
+    references: [users.id],
+  }),
+  revisions: many(cmsPageRevisions),
+}));
+
+export const cmsPageRevisionsRelations = relations(cmsPageRevisions, ({ one }) => ({
+  page: one(cmsPages, {
+    fields: [cmsPageRevisions.pageId],
+    references: [cmsPages.id],
+  }),
+  savedBy: one(users, {
+    fields: [cmsPageRevisions.savedById],
     references: [users.id],
   }),
 }));
@@ -3616,6 +3728,22 @@ export const cmsSectionMediaRelations = relations(cmsSectionMedia, ({ one }) => 
   section: one(cmsHomePageSections, {
     fields: [cmsSectionMedia.sectionId],
     references: [cmsHomePageSections.id],
+  }),
+}));
+
+export const cmsTermsRelations = relations(cmsTerms, ({ one, many }) => ({
+  parent: one(cmsTerms, {
+    fields: [cmsTerms.parentId],
+    references: [cmsTerms.id],
+  }),
+  children: many(cmsTerms, { relationName: "term_hierarchy" }),
+  relationships: many(cmsTermRelationships),
+}));
+
+export const cmsTermRelationshipsRelations = relations(cmsTermRelationships, ({ one }) => ({
+  term: one(cmsTerms, {
+    fields: [cmsTermRelationships.termId],
+    references: [cmsTerms.id],
   }),
 }));
 
@@ -3675,6 +3803,8 @@ export const hostelSettings = mysqlTable('hostel_settings', {
   paymentWindowDays: int('payment_window_days').default(3),
   minLevelPriority: int('min_level_priority').default(100),
   maxLevelPriority: int('max_level_priority').default(500),
+  paymentMode: mysqlEnum('payment_mode', ['standalone', 'bundled']).default('standalone'),
+  hostelFee: decimal('hostel_fee', { precision: 10, scale: 2 }).default('0.00'),
 });
 
 
@@ -4190,6 +4320,8 @@ export const studentCourseTransfers = mysqlTable('student_course_transfers', {
   id: int('id').autoincrement().primaryKey(),
   studentId: int('student_id').references(() => students.id).notNull(),
   matricNumber: varchar('matric_number', { length: 50 }),
+  feeStatus: mysqlEnum('fee_status', ['pending', 'paid', 'waived']).default('pending'),
+  transactionId: int('transaction_id').references(() => transactions.id),
   
   // Present
   currentFacultyId: int('current_faculty_id').references(() => faculties.id).notNull(),
@@ -6288,3 +6420,546 @@ export const payrollDeductionRules = mysqlTable('payroll_deduction_rules', {
   category: varchar('category', { length: 100 }).notNull(),
   createdAt: timestamp('created_at').defaultNow(),
 });
+
+export const conductLogs = mysqlTable('conduct_logs', {
+  id: int('id').autoincrement().primaryKey(),
+  targetType: mysqlEnum('target_type', ['student', 'staff']).notNull(),
+  studentId: int('student_id').references(() => students.id),
+  staffId: int('staff_id').references(() => staffProfiles.id),
+  infraction: varchar('infraction', { length: 255 }).notNull(),
+  description: text('description').notNull(),
+  dateOfIncident: date('date_of_incident').notNull(),
+  senateSanction: mysqlEnum('senate_sanction', ['none', 'warning', 'suspension', 'expulsion', 'rustication', 'termination', 'demotion']).default('none'),
+  sanctionStartDate: date('sanction_start_date'),
+  sanctionEndDate: date('sanction_end_date'),
+  status: mysqlEnum('status', ['active', 'resolved', 'appealed']).default('active'),
+  loggedBy: int('logged_by').references(() => users.id).notNull(),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const conductLogsRelations = relations(conductLogs, ({ one }) => ({
+  student: one(students, {
+    fields: [conductLogs.studentId],
+    references: [students.id],
+  }),
+  staff: one(staffProfiles, {
+    fields: [conductLogs.staffId],
+    references: [staffProfiles.id],
+  }),
+  logger: one(users, {
+    fields: [conductLogs.loggedBy],
+    references: [users.id],
+  }),
+}));
+
+export const graduationClearances = mysqlTable('graduation_clearances', {
+  id: int('id').autoincrement().primaryKey(),
+  studentId: int('student_id').references(() => students.id).notNull(),
+  status: mysqlEnum('status', ['pending', 'cleared', 'rejected']).default('pending'),
+  libraryStatus: mysqlEnum('library_status', ['pending', 'cleared', 'rejected']).default('pending'),
+  bursaryStatus: mysqlEnum('bursary_status', ['pending', 'cleared', 'rejected']).default('pending'),
+  departmentStatus: mysqlEnum('department_status', ['pending', 'cleared', 'rejected']).default('pending'),
+  registrarStatus: mysqlEnum('registrar_status', ['pending', 'cleared', 'rejected']).default('pending'),
+  rejectionReason: text('rejection_reason'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
+});
+
+export const graduationClearancesRelations = relations(graduationClearances, ({ one }) => ({
+  student: one(students, {
+    fields: [graduationClearances.studentId],
+    references: [students.id],
+  }),
+}));
+
+
+export const medicalInventoryRelations = relations(medicalInventory, ({ many }) => ({
+  dispensations: many(medicalDispensations),
+}));
+
+export const medicalDispensationsRelations = relations(medicalDispensations, ({ one }) => ({
+  student: one(students, {
+    fields: [medicalDispensations.studentId],
+    references: [students.id],
+  }),
+  inventory: one(medicalInventory, {
+    fields: [medicalDispensations.inventoryId],
+    references: [medicalInventory.id],
+  }),
+  appointment: one(medicalAppointments, {
+    fields: [medicalDispensations.appointmentId],
+    references: [medicalAppointments.id],
+  }),
+  dispenser: one(users, {
+    fields: [medicalDispensations.dispensedBy],
+    references: [users.id],
+  }),
+}));
+
+export const medicalExcusatsRelations = relations(medicalExcusats, ({ one }) => ({
+  student: one(students, {
+    fields: [medicalExcusats.studentId],
+    references: [students.id],
+  }),
+  issuer: one(users, {
+    fields: [medicalExcusats.issuedBy],
+    references: [users.id],
+  }),
+}));
+
+// --- EXTENDED ADMISSION MODULE ---
+export const admissionLeads = mysqlTable('admission_leads', {
+  id: int('id').autoincrement().primaryKey(),
+  name: varchar('name', { length: 255 }).notNull(),
+  email: varchar('email', { length: 255 }),
+  phone: varchar('phone', { length: 50 }),
+  programOfInterest: varchar('program_of_interest', { length: 255 }),
+  source: varchar('source', { length: 100 }), // e.g., Website, Fair, Referral
+  status: mysqlEnum('status', ['new', 'contacted', 'applied', 'cold']).default('new'),
+  notes: text('notes'),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const admissionWaitlists = mysqlTable('admission_waitlists', {
+  id: int('id').autoincrement().primaryKey(),
+  applicationId: int('application_id').references(() => admissionApplicationsV2.id).notNull(),
+  rankPosition: int('rank_position'),
+  status: mysqlEnum('status', ['waiting', 'offered', 'rejected']).default('waiting'),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const admissionInterviews = mysqlTable('admission_interviews', {
+  id: int('id').autoincrement().primaryKey(),
+  applicationId: int('application_id').references(() => admissionApplicationsV2.id).notNull(),
+  interviewDate: timestamp('interview_date'),
+  interviewerId: int('interviewer_id').references(() => users.id),
+  mode: mysqlEnum('mode', ['physical', 'virtual']).default('physical'),
+  locationOrLink: varchar('location_or_link', { length: 500 }),
+  status: mysqlEnum('status', ['scheduled', 'completed', 'no_show', 'cancelled']).default('scheduled'),
+  score: int('score'),
+  notes: text('notes'),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const admissionWaitlistsRelations = relations(admissionWaitlists, ({ one }) => ({
+  application: one(admissionApplicationsV2, {
+    fields: [admissionWaitlists.applicationId],
+    references: [admissionApplicationsV2.id],
+  }),
+}));
+
+export const admissionInterviewsRelations = relations(admissionInterviews, ({ one }) => ({
+  application: one(admissionApplicationsV2, {
+    fields: [admissionInterviews.applicationId],
+    references: [admissionApplicationsV2.id],
+  }),
+  interviewer: one(users, {
+    fields: [admissionInterviews.interviewerId],
+    references: [users.id],
+  }),
+}));
+
+// --- CENTRALIZED CBT ENGINE ---
+
+export const cbtQuizzes = mysqlTable('cbt_quizzes', {
+  id: int('id').autoincrement().primaryKey(),
+  title: varchar('title', { length: 255 }).notNull(),
+  description: text('description'),
+  durationMinutes: int('duration_minutes').default(60),
+  randomizeQuestions: boolean('randomize_questions').default(true),
+  totalMarks: decimal('total_marks', { precision: 5, scale: 2 }).default('100.00'),
+  isActive: boolean('is_active').default(true),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
+});
+
+export const cbtQuestions = mysqlTable('cbt_questions', {
+  id: int('id').autoincrement().primaryKey(),
+  quizId: int('quiz_id').references(() => cbtQuizzes.id).notNull(),
+  questionText: text('question_text').notNull(),
+  containsLatex: boolean('contains_latex').default(false),
+  questionType: mysqlEnum('question_type', ['multiple_choice', 'true_false', 'short_answer']).default('multiple_choice'),
+  options: text('options'), // JSON string of options
+  correctAnswer: text('correct_answer').notNull(),
+  marks: decimal('marks', { precision: 5, scale: 2 }).default('1.00'),
+  explanation: text('explanation'),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const cbtAttempts = mysqlTable('cbt_attempts', {
+  id: int('id').autoincrement().primaryKey(),
+  quizId: int('quiz_id').references(() => cbtQuizzes.id).notNull(),
+  userId: int('user_id').references(() => users.id).notNull(),
+  startTime: timestamp('start_time').defaultNow(),
+  endTime: timestamp('end_time'),
+  status: mysqlEnum('status', ['in_progress', 'completed', 'auto_submitted', 'flagged']).default('in_progress'),
+  score: decimal('score', { precision: 5, scale: 2 }).default('0.00'),
+  tabSwitches: int('tab_switches').default(0), // Anti-cheat tracker
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const cbtResponses = mysqlTable('cbt_responses', {
+  id: int('id').autoincrement().primaryKey(),
+  attemptId: int('attempt_id').references(() => cbtAttempts.id).notNull(),
+  questionId: int('question_id').references(() => cbtQuestions.id).notNull(),
+  selectedAnswer: text('selected_answer'),
+  isCorrect: boolean('is_correct').default(false),
+  marksAwarded: decimal('marks_awarded', { precision: 5, scale: 2 }).default('0.00'),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const cbtQuizzesRelations = relations(cbtQuizzes, ({ many }) => ({
+  questions: many(cbtQuestions),
+  attempts: many(cbtAttempts),
+}));
+
+export const cbtQuestionsRelations = relations(cbtQuestions, ({ one, many }) => ({
+  quiz: one(cbtQuizzes, {
+    fields: [cbtQuestions.quizId],
+    references: [cbtQuizzes.id],
+  }),
+  responses: many(cbtResponses),
+}));
+
+export const cbtAttemptsRelations = relations(cbtAttempts, ({ one, many }) => ({
+  quiz: one(cbtQuizzes, {
+    fields: [cbtAttempts.quizId],
+    references: [cbtQuizzes.id],
+  }),
+  user: one(users, {
+    fields: [cbtAttempts.userId],
+    references: [users.id],
+  }),
+  responses: many(cbtResponses),
+}));
+
+export const cbtResponsesRelations = relations(cbtResponses, ({ one }) => ({
+  attempt: one(cbtAttempts, {
+    fields: [cbtResponses.attemptId],
+    references: [cbtAttempts.id],
+  }),
+  question: one(cbtQuestions, {
+    fields: [cbtResponses.questionId],
+    references: [cbtQuestions.id],
+  }),
+}));
+
+// --- GRIEVANCE MODULE ---
+
+export const grievances = mysqlTable('grievances', {
+  id: int('id').autoincrement().primaryKey(),
+  reporterId: int('reporter_id').references(() => users.id).notNull(), // Confidential but required
+  targetId: int('target_id').references(() => users.id), // Optional, if reporting a specific person
+  title: varchar('title', { length: 255 }).notNull(),
+  description: text('description').notNull(),
+  evidenceUrl: varchar('evidence_url', { length: 1000 }),
+  status: mysqlEnum('status', ['submitted', 'under_investigation', 'resolved', 'dismissed']).default('submitted'),
+  resolutionNotes: text('resolution_notes'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
+});
+
+export const grievancesRelations = relations(grievances, ({ one }) => ({
+  reporter: one(users, {
+    fields: [grievances.reporterId],
+    references: [users.id],
+    relationName: "reporter_user",
+  }),
+  target: one(users, {
+    fields: [grievances.targetId],
+    references: [users.id],
+    relationName: "target_user",
+  }),
+}));
+
+// --- WORKS & MAINTENANCE MODULE ---
+
+export const maintenanceStaffProfiles = mysqlTable('maintenance_staff_profiles', {
+  id: int('id').autoincrement().primaryKey(),
+  userId: int('user_id').references(() => users.id).unique().notNull(),
+  specialty: mysqlEnum('specialty', ['electrical', 'plumbing', 'hvac', 'carpentry', 'auto_mechanic', 'masonry', 'general']).default('general').notNull(),
+  status: mysqlEnum('status', ['active', 'on_leave', 'suspended']).default('active').notNull(),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
+});
+
+export const generalMaintenanceRequests = mysqlTable('general_maintenance_requests', {
+  id: int('id').autoincrement().primaryKey(),
+  reporterUserId: int('reporter_user_id').references(() => users.id).notNull(),
+  locationType: mysqlEnum('location_type', ['classroom', 'lab', 'office', 'hostel_common', 'sports', 'other']).notNull(),
+  buildingName: varchar('building_name', { length: 255 }).notNull(),
+  roomOrAreaDescription: varchar('room_or_area_description', { length: 255 }).notNull(),
+  title: varchar('title', { length: 255 }).notNull(),
+  description: text('description').notNull(),
+  category: mysqlEnum('category', ['electrical', 'plumbing', 'hvac', 'carpentry', 'masonry', 'other']).notNull(),
+  priority: mysqlEnum('priority', ['low', 'medium', 'high', 'urgent']).default('medium'),
+  status: mysqlEnum('status', ['pending', 'in-progress', 'resolved', 'cancelled']).default('pending'),
+  assignedStaffId: int('assigned_staff_id').references(() => users.id),
+  resolutionNotes: text('resolution_notes'),
+  resolvedAt: datetime('resolved_at'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
+});
+
+export const maintenanceStaffProfilesRelations = relations(maintenanceStaffProfiles, ({ one }) => ({
+  user: one(users, {
+    fields: [maintenanceStaffProfiles.userId],
+    references: [users.id],
+  }),
+}));
+
+export const generalMaintenanceRequestsRelations = relations(generalMaintenanceRequests, ({ one }) => ({
+  reporter: one(users, {
+    fields: [generalMaintenanceRequests.reporterUserId],
+    references: [users.id],
+    relationName: "general_maint_reporter",
+  }),
+  assignedStaff: one(users, {
+    fields: [generalMaintenanceRequests.assignedStaffId],
+    references: [users.id],
+    relationName: "general_maint_assigned_staff",
+  }),
+}));
+
+export const maintenanceRepairQuotes = mysqlTable('maintenance_repair_quotes', {
+  id: int('id').autoincrement().primaryKey(),
+  requestId: int('request_id').references(() => generalMaintenanceRequests.id).notNull(),
+  technicianId: int('technician_id').references(() => users.id).notNull(),
+  itemDescription: varchar('item_description', { length: 255 }).notNull(),
+  estimatedCost: decimal('estimated_cost', { precision: 12, scale: 2 }).notNull(),
+  quoteNotes: text('quote_notes'),
+  status: mysqlEnum('status', ['pending', 'approved', 'rejected']).default('pending').notNull(),
+  reviewedBy: int('reviewed_by').references(() => users.id),
+  reviewedAt: datetime('reviewed_at'),
+  rejectionNotes: text('rejection_notes'),
+  expenditureRequestId: int('expenditure_request_id').references(() => expenditureRequests.id),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
+});
+
+export const maintenanceRepairQuotesRelations = relations(maintenanceRepairQuotes, ({ one }) => ({
+  request: one(generalMaintenanceRequests, {
+    fields: [maintenanceRepairQuotes.requestId],
+    references: [generalMaintenanceRequests.id],
+  }),
+  technician: one(users, {
+    fields: [maintenanceRepairQuotes.technicianId],
+    references: [users.id],
+    relationName: "quote_technician",
+  }),
+  reviewer: one(users, {
+    fields: [maintenanceRepairQuotes.reviewedBy],
+    references: [users.id],
+    relationName: "quote_reviewer",
+  }),
+  expenditureRequest: one(expenditureRequests, {
+    fields: [maintenanceRepairQuotes.expenditureRequestId],
+    references: [expenditureRequests.id],
+  }),
+}));
+
+// --- SECURITY UNIT TABLES ---
+export const securityVehicles = mysqlTable('security_vehicles', {
+  id: int('id').autoincrement().primaryKey(),
+  ownerId: int('owner_id').references(() => users.id),
+  ownerName: varchar('owner_name', { length: 255 }).notNull(),
+  ownerType: mysqlEnum('owner_type', ['student', 'staff', 'visitor', 'other']).notNull(),
+  licensePlate: varchar('license_plate', { length: 50 }).notNull(),
+  vehicleMake: varchar('vehicle_make', { length: 100 }).notNull(),
+  vehicleModel: varchar('vehicle_model', { length: 100 }).notNull(),
+  vehicleColor: varchar('vehicle_color', { length: 50 }).notNull(),
+  passNumber: varchar('pass_number', { length: 100 }).unique().notNull(),
+  status: mysqlEnum('status', ['pending', 'approved', 'expired', 'revoked']).default('pending').notNull(),
+  qrCode: varchar('qr_code', { length: 500 }),
+  expiresAt: datetime('expires_at'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
+});
+
+export const securityVehicleLogs = mysqlTable('security_vehicle_logs', {
+  id: int('id').autoincrement().primaryKey(),
+  vehicleId: int('vehicle_id').references(() => securityVehicles.id).notNull(),
+  gateName: varchar('gate_name', { length: 100 }).notNull(),
+  direction: mysqlEnum('direction', ['entry', 'exit']).notNull(),
+  securityOfficerId: int('security_officer_id').references(() => users.id).notNull(),
+  timestamp: timestamp('timestamp').defaultNow(),
+});
+
+export const securityStrategicPositions = mysqlTable('security_strategic_positions', {
+  id: int('id').autoincrement().primaryKey(),
+  name: varchar('name', { length: 255 }).unique().notNull(),
+  description: text('description'),
+  qrCode: varchar('qr_code', { length: 255 }).unique().notNull(),
+  isActive: boolean('is_active').default(true).notNull(),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const securityPatrolLogs = mysqlTable('security_patrol_logs', {
+  id: int('id').autoincrement().primaryKey(),
+  checkpointId: int('checkpoint_id').references(() => securityStrategicPositions.id).notNull(),
+  patrolOfficerId: int('patrol_officer_id').references(() => users.id).notNull(),
+  notes: text('notes'),
+  gpsCoordinates: varchar('gps_coordinates', { length: 100 }),
+  scannedAt: timestamp('scanned_at').defaultNow(),
+});
+
+export const securityIncidents = mysqlTable('security_incidents', {
+  id: int('id').autoincrement().primaryKey(),
+  title: varchar('title', { length: 255 }).notNull(),
+  description: text('description').notNull(),
+  incidentType: mysqlEnum('incident_type', ['theft', 'trespass', 'property_damage', 'assault', 'accident', 'fire_hazard', 'medical_emergency', 'other']).notNull(),
+  severity: mysqlEnum('severity', ['low', 'medium', 'high', 'critical']).notNull(),
+  location: varchar('location', { length: 255 }).notNull(),
+  reportedBy: int('reported_by').references(() => users.id).notNull(),
+  status: mysqlEnum('status', ['reported', 'under_investigation', 'resolved', 'closed']).default('reported').notNull(),
+  resolutionNotes: text('resolution_notes'),
+  resolvedAt: datetime('resolved_at'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
+});
+
+// Relations
+export const securityVehiclesRelations = relations(securityVehicles, ({ one, many }) => ({
+  owner: one(users, { fields: [securityVehicles.ownerId], references: [users.id] }),
+  logs: many(securityVehicleLogs),
+}));
+
+export const securityVehicleLogsRelations = relations(securityVehicleLogs, ({ one }) => ({
+  vehicle: one(securityVehicles, { fields: [securityVehicleLogs.vehicleId], references: [securityVehicles.id] }),
+  officer: one(users, { fields: [securityVehicleLogs.securityOfficerId], references: [users.id] }),
+}));
+
+export const securityPatrolLogsRelations = relations(securityPatrolLogs, ({ one }) => ({
+  checkpoint: one(securityStrategicPositions, { fields: [securityPatrolLogs.checkpointId], references: [securityStrategicPositions.id] }),
+  officer: one(users, { fields: [securityPatrolLogs.patrolOfficerId], references: [users.id] }),
+}));
+
+export const securityIncidentsRelations = relations(securityIncidents, ({ one }) => ({
+  officer: one(users, { fields: [securityIncidents.reportedBy], references: [users.id] }),
+}));
+
+// --- STUDENT AFFAIRS MODULE ---
+
+export const studentAffairsEvents = mysqlTable('student_affairs_events', {
+  id: int('id').autoincrement().primaryKey(),
+  title: varchar('title', { length: 255 }).notNull(),
+  description: text('description').notNull(),
+  location: varchar('location', { length: 255 }).notNull(),
+  startDate: datetime('start_date').notNull(),
+  endDate: datetime('end_date').notNull(),
+  createdBy: int('created_by').references(() => users.id).notNull(),
+  capacity: int('capacity'),
+  isPaid: boolean('is_paid').default(false).notNull(),
+  fee: decimal('fee', { precision: 12, scale: 2 }),
+  status: mysqlEnum('status', ['scheduled', 'cancelled', 'completed']).default('scheduled').notNull(),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
+});
+
+export const studentAffairsEventRegistrations = mysqlTable('student_affairs_event_registrations', {
+  id: int('id').autoincrement().primaryKey(),
+  eventId: int('event_id').references(() => studentAffairsEvents.id).notNull(),
+  userId: int('user_id').references(() => users.id).notNull(),
+  registeredAt: timestamp('registered_at').defaultNow(),
+  status: mysqlEnum('status', ['registered', 'cancelled']).default('registered').notNull(),
+  paymentStatus: mysqlEnum('payment_status', ['pending', 'paid', 'no_payment_required']).default('no_payment_required').notNull(),
+  transactionId: int('transaction_id').references(() => transactions.id),
+  checkedIn: boolean('checked_in').default(false).notNull(),
+  checkedInAt: timestamp('checked_in_at'),
+});
+
+export const studentAffairsClubs = mysqlTable('student_affairs_clubs', {
+  id: int('id').autoincrement().primaryKey(),
+  name: varchar('name', { length: 255 }).unique().notNull(),
+  description: text('description').notNull(),
+  category: varchar('category', { length: 100 }).notNull(),
+  presidentId: int('president_id').references(() => users.id).notNull(),
+  advisorId: int('advisor_id').references(() => users.id),
+  logoUrl: varchar('logo_url', { length: 500 }),
+  status: mysqlEnum('status', ['pending', 'approved', 'rejected', 'suspended']).default('pending').notNull(),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
+});
+
+export const studentAffairsClubMembers = mysqlTable('student_affairs_club_members', {
+  id: int('id').autoincrement().primaryKey(),
+  clubId: int('club_id').references(() => studentAffairsClubs.id).notNull(),
+  studentId: int('student_id').references(() => students.id).notNull(),
+  role: mysqlEnum('role', ['president', 'secretary', 'treasurer', 'member', 'pending']).default('pending').notNull(),
+  joinedAt: timestamp('joined_at').defaultNow(),
+});
+
+export const studentAffairsBulletins = mysqlTable('student_affairs_bulletins', {
+  id: int('id').autoincrement().primaryKey(),
+  title: varchar('title', { length: 255 }).notNull(),
+  content: text('content').notNull(),
+  category: mysqlEnum('category', ['academic', 'social', 'sports', 'announcement']).default('announcement').notNull(),
+  status: mysqlEnum('status', ['draft', 'published']).default('draft').notNull(),
+  authorId: int('author_id').references(() => users.id).notNull(),
+  publishedAt: datetime('published_at'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
+});
+
+// Relations
+export const studentAffairsEventsRelations = relations(studentAffairsEvents, ({ one, many }) => ({
+  creator: one(users, { fields: [studentAffairsEvents.createdBy], references: [users.id] }),
+  registrations: many(studentAffairsEventRegistrations),
+}));
+
+export const studentAffairsEventRegistrationsRelations = relations(studentAffairsEventRegistrations, ({ one }) => ({
+  event: one(studentAffairsEvents, { fields: [studentAffairsEventRegistrations.eventId], references: [studentAffairsEvents.id] }),
+  user: one(users, { fields: [studentAffairsEventRegistrations.userId], references: [users.id] }),
+  transaction: one(transactions, { fields: [studentAffairsEventRegistrations.transactionId], references: [transactions.id] }),
+}));
+
+export const studentAffairsClubsRelations = relations(studentAffairsClubs, ({ one, many }) => ({
+  president: one(users, { fields: [studentAffairsClubs.presidentId], references: [users.id] }),
+  advisor: one(users, { fields: [studentAffairsClubs.advisorId], references: [users.id] }),
+  members: many(studentAffairsClubMembers),
+}));
+
+export const studentAffairsClubMembersRelations = relations(studentAffairsClubMembers, ({ one }) => ({
+  club: one(studentAffairsClubs, { fields: [studentAffairsClubMembers.clubId], references: [studentAffairsClubs.id] }),
+  student: one(students, { fields: [studentAffairsClubMembers.studentId], references: [students.id] }),
+}));
+
+export const studentAffairsBulletinsRelations = relations(studentAffairsBulletins, ({ one }) => ({
+  author: one(users, { fields: [studentAffairsBulletins.authorId], references: [users.id] }),
+}));
+
+export const supportTickets = mysqlTable('support_tickets', {
+  id: int('id').autoincrement().primaryKey(),
+  ticketNumber: varchar('ticket_number', { length: 50 }).unique().notNull(),
+  userId: int('user_id').references(() => users.id).notNull(),
+  title: varchar('title', { length: 255 }).notNull(),
+  description: text('description').notNull(),
+  category: mysqlEnum('category', ['technical', 'academic', 'financial', 'hostel', 'administrative', 'other']).default('technical'),
+  priority: mysqlEnum('priority', ['low', 'medium', 'high', 'urgent']).default('low'),
+  status: mysqlEnum('status', ['open', 'in_progress', 'resolved', 'closed']).default('open'),
+  assignedToId: int('assigned_to_id').references(() => staffProfiles.id),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
+  resolvedAt: timestamp('resolved_at'),
+});
+
+export const supportTicketMessages = mysqlTable('support_ticket_messages', {
+  id: int('id').autoincrement().primaryKey(),
+  ticketId: int('ticket_id').references(() => supportTickets.id).notNull(),
+  senderId: int('sender_id').references(() => users.id).notNull(),
+  messageText: text('message_text').notNull(),
+  attachmentUrl: varchar('attachment_url', { length: 255 }),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+// Support Ticket Relations
+export const supportTicketsRelations = relations(supportTickets, ({ one, many }) => ({
+  user: one(users, { fields: [supportTickets.userId], references: [users.id] }),
+  assignedTo: one(staffProfiles, { fields: [supportTickets.assignedToId], references: [staffProfiles.id] }),
+  messages: many(supportTicketMessages),
+}));
+
+export const supportTicketMessagesRelations = relations(supportTicketMessages, ({ one }) => ({
+  ticket: one(supportTickets, { fields: [supportTicketMessages.ticketId], references: [supportTickets.id] }),
+  sender: one(users, { fields: [supportTicketMessages.senderId], references: [users.id] }),
+}));

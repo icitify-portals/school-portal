@@ -10,15 +10,15 @@ import {
 } from "@/db/schema";
 import { eq, and, desc, sql, lte, gte } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import { hasRole } from "@/lib/rbac";
+import { hasRole, hasPermission } from "@/lib/rbac";
 import { v4 as uuidv4 } from 'uuid';
 import { getBursarySettings } from "./bursary";
 import { auth } from "@/auth";
 import { sendInAppNotification } from "./notifications";
 
 async function ensureAccountingAccess() {
-    const isBursar = await hasRole("bursar");
-    const isStaff = await hasRole("bursary_staff");
+    const isBursar = await hasPermission("finance.ledger.manage") || await hasRole("bursar");
+    const isStaff = await hasPermission("finance.view_summary") || await hasRole("bursary_staff") || isBursar;
     if (!isBursar && !isStaff) throw new Error("Unauthorized accounting access");
 }
 

@@ -44,6 +44,8 @@ import {
     TrendingUp,
     ScrollText,
     Target,
+    Wrench,
+    HelpCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSession } from "next-auth/react";
@@ -124,8 +126,12 @@ const studentMenuItems: MenuItem[] = [
             { name: "SIWES Portal", href: "/student/siwes", module: "siwes" },
             { name: "Digital ID Card", href: "/student/id-card" },
             { name: "Library & OPAC", href: "/library", module: "library" },
+            { name: "Grievances & Appeals", href: "/student/grievances" },
             { name: "Communications", href: "/communications" },
             { name: "Status Changes", href: "/status" },
+            { name: "Report General Fault", href: "/maintenance-request" },
+            { name: "Vehicle Gate Pass", href: "/student/security-vehicle" },
+            { name: "Help & Support Tickets", href: "/student/support-tickets" },
         ]
     },
     { name: "Profile", icon: User, href: "/profile" },
@@ -175,6 +181,18 @@ const adminMenuItems: MenuItem[] = [
             { name: "Graduate Document Requests", href: "/admin/exams-records/documents" },
             { name: "Result Views", href: "/admin/exams-records/results" },
             { name: "Quality Assurance", href: "/admin/quality-assurance" },
+        ]
+    },
+    {
+        name: "Office of the Registrar",
+        icon: Award,
+        subItems: [
+            { name: "Registrar Dashboard", href: "/admin/registrar" },
+            { name: "Graduation & Clearance", href: "/admin/registrar/clearance" },
+            { name: "Senate & Conduct", href: "/admin/registrar/conduct" },
+            { name: "Grievances & Appeals", href: "/admin/registrar/grievances" },
+            { name: "Alumni Transition", href: "/admin/registrar/alumni" },
+            { name: "Exams & Records", href: "/admin/exams-records" },
         ]
     },
     {
@@ -395,6 +413,30 @@ const adminMenuItems: MenuItem[] = [
             { name: "Suppliers & Vendors", href: "/admin/inventory/suppliers" },
         ]
     },
+    {
+        name: "Works & Maintenance",
+        icon: Wrench,
+        subItems: [
+            { name: "Works Dashboard", href: "/admin/works-maintenance" },
+            { name: "Supervisor Console", href: "/admin/maintenance-head" },
+            { name: "Report Campus Fault", href: "/maintenance-request" },
+        ]
+    },
+    {
+        name: "Helpdesk Support",
+        icon: HelpCircle,
+        subItems: [
+            { name: "Support Console", href: "/admin/support" },
+        ]
+    },
+    {
+        name: "Campus Security",
+        icon: Shield,
+        subItems: [
+            { name: "Security Dashboard", href: "/admin/security-director" },
+            { name: "Gate Scan & Patrols", href: "/staff/security-officer" },
+        ]
+    },
 ];
 
 const dvcMenuItems: MenuItem[] = [
@@ -452,6 +494,21 @@ const staffMenuItems: MenuItem[] = [
             { name: "Growth & Certifications", href: "/staff/growth" },
             { name: "Library Portal", href: "/library", module: "library" },
             { name: "Communications", href: "/communications" },
+        ]
+    },
+    {
+        name: "Works & Maintenance",
+        icon: Wrench,
+        subItems: [
+            { name: "Technician Tasks", href: "/staff/maintenance-tasks" },
+            { name: "Report General Fault", href: "/maintenance-request" },
+        ]
+    },
+    {
+        name: "Campus Security",
+        icon: Shield,
+        subItems: [
+            { name: "Security Console", href: "/staff/security-officer" },
         ]
     },
     { name: "Profile", icon: User, href: "/profile" },
@@ -581,7 +638,40 @@ export function Sidebar({ enabledModules = {}, mobileOpen = false, onClose }: {
         }
     })();
 
-    const menuItems = filterItems(rawMenuItems);
+    const userPermissions = (session?.user as any)?.permissions || [];
+    const userRolesList = (session?.user as any)?.roles || [];
+    const hasCmsPermission = userPermissions.some((p: string) => p.startsWith("cms.")) || userRolesList.includes("CMS Manager");
+
+    let finalRawItems = [...rawMenuItems];
+    if (hasCmsPermission && !finalRawItems.some(item => item.name === "CMS & Website")) {
+        const cmsItem = adminMenuItems.find(item => item.name === "CMS & Website");
+        if (cmsItem) {
+            const profileIndex = finalRawItems.findIndex(item => item.name === "Profile");
+            if (profileIndex !== -1) {
+                finalRawItems.splice(profileIndex, 0, cmsItem);
+            } else {
+                finalRawItems.push(cmsItem);
+            }
+        }
+    }
+
+    const hasSupportPermission = userPermissions.some((p: string) => p.startsWith("support.tickets.")) || 
+                                 userRolesList.includes("Support Agent") || 
+                                 userRolesList.includes("Support Manager");
+
+    if (hasSupportPermission && !finalRawItems.some(item => item.name === "Helpdesk Support")) {
+        const helpdeskItem = adminMenuItems.find(item => item.name === "Helpdesk Support");
+        if (helpdeskItem) {
+            const profileIndex = finalRawItems.findIndex(item => item.name === "Profile");
+            if (profileIndex !== -1) {
+                finalRawItems.splice(profileIndex, 0, helpdeskItem);
+            } else {
+                finalRawItems.push(helpdeskItem);
+            }
+        }
+    }
+
+    const menuItems = filterItems(finalRawItems);
 
     const toggleMenu = (name: string) => {
         setOpenMenus(prev =>

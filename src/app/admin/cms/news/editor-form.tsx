@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
     Select, 
@@ -29,7 +30,10 @@ import {
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { upsertNews } from "@/actions/cms-publishing";
+import { getTerms, getEntityTerms } from "@/actions/cms-taxonomy";
+import { getMediaLibrary } from "@/actions/cms-media";
 import TiptapEditor from "@/components/cms/Editor";
+import MediaPicker from "@/components/cms/MediaPicker";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
@@ -41,10 +45,10 @@ export default function NewsEditorForm({ initialData }: { initialData?: any }) {
         id: initialData?.id || undefined,
         title: initialData?.title || "",
         slug: initialData?.slug || "",
-        category: initialData?.category || "Academic",
+        termIds: [], // Taxonomy terms
         teaser: initialData?.teaser || "",
         content: initialData?.content || "",
-        featuredImage: initialData?.featuredImage || "",
+        featuredImageId: initialData?.featuredImageId || undefined,
         status: initialData?.status || "draft",
     });
 
@@ -53,6 +57,22 @@ export default function NewsEditorForm({ initialData }: { initialData?: any }) {
             setFormData(prev => ({ ...prev, slug: prev.title.toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g, '') }));
         }
     }, [formData.title, formData.id]);
+
+    const [availableTerms, setAvailableTerms] = useState<any[]>([]);
+    
+    useEffect(() => {
+        getTerms('news_categories').then(res => {
+            if (res.success && res.data) setAvailableTerms(res.data);
+        });
+
+        if (initialData?.id) {
+            getEntityTerms('news', initialData.id).then(res => {
+                if (res.success && res.data) {
+                    setFormData(prev => ({ ...prev, termIds: res.data.map(r => r.termId) }));
+                }
+            });
+        }
+    }, [initialData?.id]);
 
     const handleSave = async () => {
         if (!formData.title || !formData.content) {
@@ -157,22 +177,37 @@ export default function NewsEditorForm({ initialData }: { initialData?: any }) {
                     <div className="space-y-6">
                         <Card className="rounded-2xl border-none shadow-sm bg-white overflow-hidden p-6 space-y-6">
                             <div className="space-y-4">
-                                <div className="space-y-2">
-                                    <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Classification</Label>
-                                    <Select 
-                                        value={formData.category} 
-                                        onValueChange={(v) => setFormData({ ...formData, category: v })}
-                                    >
-                                        <SelectTrigger className="h-11 rounded-xl bg-slate-50 border-none font-bold">
-                                            <SelectValue placeholder="Category" />
-                                        </SelectTrigger>
-                                        <SelectContent className="rounded-xl border-none shadow-xl">
-                                            <SelectItem value="Academic">Academic News</SelectItem>
-                                            <SelectItem value="Research">Research Highlights</SelectItem>
-                                            <SelectItem value="Sports">Sports & Campus Life</SelectItem>
-                                            <SelectItem value="Institutional">Institutional Announcements</SelectItem>
-                                        </SelectContent>
-                                    </Select>
+                                <div className="space-y-3">
+                                    <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Classification (Taxonomy)</Label>
+                                    <div className="flex flex-wrap gap-2">
+                                        {availableTerms.length === 0 ? (
+                                            <p className="text-xs text-slate-400 italic">No categories created yet in Taxonomy Manager.</p>
+                                        ) : (
+                                            availableTerms.map(term => {
+                                                const isSelected = (formData.termIds as number[]).includes(term.id);
+                                                return (
+                                                    <Badge 
+                                                        key={term.id} 
+                                                        variant={isSelected ? "default" : "outline"}
+                                                        className={cn(
+                                                            "cursor-pointer transition-colors",
+                                                            isSelected ? "bg-indigo-600 hover:bg-indigo-700" : "hover:bg-slate-100"
+                                                        )}
+                                                        onClick={() => {
+                                                            setFormData(prev => ({
+                                                                ...prev,
+                                                                termIds: isSelected 
+                                                                    ? (prev.termIds as number[]).filter(id => id !== term.id)
+                                                                    : [...(prev.termIds as number[]), term.id]
+                                                            }));
+                                                        }}
+                                                    >
+                                                        {term.name}
+                                                    </Badge>
+                                                );
+                                            })
+                                        )}
+                                    </div>
                                 </div>
 
                                 <div className="space-y-2">
@@ -201,24 +236,9 @@ export default function NewsEditorForm({ initialData }: { initialData?: any }) {
 
                             <div className="pt-6 border-t border-slate-50 space-y-4">
                                 <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Featured Image</Label>
-                                <div className={cn(
-                                    "aspect-video rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-2 cursor-pointer transition-all",
-                                    formData.featuredImage ? "border-indigo-100 bg-indigo-50/30" : "border-slate-100 bg-slate-50 hover:bg-slate-100/50"
-                                )}>
-                                    {formData.featuredImage ? (
-                                        <img src={formData.featuredImage} alt="Featured" className="w-full h-full object-cover rounded-[22px]" />
-                                    ) : (
-                                        <>
-                                            <ImagePlus className="w-8 h-8 text-slate-300" />
-                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Upload Media</span>
-                                        </>
-                                    )}
-                                </div>
-                                <Input 
-                                    placeholder="External Image URL"
-                                    className="h-10 rounded-xl bg-slate-50 border-none text-[10px] font-mono"
-                                    value={formData.featuredImage}
-                                    onChange={(e) => setFormData({ ...formData, featuredImage: e.target.value })}
+                                <MediaPicker 
+                                    value={formData.featuredImageId}
+                                    onChange={(id, url) => setFormData({ ...formData, featuredImageId: id })}
                                 />
                             </div>
                         </Card>

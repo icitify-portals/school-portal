@@ -1,9 +1,12 @@
 "use server";
 
 import { getAIProvider } from "@/lib/ai-service";
+import { hasPermission, hasRole } from "@/lib/rbac";
 
 export async function generateSEOMetadata(title: string, content: string, tone: string = "Professional & Academic") {
     try {
+        const isAllowed = await hasPermission("cms.pages.manage") || await hasPermission("cms.content.manage") || await hasRole("admin") || await hasRole("superadmin");
+        if (!isAllowed) return { success: false, error: "Unauthorized" };
         const provider = getAIProvider(process.env.AI_PROVIDER || 'gemini');
 
         const prompt = `
@@ -40,6 +43,8 @@ export async function generateSEOMetadata(title: string, content: string, tone: 
 
 export async function performSEOAudit(content: string, focusKeyword: string) {
     try {
+        const isAllowed = await hasPermission("cms.pages.manage") || await hasPermission("cms.content.manage") || await hasRole("admin") || await hasRole("superadmin");
+        if (!isAllowed) return { success: false, error: "Unauthorized" };
         const provider = getAIProvider(process.env.AI_PROVIDER || 'gemini');
 
         const prompt = `

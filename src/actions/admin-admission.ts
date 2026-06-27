@@ -1,4 +1,3 @@
-
 'use server';
 
 import { db } from "@/db";
@@ -7,9 +6,13 @@ import { eq, and, desc, inArray } from "drizzle-orm";
 import { auth } from "@/auth";
 import { AdmissionScoreCalculator } from "@/lib/admission/engine";
 import { NotificationService } from "@/services/NotificationService";
+import { hasPermission, hasRole } from "@/lib/rbac";
 
 export async function getApplicants(programmeId?: number) {
     try {
+        const allowed = await hasPermission("admission.screening.view") || await hasRole("admin") || await hasRole("superadmin");
+        if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to view applicants", applications: [] };
+
         // 1. Fetch applications
         const apps = await db.select().from(admissionApplications).orderBy(desc(admissionApplications.appliedAt));
 
@@ -64,6 +67,9 @@ export async function getApplicants(programmeId?: number) {
 
 export async function updateScreeningScore(applicationId: number, score: number) {
     try {
+        const allowed = await hasPermission("admission.applications.manage") || await hasRole("admin") || await hasRole("superadmin");
+        if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to update screening score" };
+
         // 1. Update the screening score
         await db.update(admissionApplications)
             .set({
@@ -126,6 +132,9 @@ export async function updateScreeningScore(applicationId: number, score: number)
 
 export async function updateAdmissionStatus(applicationId: number, status: 'admitted' | 'rejected') {
     try {
+        const allowed = await hasPermission("admission.applicant.admit") || await hasRole("admin") || await hasRole("superadmin");
+        if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to admit applicant" };
+
         await db.update(admissionApplications)
             .set({ status })
             .where(eq(admissionApplications.id, applicationId));

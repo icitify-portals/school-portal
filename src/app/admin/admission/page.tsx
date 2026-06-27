@@ -93,7 +93,25 @@ export default function AdminAdmissionPage() {
                     <Link href="/admin/admission/validation">
                         <Button className="font-black px-6 py-6 rounded-2xl shadow-lg transition-all flex gap-3 uppercase text-xs tracking-widest bg-white hover:bg-slate-50 text-slate-700 border border-slate-200">
                             <Settings className="w-5 h-5" />
-                            Validation Dashboard
+                            Validation
+                        </Button>
+                    </Link>
+                    <Link href="/admin/admission/leads">
+                        <Button className="font-black px-6 py-6 rounded-2xl shadow-lg transition-all flex gap-3 uppercase text-xs tracking-widest bg-blue-600 hover:bg-blue-700 text-white">
+                            <Users className="w-5 h-5" />
+                            Leads / CRM
+                        </Button>
+                    </Link>
+                    <Link href="/admin/admission/waitlist">
+                        <Button className="font-black px-6 py-6 rounded-2xl shadow-lg transition-all flex gap-3 uppercase text-xs tracking-widest bg-amber-600 hover:bg-amber-700 text-white">
+                            <AlertCircle className="w-5 h-5" />
+                            Waitlist
+                        </Button>
+                    </Link>
+                    <Link href="/admin/admission/interviews">
+                        <Button className="font-black px-6 py-6 rounded-2xl shadow-lg transition-all flex gap-3 uppercase text-xs tracking-widest bg-purple-600 hover:bg-purple-700 text-white">
+                            <Calculator className="w-5 h-5" />
+                            Interviews
                         </Button>
                     </Link>
                     <div className="relative flex-1 md:w-64">

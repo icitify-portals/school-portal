@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/db/db";
 import { studentCourseRegistrations, courses, students } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
-import { hasRole } from "@/lib/rbac";
+import { hasRole, hasPermission } from "@/lib/rbac";
 import { sendInAppNotification } from "./notifications";
 
 export async function getAvailableCoursesAction(studentId: number, semester: '1' | '2') {
@@ -69,7 +69,7 @@ export async function getRegisteredCoursesAction(studentId: number, sessionId: n
 
 export async function approveStudentRegistrationAction(studentId: number, sessionId: number, semester: '1' | '2') {
     try {
-        const isStaff = await hasRole("admin") || await hasRole("superadmin") || await hasRole("teacher");
+        const isStaff = await hasPermission("academic.registration.approve") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("teacher");
         if (!isStaff) throw new Error("Unauthorized access");
 
         const staffId = 1; // Placeholder

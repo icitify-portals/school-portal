@@ -6,7 +6,21 @@ import { academicSessions, courses, staffProfiles, departments, courseLecturers,
 import { eq, and, or, gte, lte, count, sql, desc, inArray } from "drizzle-orm";
 import { auth } from "@/auth";
 import { revalidatePath } from "next/cache";
+import { hasPermission, hasRole } from "@/lib/rbac";
 import { TimetableService } from "@/services/TimetableService";
+import { TimetableAutoScheduler } from "@/services/TimetableAutoScheduler";
+
+export async function generateAutoTimetable(deptId: number, sessionId: number, semester: '1' | '2', preserveExisting: boolean = true) {
+    try {
+        const allowed = await hasPermission("academic.timetable.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("academic_registrar");
+        if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to generate auto-schedule" };
+        const result = await TimetableAutoScheduler.generate(deptId, sessionId, semester, preserveExisting);
+        revalidatePath("/admin/academics/timetable");
+        return result;
+    } catch (error: any) {
+        return { success: false, error: error.message };
+    }
+}
 
 export async function getStaffDepartment(userId: number) {
     try {
@@ -63,6 +77,8 @@ export async function getVenues(facultyId: number) {
 
 export async function saveVenue(data: { name: string; capacity?: number; facultyId: number; id?: number }) {
     try {
+        const allowed = await hasPermission("academic.timetable.manage") || await hasRole("admin") || await hasRole("superadmin");
+        if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to save venue" };
         if (data.id) {
             await db.update(venuesTable).set(data).where(eq(venuesTable.id, data.id));
         } else {
@@ -78,6 +94,8 @@ export async function saveVenue(data: { name: string; capacity?: number; faculty
 
 export async function toggleCoursePractical(courseId: number, isPractical: boolean) {
     try {
+        const allowed = await hasPermission("academic.timetable.manage") || await hasRole("admin") || await hasRole("superadmin");
+        if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to modify course practical status" };
         await db.update(courses).set({ isPractical }).where(eq(courses.id, courseId));
         revalidatePath("/admin/academics/timetable");
         return { success: true };
@@ -104,6 +122,8 @@ export async function updateDepartmentTimetableSettings(deptId: number, data: {
     breakEnd: string;
 }) {
     try {
+        const allowed = await hasPermission("academic.timetable.manage") || await hasRole("admin") || await hasRole("superadmin");
+        if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to update timetable settings" };
         const session = await auth();
         if (!session?.user || (session.user as any).role !== 'admin') {
             return { success: false, error: "Unauthorized" };
@@ -132,6 +152,8 @@ export async function getTimetableSubmission(deptId: number, sessionId: number, 
 
 export async function submitTimetableForApproval(deptId: number, sessionId: number, semester: '1' | '2') {
     try {
+        const allowed = await hasPermission("academic.timetable.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("hod");
+        if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to submit timetable for approval" };
         const session = await auth();
         if (!session?.user) return { success: false, error: "Unauthorized" };
 
@@ -165,6 +187,8 @@ export async function submitTimetableForApproval(deptId: number, sessionId: numb
 
 export async function approveTimetable(submissionId: number, notes?: string) {
     try {
+        const allowed = await hasPermission("academic.timetable.approve") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("dean");
+        if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to approve timetable" };
         const session = await auth();
         if (!session?.user) return { success: false, error: "Unauthorized" };
 
@@ -210,6 +234,8 @@ export async function approveTimetable(submissionId: number, notes?: string) {
 
 export async function requestTimetableRevision(submissionId: number, notes: string) {
     try {
+        const allowed = await hasPermission("academic.timetable.approve") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("dean");
+        if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to request revision" };
         const session = await auth();
         if (!session?.user) return { success: false, error: "Unauthorized" };
 
@@ -264,6 +290,8 @@ export async function assignCourseToLecturer(data: {
     role?: 'main' | 'co_lecturer';
 }) {
     try {
+        const allowed = await hasPermission("academic.timetable.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("hod");
+        if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to assign lecturer" };
         // Check if assignment already exists for this STAFF and COURSE
         const existing = await db.select().from(courseLecturers).where(and(
             eq(courseLecturers.sessionId, data.sessionId),
@@ -301,6 +329,8 @@ export async function assignCourseToLecturer(data: {
 
 export async function removeLecturerFromCourse(assignmentId: number) {
     try {
+        const allowed = await hasPermission("academic.timetable.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("hod");
+        if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to remove lecturer" };
         await db.delete(courseLecturers).where(eq(courseLecturers.id, assignmentId));
         revalidatePath("/admin/academics/timetable");
         revalidatePath("/admin/academics/assignments");
@@ -374,6 +404,8 @@ export async function saveTimetableSlot(data: {
     level: number;
 }) {
     try {
+        const allowed = await hasPermission("academic.timetable.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("hod");
+        if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to save timetable slot" };
         // Clash detection logic (still here for now, or could be moved to service)
         // ... (keeping clash detection and just delegating the save/validate)
 
@@ -390,6 +422,8 @@ export async function saveTimetableSlot(data: {
 
 export async function deleteTimetableSlot(slotId: number) {
     try {
+        const allowed = await hasPermission("academic.timetable.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("hod");
+        if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to delete timetable slot" };
         await db.delete(timetableSlots).where(eq(timetableSlots.id, slotId));
         revalidatePath("/admin/academics/timetable");
         revalidatePath("/admin/academics/assignments");
@@ -419,6 +453,17 @@ export async function getLevelTimetable(deptId: number, level: number, sessionId
                 eq(courseLecturers.sessionId, sessionId),
                 eq(courseLecturers.semester, semester as any)
             ));
+
+        const submission = await db.select().from(timetableSubmissions).where(and(
+            eq(timetableSubmissions.deptId, deptId),
+            eq(timetableSubmissions.sessionId, sessionId),
+            eq(timetableSubmissions.semester, semester as any),
+            eq(timetableSubmissions.status, 'approved')
+        ));
+
+        if (submission.length === 0) {
+            return []; // Hide if not approved
+        }
 
         return slotsRaw.map(r => ({
             ...r.slot,

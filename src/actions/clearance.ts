@@ -4,7 +4,7 @@ import { db } from "@/db/db";
 import { studentClearances, studentLedger, students, users, bursarySettings, programmes, departments } from "@/db/schema";
 import { eq, and, desc, sql, gte } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import { hasRole } from "@/lib/rbac";
+import { hasRole, hasPermission } from "@/lib/rbac";
 import { v4 as uuidv4 } from 'uuid';
 import { getCurrentSession } from "./portal";
 
@@ -96,8 +96,8 @@ export async function manuallyClearStudent(data: {
     notes?: string;
 }) {
     try {
-        const isBursar = await hasRole("bursar");
-        if (!isBursar) throw new Error("Unauthorized: Only Bursar can manually clear students");
+        const isBursar = await hasPermission("finance.clearance.manage") || await hasRole("bursar") || await hasRole("admin") || await hasRole("superadmin");
+        if (!isBursar) throw new Error("Unauthorized: Financial clearance override permission required");
 
         const [existing] = await db.select().from(studentClearances).where(
             and(

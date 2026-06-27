@@ -8,6 +8,7 @@ import {
 } from "@/db/schema";
 import { eq, and, sql, desc, or, notIn } from "drizzle-orm";
 import { auth } from "@/auth";
+import { hasPermission, hasRole } from "@/lib/rbac";
 
 /**
  * Fetches the active student's pending tutor evaluations for the current active session.
@@ -179,6 +180,13 @@ export async function getInstructorQAProfiles(filters?: {
     if (!session?.user) return { success: false, error: "Unauthorized" };
 
     try {
+        // If not checking personal feedback, require QA view permission
+        const checkingSelf = filters?.staffId !== undefined;
+        if (!checkingSelf) {
+            const allowed = await hasPermission("academic.qa.view") || await hasRole("admin") || await hasRole("superadmin");
+            if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to view QA profiles" };
+        }
+
         const conditions = [];
 
         if (filters?.sessionId) {

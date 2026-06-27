@@ -1,4 +1,5 @@
 "use client";
+import { sanitizeRichContent } from "@/lib/sanitizer";
 
 import { useState, useEffect } from "react";
 import ScormPlayer from "./ScormPlayer";
@@ -1056,7 +1057,8 @@ function AssignmentView({ lesson, studentId, onSubmit }: { lesson: Lesson, stude
                                     <h3 className="text-lg font-bold text-slate-800">Mission Description</h3>
                                 </CardHeader>
                                 <CardContent className="p-6 pt-4 prose prose-slate max-w-none text-slate-600 font-medium text-sm">
-                                    <div dangerouslySetInnerHTML={{ __html: assignment?.description || "No instructions provided." }} />
+                                    {/* SECURITY FIX H-2e: Sanitize instructor-provided HTML */}
+                                    <div dangerouslySetInnerHTML={{ __html: sanitizeRichContent(assignment?.description || "No instructions provided.") }} />
                                 </CardContent>
                             </Card>
 
@@ -1109,7 +1111,8 @@ function AssignmentView({ lesson, studentId, onSubmit }: { lesson: Lesson, stude
                                         </CardTitle>
                                     </CardHeader>
                                     <CardContent className="p-6 prose prose-emerald max-w-none text-slate-600 text-sm font-semibold">
-                                        <div dangerouslySetInnerHTML={{ __html: submission.feedback }} />
+                                        {/* SECURITY FIX H-2e: Sanitize teacher feedback before render */}
+                                        <div dangerouslySetInnerHTML={{ __html: sanitizeRichContent(submission.feedback) }} />
                                     </CardContent>
                                 </Card>
                             ) : (

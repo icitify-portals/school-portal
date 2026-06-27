@@ -20,6 +20,8 @@ import {
 } from "@/db/schema";
 import { eq, and, inArray, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { hasPermission, hasRole } from "@/lib/rbac";
+import { getActiveSevereSanctions } from "@/actions/disciplinary";
 
 /**
  * Validates a list of courses against institutional and departmental rules.
@@ -159,6 +161,15 @@ export async function validateRegistration(studentId: number, courseIds: number[
  */
 export async function registerCourses(studentId: number, courseIds: number[], academicYear: string, semester: number) {
     try {
+        // SECURITY FIX: Block suspended/expelled/rusticated students from registering courses
+        const studentUserRecord = await db.query.students.findFirst({ where: eq(students.id, studentId) });
+        if (studentUserRecord) {
+            const sanctions = await getActiveSevereSanctions(studentUserRecord.userId);
+            if (sanctions.length > 0) {
+                return { success: false, error: "Course registration is blocked. You have an active disciplinary sanction. Please contact the Registrar's office." };
+            }
+        }
+
         // Run validation
         const val = await validateRegistration(studentId, courseIds, academicYear, semester);
         if (!val.success) return val;
@@ -209,6 +220,8 @@ export async function registerCourses(studentId: number, courseIds: number[], ac
  */
 export async function getPendingRegistrations() {
     try {
+        const allowed = await hasPermission("academic.registration.approve") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("academic_registrar") || await hasRole("hod") || await hasRole("dean");
+        if (!allowed) return [];
         const pending = await db.select({
             studentId: enrollments.studentId,
             academicYear: enrollments.academicYear,
@@ -255,6 +268,8 @@ export async function getPendingRegistrations() {
 
 export async function processRegistration(studentId: number, academicYear: string, semester: number, action: 'approved' | 'rejected') {
     try {
+        const allowed = await hasPermission("academic.registration.approve") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("academic_registrar") || await hasRole("hod") || await hasRole("dean");
+        if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions" };
         await db.update(enrollments)
             .set({ status: action })
             .where(and(
@@ -277,6 +292,8 @@ export async function batchProcessRegistrations(
     action: 'approved' | 'rejected'
 ) {
     try {
+        const allowed = await hasPermission("academic.registration.approve") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("academic_registrar") || await hasRole("hod") || await hasRole("dean");
+        if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to batch process registrations" };
         await db.transaction(async (tx) => {
             for (const reg of registrations) {
                 await tx.update(enrollments)
@@ -360,6 +377,8 @@ export async function submitAddDropRequest(studentId: number, courseId: number, 
  */
 export async function getAddDropRequests(deptId?: number) {
     try {
+        const allowed = await hasPermission("academic.registration.approve") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("academic_registrar") || await hasRole("hod") || await hasRole("dean");
+        if (!allowed) return [];
         const [currentSession] = await db.select().from(academicSessions).where(eq(academicSessions.isCurrent, true)).limit(1);
 
         if (!currentSession) return [];
@@ -408,6 +427,8 @@ export async function getAddDropRequests(deptId?: number) {
  */
 export async function processAddDropRequest(requestId: number, action: 'approved' | 'rejected', processorId: number) {
     try {
+        const allowed = await hasPermission("academic.registration.approve") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("academic_registrar") || await hasRole("hod") || await hasRole("dean");
+        if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to process Add/Drop request" };
         const requestRows = await db.select({
             request: addDropRequests,
             session: academicSessions
@@ -472,6 +493,8 @@ export async function processAddDropRequest(requestId: number, action: 'approved
  */
 export async function directEnrollmentUpdate(studentId: number, courseId: number, type: 'add' | 'remove', processorId: number) {
     try {
+        const allowed = await hasPermission("academic.registration.approve") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("academic_registrar");
+        if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to perform direct enrollment update" };
         const [currentSession] = await db.select().from(academicSessions).where(eq(academicSessions.isCurrent, true)).limit(1);
 
         if (!currentSession) return { success: false, error: "No active session" };

@@ -38,10 +38,19 @@ import FileUploadZone from "@/components/lms/FileUploadZone";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import * as Tabs from "@radix-ui/react-tabs";
+import { getPages } from "@/actions/cms";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 
 export default function PortalSettingsPage() {
     const [sessions, setSessions] = useState<any[]>([]);
     const [branding, setBranding] = useState<Record<string, string>>({});
+    const [pages, setPages] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSavingBranding, setIsSavingBranding] = useState(false);
@@ -67,12 +76,16 @@ export default function PortalSettingsPage() {
 
     const loadData = async () => {
         setLoading(true);
-        const [sessionData, brandingData] = await Promise.all([
+        const [sessionData, brandingData, pagesData] = await Promise.all([
             getAcademicSessions(),
-            getBrandingSettings()
+            getBrandingSettings(),
+            getPages()
         ]);
         setSessions(sessionData);
         setBranding(brandingData);
+        if (pagesData.success) {
+            setPages(pagesData.data || []);
+        }
         setLoading(false);
     };
 
@@ -416,6 +429,24 @@ export default function PortalSettingsPage() {
                                             placeholder="e.g., Excellence in Research"
                                             className="rounded-2xl border-slate-200 py-6 font-bold shadow-sm focus:ring-indigo-500"
                                         />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1 italic">Portal Homepage Page</label>
+                                        <Select
+                                            value={branding.HOMEPAGE_PAGE_ID || "default"}
+                                            onValueChange={(val) => setBranding({ ...branding, HOMEPAGE_PAGE_ID: val })}
+                                        >
+                                            <SelectTrigger className="h-12 rounded-xl bg-slate-50 border-slate-200 font-bold">
+                                                <SelectValue placeholder="Default landing sections" />
+                                            </SelectTrigger>
+                                            <SelectContent className="rounded-xl border-slate-100">
+                                                <SelectItem value="default">Default Landing Sections</SelectItem>
+                                                {pages.map((p: any) => (
+                                                    <SelectItem key={p.id} value={p.id.toString()}>{p.title} ({p.slug})</SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                        <p className="text-[10px] text-slate-400 font-medium px-2 italic">Select a custom page to serve as the homepage of the portal.</p>
                                     </div>
                                     <div className="space-y-4">
                                         <div className="flex justify-between items-center px-1">

@@ -44,14 +44,17 @@ import { ExcelBacklogService } from "@/services/ExcelBacklogService";
 
 // --- MIDDLEWARE HELPERS ---
 async function ensureBursar() {
-    const isBursar = await hasRole("bursar");
+    const isBursar = await hasPermission("finance.ledger.manage") || await hasRole("bursar");
     if (!isBursar) throw new Error("Unauthorized: Only the Bursar can perform this action");
 }
 
 async function ensureBursaryStaff() {
-    const isStaff = await hasRole("bursary_staff");
-    const isBursar = await hasRole("bursar");
-    if (!isStaff && !isBursar) throw new Error("Unauthorized: Bursary staff access required");
+    const isStaff = 
+        await hasPermission("finance.view_summary") || 
+        await hasPermission("finance.view_detailed") || 
+        await hasRole("bursary_staff") || 
+        await hasRole("bursar");
+    if (!isStaff) throw new Error("Unauthorized: Bursary staff access required");
 }
 
 // --- Excel Backlog ---

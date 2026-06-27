@@ -14,12 +14,10 @@ export async function impersonateUser(targetUserId: number) {
             return { error: "Unauthorized. Admin access required." };
         }
 
-        // Prevent self-impersonation (optional but cleaner)
+        // Prevent self-impersonation
         if (parseInt(session.user.id) === targetUserId) {
             return { error: "You cannot impersonate yourself." };
         }
-
-        const cookieStore = await cookies();
 
         // Fetch target user data
         const { db } = await import("@/db/db");
@@ -30,6 +28,15 @@ export async function impersonateUser(targetUserId: number) {
 
         if (!targetUser) return { error: "Target user not found." };
 
+        // SECURITY FIX: Prevent privilege escalation via impersonation.
+        // Only superadmin can impersonate admin-level users.
+        // Non-superadmins (bursar, registrar) can only impersonate students and staff.
+        const highPrivilegeRoles = ['admin', 'superadmin', 'dvc', 'registrar', 'bursar', 'librarian', 'dean', 'hod'];
+        if (actorRole !== 'superadmin' && highPrivilegeRoles.includes(targetUser.role?.toLowerCase() || '')) {
+            return { error: "Unauthorized: You cannot impersonate a user with equal or higher privilege level." };
+        }
+
+
         // Log impersonation to systemAuditLogs
         await db.insert(systemAuditLogs).values({
             actorId: parseInt(session.user.id),
@@ -38,6 +45,8 @@ export async function impersonateUser(targetUserId: number) {
             details: JSON.stringify({ targetUserEmail: targetUser.email, targetUserName: targetUser.name, timestamp: new Date() }),
             status: 'success'
         });
+
+        const cookieStore = await cookies();
 
         // Set impersonated ID and Role
         cookieStore.set("impersonated_id", targetUserId.toString(), {
@@ -72,6 +81,13 @@ export async function impersonateUser(targetUserId: number) {
 
 export async function stopImpersonating() {
     try {
+        // SECURITY FIX M-1: Verify the caller has an active session before
+        // modifying cookies. Prevents unauthenticated stop requests.
+        const session = await auth();
+        if (!session?.user?.id) {
+            return { error: "Unauthorized." };
+        }
+
         const cookieStore = await cookies();
         cookieStore.delete("impersonated_id");
         cookieStore.delete("impersonated_role");

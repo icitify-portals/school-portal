@@ -33,13 +33,14 @@ import { IdentityCard } from "@/components/IdentityCard";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { PushSubscriptionToggle } from "@/components/notifications/PushSubscriptionToggle";
+import TwoFactorSettings from "./TwoFactorSettings";
 
 export default function ProfilePage() {
     const { data: session } = useSession();
     const [loading, setLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const [profile, setProfile] = useState<any>(null);
-    const [activeTab, setActiveTab] = useState<"personal" | "guardian" | "kin" | "health" | "notifications">("personal");
+    const [activeTab, setActiveTab] = useState<"personal" | "guardian" | "kin" | "health" | "notifications" | "security">("personal");
     const [ninInput, setNinInput] = useState("");
     const [isVerifyingNin, setIsVerifyingNin] = useState(false);
     const [isUpdatingImage, setIsUpdatingImage] = useState(false);
@@ -162,6 +163,7 @@ export default function ProfilePage() {
             { id: "health", label: "Health Records", icon: HeartPulse },
         ] : []),
         { id: "notifications", label: "Notifications", icon: Bell },
+        { id: "security", label: "Security & 2FA", icon: ShieldCheck },
     ];
 
     return (
@@ -602,6 +604,10 @@ export default function ProfilePage() {
                                         </div>
                                     </div>
                                 </div>
+                            )}
+
+                            {activeTab === "security" && (
+                                <TwoFactorSettings />
                             )}
                         </form>
                     </Card>

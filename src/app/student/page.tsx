@@ -32,10 +32,11 @@ import { KnowledgeTree } from "@/components/ai/KnowledgeTree";
 import { HeroShop } from "@/components/ai/HeroShop";
 import { getStudentByUserId } from "@/actions/students";
 import { getStudentDashboardStats } from "@/actions/dashboards";
+import { getStudentLibraryFines } from "@/actions/library";
 import { cookies } from "next/headers";
 import { db } from "@/db/db";
-import { eq } from "drizzle-orm";
-import { institutionalUnits } from "@/db/schema";
+import { eq, and } from "drizzle-orm";
+import { institutionalUnits, medicalExcusats } from "@/db/schema";
 
 export const dynamic = "force-dynamic";
 
@@ -56,6 +57,22 @@ export default async function StudentDashboard() {
     const studentRecord = await getStudentByUserId(userId);
     const isGraduated = studentRecord?.status === 'graduated';
     const statsData = await getStudentDashboardStats(userId);
+    
+    // Fetch active medical excusat if any
+    const activeExcusat = await db.query.medicalExcusats.findFirst({
+        where: and(
+            eq(medicalExcusats.studentId, userId),
+            eq(medicalExcusats.status, 'approved')
+        )
+    });
+
+    const now = new Date();
+    const hasActiveExcusat = activeExcusat && new Date(activeExcusat.startDate) <= now && new Date(activeExcusat.endDate) >= now;
+
+    // Fetch library fines
+    // Fetch library fines — no userId arg needed, server action reads session internally
+    const libraryFinesData = await getStudentLibraryFines();
+    const hasLibraryFines = libraryFinesData.success && parseFloat(libraryFinesData.totalOwed) > 0;
 
     const studentInfo = session.user as any;
 
@@ -197,6 +214,46 @@ export default async function StudentDashboard() {
                     </div>
                 )}
             </div>
+
+            {/* Medical Excusat Alert Banner */}
+            {hasActiveExcusat && activeExcusat && (
+                <div className="bg-rose-50 border border-rose-200 border-l-4 border-l-rose-500 p-6 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm animate-pulse">
+                    <div className="flex gap-3 items-start">
+                        <div className="p-2 bg-rose-100 text-rose-600 rounded-lg">
+                            <ShieldOff className="w-5 h-5" />
+                        </div>
+                        <div>
+                            <h3 className="text-rose-800 font-bold">Active Medical Excusat</h3>
+                            <p className="text-rose-600 text-sm mt-1">
+                                You are officially excused from all academic activities until {new Date(activeExcusat.endDate).toLocaleDateString()}.
+                                Please focus on your recovery.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Library Fines Alert Banner */}
+            {hasLibraryFines && (
+                <div className="bg-orange-50 border border-orange-200 border-l-4 border-l-orange-500 p-6 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm">
+                    <div className="flex gap-3 items-start">
+                        <div className="p-2 bg-orange-100 text-orange-600 rounded-lg">
+                            <BookOpen className="w-5 h-5" />
+                        </div>
+                        <div>
+                            <h3 className="text-orange-800 font-bold">Outstanding Library Fines</h3>
+                            <p className="text-orange-600 text-sm mt-1">
+                                You owe ₦{libraryFinesData.totalOwed} in overdue library fines. Your borrowing privileges are restricted.
+                            </p>
+                        </div>
+                    </div>
+                    <Link href="/student/finance/library" className="shrink-0">
+                        <Button className="bg-orange-600 hover:bg-orange-700 text-white font-bold h-10 px-5 rounded-lg shadow-sm">
+                            Settle Fines Now
+                        </Button>
+                    </Link>
+                </div>
+            )}
 
             {/* Document Upload Required Alert Box */}
             <div className="bg-emerald-50/80 border border-emerald-100 border-l-4 border-emerald-600 p-6 rounded-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-sm">

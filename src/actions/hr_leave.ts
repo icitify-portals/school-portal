@@ -12,6 +12,7 @@ import { eq, and, desc, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { sendInAppNotification } from "./notifications";
+import { hasPermission, hasRole } from "@/lib/rbac";
 
 export async function getStaffProfileByUserId(userId: number) {
     const profile = await db.select({
@@ -154,17 +155,25 @@ export async function getMyLeaveRequests() {
 }
 
 export async function getAllLeaveRequests() {
-    const results = await db.select({
-        request: leaveRequests,
-        staff: staffProfiles,
-        user: users
-    })
-        .from(leaveRequests)
-        .innerJoin(staffProfiles, eq(leaveRequests.staffId, staffProfiles.id))
-        .innerJoin(users, eq(staffProfiles.userId, users.id))
-        .orderBy(desc(leaveRequests.startDate));
+    try {
+        const allowed = await hasPermission("hr.leave.approve") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("hr_officer");
+        if (!allowed) return [];
 
-    return results;
+        const results = await db.select({
+            request: leaveRequests,
+            staff: staffProfiles,
+            user: users
+        })
+            .from(leaveRequests)
+            .innerJoin(staffProfiles, eq(leaveRequests.staffId, staffProfiles.id))
+            .innerJoin(users, eq(staffProfiles.userId, users.id))
+            .orderBy(desc(leaveRequests.startDate));
+
+        return results;
+    } catch (error) {
+        console.error("Failed to fetch all leave requests:", error);
+        return [];
+    }
 }
 
 export async function updateLeaveStatus(requestId: number, status: 'approved' | 'rejected', comments: string) {
@@ -172,6 +181,9 @@ export async function updateLeaveStatus(requestId: number, status: 'approved' | 
     if (!session?.user?.id) return { success: false, error: "Unauthorized" };
 
     try {
+        const allowed = await hasPermission("hr.leave.approve") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("hr_officer");
+        if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to update leave status" };
+
         await db.transaction(async (tx) => {
             // 1. Update the request
             await tx.update(leaveRequests)

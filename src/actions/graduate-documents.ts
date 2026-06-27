@@ -25,6 +25,7 @@ import {
 import { eq, and, sql, desc, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { SplitPaymentEngine } from "@/services/SplitPaymentEngine";
+import { hasPermission, hasRole } from "@/lib/rbac";
 
 /**
  * 1. Checks if a student is eligible for graduation by analyzing coursework,
@@ -151,11 +152,14 @@ export async function checkGraduationEligibility(studentId: number) {
  * 2. Promotes an eligible student to a graduate and builds their Graduate Profile.
  */
 export async function promoteStudentToGraduate(studentId: number, classOfDegree: string = "Pass") {
+  const allowed = await hasPermission("registry.graduation.promote") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("registrar");
+  if (!allowed) {
+    return { success: false, error: "Unauthorized: You do not have permission to promote students to graduate status." };
+  }
+
+  // We still need the actor id for audit log — fetch the session
   const session = await auth();
   const actor = session?.user as any;
-  if (!actor || (actor.role !== "admin" && actor.role !== "superadmin" && actor.role !== "registrar")) {
-    return { success: false, error: "Unauthorized: Registrar/Admin credentials required" };
-  }
 
   try {
     // A. Check eligibility
@@ -451,11 +455,8 @@ export async function confirmDocumentApplicationPayment(reference: string) {
  * 8. Retrieve list of applications for the Registry desk queue.
  */
 export async function getRegistryApplications(filters: { status?: any; category?: any } = {}) {
-  const session = await auth();
-  const actor = session?.user as any;
-  if (!actor || (actor.role !== "admin" && actor.role !== "superadmin" && actor.role !== "registrar" && actor.role !== "staff")) {
-    return [];
-  }
+  const allowed = await hasPermission("registry.documents.view") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("registrar");
+  if (!allowed) return [];
 
   try {
     const conditions = [eq(graduateDocumentApplications.paymentStatus, "paid")];
@@ -506,8 +507,11 @@ export async function updateRegistryApplicationStatus(data: {
 }) {
   const session = await auth();
   const actor = session?.user as any;
-  if (!actor || (actor.role !== "admin" && actor.role !== "superadmin" && actor.role !== "registrar" && actor.role !== "staff")) {
-    return { success: false, error: "Unauthorized" };
+  if (!actor) return { success: false, error: "Unauthorized" };
+
+  const allowed = await hasPermission("registry.documents.process") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("registrar");
+  if (!allowed) {
+    return { success: false, error: "Unauthorized: You do not have permission to process document applications." };
   }
 
   try {
@@ -561,8 +565,11 @@ export async function createDocumentForm(data: {
 }) {
   const session = await auth();
   const actor = session?.user as any;
-  if (!actor || (actor.role !== "admin" && actor.role !== "superadmin" && actor.role !== "registrar")) {
-    return { success: false, error: "Unauthorized" };
+  if (!actor) return { success: false, error: "Unauthorized" };
+
+  const allowed = await hasPermission("registry.forms.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("registrar");
+  if (!allowed) {
+    return { success: false, error: "Unauthorized: You do not have permission to create document forms." };
   }
 
   try {
@@ -602,8 +609,11 @@ export async function configureDocumentPricingRule(data: {
 }) {
   const session = await auth();
   const actor = session?.user as any;
-  if (!actor || (actor.role !== "admin" && actor.role !== "superadmin" && actor.role !== "bursar")) {
-    return { success: false, error: "Unauthorized" };
+  if (!actor) return { success: false, error: "Unauthorized" };
+
+  const allowed = await hasPermission("registry.pricing.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("bursar");
+  if (!allowed) {
+    return { success: false, error: "Unauthorized: You do not have permission to configure document pricing rules." };
   }
 
   try {

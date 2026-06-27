@@ -5,6 +5,7 @@ import { db } from "@/db/db";
 import { departments, faculties } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { hasPermission, hasRole } from "@/lib/rbac";
 
 export async function getDepartments() {
     try {
@@ -23,6 +24,9 @@ export async function getDepartments() {
 
 export async function createDepartment(name: string, code: string, facultyId: number, data?: any) {
     try {
+        const allowed = await hasPermission("academic.departments.manage") || await hasRole("admin") || await hasRole("superadmin");
+        if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to create department" };
+
         await db.insert(departments).values({
             name,
             code,
@@ -42,6 +46,9 @@ export async function createDepartment(name: string, code: string, facultyId: nu
 
 export async function updateDepartment(id: number, data: any) {
     try {
+        const allowed = await hasPermission("academic.departments.manage") || await hasRole("admin") || await hasRole("superadmin");
+        if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to update department" };
+
         await db.update(departments)
             .set(data)
             .where(eq(departments.id, id));
@@ -55,6 +62,9 @@ export async function updateDepartment(id: number, data: any) {
 
 export async function deleteDepartment(id: number) {
     try {
+        const allowed = await hasPermission("academic.departments.manage") || await hasRole("admin") || await hasRole("superadmin");
+        if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to delete department" };
+
         await db.delete(departments).where(eq(departments.id, id));
         revalidatePath("/admin/departments");
         return { success: true };
@@ -66,6 +76,9 @@ export async function deleteDepartment(id: number) {
 
 export async function bulkImportDepartments(data: any[]) {
     try {
+        const allowed = await hasPermission("academic.departments.manage") || await hasRole("admin") || await hasRole("superadmin");
+        if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to import departments" };
+
         await db.transaction(async (tx) => {
             for (const row of data) {
                 const { name, code, facultyId } = row;

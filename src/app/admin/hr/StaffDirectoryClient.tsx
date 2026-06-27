@@ -9,7 +9,10 @@ import {
     Calendar,
     Search,
     FileUp,
-    X
+    X,
+    QrCode,
+    Loader2,
+    ShieldAlert
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { UniversalImporter } from "@/components/UniversalImporter";
@@ -17,6 +20,8 @@ import { hireStaff, bulkImportStaff } from "@/actions/hr";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { AccountManagementModal } from "@/components/admin/AccountManagementModal";
+import { generateIdentityQRCodeAction } from "@/actions/utility-actions";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 
 interface StaffDirectoryClientProps {
     initialStaff: any[];
@@ -33,6 +38,32 @@ export function StaffDirectoryClient({ initialStaff, nonStaffUsers, departments,
     const [showImporter, setShowImporter] = useState(false);
     const [selectedUser, setSelectedUser] = useState<any | null>(null);
     const router = useRouter();
+
+    const [qrStaff, setQrStaff] = useState<any | null>(null);
+    const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
+    const [qrLoading, setQrLoading] = useState(false);
+
+    const handleViewQR = async (staff: any) => {
+        setQrStaff(staff);
+        setQrLoading(true);
+        setQrDataUrl(null);
+        try {
+            // Staff ID QR format: stf:<staffId || staffRecordId>
+            const idVal = staff.staffId || staff.id;
+            const res = await generateIdentityQRCodeAction(`stf:${idVal}`);
+            if (res.success && res.dataUrl) {
+                setQrDataUrl(res.dataUrl);
+            } else {
+                alert(res.error || "Failed to generate ID QR");
+                setQrStaff(null);
+            }
+        } catch (error: any) {
+            alert(error.message || "An unexpected error occurred");
+            setQrStaff(null);
+        } finally {
+            setQrLoading(false);
+        }
+    };
 
     const canManageStaff = ["admin", "superadmin", "registrar", "dvc"].includes(userRole);
 
@@ -276,7 +307,16 @@ export function StaffDirectoryClient({ initialStaff, nonStaffUsers, departments,
                                                 </span>
                                             </td>
                                             {canManageStaff && (
-                                                <td className="px-6 py-4 text-right">
+                                                <td className="px-6 py-4 text-right flex items-center justify-end gap-2">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => handleViewQR(s)}
+                                                        className="h-8 w-8 p-0 rounded-lg text-indigo-600 hover:bg-indigo-50 flex items-center justify-center"
+                                                        title="View Staff QR ID"
+                                                    >
+                                                        <QrCode className="w-4 h-4" />
+                                                    </Button>
                                                     <Button
                                                         variant="ghost"
                                                         size="sm"
@@ -308,6 +348,71 @@ export function StaffDirectoryClient({ initialStaff, nonStaffUsers, departments,
                 onClose={() => setSelectedUser(null)}
                 onUpdate={() => router.refresh()}
             />
+
+            {/* Staff ID QR Modal */}
+            <Dialog open={!!qrStaff} onOpenChange={(open) => {
+                if (!open) {
+                    setQrStaff(null);
+                    setQrDataUrl(null);
+                }
+            }}>
+                <DialogContent className="border-none shadow-2xl rounded-[2.5rem] bg-white max-w-sm p-8">
+                    <DialogHeader className="text-center space-y-3">
+                        <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center mx-auto">
+                            <QrCode className="w-6 h-6 animate-pulse" />
+                        </div>
+                        <DialogTitle className="text-2xl font-black uppercase italic tracking-tight text-slate-900">
+                            Staff QR ID
+                        </DialogTitle>
+                        <DialogDescription className="text-slate-400 font-medium text-xs">
+                            Verify staff identity using this secure QR code.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="flex flex-col items-center justify-center py-6 space-y-4">
+                        {qrLoading ? (
+                            <div className="flex flex-col items-center justify-center space-y-2 h-48">
+                                <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
+                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Generating ID Code...</span>
+                            </div>
+                        ) : qrDataUrl ? (
+                            <>
+                                <div className="bg-slate-50 p-6 rounded-[2rem] border border-slate-100 shadow-inner">
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img src={qrDataUrl} alt="Staff QR ID Card" className="w-48 h-48 mix-blend-multiply" />
+                                </div>
+                                {qrStaff && (
+                                    <div className="text-center space-y-1">
+                                        <p className="font-black text-slate-900 uppercase italic text-sm">{qrStaff.user?.name}</p>
+                                        <p className="text-[9px] font-black text-indigo-600 uppercase tracking-widest">
+                                            {qrStaff.staffId ? `STAFF ID: ${qrStaff.staffId}` : `RECORD ID: ${qrStaff.id}`}
+                                        </p>
+                                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest italic">{qrStaff.jobTitle}</p>
+                                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest italic">{qrStaff.department?.name || 'N/A'}</p>
+                                    </div>
+                                )}
+                            </>
+                        ) : (
+                            <div className="text-center text-rose-500 py-6 text-sm font-bold flex flex-col items-center gap-2">
+                                <ShieldAlert className="w-8 h-8" />
+                                Failed to generate QR code.
+                            </div>
+                        )}
+                    </div>
+
+                    <DialogFooter className="pt-2">
+                        <Button
+                            onClick={() => {
+                                setQrStaff(null);
+                                setQrDataUrl(null);
+                            }}
+                            className="w-full bg-slate-900 hover:bg-black text-white h-12 rounded-xl font-black uppercase tracking-widest text-xs transition-all shadow-xl shadow-slate-100"
+                        >
+                            Close
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }
