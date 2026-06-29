@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ShieldCheck, Loader2, KeyRound, ArrowLeft } from "lucide-react";
-import { verifyTwoFactorLoginAction, verifyBackupCodeLoginAction } from "@/actions/two-factor";
+import { ShieldCheck, Loader2, KeyRound, ArrowLeft, RefreshCw, Mail, MessageSquare } from "lucide-react";
+import { verifyTwoFactorLoginAction, verifyBackupCodeLoginAction, getUserTwoFactorStatusAction, requestTwoFactorOTPAction } from "@/actions/two-factor";
 import { toast } from "sonner";
 
 export default function TwoFactorLoginClient() {
@@ -16,6 +16,36 @@ export default function TwoFactorLoginClient() {
     const [mode, setMode] = useState<"totp" | "backup">("totp");
     const [code, setCode] = useState("");
     const [loading, setLoading] = useState(false);
+    
+    const [method, setMethod] = useState<"app" | "email" | "sms">("app");
+    const [initializing, setInitializing] = useState(true);
+    const [resending, setResending] = useState(false);
+
+    useEffect(() => {
+        async function init() {
+            const status = await getUserTwoFactorStatusAction();
+            if (status.method) {
+                setMethod(status.method as "app" | "email" | "sms");
+                if (status.method === "email" || status.method === "sms") {
+                    await requestTwoFactorOTPAction("login", status.method as "email" | "sms");
+                    toast.success(`Verification code sent to your ${status.method === "email" ? "email" : "phone"}.`);
+                }
+            }
+            setInitializing(false);
+        }
+        init();
+    }, []);
+
+    async function handleResendCode() {
+        setResending(true);
+        const res = await requestTwoFactorOTPAction("login", method === "app" ? "email" : method);
+        if (res.error) {
+            toast.error(res.error);
+        } else {
+            toast.success("A new code has been sent!");
+        }
+        setResending(false);
+    }
 
     async function handleVerify(e: React.FormEvent) {
         e.preventDefault();
@@ -54,12 +84,23 @@ export default function TwoFactorLoginClient() {
         }, 500);
     }
 
+    if (initializing) {
+        return (
+            <Card className="max-w-md w-full border-none shadow-2xl rounded-[3rem] p-10 bg-white flex flex-col items-center justify-center min-h-[400px]">
+                <Loader2 className="w-12 h-12 text-emerald-600 animate-spin" />
+                <p className="mt-4 text-[10px] font-black uppercase tracking-widest text-slate-400">Preparing Security Challenge...</p>
+            </Card>
+        );
+    }
+
     return (
         <Card className="max-w-md w-full border-none shadow-2xl rounded-[3rem] p-10 bg-white">
             <div className="text-center space-y-6">
                 <div className="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center mx-auto">
                     {mode === "totp" ? (
-                        <ShieldCheck className="w-10 h-10 text-emerald-600" />
+                        method === "app" ? <ShieldCheck className="w-10 h-10 text-emerald-600" /> :
+                        method === "email" ? <Mail className="w-10 h-10 text-emerald-600" /> :
+                        <MessageSquare className="w-10 h-10 text-emerald-600" />
                     ) : (
                         <KeyRound className="w-10 h-10 text-amber-600" />
                     )}
@@ -71,7 +112,7 @@ export default function TwoFactorLoginClient() {
                     </h1>
                     <p className="text-xs font-bold text-slate-500 uppercase tracking-widest leading-relaxed">
                         {mode === "totp" 
-                            ? "Open your authenticator app and enter the 6-digit code to continue."
+                            ? (method === "app" ? "Open your authenticator app and enter the 6-digit code to continue." : `Enter the 6-digit code sent to your ${method === "email" ? "email address" : "phone number"}.`)
                             : "Enter one of your 8-character emergency recovery codes."}
                     </p>
                 </div>
@@ -82,7 +123,7 @@ export default function TwoFactorLoginClient() {
                         placeholder={mode === "totp" ? "000000" : "XXXXXXXX"}
                         maxLength={mode === "totp" ? 6 : 8}
                         value={code}
-                        onChange={(e) => setCode(e.target.value.replace(mode === "totp" ? /\\D/g : /[^a-zA-Z0-9]/g, "").toUpperCase())}
+                        onChange={(e) => setCode(e.target.value.replace(mode === "totp" ? /\D/g : /[^a-zA-Z0-9]/g, "").toUpperCase())}
                         className="h-16 text-center text-2xl tracking-[0.5em] font-black rounded-2xl border-slate-200"
                         autoFocus
                     />
@@ -95,6 +136,20 @@ export default function TwoFactorLoginClient() {
                         {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Verify Identity"}
                     </Button>
                 </form>
+
+                {mode === "totp" && method !== "app" && (
+                    <div className="pt-2">
+                        <button 
+                            type="button"
+                            onClick={handleResendCode}
+                            disabled={resending}
+                            className="flex items-center justify-center gap-2 mx-auto text-[10px] font-black text-blue-500 hover:text-blue-700 uppercase tracking-widest transition-colors disabled:opacity-50"
+                        >
+                            {resending ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
+                            Resend Code
+                        </button>
+                    </div>
+                )}
 
                 <div className="pt-6 border-t border-slate-100">
                     {mode === "totp" ? (
@@ -111,7 +166,7 @@ export default function TwoFactorLoginClient() {
                             onClick={() => { setMode("totp"); setCode(""); }}
                             className="flex items-center justify-center gap-2 w-full text-[10px] font-black text-slate-400 hover:text-emerald-600 uppercase tracking-widest transition-colors"
                         >
-                            <ArrowLeft className="w-3 h-3" /> Back to Authenticator
+                            <ArrowLeft className="w-3 h-3" /> Back to Verification
                         </button>
                     )}
                 </div>

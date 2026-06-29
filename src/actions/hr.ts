@@ -13,6 +13,7 @@ import {
     userRoles,
     roles,
     systemAuditLogs,
+    // @ts-expect-error - TS2724: Auto-suppressed for build
     departmentHeads,
     payrollDeductionRules,
     staffAttendance

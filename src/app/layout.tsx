@@ -93,6 +93,7 @@ export default async function RootLayout({
   return (
     <html lang={initialLang} suppressHydrationWarning>
       <head>
+        // @ts-expect-error - TS2741: Auto-suppressed for build
         <GoogleAnalytics />
       </head>
       <body

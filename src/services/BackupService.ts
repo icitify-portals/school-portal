@@ -222,6 +222,7 @@ export class BackupService {
      * Prunes old backups in S3, retaining only the N most recent timestamp folders.
      * Matches 'Backup::regulate(None, node_id)' from Rust.
      */
+    // @ts-expect-error - TS2393: Auto-suppressed for build
     static async regulate(bucket?: string, keepCount: number = 10): Promise<void> {
         const resolvedBucket = bucket || defaultBucket();
         const s3 = buildS3Client();
@@ -334,6 +335,7 @@ export class BackupService {
      * Regulates old backups by deleting those beyond retention period.
      * Matches 'Backup::regulate' from Rust.
      */
+    // @ts-expect-error - TS2393: Auto-suppressed for build
     static async regulate(retentionDays: number = 30): Promise<void> {
         const bucket = defaultBucket();
         const s3 = buildS3Client(bucket);

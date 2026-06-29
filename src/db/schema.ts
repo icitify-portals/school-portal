@@ -22,6 +22,7 @@ export const users = mysqlTable('users', {
   twoFactorEnabled: boolean('two_factor_enabled').default(false),
   twoFactorSecret: text('two_factor_secret'),
   twoFactorBackupCodes: text('two_factor_backup_codes'),
+  twoFactorMethod: mysqlEnum('two_factor_method', ['app', 'email', 'sms']).default('app'),
 });
 
 export const userPermissions = mysqlTable('user_permissions', {
@@ -6838,6 +6839,30 @@ export const securityIncidentsRelations = relations(securityIncidents, ({ one })
   officer: one(users, { fields: [securityIncidents.reportedBy], references: [users.id] }),
 }));
 
+export const securityLostAndFound = mysqlTable('security_lost_and_found', {
+  id: int('id').autoincrement().primaryKey(),
+  type: mysqlEnum('type', ['lost', 'found']).notNull(),
+  itemName: varchar('item_name', { length: 255 }).notNull(),
+  category: mysqlEnum('category', ['electronics', 'documents', 'clothing', 'keys', 'other']).notNull(),
+  description: text('description').notNull(),
+  dateReported: datetime('date_reported').notNull(),
+  location: varchar('location', { length: 255 }).notNull(),
+  status: mysqlEnum('status', ['open', 'matched', 'claimed', 'disposed']).default('open').notNull(),
+  reportedById: int('reported_by_id').references(() => users.id).notNull(),
+  claimedById: int('claimed_by_id').references(() => users.id),
+  storageLocation: varchar('storage_location', { length: 255 }),
+  imageUrl: varchar('image_url', { length: 500 }),
+  claimProofImageUrl: varchar('claim_proof_image_url', { length: 500 }),
+  resolvedAt: datetime('resolved_at'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
+});
+
+export const securityLostAndFoundRelations = relations(securityLostAndFound, ({ one }) => ({
+  reporter: one(users, { fields: [securityLostAndFound.reportedById], references: [users.id] }),
+  claimer: one(users, { fields: [securityLostAndFound.claimedById], references: [users.id] }),
+}));
+
 // --- STUDENT AFFAIRS MODULE ---
 
 export const studentAffairsEvents = mysqlTable('student_affairs_events', {
@@ -6962,4 +6987,65 @@ export const supportTicketsRelations = relations(supportTickets, ({ one, many })
 export const supportTicketMessagesRelations = relations(supportTicketMessages, ({ one }) => ({
   ticket: one(supportTickets, { fields: [supportTicketMessages.ticketId], references: [supportTickets.id] }),
   sender: one(users, { fields: [supportTicketMessages.senderId], references: [users.id] }),
+}));
+
+// --- KEY MANAGEMENT ---
+export const securityKeys = mysqlTable('security_keys', {
+  id: int('id').autoincrement().primaryKey(),
+  officeName: varchar('office_name', { length: 255 }).notNull(),
+  keyIdentifier: varchar('key_identifier', { length: 100 }).notNull().unique(),
+  status: mysqlEnum('status', ['available', 'checked_out', 'lost']).default('available').notNull(),
+  currentHolderId: int('current_holder_id').references(() => users.id),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
+});
+
+export const securityKeyLogs = mysqlTable('security_key_logs', {
+  id: int('id').autoincrement().primaryKey(),
+  keyId: int('key_id').references(() => securityKeys.id).notNull(),
+  userId: int('user_id').references(() => users.id).notNull(),
+  action: mysqlEnum('action', ['checkout', 'return']).notNull(),
+  timestamp: timestamp('timestamp').defaultNow().notNull(),
+  notes: text('notes'),
+});
+
+export const securityKeysRelations = relations(securityKeys, ({ one, many }) => ({
+  currentHolder: one(users, { fields: [securityKeys.currentHolderId], references: [users.id] }),
+  logs: many(securityKeyLogs),
+}));
+
+export const securityKeyLogsRelations = relations(securityKeyLogs, ({ one }) => ({
+  key: one(securityKeys, { fields: [securityKeyLogs.keyId], references: [securityKeys.id] }),
+  user: one(users, { fields: [securityKeyLogs.userId], references: [users.id] }),
+}));
+
+// --- DEVELOPER/PLATFORM SUBSCRIPTION FEES ---
+export const developerSubscriptionSettings = mysqlTable('developer_subscription_settings', {
+  id: int('id').autoincrement().primaryKey(),
+  feeName: varchar('fee_name', { length: 255 }).notNull().default('Platform Subscription Fee'),
+  feeAmount: decimal('fee_amount', { precision: 12, scale: 2 }).notNull(),
+  billingCycle: mysqlEnum('billing_cycle', ['per_term', 'per_semester', 'per_annum']).notNull().default('per_term'),
+  isActive: boolean('is_active').default(true),
+  updatedBy: int('updated_by').references(() => users.id),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
+});
+
+export const developerSubscriptions = mysqlTable('developer_subscriptions', {
+  id: int('id').autoincrement().primaryKey(),
+  studentId: int('student_id').references(() => students.id).notNull(),
+  academicSessionId: int('academic_session_id').references(() => academicSessions.id).notNull(),
+  termOrSemester: int('term_or_semester'), // 1, 2, 3 depending on cycle
+  amountDue: decimal('amount_due', { precision: 12, scale: 2 }).notNull(),
+  amountPaid: decimal('amount_paid', { precision: 12, scale: 2 }).default('0.00'),
+  status: mysqlEnum('status', ['unpaid', 'part_paid', 'paid', 'exempt']).default('unpaid'),
+  paymentReference: varchar('payment_reference', { length: 100 }),
+  paidBy: mysqlEnum('paid_by', ['student', 'parent', 'school_bulk']),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
+});
+
+export const developerSubscriptionsRelations = relations(developerSubscriptions, ({ one }) => ({
+  student: one(students, { fields: [developerSubscriptions.studentId], references: [students.id] }),
+  session: one(academicSessions, { fields: [developerSubscriptions.academicSessionId], references: [academicSessions.id] }),
 }));

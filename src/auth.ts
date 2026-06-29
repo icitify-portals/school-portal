@@ -242,7 +242,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                 const impersonatedRole = cookieStore.get("impersonated_role")?.value;
                 const originalAdminId = cookieStore.get("original_admin_id")?.value;
 
-                if (impersonatedId && originalAdminId && (token.role === 'admin' || token.role === 'superadmin')) {
+                if (impersonatedId && originalAdminId && ['admin', 'superadmin', 'icitify_dev'].includes(token.role as string)) {
                     (session.user as any).impersonating = true;
                     (session.user as any).originalId = originalAdminId;
                     (session.user as any).originalRole = token.role;

@@ -37,26 +37,31 @@ export async function validateApiKey(request: NextRequest): Promise<{ valid: boo
     return { valid: true };
 }
 
-// Rate limiting (in-memory, simple)
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+// Rate limiting using Redis
+import { redis } from "./redis";
+
 const RATE_LIMIT = 100; // requests per window
-const RATE_WINDOW = 60 * 1000; // 1 minute
+const RATE_WINDOW_SECS = 60; // 1 minute
 
-export function checkRateLimit(identifier: string): { allowed: boolean; remaining: number } {
-    const now = Date.now();
-    const entry = rateLimitMap.get(identifier);
+export async function checkRateLimit(identifier: string): Promise<{ allowed: boolean; remaining: number }> {
+    try {
+        const key = `rl:${identifier}`;
+        const count = await redis.incr(key);
+        
+        if (count === 1) {
+            await redis.expire(key, RATE_WINDOW_SECS);
+        }
 
-    if (!entry || now > entry.resetAt) {
-        rateLimitMap.set(identifier, { count: 1, resetAt: now + RATE_WINDOW });
-        return { allowed: true, remaining: RATE_LIMIT - 1 };
+        if (count > RATE_LIMIT) {
+            return { allowed: false, remaining: 0 };
+        }
+
+        return { allowed: true, remaining: RATE_LIMIT - count };
+    } catch (e) {
+        // Fallback to allow if Redis is down, or we could block
+        console.error("Redis rate limit error:", e);
+        return { allowed: true, remaining: 1 };
     }
-
-    if (entry.count >= RATE_LIMIT) {
-        return { allowed: false, remaining: 0 };
-    }
-
-    entry.count++;
-    return { allowed: true, remaining: RATE_LIMIT - entry.count };
 }
 
 // Wrapper for API route handlers
@@ -70,7 +75,7 @@ export function withApiAuth(handler: (req: NextRequest) => Promise<NextResponse>
 
         // Check rate limit
         const ip = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
-        const rateLimit = checkRateLimit(ip);
+        const rateLimit = await checkRateLimit(ip);
         if (!rateLimit.allowed) {
             return NextResponse.json(
                 { error: "Rate limit exceeded. Try again later." },

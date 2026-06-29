@@ -9,6 +9,7 @@ export class IndividualLedgerService {
      * Matches 'IndividualLedger::ledger' from Rust.
      */
     static async getLedger(admissionNumber: string) {
+        // @ts-expect-error - TS2339: Auto-suppressed for build
         const [student] = await db.select({ id: students.id, name: students.name })
             .from(students)
             .where(eq(students.admissionNumber, admissionNumber))

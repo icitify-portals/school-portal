@@ -147,6 +147,7 @@ const parentMenuItems: MenuItem[] = [
 const adminMenuItems: MenuItem[] = [
     { name: "Admin Dashboard", icon: LayoutDashboard, href: "/admin/dashboard" },
     { name: "Master Overwatch", icon: Globe, href: "/super-admin/dashboard", role: "superadmin" },
+    { name: "Developer Analytics", icon: Activity, href: "/admin/system/developer-fees", role: "icitify_dev" },
     {
         name: "Portal Settings",
         icon: Settings,
@@ -155,6 +156,7 @@ const adminMenuItems: MenuItem[] = [
             { name: "Environment & API Keys", href: "/admin/settings/env" },
             { name: "Module Governance", href: "/admin/settings/modules" },
             { name: "Theme Customization", href: "/admin/settings/theme" },
+            { name: "System Backup", href: "/admin/system/backup" },
             { name: "Integrations", href: "/admin/settings/integrations" },
             { name: "Payment Gateways", href: "/admin/settings/payment-gateways" },
             { name: "Developer APIs", href: "/admin/settings/developer" },
@@ -239,6 +241,7 @@ const adminMenuItems: MenuItem[] = [
             { name: "Transaction History", href: "/admin/bursary/history" },
             { name: "School Bills", href: "/admin/bursary/bills" },
             { name: "Refund Management", href: "/admin/bursary/refunds" },
+            { name: "Platform Subscriptions", href: "/admin/bursary/developer-subscriptions" },
             { name: "Financial Reports", href: "/admin/bursary/reports" },
             { name: "Bursary Settings", href: "/admin/bursary/settings" },
         ]
@@ -433,7 +436,10 @@ const adminMenuItems: MenuItem[] = [
         name: "Campus Security",
         icon: Shield,
         subItems: [
-            { name: "Security Dashboard", href: "/admin/security-director" },
+            { name: "Master Analytics", href: "/admin/security-director/analytics" },
+            { name: "Visitor Management", href: "/admin/security-director/visitors" },
+            { name: "Key Management", href: "/admin/security-director/key-management" },
+            { name: "Lost & Found", href: "/admin/security-director/lost-and-found" },
             { name: "Gate Scan & Patrols", href: "/staff/security-officer" },
         ]
     },

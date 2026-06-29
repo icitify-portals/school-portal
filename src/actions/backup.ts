@@ -107,6 +107,19 @@ export async function runBackup() {
         // 3. Cloud Uploads
         const s3Status = await uploadToCloud(dbBackupFile, 's3') && await uploadToCloud(fileBackupFile, 's3');
         const wasabiStatus = await uploadToCloud(dbBackupFile, 'wasabi') && await uploadToCloud(fileBackupFile, 'wasabi');
+        // 4. Prune old local backups (5 days)
+        const PRUNE_DAYS = 5;
+        const now = Date.now();
+        const files = fs.readdirSync(BACKUP_DIR);
+        for (const file of files) {
+            const filePath = path.join(BACKUP_DIR, file);
+            const stats = fs.statSync(filePath);
+            const daysOld = (now - stats.mtimeMs) / (1000 * 60 * 60 * 24);
+            if (daysOld > PRUNE_DAYS) {
+                fs.unlinkSync(filePath);
+                console.log(`Pruned old backup: ${file}`);
+            }
+        }
         
         revalidatePath("/admin/system/backup");
         return { 

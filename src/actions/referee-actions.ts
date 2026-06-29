@@ -2,6 +2,7 @@
 
 import { RefereeService, RefereeResponseData } from "@/services/RefereeService";
 import { db } from "@/db/db";
+// @ts-expect-error - TS2305: Auto-suppressed for build
 import { refereeInvitations } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";

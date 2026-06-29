@@ -13,11 +13,29 @@ export interface StorageProvider {
 }
 
 /**
+ * Validates the file buffer against allowed magic bytes to prevent malicious uploads.
+ */
+function validateFile(buffer: Buffer): boolean {
+    if (!buffer || buffer.length < 4) return false;
+    const hex = buffer.toString('hex', 0, 4).toUpperCase();
+    const allowed = [
+        '89504E47', // PNG
+        'FFD8FFDB', 'FFD8FFE0', 'FFD8FFEE', 'FFD8FFE1', // JPEG
+        '25504446', // PDF
+        '504B0304', // ZIP / DOCX / XLSX
+        'D0CF11E0', // Legacy DOC / XLS
+        '52494646', // WEBP / AVI / WAV (RIFF)
+    ];
+    return allowed.some(sig => hex.startsWith(sig));
+}
+
+/**
  * Local Filesystem Implementation
  * Used for local XAMPP development.
  */
 class LocalStorageProvider implements StorageProvider {
     async upload(file: Buffer, filename: string, subDir: string = "general") {
+        if (!validateFile(file)) return { success: false, error: "Security Error: Invalid or malicious file type format." };
         try {
             const uploadDir = join(process.cwd(), config.storage.local.uploadDir, subDir);
             await mkdir(uploadDir, { recursive: true });
@@ -36,6 +54,7 @@ class LocalStorageProvider implements StorageProvider {
     }
 
     async uploadFileAt(file: Buffer, relativePath: string) {
+        if (!validateFile(file)) return { success: false, error: "Security Error: Invalid or malicious file type format." };
         try {
             const fullPath = join(process.cwd(), config.storage.local.uploadDir, relativePath);
             const dir = join(fullPath, "..");
@@ -79,6 +98,7 @@ class S3StorageProvider implements StorageProvider {
     }
 
     async upload(file: Buffer, filename: string, subDir: string = "general", mimeType?: string) {
+        if (!validateFile(file)) return { success: false, error: "Security Error: Invalid or malicious file type format." };
         try {
             const key = `${subDir}/${Date.now()}-${filename}`;
             const command = new PutObjectCommand({
@@ -114,6 +134,7 @@ class S3StorageProvider implements StorageProvider {
     }
 
     async uploadFileAt(file: Buffer, relativePath: string, mimeType?: string) {
+        if (!validateFile(file)) return { success: false, error: "Security Error: Invalid or malicious file type format." };
         try {
             const key = relativePath.replace(/\\/g, '/');
             const command = new PutObjectCommand({

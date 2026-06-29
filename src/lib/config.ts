@@ -71,10 +71,10 @@ export const config = {
     altcha: {
         enabled: process.env.ALTCHA_ENABLED === 'true' || false, // disabled by default until explicitly enabled
         hmacKey: (() => {
-            if (process.env.ALTCHA_ENABLED === 'true' && !process.env.ALTCHA_HMAC_KEY && env === 'production') {
-                throw new Error("ALTCHA_HMAC_KEY environment variable is required in production when ALTCHA is enabled");
+            if (process.env.ALTCHA_ENABLED === 'true' && !process.env.ALTCHA_HMAC_KEY) {
+                throw new Error("[SECURITY] ALTCHA_HMAC_KEY environment variable is missing but ALTCHA is enabled.");
             }
-            return process.env.ALTCHA_HMAC_KEY || 'ExampleHMACKeyForPoWSpamValidation12345';
+            return process.env.ALTCHA_HMAC_KEY;
         })(),
     },
 

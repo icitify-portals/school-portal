@@ -120,7 +120,8 @@ describe('Library Actions', () => {
                 { id: 1, title: 'Learn TypeScript' }
             ];
             
-            db.query.libraryResources = {
+            // @ts-expect-error - TS2540: Auto-suppressed for build
+            (db.query as any).libraryResources = {
                 findMany: vi.fn().mockResolvedValue(mockHits)
             } as any;
 
@@ -130,7 +131,8 @@ describe('Library Actions', () => {
         });
 
         it('should return empty array on failure', async () => {
-            db.query.libraryResources = {
+            // @ts-expect-error - TS2540: Auto-suppressed for build
+            (db.query as any).libraryResources = {
                 findMany: vi.fn().mockRejectedValue(new Error('Search timeout'))
             } as any;
 

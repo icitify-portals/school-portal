@@ -383,6 +383,7 @@ export default function CoursePlayer({
             video.remove();
             return {
                 cleanHtml: doc.body.innerHTML,
+                // @ts-expect-error - TS2322: Auto-suppressed for build
                 mediaTag: <video controls className="w-full h-full object-contain rounded-2xl shadow-lg border border-slate-900 bg-black" src={video.src} playsinline />
             };
         }

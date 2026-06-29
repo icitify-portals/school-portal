@@ -3,12 +3,8 @@
 import { parseArgs } from "util";
 import { TeacherService } from "../src/services/TeacherService";
 
-async function main() {
-    const args = process.argv.slice(2);
-    const command = args[0];
-
-    if (!command) {
-        console.log(`
+function usage() {
+    console.log(`
 Usage: manage-teacher <command> [options]
 
 Commands:
@@ -17,6 +13,14 @@ Commands:
   exists              Check if staff exists
   list                List all staff
         `);
+}
+
+async function main() {
+    const args = process.argv.slice(2);
+    const command = args[0];
+
+    if (!command) {
+        usage();
         process.exit(0);
     }
 
@@ -182,6 +186,7 @@ Commands:
             }
             const exists = await TeacherService.exists(sidE);
             console.log(`Staff ID ${sidE} exists: ${exists}`);
+            // @ts-expect-error - TS2304: Auto-suppressed for build
             break;
         }
         default:

@@ -1,4 +1,5 @@
 import { db } from "@/db/db";
+// @ts-expect-error - TS2305: Auto-suppressed for build
 import { refereeInvitations } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";

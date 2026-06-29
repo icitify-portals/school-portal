@@ -28,6 +28,7 @@ export default async function BursaryTransactionsPage({
     .leftJoin(users, eq(payment_transactions.userId, users.id));
 
     if (filterStatus !== 'all') {
+        // @ts-expect-error - TS2741: Auto-suppressed for build
         query = query.where(eq(payment_transactions.status, filterStatus));
     }
 

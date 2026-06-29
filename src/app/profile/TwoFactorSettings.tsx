@@ -21,7 +21,9 @@ import {
     generateTwoFactorSetupAction,
     enableTwoFactorAction,
     disableTwoFactorAction,
-    getUserTwoFactorStatusAction
+    getUserTwoFactorStatusAction,
+    requestTwoFactorOTPAction,
+    enableOtpTwoFactorAction
 } from "@/actions/two-factor";
 import QRCode from "qrcode";
 import { toast } from "sonner";
@@ -29,6 +31,7 @@ import { toast } from "sonner";
 export default function TwoFactorSettings() {
     const { data: session, update } = useSession();
     const [isEnabled, setIsEnabled] = useState<boolean>(false);
+    const [method, setMethod] = useState<"app" | "email" | "sms">("app");
     const [loading, setLoading] = useState<boolean>(true);
     const [submitting, setSubmitting] = useState<boolean>(false);
     
@@ -51,25 +54,37 @@ export default function TwoFactorSettings() {
         setLoading(true);
         const res = await getUserTwoFactorStatusAction();
         setIsEnabled(res.enabled);
+        if (res.method) setMethod(res.method as any);
         setLoading(false);
     }
 
-    async function handleStartSetup() {
+    async function handleStartSetup(selectedMethod: "app" | "email" | "sms" = method) {
+        setMethod(selectedMethod);
         setSubmitting(true);
-        const res = await generateTwoFactorSetupAction();
-        if (res.error || !res.secret || !res.otpauthUri) {
-            toast.error(res.error || "Failed to start 2FA setup");
-            setSubmitting(false);
-            return;
-        }
-
-        try {
-            const url = await QRCode.toDataURL(res.otpauthUri);
-            setSecret(res.secret);
-            setQrCodeUrl(url);
+        if (selectedMethod === "app") {
+            const res = await generateTwoFactorSetupAction();
+            if (res.error || !res.secret || !res.otpauthUri) {
+                toast.error(res.error || "Failed to start 2FA setup");
+                setSubmitting(false);
+                return;
+            }
+            try {
+                const url = await QRCode.toDataURL(res.otpauthUri);
+                setSecret(res.secret);
+                setQrCodeUrl(url);
+                setSetupStep("setup");
+            } catch (err) {
+                toast.error("Failed to generate QR code");
+            }
+        } else {
+            const res = await requestTwoFactorOTPAction('setup', selectedMethod);
+            if (res.error) {
+                toast.error(res.error || "Failed to send verification code");
+                setSubmitting(false);
+                return;
+            }
+            toast.success(res.message || "Code sent!");
             setSetupStep("setup");
-        } catch (err) {
-            toast.error("Failed to generate QR code");
         }
         setSubmitting(false);
     }
@@ -79,9 +94,15 @@ export default function TwoFactorSettings() {
             toast.error("Please enter a valid 6-digit code");
             return;
         }
-
         setSubmitting(true);
-        const res = await enableTwoFactorAction(secret, verificationCode);
+        
+        let res;
+        if (method === "app") {
+            res = await enableTwoFactorAction(secret, verificationCode);
+        } else {
+            res = await enableOtpTwoFactorAction(method, verificationCode);
+        }
+
         if (res.error || !res.backupCodes) {
             toast.error(res.error || "Failed to verify 2FA code");
             setSubmitting(false);
@@ -92,7 +113,6 @@ export default function TwoFactorSettings() {
         setIsEnabled(true);
         setSetupStep("backup_codes");
         
-        // Sync session details client side
         await update({ twoFactorVerified: true });
         
         toast.success("Two-Factor Authentication successfully enabled!");
@@ -180,22 +200,43 @@ export default function TwoFactorSettings() {
 
             {/* Enable Process Flow */}
             {setupStep === "idle" && !isEnabled && (
-                <div className="bg-slate-50/50 border border-slate-100 p-8 rounded-[2.5rem] text-center space-y-6">
-                    <Lock className="w-12 h-12 mx-auto text-slate-400" />
-                    <div className="max-w-md mx-auto space-y-2">
+                <div className="bg-slate-50/50 border border-slate-100 p-8 rounded-[2.5rem] space-y-6">
+                    <div className="text-center">
+                        <Lock className="w-12 h-12 mx-auto text-slate-400 mb-4" />
                         <h5 className="font-black text-sm uppercase text-slate-800">Secure Your Session</h5>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider leading-relaxed">
-                            Use authenticator applications like Google Authenticator, Microsoft Authenticator, or Duo to configure secondary codes.
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider leading-relaxed max-w-md mx-auto">
+                            Choose your preferred secondary security method to protect your account.
                         </p>
                     </div>
-                    <Button
-                        type="button"
-                        onClick={handleStartSetup}
-                        disabled={submitting}
-                        className="bg-emerald-800 h-14 px-8 rounded-2xl hover:bg-emerald-950 text-white font-black uppercase tracking-widest text-[9px] transition-all hover:scale-105"
-                    >
-                        {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Initiate Setup"}
-                    </Button>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-4xl mx-auto mt-6">
+                        <div className="p-6 bg-white border border-slate-100 rounded-2xl flex flex-col items-center text-center space-y-4 hover:border-emerald-200 hover:shadow-md transition-all cursor-pointer" onClick={() => handleStartSetup("app")}>
+                            <ShieldCheck className="w-8 h-8 text-emerald-600" />
+                            <div>
+                                <h6 className="font-black text-xs uppercase text-slate-800">Authenticator App</h6>
+                                <p className="text-[9px] text-slate-500 uppercase tracking-wider mt-1">Highest Security</p>
+                            </div>
+                            <Button disabled={submitting} className="w-full mt-auto bg-emerald-800 hover:bg-emerald-950 text-white text-[9px] uppercase tracking-widest rounded-xl">Use App</Button>
+                        </div>
+                        
+                        <div className="p-6 bg-white border border-slate-100 rounded-2xl flex flex-col items-center text-center space-y-4 hover:border-blue-200 hover:shadow-md transition-all cursor-pointer" onClick={() => handleStartSetup("email")}>
+                            <RefreshCw className="w-8 h-8 text-blue-600" />
+                            <div>
+                                <h6 className="font-black text-xs uppercase text-slate-800">Email OTP</h6>
+                                <p className="text-[9px] text-slate-500 uppercase tracking-wider mt-1">Codes sent to email</p>
+                            </div>
+                            <Button disabled={submitting} className="w-full mt-auto bg-blue-600 hover:bg-blue-800 text-white text-[9px] uppercase tracking-widest rounded-xl">Use Email</Button>
+                        </div>
+
+                        <div className="p-6 bg-white border border-slate-100 rounded-2xl flex flex-col items-center text-center space-y-4 hover:border-purple-200 hover:shadow-md transition-all cursor-pointer" onClick={() => handleStartSetup("sms")}>
+                            <KeyRound className="w-8 h-8 text-purple-600" />
+                            <div>
+                                <h6 className="font-black text-xs uppercase text-slate-800">SMS / WhatsApp</h6>
+                                <p className="text-[9px] text-slate-500 uppercase tracking-wider mt-1">Codes sent to phone</p>
+                            </div>
+                            <Button disabled={submitting} className="w-full mt-auto bg-purple-600 hover:bg-purple-800 text-white text-[9px] uppercase tracking-widest rounded-xl">Use Phone</Button>
+                        </div>
+                    </div>
                 </div>
             )}
 
@@ -203,7 +244,7 @@ export default function TwoFactorSettings() {
                 <div className="bg-white border border-slate-100 p-10 rounded-[2.5rem] space-y-8 shadow-sm">
                     <div className="flex items-center gap-3 border-b border-slate-50 pb-4">
                         <KeyRound className="w-5 h-5 text-emerald-600" />
-                        <h5 className="font-black text-sm uppercase text-slate-800">Scan Authenticator QR Code</h5>
+                        <h5 className="font-black text-sm uppercase text-slate-800">{method === 'app' ? "Scan Authenticator QR Code" : `Verify ${method === 'email' ? 'Email' : 'Phone'} OTP`}</h5>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
@@ -212,16 +253,30 @@ export default function TwoFactorSettings() {
                                 <img src={qrCodeUrl} alt="2FA QR Code" className="w-48 h-48 object-contain shadow-inner rounded-xl" />
                             )}
                             <div className="mt-4 text-center space-y-1">
-                                <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Secret Key (Manual Entry)</span>
-                                <code className="block text-xs font-black text-slate-700 tracking-widest select-all">{secret}</code>
+                                {method === 'app' && (
+                                    <>
+                                        <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Secret Key (Manual Entry)</span>
+                                        <code className="block text-xs font-black text-slate-700 tracking-widest select-all">{secret}</code>
+                                    </>
+                                )}
                             </div>
                         </div>
 
                         <div className="space-y-6">
                             <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider leading-loose">
-                                1. Open your authenticator application.<br />
-                                2. Scan the QR code or manually enter the secret key.<br />
-                                3. Enter the 6-digit code displayed in the app below to finalize activation.
+                                {method === 'app' ? (
+                                    <>
+                                        1. Open your authenticator application.<br />
+                                        2. Scan the QR code or manually enter the secret key.<br />
+                                        3. Enter the 6-digit code displayed in the app below to finalize activation.
+                                    </>
+                                ) : (
+                                    <>
+                                        A 6-digit verification code has been sent to your {method === 'email' ? 'email address' : 'phone number'}.<br />
+                                        Please enter the code below to finalize activation.<br />
+                                        The code will expire in 10 minutes.
+                                    </>
+                                )}
                             </p>
                             
                             <div className="space-y-2">

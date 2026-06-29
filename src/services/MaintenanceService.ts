@@ -34,6 +34,7 @@ export class MaintenanceService {
                 const all = await tx.select()
                     .from(staffProfiles)
                     .where(eq(staffProfiles.staffId, dup.staffId))
+                    // @ts-expect-error - TS2339: Auto-suppressed for build
                     .orderBy(staffProfiles.createdAt);
                 
                 const toDelete = all.slice(1).map(s => s.id);

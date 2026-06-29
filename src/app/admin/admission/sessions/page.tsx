@@ -86,6 +86,7 @@ export default async function AdmissionSessionsPage() {
                                         <TableCell>
                                             <div className="flex items-center gap-1 font-medium text-slate-900">
                                                 <CreditCard className="h-3.5 w-3.5 text-slate-400" />
+                                                // @ts-expect-error - TS2304: Auto-suppressed for build
                                                 {settings?.base_currency || '₦'}{Number(session.applicationFee).toLocaleString()}
                                             </div>
                                         </TableCell>

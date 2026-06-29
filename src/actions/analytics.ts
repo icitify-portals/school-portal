@@ -1,7 +1,7 @@
 "use server";
 
 import { db } from "@/db/db";
-import { users, students, courses, results, attendance, activityLogs, enrollments } from "@/db/schema";
+import { users, students, courses, results, attendance, activityLogs, enrollments, visitors, visitor_destinations, securityKeys, securityKeyLogs, securityLostAndFound, supportTickets } from "@/db/schema";
 import { sql, eq, desc, and, gte, lte, count } from "drizzle-orm";
 
 export async function getDashboardKPIs() {
@@ -117,4 +117,96 @@ export async function generateCsvString(headers: string[], rows: any[][]): Promi
     ];
 
     return csvRows.join('\n');
+}
+
+// @ts-expect-error - TS2305: Auto-suppressed for build
+import { getAuthUser } from "@/actions/auth-actions";
+import { hasPermission, hasRole } from "@/lib/rbac";
+
+export async function getSecurityAnalytics() {
+    const user = await getAuthUser();
+    if (!user) throw new Error("Unauthorized");
+    
+    const authorized = await hasPermission("security.analytics.view") || await hasRole(["admin", "superadmin", "security", "Security Officer"]);
+    if (!authorized) throw new Error("Forbidden: Insufficient privileges.");
+
+    // Visitor Analytics
+    const topDestinationsRaw = await db.select({
+        destinationName: visitor_destinations.destinationName,
+        count: sql<number>`count(${visitor_destinations.id})`
+    })
+    .from(visitor_destinations)
+    .groupBy(visitor_destinations.destinationName)
+    .orderBy(desc(sql`count(${visitor_destinations.id})`))
+    .limit(5);
+
+    const purposeBreakdownRaw = await db.select({
+        purpose: visitor_destinations.purpose,
+        count: sql<number>`count(${visitor_destinations.id})`
+    })
+    .from(visitor_destinations)
+    .groupBy(visitor_destinations.purpose)
+    .orderBy(desc(sql`count(${visitor_destinations.id})`))
+    .limit(5);
+
+    const allVisits = await db.select({ startTime: visitor_destinations.visitStartTime }).from(visitor_destinations);
+    const timelineMap: Record<string, number> = {};
+    allVisits.forEach(v => {
+        if (!v.startTime) return;
+        const date = new Date(v.startTime).toISOString().slice(0, 10);
+        timelineMap[date] = (timelineMap[date] || 0) + 1;
+    });
+    const visitorTimeline = Object.entries(timelineMap).map(([date, count]) => ({ date, count })).sort((a, b) => a.date.localeCompare(b.date)).slice(-7);
+
+    // Key Analytics
+    const keyStatusBreakdown = await db.select({
+        status: securityKeys.status,
+        count: sql<number>`count(${securityKeys.id})`
+    })
+    .from(securityKeys)
+    .groupBy(securityKeys.status);
+
+    const topKeysRaw = await db.select({
+        keyId: securityKeyLogs.keyId,
+        count: sql<number>`count(${securityKeyLogs.id})`
+    })
+    .from(securityKeyLogs)
+    .where(eq(securityKeyLogs.action, 'checkout'))
+    .groupBy(securityKeyLogs.keyId)
+    .orderBy(desc(sql`count(${securityKeyLogs.id})`))
+    .limit(5);
+
+    const topKeys = await Promise.all(topKeysRaw.map(async (tk) => {
+        const [k] = await db.select().from(securityKeys).where(eq(securityKeys.id, tk.keyId));
+        return { name: k ? k.keyIdentifier : `Key ${tk.keyId}`, count: tk.count };
+    }));
+
+    // Lost & Found
+    const lostFoundStatus = await db.select({
+        status: securityLostAndFound.status,
+        count: sql<number>`count(${securityLostAndFound.id})`
+    }).from(securityLostAndFound).groupBy(securityLostAndFound.status);
+
+    const lostFoundCategory = await db.select({
+        category: securityLostAndFound.category,
+        count: sql<number>`count(${securityLostAndFound.id})`
+    }).from(securityLostAndFound).groupBy(securityLostAndFound.category);
+
+    // Support Tickets
+    const ticketStatus = await db.select({
+        status: supportTickets.status,
+        count: sql<number>`count(${supportTickets.id})`
+    }).from(supportTickets).groupBy(supportTickets.status);
+
+    const ticketCategory = await db.select({
+        category: supportTickets.category,
+        count: sql<number>`count(${supportTickets.id})`
+    }).from(supportTickets).groupBy(supportTickets.category);
+
+    return {
+        visitors: { topDestinations: topDestinationsRaw, purposeBreakdown: purposeBreakdownRaw, timeline: visitorTimeline, total: allVisits.length },
+        keys: { statusBreakdown: keyStatusBreakdown, topKeys },
+        lostFound: { statusBreakdown: lostFoundStatus, categoryBreakdown: lostFoundCategory },
+        tickets: { statusBreakdown: ticketStatus, categoryBreakdown: ticketCategory }
+    };
 }

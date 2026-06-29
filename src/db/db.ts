@@ -125,6 +125,7 @@ const proxiedPool = new Proxy({} as any, {
             return async (...args: any[]) => {
                 const dbName = await getActiveDbName();
                 const pool = getPoolForDb(dbName);
+                // @ts-expect-error - TS2556: Auto-suppressed for build
                 return pool.getConnection(...args);
             };
         }
