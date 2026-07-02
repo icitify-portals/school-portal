@@ -62,7 +62,7 @@ export class SchoolConfigService {
         const settings = await db.select().from(systemSettings);
         
         return {
-            institution: branch?.name || "School Portal",
+            institution: branch?.name || "FSS Portal",
             activeSettings: settings.length,
             environment: process.env.NODE_ENV || "development",
             database: process.env.DB_NAME || "mysql"

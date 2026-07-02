@@ -46,8 +46,8 @@ export default function ChangePasswordPage() {
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
-            <Card className="w-full max-w-md border-none shadow-xl">
-                <CardHeader className="text-center space-y-1">
+            <Card className="w-full max-w-md border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
+                <CardHeader className="text-center space-y-1 bg-slate-50/50 border-b border-slate-100 p-6">
                     <div className="flex justify-center mb-4">
                         <div className="p-3 bg-rose-600 rounded-2xl text-white">
                             <ShieldAlert className="w-10 h-10" />
@@ -56,7 +56,7 @@ export default function ChangePasswordPage() {
                     <CardTitle className="text-2xl font-bold text-slate-900">Security Update Required</CardTitle>
                     <CardDescription>You must change your default password before accessing your dashboard.</CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className=" p-6">
                     <form onSubmit={handleSubmit} className="space-y-4">
                         {status && (
                             <div className={`p-4 rounded-xl text-sm flex gap-3 ${status.success ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>

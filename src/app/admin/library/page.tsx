@@ -63,7 +63,7 @@ export default function LibrarianWorkspace() {
     };
 
     return (
-        <div className="p-10 space-y-10 max-w-[1600px] mx-auto">
+        <div className="p-10 space-y-10 max-w-[1600px] mx-auto animate-in fade-in slide-in-from-bottom-4 duration-700">
             {/* Header / Hero */}
             <div className="flex flex-col md:flex-row justify-between items-start gap-6">
                 <div>
@@ -103,7 +103,7 @@ export default function LibrarianWorkspace() {
                         <Button className="h-16 px-10 bg-indigo-600 hover:bg-indigo-700 rounded-2xl font-black text-white" onClick={handleSearch}>Find</Button>
                     </div>
 
-                    <div className="bg-white rounded-[40px] shadow-2xl shadow-indigo-100/50 border border-indigo-50 overflow-hidden">
+                    <div className="backdrop-blur-xl bg-white/70 dark:bg-slate-900/70 border border-white/20 shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden rounded-3xl">
                         <Table>
                             <TableHeader className="bg-slate-50">
                                 <TableRow className="border-none hover:bg-transparent">
@@ -145,7 +145,7 @@ export default function LibrarianWorkspace() {
 
                 <TabsContent value="circulation">
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-                        <Card className="rounded-[40px] border-none shadow-2xl p-10 bg-slate-900 text-white space-y-8">
+                        <Card className="/20 -[0_8px_30px_rgb(0,0,0,0.04)] p-10 backdrop-blur-xl /90 text-white space-y-8 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                             <div className="space-y-2">
                                 <h3 className="text-3xl font-black">Action Panel</h3>
                                 <p className="text-indigo-300 font-medium">Scan barcode to trigger circulation event.</p>
@@ -198,7 +198,7 @@ export default function LibrarianWorkspace() {
                             </div>
                         </Card>
 
-                        <Card className="rounded-[40px] border-none shadow-2xl p-10 bg-white space-y-8">
+                        <Card className="-[40px] p-10 space-y-8 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                              <div className="flex items-center justify-between">
                                 <h3 className="text-2xl font-black text-slate-900">Recent Desk Activity</h3>
                                 <Badge variant="secondary" className="px-4 py-1.5 rounded-full font-bold">Live Stream</Badge>
@@ -234,7 +234,7 @@ export default function LibrarianWorkspace() {
                          <p className="text-slate-500 font-bold italic text-sm">Professional item registration with metadata alignment.</p>
                     </DialogHeader>
                     
-                    <div className="grid gap-6 py-4">
+                    <div className="grid gap-4 py-4">
                         <div className="grid gap-2">
                              <Label className="text-[10px] font-black uppercase text-indigo-600 px-1 tracking-widest">Full Resource Title</Label>
                              <Input 

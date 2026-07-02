@@ -161,6 +161,7 @@ export async function getBrandingSettings() {
         INST_LOGO: portalLogo,
         INST_MOTTO: schoolMotto,
         INST_ADDRESS: schoolAddress,
+        SCHOOL_ADDRESS: schoolAddress,
         HOMEPAGE_PAGE_ID: homepagePageId,
         COLOR_PRIMARY: await getSettingByKey('primary_color') || await getSettingByKey('c_o_l_o_r__p_r_i_m_a_r_y') || '#4f46e5',
         COLOR_SECONDARY: await getSettingByKey('secondary_color') || await getSettingByKey('c_o_l_o_r__s_e_c_o_n_d_a_r_y') || '#0f172a',
@@ -184,6 +185,7 @@ export async function updateBrandingSettings(data: any) {
             if (key === 'INST_NAME' || key === 'portalName') dbKey = 'portal_name';
             else if (key === 'INST_LOGO' || key === 'portalLogo') dbKey = 'portal_logo';
             else if (key === 'INST_MOTTO' || key === 'schoolMotto') dbKey = 'school_motto';
+            else if (key === 'SCHOOL_ADDRESS' || key === 'schoolAddress') dbKey = 'school_address';
             else if (key === 'COLOR_PRIMARY' || key === 'colorPrimary') dbKey = 'primary_color';
             else if (key === 'COLOR_SECONDARY' || key === 'colorSecondary') dbKey = 'secondary_color';
             else if (key === 'COLOR_ACCENT' || key === 'colorAccent') dbKey = 'accent_color';
@@ -427,6 +429,46 @@ export async function deleteStudentGroup(id: number) {
         return { success: true };
     } catch (error: any) {
         return { success: false, error: error.message };
+    }
+}
+
+export async function addInstitutionalUnit(name: string, code: string, type: string = 'campus') {
+    const allowed = await hasPermission("system.settings.manage") || await hasRole("admin") || await hasRole("superadmin");
+    if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions" };
+
+    try {
+        await db.insert(institutionalUnits).values({ name, code, type, slug: code.toLowerCase().replace(/[^a-z0-9]/g, '-') });
+        revalidatePath("/admin/settings");
+        return { success: true };
+    } catch (error: any) {
+        return { success: false, error: error.message };
+    }
+}
+
+export async function updateInstitutionalUnit(id: number, data: { name: string, code: string }) {
+    const allowed = await hasPermission("system.settings.manage") || await hasRole("admin") || await hasRole("superadmin");
+    if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions" };
+
+    try {
+        await db.update(institutionalUnits).set(data).where(eq(institutionalUnits.id, id));
+        revalidatePath("/admin/settings");
+        return { success: true };
+    } catch (error: any) {
+        return { success: false, error: error.message };
+    }
+}
+
+export async function deleteInstitutionalUnit(id: number) {
+    const allowed = await hasPermission("system.settings.manage") || await hasRole("admin") || await hasRole("superadmin");
+    if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions" };
+
+    try {
+        await db.delete(institutionalUnits).where(eq(institutionalUnits.id, id));
+        revalidatePath("/admin/settings");
+        return { success: true };
+    } catch (error: any) {
+        // usually fails if there are references (student groups, etc.)
+        return { success: false, error: "Cannot delete this level. It may contain classes or records." };
     }
 }
 

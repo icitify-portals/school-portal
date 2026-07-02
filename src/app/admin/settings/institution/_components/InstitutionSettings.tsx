@@ -13,7 +13,9 @@ import {
     Type,
     Clock,
     ChevronRight,
-    Search
+    Search,
+    Edit2,
+    X
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,10 +27,15 @@ import {
     updateSchoolSchedule, 
     addClassOrArm, 
     deleteStudentGroup,
-    updateTerminology
+    updateTerminology,
+    deleteInstitutionalUnit,
+    addInstitutionalUnit,
+    updateInstitutionalUnit
 } from "@/actions/settings";
 import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import FileUploadZone from "@/components/lms/FileUploadZone";
+import { uploadFile } from "@/actions/upload";
 
 interface Props {
     units: any[];
@@ -39,7 +46,46 @@ interface Props {
 
 export default function InstitutionSettings({ units, currentSession, initialSettings, classGroups }: Props) {
     const [loading, setLoading] = useState(false);
+    const [isUploadingLogo, setIsUploadingLogo] = useState(false);
     const [activeUnit, setActiveUnit] = useState<number>(units[0]?.id || 0);
+    const [editingUnit, setEditingUnit] = useState<number | null>(null);
+    const [editForm, setEditForm] = useState({ name: "", code: "" });
+    const [logoUrl, setLogoUrl] = useState(initialSettings?.portal_logo || initialSettings?.INST_LOGO || "");
+
+    const handleUpdateUnit = async (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        setLoading(true);
+        try {
+            const res = await updateInstitutionalUnit(editingUnit!, editForm);
+            if (res.success) {
+                toast.success("Level updated");
+                setEditingUnit(null);
+            } else {
+                toast.error(res.error || "Failed to update level");
+            }
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleLogoUpload = async (file: File) => {
+        setIsUploadingLogo(true);
+        const formData = new FormData();
+        formData.append("file", file);
+        try {
+            const res = await uploadFile(formData, "branding");
+            if (res.success && res.url) {
+                setLogoUrl(res.url);
+                toast.success("Logo uploaded successfully");
+            } else {
+                toast.error(res.error || "Upload failed");
+            }
+        } catch (error) {
+            toast.error("Upload failed");
+        } finally {
+            setIsUploadingLogo(false);
+        }
+    };
 
     const handleSaveGeneral = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -110,7 +156,43 @@ export default function InstitutionSettings({ units, currentSession, initialSett
         try {
             const res = await deleteStudentGroup(id);
             if (res.success) toast.success("Group deleted");
-            else toast.error(res.error);
+            else toast.error(res.error || "Failed");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleDeleteUnit = async (id: number, name: string) => {
+        if (!confirm(`Are you sure you want to delete the level "${name}"? This action cannot be undone.`)) return;
+        setLoading(true);
+        try {
+            const res = await deleteInstitutionalUnit(id);
+            if (res.success) {
+                toast.success("Level deleted");
+                if (activeUnit === id && units.length > 1) setActiveUnit(units.find(u => u.id !== id)?.id || 0);
+            } else {
+                toast.error(res.error || "Failed");
+            }
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleAddUnit = async (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        setLoading(true);
+        const formData = new FormData(e.currentTarget);
+        try {
+            const res = await addInstitutionalUnit(
+                formData.get("name") as string,
+                formData.get("code") as string
+            );
+            if (res.success) {
+                toast.success("Level added");
+                (e.target as HTMLFormElement).reset();
+            } else {
+                toast.error(res.error || "Failed to add level");
+            }
         } finally {
             setLoading(false);
         }
@@ -178,10 +260,10 @@ export default function InstitutionSettings({ units, currentSession, initialSett
 
                 {/* STRUCTURE TAB */}
                 <TabsContent value="structure" className="mt-0 ring-offset-transparent focus-visible:outline-none">
-                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
                         {/* Units Navigation */}
                         <div className="lg:col-span-4 space-y-4">
-                            <Card className="border-none shadow-sm rounded-2xl overflow-hidden ring-1 ring-slate-100">
+                            <Card className="overflow-hidden ring-1 ring-slate-100 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                                 <CardHeader className="bg-slate-50/50 border-b border-slate-100">
                                     <CardTitle className="text-lg font-black text-slate-900 flex items-center gap-2">
                                         <LayoutGrid className="w-5 h-5 text-indigo-600" /> Academic Levels
@@ -190,37 +272,105 @@ export default function InstitutionSettings({ units, currentSession, initialSett
                                 <CardContent className="p-2">
                                     <div className="space-y-1">
                                         {units.map((unit) => (
-                                            <button
-                                                key={unit.id}
-                                                onClick={() => setActiveUnit(unit.id)}
-                                                className={`w-full flex items-center justify-between p-4 rounded-2xl transition-all font-bold ${
-                                                    activeUnit === unit.id 
-                                                    ? "bg-indigo-50 text-indigo-700 ring-1 ring-indigo-100" 
-                                                    : "hover:bg-slate-50 text-slate-600"
-                                                }`}
-                                            >
-                                                <div className="flex items-center gap-3">
-                                                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${activeUnit === unit.id ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-400"}`}>
-                                                        <School className="w-4 h-4" />
-                                                    </div>
-                                                    <span>{unit.name}</span>
-                                                </div>
-                                                <ChevronRight className={`w-4 h-4 transition-transform ${activeUnit === unit.id ? "rotate-90" : "opacity-0"}`} />
-                                            </button>
+                                            <div key={unit.id} className="w-full">
+                                                {editingUnit === unit.id ? (
+                                                    <form onSubmit={handleUpdateUnit} className="bg-slate-50 p-4 rounded-2xl border border-indigo-100 shadow-inner space-y-3">
+                                                        <div className="space-y-1">
+                                                            <Label className="text-xs text-slate-500">Name</Label>
+                                                            <Input 
+                                                                required
+                                                                value={editForm.name} 
+                                                                onChange={(e) => setEditForm({...editForm, name: e.target.value})}
+                                                                className="h-8 text-sm"
+                                                            />
+                                                        </div>
+                                                        <div className="space-y-1">
+                                                            <Label className="text-xs text-slate-500">Code</Label>
+                                                            <Input 
+                                                                required
+                                                                value={editForm.code} 
+                                                                onChange={(e) => setEditForm({...editForm, code: e.target.value})}
+                                                                className="h-8 text-sm"
+                                                            />
+                                                        </div>
+                                                        <div className="flex gap-2 pt-2">
+                                                            <Button type="submit" disabled={loading} size="sm" className="bg-indigo-600 hover:bg-indigo-700 flex-1 h-8 text-xs font-bold">
+                                                                Save
+                                                            </Button>
+                                                            <Button type="button" variant="outline" size="sm" onClick={() => setEditingUnit(null)} className="h-8 w-8 p-0">
+                                                                <X className="w-4 h-4" />
+                                                            </Button>
+                                                        </div>
+                                                    </form>
+                                                ) : (
+                                                    <button
+                                                        onClick={() => setActiveUnit(unit.id)}
+                                                        className={`w-full flex items-center justify-between p-4 rounded-2xl transition-all font-bold ${
+                                                            activeUnit === unit.id 
+                                                            ? "bg-indigo-50 text-indigo-700 ring-1 ring-indigo-100" 
+                                                            : "hover:bg-slate-50 text-slate-600"
+                                                        }`}
+                                                    >
+                                                        <div className="flex items-center gap-3">
+                                                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${activeUnit === unit.id ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-400"}`}>
+                                                                <School className="w-4 h-4" />
+                                                            </div>
+                                                            <span>{unit.name}</span>
+                                                        </div>
+                                                        <div className="flex items-center gap-2">
+                                                            <ChevronRight className={`w-4 h-4 transition-transform ${activeUnit === unit.id ? "rotate-90 text-indigo-600" : "opacity-0"}`} />
+                                                            <Button 
+                                                                variant="ghost" 
+                                                                size="icon"
+                                                                className="w-8 h-8 rounded-lg hover:bg-indigo-100 hover:text-indigo-600 text-slate-300 transition-colors"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setEditForm({ name: unit.name, code: unit.code });
+                                                                    setEditingUnit(unit.id);
+                                                                }}
+                                                            >
+                                                                <Edit2 className="w-4 h-4" />
+                                                            </Button>
+                                                            <Button 
+                                                                variant="ghost" 
+                                                                size="icon"
+                                                                className="w-8 h-8 rounded-lg hover:bg-rose-100 hover:text-rose-600 text-slate-300 transition-colors"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleDeleteUnit(unit.id, unit.name);
+                                                                }}
+                                                            >
+                                                                <Trash2 className="w-4 h-4" />
+                                                            </Button>
+                                                        </div>
+                                                    </button>
+                                                )}
+                                            </div>
                                         ))}
                                     </div>
                                 </CardContent>
                             </Card>
 
-                            <Card className="border-none shadow-sm rounded-2xl overflow-hidden ring-1 ring-slate-100 bg-indigo-600 text-white">
-                                <CardContent className="p-6 space-y-4">
-                                    <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
-                                        <Plus className="w-6 h-6" />
-                                    </div>
-                                    <div>
-                                        <h3 className="font-black text-lg">Define Terminology</h3>
-                                        <p className="text-white/70 text-sm font-medium">Use the Terminology tab to change "Arms" to "Houses" or "Groups" globally.</p>
-                                    </div>
+                            <Card className="overflow-hidden ring-1 ring-slate-100 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
+                                <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-4">
+                                    <CardTitle className="text-sm font-black text-slate-900 flex items-center gap-2">
+                                        <Plus className="w-4 h-4 text-indigo-600" /> Add New Level
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent className="p-4">
+                                    <form onSubmit={handleAddUnit} className="space-y-4">
+                                        <div className="space-y-2">
+                                            <Label className="text-xs font-bold text-slate-500">Name (e.g. Primary)</Label>
+                                            <Input name="name" required className="rounded-xl border-slate-200 text-sm h-10" placeholder="Name" />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label className="text-xs font-bold text-slate-500">Code (e.g. PRI)</Label>
+                                            <Input name="code" required className="rounded-xl border-slate-200 text-sm h-10" placeholder="Code" />
+                                        </div>
+                                        <Button type="submit" disabled={loading} className="w-full rounded-xl bg-indigo-600 hover:bg-indigo-700 h-10 font-bold">
+                                            Create Level
+                                        </Button>
+                                    </form>
                                 </CardContent>
                             </Card>
                         </div>
@@ -234,7 +384,7 @@ export default function InstitutionSettings({ units, currentSession, initialSett
                             </div>
 
                             {/* Quick Add Form */}
-                            <Card className="border-none shadow-sm rounded-2xl ring-1 ring-slate-100 overflow-hidden">
+                            <Card className="ring-1 ring-slate-100 overflow-hidden border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                                 <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-6">
                                     <CardTitle className="text-sm font-black text-slate-900 uppercase tracking-widest">Quick Add Group</CardTitle>
                                 </CardHeader>
@@ -304,7 +454,7 @@ export default function InstitutionSettings({ units, currentSession, initialSett
 
                 {/* CALENDAR TAB */}
                 <TabsContent value="calendar" className="mt-0 ring-offset-transparent focus-visible:outline-none">
-                    <Card className="border-none shadow-sm rounded-2xl overflow-hidden ring-1 ring-slate-100">
+                    <Card className="overflow-hidden ring-1 ring-slate-100 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                         <CardHeader className="bg-amber-50/50 border-b border-amber-100/50 p-8">
                             <div className="flex items-center gap-4">
                                 <div className="w-12 h-12 bg-amber-600 rounded-2xl flex items-center justify-center shadow-lg shadow-amber-100">
@@ -317,7 +467,7 @@ export default function InstitutionSettings({ units, currentSession, initialSett
                             </div>
                         </CardHeader>
                         <CardContent className="p-8">
-                            <form onSubmit={handleUpdateCalendar} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                            <form onSubmit={handleUpdateCalendar} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                 <div className="space-y-3">
                                     <Label className="text-sm font-black text-slate-700">Active Term</Label>
                                     <Select name="term" defaultValue="1">
@@ -364,19 +514,34 @@ export default function InstitutionSettings({ units, currentSession, initialSett
 
                 {/* BRANDING TAB */}
                 <TabsContent value="branding" className="mt-0 ring-offset-transparent focus-visible:outline-none">
-                     <Card className="border-none shadow-sm rounded-2xl overflow-hidden ring-1 ring-slate-100">
+                     <Card className="overflow-hidden ring-1 ring-slate-100 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                         <CardHeader className="bg-emerald-50/50 border-b border-emerald-100/50 p-8">
                             <CardTitle className="text-2xl font-black text-slate-900">Visual Identity</CardTitle>
                         </CardHeader>
                         <CardContent className="p-8">
-                            <form onSubmit={handleSaveGeneral} className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <form onSubmit={handleSaveGeneral} className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="space-y-3">
                                     <Label className="text-sm font-black text-slate-700">School Legal Name</Label>
                                     <Input name="INST_NAME" defaultValue={initialSettings?.portal_name || initialSettings?.INST_NAME} className="rounded-2xl border-slate-200 h-12 bg-slate-50/50" />
                                 </div>
                                 <div className="space-y-3">
+                                    <Label className="text-sm font-black text-slate-700">School Logo</Label>
+                                    <input type="hidden" name="INST_LOGO" value={logoUrl} />
+                                    <FileUploadZone 
+                                        onUpload={handleLogoUpload}
+                                        uploading={isUploadingLogo}
+                                        accept="image/*"
+                                        label="Drop logo here (PNG, JPG)"
+                                        currentUrl={logoUrl}
+                                    />
+                                </div>
+                                <div className="space-y-3">
                                     <Label className="text-sm font-black text-slate-700">Official Motto</Label>
                                     <Input name="INST_MOTTO" defaultValue={initialSettings?.school_motto || initialSettings?.INST_MOTTO} className="rounded-2xl border-slate-200 h-12 bg-slate-50/50" />
+                                </div>
+                                <div className="space-y-3">
+                                    <Label className="text-sm font-black text-slate-700">School Address</Label>
+                                    <Input name="SCHOOL_ADDRESS" defaultValue={initialSettings?.school_address || ""} placeholder="e.g. 123 Education Way, City" className="rounded-2xl border-slate-200 h-12 bg-slate-50/50" />
                                 </div>
                                 <div className="space-y-3">
                                     <Label className="text-sm font-black text-slate-700">Primary Branding Color</Label>
@@ -397,13 +562,13 @@ export default function InstitutionSettings({ units, currentSession, initialSett
 
                 {/* TERMINOLOGY TAB */}
                 <TabsContent value="terminology" className="mt-0 ring-offset-transparent focus-visible:outline-none">
-                     <Card className="border-none shadow-sm rounded-2xl overflow-hidden ring-1 ring-slate-100">
+                     <Card className="overflow-hidden ring-1 ring-slate-100 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                         <CardHeader className="bg-rose-50/50 border-b border-rose-100/50 p-8">
                             <CardTitle className="text-2xl font-black text-slate-900">Level Specific Terminology</CardTitle>
                             <CardDescription>Customize naming for {units.find(u => u.id === activeUnit)?.name}</CardDescription>
                         </CardHeader>
                         <CardContent className="p-8">
-                            <form onSubmit={handleSaveTerminology} className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <form onSubmit={handleSaveTerminology} className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="space-y-3">
                                     <Label className="text-sm font-black text-slate-700">What do you call 'Classes'?</Label>
                                     <Input name="class_alias" defaultValue={initialSettings[`unit_${activeUnit}_class_alias`] || "Class"} className="rounded-2xl border-slate-200 h-12 bg-slate-50/50" placeholder="e.g. Grade, Form, Level" />

@@ -134,7 +134,7 @@ export function MessagingChat({ conversationId: initialConversationId, targetUse
         if (navigator.share) {
             try {
                 await navigator.share({
-                    title: 'School Portal Message',
+                    title: 'FSS Portal Message',
                     text: text,
                     url: window.location.href,
                 });

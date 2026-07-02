@@ -405,7 +405,7 @@ export async function libraryChat(query: string, history: { role: string; conten
         const provider = getAIProvider(process.env.AI_PROVIDER || 'gemini');
 
         const systemPrompt = `
-        You are "Library AI", an advanced, friendly research librarian and study companion on the school portal.
+        You are "Library AI", an advanced, friendly research librarian and study companion on the FSS Portal.
         Your goal is to assist students with finding books, summarizing concepts, suggesting research pathways, and mapping topics to exam syllabi (like WAEC, JAMB, NECO).
         
         Guidelines:
@@ -553,12 +553,8 @@ export async function processLibraryFinePayment() {
                 status: 'success'
             });
         });
-
-        // @ts-expect-error - TS2304: Auto-suppressed for build
         revalidatePath("/student/finance/library");
-        // @ts-expect-error - TS2304: Auto-suppressed for build
         revalidatePath("/student/finance");
-        // @ts-expect-error - TS2304: Auto-suppressed for build
         revalidatePath("/student");
         return { success: true };
     } catch (error) {

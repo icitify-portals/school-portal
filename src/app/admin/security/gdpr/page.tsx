@@ -81,7 +81,7 @@ export default function GdprPage() {
 
             {/* Summary Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Card className="bg-gradient-to-br from-indigo-50 to-white border-indigo-100">
+                <Card className="-to-br from-indigo-50 to-white -100 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                     <CardContent className="p-5">
                         <div className="flex items-center gap-3">
                             <div className="p-2 bg-indigo-100 rounded-xl">
@@ -94,7 +94,7 @@ export default function GdprPage() {
                         </div>
                     </CardContent>
                 </Card>
-                <Card className="bg-gradient-to-br from-red-50 to-white border-red-100">
+                <Card className="-to-br from-red-50 to-white -100 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                     <CardContent className="p-5">
                         <div className="flex items-center gap-3">
                             <div className="p-2 bg-red-100 rounded-xl">
@@ -107,7 +107,7 @@ export default function GdprPage() {
                         </div>
                     </CardContent>
                 </Card>
-                <Card className="bg-gradient-to-br from-amber-50 to-white border-amber-100">
+                <Card className="-to-br from-amber-50 to-white -100 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                     <CardContent className="p-5">
                         <div className="flex items-center gap-3">
                             <div className="p-2 bg-amber-100 rounded-xl">
@@ -123,11 +123,11 @@ export default function GdprPage() {
             </div>
 
             {/* User Data Actions */}
-            <Card>
-                <CardHeader>
+            <Card className=" border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
+                <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-6">
                     <CardTitle className="text-sm font-black uppercase tracking-wider text-slate-500">User Data Actions</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-4 p-6">
                     <div className="flex flex-col sm:flex-row gap-3">
                         <div className="flex-1">
                             <label className="text-xs font-bold text-slate-600 uppercase mb-1 block">User ID</label>
@@ -179,13 +179,13 @@ export default function GdprPage() {
             </Card>
 
             {/* Data Retention */}
-            <Card>
-                <CardHeader>
+            <Card className=" border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
+                <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-6">
                     <CardTitle className="text-sm font-black uppercase tracking-wider text-slate-500 flex items-center gap-2">
                         <Clock className="w-4 h-4" /> Data Retention Policy
                     </CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className=" p-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="p-4 bg-slate-50 rounded-xl">
                             <p className="text-xs font-bold text-slate-500 uppercase">Graduated Student Data</p>

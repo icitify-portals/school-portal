@@ -113,9 +113,9 @@ export default function EventEditorForm({ initialData }: { initialData?: any }) 
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                     <div className="lg:col-span-2 space-y-6">
-                        <Card className="rounded-2xl border-none shadow-sm overflow-hidden bg-white">
+                        <Card className="overflow-hidden border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                             <CardContent className="p-6 space-y-6">
                                 <div className="space-y-4">
                                     <div className="space-y-2">
@@ -138,7 +138,7 @@ export default function EventEditorForm({ initialData }: { initialData?: any }) 
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-slate-50">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-slate-50">
                                     <div className="space-y-2">
                                         <Label className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] pl-1">Commences At</Label>
                                         <Input 
@@ -163,7 +163,7 @@ export default function EventEditorForm({ initialData }: { initialData?: any }) 
                     </div>
 
                     <div className="space-y-6">
-                        <Card className="rounded-2xl border-none shadow-sm bg-white overflow-hidden p-6 space-y-6">
+                        <Card className="overflow-hidden p-6 space-y-6 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                             <div className="space-y-4">
                                 <div className="flex items-center justify-between p-4 rounded-2xl bg-slate-50">
                                     <div className="space-y-1">

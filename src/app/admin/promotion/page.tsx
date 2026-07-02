@@ -117,9 +117,9 @@ export default function PromotionPage() {
             </div>
 
             {/* Session Selectors */}
-            <Card className="border-none shadow-xl rounded-2xl bg-white overflow-hidden">
+            <Card className="overflow-hidden border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                 <CardContent className="p-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 block mb-2">
                                 Promote From (Source Session)
@@ -199,7 +199,7 @@ export default function PromotionPage() {
 
             {/* Result Banner */}
             {result && (
-                <Card className="border-none shadow-xl rounded-2xl bg-gradient-to-r from-emerald-50 to-green-50 overflow-hidden">
+                <Card className="-to-r from-emerald-50 to-green-50 overflow-hidden border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                     <CardContent className="p-6 flex items-center gap-4">
                         <CheckCircle2 className="w-10 h-10 text-emerald-600" />
                         <div>

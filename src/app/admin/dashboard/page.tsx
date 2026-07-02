@@ -20,7 +20,8 @@ import {
     ShieldAlert,
     BookMarked,
     ScrollText,
-    Zap
+    Zap,
+    Activity
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { db } from "@/db/db";
@@ -68,17 +69,17 @@ export default async function AdminDashboardPage() {
     const programmeCount = statsData[2][0]?.value.toString() || "0";
 
     const adminStats = [
-        { name: "Total Students", value: statsData[0][0]?.value.toString() || "0", icon: Users, color: "text-blue-600", bg: "bg-blue-50", href: "/admin/students" },
-        { name: "Total Staff", value: statsData[5][0]?.value.toString() || "0", icon: GraduationCap, color: "text-indigo-600", bg: "bg-indigo-50", href: "/admin/hr" },
-        { name: "Faculties", value: facultyCount, icon: Award, color: "text-rose-600", bg: "bg-rose-50", href: "/admin/faculties" },
-        { name: "Programmes", value: programmeCount, icon: BookOpen, color: "text-amber-600", bg: "bg-amber-50", href: "/admin/programmes" },
-        { name: "Depts & Units", value: statsData[1][0]?.value.toString() || "0", icon: Home, color: "text-emerald-600", bg: "bg-emerald-50", href: "/admin/departments" },
-        { name: "Active Admissions", value: statsData[6][0]?.value.toString() || "0", icon: UserCheck, color: "text-purple-600", bg: "bg-purple-50", href: "/admin/admission" },
+        { name: "Total Students", value: statsData[0][0]?.value.toString() || "0", icon: Users, color: "text-blue-600", bg: "bg-gradient-to-br from-blue-500 to-blue-600", href: "/admin/students", colSpan: "md:col-span-2 xl:col-span-2" },
+        { name: "Total Staff", value: statsData[5][0]?.value.toString() || "0", icon: GraduationCap, color: "text-indigo-600", bg: "bg-gradient-to-br from-indigo-500 to-indigo-600", href: "/admin/hr", colSpan: "md:col-span-1 xl:col-span-1" },
+        { name: "Faculties", value: facultyCount, icon: Award, color: "text-rose-600", bg: "bg-gradient-to-br from-rose-500 to-rose-600", href: "/admin/faculties", colSpan: "md:col-span-1 xl:col-span-1" },
+        { name: "Programmes", value: programmeCount, icon: BookOpen, color: "text-amber-600", bg: "bg-gradient-to-br from-amber-500 to-amber-600", href: "/admin/programmes", colSpan: "md:col-span-1 xl:col-span-1" },
+        { name: "Depts & Units", value: statsData[1][0]?.value.toString() || "0", icon: Home, color: "text-emerald-600", bg: "bg-gradient-to-br from-emerald-500 to-emerald-600", href: "/admin/departments", colSpan: "md:col-span-1 xl:col-span-1" },
+        { name: "Active Admissions", value: statsData[6][0]?.value.toString() || "0", icon: UserCheck, color: "text-purple-600", bg: "bg-gradient-to-br from-purple-500 to-purple-600", href: "/admin/admission", colSpan: "md:col-span-2 xl:col-span-2" },
     ];
     return (
-        <div className="p-5 md:p-6 max-w-[1600px] w-full mx-auto space-y-6">
+        <div className="p-4 md:p-6 max-w-[1600px] w-full mx-auto space-y-6">
             {!activeAcademicSession && (
-                <div className="p-4 bg-rose-50 border border-rose-200 rounded-2xl flex items-center gap-4 text-rose-700 animate-pulse">
+                <div className="p-4 bg-rose-50 border border-rose-200 rounded-3xl flex items-center gap-4 text-rose-700 animate-pulse shadow-sm">
                     <AlertCircle className="w-5 h-5 flex-shrink-0" />
                     <div>
                         <p className="font-black uppercase text-xs tracking-widest">System Warning: Primary Session Missing</p>
@@ -86,29 +87,33 @@ export default async function AdminDashboardPage() {
                     </div>
                 </div>
             )}
-            <div className="flex justify-between items-center">
+            
+            {/* Bento Header */}
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-slate-900 p-8 rounded-[2rem] shadow-xl text-white">
                 <div>
-                    <h2 className="text-3xl font-black text-slate-900 tracking-tight">Admin Overview</h2>
-                    <p className="text-slate-500 font-medium text-sm mt-1">System-wide monitoring and management</p>
+                    <h2 className="text-4xl font-black tracking-tighter">Admin Command Center</h2>
+                    <p className="text-slate-400 font-medium text-sm mt-1 max-w-lg leading-relaxed">System-wide monitoring, academic configurations, and administrative oversight.</p>
                 </div>
-                <div className="px-3 py-1.5 bg-indigo-50 text-indigo-700 rounded-full border border-indigo-100 flex items-center gap-2">
-                    <TrendingUp className="w-4 h-4" />
-                    <span className="text-xs font-bold uppercase tracking-widest">System Stable</span>
+                <div className="px-4 py-2 bg-white/10 backdrop-blur-md text-emerald-400 rounded-2xl border border-white/10 flex items-center gap-2">
+                    <Activity className="w-4 h-4 animate-pulse" />
+                    <span className="text-xs font-black uppercase tracking-widest">System Stable</span>
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-                {adminStats.map((stat) => {
+            {/* Bento Grid: Overview Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 auto-rows-[140px]">
+                {adminStats.map((stat, idx) => {
                     const CardElement = (
-                        <Card className="border-none shadow-sm hover:shadow-md transition-shadow h-full">
-                            <CardContent className="pt-6">
-                                <div className="flex items-center gap-4">
-                                    <div className={cn("p-3 rounded-xl", stat.bg)}>
-                                        <stat.icon className={cn("w-6 h-6", stat.color)} />
+                        <Card className="border-none shadow-sm hover:shadow-xl transition-all duration-300 h-full w-full overflow-hidden relative group rounded-3xl bg-white">
+                            <div className={cn("absolute inset-0 opacity-[0.03] group-hover:opacity-10 transition-opacity z-0", stat.bg)} />
+                            <CardContent className="p-6 h-full flex flex-col justify-center relative z-10">
+                                <div className="flex items-center gap-5">
+                                    <div className={cn("p-4 rounded-[1.25rem] shadow-sm text-white", stat.bg)}>
+                                        <stat.icon className="w-6 h-6 group-hover:scale-110 transition-transform" />
                                     </div>
                                     <div>
-                                        <p className="text-sm font-medium text-slate-500">{stat.name}</p>
-                                        <h3 className="text-2xl font-bold text-slate-900">{stat.value}</h3>
+                                        <p className="text-xs font-black text-slate-400 tracking-widest uppercase mb-1">{stat.name}</p>
+                                        <h3 className={cn("font-black text-slate-900 tracking-tighter", stat.colSpan.includes("2") ? "text-5xl" : "text-3xl")}>{stat.value}</h3>
                                     </div>
                                 </div>
                             </CardContent>
@@ -116,110 +121,110 @@ export default async function AdminDashboardPage() {
                     );
 
                     return stat.href ? (
-                        <Link key={stat.name} href={stat.href} className="block">
+                        <Link key={stat.name} href={stat.href} className={cn("block group active:scale-95 transition-transform", stat.colSpan)}>
                             {CardElement}
                         </Link>
                     ) : (
-                        <div key={stat.name}>{CardElement}</div>
+                        <div key={stat.name} className={stat.colSpan}>{CardElement}</div>
                     );
                 })}
             </div>
 
-            <div>
-                <h3 className="text-xs font-black uppercase tracking-widest text-slate-400 mb-4 px-1">Management Hub</h3>
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                    {[
-                        { title: "User Management", desc: "Manage all users & bulk import", href: "/admin/users", icon: Users, color: "bg-blue-600" },
-                        { title: "Admission Desk", desc: "Screening & applications", href: "/admin/admission", icon: UserCheck, color: "bg-emerald-600" },
-                        { title: "CBT Assessments", desc: "Advanced Quiz & Exam Engine", href: "/admin/cbt", icon: Brain, color: "bg-purple-600" },
-                        { title: "Human Resources", desc: "Staff, Payroll & Performance", href: "/admin/hr", icon: Users, color: "bg-indigo-600" },
-                        { title: "Bursary & Finance", desc: "Fees, Allocations & Inflows", href: "/admin/bursary", icon: Wallet, color: "bg-amber-600" },
-                        { title: "Accounting Center", desc: "Ledgers, CoAs & Reports", href: "/admin/accounting", icon: Landmark, color: "bg-slate-700" },
-                        { title: "Academic Engine", desc: "Background Tasks & Caching", href: "/admin/academics/engine", icon: Zap, color: "bg-indigo-900" },
-                        { title: "Academic Timetable", desc: "Lecture & Exam Schedules", href: "/admin/academics/timetable", icon: Calendar, color: "bg-indigo-500" },
-                        { title: isK12 ? "Subject Manager" : "Course Manager", desc: "Curriculum & Enrollments", href: "/admin/courses", icon: BookMarked, color: "bg-cyan-600" },
-                        { title: "Academic Calendar", desc: "Sessions & Event Deadlines", href: "/admin/calendar", icon: ScrollText, color: "bg-orange-500" },
-                        { title: "Registration Controls", desc: "Level-based Access Rules", href: "/admin/registration/controls", icon: Settings2, color: "bg-rose-500" },
-                        { title: "Grading Systems", desc: "GPA & Honours Scales", href: "/admin/settings/grading", icon: Award, color: "bg-blue-700" },
-                        { title: "Attendance", desc: "Scan & Track Presence", href: "/admin/attendance", icon: ClipboardList, color: "bg-teal-600" },
-                        { title: "AI Grading", desc: "Automated Essay & Quiz Marking", href: "/admin/settings/ai", icon: Brain, color: "bg-fuchsia-600" },
-                        { title: "Public Job Board", desc: "Recruitment & ATS Portal", href: "/jobs", icon: Briefcase, color: "bg-slate-600" },
-                        { title: "Concessions Queue", desc: "Special Registration Overrides", href: "/admin/registration/concessions", icon: ShieldAlert, color: "bg-red-600" },
-                        { title: "System Units", desc: "Faculties & Departments", href: "/admin/settings/units", icon: Home, color: "bg-slate-400" },
-                        { title: "RBAC Settings", desc: "Permissions & Role Access", href: "/admin/rbac", icon: Shield, color: "bg-slate-900" },
-                        { title: "Portal Management", desc: "Branding & Site Config", href: "/admin/settings/portal", icon: Settings2, color: "bg-slate-500" },
-                    ].map((tool) => (
-                        <Link key={tool.title} href={tool.href}>
-                            <Card className="border-none shadow-sm hover:shadow-xl transition-all group overflow-hidden bg-white h-full">
-                                <CardContent className="p-6">
-                                    <div className="flex items-center gap-5">
-                                        <div className={cn("p-4 rounded-2xl text-white shadow-lg group-hover:scale-110 transition-transform", tool.color)}>
+            {/* Bento Grid: Management Hub & System Health */}
+            <div className="grid grid-cols-1 xl:grid-cols-4 gap-4">
+                <div className="xl:col-span-3 space-y-4">
+                    <div className="flex items-center gap-3 px-2">
+                        <h3 className="text-xs font-black uppercase tracking-widest text-slate-400">Management Tools</h3>
+                        <div className="h-px bg-slate-200 flex-1"></div>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                        {[
+                            { title: "User Management", desc: "Manage all users & bulk import", href: "/admin/users", icon: Users, color: "bg-blue-600" },
+                            { title: "Admission Desk", desc: "Screening & applications", href: "/admin/admission", icon: UserCheck, color: "bg-emerald-600" },
+                            { title: "CBT Assessments", desc: "Advanced Quiz & Exam Engine", href: "/admin/cbt", icon: Brain, color: "bg-purple-600" },
+                            { title: "Human Resources", desc: "Staff, Payroll & Performance", href: "/admin/hr", icon: Users, color: "bg-indigo-600" },
+                            { title: "Bursary & Finance", desc: "Fees, Allocations & Inflows", href: "/admin/bursary", icon: Wallet, color: "bg-amber-600" },
+                            { title: "Accounting Center", desc: "Ledgers, CoAs & Reports", href: "/admin/accounting", icon: Landmark, color: "bg-slate-700" },
+                            { title: "Academic Engine", desc: "Background Tasks & Caching", href: "/admin/academics/engine", icon: Zap, color: "bg-indigo-900" },
+                            { title: "Academic Timetable", desc: "Lecture & Exam Schedules", href: "/admin/academics/timetable", icon: Calendar, color: "bg-indigo-500" },
+                            { title: isK12 ? "Subject Manager" : "Course Manager", desc: "Curriculum & Enrollments", href: "/admin/courses", icon: BookMarked, color: "bg-cyan-600" },
+                            { title: "Academic Calendar", desc: "Sessions & Event Deadlines", href: "/admin/calendar", icon: ScrollText, color: "bg-orange-500" },
+                            { title: "Registration Controls", desc: "Level-based Access Rules", href: "/admin/registration/controls", icon: Settings2, color: "bg-rose-500" },
+                            { title: "Grading Systems", desc: "GPA & Honours Scales", href: "/admin/settings/grading", icon: Award, color: "bg-blue-700" },
+                            { title: "Attendance", desc: "Scan & Track Presence", href: "/admin/attendance", icon: ClipboardList, color: "bg-teal-600" },
+                            { title: "AI Grading", desc: "Automated Essay & Quiz Marking", href: "/admin/settings/ai", icon: Brain, color: "bg-fuchsia-600" },
+                            { title: "Public Job Board", desc: "Recruitment & ATS Portal", href: "/jobs", icon: Briefcase, color: "bg-slate-600" },
+                            { title: "Concessions Queue", desc: "Special Registration Overrides", href: "/admin/registration/concessions", icon: ShieldAlert, color: "bg-red-600" },
+                            { title: "System Units", desc: "Faculties & Departments", href: "/admin/settings/units", icon: Home, color: "bg-slate-400" },
+                            { title: "RBAC Settings", desc: "Permissions & Role Access", href: "/admin/rbac", icon: Shield, color: "bg-slate-900" },
+                            { title: "Portal Management", desc: "Branding & Site Config", href: "/admin/settings/portal", icon: Settings2, color: "bg-slate-500" },
+                        ].map((tool) => (
+                            <Link key={tool.title} href={tool.href} className="active:scale-95 transition-transform">
+                                <Card className="border-none shadow-sm hover:shadow-xl transition-all group overflow-hidden bg-white h-full rounded-[1.5rem]">
+                                    <CardContent className="p-4 flex flex-col justify-between h-full gap-3">
+                                        <div className={cn("w-10 h-10 rounded-xl text-white shadow-md flex items-center justify-center group-hover:rotate-6 transition-transform", tool.color)}>
                                             <tool.icon className="w-5 h-5" />
                                         </div>
                                         <div>
-                                            <h4 className="text-sm font-bold text-slate-900 tracking-tight">{tool.title}</h4>
-                                            <p className="text-[10px] text-slate-500 font-medium leading-tight mt-0.5">{tool.desc}</p>
+                                            <h4 className="text-[12px] font-black text-slate-900 tracking-tight leading-tight mb-0.5">{tool.title}</h4>
+                                            <p className="text-[10px] font-medium text-slate-500 leading-snug">{tool.desc}</p>
                                         </div>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        </Link>
-                    ))}
+                                    </CardContent>
+                                </Card>
+                            </Link>
+                        ))}
+                    </div>
                 </div>
-            </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <Card className="shadow-sm border border-slate-100 rounded-2xl">
-                    <CardHeader>
-                        <CardTitle className="text-lg">Recent System Activity</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="space-y-6">
-                            <div className="flex gap-4">
-                                <div className="p-2 bg-blue-50 text-blue-600 rounded-lg h-fit">
+                <div className="xl:col-span-1 space-y-4">
+                    <Card className="border-none shadow-sm bg-slate-900 text-white rounded-[2rem] overflow-hidden">
+                        <CardHeader className="pb-4">
+                            <CardTitle className="text-sm font-black uppercase tracking-widest text-slate-400">Database Health</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <div className="p-4 rounded-2xl bg-white/10 flex justify-between items-center backdrop-blur-sm">
+                                <span className="text-xs font-bold">MySQL Connection</span>
+                                <div className="w-2.5 h-2.5 bg-emerald-400 rounded-full shadow-[0_0_10px_rgba(52,211,153,0.8)] animate-pulse"></div>
+                            </div>
+                            <div className="p-4 rounded-2xl bg-white/10 flex justify-between items-center backdrop-blur-sm">
+                                <span className="text-xs font-bold">Storage Usage</span>
+                                <span className="text-xs font-black text-blue-400">12% used</span>
+                            </div>
+                            <div className="p-4 rounded-2xl bg-white/10 flex justify-between items-center backdrop-blur-sm">
+                                <span className="text-xs font-bold">Backup Status</span>
+                                <span className="text-xs font-black text-emerald-400">Success</span>
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    <Card className="border-none shadow-sm bg-indigo-50 text-indigo-900 rounded-[2rem] h-[340px] flex flex-col">
+                        <CardHeader>
+                            <CardTitle className="text-sm font-black uppercase tracking-widest">Recent Activity</CardTitle>
+                        </CardHeader>
+                        <CardContent className="flex-1 overflow-y-auto pr-2 space-y-4">
+                            <div className="flex gap-3">
+                                <div className="p-2 bg-indigo-100 text-indigo-600 rounded-xl h-fit shadow-sm">
                                     <Users className="w-4 h-4" />
                                 </div>
                                 <div>
-                                    <p className="text-sm font-bold text-slate-800">New Student Registered</p>
-                                    <p className="text-xs text-slate-500 mt-1">Jane Smith (2025/SMS/4021) has joined the portal.</p>
-                                    <p className="text-[10px] text-slate-400 mt-2">10 minutes ago</p>
+                                    <p className="text-xs font-bold">New Student Registered</p>
+                                    <p className="text-[10px] text-indigo-700/70 mt-0.5">Jane Smith (2025/SMS/4021)</p>
+                                    <p className="text-[9px] font-black uppercase tracking-widest mt-1 opacity-50">10 mins ago</p>
                                 </div>
                             </div>
-                            <div className="flex gap-4">
-                                <div className="p-2 bg-orange-50 text-orange-600 rounded-lg h-fit">
+                            <div className="flex gap-3">
+                                <div className="p-2 bg-indigo-100 text-indigo-600 rounded-xl h-fit shadow-sm">
                                     <AlertCircle className="w-4 h-4" />
                                 </div>
                                 <div>
-                                    <p className="text-sm font-bold text-slate-800">Module Update: Results</p>
-                                    <p className="text-xs text-slate-500 mt-1">Staff member 'Dr. Ade' uploaded results for CSC401.</p>
-                                    <p className="text-[10px] text-slate-400 mt-2">1 hour ago</p>
+                                    <p className="text-xs font-bold">Module Update</p>
+                                    <p className="text-[10px] text-indigo-700/70 mt-0.5">Results uploaded for CSC401.</p>
+                                    <p className="text-[9px] font-black uppercase tracking-widest mt-1 opacity-50">1 hour ago</p>
                                 </div>
                             </div>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <Card className="shadow-sm border border-slate-100 rounded-2xl">
-                    <CardHeader>
-                        <CardTitle className="text-lg">Database Health</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="space-y-4">
-                            <div className="flex justify-between items-center p-3 rounded-lg bg-slate-50">
-                                <span className="text-sm font-medium">MySQL Connection</span>
-                                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                            </div>
-                            <div className="flex justify-between items-center p-3 rounded-lg bg-slate-50">
-                                <span className="text-sm font-medium">Storage Usage</span>
-                                <span className="text-xs font-bold text-slate-500">12% used</span>
-                            </div>
-                            <div className="flex justify-between items-center p-3 rounded-lg bg-slate-50">
-                                <span className="text-sm font-medium">Backup Status</span>
-                                <span className="text-xs font-bold text-green-600">Daily Success</span>
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
+                        </CardContent>
+                    </Card>
+                </div>
             </div>
         </div>
     );

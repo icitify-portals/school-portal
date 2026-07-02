@@ -73,7 +73,7 @@ export default function StaffPayslipsPage() {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
                 {/* Historical List */}
                 <div className="lg:col-span-1 space-y-4">
                     <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 px-2 italic">Earnings History</h3>

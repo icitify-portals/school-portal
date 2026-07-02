@@ -203,10 +203,10 @@ export default function MenuBuilder() {
                     </Button>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                     {/* Main Builder Area */}
                     <div className="lg:col-span-2 space-y-6">
-                        <Card className="rounded-2xl border-none shadow-sm bg-white overflow-hidden min-h-[500px]">
+                        <Card className="overflow-hidden min-h-[500px] border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                             <CardHeader className="border-b border-slate-50 p-6">
                                 <CardTitle className="text-sm font-black uppercase tracking-[0.2em] text-slate-400">Website Navigation Structure</CardTitle>
                                 <CardDescription>Rearrange items using drag and drop</CardDescription>
@@ -261,7 +261,7 @@ export default function MenuBuilder() {
 
                     {/* Sidebar: Shortcuts & Tips */}
                     <div className="space-y-6">
-                        <Card className="rounded-2xl border-none shadow-sm bg-indigo-600 text-white overflow-hidden p-6 space-y-4">
+                        <Card className="text-white overflow-hidden p-6 space-y-4 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                             <div className="flex items-center gap-2">
                                 <Zap className="w-5 h-5" />
                                 <h3 className="font-black uppercase tracking-widest text-xs">Institutional Shortcuts</h3>
@@ -280,7 +280,7 @@ export default function MenuBuilder() {
                             </div>
                         </Card>
 
-                        <Card className="rounded-2xl border-none shadow-sm bg-white p-6 space-y-4">
+                        <Card className="p-6 space-y-4 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                             <h3 className="font-black uppercase tracking-widest text-[10px] text-slate-400">Builder Guidelines</h3>
                             <ul className="space-y-3">
                                 <li className="flex gap-3 items-start">

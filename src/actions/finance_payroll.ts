@@ -106,7 +106,7 @@ export async function approvePayrollBatch(batchId: string) {
                         </div>
                         <p style="font-size: 14px; color: #6b7280;">You can view and download your full breakdown from the staff portal.</p>
                         <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;" />
-                        <p style="font-size: 12px; color: #9ca3af; text-align: center;">${hrSettings['institutional_name'] || 'Institutional School Portal'} | Finance Department</p>
+                        <p style="font-size: 12px; color: #9ca3af; text-align: center;">${hrSettings['institutional_name'] || 'Institutional FSS Portal'} | Finance Department</p>
                     </div>
                 `;
                 await sendEmail(

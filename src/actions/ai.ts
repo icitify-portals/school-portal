@@ -116,7 +116,7 @@ export async function bursaryChat(history: { role: string; parts: { text: string
         const provider = getAIProvider(process.env.AI_PROVIDER || 'gemini');
 
         const systemPrompt = `
-        You are the Bursary Assistant AI for the school portal. 
+        You are the Bursary Assistant AI for the FSS Portal. 
         Your role is to assist with financial queries, budget tracking, and expenditure questions.
         
         Tone: Professional, Helpful, Financial Expert.
@@ -308,7 +308,7 @@ export async function askAITutor(query: string, context?: string) {
         const provider = getAIProvider(process.env.AI_PROVIDER || 'gemini');
 
         const systemPrompt = `
-        You are "SmartTutor", an advanced AI learning assistant for a Nigerian school portal.
+        You are "SmartTutor", an advanced AI learning assistant for a Nigerian FSS Portal.
         Your goal is to provide interactive, encouraging, and clear guidance to students.
         
         Context of the current lesson: ${context || "General learning assistance"}

@@ -338,7 +338,7 @@ export default function JournalSubmitPage() {
             </div>
 
             {/* Step Content */}
-            <Card className="border-none shadow-2xl shadow-indigo-500/5 bg-white/60 dark:bg-slate-900/60 backdrop-blur-md rounded-[32px]">
+            <Card className="-500/5 /60 dark:/60 backdrop-blur-md -[32px] border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                 <CardContent className="p-8 space-y-6">
                     {/* Error and Warning displays */}
                     {errors.length > 0 && (
@@ -370,7 +370,7 @@ export default function JournalSubmitPage() {
                         <div className="space-y-6">
                             <h2 className="text-2xl font-black border-l-4 border-indigo-600 pl-4 uppercase tracking-tighter">Step 1: Section, License & Compliance</h2>
                             
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                     <label className="text-sm font-bold text-slate-700 dark:text-slate-300">Journal Section / Category</label>
                                     <select 
@@ -643,7 +643,7 @@ export default function JournalSubmitPage() {
                         <div className="space-y-6">
                             <h2 className="text-2xl font-black border-l-4 border-indigo-600 pl-4 uppercase tracking-tighter">Step 5: Review & Submit</h2>
 
-                            <Card className="border border-slate-100 rounded-2xl p-6 bg-slate-50/50 shadow-none">
+                            <Card className="-100 p-6 /50 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                                 <div className="space-y-4">
                                     <div>
                                         <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Title</span>

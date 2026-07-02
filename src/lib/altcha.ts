@@ -13,7 +13,7 @@ export interface AltchaChallenge {
  * Creates an ALTCHA cryptographic challenge payload.
  */
 export function createAltchaChallenge(maxNumber = 100000): AltchaChallenge {
-    const hmacKey = config.altcha.hmacKey;
+    const hmacKey = config.altcha.hmacKey || "default-altcha-secret";
     const number = Math.floor(Math.random() * maxNumber);
     const salt = crypto.randomBytes(16).toString("hex");
     
@@ -49,7 +49,7 @@ export function verifyAltchaSolution(payload: {
     }
 
     const { challenge, salt, number, signature } = payload;
-    const hmacKey = config.altcha.hmacKey;
+    const hmacKey = config.altcha.hmacKey || "default-altcha-secret";
 
     if (!challenge || !salt || number === undefined || !signature) {
         return false;

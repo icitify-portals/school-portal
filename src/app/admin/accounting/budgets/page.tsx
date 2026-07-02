@@ -97,13 +97,13 @@ export default function BudgetManagementPage() {
             </div>
 
             {isAdding && (
-                <Card className="mb-10 border-none shadow-md bg-slate-50 overflow-hidden">
+                <Card className="mb-10 overflow-hidden border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                     <CardHeader className="bg-white border-b border-slate-100">
                         <CardTitle className="text-lg">New Budget Allocation</CardTitle>
                     </CardHeader>
                     <CardContent className="p-6">
                         <form onSubmit={handleCreate} className="space-y-6">
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div className="space-y-1">
                                     <label className="text-xs font-bold text-slate-500 uppercase">Department</label>
                                     <select
@@ -140,7 +140,7 @@ export default function BudgetManagementPage() {
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="space-y-1">
                                     <label className="text-xs font-bold text-slate-500 uppercase">Category</label>
                                     <select
@@ -176,7 +176,7 @@ export default function BudgetManagementPage() {
                 </Card>
             )}
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                 <div className="lg:col-span-2 space-y-4">
                     {loading ? (
                         <div className="py-20 text-center">
@@ -210,8 +210,7 @@ export default function BudgetManagementPage() {
                                                 <p className="text-sm text-slate-500 capitalize">{b.category} Budget</p>
                                             </div>
                                             <div className="text-right">
-                                                // @ts-expect-error - TS2304: Auto-suppressed for build
-                                                <p className="text-xl font-black text-slate-900">{settings?.base_currency || '₦'}{parseFloat(b.amount).toLocaleString()}</p>
+                                                <p className="text-xl font-black text-slate-900">₦{parseFloat(b.amount).toLocaleString()}</p>
                                                 <p className="text-xs font-bold text-emerald-600 flex items-center justify-end gap-1">
                                                     <BadgeCheck className="w-3 h-3" />
                                                     Active Allocation
@@ -226,15 +225,15 @@ export default function BudgetManagementPage() {
                 </div>
 
                 <div className="space-y-6">
-                    <Card className="border-none shadow-lg bg-indigo-900 text-white overflow-hidden relative">
+                    <Card className="text-white overflow-hidden relative border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                         <BarChart3 className="absolute -right-4 -bottom-4 w-32 h-32 text-white/10" />
-                        <CardHeader>
+                        <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-6">
                             <CardTitle className="text-lg font-bold flex items-center gap-2">
                                 <TrendingUp className="w-5 h-5 text-indigo-300" />
                                 Instant Analysis
                             </CardTitle>
                         </CardHeader>
-                        <CardContent>
+                        <CardContent className=" p-6">
                             {selectedAnalysis ? (
                                 <div className="space-y-6 relative z-10">
                                     <div className="p-4 bg-white/10 rounded-2xl backdrop-blur-sm">
@@ -257,13 +256,11 @@ export default function BudgetManagementPage() {
                                     <div className="grid grid-cols-2 gap-4 text-sm">
                                         <div>
                                             <p className="text-indigo-300 mb-1">Actual Spent</p>
-                                            // @ts-expect-error - TS2304: Auto-suppressed for build
-                                            <p className="font-bold text-lg">{settings?.base_currency || '₦'}{selectedAnalysis.actual.toLocaleString()}</p>
+                                            <p className="font-bold text-lg">₦{selectedAnalysis.actual.toLocaleString()}</p>
                                         </div>
                                         <div>
                                             <p className="text-indigo-300 mb-1">Remaining</p>
-                                            // @ts-expect-error - TS2304: Auto-suppressed for build
-                                            <p className="font-bold text-lg">{settings?.base_currency || '₦'}{selectedAnalysis.remaining.toLocaleString()}</p>
+                                            <p className="font-bold text-lg">₦{selectedAnalysis.remaining.toLocaleString()}</p>
                                         </div>
                                     </div>
 
@@ -287,14 +284,14 @@ export default function BudgetManagementPage() {
                         </CardContent>
                     </Card>
 
-                    <Card className="border-none shadow-sm bg-slate-50">
-                        <CardHeader>
+                    <Card className=" border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
+                        <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-6">
                             <CardTitle className="text-base text-slate-700 font-bold flex items-center gap-2">
                                 <History className="w-4 h-4" />
                                 Recent Approvals
                             </CardTitle>
                         </CardHeader>
-                        <CardContent className="space-y-4">
+                        <CardContent className="space-y-4 p-6">
                             <div className="flex items-center gap-3 p-3 bg-white rounded-xl shadow-sm border border-slate-100">
                                 <div className="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center text-emerald-600">
                                     <BadgeCheck className="w-5 h-5" />

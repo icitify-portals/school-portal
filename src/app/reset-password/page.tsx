@@ -112,8 +112,8 @@ function ResetPasswordForm() {
 export default function ResetPasswordPage() {
     return (
         <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
-            <Card className="w-full max-w-md border-none shadow-xl">
-                <CardHeader className="text-center space-y-1">
+            <Card className="w-full max-w-md border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
+                <CardHeader className="text-center space-y-1 bg-slate-50/50 border-b border-slate-100 p-6">
                     <div className="flex justify-center mb-4">
                         <div className="p-3 bg-indigo-600 rounded-2xl text-white">
                             <GraduationCap className="w-10 h-10" />
@@ -122,7 +122,7 @@ export default function ResetPasswordPage() {
                     <CardTitle className="text-2xl font-bold text-slate-900">Set New Password</CardTitle>
                     <CardDescription>Enter your new password below to secure your account.</CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className=" p-6">
                     <Suspense fallback={<div className="flex justify-center p-8"><Loader2 className="w-8 h-8 animate-spin text-slate-200" /></div>}>
                         <ResetPasswordForm />
                     </Suspense>

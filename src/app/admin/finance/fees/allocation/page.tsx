@@ -94,7 +94,7 @@ export default function FeeAllocationManager() {
         </div>
       </div>
 
-      <div className="grid grid-cols-12 gap-8">
+      <div className="grid grid-cols-12 gap-4">
         {/* Left: Fee Item Sidebar */}
         <div className="col-span-12 lg:col-span-4 space-y-6">
           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 space-y-4">
@@ -121,8 +121,7 @@ export default function FeeAllocationManager() {
                     </div>
                     <div>
                       <div className="text-slate-900 font-bold">{fee.name}</div>
-                      // @ts-expect-error - TS2304: Auto-suppressed for build
-                      <div className="text-slate-400 text-xs">{settings?.base_currency || '₦'}{parseFloat(fee.defaultAmount).toLocaleString()} • {fee.category}</div>
+                      <div className="text-slate-400 text-xs">₦{parseFloat(fee.defaultAmount).toLocaleString()} • {fee.category}</div>
                     </div>
                   </div>
                   <ChevronRight size={18} className={`transition-all ${selectedFee?.id === fee.id ? 'text-indigo-600 translate-x-1' : 'text-slate-300 group-hover:text-indigo-400'}`} />

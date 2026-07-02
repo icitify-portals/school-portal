@@ -92,7 +92,7 @@ export default function AdminGrievancesPage() {
                 </Link>
             </div>
 
-            <Card className="shadow-sm border-slate-200">
+            <Card className="-200 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                 <CardHeader className="bg-slate-50 border-b">
                     <CardTitle className="text-lg">Grievance Inbox</CardTitle>
                     <CardDescription>All submitted complaints from staff and students.</CardDescription>

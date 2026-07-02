@@ -1,7 +1,7 @@
 import TwoFactorLoginClient from "./TwoFactorLoginClient";
 
 export const metadata = {
-    title: "Two-Factor Authentication | School Portal",
+    title: "Two-Factor Authentication | FSS Portal",
     description: "Verify your identity to access the portal.",
 };
 

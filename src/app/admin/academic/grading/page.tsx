@@ -61,23 +61,30 @@ export default function GradingSystemConfigurator() {
   };
 
   return (
-    <div className="p-8 max-w-[1600px] w-full mx-auto space-y-8 bg-slate-50 min-h-screen">
-      <div className="flex justify-between items-end">
-        <div className="flex items-center gap-4">
-          <div className="w-14 h-14 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-xl shadow-indigo-100">
-            <Trophy size={28} />
-          </div>
-          <div>
-            <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Grading Intelligence Configurator</h1>
-            <p className="text-slate-500 font-medium text-lg">Define institutional scales and academic standing rules</p>
-          </div>
+    <div className="p-4 sm:p-6 lg:p-8 min-h-screen">
+      <div className="max-w-[1600px] w-full mx-auto space-y-8">
+        {/* Header Section */}
+        <div className="relative overflow-hidden bg-slate-900 rounded-3xl p-8 lg:p-12 text-white shadow-2xl border border-slate-800">
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-600/30 to-indigo-600/30 opacity-50 mix-blend-overlay" />
+            <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                <div>
+                    <div className="flex items-center gap-3 mb-2">
+                        <Trophy className="w-12 h-12 text-blue-400" />
+                        <h1 className="text-4xl lg:text-5xl font-black tracking-tighter drop-shadow-md italic uppercase">
+                            Grading Intelligence Configurator
+                        </h1>
+                    </div>
+                    <p className="text-slate-300 font-medium tracking-tight max-w-2xl text-lg opacity-90">
+                        Define institutional scales and academic standing rules
+                    </p>
+                </div>
+            </div>
         </div>
-      </div>
 
       <div className="grid grid-cols-12 gap-8">
         {/* Left: General Settings */}
         <div className="col-span-12 lg:col-span-4 space-y-6">
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-8 space-y-6">
+          <div className="bg-white/60 backdrop-blur-3xl rounded-[3rem] border border-white/40 shadow-xl shadow-slate-200/50 p-8 space-y-6">
             <h2 className="text-sm font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
               <Settings2 size={14} />
               System Properties
@@ -144,20 +151,20 @@ export default function GradingSystemConfigurator() {
 
         {/* Right: Grade Definitions */}
         <div className="col-span-12 lg:col-span-8 space-y-6">
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-xl overflow-hidden">
-            <div className="p-8 border-b border-slate-50 bg-slate-50/50 flex justify-between items-center">
+          <div className="bg-white/60 backdrop-blur-3xl rounded-[3rem] border border-white/40 shadow-xl shadow-slate-200/50 overflow-hidden">
+            <div className="p-8 border-b border-white/20 bg-white/40 flex justify-between items-center">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-white rounded-2xl border border-slate-200 flex items-center justify-center text-indigo-600">
+                <div className="w-12 h-12 bg-white rounded-2xl border border-slate-200 flex items-center justify-center text-indigo-600 shadow-sm">
                   <ListChecks size={24} />
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-slate-900">Grade Point Definitions</h3>
+                  <h3 className="text-xl font-bold text-slate-800 tracking-tight">Grade Point Definitions</h3>
                   <p className="text-slate-500 text-sm">Configure marks-to-grade mappings and weighted points</p>
                 </div>
               </div>
               <button 
                 onClick={addGrade}
-                className="bg-white border border-slate-200 p-2 px-4 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-50 transition-colors flex items-center gap-2"
+                className="bg-white/80 backdrop-blur-md border border-white p-2 px-4 rounded-xl text-sm font-bold text-indigo-600 hover:bg-white transition-colors flex items-center gap-2 shadow-sm"
               >
                 <Plus size={16} />
                 Add Grade
@@ -237,6 +244,7 @@ export default function GradingSystemConfigurator() {
                <p className="text-xs text-slate-500 leading-relaxed">
                  <span className="font-bold text-indigo-700">Institutional Rule:</span> These definitions will be used globally for result computation. Ensure mark ranges are contiguous and non-overlapping. The <span className="font-bold">Points</span> defined here will serve as the multiplier for credit units in GPA calculation.
                </p>
+            </div>
             </div>
           </div>
         </div>

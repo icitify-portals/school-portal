@@ -124,14 +124,14 @@ export default function AdminPerformancePage() {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                 {/* KPIs Overview */}
                 <div className="lg:col-span-1 space-y-6">
-                    <Card className="border-none shadow-sm overflow-hidden border-t-4 border-indigo-600">
+                    <Card className="overflow-hidden -4 -600 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                         <CardHeader className="bg-white">
                             <CardTitle className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Institutional Metrics</CardTitle>
                         </CardHeader>
-                        <CardContent className="space-y-4 pt-0">
+                        <CardContent className="space-y-4 pt-0 p-6">
                             {kpis.map((kpi) => (
                                 <div key={kpi.id} className="p-4 bg-slate-50 rounded-xl border border-slate-100 flex justify-between items-center group">
                                     <div>
@@ -148,7 +148,7 @@ export default function AdminPerformancePage() {
                         </CardContent>
                     </Card>
 
-                    <Card className="border-none shadow-sm bg-slate-900 text-white p-6 relative overflow-hidden">
+                    <Card className="text-white p-6 relative overflow-hidden border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                         <div className="absolute top-[-20px] right-[-20px] opacity-10">
                             <Star className="w-32 h-32" />
                         </div>
@@ -226,17 +226,17 @@ export default function AdminPerformancePage() {
             {/* KPI Config Modal */}
             {showKPIForm && (
                 <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                    <Card className="w-full max-w-lg border-none shadow-2xl animate-in zoom-in-95 duration-200">
+                    <Card className="w-full max-w-lg animate-in zoom-in-95 duration-200 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                         <CardHeader className="bg-emerald-600 text-white rounded-t-2xl">
                             <CardTitle className="text-lg font-black uppercase tracking-[0.1em] italic">KPI Strategic Configuration</CardTitle>
                         </CardHeader>
-                        <CardContent className="pt-8">
+                        <CardContent className="pt-8 p-6">
                             <form onSubmit={handleCreateKPI} className="space-y-6">
                                 <div className="space-y-1">
                                     <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Metric Name</label>
                                     <input name="name" required placeholder="e.g. Student Research Engagement" className="w-full p-3 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50" />
                                 </div>
-                                <div className="grid grid-cols-2 gap-6">
+                                <div className="grid grid-cols-2 gap-4">
                                     <div className="space-y-1">
                                         <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Category</label>
                                         <select name="category" className="w-full p-3 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50">
@@ -270,12 +270,12 @@ export default function AdminPerformancePage() {
             {/* Appraisal Modal */}
             {showAppraisalModal && (
                 <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                    <Card className="w-full max-w-lg border-none shadow-2xl animate-in zoom-in-95 duration-200">
+                    <Card className="w-full max-w-lg animate-in zoom-in-95 duration-200 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                         <CardHeader className="bg-indigo-900 text-white rounded-t-2xl text-center py-10">
                             <CardTitle className="text-2xl font-black uppercase tracking-widest italic">Initialize Appraisal</CardTitle>
                             <p className="text-indigo-400 text-[10px] font-black uppercase tracking-[0.2em] mt-2">Annual Evaluation Cycle</p>
                         </CardHeader>
-                        <CardContent className="pt-8">
+                        <CardContent className="pt-8 p-6">
                             <form onSubmit={handleInitiate} className="space-y-6">
                                 <div className="space-y-1">
                                     <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Select Staff Member</label>

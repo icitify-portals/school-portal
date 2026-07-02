@@ -37,7 +37,7 @@ export default function HealthRegistrationForm({ studentId, initialData }: { stu
 
     return (
         <form onSubmit={handleSubmit} className="space-y-8">
-            <div className="grid md:grid-cols-2 gap-6">
+            <div className="grid md:grid-cols-2 gap-4">
                 <div className="space-y-4">
                     <h3 className="text-xs font-black uppercase text-slate-400 tracking-widest border-b pb-2">Basic Medical Info</h3>
                     <div className="grid grid-cols-2 gap-4">

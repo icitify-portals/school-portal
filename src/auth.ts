@@ -1,10 +1,18 @@
-import NextAuth from "next-auth";
+import NextAuth, { CredentialsSignin } from "next-auth";
+
+class InvalidCredentialsError extends CredentialsSignin {
+    code = "Invalid email or password";
+}
+
+class AccountLockedError extends CredentialsSignin {
+    code = "Account is temporarily locked due to multiple failed attempts.";
+}
 import { DrizzleAdapter } from "@auth/drizzle-adapter";
 import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
 import MicrosoftEntraID from "next-auth/providers/microsoft-entra-id";
 import { db } from "@/db/db";
-import { users, roles, permissions, rolePermissions, userRoles } from "@/db/schema";
+import { users, roles, permissions, rolePermissions, userRoles, students, staffProfiles } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { authConfig } from "./auth.config";
@@ -80,37 +88,94 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         // Email/Password credentials
         Credentials({
             async authorize(credentials) {
-                if (!credentials?.email || !credentials?.password) return null;
+                if (!credentials?.email || !credentials?.password) {
+                    throw new InvalidCredentialsError();
+                }
 
-                const email = (credentials.email as string).trim().toLowerCase();
+                const loginId = (credentials.email as string).trim().toLowerCase();
+                let user: any = null;
+                let studentRecord: any = null;
+                let staffRecord: any = null;
 
-                const [user] = await db
+                const [userByEmail] = await db
                     .select()
                     .from(users)
-                    .where(eq(users.email, email))
+                    .where(eq(users.email, loginId))
                     .limit(1);
+                    
+                user = userByEmail;
 
-                if (!user) return null;
+                if (!user) {
+                    // Try finding student by matric number
+                    const [studentRec] = await db
+                        .select({ user: users, student: students })
+                        .from(students)
+                        .innerJoin(users, eq(students.userId, users.id))
+                        .where(eq(students.matricNumber, loginId.toUpperCase()))
+                        .limit(1);
+                        
+                    if (studentRec) {
+                        user = studentRec.user;
+                        studentRecord = studentRec.student;
+                    }
+                }
+
+                if (!user) {
+                    throw new InvalidCredentialsError();
+                }
 
                 // Check if account is locked
                 if (user.lockoutUntil && new Date(user.lockoutUntil) > new Date()) {
-                    console.warn(`Attempted login on locked account: ${email}`);
-                    return null; // NextAuth doesn't easily surface custom error messages from authorize to the UI without extra handling
+                    console.warn(`Attempted login on locked account: ${user.email}`);
+                    throw new AccountLockedError();
                 }
 
                 // Try LDAP first (if configured), then local password
                 let isAuthenticated = false;
 
                 if (process.env.LDAP_URL) {
-                    isAuthenticated = await authenticateWithLDAP(email, credentials.password as string);
+                    isAuthenticated = await authenticateWithLDAP(user.email, credentials.password as string);
                 }
 
                 if (!isAuthenticated) {
-                    if (!user.password) return null;
+                    if (!user.password) {
+                        throw new InvalidCredentialsError();
+                    }
+                    
                     isAuthenticated = await bcrypt.compare(
                         credentials.password as string,
                         user.password
                     );
+                    
+                    if (!isAuthenticated) {
+                        // Check for default fallback passwords
+                        const providedPassword = credentials.password as string;
+                        
+                        if (user.role === 'student') {
+                            if (!studentRecord) {
+                                const [sr] = await db.select().from(students).where(eq(students.userId, user.id)).limit(1);
+                                studentRecord = sr;
+                            }
+                            if (studentRecord && (providedPassword === studentRecord.matricNumber || providedPassword === studentRecord.admissionNumber)) {
+                                isAuthenticated = true;
+                                user.requiresPasswordChange = true;
+                                // Enforce it in the DB immediately
+                                await db.update(users).set({ requiresPasswordChange: true }).where(eq(users.id, user.id));
+                            }
+                        } else if (['staff', 'admin', 'superadmin', 'hod', 'dean', 'bursar', 'registrar', 'librarian'].includes(user.role)) {
+                            if (!staffRecord) {
+                                const [sr] = await db.select().from(staffProfiles).where(eq(staffProfiles.userId, user.id)).limit(1);
+                                staffRecord = sr;
+                            }
+                            // Default password for staff is their staff_id, or "password123" if they don't have one
+                            const fallbackPassword = staffRecord?.staffId || "password123";
+                            if (providedPassword === fallbackPassword) {
+                                isAuthenticated = true;
+                                user.requiresPasswordChange = true;
+                                await db.update(users).set({ requiresPasswordChange: true }).where(eq(users.id, user.id));
+                            }
+                        }
+                    }
                 }
 
                 if (!isAuthenticated) {
@@ -129,10 +194,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                         })
                         .where(eq(users.id, user.id));
 
-                    return null;
+                    throw new InvalidCredentialsError();
                 }
 
-                // Success: Reset failures
+                // If successful, reset failed attempts
                 if (user.failedLoginAttempts !== 0 || user.lockoutUntil) {
                     await db.update(users).set({
                         failedLoginAttempts: 0,

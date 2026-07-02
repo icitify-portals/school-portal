@@ -14,7 +14,7 @@ export default async function AdminMaintenancePage() {
                 <p className="text-xs text-slate-500 font-medium">Monitor and manage facility issues reported by students.</p>
             </div>
 
-            <Card className="border-none shadow-sm border border-slate-100 overflow-hidden">
+            <Card className="-100 overflow-hidden border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                 <CardContent className="p-0 overflow-x-auto">
                     <table className="w-full text-left whitespace-nowrap">
                         <thead>

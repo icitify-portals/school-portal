@@ -32,7 +32,7 @@ export default function StudentTimetableGrid({ initialData, deptSettings }: any)
     };
 
     return (
-        <Card className="border-none shadow-2xl overflow-hidden rounded-2xl">
+        <Card className="overflow-hidden border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
             <CardHeader className="bg-gradient-to-r from-slate-900 to-slate-800 text-white p-8">
                 <div className="flex justify-between items-center">
                     <CardTitle className="text-sm font-black uppercase tracking-[0.2em] text-slate-400">Weekly View</CardTitle>

@@ -50,7 +50,7 @@ export default function ForumTopicPage() {
             </Link>
 
             {/* Original Post */}
-            <Card className="border-none shadow-lg overflow-hidden">
+            <Card className="overflow-hidden border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                 <div className="bg-indigo-600 h-1.5 w-full" />
                 <CardContent className="p-8">
                     <div className="flex items-center justify-between mb-6">
@@ -97,7 +97,7 @@ export default function ForumTopicPage() {
                     <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center shrink-0">
                         <CornerDownRight className="w-5 h-5 text-slate-300" />
                     </div>
-                    <Card className="border-none shadow-sm flex-1">
+                    <Card className="flex-1 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                         <CardContent className="p-6">
                             <div className="flex items-center gap-3 mb-3">
                                 <Avatar className="w-8 h-8">
@@ -116,7 +116,7 @@ export default function ForumTopicPage() {
 
             {/* Quick Reply */}
             <div className="pt-8">
-                <Card className="border-none shadow-xl bg-slate-50/50">
+                <Card className="/50 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                     <CardContent className="p-6 space-y-4">
                         <div className="flex items-center gap-3 text-[10px] font-black uppercase tracking-widest text-slate-400">
                             <MessageCircle className="w-3 h-3" /> Post your reply

@@ -26,7 +26,7 @@ export default function SeederPage() {
 
     return (
         <div className="p-8 flex items-center justify-center min-h-[80vh]">
-            <Card className="max-w-md w-full border-none shadow-2xl ring-1 ring-slate-100 overflow-hidden">
+            <Card className="max-w-md w-full ring-1 ring-slate-100 overflow-hidden border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                 <CardHeader className="bg-slate-900 text-white p-8 space-y-2">
                     <div className="bg-white/10 w-fit p-3 rounded-2xl mb-2">
                         <Database className="w-8 h-8 text-indigo-400" />

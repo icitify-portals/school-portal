@@ -90,10 +90,10 @@ export default function StudentGrievancesPage() {
                 </AlertDescription>
             </Alert>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                 
                 {/* Submission Form */}
-                <Card className="lg:col-span-1 shadow-md border-slate-200 h-fit">
+                <Card className="lg:col-span-1 -200 h-fit border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                     <CardHeader className="bg-slate-50 border-b">
                         <CardTitle className="flex items-center gap-2 text-lg">
                             <FileText className="w-5 h-5 text-slate-500" />
@@ -137,7 +137,7 @@ export default function StudentGrievancesPage() {
                 </Card>
 
                 {/* History */}
-                <Card className="lg:col-span-2 shadow-md border-slate-200">
+                <Card className="lg:col-span-2 -200 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                     <CardHeader className="bg-slate-50 border-b">
                         <CardTitle className="text-lg">My Submissions</CardTitle>
                         <CardDescription>Track the status of your reported grievances.</CardDescription>

@@ -16,9 +16,10 @@ export default function ProgrammesPage() {
 
     const [newName, setNewName] = useState("");
     const [selectedDept, setSelectedDept] = useState("");
-    const [durationMonths, setDurationMonths] = useState("48");
+    const [durationMonths, setDurationMonths] = useState("24");
     const [submitting, setSubmitting] = useState(false);
     const [showImporter, setShowImporter] = useState(false);
+    const [searchQuery, setSearchQuery] = useState("");
 
     useEffect(() => {
         fetchData();
@@ -43,7 +44,7 @@ export default function ProgrammesPage() {
         if (res.success) {
             setNewName("");
             setSelectedDept("");
-            setDurationMonths("48");
+            setDurationMonths("24");
             setIsAdding(false);
             fetchData();
         } else {
@@ -59,27 +60,45 @@ export default function ProgrammesPage() {
     };
 
     return (
-        <div className="p-8 max-w-[1600px] w-full mx-auto">
-            <div className="flex justify-between items-center mb-8">
-                <div>
-                    <h2 className="text-3xl font-bold text-slate-900 tracking-tight">Programmes</h2>
-                    <p className="text-slate-500 mt-1">Manage degree programmes and courses of study</p>
-                </div>
-                <div className="flex gap-2">
-                    <Button
-                        onClick={() => setShowImporter(!showImporter)}
-                        variant="outline"
-                        className="rounded-xl font-bold text-xs uppercase tracking-widest h-11 border-slate-200 bg-white gap-2 shadow-sm"
-                    >
-                        {showImporter ? <X className="w-4 h-4" /> : <FileUp className="w-4 h-4" />}
-                        {showImporter ? "Close Importer" : "Import Programmes"}
-                    </Button>
-                    <Button
-                        onClick={() => setIsAdding(!isAdding)}
-                        className="bg-indigo-600 hover:bg-indigo-700 h-11 px-6 rounded-xl shadow-lg shadow-indigo-500/20 gap-2 font-bold"
-                    >
-                        {isAdding ? "Cancel" : <><Plus className="w-4 h-4" /> Add Programme</>}
-                    </Button>
+        <div className="p-4 sm:p-6 lg:p-8 min-h-screen pb-32">
+            <div className="max-w-[1600px] w-full mx-auto space-y-8">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-slate-900 rounded-3xl p-8 lg:p-12 text-white shadow-2xl border border-slate-800 relative overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-r from-indigo-600/30 to-purple-600/30 opacity-50 mix-blend-overlay" />
+                    <div className="relative z-10 flex items-center gap-3 mb-2">
+                        <BookOpen className="w-12 h-12 text-indigo-400" />
+                        <div>
+                            <h1 className="text-4xl lg:text-5xl font-black tracking-tighter drop-shadow-md italic uppercase">
+                                Programmes
+                            </h1>
+                            <p className="text-slate-300 font-medium tracking-tight max-w-2xl text-lg opacity-90 mt-1">
+                                Manage degree programmes and courses of study
+                            </p>
+                        </div>
+                    </div>
+                    <div className="relative z-10 flex flex-col items-end gap-4 w-full md:w-auto">
+                    <div className="flex gap-2">
+                        <Button
+                            onClick={() => setShowImporter(!showImporter)}
+                            variant="outline"
+                            className="rounded-xl font-bold text-xs uppercase tracking-widest h-11 border-slate-200 bg-white gap-2 shadow-sm"
+                        >
+                            {showImporter ? <X className="w-4 h-4" /> : <FileUp className="w-4 h-4" />}
+                            {showImporter ? "Close Importer" : "Import Programmes"}
+                        </Button>
+                        <Button
+                            onClick={() => setIsAdding(!isAdding)}
+                            className="bg-indigo-600 hover:bg-indigo-700 h-11 px-6 rounded-xl shadow-lg shadow-indigo-500/20 gap-2 font-bold"
+                        >
+                            {isAdding ? "Cancel" : <><Plus className="w-4 h-4" /> Add Programme</>}
+                        </Button>
+                    </div>
+                    <input
+                        type="text"
+                        placeholder="Search programmes..."
+                        className="w-full md:w-64 px-4 py-2 rounded-xl bg-white border border-slate-200 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                    />
                 </div>
             </div>
 
@@ -99,8 +118,8 @@ export default function ProgrammesPage() {
             )}
 
             {isAdding && (
-                <Card className="mb-8 border-none shadow-md bg-slate-50">
-                    <CardContent className="pt-6">
+                <Card className="mb-8 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
+                    <CardContent className="pt-6 p-6">
                         <form onSubmit={handleAdd} className="grid grid-cols-1 md:grid-cols-4 gap-4 pb-2">
                             <div className="space-y-1">
                                 <label className="text-xs font-bold text-slate-500 uppercase">Programme Name</label>
@@ -150,7 +169,7 @@ export default function ProgrammesPage() {
                 </Card>
             )}
 
-            <Card className="border-none shadow-sm overflow-hidden">
+            <Card className="overflow-hidden border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                 <table className="w-full text-left">
                     <thead>
                         <tr className="bg-slate-50 text-slate-500 text-xs font-bold uppercase tracking-wider">
@@ -168,14 +187,14 @@ export default function ProgrammesPage() {
                                     <Loader2 className="w-6 h-6 animate-spin mx-auto text-slate-400" />
                                 </td>
                             </tr>
-                        ) : programmes.length === 0 ? (
+                        ) : programmes.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()) || (p.department?.name || "").toLowerCase().includes(searchQuery.toLowerCase())).length === 0 ? (
                             <tr>
                                 <td colSpan={5} className="px-6 py-10 text-center text-slate-500">
-                                    No programmes found.
+                                    {searchQuery ? "Try a different search term." : "No programmes found."}
                                 </td>
                             </tr>
                         ) : (
-                            programmes.map((p) => (
+                            programmes.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()) || (p.department?.name || "").toLowerCase().includes(searchQuery.toLowerCase())).map((p) => (
                                 <tr key={p.id} className="hover:bg-slate-50/50 transition-colors">
                                     <td className="px-6 py-4 text-sm font-mono text-slate-400">#{p.id}</td>
                                     <td className="px-6 py-4 text-sm font-bold text-slate-700">{p.name}</td>
@@ -197,6 +216,7 @@ export default function ProgrammesPage() {
                     </tbody>
                 </table>
             </Card>
+        </div>
         </div>
     );
 }

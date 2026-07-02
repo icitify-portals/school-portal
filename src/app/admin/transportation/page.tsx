@@ -242,126 +242,145 @@ export default function TransportationManagement() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-[1600px] w-full mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Transportation Management</h1>
-            <p className="text-gray-600">Manage fleet, drivers, routes, and schedules</p>
-          </div>
-          <div className="flex items-center gap-4">
-            <Button
-              variant={activeTab === 'dashboard' ? 'default' : 'outline'}
-              onClick={() => setActiveTab('dashboard')}
-            >
-              <Activity className="w-4 h-4 mr-2" />
-              Dashboard
-            </Button>
-            <Button
-              variant={activeTab === 'vehicles' ? 'default' : 'outline'}
-              onClick={() => setActiveTab('vehicles')}
-            >
-              <Bus className="w-4 h-4 mr-2" />
-              Vehicles
-            </Button>
-            <Button
-              variant={activeTab === 'drivers' ? 'default' : 'outline'}
-              onClick={() => setActiveTab('drivers')}
-            >
-              <Users className="w-4 h-4 mr-2" />
-              Drivers
-            </Button>
-            <Button
-              variant={activeTab === 'routes' ? 'default' : 'outline'}
-              onClick={() => setActiveTab('routes')}
-            >
-              <Route className="w-4 h-4 mr-2" />
-              Routes
-            </Button>
-          </div>
+    <div className="p-4 sm:p-6 lg:p-8 min-h-screen">
+      <div className="max-w-[1600px] w-full mx-auto space-y-8">
+        {/* Header Section */}
+        <div className="relative overflow-hidden bg-slate-900 rounded-3xl p-8 lg:p-12 text-white shadow-2xl border border-slate-800">
+            <div className="absolute inset-0 bg-gradient-to-r from-emerald-600/30 to-teal-600/30 opacity-50 mix-blend-overlay" />
+            <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                <div>
+                    <div className="flex items-center gap-3 mb-2">
+                        <Bus className="w-12 h-12 text-emerald-400" />
+                        <h1 className="text-4xl lg:text-5xl font-black tracking-tighter drop-shadow-md italic">
+                            Fleet & Logistics
+                        </h1>
+                    </div>
+                    <p className="text-slate-300 font-medium tracking-tight max-w-2xl text-lg opacity-90">
+                        Manage vehicles, drivers, transit routes, and schedules
+                    </p>
+                </div>
+                
+                <div className="flex bg-white/10 p-1.5 rounded-2xl backdrop-blur-md border border-white/10 overflow-x-auto max-w-full">
+                    <button
+                        onClick={() => setActiveTab('dashboard')}
+                        className={`flex items-center gap-2 px-5 py-3 text-xs font-black uppercase tracking-widest rounded-xl transition-all whitespace-nowrap ${
+                            activeTab === 'dashboard' 
+                            ? "bg-white text-emerald-600 shadow-lg" 
+                            : "text-slate-300 hover:text-white hover:bg-white/10"
+                        }`}
+                    >
+                        <Activity className="w-4 h-4" /> Dashboard
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('vehicles')}
+                        className={`flex items-center gap-2 px-5 py-3 text-xs font-black uppercase tracking-widest rounded-xl transition-all whitespace-nowrap ${
+                            activeTab === 'vehicles' 
+                            ? "bg-white text-emerald-600 shadow-lg" 
+                            : "text-slate-300 hover:text-white hover:bg-white/10"
+                        }`}
+                    >
+                        <Bus className="w-4 h-4" /> Vehicles
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('drivers')}
+                        className={`flex items-center gap-2 px-5 py-3 text-xs font-black uppercase tracking-widest rounded-xl transition-all whitespace-nowrap ${
+                            activeTab === 'drivers' 
+                            ? "bg-white text-emerald-600 shadow-lg" 
+                            : "text-slate-300 hover:text-white hover:bg-white/10"
+                        }`}
+                    >
+                        <Users className="w-4 h-4" /> Drivers
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('routes')}
+                        className={`flex items-center gap-2 px-5 py-3 text-xs font-black uppercase tracking-widest rounded-xl transition-all whitespace-nowrap ${
+                            activeTab === 'routes' 
+                            ? "bg-white text-emerald-600 shadow-lg" 
+                            : "text-slate-300 hover:text-white hover:bg-white/10"
+                        }`}
+                    >
+                        <Route className="w-4 h-4" /> Routes
+                    </button>
+                </div>
+            </div>
         </div>
 
         {/* Dashboard */}
         {activeTab === 'dashboard' && dashboardData && (
-          <div className="space-y-6">
+          <div className="space-y-8">
             {/* Statistics Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center">
-                    <div className="p-3 bg-blue-100 rounded-full">
-                      <Bus className="w-6 h-6 text-blue-600" />
+              <Card className="border border-white/40 shadow-xl shadow-slate-200/50 bg-emerald-600 text-white backdrop-blur-3xl rounded-[2rem] hover:-translate-y-1 transition-all duration-300 overflow-hidden group p-2">
+                <CardContent className="p-6 flex items-center justify-between">
+                    <div>
+                        <p className="text-[10px] font-black text-emerald-200 uppercase tracking-widest">Total Fleet Vehicles</p>
+                        <h3 className="text-4xl font-black mt-2 italic tracking-tighter">{dashboardData.vehicleStats.total}</h3>
+                        <p className="text-xs font-bold text-emerald-300 mt-2">
+                            {dashboardData.vehicleStats.active} active • {dashboardData.vehicleStats.totalCapacity} capacity
+                        </p>
                     </div>
-                    <div className="ml-4">
-                      <p className="text-sm font-medium text-gray-600">Total Vehicles</p>
-                      <p className="text-2xl font-bold text-gray-900">{dashboardData.vehicleStats.total}</p>
-                      <p className="text-xs text-gray-500">
-                        {dashboardData.vehicleStats.active} active • {dashboardData.vehicleStats.totalCapacity} total capacity
-                      </p>
+                    <div className="p-4 bg-white/20 rounded-2xl text-white shadow-inner group-hover:scale-110 transition-transform">
+                        <Bus className="w-8 h-8" />
                     </div>
-                  </div>
                 </CardContent>
               </Card>
               
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center">
-                    <div className="p-3 bg-green-100 rounded-full">
-                      <Users className="w-6 h-6 text-green-600" />
+              <Card className="border border-white/40 shadow-xl shadow-slate-200/50 bg-white/60 backdrop-blur-3xl rounded-[2rem] hover:-translate-y-1 transition-all duration-300 overflow-hidden group p-2">
+                <CardContent className="p-6 flex items-center justify-between">
+                    <div>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Registered Drivers</p>
+                        <h3 className="text-4xl font-black text-slate-900 mt-2 italic tracking-tighter">{dashboardData.driverStats.total}</h3>
+                        <p className="text-xs font-bold text-slate-500 mt-2">
+                            {dashboardData.driverStats.active} active • {Math.round(dashboardData.driverStats.avgExperience || 0)} yrs avg exp.
+                        </p>
                     </div>
-                    <div className="ml-4">
-                      <p className="text-sm font-medium text-gray-600">Total Drivers</p>
-                      <p className="text-2xl font-bold text-gray-900">{dashboardData.driverStats.total}</p>
-                      <p className="text-xs text-gray-500">
-                        {dashboardData.driverStats.active} active • {Math.round(dashboardData.driverStats.avgExperience || 0)} avg years exp.
-                      </p>
+                    <div className="p-4 bg-slate-100/50 rounded-2xl text-slate-600 shadow-inner group-hover:scale-110 transition-transform">
+                        <Users className="w-8 h-8" />
                     </div>
-                  </div>
                 </CardContent>
               </Card>
               
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center">
-                    <div className="p-3 bg-purple-100 rounded-full">
-                      <Route className="w-6 h-6 text-purple-600" />
+              <Card className="border border-white/40 shadow-xl shadow-slate-200/50 bg-white/60 backdrop-blur-3xl rounded-[2rem] hover:-translate-y-1 transition-all duration-300 overflow-hidden group p-2">
+                <CardContent className="p-6 flex items-center justify-between">
+                    <div>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Transit Routes</p>
+                        <h3 className="text-4xl font-black text-slate-900 mt-2 italic tracking-tighter">{dashboardData.routeStats.total}</h3>
+                        <p className="text-xs font-bold text-slate-500 mt-2">
+                            {dashboardData.routeStats.active} active • {Math.round(dashboardData.routeStats.avgDistance || 0)}km avg distance
+                        </p>
                     </div>
-                    <div className="ml-4">
-                      <p className="text-sm font-medium text-gray-600">Total Routes</p>
-                      <p className="text-2xl font-bold text-gray-900">{dashboardData.routeStats.total}</p>
-                      <p className="text-xs text-gray-500">
-                        {dashboardData.routeStats.active} active • {Math.round(dashboardData.routeStats.avgDistance || 0)}km avg distance
-                      </p>
+                    <div className="p-4 bg-slate-100/50 rounded-2xl text-slate-600 shadow-inner group-hover:scale-110 transition-transform">
+                        <Route className="w-8 h-8" />
                     </div>
-                  </div>
                 </CardContent>
               </Card>
             </div>
 
             {/* Vehicle Type Breakdown */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Bus className="w-5 h-5" />
+              <Card className="bg-white/60 backdrop-blur-3xl border border-white/40 shadow-xl shadow-slate-200/50 rounded-[3rem] overflow-hidden">
+                <CardHeader className="border-b border-white/40 bg-white/40 pb-6 px-10 pt-10">
+                  <CardTitle className="text-2xl font-black text-slate-900 italic tracking-tighter flex items-center gap-3">
+                    <Bus className="w-6 h-6 text-emerald-600" />
                     Vehicle Fleet Breakdown
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
+                <CardContent className="p-0">
+                  <div className="divide-y divide-slate-100/50">
                     {dashboardData.vehicleTypes.map((type: any, index: number) => (
-                      <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div key={index} className="flex items-center justify-between p-6 px-10 hover:bg-white/40 transition-colors">
                         <div className="flex items-center">
-                          {getVehicleIcon(type.type)}
-                          <div className="ml-3">
-                            <div className="font-medium text-gray-900 capitalize">{type.type.replace('_', ' ')}</div>
-                            <div className="text-sm text-gray-500">{type.count} vehicles</div>
+                          <div className="p-3 bg-slate-100 rounded-2xl text-slate-500">
+                            {getVehicleIcon(type.type)}
+                          </div>
+                          <div className="ml-4">
+                            <div className="font-black text-sm text-slate-900 capitalize">{type.type.replace('_', ' ')}</div>
+                            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{type.count} vehicles</div>
                           </div>
                         </div>
-                        <div className="text-right">
-                          <div className="text-lg font-bold text-gray-900">{type.totalCapacity}</div>
-                          <div className="text-xs text-gray-500">total capacity</div>
+                        <div className="text-right bg-white p-3 rounded-2xl shadow-sm border border-slate-100">
+                          <div className="text-sm font-black text-slate-900">{type.totalCapacity}</div>
+                          <div className="text-[10px] text-slate-400 font-bold mt-1 uppercase tracking-widest">Total Cap.</div>
                         </div>
                       </div>
                     ))}
@@ -369,25 +388,24 @@ export default function TransportationManagement() {
                 </CardContent>
               </Card>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Route className="w-5 h-5" />
+              <Card className="bg-white/60 backdrop-blur-3xl border border-white/40 shadow-xl shadow-slate-200/50 rounded-[3rem] overflow-hidden">
+                <CardHeader className="border-b border-white/40 bg-white/40 pb-6 px-10 pt-10">
+                  <CardTitle className="text-2xl font-black text-slate-900 italic tracking-tighter flex items-center gap-3">
+                    <Route className="w-6 h-6 text-emerald-600" />
                     Route Type Distribution
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
+                <CardContent className="p-0">
+                  <div className="divide-y divide-slate-100/50">
                     {dashboardData.routeTypes.map((type: any, index: number) => (
-                      <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                        <div>
-                          <div className="font-medium text-gray-900 capitalize">{type.routeType.replace('_', ' ')}</div>
-                          <div className="text-sm text-gray-500">{type.count} routes</div>
+                      <div key={index} className="flex items-center justify-between p-6 px-10 hover:bg-white/40 transition-colors">
+                        <div className="ml-2">
+                          <div className="font-black text-sm text-slate-900 capitalize">{type.routeType.replace('_', ' ')}</div>
+                          <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{type.count} routes</div>
                         </div>
-                        <div className="text-right">
-                          // @ts-expect-error - TS2304: Auto-suppressed for build
-                          <div className="text-lg font-bold text-gray-900">{settings?.base_currency || '₦'}{type.avgFare || 0}</div>
-                          <div className="text-xs text-gray-500">avg fare</div>
+                        <div className="text-right bg-white p-3 rounded-2xl shadow-sm border border-slate-100">
+                          <div className="text-sm font-black text-slate-900">₦{type.avgFare || 0}</div>
+                          <div className="text-[10px] text-slate-400 font-bold mt-1 uppercase tracking-widest">Avg Fare</div>
                         </div>
                       </div>
                     ))}
@@ -739,8 +757,7 @@ export default function TransportationManagement() {
                       </div>
                       <div className="flex items-center text-sm">
                         <DollarSign className="w-4 h-4 mr-2 text-gray-400" />
-                        // @ts-expect-error - TS2304: Auto-suppressed for build
-                        <span>{settings?.base_currency || '₦'}{route.fareAmount}</span>
+                        <span>₦{route.fareAmount}</span>
                       </div>
                       {route.operatingHoursStart && route.operatingHoursEnd && (
                         <div className="flex items-center text-sm">

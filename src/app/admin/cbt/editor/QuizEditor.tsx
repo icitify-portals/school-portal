@@ -58,13 +58,13 @@ export default function QuizEditor({ existingQuizzes }: { existingQuizzes: any[]
     }
 
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <div className="space-y-8">
-                <Card className="border-none shadow-sm">
+                <Card className=" border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                     <CardHeader className="bg-slate-50 border-b">
                         <CardTitle className="text-sm font-black uppercase tracking-widest text-slate-500">1. Setup Quiz</CardTitle>
                     </CardHeader>
-                    <CardContent className="pt-6 space-y-4">
+                    <CardContent className="pt-6 space-y-4 p-6">
                         {!quizId ? (
                             <>
                                 <div>
@@ -99,7 +99,7 @@ export default function QuizEditor({ existingQuizzes }: { existingQuizzes: any[]
                             <label htmlFor="latex" className="text-xs font-bold uppercase text-slate-500">Enable LaTeX</label>
                         </div>
                     </CardHeader>
-                    <CardContent className="pt-6 space-y-4">
+                    <CardContent className="pt-6 space-y-4 p-6">
                         <div>
                             <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 block">Question Text</label>
                             <Textarea 
@@ -152,7 +152,7 @@ export default function QuizEditor({ existingQuizzes }: { existingQuizzes: any[]
                         <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
                         Live Preview (Student View)
                     </h2>
-                    <Card className="border-none shadow-xl shadow-slate-200/50 rounded-3xl overflow-hidden bg-white">
+                    <Card className="-200/50 overflow-hidden border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                         <div className="h-2 bg-indigo-600 w-full"></div>
                         <CardContent className="p-8">
                             <div className="prose prose-slate max-w-none">

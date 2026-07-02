@@ -16,8 +16,6 @@ export async function initializeWalletTopUp(amount: number, gateway: 'remita' | 
         const userId = parseInt(session.user.id);
         const user = await db.select().from(users).where(eq(users.id, userId)).limit(1).then(res => res[0]);
         if (!user) return { success: false, error: "User not found" };
-
-        // @ts-expect-error - TS2304: Auto-suppressed for build
         const student = await db.select().from(students).where(eq(students.userId, userId)).limit(1).then(res => res[0]);
         if (!student) return { success: false, error: "Student profile not found" };
 

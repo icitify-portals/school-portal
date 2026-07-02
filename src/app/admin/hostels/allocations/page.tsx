@@ -36,72 +36,83 @@ export default async function AllocationsPage() {
     }
 
     return (
-        <div className="space-y-6">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <div>
-                    <h3 className="text-lg font-bold text-slate-900">Bed Allocations</h3>
-                    <p className="text-xs text-slate-500">Review requests, approve allocations, and manage student beds.</p>
+        <div className="space-y-8 text-slate-800">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 bg-slate-900 text-white rounded-[2.5rem] p-8 shadow-xl relative overflow-hidden border border-slate-800">
+                <div className="absolute inset-0 bg-gradient-to-r from-indigo-600/20 to-slate-650/30 opacity-50 mix-blend-overlay" />
+                <div className="relative z-10 flex-1">
+                    <h3 className="text-2xl font-black uppercase italic tracking-tight">Bed Allocations</h3>
+                    <p className="text-slate-350 text-xs font-medium mt-1 uppercase tracking-wide opacity-90">Review requests, approve allocations, and manage student beds.</p>
                 </div>
-                <div className="relative w-full md:w-72">
+                <div className="relative w-full md:w-72 z-10">
                     <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                     <input
                         placeholder="Search matric or name..."
-                        className="w-full bg-white border border-slate-200 rounded-xl h-10 pl-9 pr-4 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all shadow-sm"
+                        className="w-full bg-white/10 border border-white/20 rounded-xl h-12 pl-10 pr-4 text-xs font-bold text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all shadow-inner"
                     />
                 </div>
             </div>
 
-            <Card className="border-none shadow-sm border border-slate-100 overflow-hidden">
+            <Card className="border border-white/40 shadow-2xl shadow-slate-200/50 bg-white/60 backdrop-blur-3xl overflow-hidden rounded-[3rem]">
                 <CardContent className="p-0 overflow-x-auto">
                     <table className="w-full text-left whitespace-nowrap">
                         <thead>
-                            <tr className="bg-slate-50 border-b border-slate-100 text-[10px] font-extrabold uppercase tracking-widest text-slate-400">
-                                <th className="px-6 py-4">Student</th>
-                                <th className="px-6 py-4">Hostel Preference</th>
-                                <th className="px-6 py-4">Status</th>
-                                <th className="px-6 py-4">Allocation</th>
-                                <th className="px-6 py-4">Applied Date</th>
-                                <th className="px-6 py-4 text-right">Actions</th>
+                            <tr className="bg-slate-900 text-white">
+                                <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em]">Student</th>
+                                <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em]">Hostel Preference</th>
+                                <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em]">Status</th>
+                                <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em]">Allocation</th>
+                                <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em]">Applied Date</th>
+                                <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-right">Actions</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-50">
+                        <tbody className="divide-y divide-white/40 bg-white/20">
                             {applications.length === 0 ? (
                                 <tr>
-                                    <td colSpan={6} className="px-6 py-12 text-center text-slate-400">
-                                        <Home className="w-8 h-8 mx-auto mb-3 opacity-20" />
-                                        <p className="text-sm">No applications found.</p>
+                                    <td colSpan={6} className="px-8 py-20 text-center text-slate-400">
+                                        <Home className="w-12 h-12 mx-auto mb-4 text-slate-300 animate-pulse" />
+                                        <p className="text-xs font-black uppercase tracking-widest">No applications found</p>
                                     </td>
                                 </tr>
                             ) : (
                                 applications.map((app: any) => (
-                                    <tr key={app.id} className="hover:bg-slate-50/50 transition-colors">
-                                        <td className="px-6 py-4">
-                                            <p className="font-bold text-sm text-slate-900 uppercase">{app.student.name || "(No Name)"}</p>
-                                            <p className="text-[10px] font-mono font-bold text-slate-500 mt-0.5">{app.student.matricNumber}</p>
-                                            <div className="flex gap-2 mt-1">
-                                                <Badge variant="secondary" className="text-[9px] px-1.5 py-0 font-bold uppercase">{app.student.level}L</Badge>
-                                                {app.isPriority && <Badge variant="outline" className="text-[9px] px-1.5 py-0 font-bold uppercase text-amber-600 border-amber-200 bg-amber-50">Priority</Badge>}
+                                    <tr key={app.id} className="group hover:bg-white/40 transition-colors">
+                                        <td className="px-8 py-5">
+                                            <div className="flex flex-col">
+                                                <span className="font-black text-sm text-slate-800 uppercase">{app.student.name || "(No Name)"}</span>
+                                                <span className="text-[10px] font-black text-slate-400 uppercase mt-0.5">{app.student.matricNumber}</span>
+                                                <div className="flex gap-2 mt-1.5">
+                                                    <Badge className="text-[8px] px-2 py-0.5 font-black uppercase bg-slate-100 text-slate-500 border border-slate-200">
+                                                        {app.student.level}L
+                                                    </Badge>
+                                                    {app.isPriority && (
+                                                        <Badge className="text-[8px] px-2 py-0.5 font-black uppercase text-amber-600 border border-amber-250 bg-amber-50 shadow-sm">
+                                                            Priority
+                                                        </Badge>
+                                                    )}
+                                                </div>
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4 font-semibold text-sm text-slate-700">
+                                        <td className="px-8 py-5 font-black text-sm text-slate-700 uppercase italic">
                                             {app.hostel.name}
                                         </td>
-                                        <td className="px-6 py-4">
-                                            {app.status === 'pending' && <Badge variant="outline" className="text-amber-600 bg-amber-50 border-amber-200 gap-1"><Clock className="w-3 h-3" /> Pending</Badge>}
-                                            {app.status === 'approved' && <Badge variant="outline" className="text-indigo-600 bg-indigo-50 border-indigo-200 gap-1">Approved</Badge>}
-                                            {app.status === 'allocated' && <Badge variant="outline" className="text-emerald-600 bg-emerald-50 border-emerald-200 gap-1"><CheckCircle2 className="w-3 h-3" /> Allocated</Badge>}
-                                            {app.status === 'rejected' && <Badge variant="outline" className="text-red-600 bg-red-50 border-red-200 gap-1"><XCircle className="w-3 h-3" /> Rejected</Badge>}
-                                            {app.status === 'expired' && <Badge variant="outline" className="text-slate-500 bg-slate-50 border-slate-200 gap-1">Expired</Badge>}
+                                        <td className="px-8 py-5">
+                                            <div className="flex flex-col items-start gap-1">
+                                                {app.status === 'pending' && <Badge className="text-[9px] font-black uppercase tracking-widest px-3 py-1 bg-amber-50 border border-amber-250 text-amber-600 shadow-sm gap-1"><Clock className="w-3 h-3" /> Pending</Badge>}
+                                                {app.status === 'approved' && <Badge className="text-[9px] font-black uppercase tracking-widest px-3 py-1 bg-indigo-50 border border-indigo-250 text-indigo-600 shadow-sm gap-1">Approved</Badge>}
+                                                {app.status === 'allocated' && <Badge className="text-[9px] font-black uppercase tracking-widest px-3 py-1 bg-emerald-50 border border-emerald-250 text-emerald-600 shadow-sm gap-1"><CheckCircle2 className="w-3 h-3" /> Allocated</Badge>}
+                                                {app.status === 'rejected' && <Badge className="text-[9px] font-black uppercase tracking-widest px-3 py-1 bg-rose-50 border border-rose-250 text-rose-600 shadow-sm gap-1"><XCircle className="w-3 h-3" /> Rejected</Badge>}
+                                                {app.status === 'expired' && <Badge className="text-[9px] font-black uppercase tracking-widest px-3 py-1 bg-slate-50 border border-slate-250 text-slate-400 shadow-sm gap-1">Expired</Badge>}
 
-                                            {app.paymentStatus === 'paid' && <p className="text-[9px] font-bold text-emerald-600 uppercase mt-1">Paid</p>}
+                                                {app.paymentStatus === 'paid' && <p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest mt-1">Paid</p>}
+                                            </div>
                                         </td>
-                                        <td className="px-6 py-4">
+                                        <td className="px-8 py-5">
                                             <RoomDetails roomId={app.allocatedRoomId} />
                                         </td>
-                                        <td className="px-6 py-4 text-xs font-medium text-slate-500">
+                                        <td className="px-8 py-5 text-xs font-black text-slate-500 font-mono">
                                             {new Date(app.appliedAt).toLocaleDateString()}
                                         </td>
-                                        <td className="px-6 py-4 text-right space-x-2">
+                                        <td className="px-8 py-5 text-right">
                                             <AllocationActions
                                                 applicationId={app.id}
                                                 status={app.status}

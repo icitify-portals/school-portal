@@ -46,7 +46,7 @@ export default function ITSSyncPage() {
             <ITSSyncDashboard />
 
             {/* Multi-Device Status */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-8 border-t border-slate-100">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-8 border-t border-slate-100">
                 <div className="space-y-4">
                     <h3 className="text-sm font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
                         <Wifi className="w-4 h-4" />

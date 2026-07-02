@@ -24,9 +24,9 @@ export default async function HealthRecordsPage() {
     const records = health.healthRecords || [];
 
     return (
-        <div className="grid md:grid-cols-3 gap-8">
+        <div className="grid md:grid-cols-3 gap-4">
             <div className="md:col-span-2 space-y-6">
-                <Card className="border-none shadow-sm border border-slate-100/50">
+                <Card className="-100/50 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                     <CardHeader className="border-b border-slate-100 flex flex-row items-center justify-between bg-slate-50/50">
                         <CardTitle className="text-lg flex items-center gap-2">
                             <FileText className="w-5 h-5 text-emerald-600" />
@@ -72,7 +72,7 @@ export default async function HealthRecordsPage() {
             </div>
 
             <div className="md:col-span-1">
-                <Card className="border-none shadow-sm border border-slate-100/50 sticky top-24">
+                <Card className="-100/50 sticky top-24 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                     <CardHeader className="bg-indigo-600 text-white rounded-t-xl">
                         <CardTitle className="text-base flex items-center gap-2">
                             <FileUp className="w-5 h-5" />

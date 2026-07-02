@@ -56,7 +56,7 @@ export default function PublicJournalsPage() {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {isLoading ? (
                     Array(3).fill(0).map((_, i) => (
                         <Card key={i} className="animate-pulse h-64 bg-slate-100 dark:bg-slate-900 rounded-2xl border-none shadow-none" />
@@ -70,9 +70,9 @@ export default function PublicJournalsPage() {
                 ) : (
                     filteredJournals.map((journal) => (
                         <Link key={journal.id} href={`/journal/${journal.slug}`}>
-                            <Card className="group h-full relative border-none shadow-xl shadow-slate-200/50 dark:shadow-none hover:shadow-2xl hover:shadow-indigo-500/10 transition-all duration-500 overflow-hidden rounded-2xl bg-white dark:bg-slate-900">
+                            <Card className="group h-full relative -200/50 dark: hover: hover:-500/10 transition-all duration-500 overflow-hidden dark: border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                                 <div className="h-2 bg-indigo-600 w-0 group-hover:w-full transition-all duration-500 absolute top-0" />
-                                <CardHeader className="pt-8 px-8">
+                                <CardHeader className="pt-8 px-8 bg-slate-50/50 border-b border-slate-100 p-6">
                                     <div className="flex justify-between items-start mb-4">
                                         <div className="h-16 w-16 rounded-2xl bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center p-3">
                                             {journal.logoUrl ? (
@@ -99,7 +99,7 @@ export default function PublicJournalsPage() {
                 )}
             </div>
 
-            <Card className="bg-gradient-to-br from-slate-900 to-indigo-950 text-white border-none rounded-[40px] p-8 md:p-16 relative overflow-hidden shadow-2xl">
+            <Card className="-to-br from-slate-900 to-indigo-950 text-white -[40px] p-8 md:p-16 relative overflow-hidden border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                 <div className="absolute top-0 right-0 w-1/2 h-full bg-indigo-500/10 blur-3xl rounded-full translate-x-1/4 -translate-y-1/4 pointer-events-none" />
                 <div className="relative z-10 grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
                     <div className="space-y-8">
@@ -114,7 +114,7 @@ export default function PublicJournalsPage() {
                             </Link>
                         </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-6">
+                    <div className="grid grid-cols-2 gap-4">
                         {[
                             { icon: Newspaper, label: "Published Articles", value: "2.4k+" },
                             { icon: Users, label: "Active Reviewers", value: "850+" },

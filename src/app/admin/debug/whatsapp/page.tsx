@@ -12,7 +12,7 @@ import { MessageSquare, Send, CheckCircle2 } from "lucide-react";
 
 export default function WhatsAppDebugTestPage() {
     const [phone, setPhone] = useState("+2347043091082");
-    const [message, setMessage] = useState("Hello from the School Portal! Your WhatsApp integration is working. 🚀");
+    const [message, setMessage] = useState("Hello from the FSS Portal! Your WhatsApp integration is working. 🚀");
     const [loading, setLoading] = useState(false);
 
     const handleSend = async () => {
@@ -47,14 +47,14 @@ export default function WhatsAppDebugTestPage() {
                 <h1 className="text-3xl font-bold">WhatsApp Debugger</h1>
             </div>
 
-            <Card className="border-2 border-green-100 shadow-sm">
-                <CardHeader>
+            <Card className="-100 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
+                <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-6">
                     <CardTitle>Test Twilio Integration</CardTitle>
                     <CardDescription>
                         Send a manual WhatsApp message to verify your environment variables and Twilio connectivity.
                     </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-4 p-6">
                     <div className="space-y-2">
                         <label className="text-sm font-medium">Recipient Phone Number</label>
                         <Input

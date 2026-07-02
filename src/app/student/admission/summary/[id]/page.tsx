@@ -85,7 +85,7 @@ export default async function ApplicationSummaryPage({ params }: { params: Promi
 
                     <div className="p-8 space-y-8">
                         {/* Section 1: Personal Info */}
-                        <div className="grid md:grid-cols-2 gap-8">
+                        <div className="grid md:grid-cols-2 gap-4">
                             <div className="space-y-4">
                                 <h3 className="text-xs font-black uppercase text-indigo-600 tracking-widest border-b pb-2">Candidate Details</h3>
                                 <div className="space-y-3">
@@ -155,8 +155,7 @@ export default async function ApplicationSummaryPage({ params }: { params: Promi
                             <div className="flex items-center gap-4">
                                 <div className="text-right">
                                     <p className="text-[10px] uppercase font-bold text-slate-500">Amount Paid</p>
-                                    // @ts-expect-error - TS2304: Auto-suppressed for build
-                                    <p className="text-xl font-black text-white">{settings?.base_currency || '₦'}{Number(session?.applicationFee).toLocaleString()}</p>
+                                    <p className="text-xl font-black text-white">₦{Number(session?.applicationFee).toLocaleString()}</p>
                                 </div>
                                 <div className="h-10 w-[1px] bg-slate-800 hidden md:block" />
                                 <div className="px-3 py-1 bg-emerald-500 text-white text-[10px] font-black rounded-lg">
@@ -167,7 +166,7 @@ export default async function ApplicationSummaryPage({ params }: { params: Promi
 
                         {/* Footer */}
                         <div className="pt-8 border-t text-center space-y-2">
-                            <p className="text-[10px] text-slate-400 uppercase font-bold tracking-widest">School Portal Admission Management System</p>
+                            <p className="text-[10px] text-slate-400 uppercase font-bold tracking-widest">FSS Portal Admission Management System</p>
                             <div className="flex justify-center gap-4 text-xs text-slate-500">
                                 <span>Support: support@school.edu</span>
                                 <span>Verification: verify@school.edu</span>

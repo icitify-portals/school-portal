@@ -209,7 +209,7 @@ export default function JournalDetailPage() {
                                     <h3 className="text-2xl font-black px-4 border-l-4 border-indigo-600">Table of Contents</h3>
                                     <div className="grid gap-4">
                                         {articles.filter(a => a.issueId === currentIssue.id && a.status === 'published').length === 0 ? (
-                                            <Card className="p-12 text-center text-slate-400 border-none shadow-none bg-slate-50 dark:bg-slate-900/50 rounded-[32px]">
+                                            <Card className="p-12 text-center text-slate-400 dark:/50 -[32px] border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                                                 <Info className="mx-auto h-8 w-8 opacity-20 mb-2" />
                                                 <p className="italic font-medium">Articles for this issue are currently in production.</p>
                                             </Card>
@@ -253,7 +253,7 @@ export default function JournalDetailPage() {
                     </TabsContent>
 
                     <TabsContent value="archive" className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                             {issues.filter(i => i.isPublished).length === 0 ? (
                                 <div className="col-span-full py-20 text-center opacity-40 italic font-medium">Archive is currently empty.</div>
                             ) : (
@@ -267,7 +267,7 @@ export default function JournalDetailPage() {
                                                 <BookOpen className="h-12 w-12 text-slate-300" />
                                             )}
                                         </div>
-                                        <CardHeader className="p-6">
+                                        <CardHeader className="p-6 bg-slate-50/50 border-b border-slate-100 p-6">
                                             <div className="text-xs font-black text-indigo-600 mb-1">VOL {issue.volume} NO {issue.number}</div>
                                             <CardTitle className="text-lg font-black leading-tight">{issue.title || `Issue ${issue.number}, ${issue.year}`}</CardTitle>
                                             <CardDescription className="text-xs italic font-medium pt-1">Published: {issue.publishedAt ? new Date(issue.publishedAt).getFullYear() : issue.year}</CardDescription>
@@ -279,8 +279,8 @@ export default function JournalDetailPage() {
                     </TabsContent>
 
                     <TabsContent value="editorial" className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                            <Card className="rounded-2xl border-slate-100 p-6 space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <Card className="-100 p-6 space-y-4 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                                 <div className="h-12 w-12 rounded-xl bg-indigo-50 dark:bg-indigo-950/20 text-indigo-600 flex items-center justify-center font-black">C</div>
                                 <div>
                                     <h4 className="font-black text-lg">Dr. Adegoke Babatunde</h4>
@@ -288,7 +288,7 @@ export default function JournalDetailPage() {
                                     <p className="text-xs text-slate-500 mt-2 font-medium">Department of Statistics, Federal School of Statistics, Nigeria</p>
                                 </div>
                             </Card>
-                            <Card className="rounded-2xl border-slate-100 p-6 space-y-4">
+                            <Card className="-100 p-6 space-y-4 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                                 <div className="h-12 w-12 rounded-xl bg-indigo-50 dark:bg-indigo-950/20 text-indigo-600 flex items-center justify-center font-black">A</div>
                                 <div>
                                     <h4 className="font-black text-lg">Prof. Elizabeth Carter</h4>
@@ -296,7 +296,7 @@ export default function JournalDetailPage() {
                                     <p className="text-xs text-slate-500 mt-2 font-medium">School of Mathematics & Computing, University of Manchester, UK</p>
                                 </div>
                             </Card>
-                            <Card className="rounded-2xl border-slate-100 p-6 space-y-4">
+                            <Card className="-100 p-6 space-y-4 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                                 <div className="h-12 w-12 rounded-xl bg-indigo-50 dark:bg-indigo-950/20 text-indigo-600 flex items-center justify-center font-black">T</div>
                                 <div>
                                     <h4 className="font-black text-lg">Dr. Marcus Vance</h4>
@@ -308,7 +308,7 @@ export default function JournalDetailPage() {
                     </TabsContent>
 
                     <TabsContent value="about" className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-8">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="space-y-4">
                                 <h3 className="text-xl font-black border-l-4 border-indigo-600 pl-3">Aims & Scope</h3>
                                 <p className="text-sm text-slate-500 leading-relaxed font-serif">

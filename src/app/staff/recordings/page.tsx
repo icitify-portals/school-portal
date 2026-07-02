@@ -18,90 +18,104 @@ export default async function RecordingsPage() {
     const recordings = await getLecturerRecordings(lecturerId);
 
     return (
-        <div className="p-6 md:p-10 space-y-6 max-w-[1600px] w-full mx-auto">
-            <div>
-                <h1 className="text-3xl font-bold tracking-tight">Class Recordings</h1>
-                <p className="text-slate-500 mt-2">
-                    Manage and publish your Live Class session recordings.
-                    Published recordings will be visible to enrolled students.
-                </p>
-            </div>
+        <div className="p-4 sm:p-6 lg:p-8 min-h-screen bg-transparent">
+            <div className="max-w-[1600px] w-full mx-auto space-y-10 text-slate-800">
+                {/* Header */}
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 bg-slate-900 text-white rounded-[3rem] p-8 lg:p-12 shadow-2xl relative overflow-hidden border border-slate-800">
+                    <div className="absolute inset-0 bg-gradient-to-r from-indigo-650/30 to-purple-650/30 opacity-50 mix-blend-overlay" />
+                    <div className="relative z-10 flex-1">
+                        <div className="flex items-center gap-4 mb-2">
+                            <Video className="w-12 h-12 text-indigo-400 drop-shadow-md" />
+                            <h2 className="text-4xl lg:text-5xl font-black tracking-tighter uppercase italic drop-shadow-md">
+                                Class Recordings
+                            </h2>
+                        </div>
+                        <p className="text-slate-300 font-medium mt-1 uppercase text-sm tracking-wide opacity-90">
+                            Manage and publish your Live Class session recordings for student playback
+                        </p>
+                    </div>
+                </div>
 
-            {recordings.length === 0 ? (
-                <Alert>
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertTitle>No Recordings Found</AlertTitle>
-                    <AlertDescription>
-                        You have not recorded any live classes yet. To record a class, click "Record" inside a live session.
-                    </AlertDescription>
-                </Alert>
-            ) : (
-                <div className="grid gap-6">
-                    {recordings.map((rec) => (
-                        <Card key={rec.id} className="overflow-hidden border-slate-200 shadow-sm transition-all hover:shadow-md">
-                            <div className="flex flex-col md:flex-row">
-                                {/* Video Thumbnail / Play Trigger */}
-                                <div className="md:w-64 bg-slate-900 flex items-center justify-center min-h-[160px] relative group overflow-hidden">
-                                    <RecordingPlayer
-                                        s3Key={rec.s3Key || ""}
-                                        title={rec.title || "Class Recording"}
-                                        trigger={
-                                            <button className="absolute inset-0 w-full h-full flex items-center justify-center focus:outline-none bg-black/40 group-hover:bg-black/20 transition-all">
-                                                <PlayCircle className="w-12 h-12 text-white/50 group-hover:text-indigo-400 group-hover:scale-110 transition-all shadow-2xl" />
-                                            </button>
-                                        }
-                                    />
-                                </div>
+                {recordings.length === 0 ? (
+                    <Card className="border border-white/40 shadow-xl shadow-slate-200/50 bg-white/60 backdrop-blur-3xl rounded-[3rem] p-12 text-center flex flex-col items-center max-w-2xl mx-auto space-y-4">
+                        <div className="p-4 bg-slate-100 rounded-2xl text-slate-400">
+                            <AlertCircle className="h-8 w-8" />
+                        </div>
+                        <h3 className="text-xl font-black uppercase tracking-wider text-slate-800">No Recordings Found</h3>
+                        <p className="text-slate-500 font-bold text-sm leading-relaxed">
+                            You have not recorded any live classes yet. To record a class, click "Record" inside a live session.
+                        </p>
+                    </Card>
+                ) : (
+                    <div className="grid gap-8">
+                        {recordings.map((rec) => (
+                            <Card key={rec.id} className="border border-white/40 shadow-xl shadow-slate-200/50 bg-white/60 backdrop-blur-3xl overflow-hidden rounded-[3rem] p-6 hover:-translate-y-0.5 transition-all duration-300">
+                                <div className="flex flex-col md:flex-row gap-6">
+                                    {/* Video Thumbnail / Play Trigger */}
+                                    <div className="md:w-72 bg-slate-950 flex items-center justify-center min-h-[180px] relative group overflow-hidden rounded-[2rem] shadow-inner border border-white/10 shrink-0">
+                                        <RecordingPlayer
+                                            s3Key={rec.s3Key || ""}
+                                            title={rec.title || "Class Recording"}
+                                            trigger={
+                                                <button className="absolute inset-0 w-full h-full flex items-center justify-center focus:outline-none bg-black/40 group-hover:bg-black/20 transition-all">
+                                                    <PlayCircle className="w-14 h-14 text-white/50 group-hover:text-indigo-400 group-hover:scale-110 transition-all drop-shadow-lg" />
+                                                </button>
+                                            }
+                                        />
+                                    </div>
 
-                                <div className="flex-1 p-6 flex flex-col justify-center">
-                                    <div className="flex items-start justify-between">
-                                        <div>
-                                            <h3 className="text-xl font-bold text-slate-900 mb-2">
-                                                {rec.title}
-                                            </h3>
-                                            <div className="flex flex-wrap gap-4 text-sm text-slate-600 mb-4">
-                                                <div className="flex items-center gap-1.5">
-                                                    <Calendar className="w-4 h-4 text-slate-400" />
-                                                    {new Date(rec.date!).toLocaleDateString(undefined, {
-                                                        weekday: 'short', year: 'numeric', month: 'short', day: 'numeric'
-                                                    })}
+                                    <div className="flex-1 flex flex-col justify-between py-2">
+                                        <div className="space-y-4">
+                                            <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
+                                                <div>
+                                                    <h3 className="text-2xl font-black text-slate-800 uppercase tracking-tight">
+                                                        {rec.title}
+                                                    </h3>
+                                                    <div className="flex flex-wrap gap-4 text-xs font-bold text-slate-500 uppercase tracking-wider mt-2">
+                                                        <div className="flex items-center gap-1.5 bg-slate-100 border border-slate-200 px-3 py-1 rounded-full">
+                                                            <Calendar className="w-3.5 h-3.5 text-slate-450" />
+                                                            {new Date(rec.date!).toLocaleDateString(undefined, {
+                                                                weekday: 'short', year: 'numeric', month: 'short', day: 'numeric'
+                                                            })}
+                                                        </div>
+                                                        <div className="flex items-center gap-1.5 bg-slate-100 border border-slate-200 px-3 py-1 rounded-full font-mono">
+                                                            <Clock className="w-3.5 h-3.5 text-slate-450" />
+                                                            {Math.ceil((rec.duration || 0) / 60)} MINS
+                                                        </div>
+                                                    </div>
                                                 </div>
-                                                <div className="flex items-center gap-1.5">
-                                                    <Clock className="w-4 h-4 text-slate-400" />
-                                                    {Math.ceil((rec.duration || 0) / 60)} minutes
+
+                                                {/* Actions */}
+                                                <div className="flex items-center gap-3 shrink-0">
+                                                    <RecordingPlayer
+                                                        s3Key={rec.s3Key || ""}
+                                                        title={rec.title || "Recording"}
+                                                        trigger={
+                                                            <Button size="sm" className="bg-indigo-650 hover:bg-indigo-700 text-white font-black uppercase text-xs tracking-widest px-5 py-5 rounded-xl shadow-md">
+                                                                <PlayCircle className="w-4 h-4 mr-2" /> Play
+                                                            </Button>
+                                                        }
+                                                    />
+                                                    <Button variant="outline" size="sm" className="hidden sm:inline-flex bg-white hover:bg-slate-50 text-slate-700 border-slate-200 font-black uppercase text-xs tracking-widest px-5 py-5 rounded-xl shadow-sm" asChild>
+                                                        <a href={rec.url || "#"} target="_blank" rel="noreferrer">
+                                                            <Share2 className="w-4 h-4 mr-2 text-slate-450" /> Details
+                                                        </a>
+                                                    </Button>
                                                 </div>
                                             </div>
                                         </div>
 
-                                        {/* Actions */}
-                                        <div className="flex items-center gap-3">
-                                            <RecordingPlayer
-                                                s3Key={rec.s3Key || ""}
-                                                title={rec.title || "Recording"}
-                                                trigger={
-                                                    <Button variant="default" size="sm" className="bg-indigo-600 hover:bg-indigo-700">
-                                                        <PlayCircle className="w-4 h-4 mr-2" /> Play
-                                                    </Button>
-                                                }
-                                            />
-                                            <Button variant="outline" size="sm" className="hidden sm:inline-flex" asChild>
-                                                <a href={rec.url || "#"} target="_blank" rel="noreferrer">
-                                                    <Share2 className="w-4 h-4 mr-2" /> Details
-                                                </a>
-                                            </Button>
+                                        {/* Recording info */}
+                                        <div className="pt-4 border-t border-white/40 text-xs font-bold text-slate-400 uppercase tracking-widest mt-6">
+                                            Published recordings are available to enrolled students automatically.
                                         </div>
                                     </div>
-
-                                    {/* Recording info */}
-                                    <div className="mt-auto pt-4 border-t border-slate-100 text-sm text-slate-500">
-                                        Recordings are available to enrolled students automatically.
-                                    </div>
                                 </div>
-                            </div>
-                        </Card>
-                    ))}
-                </div>
-            )}
+                            </Card>
+                        ))}
+                    </div>
+                )}
+            </div>
         </div>
     );
 }

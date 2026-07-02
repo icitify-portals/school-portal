@@ -129,9 +129,9 @@ export function RoomManager({ hostelId, hostelName }: { hostelId: number, hostel
                 <span>Blocks & Rooms</span>
             </div>
 
-            <div className="grid grid-cols-12 gap-6">
+            <div className="grid grid-cols-12 gap-4">
                 {/* Blocks List */}
-                <Card className="col-span-12 md:col-span-4 border-none shadow-sm border border-slate-100 h-fit">
+                <Card className="col-span-12 md:col-span-4 -100 h-fit border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                     <CardHeader className="bg-slate-50/50 border-b border-slate-100 flex flex-row items-center justify-between py-3">
                         <CardTitle className="text-xs font-bold flex items-center gap-2 uppercase tracking-widest text-slate-500">
                             <Layers className="w-3.5 h-3.5" /> Blocks
@@ -186,7 +186,7 @@ export function RoomManager({ hostelId, hostelName }: { hostelId: number, hostel
                 </Card>
 
                 {/* Rooms Matrix */}
-                <Card className="col-span-12 md:col-span-8 border-none shadow-sm border border-slate-100">
+                <Card className="col-span-12 md:col-span-8 -100 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                     <CardHeader className="bg-slate-50/50 border-b border-slate-100 flex flex-row items-center justify-between py-3">
                         <CardTitle className="text-xs font-bold flex items-center gap-2 uppercase tracking-widest text-slate-500">
                             <Home className="w-3.5 h-3.5" /> {currentBlock?.name || 'Rooms'} Management
@@ -297,8 +297,7 @@ export function RoomManager({ hostelId, hostelName }: { hostelId: number, hostel
                                                     style={{ width: `${(r.occupiedCount / r.capacity) * 100}%` }}
                                                 />
                                             </div>
-                                            // @ts-expect-error - TS2304: Auto-suppressed for build
-                                            <p className="text-xs font-bold text-slate-700 mt-2">{settings?.base_currency || '₦'}{Number(r.price).toLocaleString()}</p>
+                                            <p className="text-xs font-bold text-slate-700 mt-2">₦{Number(r.price).toLocaleString()}</p>
                                         </div>
                                     </div>
                                 ))}

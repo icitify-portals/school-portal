@@ -22,7 +22,7 @@ function StudentsPageContent() {
     const pathname = usePathname();
     const searchParams = useSearchParams();
     const { isK12 } = useBranch();
-    const settings = { base_currency: '₦' };
+    const settings = { base_currency: ₦ };
 
     const [students, setStudents] = useState<any[]>([]);
     const [totalCount, setTotalCount] = useState(0);
@@ -121,8 +121,8 @@ function StudentsPageContent() {
     };
 
     return (
-        <div className="p-8 max-w-6xl mx-auto">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+        <div className="p-8 pb-32 max-w-[1600px] w-full mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                 <div>
                     <h2 className="text-3xl font-bold text-slate-900 tracking-tight">Student Management</h2>
                     <p className="text-slate-500 mt-1">Review and manage student records</p>
@@ -186,6 +186,11 @@ function StudentsPageContent() {
             </div>
 
             <Card className="border-none shadow-sm overflow-hidden flex flex-col">
+                <DataTablePagination
+                    totalItems={totalCount}
+                    pageSize={pageSize}
+                    currentPage={page}
+                />
                 <div className="overflow-x-auto">
                     <table className="w-full text-left">
                         <thead>
@@ -239,7 +244,7 @@ function StudentsPageContent() {
                                             <span className="text-sm text-slate-600">{s.programme?.name || 'Not Assigned'}</span>
                                         </td>
                                         <td className="px-6 py-4">
-                                            <span className="text-sm font-bold text-slate-700">{settings?.base_currency || '₦'}{parseFloat(s.walletBalance).toLocaleString()}</span>
+                                            <span className="text-sm font-bold text-slate-700">{settings?.base_currency || ₦}{parseFloat(s.walletBalance).toLocaleString()}</span>
                                         </td>
                                         <td className="px-6 py-4">
                                             <Button

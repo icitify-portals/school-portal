@@ -226,7 +226,7 @@ export default function SettingsHubClient({ initialSettings, modulesCount }: Set
   }, {} as Record<string, typeof settingsCards>);
 
   return (
-    <div className="p-8 max-w-[1600px] w-full mx-auto space-y-8">
+    <div className="p-8 max-w-[1600px] w-full mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
       {/* Header */}
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
         <div>
@@ -270,7 +270,7 @@ export default function SettingsHubClient({ initialSettings, modulesCount }: Set
 
             {/* Render Category Blocks */}
             {Object.keys(categories).length === 0 ? (
-              <Card className="border-none shadow-2xl rounded-[3rem] p-16 text-center bg-white">
+              <Card className="backdrop-blur-xl bg-white/70 dark:bg-slate-900/70 border border-white/20 shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-[3rem] p-16 text-center">
                 <div className="w-12 h-12 bg-slate-50 text-slate-400 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Search className="w-6 h-6" />
                 </div>
@@ -285,7 +285,7 @@ export default function SettingsHubClient({ initialSettings, modulesCount }: Set
                       const Icon = card.icon;
                       return (
                         <Link href={card.href} key={card.title} className="group">
-                          <Card className="border-none hover:border-indigo-200 hover:border rounded-[2rem] shadow-xl hover:shadow-2xl bg-white p-6 flex flex-col justify-between h-[230px] transition-all duration-300 relative overflow-hidden group">
+                          <Card className="backdrop-blur-xl bg-white/70 dark:bg-slate-900/70 border border-white/20 hover:border-indigo-200 shadow-xl hover:shadow-[0_8px_30px_rgb(0,0,0,0.1)] rounded-[2rem] p-6 flex flex-col justify-between h-[230px] transition-all duration-300 relative overflow-hidden group">
                             <div className="space-y-4">
                               <div className="flex justify-between items-start">
                                 <div className={`w-12 h-12 rounded-2xl ${card.iconBg} flex items-center justify-center transition-all group-hover:scale-110 duration-300`}>
@@ -319,7 +319,7 @@ export default function SettingsHubClient({ initialSettings, modulesCount }: Set
 
           {/* Diagnostics Sidebar */}
           <div className="lg:col-span-1 space-y-6">
-            <Card className="border-none shadow-2xl rounded-[2.5rem] overflow-hidden bg-white p-6">
+            <Card className="backdrop-blur-xl bg-white/70 dark:bg-slate-900/70 border border-white/20 shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-[2.5rem] overflow-hidden p-6">
               <CardHeader className="p-0 pb-4 border-b border-slate-100 mb-6 flex flex-row items-center gap-3">
                 <div className="w-9 h-9 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center">
                   <Server className="w-5 h-5" />

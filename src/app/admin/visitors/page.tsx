@@ -157,103 +157,112 @@ export default function VisitorManagement() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-[1600px] w-full mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Visitor Management</h1>
-            <p className="text-gray-600">Manage visitor access and tracking</p>
-          </div>
-          <div className="flex items-center gap-4">
-            <Button
-              variant={activeTab === 'register' ? 'default' : 'outline'}
-              onClick={() => setActiveTab('register')}
-            >
-              <Users className="w-4 h-4 mr-2" />
-              Register Visitor
-            </Button>
-            <Button
-              variant={activeTab === 'list' ? 'default' : 'outline'}
-              onClick={() => setActiveTab('list')}
-            >
-              <Users className="w-4 h-4 mr-2" />
-              Visitor List
-            </Button>
-          </div>
+    <div className="p-4 sm:p-6 lg:p-8 min-h-screen">
+      <div className="max-w-[1600px] w-full mx-auto space-y-8">
+        {/* Header Section */}
+        <div className="relative overflow-hidden bg-slate-900 rounded-3xl p-8 lg:p-12 text-white shadow-2xl border border-slate-800">
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-600/30 to-purple-600/30 opacity-50 mix-blend-overlay" />
+            <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                <div>
+                    <div className="flex items-center gap-3 mb-2">
+                        <UserCheck className="w-12 h-12 text-blue-400" />
+                        <h1 className="text-4xl lg:text-5xl font-black tracking-tighter drop-shadow-md italic">
+                            Visitor Management
+                        </h1>
+                    </div>
+                    <p className="text-slate-300 font-medium tracking-tight max-w-2xl text-lg opacity-90">
+                        Manage guest access, security tracking, and digital check-ins
+                    </p>
+                </div>
+                
+                <div className="flex bg-white/10 p-1.5 rounded-2xl backdrop-blur-md border border-white/10 overflow-x-auto max-w-full shadow-inner">
+                    <button
+                        onClick={() => setActiveTab('register')}
+                        className={`flex items-center gap-2 px-6 py-3 text-xs font-black uppercase tracking-widest rounded-xl transition-all whitespace-nowrap ${
+                            activeTab === 'register' 
+                            ? "bg-white text-blue-600 shadow-lg" 
+                            : "text-slate-300 hover:text-white hover:bg-white/10"
+                        }`}
+                    >
+                        <UserCheck className="w-4 h-4" /> Register Guest
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('list')}
+                        className={`flex items-center gap-2 px-6 py-3 text-xs font-black uppercase tracking-widest rounded-xl transition-all whitespace-nowrap ${
+                            activeTab === 'list' 
+                            ? "bg-white text-blue-600 shadow-lg" 
+                            : "text-slate-300 hover:text-white hover:bg-white/10"
+                        }`}
+                    >
+                        <Users className="w-4 h-4" /> Visitor Log
+                    </button>
+                </div>
+            </div>
         </div>
 
         {/* Statistics Cards */}
         {stats && (
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center">
-                  <div className="p-3 bg-blue-100 rounded-full">
-                    <Users className="w-6 h-6 text-blue-600" />
-                  </div>
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600">Total Today</p>
-                    <p className="text-2xl font-bold text-gray-900">{stats.todayStats.totalVisitors}</p>
-                  </div>
-                </div>
-              </CardContent>
+            <Card className="border border-white/40 shadow-xl shadow-slate-200/50 bg-blue-600 text-white backdrop-blur-3xl rounded-[2rem] hover:-translate-y-1 transition-all duration-300 overflow-hidden group p-2">
+                <CardContent className="p-6 flex items-center justify-between">
+                    <div>
+                        <p className="text-[10px] font-black text-blue-200 uppercase tracking-widest">Total Today</p>
+                        <h3 className="text-4xl font-black mt-2 italic tracking-tighter">{stats.todayStats.totalVisitors}</h3>
+                    </div>
+                    <div className="p-4 bg-white/20 rounded-2xl text-white shadow-inner group-hover:scale-110 transition-transform">
+                        <Users className="w-8 h-8" />
+                    </div>
+                </CardContent>
             </Card>
             
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center">
-                  <div className="p-3 bg-green-100 rounded-full">
-                    <UserCheck className="w-6 h-6 text-green-600" />
-                  </div>
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600">Checked In</p>
-                    <p className="text-2xl font-bold text-gray-900">{stats.todayStats.checkedIn}</p>
-                  </div>
-                </div>
-              </CardContent>
+            <Card className="border border-white/40 shadow-xl shadow-slate-200/50 bg-white/60 backdrop-blur-3xl rounded-[2rem] hover:-translate-y-1 transition-all duration-300 overflow-hidden group p-2">
+                <CardContent className="p-6 flex items-center justify-between">
+                    <div>
+                        <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Checked In</p>
+                        <h3 className="text-4xl font-black text-slate-900 mt-2 italic tracking-tighter">{stats.todayStats.checkedIn}</h3>
+                    </div>
+                    <div className="p-4 bg-emerald-50 rounded-2xl text-emerald-600 shadow-inner group-hover:scale-110 transition-transform border border-emerald-100">
+                        <UserCheck className="w-8 h-8" />
+                    </div>
+                </CardContent>
             </Card>
             
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center">
-                  <div className="p-3 bg-blue-100 rounded-full">
-                    <LogOut className="w-6 h-6 text-blue-600" />
-                  </div>
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600">Checked Out</p>
-                    <p className="text-2xl font-bold text-gray-900">{stats.todayStats.checkedOut}</p>
-                  </div>
-                </div>
-              </CardContent>
+            <Card className="border border-white/40 shadow-xl shadow-slate-200/50 bg-white/60 backdrop-blur-3xl rounded-[2rem] hover:-translate-y-1 transition-all duration-300 overflow-hidden group p-2">
+                <CardContent className="p-6 flex items-center justify-between">
+                    <div>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Checked Out</p>
+                        <h3 className="text-4xl font-black text-slate-900 mt-2 italic tracking-tighter">{stats.todayStats.checkedOut}</h3>
+                    </div>
+                    <div className="p-4 bg-slate-100/50 rounded-2xl text-slate-600 shadow-inner group-hover:scale-110 transition-transform">
+                        <LogOut className="w-8 h-8" />
+                    </div>
+                </CardContent>
             </Card>
             
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center">
-                  <div className="p-3 bg-yellow-100 rounded-full">
-                    <Clock className="w-6 h-6 text-yellow-600" />
-                  </div>
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600">Scheduled</p>
-                    <p className="text-2xl font-bold text-gray-900">{stats.todayStats.scheduled}</p>
-                  </div>
-                </div>
-              </CardContent>
+            <Card className="border border-white/40 shadow-xl shadow-slate-200/50 bg-white/60 backdrop-blur-3xl rounded-[2rem] hover:-translate-y-1 transition-all duration-300 overflow-hidden group p-2">
+                <CardContent className="p-6 flex items-center justify-between">
+                    <div>
+                        <p className="text-[10px] font-black text-amber-500 uppercase tracking-widest">Scheduled</p>
+                        <h3 className="text-4xl font-black text-slate-900 mt-2 italic tracking-tighter">{stats.todayStats.scheduled}</h3>
+                    </div>
+                    <div className="p-4 bg-amber-50 rounded-2xl text-amber-600 shadow-inner group-hover:scale-110 transition-transform border border-amber-100">
+                        <Clock className="w-8 h-8" />
+                    </div>
+                </CardContent>
             </Card>
           </div>
         )}
 
         {/* Main Content */}
         {activeTab === 'register' && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="w-5 h-5" />
-                Register New Visitor
+          <Card className="bg-white/60 backdrop-blur-3xl border border-white/40 shadow-xl shadow-slate-200/50 rounded-[3rem] overflow-hidden">
+            <CardHeader className="border-b border-white/40 bg-white/40 pb-6 px-10 pt-10">
+              <CardTitle className="text-2xl font-black text-slate-900 italic tracking-tighter flex items-center gap-3">
+                <Users className="w-6 h-6 text-blue-600" />
+                Register New Guest
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-10">
               <form onSubmit={handleCreateVisitor} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* Personal Information */}

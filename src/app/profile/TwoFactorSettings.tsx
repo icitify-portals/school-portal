@@ -152,7 +152,7 @@ export default function TwoFactorSettings() {
     }
 
     function handleDownloadBackupCodes() {
-        const text = `SCHOOL PORTAL 2FA BACKUP CODES\nGenerated: ${new Date().toLocaleString()}\n\nKeep these codes in a safe place. Each code can be used once to log in.\n\n${backupCodes.join("\n")}`;
+        const text = `FSS Portal 2FA BACKUP CODES\nGenerated: ${new Date().toLocaleString()}\n\nKeep these codes in a safe place. Each code can be used once to log in.\n\n${backupCodes.join("\n")}`;
         const blob = new Blob([text], { type: "text/plain" });
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");

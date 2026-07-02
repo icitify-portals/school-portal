@@ -34,20 +34,30 @@ export default async function WaitlistPage() {
     });
 
     return (
-        <div className="p-6 max-w-7xl mx-auto space-y-6">
-            <div className="flex justify-between items-center">
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight text-slate-900 flex items-center gap-2">
-                        <Clock className="h-8 w-8 text-amber-600" />
-                        Admission Waitlist
-                    </h1>
-                    <p className="text-slate-500 mt-1">
-                        Manage waitlisted applicants and roll over admissions based on availability.
-                    </p>
+        <div className="p-4 sm:p-6 lg:p-8 min-h-screen">
+            <div className="max-w-[1600px] w-full mx-auto space-y-8">
+                {/* Header Section */}
+                <div className="relative overflow-hidden bg-slate-900 rounded-3xl p-8 lg:p-12 text-white shadow-2xl border border-slate-800">
+                    <div className="absolute inset-0 bg-gradient-to-r from-amber-600/30 to-orange-600/30 opacity-50 mix-blend-overlay" />
+                    <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                        <div>
+                            <div className="flex items-center gap-3 mb-2">
+                                <Clock className="w-12 h-12 text-amber-400" />
+                                <h1 className="text-4xl lg:text-5xl font-black tracking-tighter drop-shadow-md italic uppercase">
+                                    Admission Waitlist
+                                </h1>
+                            </div>
+                            <p className="text-slate-300 font-medium tracking-tight max-w-2xl text-lg opacity-90">
+                                Manage waitlisted applicants and roll over admissions based on availability.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="bg-white/60 backdrop-blur-3xl border border-white/40 shadow-xl shadow-slate-200/50 rounded-[3rem] p-8 overflow-hidden">
+                    <WaitlistTable initialData={formattedList} />
                 </div>
             </div>
-
-            <WaitlistTable initialData={formattedList} />
         </div>
     );
 }

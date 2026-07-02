@@ -17,7 +17,8 @@ import {
   Eye,
   Calendar,
   BookOpen,
-  Award
+  Award,
+  Loader2
 } from "lucide-react";
 import {
   getRoleTransitions,
@@ -193,215 +194,221 @@ export default function RoleTransitionsPage() {
   };
 
   return (
-    <div className="p-8 max-w-[1600px] w-full mx-auto space-y-8">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-        <div>
-          <h1 className="text-4xl font-black text-slate-900 flex items-center gap-4 italic">
-            <UserCheck className="w-10 h-10 text-indigo-600" />
-            ROLE TRANSITIONS
-          </h1>
-          <p className="text-slate-500 font-bold uppercase tracking-widest text-[10px] mt-2">
-            Manage user role transitions from applicant to fresher to student
-          </p>
+    <div className="p-4 sm:p-6 lg:p-8 min-h-screen bg-transparent">
+      <div className="max-w-[1600px] w-full mx-auto space-y-10 text-slate-800">
+        {/* Header */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 bg-slate-900 text-white rounded-[3rem] p-8 lg:p-12 shadow-2xl relative overflow-hidden border border-slate-800">
+          <div className="absolute inset-0 bg-gradient-to-r from-indigo-650/30 to-purple-650/30 opacity-50 mix-blend-overlay" />
+          <div className="relative z-10 flex-1">
+            <div className="flex items-center gap-4 mb-2">
+              <UserCheck className="w-12 h-12 text-indigo-400 drop-shadow-md" />
+              <h2 className="text-4xl lg:text-5xl font-black tracking-tighter uppercase italic drop-shadow-md">
+                Role Transitions
+              </h2>
+            </div>
+            <p className="text-slate-300 font-medium mt-1 uppercase text-sm tracking-wide opacity-90">
+              Manage user role transitions from applicant to fresher to student
+            </p>
+          </div>
+          <div className="relative z-10 flex gap-3 shrink-0">
+            <Button
+              onClick={() => setShowTransitionModal(true)}
+              className="font-black px-6 py-6 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white active:scale-95 shadow-md uppercase text-xs tracking-widest border border-white/10"
+            >
+              <UserCheck className="w-5 h-5 mr-2" />
+              Manual Transition
+            </Button>
+            <Button onClick={fetchData} disabled={loading} className="font-black px-6 py-6 rounded-2xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 active:scale-95 shadow-md uppercase text-xs tracking-widest">
+              {loading ? <RefreshCw className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
+              Refresh
+            </Button>
+          </div>
         </div>
-        <div className="flex gap-3">
-          <Button
-            onClick={() => setShowTransitionModal(true)}
-            className="font-black px-6 py-6 rounded-2xl shadow-lg transition-all flex gap-3 uppercase text-xs tracking-widest bg-indigo-600 hover:bg-indigo-700 text-white"
-          >
-            <UserCheck className="w-5 h-5" />
-            Manual Transition
-          </Button>
-          <Button onClick={fetchData} disabled={loading}>
-            {loading ? <RefreshCw className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
-            Refresh
-          </Button>
+
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <Card className="border border-white/40 shadow-xl shadow-slate-200/50 bg-white/60 backdrop-blur-3xl rounded-[3rem] p-6 hover:-translate-y-1 transition-all duration-300">
+            <div className="flex items-center gap-4">
+              <div className="p-4 bg-slate-100 rounded-[1.5rem] text-slate-600 shadow-inner">
+                <Users className="w-6 h-6" />
+              </div>
+              <div>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Total Transitions</p>
+                <p className="text-3xl font-black text-slate-900 tracking-tighter">{stats.total}</p>
+              </div>
+            </div>
+          </Card>
+          <Card className="border border-white/40 shadow-xl shadow-slate-200/50 bg-white/60 backdrop-blur-3xl rounded-[3rem] p-6 hover:-translate-y-1 transition-all duration-300">
+            <div className="flex items-center gap-4">
+              <div className="p-4 bg-amber-100 rounded-[1.5rem] text-amber-600 shadow-inner">
+                <GraduationCap className="w-6 h-6" />
+              </div>
+              <div>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Applicant → Fresher</p>
+                <p className="text-3xl font-black text-slate-900 tracking-tighter">{stats.applicantToFresher}</p>
+              </div>
+            </div>
+          </Card>
+          <Card className="border border-white/40 shadow-xl shadow-slate-200/50 bg-white/60 backdrop-blur-3xl rounded-[3rem] p-6 hover:-translate-y-1 transition-all duration-300">
+            <div className="flex items-center gap-4">
+              <div className="p-4 bg-indigo-100 rounded-[1.5rem] text-indigo-600 shadow-inner">
+                <BookOpen className="w-6 h-6" />
+              </div>
+              <div>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Fresher → Student</p>
+                <p className="text-3xl font-black text-slate-900 tracking-tighter">{stats.fresherToStudent}</p>
+              </div>
+            </div>
+          </Card>
+          <Card className="border border-white/40 shadow-xl shadow-slate-200/50 bg-white/60 backdrop-blur-3xl rounded-[3rem] p-6 hover:-translate-y-1 transition-all duration-300">
+            <div className="flex items-center gap-4">
+              <div className="p-4 bg-emerald-100 rounded-[1.5rem] text-emerald-600 shadow-inner">
+                <UserCheck className="w-6 h-6" />
+              </div>
+              <div>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Manual Transitions</p>
+                <p className="text-3xl font-black text-slate-900 tracking-tighter">{stats.manual}</p>
+              </div>
+            </div>
+          </Card>
         </div>
-      </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card className="border-none shadow-sm bg-slate-50/50 rounded-2xl p-6">
-          <div className="flex items-center gap-4">
-            <div className="p-3 bg-slate-100 rounded-2xl text-slate-600">
-              <Users className="w-6 h-6" />
-            </div>
-            <div>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Transitions</p>
-              <p className="text-2xl font-black text-slate-900">{stats.total}</p>
-            </div>
+        {/* Search */}
+        <Card className="border border-white/40 shadow-xl shadow-slate-200/50 bg-white/60 backdrop-blur-3xl rounded-[2rem] p-6">
+          <div className="relative">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <input
+              className="w-full pl-12 pr-4 py-3.5 rounded-2xl border border-slate-200 bg-white font-bold text-sm text-slate-800 placeholder-slate-400 outline-none focus:ring-2 focus:ring-indigo-500/20 shadow-inner"
+              placeholder="Search by name, email, or matric number..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
           </div>
         </Card>
-        <Card className="border-none shadow-sm bg-amber-50/50 rounded-2xl p-6">
-          <div className="flex items-center gap-4">
-            <div className="p-3 bg-amber-100 rounded-2xl text-amber-600">
-              <GraduationCap className="w-6 h-6" />
-            </div>
-            <div>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Applicant → Fresher</p>
-              <p className="text-2xl font-black text-slate-900">{stats.applicantToFresher}</p>
-            </div>
-          </div>
-        </Card>
-        <Card className="border-none shadow-sm bg-indigo-50/50 rounded-2xl p-6">
-          <div className="flex items-center gap-4">
-            <div className="p-3 bg-indigo-100 rounded-2xl text-indigo-600">
-              <BookOpen className="w-6 h-6" />
-            </div>
-            <div>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Fresher → Student</p>
-              <p className="text-2xl font-black text-slate-900">{stats.fresherToStudent}</p>
-            </div>
-          </div>
-        </Card>
-        <Card className="border-none shadow-sm bg-emerald-50/50 rounded-2xl p-6">
-          <div className="flex items-center gap-4">
-            <div className="p-3 bg-emerald-100 rounded-2xl text-emerald-600">
-              <UserCheck className="w-6 h-6" />
-            </div>
-            <div>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Manual Transitions</p>
-              <p className="text-2xl font-black text-slate-900">{stats.manual}</p>
-            </div>
-          </div>
-        </Card>
-      </div>
 
-      {/* Search */}
-      <Card className="border-none shadow-xl rounded-[2.5rem] p-6">
-        <div className="relative">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <input
-            className="w-full pl-12 pr-4 py-3 rounded-2xl border border-slate-200 bg-white font-bold text-sm"
-            placeholder="Search by name, email, or matric number..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </div>
-      </Card>
-
-      {/* Transitions Table */}
-      <Card className="border-none shadow-xl overflow-hidden rounded-[2.5rem]">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left">
-            <thead>
-              <tr className="bg-slate-900 text-white">
-                <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em]">User</th>
-                <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em]">Transition</th>
-                <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em]">Programme</th>
-                <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em]">Level/Matric</th>
-                <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em]">Date</th>
-                <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em]">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-50 bg-white">
-              {loading ? (
-                <tr>
-                  <td colSpan={6} className="px-8 py-20 text-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
-                  </td>
+        {/* Transitions Table */}
+        <Card className="border border-white/40 shadow-2xl shadow-slate-200/50 bg-white/60 backdrop-blur-3xl overflow-hidden rounded-[3rem]">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="bg-slate-900 text-white">
+                  <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em]">User</th>
+                  <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em]">Transition</th>
+                  <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em]">Programme</th>
+                  <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em]">Level/Matric</th>
+                  <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em]">Date</th>
+                  <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em]">Actions</th>
                 </tr>
-              ) : filteredTransitions.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="px-8 py-20 text-center text-slate-400">
-                    No transitions found
-                  </td>
-                </tr>
-              ) : (
-                filteredTransitions.map((transition) => (
-                  <tr key={transition.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="px-8 py-6">
-                      <div className="flex flex-col">
-                        <span className="text-sm font-black text-slate-900">{transition.userName}</span>
-                        <span className="text-xs text-slate-500">{transition.userEmail}</span>
-                      </div>
-                    </td>
-                    <td className="px-8 py-6">
-                      <div className="flex items-center gap-3">
-                        {getRoleBadge(transition.fromRole)}
-                        <ArrowRight className="w-4 h-4 text-slate-400" />
-                        {getRoleBadge(transition.toRole)}
-                      </div>
-                      <div className="flex items-center gap-2 mt-2">
-                        {getTransitionIcon(transition.transitionType)}
-                        {getTransitionBadge(transition.transitionType)}
-                      </div>
-                    </td>
-                    <td className="px-8 py-6">
-                      <span className="text-sm text-slate-600">
-                        {transition.programmeName || 'N/A'}
-                      </span>
-                    </td>
-                    <td className="px-8 py-6">
-                      <div className="flex flex-col">
-                        <span className="text-sm font-medium text-slate-900">Level {transition.level}</span>
-                        {transition.matricNumber && (
-                          <span className="text-xs text-slate-500">{transition.matricNumber}</span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-8 py-6">
-                      <div className="flex flex-col">
-                        <span className="text-sm text-slate-600">
-                          {new Date(transition.processedAt).toLocaleDateString()}
-                        </span>
-                        <span className="text-xs text-slate-500">
-                          {new Date(transition.processedAt).toLocaleTimeString()}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-8 py-6">
-                      <Button size="sm" variant="outline">
-                        <Eye className="w-4 h-4" />
-                      </Button>
+              </thead>
+              <tbody className="divide-y divide-white/40 bg-white/20">
+                {loading ? (
+                  <tr>
+                    <td colSpan={6} className="px-8 py-20 text-center">
+                      <Loader2 className="w-10 h-10 animate-spin mx-auto text-indigo-600" />
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </Card>
+                ) : filteredTransitions.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="px-8 py-20 text-center text-slate-400 font-bold uppercase tracking-wider text-xs">
+                      No transitions found
+                    </td>
+                  </tr>
+                ) : (
+                  filteredTransitions.map((transition) => (
+                    <tr key={transition.id} className="hover:bg-white/40 transition-colors group">
+                      <td className="px-8 py-6">
+                        <div className="flex flex-col">
+                          <span className="text-base font-black text-slate-800 uppercase">{transition.userName}</span>
+                          <span className="text-xs text-slate-500 font-bold mt-0.5">{transition.userEmail}</span>
+                        </div>
+                      </td>
+                      <td className="px-8 py-6">
+                        <div className="flex items-center gap-3">
+                          {getRoleBadge(transition.fromRole)}
+                          <ArrowRight className="w-4 h-4 text-slate-400" />
+                          {getRoleBadge(transition.toRole)}
+                        </div>
+                        <div className="flex items-center gap-2 mt-2">
+                          {getTransitionIcon(transition.transitionType)}
+                          {getTransitionBadge(transition.transitionType)}
+                        </div>
+                      </td>
+                      <td className="px-8 py-6">
+                        <span className="text-sm font-bold text-slate-600">
+                          {transition.programmeName || 'N/A'}
+                        </span>
+                      </td>
+                      <td className="px-8 py-6">
+                        <div className="flex flex-col">
+                          <span className="text-sm font-bold text-slate-700">Level {transition.level}</span>
+                          {transition.matricNumber && (
+                            <span className="text-xs text-slate-400 font-mono mt-0.5">{transition.matricNumber}</span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-8 py-6">
+                        <div className="flex flex-col text-sm font-bold text-slate-600 font-mono">
+                          <span>
+                            {new Date(transition.processedAt).toLocaleDateString()}
+                          </span>
+                          <span className="text-xs text-slate-400 font-normal">
+                            {new Date(transition.processedAt).toLocaleTimeString()}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-8 py-6">
+                        <Button size="sm" variant="ghost" className="hover:bg-white/60 rounded-xl">
+                          <Eye className="w-4 h-4 text-slate-600" />
+                        </Button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      </div>
 
       {/* Manual Transition Modal */}
       {showTransitionModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <Card className="w-full max-w-2xl border-none shadow-2xl rounded-2xl max-h-[90vh] overflow-y-auto">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-3">
-                <UserCheck className="w-5 h-5" />
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-2xl border border-white/40 shadow-2xl shadow-slate-200/50 bg-white/80 backdrop-blur-3xl rounded-[2.5rem] max-h-[90vh] overflow-y-auto">
+            <CardHeader className="p-8 pb-4">
+              <CardTitle className="flex items-center gap-3 text-slate-800 font-black uppercase text-lg tracking-wide">
+                <UserCheck className="w-6 h-6 text-indigo-600" />
                 Manual Role Transition
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="p-8 pt-0 space-y-6">
               {/* User Search */}
-              <div>
-                <Label className="text-sm font-bold text-slate-700">Search User by Email</Label>
-                <div className="flex gap-2 mt-2">
+              <div className="p-5 bg-white/40 border border-white/60 rounded-[2rem] space-y-3">
+                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 block">Search User by Email</Label>
+                <div className="flex gap-2">
                   <Input
                     value={transitionForm.userEmail}
                     onChange={(e) => setTransitionForm({ ...transitionForm, userEmail: e.target.value })}
                     placeholder="Enter user email..."
+                    className="bg-white border-slate-200 rounded-xl font-bold"
                   />
-                  <Button onClick={() => searchUser(transitionForm.userEmail)}>
+                  <Button onClick={() => searchUser(transitionForm.userEmail)} className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-sm px-4">
                     <Search className="w-4 h-4" />
                   </Button>
                 </div>
                 {transitionForm.userName && (
-                  <div className="mt-2 p-3 bg-slate-50 rounded-xl">
-                    <p className="text-sm font-bold text-slate-900">{transitionForm.userName}</p>
-                    <p className="text-xs text-slate-500">{transitionForm.userEmail}</p>
+                  <div className="p-4 bg-white border border-slate-200/55 rounded-xl">
+                    <p className="text-sm font-black text-slate-800 uppercase">{transitionForm.userName}</p>
+                    <p className="text-xs text-slate-400 font-bold mt-0.5">{transitionForm.userEmail}</p>
                   </div>
                 )}
               </div>
 
               {/* Transition Details */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <Label className="text-sm font-bold text-slate-700">Target Role</Label>
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 block mb-2">Target Role</Label>
                   <Select value={transitionForm.toRole} onValueChange={(value) => setTransitionForm({ ...transitionForm, toRole: value })}>
-                    <SelectTrigger className="mt-2">
+                    <SelectTrigger className="bg-white border-slate-200 rounded-xl font-bold">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -412,9 +419,9 @@ export default function RoleTransitionsPage() {
                 </div>
 
                 <div>
-                  <Label className="text-sm font-bold text-slate-700">Transition Type</Label>
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 block mb-2">Transition Type</Label>
                   <Select value={transitionForm.transitionType} onValueChange={(value) => setTransitionForm({ ...transitionForm, transitionType: value })}>
-                    <SelectTrigger className="mt-2">
+                    <SelectTrigger className="bg-white border-slate-200 rounded-xl font-bold">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -426,18 +433,18 @@ export default function RoleTransitionsPage() {
                 </div>
 
                 <div>
-                  <Label className="text-sm font-bold text-slate-700">Academic Session</Label>
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 block mb-2">Academic Session</Label>
                   <Input
                     value={transitionForm.academicSession}
                     onChange={(e) => setTransitionForm({ ...transitionForm, academicSession: e.target.value })}
-                    className="mt-2"
+                    className="bg-white border-slate-200 rounded-xl font-bold"
                   />
                 </div>
 
                 <div>
-                  <Label className="text-sm font-bold text-slate-700">Level</Label>
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 block mb-2">Level</Label>
                   <Select value={transitionForm.level} onValueChange={(value) => setTransitionForm({ ...transitionForm, level: value })}>
-                    <SelectTrigger className="mt-2">
+                    <SelectTrigger className="bg-white border-slate-200 rounded-xl font-bold">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -449,21 +456,21 @@ export default function RoleTransitionsPage() {
 
                 {transitionForm.toRole === 'student' && (
                   <div>
-                    <Label className="text-sm font-bold text-slate-700">Matric Number</Label>
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 block mb-2">Matric Number</Label>
                     <Input
                       value={transitionForm.matricNumber}
                       onChange={(e) => setTransitionForm({ ...transitionForm, matricNumber: e.target.value })}
                       placeholder="e.g., 2026/123456"
-                      className="mt-2"
+                      className="bg-white border-slate-200 rounded-xl font-bold"
                     />
                   </div>
                 )}
 
                 {transitionForm.toRole === 'student' && (
                   <div>
-                    <Label className="text-sm font-bold text-slate-700">Programme</Label>
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 block mb-2">Programme</Label>
                     <Select value={transitionForm.programmeId} onValueChange={(value) => setTransitionForm({ ...transitionForm, programmeId: value })}>
-                      <SelectTrigger className="mt-2">
+                      <SelectTrigger className="bg-white border-slate-200 rounded-xl font-bold">
                         <SelectValue placeholder="Select programme" />
                       </SelectTrigger>
                       <SelectContent>
@@ -479,12 +486,12 @@ export default function RoleTransitionsPage() {
               </div>
 
               <div>
-                <Label className="text-sm font-bold text-slate-700">Reason (Optional)</Label>
+                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 block mb-2">Reason (Optional)</Label>
                 <Input
                   value={transitionForm.reason}
                   onChange={(e) => setTransitionForm({ ...transitionForm, reason: e.target.value })}
                   placeholder="Reason for transition..."
-                  className="mt-2"
+                  className="bg-white border-slate-200 rounded-xl font-bold"
                 />
               </div>
 
@@ -495,14 +502,14 @@ export default function RoleTransitionsPage() {
                     setShowTransitionModal(false);
                     resetForm();
                   }}
-                  className="flex-1"
+                  className="flex-1 font-black uppercase text-xs tracking-widest py-3 border border-slate-200 rounded-xl"
                 >
                   Cancel
                 </Button>
                 <Button
                   onClick={handleManualTransition}
                   disabled={processing || !transitionForm.userId}
-                  className="flex-1 bg-indigo-600 hover:bg-indigo-700"
+                  className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-black uppercase text-xs tracking-widest py-3 rounded-xl shadow-md"
                 >
                   {processing ? (
                     <RefreshCw className="w-4 h-4 mr-2 animate-spin" />

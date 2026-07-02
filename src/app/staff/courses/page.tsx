@@ -38,10 +38,10 @@ export default async function StaffCoursesPage() {
                 {/* <Button>Create New Course</Button> (Courses are created by Admin in Academics) */}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {allCourses.map((course) => (
                     <Card key={course.id} className="hover:shadow-lg transition-shadow border-slate-200">
-                        <CardHeader className="pb-3">
+                        <CardHeader className="pb-3 bg-slate-50/50 border-b border-slate-100 p-6">
                             <div className="flex justify-between items-start">
                                 <div className="p-2 bg-blue-100 rounded-lg text-blue-600 mb-2 w-fit">
                                     <BookOpen className="w-5 h-5" />
@@ -53,7 +53,7 @@ export default async function StaffCoursesPage() {
                                 {course.description || "No description provided."}
                             </CardDescription>
                         </CardHeader>
-                        <CardContent>
+                        <CardContent className=" p-6">
                             <div className="flex items-center gap-4 text-sm text-slate-500 mb-6">
                                 <div className="flex items-center gap-1">
                                     <FileText className="w-4 h-4" />

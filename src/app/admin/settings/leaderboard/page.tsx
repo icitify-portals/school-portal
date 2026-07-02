@@ -60,18 +60,18 @@ export default function LeaderboardSettings() {
                 </Button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {/* Certificates Weight */}
-                <Card className="border-none shadow-sm rounded-[32px] overflow-hidden group hover:shadow-xl transition-all">
+                <Card className="-[32px] overflow-hidden group hover: transition-all border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                     <div className="h-2 bg-amber-400" />
-                    <CardHeader>
+                    <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-6">
                         <div className="w-12 h-12 bg-amber-50 rounded-2xl flex items-center justify-center mb-4 ring-1 ring-amber-100 group-hover:scale-110 transition-transform">
                             <Award className="w-6 h-6 text-amber-600" />
                         </div>
                         <CardTitle className="text-lg font-black uppercase italic tracking-tight">Course Certificates</CardTitle>
                         <CardDescription className="text-xs font-medium">Points awarded per verified course certification.</CardDescription>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className=" p-6">
                         <div className="space-y-4">
                             <div className="flex items-center gap-4">
                                 <Input
@@ -92,16 +92,16 @@ export default function LeaderboardSettings() {
                 </Card>
 
                 {/* Badges Weight */}
-                <Card className="border-none shadow-sm rounded-[32px] overflow-hidden group hover:shadow-xl transition-all">
+                <Card className="-[32px] overflow-hidden group hover: transition-all border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                     <div className="h-2 bg-indigo-500" />
-                    <CardHeader>
+                    <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-6">
                         <div className="w-12 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center mb-4 ring-1 ring-indigo-100 group-hover:scale-110 transition-transform">
                             <Trophy className="w-6 h-6 text-indigo-600" />
                         </div>
                         <CardTitle className="text-lg font-black uppercase italic tracking-tight">Skill Badges</CardTitle>
                         <CardDescription className="text-xs font-medium">Points awarded for each earned digital badge.</CardDescription>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className=" p-6">
                         <div className="space-y-4">
                             <div className="flex items-center gap-4">
                                 <Input
@@ -122,16 +122,16 @@ export default function LeaderboardSettings() {
                 </Card>
 
                 {/* GPA/Academic Weight */}
-                <Card className="border-none shadow-sm rounded-[32px] overflow-hidden group hover:shadow-xl transition-all">
+                <Card className="-[32px] overflow-hidden group hover: transition-all border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                     <div className="h-2 bg-emerald-500" />
-                    <CardHeader>
+                    <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-6">
                         <div className="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center mb-4 ring-1 ring-emerald-100 group-hover:scale-110 transition-transform">
                             <GraduationCap className="w-6 h-6 text-emerald-600" />
                         </div>
                         <CardTitle className="text-lg font-black uppercase italic tracking-tight">Academic CGPA</CardTitle>
                         <CardDescription className="text-xs font-medium">Weight applied to the student's cumulative GPA.</CardDescription>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className=" p-6">
                         <div className="space-y-4">
                             <div className="flex items-center gap-4">
                                 <Input

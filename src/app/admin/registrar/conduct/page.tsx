@@ -85,11 +85,11 @@ export default async function ConductPage() {
                 </Button>
             </div>
 
-            <Card>
-                <CardHeader>
+            <Card className=" border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
+                <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-6">
                     <CardTitle>Disciplinary Logs</CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className=" p-6">
                     {formattedLogs.length === 0 ? (
                         <div className="text-center py-10 text-slate-500">
                             <FileText className="mx-auto h-12 w-12 text-slate-300 mb-3" />

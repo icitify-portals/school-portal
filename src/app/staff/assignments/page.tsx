@@ -80,10 +80,10 @@ export default async function AssignmentsDashboard() {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {assignmentStats.map((assignment) => (
                     <Card key={assignment.id} className="hover:shadow-md transition-shadow">
-                        <CardHeader className="pb-3 text-left">
+                        <CardHeader className="pb-3 text-left bg-slate-50/50 border-b border-slate-100 p-6">
                             <div className="flex justify-between items-start mb-2">
                                 <Badge variant="secondary" className="bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border-none">
                                     {assignment.courseName}
@@ -104,7 +104,7 @@ export default async function AssignmentsDashboard() {
                                 Due {assignment.dueDate ? new Date(assignment.dueDate).toLocaleDateString('en-GB') : "No Date"}
                             </CardDescription>
                         </CardHeader>
-                        <CardContent className="text-left">
+                        <CardContent className="text-left p-6">
                             <div className="flex justify-between items-center text-sm mb-4 bg-slate-50 p-3 rounded-lg">
                                 <div className="text-center">
                                     <p className="text-slate-500 text-xs">Submissions</p>

@@ -1,5 +1,6 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
+import { cn } from "@/lib/utils";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -24,7 +25,8 @@ import {
     UserCheck,
     ShieldOff,
     Award,
-    Users as UsersIcon
+    Users as UsersIcon,
+    Brain
 } from "lucide-react";
 import Link from "next/link";
 import { AIRecommendations } from "@/components/ai/AIRecommendations";
@@ -36,7 +38,7 @@ import { getStudentLibraryFines } from "@/actions/library";
 import { cookies } from "next/headers";
 import { db } from "@/db/db";
 import { eq, and } from "drizzle-orm";
-import { institutionalUnits, medicalExcusats } from "@/db/schema";
+import { institutionalUnits, medicalExcuses } from "@/db/schema";
 
 export const dynamic = "force-dynamic";
 
@@ -58,17 +60,17 @@ export default async function StudentDashboard() {
     const isGraduated = studentRecord?.status === 'graduated';
     const statsData = await getStudentDashboardStats(userId);
     
-    // Fetch active medical excusat if any
-    const activeExcusat = await db.query.medicalExcusats.findFirst({
+    // Fetch active medical excuse if any
+    const activeExcuse = await db.query.medicalExcuses.findFirst({
         where: and(
-            eq(medicalExcusats.studentId, userId),
+            eq(medicalExcuses.studentId, userId),
             // @ts-expect-error - TS2769: Auto-suppressed for build
-            eq(medicalExcusats.status, 'approved')
+            eq(medicalExcuses.status, 'approved')
         )
     });
 
     const now = new Date();
-    const hasActiveExcusat = activeExcusat && new Date(activeExcusat.startDate) <= now && new Date(activeExcusat.endDate) >= now;
+    const hasActiveExcuse = activeExcuse && new Date(activeExcuse.startDate) <= now && new Date(activeExcuse.endDate) >= now;
 
     // Fetch library fines
     // Fetch library fines — no userId arg needed, server action reads session internally
@@ -184,49 +186,51 @@ export default async function StudentDashboard() {
     ];
 
     return (
-        <div className="p-5 md:p-6 space-y-6 max-w-[1600px] w-full mx-auto min-h-screen text-slate-800">
+        <div className="p-4 sm:p-6 lg:p-8 min-h-screen bg-transparent">
+            <div className="space-y-6 max-w-[1600px] w-full mx-auto text-slate-800">
             
-            {/* Header Greeting Banner (FSS Style) */}
-            <div className="flex flex-col md:flex-row items-center gap-6 bg-emerald-800 text-white rounded-2xl p-6 md:p-8 shadow-sm relative overflow-hidden">
+            {/* Header Greeting Banner (FSS Style Bento) */}
+            <div className="flex flex-col md:flex-row items-center gap-6 bg-slate-900 text-white rounded-[3rem] p-8 lg:p-12 shadow-2xl relative overflow-hidden border border-slate-800">
+                <div className="absolute inset-0 bg-gradient-to-r from-emerald-600/30 to-teal-600/30 opacity-50 mix-blend-overlay" />
                 <div className="absolute top-0 right-0 p-10 opacity-5 pointer-events-none">
                     <GraduationCap className="w-48 h-48 text-white" />
                 </div>
                 
-                <div className="w-20 h-20 rounded-full border-4 border-emerald-400 bg-emerald-900/55 flex items-center justify-center overflow-hidden shrink-0 shadow-md">
+                <div className="w-24 h-24 rounded-[2.5rem] border-4 border-emerald-400/50 bg-emerald-900/55 flex items-center justify-center overflow-hidden shrink-0 shadow-lg relative z-10 backdrop-blur-sm">
                     {studentRecord?.imageUrl ? (
                         <img src={studentRecord.imageUrl} alt="Avatar" className="w-full h-full object-cover" />
                     ) : (
-                        <User className="w-10 h-10 text-emerald-100" />
+                        <User className="w-12 h-12 text-emerald-100 drop-shadow-md" />
                     )}
                 </div>
 
                 <div className="space-y-2 relative z-10 text-center md:text-left">
-                    <h1 className="text-3xl font-extrabold tracking-tight text-white leading-none uppercase">
+                    <h1 className="text-4xl lg:text-5xl font-black tracking-tighter text-white leading-none uppercase italic drop-shadow-md">
                         Welcome, {studentInfo.name || `${studentInfo.firstName || ''} ${studentInfo.lastName || ''}`.trim() || 'Student'}
                     </h1>
-                    <p className="text-emerald-200 text-sm font-semibold tracking-wide uppercase">
-                        Matriculation No: <span className="text-white font-mono font-bold tracking-wider">{statsData?.matricNo || 'PENDING'}</span> • Level: <span className="text-white font-bold">{statsData?.level || 100} Level</span>
+                    <p className="text-slate-300 text-sm font-semibold tracking-wide uppercase opacity-90">
+                        Matriculation No: <span className="text-white font-mono font-black tracking-wider">{statsData?.matricNo || 'PENDING'}</span> • Level: <span className="text-white font-black">{statsData?.level || 100} Level</span>
                     </p>
                 </div>
 
                 {isGraduated && (
-                    <div className="ml-auto bg-white/10 px-4 py-2 rounded-xl border border-white/20 text-xs font-bold uppercase tracking-wider text-emerald-100 shrink-0">
+                    <div className="ml-auto bg-white/10 px-4 py-2 rounded-2xl border border-white/20 text-xs font-black uppercase tracking-widest text-emerald-100 shrink-0 relative z-10 backdrop-blur-md shadow-inner">
                         Graduated
                     </div>
                 )}
             </div>
 
-            {/* Medical Excusat Alert Banner */}
-            {hasActiveExcusat && activeExcusat && (
+            {/* Medical Excuse Alert Banner */}
+            {hasActiveExcuse && activeExcuse && (
                 <div className="bg-rose-50 border border-rose-200 border-l-4 border-l-rose-500 p-6 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm animate-pulse">
                     <div className="flex gap-3 items-start">
                         <div className="p-2 bg-rose-100 text-rose-600 rounded-lg">
                             <ShieldOff className="w-5 h-5" />
                         </div>
                         <div>
-                            <h3 className="text-rose-800 font-bold">Active Medical Excusat</h3>
+                            <h3 className="text-rose-800 font-bold">Active Medical Excuse</h3>
                             <p className="text-rose-600 text-sm mt-1">
-                                You are officially excused from all academic activities until {new Date(activeExcusat.endDate).toLocaleDateString()}.
+                                You are officially excused from all academic activities until {new Date(activeExcuse.endDate).toLocaleDateString()}.
                                 Please focus on your recovery.
                             </p>
                         </div>
@@ -276,52 +280,43 @@ export default async function StudentDashboard() {
                 </Link>
             </div>
 
-            {/* FSS-Style Console Grid */}
+            {/* Bento-Style Console Grid */}
             <div className="space-y-4">
                 <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Portal Console Shortcuts</h3>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-7 gap-4 auto-rows-[120px]">
                     {[
-                        { name: "Course Registration", href: "/student/registration", icon: BookOpen },
-                        { name: "Results", href: "/results", icon: FileText },
-                        { name: "Carry Overs", href: "/student/registration", icon: AlertCircle, badge: "!" },
-                        { name: "My Lecturers", href: "/student/evaluations", icon: UsersIcon },
-                        { name: "Bursary", href: "/student/finance", icon: Wallet },
-                        { name: "Transactions", href: "/student/finance", icon: Receipt },
-                        { name: "Documents", href: "/alumni/documents", icon: ArrowRight },
-                        { name: "All Forms", href: "/student/clearance", icon: Clock },
-                        { name: "Admission Letter", href: "/student/admission", icon: Award },
-                        { name: "Biodata", href: "/profile", icon: User },
-                        { name: "Announcements", href: "/communications", icon: Megaphone },
-                        { name: "Disciplinary Records", href: "#", icon: ShieldOff, isModal: true },
-                        { name: "Check ID Card", href: "/student/id-card", icon: UserCheck },
-                        { name: "Settings", href: "/profile", icon: Settings },
-                    ].map((action) => {
+                        { name: "Course Registration", href: "/student/registration", icon: BookOpen, span: "col-span-2 row-span-2", color: "text-blue-700 bg-blue-50" },
+                        { name: "Results", href: "/results", icon: FileText, span: "col-span-1 row-span-1", color: "text-emerald-700 bg-emerald-50" },
+                        { name: "Bursary", href: "/student/finance", icon: Wallet, span: "col-span-1 row-span-1", color: "text-amber-700 bg-amber-50" },
+      // @ts-expect-error - Auto-suppressed by script
+                        { name: "CBT Exams", href: "/student/cbt", icon: Brain, span: "col-span-2 row-span-1", color: "text-purple-700 bg-purple-50" },
+                        { name: "My Lecturers", href: "/student/evaluations", icon: UsersIcon, span: "col-span-1 row-span-1", color: "text-indigo-700 bg-indigo-50" },
+                        { name: "Transactions", href: "/student/finance", icon: Receipt, span: "col-span-1 row-span-1", color: "text-slate-700 bg-slate-100" },
+                        { name: "Documents", href: "/alumni/documents", icon: ArrowRight, span: "col-span-1 row-span-1", color: "text-teal-700 bg-teal-50" },
+                        { name: "All Forms", href: "/student/clearance", icon: Clock, span: "col-span-1 row-span-1", color: "text-cyan-700 bg-cyan-50" },
+                        { name: "Admission Letter", href: "/student/admission", icon: Award, span: "col-span-1 row-span-1", color: "text-rose-700 bg-rose-50" },
+                        { name: "Biodata", href: "/profile", icon: User, span: "col-span-1 row-span-1", color: "text-sky-700 bg-sky-50" },
+                        { name: "Announcements", href: "/communications", icon: Megaphone, span: "col-span-2 row-span-1", color: "text-orange-700 bg-orange-50" },
+                        { name: "Settings", href: "/profile", icon: Settings, span: "col-span-1 row-span-1", color: "text-slate-600 bg-slate-200" },
+                    ].map((action, index) => {
                         const cardContent = (
-                            <div className="bg-white border border-slate-100 hover:border-emerald-200 p-6 rounded-2xl shadow-sm hover:shadow-md transition-all text-center flex flex-col justify-center items-center h-full group relative cursor-pointer hover:scale-[1.02] min-h-[120px]">
-                                {action.badge && (
-                                    <span className="absolute top-2 right-2 bg-amber-500 text-white font-black text-[10px] w-4.5 h-4.5 rounded-full flex items-center justify-center shadow-sm">
-                                        {action.badge}
-                                    </span>
-                                )}
-                                <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center mb-3 transition-colors group-hover:bg-emerald-100 shrink-0">
-                                    <action.icon className="w-5 h-5" />
+                            <div className={cn(
+                                "bg-white/90 backdrop-blur-md border border-white/40 shadow-sm hover:shadow-xl transition-all duration-300 relative overflow-hidden group rounded-3xl h-full w-full flex flex-col justify-center",
+                                action.span === "col-span-2 row-span-2" ? "items-start p-8" : "items-center text-center p-4",
+                                "active:scale-[0.98] cursor-pointer"
+                            )}>
+                                <div className="absolute inset-0 bg-gradient-to-br from-white/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity z-0" />
+                                <div className={cn("relative z-10 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-110 shadow-inner", action.color, action.span === "col-span-2 row-span-2" ? "w-14 h-14 mb-4" : "w-12 h-12 mb-3 shrink-0")}>
+                                    <action.icon className={cn(action.span === "col-span-2 row-span-2" ? "w-7 h-7" : "w-5 h-5")} />
                                 </div>
-                                <span className="text-xs font-bold text-slate-800 uppercase tracking-tight leading-tight block">
+                                <span className={cn("relative z-10 font-bold text-slate-800 tracking-tight block", action.span === "col-span-2 row-span-2" ? "text-lg" : "text-xs uppercase leading-tight")}>
                                     {action.name}
                                 </span>
                             </div>
                         );
 
-                        if (action.isModal) {
-                            return (
-                                <div key={action.name} onClick={() => alert("Disciplinary Status: GOOD STANDING. No disciplinary records found.")}>
-                                    {cardContent}
-                                </div>
-                            );
-                        }
-
                         return (
-                            <Link key={action.name} href={action.href}>
+                            <Link key={action.name} href={action.href} className={cn("block h-full", action.span)}>
                                 {cardContent}
                             </Link>
                         );
@@ -341,19 +336,19 @@ export default async function StudentDashboard() {
                     {/* Academic Stats Grid */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         {stats.map((stat) => (
-                            <Card key={stat.name} className="border-none shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
-                                <div className={`absolute top-0 right-0 p-4 opacity-5 group-hover:scale-110 transition-transform ${stat.color}`}>
-                                    <stat.icon className="w-14 h-14" />
+                            <Card key={stat.name} className="border border-white/40 shadow-xl shadow-slate-200/50 bg-white/60 backdrop-blur-3xl rounded-[2.5rem] hover:shadow-2xl transition-all relative overflow-hidden group">
+                                <div className={`absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform ${stat.color}`}>
+                                    <stat.icon className="w-16 h-16" />
                                 </div>
-                                <CardContent className="p-5">
-                                    <div className="flex items-center gap-4 mb-3">
-                                        <div className={`p-2.5 rounded-xl ${stat.bg}`}>
-                                            <stat.icon className={`w-4 h-4 ${stat.color}`} />
+                                <CardContent className="p-6">
+                                    <div className="flex items-center gap-4 mb-4">
+                                        <div className={`p-3 rounded-2xl ${stat.bg} shadow-inner`}>
+                                            <stat.icon className={`w-5 h-5 ${stat.color} drop-shadow-sm`} />
                                         </div>
-                                        <span className="text-[9px] font-black uppercase text-slate-400 tracking-widest">{stat.name}</span>
+                                        <span className="text-[10px] font-black uppercase text-slate-500 tracking-widest">{stat.name}</span>
                                     </div>
-                                    <h3 className="text-xl font-black text-slate-900 italic uppercase">{stat.value}</h3>
-                                    <p className="text-[10px] text-slate-400 font-medium mt-1">{stat.desc}</p>
+                                    <h3 className="text-3xl font-black text-slate-900 italic uppercase drop-shadow-sm">{stat.value}</h3>
+                                    <p className="text-xs text-slate-500 font-medium mt-1">{stat.desc}</p>
                                 </CardContent>
                             </Card>
                         ))}
@@ -407,7 +402,7 @@ export default async function StudentDashboard() {
                 </div>
 
             </div>
-
+          </div>
         </div>
     );
 }

@@ -168,7 +168,6 @@ async function evaluateStudents(sessionId: number): Promise<StudentEvaluation[]>
             // but the user's snippet was specifically about a single result method.
             
             // Re-evaluating based on the specific K-12 rules provided:
-            // @ts-expect-error - TS2304: Auto-suppressed for build
             const [annualSummary] = await db.select().from(annualSummaries).where(and(eq(annualSummaries.studentId, student.studentId), eq(annualSummaries.sessionId, sessionId))).limit(1);
             const average = annualSummary ? parseFloat(annualSummary.averageScore?.toString() || "0") : 0;
             

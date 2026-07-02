@@ -51,7 +51,7 @@ export default function ReviewerWorkspace() {
                          <p className="text-slate-500 italic font-medium leading-relaxed">{article.abstract}</p>
                     </div>
 
-                    <Card className="border-none shadow-2xl shadow-indigo-100 bg-white rounded-[40px] overflow-hidden">
+                    <Card className="-100 -[40px] overflow-hidden border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                         <CardHeader className="bg-slate-900 text-white p-8">
                             <CardTitle className="text-xl font-black flex items-center">
                                 <FileText className="mr-3 h-5 w-5 text-indigo-400" /> Manuscript Files
@@ -80,7 +80,7 @@ export default function ReviewerWorkspace() {
 
                 {/* Right Side: Review Form */}
                 <div className="w-full md:w-[450px] sticky top-10">
-                    <Card className="border-none shadow-2xl shadow-slate-200 bg-slate-50 rounded-[40px] p-8 space-y-8">
+                    <Card className="-200 -[40px] p-8 space-y-8 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                         <div className="space-y-2">
                              <h2 className="text-2xl font-black text-slate-900">Your Evaluation</h2>
                              <p className="text-sm font-bold text-slate-400 italic">Please provide your scholarly feedback below.</p>

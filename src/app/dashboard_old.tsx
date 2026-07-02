@@ -52,7 +52,7 @@ export default async function DashboardPage() {
   return (
     <div className="p-8">
       {activeClasses.length > 0 && (
-        <Card className="mb-8 border-none shadow-xl bg-gradient-to-r from-red-600 to-rose-600 text-white overflow-hidden relative animate-in slide-in-from-top-4">
+        <Card className="mb-8 -to-r from-red-600 to-rose-600 text-white overflow-hidden relative animate-in slide-in-from-top-4 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
           <div className="absolute top-0 right-0 p-4 opacity-20">
             <Video className="w-24 h-24" />
           </div>
@@ -123,7 +123,7 @@ export default async function DashboardPage() {
       </div>
 
       {(studentStats?.isFinalYear || studentStats?.status === 'graduated') && (
-        <Card className="mb-10 border-none shadow-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white overflow-hidden relative group">
+        <Card className="mb-10 -to-r from-emerald-600 to-teal-600 text-white overflow-hidden relative group border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
           <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform">
             <GraduationCap className="w-32 h-32" />
           </div>
@@ -146,7 +146,7 @@ export default async function DashboardPage() {
         </Card>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
         {[
           { name: "CGPA", value: (studentStats as any)?.cgpa || "0.00", icon: GraduationCap, bg: "bg-indigo-50", color: "text-indigo-600" },
           { name: "Total Credits", value: (studentStats as any)?.totalCredits || 0, icon: BookOpen, bg: "bg-blue-50", color: "text-blue-600" },
@@ -154,7 +154,7 @@ export default async function DashboardPage() {
           { name: "Attendance", value: `${(studentStats as any)?.attendance || 0}%`, icon: Clock, bg: "bg-amber-50", color: "text-amber-600" },
         ].map((stat) => (
           <Card key={stat.name} className="border-none shadow-sm hover:shadow-md transition-shadow">
-            <CardContent className="pt-6">
+            <CardContent className="pt-6 p-6">
               <div className="flex items-center gap-4">
                 <div className={cn("p-3 rounded-xl", stat.bg)}>
                   <stat.icon className={cn("w-6 h-6", stat.color)} />
@@ -170,7 +170,7 @@ export default async function DashboardPage() {
       </div>
 
       {activeSession?.isAddDropOpen && (
-        <Card className="mb-10 border-none shadow-xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white overflow-hidden relative group">
+        <Card className="mb-10 -to-r from-indigo-600 to-violet-600 text-white overflow-hidden relative group border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
           <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform">
             <BookOpen className="w-32 h-32" />
           </div>
@@ -192,8 +192,8 @@ export default async function DashboardPage() {
         </Card>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-        <Card className="hover:shadow-lg transition-shadow border-slate-100 group">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
+        <Card className="hover: transition- -100 group border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
           <Link href="/student/timetable">
             <CardContent className="p-6">
               <div className="flex items-center gap-4">
@@ -209,7 +209,7 @@ export default async function DashboardPage() {
           </Link>
         </Card>
 
-        <Card className="hover:shadow-lg transition-shadow border-slate-100 group">
+        <Card className="hover: transition- -100 group border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
           <Link href="/student/finance">
             <CardContent className="p-6">
               <div className="flex items-center gap-4">
@@ -225,7 +225,7 @@ export default async function DashboardPage() {
           </Link>
         </Card>
 
-        <Card className="hover:shadow-lg transition-shadow border-slate-100 group">
+        <Card className="hover: transition- -100 group border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
           <Link href="/results">
             <CardContent className="p-6">
               <div className="flex items-center gap-4">
@@ -241,7 +241,7 @@ export default async function DashboardPage() {
           </Link>
         </Card>
 
-        <Card className="hover:shadow-lg transition-shadow border-slate-100 group">
+        <Card className="hover: transition- -100 group border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
           <Link href="/student/cbt">
             <CardContent className="p-6">
               <div className="flex items-center gap-4">
@@ -258,8 +258,8 @@ export default async function DashboardPage() {
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <Card className="lg:col-span-2 shadow-sm border-none bg-white rounded-2xl overflow-hidden">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <Card className="lg:col-span-2 overflow-hidden border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
           <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-6 flex flex-row items-center justify-between">
             <div>
               <CardTitle className="text-[10px] font-black uppercase tracking-widest text-indigo-600 mb-1">Learning Momentum</CardTitle>
@@ -302,7 +302,7 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="shadow-sm border-none bg-white rounded-2xl overflow-hidden">
+        <Card className="overflow-hidden border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
           <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-6">
             <CardTitle className="text-[10px] font-black uppercase tracking-widest text-indigo-600 mb-1">Upcoming</CardTitle>
             <CardDescription className="text-xl font-black text-slate-900 uppercase italic">Schedule Summary</CardDescription>
@@ -329,7 +329,7 @@ export default async function DashboardPage() {
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-1 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-1 gap-4">
       </div>
     </div>
   );

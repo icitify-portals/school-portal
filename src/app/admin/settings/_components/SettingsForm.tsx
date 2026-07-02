@@ -58,12 +58,12 @@ export default function SettingsForm({ initialSettings }: SettingsFormProps) {
 
     return (
         <div className="space-y-6">
-            <Card>
-                <CardHeader>
+            <Card className=" border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
+                <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-6">
                     <CardTitle>Feature Modules</CardTitle>
                     <CardDescription>Enable or disable specific features of the portal. Disabling a module will hide it from the navigation.</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-6">
+                <CardContent className="space-y-6 p-6">
                     {modules.map((setting) => (
                         <div key={setting.key} className="flex items-center justify-between space-x-2">
                             <div className="flex flex-col space-y-1">
@@ -88,12 +88,12 @@ export default function SettingsForm({ initialSettings }: SettingsFormProps) {
                 </CardContent>
             </Card>
 
-            <Card>
-                <CardHeader>
+            <Card className=" border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
+                <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-6">
                     <CardTitle>System Configuration</CardTitle>
                     <CardDescription>Global system settings and preferences.</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-6">
+                <CardContent className="space-y-6 p-6">
                     {system.map((setting) => (
                         <div key={setting.key} className="flex items-center justify-between space-x-2">
                             <div className="flex flex-col space-y-1">
@@ -123,12 +123,12 @@ export default function SettingsForm({ initialSettings }: SettingsFormProps) {
                 </CardContent>
             </Card>
 
-            <Card>
-                <CardHeader>
+            <Card className=" border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
+                <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-6">
                     <CardTitle>LiveKit Integrations</CardTitle>
                     <CardDescription>Configure your connection to the LiveKit signaling server for the live classroom features.</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-6">
+                <CardContent className="space-y-6 p-6">
                     {livekit.map((setting) => (
                         <div key={setting.key} className="flex items-center space-x-4">
                             <Label htmlFor={setting.key} className="w-1/4 capitalize font-medium">

@@ -33,6 +33,7 @@ import { getAcademicSessions } from "@/actions/portal";
 import { getDepartments } from "@/actions/departments";
 import { getProgrammes } from "@/actions/programmes";
 import { cn } from "@/lib/utils";
+import Link from "next/link";
 
 export default function BursaryBillsPage() {
     const [studentsList, setStudentsList] = useState<any[]>([]);
@@ -61,6 +62,8 @@ export default function BursaryBillsPage() {
     const [billsLoading, setBillsLoading] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
     const [updatingBillId, setUpdatingBillId] = useState<number | null>(null);
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 20;
 
     const fetchBills = async (search?: string) => {
         setBillsLoading(true);
@@ -80,6 +83,7 @@ export default function BursaryBillsPage() {
     useEffect(() => {
         const delayDebounceFn = setTimeout(() => {
             fetchBills(searchQuery);
+            setCurrentPage(1);
         }, 500);
 
         return () => clearTimeout(delayDebounceFn);
@@ -181,6 +185,9 @@ export default function BursaryBillsPage() {
             setSubmitting(false);
         }
     };
+
+    const totalPages = Math.ceil(billsList.length / itemsPerPage);
+    const paginatedBills = billsList.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
     if (loading) return (
         <div className="flex h-[400px] items-center justify-center">
@@ -427,10 +434,11 @@ export default function BursaryBillsPage() {
                                             <th className="px-8 py-5">Amount Paid</th>
                                             <th className="px-8 py-5">Installment Override</th>
                                             <th className="px-8 py-5">Status</th>
+                                            <th className="px-8 py-5 text-right">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-100">
-                                        {billsList.map((bill) => {
+                                        {paginatedBills.map((bill) => {
                                             const outstanding = parseFloat(bill.totalAmount) - parseFloat(bill.amountPaid || "0.00");
                                             const isUpdating = updatingBillId === bill.id;
 
@@ -447,14 +455,11 @@ export default function BursaryBillsPage() {
                                                         {bill.session?.name}
                                                     </td>
                                                     <td className="px-8 py-5 text-sm font-black text-slate-900">
-                                                        // @ts-expect-error - TS2304: Auto-suppressed for build
-                                                        {settings?.base_currency || '₦'}{parseFloat(bill.totalAmount).toLocaleString()}
+                                                        ₦{parseFloat(bill.totalAmount).toLocaleString()}
                                                     </td>
                                                     <td className="px-8 py-5">
-                                                        // @ts-expect-error - TS2304: Auto-suppressed for build
-                                                        <p className="text-xs font-bold text-emerald-600">{settings?.base_currency || '₦'}{parseFloat(bill.amountPaid || "0.00").toLocaleString()}</p>
-                                                        // @ts-expect-error - TS2304: Auto-suppressed for build
-                                                        <p className="text-[10px] text-slate-400">Owed: {settings?.base_currency || '₦'}{outstanding.toLocaleString()}</p>
+                                                        <p className="text-xs font-bold text-emerald-600">₦{parseFloat(bill.amountPaid || "0.00").toLocaleString()}</p>
+                                                        <p className="text-[10px] text-slate-400">Owed: ₦{outstanding.toLocaleString()}</p>
                                                     </td>
                                                     <td className="px-8 py-5">
                                                         <div className="flex items-center gap-6">
@@ -467,10 +472,10 @@ export default function BursaryBillsPage() {
                                                                         onChange={() => handleToggleInstallment(bill.id, bill.partPaymentAllowed !== false, bill.partPaymentMinPercent ?? 60)}
                                                                         className="sr-only peer"
                                                                     />
-                                                                    <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600"></div>
+                                                                    <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600 opacity-80 peer-disabled:opacity-50"></div>
                                                                 </label>
-                                                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                                                                    {bill.partPaymentAllowed !== false ? "Allowed" : "Disabled"}
+                                                                <span className="text-[10px] font-bold text-slate-500 uppercase w-12">
+                                                                    {bill.partPaymentAllowed === false ? "No" : "Yes"}
                                                                 </span>
                                                             </div>
                                                             <div className="flex items-center gap-1.5">
@@ -500,6 +505,11 @@ export default function BursaryBillsPage() {
                                                             {bill.status === 'partially_paid' ? 'Part-Paid' : bill.status}
                                                         </span>
                                                     </td>
+                                                    <td className="px-8 py-5 text-right">
+                                                        <Button variant="ghost" size="sm" asChild className="text-indigo-600 hover:bg-indigo-50 hover:text-indigo-700">
+                                                            <Link href={`/admin/bursary/ledger/${bill.student?.id}`}>View Ledger</Link>
+                                                        </Button>
+                                                    </td>
                                                 </tr>
                                             );
                                         })}
@@ -508,6 +518,33 @@ export default function BursaryBillsPage() {
                             </div>
                         )}
                     </div>
+                    {!billsLoading && billsList.length > 0 && totalPages > 1 && (
+                        <div className="flex items-center justify-between border-t border-slate-100 bg-slate-50/50 px-8 py-4">
+                            <span className="text-xs font-medium text-slate-500">
+                                Showing <span className="font-bold text-slate-900">{((currentPage - 1) * itemsPerPage) + 1}</span> to <span className="font-bold text-slate-900">{Math.min(currentPage * itemsPerPage, billsList.length)}</span> of <span className="font-bold text-slate-900">{billsList.length}</span> bills
+                            </span>
+                            <div className="flex items-center gap-2">
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-8 border-slate-200 text-xs"
+                                    disabled={currentPage === 1}
+                                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                >
+                                    Previous
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-8 border-slate-200 text-xs"
+                                    disabled={currentPage === totalPages}
+                                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                >
+                                    Next
+                                </Button>
+                            </div>
+                        </div>
+                    )}
                 </Card>
             </div>
         </div>

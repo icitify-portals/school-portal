@@ -42,11 +42,11 @@ export default async function AlumniPage() {
                 </p>
             </div>
 
-            <Card>
-                <CardHeader>
+            <Card className=" border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
+                <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-6">
                     <CardTitle>Cleared Students & Alumni</CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className=" p-6">
                     <AlumniTransitionTable students={studentData} />
                 </CardContent>
             </Card>

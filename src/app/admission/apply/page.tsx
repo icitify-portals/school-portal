@@ -82,7 +82,7 @@ export default function AdmissionApplicationPortal() {
           <p className="text-slate-500 font-medium text-xl">Select your preferred academic pathway to begin your journey</p>
        </div>
 
-       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl w-full">
+       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-w-6xl w-full">
           {templates.map((template) => (
              <div 
                key={template.id} 
@@ -167,7 +167,7 @@ export default function AdmissionApplicationPortal() {
                 <p className="text-slate-500 font-medium italic">{currentSection?.description || "Please provide accurate information as requested below."}</p>
              </div>
 
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {currentSection?.fields?.map((field: any) => (
                    <div key={field.id} className="space-y-2">
                       <label className="text-sm font-bold text-slate-700 flex items-center gap-1">

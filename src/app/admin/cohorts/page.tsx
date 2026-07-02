@@ -76,11 +76,11 @@ export default function CohortManagementPage() {
             </div>
 
             {showCreate && (
-                <Card className="border-none shadow-sm animate-in fade-in slide-in-from-top-4 duration-300">
-                    <CardHeader>
+                <Card className="animate-in fade-in slide-in-from-top-4 duration-300 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
+                    <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-6">
                         <CardTitle className="text-sm font-black uppercase tracking-widest">Create New Cohort</CardTitle>
                     </CardHeader>
-                    <CardContent className="space-y-4">
+                    <CardContent className="space-y-4 p-6">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <Input
                                 placeholder="Cohort Name (e.g., Class of 2026)"
@@ -103,7 +103,7 @@ export default function CohortManagementPage() {
                 </Card>
             )}
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                 {/* Cohort List */}
                 <div className="lg:col-span-1 space-y-4">
                     <h3 className="text-xs font-black uppercase tracking-widest text-slate-400 mb-2">Active Cohorts</h3>
@@ -139,7 +139,7 @@ export default function CohortManagementPage() {
                 {/* Member Management */}
                 <div className="lg:col-span-2">
                     {selectedCohort ? (
-                        <Card className="border-none shadow-sm min-h-[500px]">
+                        <Card className="min-h-[500px] border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                             <CardHeader className="border-b border-slate-50 flex flex-row items-center justify-between">
                                 <div>
                                     <CardTitle className="text-xl font-black text-slate-800">{selectedCohort.name}</CardTitle>

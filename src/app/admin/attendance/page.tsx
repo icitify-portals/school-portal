@@ -104,7 +104,7 @@ export default function AttendancePage() {
     };
 
     return (
-        <div className="p-8 space-y-12 max-w-[1600px] w-full mx-auto">
+        <div className="p-8 space-y-12 max-w-[1600px] w-full mx-auto animate-in fade-in slide-in-from-bottom-4 duration-700">
             <div className="flex flex-col md:flex-row justify-between items-center gap-6">
                 <div className="space-y-2 text-center md:text-left">
                     <h1 className="text-4xl font-black text-slate-900 tracking-tight uppercase italic flex items-center justify-center md:justify-start gap-3">
@@ -146,8 +146,8 @@ export default function AttendancePage() {
                         </Button>
                     </div>
 
-                    <Card className="border-none shadow-2xl overflow-hidden rounded-[3rem] bg-white relative">
-                        <CardHeader className="text-center p-8 bg-slate-50/50 border-b border-slate-100">
+                    <Card className="backdrop-blur-xl bg-white/70 dark:bg-slate-900/70 border border-white/20 shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden rounded-3xl relative">
+                        <CardHeader className="text-center p-8 border-b border-slate-100/50">
                             <div className="flex items-center justify-center gap-2 mb-2">
                                 <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
                                 <span className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-600">Active Monitoring</span>

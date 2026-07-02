@@ -11,10 +11,10 @@ export default async function VerifyPage({ params }: { params: Promise<{ code: s
 
     return (
         <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
-            <Card className="max-w-2xl w-full bg-white shadow-2xl shadow-indigo-100 border-none rounded-[32px] overflow-hidden">
+            <Card className="max-w-2xl w-full -100 -[32px] overflow-hidden border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                 <div className="h-4 bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-600" />
 
-                <CardHeader className="text-center pt-10 pb-6">
+                <CardHeader className="text-center pt-10 pb-6 bg-slate-50/50 border-b border-slate-100 p-6">
                     <div className="mx-auto w-20 h-20 rounded-2xl bg-indigo-50 flex items-center justify-center mb-6 ring-1 ring-indigo-100 shadow-inner">
                         <ShieldCheck className={`w-10 h-10 ${res.success ? 'text-indigo-600' : 'text-slate-300'}`} />
                     </div>
@@ -26,7 +26,7 @@ export default async function VerifyPage({ params }: { params: Promise<{ code: s
                     </CardDescription>
                 </CardHeader>
 
-                <CardContent className="px-10 pb-12 space-y-8">
+                <CardContent className="px-10 pb-12 space-y-8 p-6">
                     {res.success ? (
                         <div className="space-y-8">
                             <div className="bg-emerald-50 border border-emerald-100 p-6 rounded-2xl flex items-center gap-4">
@@ -37,7 +37,7 @@ export default async function VerifyPage({ params }: { params: Promise<{ code: s
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
                                 <div className="space-y-1">
                                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Recipient Name</p>
                                     <p className="text-xl font-black text-slate-900 uppercase tracking-tight">{(res as any).certificate.studentName}</p>

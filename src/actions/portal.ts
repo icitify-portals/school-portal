@@ -1,7 +1,7 @@
 "use server";
 
 import { db } from "@/db/db";
-import { academicSessions } from "@/db/schema";
+import { academicSessions, students } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
@@ -64,6 +64,15 @@ export async function setCurrentSession(id: number) {
         await db.update(academicSessions)
             .set({ isCurrent: true, status: 'active' })
             .where(eq(academicSessions.id, id));
+
+        // --- PHASE 4: FINANCIAL ENFORCEMENT ---
+        const [newSession] = await db.select().from(academicSessions).where(eq(academicSessions.id, id));
+        if (newSession && newSession.name === "2026/2027") {
+            await db.update(students).set({ 
+                isFinanciallyLocked: true
+            });
+            console.log("CRITICAL: 2026/2027 Session Transition. Student financial locks reactivated.");
+        }
 
         revalidatePath("/admin/settings/portal");
         revalidatePath("/");

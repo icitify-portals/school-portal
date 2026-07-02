@@ -26,7 +26,7 @@ export function WaitlistTable({ initialData }: { initialData: any[] }) {
     };
 
     return (
-        <Card>
+        <Card className=" border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
             <CardContent className="p-0">
                 <table className="w-full text-sm text-left">
                     <thead className="bg-slate-50 text-slate-600 uppercase font-medium border-b">

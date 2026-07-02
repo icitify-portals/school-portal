@@ -149,8 +149,7 @@ export default function StudentWalletPortal() {
                     <div className="text-[10px] font-black text-indigo-200 uppercase tracking-widest flex items-center gap-1.5">
                       <Sparkles className="w-3.5 h-3.5" /> Available Wallet Balance
                     </div>
-                    // @ts-expect-error - TS2304: Auto-suppressed for build
-                    <div className="text-5xl font-black tracking-tight">{settings?.base_currency || '₦'}{availableBalance}</div>
+                    <div className="text-5xl font-black tracking-tight">₦{availableBalance}</div>
                  </div>
                  <div className="p-3.5 bg-white/10 rounded-2xl backdrop-blur-md">
                     <TrendingUp size={24} />
@@ -238,8 +237,7 @@ export default function StudentWalletPortal() {
                                 </div>
                              </div>
                              <div className={`text-lg font-black ${tx.type === 'credit' ? 'text-emerald-600' : 'text-slate-900'}`}>
-                                // @ts-expect-error - TS2304: Auto-suppressed for build
-                                {tx.type === 'credit' ? '+' : '-'}{settings?.base_currency || '₦'}{parseFloat(tx.amount).toLocaleString()}
+                                {tx.type === 'credit' ? '+' : '-'}₦{parseFloat(tx.amount).toLocaleString()}
                              </div>
                           </div>
                        ))}
@@ -305,8 +303,7 @@ export default function StudentWalletPortal() {
                           onClick={() => setCustomAmount(amt.toString())}
                           className="py-2.5 px-3 bg-slate-50 hover:bg-indigo-50 hover:text-indigo-600 rounded-xl border border-slate-100 hover:border-indigo-200 text-xs font-extrabold transition-all text-slate-700"
                         >
-                          // @ts-expect-error - TS2304: Auto-suppressed for build
-                          {settings?.base_currency || '₦'}{amt.toLocaleString()}
+                          ₦{amt.toLocaleString()}
                         </button>
                       ))}
                     </div>

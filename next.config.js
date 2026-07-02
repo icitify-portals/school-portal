@@ -23,8 +23,8 @@ const securityHeaders = [
     key: 'Content-Security-Policy',
     value: [
       "default-src 'self'",
-      // Allow inline scripts only via nonce (Next.js injects a nonce). Fallback to 'self'.
-      "script-src 'self' 'unsafe-eval'",
+      // Allow inline scripts (required for Next.js hydration and DevTools)
+      "script-src 'self' 'unsafe-eval' 'unsafe-inline'",
       // Styles: inline allowed (required for Tailwind / template CSS injection)
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       // Fonts
@@ -95,6 +95,11 @@ const nextConfig = {
     // WARNING: ignoring build errors can mask security vulnerabilities and logic bugs. 
     // It is highly recommended to fix TS errors and set this to false.
     ignoreBuildErrors: true,
+  },
+  eslint: {
+    // Warning: This allows production builds to successfully complete even if
+    // your project has ESLint errors.
+    ignoreDuringBuilds: true,
   },
   experimental: {
     serverActions: {

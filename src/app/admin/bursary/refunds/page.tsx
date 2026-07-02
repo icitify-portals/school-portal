@@ -87,13 +87,13 @@ export default function AdminRefundsPage() {
                 ))}
             </div>
 
-            <div className="grid grid-cols-1 gap-6">
+            <div className="grid grid-cols-1 gap-4">
                 {loading ? (
                     <div className="py-20 text-center">
                         <Loader2 className="w-8 h-8 animate-spin mx-auto text-slate-300" />
                     </div>
                 ) : requests.length === 0 ? (
-                    <Card className="border-dashed border-2 py-20 flex flex-col items-center justify-center text-slate-400">
+                    <Card className="py-20 flex flex-col items-center justify-center text-slate-400 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                         <AlertCircle className="w-10 h-10 mb-4 opacity-20" />
                         <p className="italic">No refund requests found for this category.</p>
                     </Card>
@@ -116,8 +116,7 @@ export default function AdminRefundsPage() {
                                         <div className="space-y-4">
                                             <div className="bg-white p-4 rounded-xl border border-slate-100">
                                                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Refund Amount</p>
-                                                // @ts-expect-error - TS2304: Auto-suppressed for build
-                                                <p className="text-2xl font-black text-indigo-600">{settings?.base_currency || '₦'}{parseFloat(item.request.amount).toLocaleString()}</p>
+                                                <p className="text-2xl font-black text-indigo-600">₦{parseFloat(item.request.amount).toLocaleString()}</p>
                                             </div>
 
                                             <div className="flex items-center gap-2 text-xs text-slate-500">
@@ -142,7 +141,7 @@ export default function AdminRefundsPage() {
                                             </p>
                                         </div>
 
-                                        <div className="grid grid-cols-2 gap-8 pt-6 border-t border-slate-50">
+                                        <div className="grid grid-cols-2 gap-4 pt-6 border-t border-slate-50">
                                             <div className="space-y-2">
                                                 <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase">
                                                     <Building2 className="w-3 h-3" />

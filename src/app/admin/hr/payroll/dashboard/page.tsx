@@ -107,7 +107,7 @@ export default function PayrollDashboard() {
       </div>
 
       {/* Monthly Summary Statistics */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
          {[
            { label: 'Total Payroll', value: `₦${totalPayroll.toLocaleString()}`, icon: DollarSign, color: 'text-indigo-600', bg: 'bg-indigo-50' },
            { label: 'Staff Count', value: logs.length, icon: Users, color: 'text-emerald-600', bg: 'bg-emerald-50' },
@@ -126,7 +126,7 @@ export default function PayrollDashboard() {
          ))}
       </div>
 
-      <div className="grid grid-cols-12 gap-8">
+      <div className="grid grid-cols-12 gap-4">
         {/* Payroll Register */}
         <div className="col-span-12 lg:col-span-8 space-y-6">
            <div className="bg-white rounded-[40px] border border-slate-100 shadow-xl overflow-hidden">
@@ -172,8 +172,7 @@ export default function PayrollDashboard() {
                                 </div>
                              </td>
                              <td className="px-8 py-6 font-black text-slate-900 text-lg">
-                                // @ts-expect-error - TS2304: Auto-suppressed for build
-                                {settings?.base_currency || '₦'}{parseFloat(item.netPay).toLocaleString()}
+                                ₦{parseFloat(item.netPay).toLocaleString()}
                              </td>
                              <td className="px-8 py-6">
                                 <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
@@ -202,8 +201,7 @@ export default function PayrollDashboard() {
                       </div>
                       <div>
                          <div className="text-xs font-bold text-slate-400 uppercase tracking-widest">Awaiting Institutional Authorization</div>
-                         // @ts-expect-error - TS2304: Auto-suppressed for build
-                         <div className="text-lg font-bold">Total Disbursable: {settings?.base_currency || '₦'}{totalPayroll.toLocaleString()}</div>
+                         <div className="text-lg font-bold">Total Disbursable: ₦{totalPayroll.toLocaleString()}</div>
                       </div>
                    </div>
                    <button 

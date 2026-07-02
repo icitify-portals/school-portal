@@ -59,11 +59,11 @@ export default async function ApplyForScreeningPage() {
                 <h1 className="text-3xl font-bold tracking-tight">{activeSession.name}</h1>
             </div>
 
-            <Card>
-                <CardHeader>
+            <Card className=" border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
+                <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-6">
                     <CardTitle>Application Details</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-6">
+                <CardContent className="space-y-6 p-6">
                     {activeSession.instructions && (
                         <div className="p-4 bg-indigo-50 border border-indigo-100 rounded-lg text-sm text-indigo-700 whitespace-pre-wrap">
                             <h3 className="font-bold mb-1 flex items-center gap-1"><AlertCircle className="h-4 w-4" /> Instructions:</h3>
@@ -74,8 +74,7 @@ export default async function ApplyForScreeningPage() {
                     <div className="p-4 bg-slate-50 rounded-lg space-y-2 text-sm">
                         <p><span className="font-semibold">Candidate:</span> {candidate.surname} {candidate.firstname}</p>
                         <p><span className="font-semibold">JAMB Reg:</span> {candidate.jambRegNo}</p>
-                        // @ts-expect-error - TS2304: Auto-suppressed for build
-                        <p><span className="font-semibold">Application Fee:</span> <span className="text-indigo-600 font-bold">{settings?.base_currency || '₦'}{Number(activeSession.applicationFee).toLocaleString()}</span></p>
+                        <p><span className="font-semibold">Application Fee:</span> <span className="text-indigo-600 font-bold">₦{Number(activeSession.applicationFee).toLocaleString()}</span></p>
                     </div>
 
                     <ApplyForm programmes={availableProgrammes} session={activeSession} />

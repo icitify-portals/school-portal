@@ -75,3 +75,19 @@ dean-details.txt
 grep_result.txt
 app_structure*
 db_dump*
+
+# Custom Scripts & Agents
+scratch/
+scripts/
+*.cjs
+*.mjs
+*.md
+*.pdf
+*.js
+!README.md
+!package.json
+!next.config.js
+!postcss.config.js
+!tailwind.config.js
+.agents/
+public/uploads/

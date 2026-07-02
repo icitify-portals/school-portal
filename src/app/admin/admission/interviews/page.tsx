@@ -34,22 +34,36 @@ export default async function InterviewsPage() {
     });
 
     return (
-        <div className="p-6 max-w-7xl mx-auto space-y-6">
-            <div className="flex justify-between items-center">
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight text-slate-900 flex items-center gap-2">
-                        <Calendar className="h-8 w-8 text-purple-600" />
-                        Admission Interviews
-                    </h1>
-                    <p className="text-slate-500 mt-1">
-                        Schedule and score physical or virtual interviews for applicants.
-                    </p>
+        <div className="p-4 sm:p-6 lg:p-8 min-h-screen">
+            <div className="max-w-[1600px] w-full mx-auto space-y-8">
+                {/* Header Section */}
+                <div className="relative overflow-hidden bg-slate-900 rounded-3xl p-8 lg:p-12 text-white shadow-2xl border border-slate-800">
+                    <div className="absolute inset-0 bg-gradient-to-r from-purple-600/30 to-fuchsia-600/30 opacity-50 mix-blend-overlay" />
+                    <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                        <div>
+                            <div className="flex items-center gap-3 mb-2">
+                                <Calendar className="w-12 h-12 text-purple-400" />
+                                <h1 className="text-4xl lg:text-5xl font-black tracking-tighter drop-shadow-md italic uppercase">
+                                    Admission Interviews
+                                </h1>
+                            </div>
+                            <p className="text-slate-300 font-medium tracking-tight max-w-2xl text-lg opacity-90">
+                                Schedule and score physical or virtual interviews for applicants.
+                            </p>
+                        </div>
+                        
+                        <div className="flex bg-white/10 p-1.5 rounded-2xl backdrop-blur-md border border-white/10 shadow-inner gap-2 flex-wrap">
+                            <button className="flex items-center gap-2 px-6 py-4 text-xs font-black uppercase tracking-widest rounded-xl transition-all whitespace-nowrap bg-purple-600 text-white hover:bg-purple-500 shadow-lg hover:-translate-y-1">
+                                Schedule Interview
+                            </button>
+                        </div>
+                    </div>
                 </div>
-                {/* Note: A dialog to schedule an interview would typically go here */}
-                <Button>Schedule Interview</Button>
-            </div>
 
-            <InterviewTable initialData={formattedList} />
+                <div className="bg-white/60 backdrop-blur-3xl border border-white/40 shadow-xl shadow-slate-200/50 rounded-[3rem] p-8 overflow-hidden">
+                    <InterviewTable initialData={formattedList} />
+                </div>
+            </div>
         </div>
     );
 }

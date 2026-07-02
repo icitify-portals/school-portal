@@ -197,8 +197,8 @@ export default function ExpenditurePage() {
             </div>
 
             {isAdding && (
-                <Card className="mb-10 border-none shadow-md bg-slate-50">
-                    <CardHeader className="flex flex-row items-center justify-between">
+                <Card className="mb-10 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
+                    <CardHeader className="flex flex-row items-center justify-between bg-slate-50/50 border-b border-slate-100 p-6">
                         <CardTitle className="text-lg">New Expenditure Request</CardTitle>
                         <div className="flex gap-2">
                             <input
@@ -220,9 +220,9 @@ export default function ExpenditurePage() {
                             </Button>
                         </div>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className=" p-6">
                         <form onSubmit={handleSubmit} className="space-y-6">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="space-y-1">
                                     <label className="text-xs font-bold text-slate-500 uppercase">Title / Subject</label>
                                     <input
@@ -261,7 +261,7 @@ export default function ExpenditurePage() {
                                 />
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div className="space-y-1">
                                     <label className="text-xs font-bold text-slate-500 uppercase">Department (Optional)</label>
                                     <select
@@ -394,8 +394,7 @@ export default function ExpenditurePage() {
 
                                     <div className="p-6 lg:w-48 bg-slate-50/50 flex flex-col justify-center items-center text-center">
                                         <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Requested</p>
-                                        // @ts-expect-error - TS2304: Auto-suppressed for build
-                                        <p className="text-2xl font-bold text-slate-900">{settings?.base_currency || '₦'}{parseFloat(req.amount).toLocaleString()}</p>
+                                        <p className="text-2xl font-bold text-slate-900">₦{parseFloat(req.amount).toLocaleString()}</p>
                                     </div>
 
                                     <div className="p-6 lg:w-72 flex flex-col justify-center gap-4">

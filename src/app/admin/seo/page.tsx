@@ -57,7 +57,7 @@ export default function SEOAnalyticsDashboard() {
             </div>
 
             {/* Quick Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 {[
                     { label: "Total Impressions", value: "84.2k", change: "+12.5%", icon: TrendingUp, color: "text-indigo-600", bg: "bg-indigo-50" },
                     { label: "Search Clicks", value: "3.1k", change: "+5.2%", icon: MousePointer2, color: "text-emerald-600", bg: "bg-emerald-50" },
@@ -81,10 +81,10 @@ export default function SEOAnalyticsDashboard() {
                 ))}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {/* Performance Chart */}
-                <Card className="md:col-span-2 border-none shadow-sm rounded-[40px] bg-white p-8 overflow-hidden relative">
-                    <CardHeader className="p-0 mb-8">
+                <Card className="md:col-span-2 -[40px] p-8 overflow-hidden relative border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
+                    <CardHeader className="p-0 mb-8 bg-slate-50/50 border-b border-slate-100 p-6">
                         <CardTitle className="text-xl font-black flex items-center gap-2 italic">
                             <Zap className="h-5 w-5 text-indigo-600 fill-current" /> Performance Over Time
                         </CardTitle>
@@ -109,8 +109,8 @@ export default function SEOAnalyticsDashboard() {
                 </Card>
 
                 {/* Top Keywords / Queries */}
-                <Card className="border-none shadow-sm rounded-[40px] bg-white p-8">
-                    <CardHeader className="p-0 mb-8">
+                <Card className="-[40px] p-8 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
+                    <CardHeader className="p-0 mb-8 bg-slate-50/50 border-b border-slate-100 p-6">
                         <CardTitle className="text-xl font-black italic">Top Search Queries</CardTitle>
                     </CardHeader>
                     <div className="space-y-6">
@@ -143,7 +143,7 @@ export default function SEOAnalyticsDashboard() {
                     <Sparkles className="h-5 w-5 text-indigo-600 fill-current" />
                     <h2 className="text-2xl font-black tracking-tight italic text-slate-900">AI SEO Recommendations</h2>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     {[
                         { title: "Meta Description Missing", count: "14 Articles", desc: "AI can auto-generate descriptions based on abstracts.", action: "Auto-Fix Now" },
                         { title: "Low-Performing Keywords", count: "8 Pages", desc: "Suggesting long-tail keyword variations for better ranking.", action: "View Suggestions" },

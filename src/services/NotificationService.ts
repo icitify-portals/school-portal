@@ -73,7 +73,7 @@ export class NotificationService {
                     <h2 style="color: #4f46e5;">${payload.title}</h2>
                     <p style="font-size: 16px; color: #374151;">${payload.message}</p>
                     <hr style="margin: 20px 0; border: none; border-top: 1px solid #eee;" />
-                    <p style="font-size: 12px; color: #9ca3af;">This is an automated alert from your School Portal.</p>
+                    <p style="font-size: 12px; color: #9ca3af;">This is an automated alert from your FSS Portal.</p>
                 </div>`
             );
         }
@@ -122,7 +122,7 @@ export class NotificationService {
 
     // Existing specialized alerts kept for compatibility
     static async sendAcademicAlert(phone: string, courseCode: string, sessionTime: string) {
-        const body = `📚 School Portal Alert: Your session for ${courseCode} starts at ${sessionTime}. Don't forget to mark your attendance!`;
+        const body = `📚 FSS Portal Alert: Your session for ${courseCode} starts at ${sessionTime}. Don't forget to mark your attendance!`;
         return await this.sendDirectWhatsApp(phone, body);
     }
 

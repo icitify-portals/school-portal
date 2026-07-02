@@ -58,17 +58,17 @@ export default async function ResultGradingDashboard() {
                 <p className="text-slate-500 font-medium">Enter and manage student subject results for your assigned courses.</p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {assignedCourses.map((course) => (
                     <Card key={course.id} className="hover:shadow-lg transition-all border-slate-200 group">
-                        <CardHeader className="pb-3 text-left">
+                        <CardHeader className="pb-3 text-left bg-slate-50/50 border-b border-slate-100 p-6">
                             <div className="p-2 bg-indigo-50 rounded-lg text-indigo-600 mb-2 w-fit">
                                 <GraduationCap className="w-5 h-5" />
                             </div>
                             <CardTitle className="text-lg font-bold group-hover:text-indigo-600 transition-colors">{course.name}</CardTitle>
                             <CardDescription className="font-mono text-xs">{course.code}</CardDescription>
                         </CardHeader>
-                        <CardContent className="text-left py-2">
+                        <CardContent className="text-left py-2 p-6">
                              <p className="text-xs text-slate-500 line-clamp-2 mb-4">
                                  {course.description || "Enter CA and Examination scores for the current session."}
                              </p>

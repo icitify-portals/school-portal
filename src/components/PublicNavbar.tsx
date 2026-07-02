@@ -31,7 +31,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { getMenusBySlot } from "@/actions/cms";
 import { useSession } from "next-auth/react";
-import LanguageSwitcher from "@/components/i18n/LanguageSwitcher";
+
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -64,13 +64,13 @@ const IconMap: Record<string, any> = {
 function MegaMenuItem({ item }: { item: any }) {
     return (
         <div className="group relative">
-            <button className="flex items-center gap-1.5 text-[11px] font-bold text-slate-600 hover:text-indigo-600 outline-none transition-colors uppercase tracking-widest py-3">
+            <button className="flex items-center gap-1.5 text-[11px] font-bold text-slate-300 hover:text-white outline-none transition-colors uppercase tracking-widest py-3">
                 {item.label}
                 <ChevronDown className="w-3.5 h-3.5 opacity-50 group-hover:rotate-180 transition-transform duration-300" />
             </button>
 
             {/* Panel */}
-            <div className="absolute top-[100%] left-0 right-0 w-[860px] -translate-x-1/4 bg-white/95 backdrop-blur-xl border border-slate-100 shadow-2xl rounded-3xl p-8 grid grid-cols-4 gap-8 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-all duration-300 transform translate-y-2 group-hover:translate-y-0 z-50">
+            <div className="absolute top-[100%] left-0 right-0 w-[860px] -translate-x-1/4 bg-slate-900/95 backdrop-blur-xl border border-white/10 shadow-2xl rounded-3xl p-8 grid grid-cols-4 gap-8 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-all duration-300 transform translate-y-2 group-hover:translate-y-0 z-50">
                 {/* Children grid */}
                 <div className="col-span-3 grid grid-cols-3 gap-3">
                     {item.children?.map((child: any) => {
@@ -79,15 +79,15 @@ function MegaMenuItem({ item }: { item: any }) {
                             <Link
                                 key={child.id}
                                 href={child.href}
-                                className="group/item flex gap-4 p-4 rounded-2xl hover:bg-slate-50 transition-all duration-200"
+                                className="group/item flex gap-4 p-4 rounded-2xl hover:bg-slate-800 transition-all duration-200"
                             >
-                                <div className="w-11 h-11 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 group-hover/item:bg-white group-hover/item:text-indigo-600 group-hover/item:shadow-md transition-all shrink-0">
+                                <div className="w-11 h-11 rounded-xl bg-slate-800 flex items-center justify-center text-slate-400 group-hover/item:bg-indigo-600 group-hover/item:text-white group-hover/item:shadow-md transition-all shrink-0">
                                     <Icon className="w-5 h-5" />
                                 </div>
                                 <div className="flex flex-col gap-1">
-                                    <span className="text-sm font-bold text-slate-900 group-hover/item:text-indigo-600 transition-colors">{child.label}</span>
+                                    <span className="text-sm font-bold text-slate-200 group-hover/item:text-white transition-colors">{child.label}</span>
                                     {child.description && (
-                                        <span className="text-xs text-slate-500 font-medium leading-relaxed line-clamp-2">{child.description}</span>
+                                        <span className="text-xs text-slate-400 font-medium leading-relaxed line-clamp-2">{child.description}</span>
                                     )}
                                 </div>
                             </Link>
@@ -121,32 +121,29 @@ function MegaMenuItem({ item }: { item: any }) {
 /** Dropdown: classic hover dropdown */
 function DropdownMenuItem2({ item }: { item: any }) {
     return (
-        <DropdownMenu>
-            <DropdownMenuTrigger className="flex items-center gap-1 text-[11px] font-bold text-slate-600 hover:text-indigo-600 outline-none transition-colors uppercase tracking-widest">
+        <div className="group relative">
+            <button className="flex items-center gap-1.5 text-[11px] font-bold text-slate-300 hover:text-white outline-none transition-colors uppercase tracking-widest py-3">
                 {item.label}
-                <ChevronDown className="w-3 h-3 opacity-50 group-data-[state=open]:rotate-180 transition-transform" />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-72 rounded-2xl p-2 shadow-2xl border-slate-100 bg-white/95 backdrop-blur-xl">
+                <ChevronDown className="w-3.5 h-3.5 opacity-50 group-hover:rotate-180 transition-transform duration-300" />
+            </button>
+            <div className="absolute top-[100%] left-0 w-64 bg-slate-900/95 backdrop-blur-xl border border-white/10 shadow-2xl rounded-2xl p-2 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-all duration-300 transform translate-y-2 group-hover:translate-y-0 z-50">
                 {item.children?.map((child: any) => {
                     const Icon = (child.icon && IconMap[child.icon]) || Globe;
                     return (
-                        <DropdownMenuItem key={child.id} asChild className="rounded-xl p-3 focus:bg-indigo-50 group/item">
-                            <Link href={child.href} className="flex gap-3 w-full">
-                                <div className="w-10 h-10 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400 group-focus:bg-white group-focus:text-indigo-600 transition-colors">
-                                    <Icon className="w-5 h-5" />
-                                </div>
-                                <div className="flex flex-col gap-0.5">
-                                    <span className="text-sm font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">{child.label}</span>
-                                    {child.description && (
-                                        <span className="text-[10px] text-slate-400 line-clamp-1">{child.description}</span>
-                                    )}
-                                </div>
-                            </Link>
-                        </DropdownMenuItem>
+                        <Link
+                            key={child.id}
+                            href={child.href}
+                            className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-800 transition-colors group/item"
+                        >
+                            <Icon className="w-4 h-4 text-slate-400 group-hover/item:text-white transition-colors" />
+                            <div className="flex flex-col">
+                                <span className="text-[13px] font-bold text-slate-300 group-hover/item:text-white transition-colors">{child.label}</span>
+                            </div>
+                        </Link>
                     );
                 })}
-            </DropdownMenuContent>
-        </DropdownMenu>
+            </div>
+        </div>
     );
 }
 
@@ -155,7 +152,7 @@ function AccordionMenuItem({ item }: { item: any }) {
     const [open, setOpen] = useState(false);
     if (!item.children?.length) {
         return (
-            <Link href={item.href} className="text-[11px] font-bold text-slate-600 hover:text-indigo-600 transition-colors uppercase tracking-widest">
+            <Link href={item.href} className="text-[11px] font-bold text-slate-300 hover:text-white transition-colors uppercase tracking-widest">
                 {item.label}
             </Link>
         );
@@ -164,21 +161,21 @@ function AccordionMenuItem({ item }: { item: any }) {
         <div className="relative">
             <button
                 onClick={() => setOpen(!open)}
-                className="flex items-center gap-1.5 text-[11px] font-bold text-slate-600 hover:text-indigo-600 outline-none transition-colors uppercase tracking-widest py-3"
+                className="flex items-center gap-1.5 text-[11px] font-bold text-slate-300 hover:text-white outline-none transition-colors uppercase tracking-widest py-3"
             >
                 {item.label}
                 <ChevronDown className={cn("w-3.5 h-3.5 opacity-50 transition-transform duration-300", open && "rotate-180")} />
             </button>
             {open && (
-                <div className="absolute top-full left-0 bg-white/95 backdrop-blur-xl border border-slate-100 shadow-2xl rounded-2xl p-3 w-64 z-50 space-y-1 animate-in slide-in-from-top-2">
+                <div className="absolute top-full left-0 bg-slate-900/95 backdrop-blur-xl border border-white/10 shadow-2xl rounded-2xl p-3 w-64 z-50 space-y-1 animate-in slide-in-from-top-2">
                     {item.children.map((child: any) => (
                         <Link
                             key={child.id}
                             href={child.href}
                             onClick={() => setOpen(false)}
-                            className="flex items-center gap-2 p-3 rounded-xl hover:bg-slate-50 text-sm font-medium text-slate-700 hover:text-indigo-600 transition-all"
+                            className="flex items-center gap-2 p-3 rounded-xl hover:bg-slate-800 text-sm font-medium text-slate-300 hover:text-white transition-all"
                         >
-                            <ChevronRight className="w-4 h-4 text-slate-300" />
+                            <ChevronRight className="w-4 h-4 text-slate-500" />
                             {child.label}
                         </Link>
                     ))}
@@ -194,10 +191,10 @@ function SimpleMenuItem({ item }: { item: any }) {
         <div className="relative group">
             <Link
                 href={item.href}
-                className="text-[11px] font-bold text-slate-600 hover:text-indigo-600 transition-colors uppercase tracking-widest relative"
+                className="text-[11px] font-bold text-slate-300 hover:text-white transition-colors uppercase tracking-widest relative"
             >
                 {item.label}
-                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-indigo-600 transition-all group-hover:w-full" />
+                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-indigo-500 transition-all group-hover:w-full" />
             </Link>
         </div>
     );
@@ -248,14 +245,14 @@ export function PublicNavbar() {
 
     return (
         <>
-            {/* Secondary utility bar */}
+            {/* Top secondary strip */}
             {secondaryMenus.length > 0 && (
-                <div className="hidden md:flex items-center justify-end gap-6 px-8 py-1.5 bg-slate-900 text-slate-400 text-[10px] font-bold uppercase tracking-widest border-b border-slate-800">
+                <div className="hidden md:flex justify-end items-center px-8 h-[30px] bg-slate-950 border-b border-white/5 fixed top-0 w-full z-50 gap-6">
                     {secondaryMenus.map(item => (
                         <Link
                             key={item.id}
                             href={item.href}
-                            className="hover:text-white transition-colors"
+                            className="text-[10px] font-bold uppercase tracking-widest text-slate-400 hover:text-white transition-colors"
                         >
                             {item.label}
                         </Link>
@@ -268,18 +265,18 @@ export function PublicNavbar() {
                 "fixed top-0 left-0 right-0 z-50 transition-all duration-300 border-b",
                 secondaryMenus.length > 0 ? "mt-[30px]" : "",
                 isScrolled
-                    ? "bg-white/80 backdrop-blur-md border-slate-200 py-3"
-                    : "bg-transparent border-transparent py-5"
+                    ? "bg-slate-950/90 backdrop-blur-xl border-white/10 py-3 shadow-2xl shadow-black/20"
+                    : "bg-slate-900/50 backdrop-blur-sm border-transparent py-5"
             )}>
                 <div className="max-w-[1600px] w-full mx-auto px-4 sm:px-6 lg:px-8 relative">
                     <div className="flex justify-between items-center">
                         {/* Logo */}
                         <Link href="/" className="flex items-center gap-2 group">
-                            <div className="p-2 bg-indigo-600 rounded-xl shadow-lg shadow-indigo-600/20 group-hover:scale-110 transition-transform">
+                            <div className="p-2 bg-indigo-500 rounded-xl shadow-lg shadow-indigo-500/20 group-hover:scale-110 transition-transform">
                                 <ShieldCheck className="w-6 h-6 text-white" />
                             </div>
-                            <span className="text-xl font-black tracking-tighter uppercase italic text-slate-900">
-                                School<span className="text-indigo-600">Portal</span>
+                            <span className="text-xl font-black tracking-tighter uppercase italic text-white">
+                                FSS<span className="text-indigo-400">Portal</span>
                             </span>
                         </Link>
 
@@ -292,18 +289,18 @@ export function PublicNavbar() {
 
                         {/* Right Actions */}
                         <div className="flex items-center gap-3">
-                            <Button variant="ghost" size="icon" className="text-slate-500 rounded-full hover:bg-slate-100">
+                            <Button variant="ghost" size="icon" className="text-slate-400 rounded-full hover:bg-slate-800 hover:text-white">
                                 <Search className="w-5 h-5" />
                             </Button>
-                            <LanguageSwitcher />
-                            <Button asChild className="hidden sm:flex bg-indigo-600 hover:bg-indigo-700 rounded-full px-6 h-10 font-bold shadow-lg shadow-indigo-600/20">
+
+                            <Button asChild className="hidden sm:flex bg-indigo-500 hover:bg-indigo-600 rounded-full px-6 h-10 font-bold shadow-lg shadow-indigo-500/20 text-white">
                                 <Link href={session ? "/dashboard" : "/login"}>
                                     <User className="w-4 h-4 mr-2" />
                                     {session ? "My Dashboard" : "Portal Login"}
                                 </Link>
                             </Button>
                             <button
-                                className="md:hidden p-2 text-slate-600 hover:bg-slate-100 rounded-lg"
+                                className="md:hidden p-2 text-slate-300 hover:bg-slate-800 hover:text-white rounded-lg"
                                 onClick={() => setMobileOpen(!mobileOpen)}
                             >
                                 {mobileOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
@@ -314,13 +311,13 @@ export function PublicNavbar() {
 
                 {/* Mobile Menu */}
                 {mobileOpen && (
-                    <div className="md:hidden absolute top-full left-0 right-0 bg-white border-b border-slate-100 shadow-xl p-4 space-y-2 animate-in slide-in-from-top-4">
+                    <div className="md:hidden absolute top-full left-0 right-0 bg-slate-950 border-b border-white/10 shadow-2xl p-4 space-y-2 animate-in slide-in-from-top-4">
                         {primaryMenus.map(item => (
                             <div key={item.id}>
                                 <div className="flex items-center justify-between">
                                     <Link
                                         href={item.href}
-                                        className="block text-lg font-bold text-slate-800 py-2"
+                                        className="block text-lg font-bold text-white py-2"
                                         onClick={() => setMobileOpen(false)}
                                     >
                                         {item.label}
@@ -328,22 +325,22 @@ export function PublicNavbar() {
                                     {item.children?.length > 0 && (
                                         <button
                                             onClick={() => setMobileExpanded(mobileExpanded === item.id ? null : item.id)}
-                                            className="p-1 text-slate-400"
+                                            className="p-1 text-slate-400 hover:text-white"
                                         >
                                             <ChevronDown className={cn("w-4 h-4 transition-transform", mobileExpanded === item.id && "rotate-180")} />
                                         </button>
                                     )}
                                 </div>
                                 {item.children?.length > 0 && mobileExpanded === item.id && (
-                                    <div className="ml-4 space-y-1 border-l-2 border-slate-100 pl-4 pb-2 animate-in slide-in-from-top-2">
+                                    <div className="ml-4 space-y-1 border-l-2 border-white/10 pl-4 pb-2 animate-in slide-in-from-top-2">
                                         {item.children.map((child: any) => (
                                             <Link
                                                 key={child.id}
                                                 href={child.href}
-                                                className="flex items-center gap-2 py-1.5 text-slate-500 font-medium text-sm hover:text-indigo-600 transition-colors"
+                                                className="flex items-center gap-2 py-1.5 text-slate-400 font-medium text-sm hover:text-indigo-400 transition-colors"
                                                 onClick={() => setMobileOpen(false)}
                                             >
-                                                <ChevronRight className="w-3 h-3 text-slate-300" />
+                                                <ChevronRight className="w-3 h-3 text-slate-500" />
                                                 {child.label}
                                             </Link>
                                         ))}
@@ -354,12 +351,12 @@ export function PublicNavbar() {
 
                         {/* Secondary links in mobile */}
                         {secondaryMenus.length > 0 && (
-                            <div className="pt-4 border-t border-slate-100 flex flex-wrap gap-3">
+                            <div className="pt-4 border-t border-white/10 flex flex-wrap gap-3">
                                 {secondaryMenus.map(item => (
                                     <Link
                                         key={item.id}
                                         href={item.href}
-                                        className="text-xs font-bold uppercase tracking-widest text-slate-400 hover:text-indigo-600 transition-colors"
+                                        className="text-xs font-bold uppercase tracking-widest text-slate-400 hover:text-indigo-400 transition-colors"
                                         onClick={() => setMobileOpen(false)}
                                     >
                                         {item.label}
@@ -368,8 +365,8 @@ export function PublicNavbar() {
                             </div>
                         )}
 
-                        <div className="pt-4 border-t border-slate-100">
-                            <Button asChild className="w-full bg-indigo-600 rounded-xl h-12 font-bold">
+                        <div className="pt-4 border-t border-white/10">
+                            <Button asChild className="w-full bg-indigo-500 hover:bg-indigo-600 text-white rounded-xl h-12 font-bold">
                                 <Link href={session ? "/dashboard" : "/login"}>
                                     <User className="w-4 h-4 mr-2" />
                                     {session ? "Dashboard" : "Portal Login"}

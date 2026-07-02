@@ -102,19 +102,19 @@ export default function StudentRefundRequestPage() {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                 <div className="lg:col-span-2">
-                    <Card className="border-none shadow-sm">
-                        <CardHeader>
+                    <Card className=" border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
+                        <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-6">
                             <CardTitle className="text-lg flex items-center gap-2">
                                 <ClipboardList className="w-5 h-5 text-indigo-600" />
                                 Refund Details
                             </CardTitle>
                         </CardHeader>
-                        <CardContent>
+                        <CardContent className=" p-6">
                             <form onSubmit={handleSubmit} className="space-y-6">
                                 <div className="space-y-4">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div className="space-y-2">
                                             <label className="text-xs font-bold text-slate-500 uppercase">Amount to Refund (NGN)</label>
                                             <div className="relative">
@@ -141,8 +141,7 @@ export default function StudentRefundRequestPage() {
                                                     <option value="">Select previous payment...</option>
                                                     {ledger.map(tx => (
                                                         <option key={tx.id} value={tx.transactionId}>
-                                                            // @ts-expect-error - TS2304: Auto-suppressed for build
-                                                            Ref: {tx.transactionId} - {settings?.base_currency || '₦'}{parseFloat(tx.credit).toLocaleString()} ({tx.description})
+                                                            Ref: {tx.transactionId} - ₦{parseFloat(tx.credit).toLocaleString()} ({tx.description})
                                                         </option>
                                                     ))}
                                                 </select>
@@ -169,7 +168,7 @@ export default function StudentRefundRequestPage() {
                                         Bank Account Details (Where funds should be sent)
                                     </h4>
                                     <div className="space-y-4">
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                             <div className="space-y-2">
                                                 <label className="text-[10px] font-bold text-slate-400 uppercase">Bank Name</label>
                                                 <input
@@ -221,7 +220,7 @@ export default function StudentRefundRequestPage() {
                 </div>
 
                 <div className="space-y-6">
-                    <Card className="border-none shadow-sm bg-amber-50">
+                    <Card className=" border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                         <CardContent className="p-6">
                             <div className="flex gap-3 items-start mb-4">
                                 <AlertCircle className="w-5 h-5 text-amber-600 mt-0.5" />
@@ -244,11 +243,11 @@ export default function StudentRefundRequestPage() {
                         </CardContent>
                     </Card>
 
-                    <Card className="border-none shadow-sm bg-slate-50">
-                        <CardHeader>
+                    <Card className=" border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
+                        <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-6">
                             <CardTitle className="text-sm font-bold">Process Workflow</CardTitle>
                         </CardHeader>
-                        <CardContent className="space-y-6 relative">
+                        <CardContent className="space-y-6 relative p-6">
                             {[
                                 { title: "Submission", desc: "Form successfully submitted by student" },
                                 { title: "Verification", desc: "Bursary staff verifies payment history" },

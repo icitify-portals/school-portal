@@ -357,8 +357,7 @@ export default function DeanDashboard() {
                                             <div className="font-black text-lg text-slate-950 uppercase">{exp.title}</div>
                                             <div className="text-xs text-slate-500 font-bold flex gap-4">
                                                 <span>Dept: <span className="text-slate-950 font-black uppercase">{exp.department?.name || "General Faculty"}</span></span>
-                                                // @ts-expect-error - TS2304: Auto-suppressed for build
-                                                <span>Amount: <span className="text-rose-600 font-black">{settings?.base_currency || '₦'}{parseFloat(exp.amount).toLocaleString()}</span></span>
+                                                <span>Amount: <span className="text-rose-600 font-black">₦{parseFloat(exp.amount).toLocaleString()}</span></span>
                                             </div>
                                             <div className="text-xs text-slate-400 italic">" {exp.purpose || "No description provided"} "</div>
                                             <div className="text-[10px] text-slate-400 font-mono font-bold uppercase">Submitted By: {exp.requestedBy?.name || "Department HOD"}</div>

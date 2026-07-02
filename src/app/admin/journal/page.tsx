@@ -160,12 +160,12 @@ export default function AdminJournalPage() {
                 </Dialog>
             </div>
 
-            <Card>
-                <CardHeader>
+            <Card className=" border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
+                <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-6">
                     <CardTitle>Active Journals</CardTitle>
                     <CardDescription>A list of all journals currently hosted on the platform.</CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className=" p-6">
                     {isLoading ? (
                         <div className="flex justify-center p-8">
                             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
@@ -239,36 +239,36 @@ export default function AdminJournalPage() {
                 </CardContent>
             </Card>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <Card className="bg-gradient-to-br from-indigo-500 to-purple-600 text-white border-none">
-                    <CardHeader className="pb-2">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Card className="-to-br from-indigo-500 to-purple-600 text-white border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
+                    <CardHeader className="pb-2 bg-slate-50/50 border-b border-slate-100 p-6">
                         <CardTitle className="text-lg font-medium flex items-center">
                             <BookOpen className="mr-2 h-5 w-5" /> Submissions
                         </CardTitle>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className=" p-6">
                         <div className="text-3xl font-bold">0</div>
                         <p className="text-indigo-100 text-xs mt-1">Pending editorial review</p>
                     </CardContent>
                 </Card>
-                <Card className="bg-gradient-to-br from-emerald-500 to-teal-600 text-white border-none">
-                    <CardHeader className="pb-2">
+                <Card className="-to-br from-emerald-500 to-teal-600 text-white border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
+                    <CardHeader className="pb-2 bg-slate-50/50 border-b border-slate-100 p-6">
                         <CardTitle className="text-lg font-medium flex items-center">
                             <Hash className="mr-2 h-5 w-5" /> Issues
                         </CardTitle>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className=" p-6">
                         <div className="text-3xl font-bold">0</div>
                         <p className="text-emerald-100 text-xs mt-1">Total published issues</p>
                     </CardContent>
                 </Card>
-                <Card className="bg-gradient-to-br from-amber-500 to-orange-600 text-white border-none">
-                    <CardHeader className="pb-2">
+                <Card className="-to-br from-amber-500 to-orange-600 text-white border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
+                    <CardHeader className="pb-2 bg-slate-50/50 border-b border-slate-100 p-6">
                         <CardTitle className="text-lg font-medium flex items-center">
                             <Plus className="mr-2 h-5 w-5" /> Peer Reviews
                         </CardTitle>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className=" p-6">
                         <div className="text-3xl font-bold">0</div>
                         <p className="text-amber-100 text-xs mt-1">Active peer review cycles</p>
                     </CardContent>

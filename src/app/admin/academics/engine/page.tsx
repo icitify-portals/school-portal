@@ -52,8 +52,8 @@ export default function AcademicEnginePage() {
                 </div>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <Card className="border-none shadow-2xl bg-white overflow-hidden group">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Card className="overflow-hidden group border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                     <CardHeader className="bg-slate-900 text-white pb-8">
                         <div className="flex items-center gap-4 mb-2">
                             <div className="p-3 bg-indigo-500 rounded-2xl shadow-lg group-hover:scale-110 transition-transform">
@@ -85,7 +85,7 @@ export default function AcademicEnginePage() {
                     </CardContent>
                 </Card>
 
-                <Card className="border-none shadow-2xl bg-white overflow-hidden group">
+                <Card className="overflow-hidden group border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                     <CardHeader className="bg-indigo-600 text-white pb-8">
                         <div className="flex items-center gap-4 mb-2">
                             <div className="p-3 bg-white rounded-2xl shadow-lg group-hover:scale-110 transition-transform text-indigo-600">

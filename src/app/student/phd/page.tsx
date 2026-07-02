@@ -82,13 +82,13 @@ export default async function StudentPhdDashboard() {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 
                 {/* Left Column: Progress & Actions */}
                 <div className="md:col-span-2 space-y-6">
                     
                     {/* Active Stage Card */}
-                    <Card className="border border-slate-200 shadow-sm rounded-2xl overflow-hidden">
+                    <Card className="-200 overflow-hidden border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                         <CardHeader className="bg-slate-50 border-b border-slate-100">
                             <CardTitle className="flex items-center gap-2 text-lg">
                                 <Clock className="w-5 h-5 text-indigo-600" /> Current Stage Action Required
@@ -166,7 +166,7 @@ export default async function StudentPhdDashboard() {
                     </Card>
 
                     {/* Thesis Submissions History */}
-                    <Card className="border border-slate-200 shadow-sm rounded-2xl overflow-hidden">
+                    <Card className="-200 overflow-hidden border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                         <CardHeader className="bg-slate-50 border-b border-slate-100">
                             <CardTitle className="text-lg">Thesis History</CardTitle>
                         </CardHeader>
@@ -200,7 +200,7 @@ export default async function StudentPhdDashboard() {
 
                 {/* Right Column: Supervisors & Examiners */}
                 <div className="space-y-6">
-                    <Card className="border border-slate-200 shadow-sm rounded-2xl overflow-hidden">
+                    <Card className="-200 overflow-hidden border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                         <CardHeader className="bg-slate-50 border-b border-slate-100">
                             <CardTitle className="text-lg">Supervisory Team</CardTitle>
                         </CardHeader>

@@ -75,7 +75,7 @@ export default function TemplateEngineStudio() {
         </div>
       </div>
 
-      <div className="grid grid-cols-12 gap-8">
+      <div className="grid grid-cols-12 gap-4">
         {/* Template List */}
         <div className="col-span-12 lg:col-span-5 space-y-4">
            <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest ml-2">Available Design Archetypes</h3>

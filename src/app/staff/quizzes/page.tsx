@@ -80,10 +80,10 @@ export default async function QuizzesDashboard() {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {quizStats.map((quiz) => (
                     <Card key={quiz.id} className="hover:shadow-lg transition-all border-slate-200 group">
-                        <CardHeader className="pb-3 text-left">
+                        <CardHeader className="pb-3 text-left bg-slate-50/50 border-b border-slate-100 p-6">
                             <div className="flex justify-between items-start mb-2">
                                 <Badge variant="secondary" className="bg-purple-50 text-purple-700 font-bold border-none">
                                     {quiz.courseName}
@@ -97,7 +97,7 @@ export default async function QuizzesDashboard() {
                                 Computer-Based Testing Module
                             </CardDescription>
                         </CardHeader>
-                        <CardContent className="text-left">
+                        <CardContent className="text-left p-6">
                             <div className="flex justify-between items-center text-sm mb-4 bg-purple-50/30 border border-purple-100 p-3 rounded-lg">
                                 <div className="text-center">
                                     <p className="text-[10px] text-slate-400 font-black uppercase">Attempts</p>

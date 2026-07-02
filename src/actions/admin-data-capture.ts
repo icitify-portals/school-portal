@@ -41,7 +41,7 @@ export async function extractProspectusData(formData: FormData) {
         // 2. Handle Documents/Images via AI analyzeDocument
         const provider = getAIProvider("multi");
         const prompt = `
-        You are an intelligent data capture module for a school portal. 
+        You are an intelligent data capture module for a FSS Portal. 
         Extract all course and lecturer information from the attached prospectus.
         
         Return a JSON object with:

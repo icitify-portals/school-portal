@@ -45,44 +45,46 @@ export default function CBTDashboard() {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <Card className="border-none shadow-sm bg-indigo-600 text-white">
-                    <CardContent className="pt-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 auto-rows-[160px]">
+                <Card className="text-white hover: transition-all duration-300 relative overflow-hidden group col-span-1 md:col-span-2 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
+                    <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity z-0" />
+                    <CardContent className="p-8 h-full flex flex-col justify-center relative z-10">
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-xs font-bold uppercase tracking-widest text-indigo-100">Active Exams</p>
-                                <h3 className="text-3xl font-black mt-1">24</h3>
+                                <p className="text-sm font-bold uppercase tracking-widest text-indigo-100">Active Exams</p>
+                                <h3 className="text-5xl font-black mt-2 tracking-tight">24</h3>
                             </div>
-                            <Clock className="w-10 h-10 text-indigo-400 opacity-50" />
+                            <Clock className="w-16 h-16 text-indigo-400 opacity-50 group-hover:scale-110 transition-transform group-hover:opacity-80" />
                         </div>
                     </CardContent>
                 </Card>
-                <Card className="border-none shadow-sm bg-amber-500 text-white">
-                    <CardContent className="pt-6">
+                <Card className="text-white hover: transition-all duration-300 relative overflow-hidden group border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
+                    <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity z-0" />
+                    <CardContent className="p-6 h-full flex flex-col justify-center relative z-10">
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-xs font-bold uppercase tracking-widest text-amber-100">Manual Grading</p>
-                                <h3 className="text-3xl font-black mt-1">12</h3>
+                                <h3 className="text-4xl font-black mt-2 tracking-tight">12</h3>
                             </div>
-                            <FileEdit className="w-10 h-10 text-amber-300 opacity-50" />
+                            <FileEdit className="w-12 h-12 text-amber-300 opacity-50 group-hover:scale-110 transition-transform group-hover:opacity-80" />
                         </div>
                     </CardContent>
                 </Card>
-                <Card className="border-none shadow-sm bg-emerald-600 text-white">
-                    <CardContent className="pt-6">
+                <Card className="text-white hover: transition-all duration-300 relative overflow-hidden group md:col-span-3 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
+                    <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity z-0" />
+                    <CardContent className="p-6 h-full flex flex-col justify-center relative z-10">
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-xs font-bold uppercase tracking-widest text-emerald-100">Avg. Pass Rate</p>
-                                <h3 className="text-3xl font-black mt-1">78%</h3>
+                                <p className="text-sm font-bold uppercase tracking-widest text-emerald-100">Avg. Pass Rate</p>
+                                <h3 className="text-4xl font-black mt-2 tracking-tight">78%</h3>
                             </div>
-                            <BarChart3 className="w-10 h-10 text-emerald-400 opacity-50" />
+                            <BarChart3 className="w-12 h-12 text-emerald-400 opacity-50 group-hover:scale-110 transition-transform group-hover:opacity-80" />
                         </div>
                     </CardContent>
                 </Card>
             </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-4">
-                <Card className="border-none shadow-sm">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
+                <Card className=" border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                     <CardHeader className="border-b border-slate-50 flex flex-row items-center justify-between">
                         <CardTitle className="text-sm font-black uppercase tracking-widest text-slate-400">Recent Assessments</CardTitle>
                         <Settings2 className="w-4 h-4 text-slate-300" />
@@ -107,7 +109,7 @@ export default function CBTDashboard() {
                     </CardContent>
                 </Card>
 
-                <Card className="border-none shadow-sm">
+                <Card className=" border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                     <CardHeader className="border-b border-slate-50">
                         <CardTitle className="text-sm font-black uppercase tracking-widest text-slate-400">Question Types Overview</CardTitle>
                     </CardHeader>

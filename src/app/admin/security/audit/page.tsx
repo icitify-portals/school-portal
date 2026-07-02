@@ -87,7 +87,7 @@ export default function AuditLogPage() {
             </div>
 
             {/* Filters */}
-            <Card>
+            <Card className=" border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                 <CardContent className="p-4">
                     <div className="flex flex-wrap items-center gap-3">
                         <div className="flex items-center gap-2">
@@ -131,7 +131,7 @@ export default function AuditLogPage() {
             </Card>
 
             {/* Logs Table */}
-            <Card>
+            <Card className=" border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                 <CardContent className="p-0">
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm">

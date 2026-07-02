@@ -9,7 +9,9 @@ import {
     feeStructures,
     feeStructureItems,
     feeItems,
-    admissionApplicationsV2
+    admissionApplicationsV2,
+    users,
+    studentBillItems
 } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 
@@ -276,13 +278,19 @@ export class SplitPaymentEngine {
         console.log(`Starting Checkout: StudentId ${studentId}, BillId ${billId}, SelectedAmount ₦${selectedAmount}`);
         
         // 1. Fetch Student details
-        const student = await db.query.students.findFirst({
-            where: eq(students.id, studentId),
-            with: { user: true }
-        });
-        if (!student || !student.user) {
+        const studentRows = await db.select({
+            student: students,
+            user: users
+        }).from(students)
+          .leftJoin(users, eq(students.userId, users.id))
+          .where(eq(students.id, studentId))
+          .limit(1);
+
+        if (!studentRows || studentRows.length === 0 || !studentRows[0].user) {
             return { success: false, reference: "", error: "Student or User profile not found." };
         }
+        
+        const student = { ...studentRows[0].student, user: studentRows[0].user };
 
         // 2. Fetch Active Settings
         const settings = await this.getBursarySettingsMap();
@@ -290,22 +298,25 @@ export class SplitPaymentEngine {
         const feeBearerRule = (settings['gateway_fee_bearer'] || 'default') as 'developer' | 'default' | 'subaccounts' | 'student' | 'prorated';
         
         // 3. Fetch Student Bill & Items
-        const bill = await db.query.studentBills.findFirst({
-            where: eq(studentBills.id, billId),
-            with: { 
-                items: { 
-                    with: { 
-                        item: true 
-                    } 
-                } 
-            }
-        });
-
-        if (!bill) {
+        const billRows = await db.select().from(studentBills).where(eq(studentBills.id, billId)).limit(1);
+        if (!billRows || billRows.length === 0) {
             return { success: false, reference: "", error: "Student bill not found." };
         }
+        const bill = billRows[0];
+        
+        const billItemRows = await db.select({
+            item: studentBillItems,
+            feeItem: feeItems
+        }).from(studentBillItems)
+          .leftJoin(feeItems, eq(studentBillItems.feeItemId, feeItems.id))
+          .where(eq(studentBillItems.billId, billId));
+          
+        const billWithItems = {
+            ...bill,
+            items: billItemRows.map(r => ({ ...r.item, item: r.feeItem }))
+        };
 
-        const billTotal = parseFloat(bill.totalAmount);
+        const billTotal = parseFloat(billWithItems.totalAmount);
         if (billTotal <= 0) {
             return { success: false, reference: "", error: "Invalid bill amount." };
         }
@@ -338,7 +349,7 @@ export class SplitPaymentEngine {
         let splits: SplitItem[] = [];
         let totalAllocated = 0;
 
-        for (const item of bill.items) {
+        for (const item of billWithItems.items) {
             const itemAmt = parseFloat(item.amount);
             if (item.item?.settlementAccountId) {
                 // Fetch destination settlement account bank details
@@ -490,20 +501,18 @@ export class SplitPaymentEngine {
         const activeGateway = settings['active_gateway'] || 'remita';
         const feeBearerRule = settings[`${activeGateway}_fee_bearer`] || 'default';
 
-        // 2. Fetch Fee Structure Items
-        const structure = await db.query.feeStructures.findFirst({
-            where: eq(feeStructures.id, feeStructureId)
-        });
+        const structureRows = await db.select().from(feeStructures).where(eq(feeStructures.id, feeStructureId)).limit(1);
+        if (!structureRows || structureRows.length === 0) return { success: false, reference: "", error: "Admission Fee Structure not found" };
+        const structure = structureRows[0];
 
-        if (!structure) return { success: false, reference: "", error: "Admission Fee Structure not found" };
-
-        const items = await db.query.feeStructureItems.findMany({
-            where: eq(feeStructureItems.feeStructureId, feeStructureId),
-            with: {
-                // @ts-expect-error - TS2353: Auto-suppressed for build
-                feeItem: true
-            }
-        });
+        const itemRows = await db.select({
+            item: feeStructureItems,
+            feeItem: feeItems
+        }).from(feeStructureItems)
+          .leftJoin(feeItems, eq(feeStructureItems.feeItemId, feeItems.id))
+          .where(eq(feeStructureItems.feeStructureId, feeStructureId));
+          
+        const items = itemRows.map(r => ({ ...r.item, feeItem: r.feeItem }));
 
         // @ts-expect-error - TS2339: Auto-suppressed for build
         const billTotal = parseFloat(structure.totalAmount);

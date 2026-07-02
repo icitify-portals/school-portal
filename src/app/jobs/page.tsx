@@ -131,7 +131,7 @@ export default function PublicJobBoardPage() {
             {/* Application Modal */}
             {selectedJob && (
                 <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md flex items-center justify-center z-50 p-4">
-                    <Card className="w-full max-w-2xl border-none shadow-2xl relative overflow-hidden animate-in zoom-in-95 duration-200">
+                    <Card className="w-full max-w-2xl relative overflow-hidden animate-in zoom-in-95 duration-200 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                         {submitted ? (
                             <div className="p-20 text-center animate-in fade-in duration-500">
                                 <div className="w-20 h-20 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-6">

@@ -135,6 +135,22 @@ export async function getFeeStructures() {
     }
 }
 
+export async function getFeeAllocations() {
+    try {
+        const rawAllocations = await db.select().from(feeAllocations);
+        const structures = await db.select().from(feeStructures);
+        
+        return rawAllocations.map(a => ({
+            ...a,
+            structure: structures.find(s => s.id === a.feeStructureId)
+        }));
+    } catch (error) {
+        console.error("Failed to fetch fee allocations:", error);
+        return [];
+    }
+}
+
+
 export async function createFeeStructure(data: {
     name: string;
     academicYear?: string;
@@ -177,6 +193,86 @@ export async function createFeeStructure(data: {
     }
 }
 
+export async function updateFeeStructure(id: number, data: any) {
+    try {
+        const [existing] = await db.select().from(feeStructures).where(eq(feeStructures.id, id));
+        if (!existing) return { success: false, error: "Structure not found" };
+
+        // If approved, create a new draft version
+        if (existing.status === 'approved') {
+            const result = await db.transaction(async (tx) => {
+                const [newStructure] = await tx.insert(feeStructures).values({
+                    name: `${data.name} (v2)`,
+                    academicYear: data.academicYear,
+                    level: data.level,
+                    status: 'draft'
+                });
+
+                if (data.items.length > 0) {
+                    await tx.insert(feeStructureItems).values(
+                        data.items.map((item: any) => ({
+                            feeStructureId: newStructure.insertId,
+                            feeItemId: item.feeItemId,
+                            amount: item.amount,
+                            semester: item.semester
+                        }))
+                    );
+                }
+                return newStructure.insertId;
+            });
+            revalidatePath("/admin/bursary/fees");
+            return { success: true, id: result, newVersion: true, message: "A new draft version was created because the original was already approved." };
+        }
+
+        // If draft, update in place
+        await db.transaction(async (tx) => {
+            await tx.update(feeStructures)
+                .set({
+                    name: data.name,
+                    academicYear: data.academicYear,
+                    level: data.level
+                })
+                .where(eq(feeStructures.id, id));
+
+            // Delete old items
+            await tx.delete(feeStructureItems).where(eq(feeStructureItems.feeStructureId, id));
+
+            // Insert new items
+            if (data.items.length > 0) {
+                await tx.insert(feeStructureItems).values(
+                    data.items.map((item: any) => ({
+                        feeStructureId: id,
+                        feeItemId: item.feeItemId,
+                        amount: item.amount,
+                        semester: item.semester
+                    }))
+                );
+            }
+        });
+
+        revalidatePath("/admin/bursary/fees");
+        return { success: true, id };
+    } catch (error) {
+        console.error("Failed to update fee structure:", error);
+        return { success: false, error: "Failed to update fee structure" };
+    }
+}
+
+export async function deleteFeeStructure(id: number) {
+    try {
+        await db.transaction(async (tx) => {
+            await tx.delete(feeStructureItems).where(eq(feeStructureItems.feeStructureId, id));
+            await tx.delete(feeAllocations).where(eq(feeAllocations.feeStructureId, id));
+            await tx.delete(feeStructures).where(eq(feeStructures.id, id));
+        });
+        revalidatePath("/admin/bursary/fees");
+        return { success: true };
+    } catch (error) {
+        console.error("Failed to delete fee structure:", error);
+        return { success: false, error: "Cannot delete structure. It might be linked to existing bills." };
+    }
+}
+
 export async function approveFeeStructure(id: number, userId: number) {
     try {
         await db.update(feeStructures)
@@ -209,10 +305,17 @@ export async function allocateFeeStructure(data: {
         let yearToUse = data.academicYear;
         let semesterToUse = data.semester || 'both';
 
+        let sessionObj = null;
+
         if (!yearToUse) {
             const currentSession = await getCurrentSession();
+            sessionObj = currentSession;
             yearToUse = currentSession?.name || "2025/2026";
             if (!data.semester) semesterToUse = (currentSession?.currentSemester as '1' | '2') || '1';
+        } else {
+            // Find session by name
+            const [foundSession] = await db.select().from(academicSessions).where(eq(academicSessions.name, yearToUse)).limit(1);
+            sessionObj = foundSession;
         }
 
         await db.insert(feeAllocations).values({
@@ -220,6 +323,7 @@ export async function allocateFeeStructure(data: {
             facultyId: data.facultyId,
             deptId: data.deptId,
             programmeId: data.programmeId,
+            sessionId: sessionObj?.id || undefined,
         });
         revalidatePath("/admin/bursary/allocations");
         return { success: true };
@@ -361,7 +465,6 @@ export async function processPayment(data: {
                     .where(eq(students.id, data.studentId));
 
                 // Record the wallet transaction
-                // @ts-expect-error - TS2304: Auto-suppressed for build
                 await tx.insert(walletTransactions).values({
                     userId: student.userId, // We need userId for wallet transactions
                     type: 'credit',
@@ -1017,6 +1120,16 @@ export async function approveFeeStructureWithAuth(id: number, userId: number) {
         return await approveFeeStructure(id, userId);
     } catch (error) {
         return { success: false, error: (error as Error).message };
+    }
+}
+
+export async function deleteFeeAllocation(id: number) {
+    try {
+        await db.delete(feeAllocations).where(eq(feeAllocations.id, id));
+        revalidatePath("/admin/bursary/allocations");
+        return { success: true };
+    } catch (error: any) {
+        return { success: false, error: error.message };
     }
 }
 
@@ -1679,7 +1792,6 @@ export async function getAccountsReceivableAging() {
 export async function payBillWithWalletAction(studentId: number, billId: number, amount: number) {
     try {
         const { PaymentService } = await import("@/services/PaymentService");
-        // @ts-expect-error - TS2304: Auto-suppressed for build
         const session = await auth();
         if (!session?.user?.id) throw new Error("Unauthorized");
         const recordedBy = 0; // System automated
@@ -1772,7 +1884,6 @@ export async function postDirectPayment(studentId: number, billId: number, amoun
                 // @ts-expect-error - TS2769: Auto-suppressed for build
                 const [user] = await tx.select().from(users).where(eq(users.id, student.userId)).limit(1);
                 const studentName = user ? user.name : `Student #${studentId}`;
-                // @ts-expect-error - TS2304: Auto-suppressed for build
                 const session = await auth();
                 const recordedBy = session?.user?.id ? parseInt(session.user.id) : 1;
 
@@ -2038,8 +2149,41 @@ export async function updateBillInstallmentSettings(billId: number, data: any) {
 
 
 // Added to resolve Next.js build module resolution errors
-export async function getStudentBillsAdmin(session: any, term: any) {
-    return { success: false, data: [] };
+export async function getStudentBillsAdmin(data: { search?: string }) {
+    try {
+        const query = db.select({
+            bill: studentBills,
+            student: students,
+            session: academicSessions
+        }).from(studentBills)
+            .leftJoin(students, eq(studentBills.studentId, students.id))
+            .leftJoin(academicSessions, eq(studentBills.sessionId, academicSessions.id))
+            .orderBy(desc(studentBills.createdAt));
+
+        const result = await query;
+
+        let filtered = result;
+        if (data?.search) {
+            const s = data.search.toLowerCase();
+            filtered = result.filter(r => 
+                r.bill.billNumber.toLowerCase().includes(s) ||
+                (r.student?.matricNumber && r.student.matricNumber.toLowerCase().includes(s)) ||
+                (r.student?.firstName && r.student.firstName.toLowerCase().includes(s)) ||
+                (r.student?.lastName && r.student.lastName.toLowerCase().includes(s))
+            );
+        }
+
+        const formatted = filtered.map(r => ({
+            ...r.bill,
+            student: r.student,
+            session: r.session
+        }));
+
+        return { success: true, data: formatted };
+    } catch (error) {
+        console.error("Failed to fetch admin bills:", error);
+        return { success: false, data: [] };
+    }
 }
 
 

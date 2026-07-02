@@ -206,28 +206,32 @@ export default function StudentRegistration() {
     const gstCourses = availableCourses.filter(c => c.isGST);
 
     return (
-        <div className="p-8 max-w-6xl mx-auto space-y-8">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-                <div>
-                    <h1 className="text-4xl font-black text-slate-900 tracking-tight flex items-center gap-4">
-                        <BookOpen className="w-10 h-10 text-indigo-600" />
-                        Course Registration
-                    </h1>
-                    <p className="text-slate-500 mt-2 font-medium">
+        <div className="p-4 sm:p-6 lg:p-8 min-h-screen bg-transparent">
+          <div className="max-w-[1600px] w-full mx-auto space-y-8 text-slate-800">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 bg-slate-900 text-white rounded-[3rem] p-8 lg:p-12 shadow-2xl relative overflow-hidden border border-slate-800">
+                <div className="absolute inset-0 bg-gradient-to-r from-indigo-600/30 to-purple-600/30 opacity-50 mix-blend-overlay" />
+                <div className="relative z-10">
+                    <div className="flex items-center gap-4 mb-2">
+                        <BookOpen className="w-12 h-12 text-indigo-400 drop-shadow-md" />
+                        <h1 className="text-4xl lg:text-5xl font-black tracking-tighter uppercase italic drop-shadow-md">
+                            Course Registration
+                        </h1>
+                    </div>
+                    <p className="text-slate-300 mt-2 font-medium tracking-wide uppercase text-sm opacity-90">
                         {activeSession?.currentSemester === '1' ? 'First' : 'Second'} Semester, {activeSession?.name} Session
                     </p>
                 </div>
-                <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-xl shadow-slate-100/50 flex items-center gap-8 min-w-[300px]">
+                <div className="bg-white/10 backdrop-blur-md p-6 rounded-[2rem] border border-white/20 shadow-inner flex items-center gap-8 min-w-[300px] relative z-10">
                     <div className="space-y-1">
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Unit Load</p>
-                        <h2 className={cn("text-3xl font-black", totalUnits > 24 ? "text-rose-500" : "text-indigo-600")}>
-                            {totalUnits} <span className="text-sm text-slate-300 font-bold">/ 24 Units</span>
+                        <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Total Unit Load</p>
+                        <h2 className={cn("text-4xl font-black italic drop-shadow-md", totalUnits > 24 ? "text-rose-400" : "text-white")}>
+                            {totalUnits} <span className="text-sm text-slate-400 font-bold">/ 24 Units</span>
                         </h2>
                     </div>
                     <Button
                         onClick={handleSubmit}
                         disabled={isSubmitting || totalUnits === 0 || totalUnits > 24}
-                        className="bg-slate-900 hover:bg-black text-white px-8 h-14 rounded-2xl font-black uppercase tracking-widest text-[10px]"
+                        className="bg-white text-slate-900 hover:bg-slate-200 px-8 h-14 rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-lg transition-transform active:scale-95 disabled:opacity-50"
                     >
                         {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Finalize Registration"}
                     </Button>
@@ -356,6 +360,7 @@ export default function StudentRegistration() {
                     </Card>
                 </div>
             </div>
+          </div>
         </div>
     );
 }

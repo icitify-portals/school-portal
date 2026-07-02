@@ -55,15 +55,15 @@ export default async function ApplicantScoringPage({ params }: { params: Promise
         <div className="p-6 max-w-[1600px] w-full mx-auto space-y-6">
             <h1 className="text-3xl font-bold tracking-tight">Candidate Evaluation</h1>
 
-            <div className="grid gap-6 md:grid-cols-3">
+            <div className="grid gap-4 md:grid-cols-3">
                 {/* Profile Overview */}
-                <Card className="md:col-span-1">
-                    <CardHeader>
+                <Card className="md:col-span-1 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
+                    <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-6">
                         <CardTitle className="text-lg flex items-center gap-2">
                             <User className="h-5 w-5" /> Candidate Information
                         </CardTitle>
                     </CardHeader>
-                    <CardContent className="space-y-4">
+                    <CardContent className="space-y-4 p-6">
                         <div className="space-y-1">
                             <p className="text-sm text-muted-foreground uppercase font-semibold">Name</p>
                             <p className="font-medium text-lg">{application.candidate.surname}, {application.candidate.firstname} {application.candidate.middlename}</p>
@@ -87,13 +87,13 @@ export default async function ApplicantScoringPage({ params }: { params: Promise
                 </Card>
 
                 {/* Evaluation Form / Scoring */}
-                <Card className="md:col-span-2">
-                    <CardHeader>
+                <Card className="md:col-span-2 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
+                    <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-6">
                         <CardTitle className="text-lg flex items-center gap-2">
                             <ClipboardCheck className="h-5 w-5" /> Screening Scores
                         </CardTitle>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className=" p-6">
                         <EnhancedScoringForm
                             applicationId={application.id}
                             jambRegNo={application.candidate.jambRegNo}

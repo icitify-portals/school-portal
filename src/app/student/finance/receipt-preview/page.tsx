@@ -28,7 +28,7 @@ export default async function ReceiptPreviewPage({
 
     const institutionName = settingsMap.institution_name || 'FEDERAL POLYTECHNIC NIGERIA';
     const institutionAddress = settingsMap.institution_address || 'P.M.B. 1234, Main Campus Road, City, State.';
-    const logoUrl = settingsMap.institution_logo || 'https://ui-avatars.com/api/?name=UNI&background=0D8ABC&color=fff&size=128&rounded=true'; // Fallback placeholder
+    const logoUrl = settingsMap.institution_logo || 'https://fssibadan.edu.ng/wp-content/uploads/2026/06/header-logo.png'; // Fallback placeholder
     const signatureUrl = settingsMap.bursar_signature || 'https://upload.wikimedia.org/wikipedia/commons/f/f3/Curzon_signature.svg'; // Fallback signature placeholder
 
     return (
@@ -61,7 +61,7 @@ export default async function ReceiptPreviewPage({
                     </div>
 
                     {/* Receipt Details */}
-                    <div className="grid grid-cols-2 gap-8">
+                    <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-4">
                             <div>
                                 <p className="text-[10px] uppercase font-bold tracking-widest text-slate-400 mb-1">Received From</p>

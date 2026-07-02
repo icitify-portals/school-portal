@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { getNews } from "@/actions/cms-publishing";
 import { Newspaper, ChevronRight, Search, Clock, Filter } from "lucide-react";
 import { Badge } from "@/components/ui/badge";

@@ -281,11 +281,11 @@ export default function SupportTicketsClient({ initialTickets, session }: Props)
     };
 
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
             {/* Top Counters */}
-            <div className="col-span-1 lg:col-span-12 grid grid-cols-1 sm:grid-cols-3 gap-6">
-                <Card className="shadow-sm border-slate-200 bg-white/50 backdrop-blur-md">
-                    <CardContent className="pt-6 flex items-center justify-between">
+            <div className="col-span-1 lg:col-span-12 grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <Card className="-200 /50 backdrop-blur-md border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
+                    <CardContent className="pt-6 flex items-center justify-between p-6">
                         <div>
                             <p className="text-sm font-semibold text-slate-500 uppercase tracking-wider">Total Tickets</p>
                             <h3 className="text-3xl font-black text-slate-800 mt-1">{tickets.length}</h3>
@@ -295,8 +295,8 @@ export default function SupportTicketsClient({ initialTickets, session }: Props)
                         </div>
                     </CardContent>
                 </Card>
-                <Card className="shadow-sm border-slate-200 bg-white/50 backdrop-blur-md">
-                    <CardContent className="pt-6 flex items-center justify-between">
+                <Card className="-200 /50 backdrop-blur-md border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
+                    <CardContent className="pt-6 flex items-center justify-between p-6">
                         <div>
                             <p className="text-sm font-semibold text-slate-500 uppercase tracking-wider">Active Queue</p>
                             <h3 className="text-3xl font-black text-emerald-600 mt-1">
@@ -308,8 +308,8 @@ export default function SupportTicketsClient({ initialTickets, session }: Props)
                         </div>
                     </CardContent>
                 </Card>
-                <Card className="shadow-sm border-slate-200 bg-white/50 backdrop-blur-md">
-                    <CardContent className="pt-6 flex items-center justify-between">
+                <Card className="-200 /50 backdrop-blur-md border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
+                    <CardContent className="pt-6 flex items-center justify-between p-6">
                         <div>
                             <p className="text-sm font-semibold text-slate-500 uppercase tracking-wider">Resolved Cases</p>
                             <h3 className="text-3xl font-black text-indigo-600 mt-1">
@@ -325,7 +325,7 @@ export default function SupportTicketsClient({ initialTickets, session }: Props)
 
             {/* Left Column: Tickets Queue List (4 cols) */}
             <div className="col-span-1 lg:col-span-4 space-y-4">
-                <Card className="shadow-sm border-slate-200 bg-white/50 backdrop-blur-md">
+                <Card className="-200 /50 backdrop-blur-md border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                     <CardHeader className="pb-3 border-b flex flex-row items-center justify-between space-y-0">
                         <CardTitle className="text-lg font-bold text-slate-800">Support Inbox</CardTitle>
                         <Button 
@@ -336,7 +336,7 @@ export default function SupportTicketsClient({ initialTickets, session }: Props)
                             <Plus className="h-4 w-4" /> New Ticket
                         </Button>
                     </CardHeader>
-                    <CardContent className="pt-4 space-y-3">
+                    <CardContent className="pt-4 space-y-3 p-6">
                         {/* Search & Filters */}
                         <div className="relative">
                             <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
@@ -413,14 +413,14 @@ export default function SupportTicketsClient({ initialTickets, session }: Props)
             {/* Right Column: Ticket Conversation details (8 cols) */}
             <div className="col-span-1 lg:col-span-8">
                 {loadingDetail ? (
-                    <Card className="shadow-sm border-slate-200 bg-white h-[580px] flex items-center justify-center">
+                    <Card className="-200 h-[580px] flex items-center justify-center border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                         <div className="text-center space-y-2">
                             <Loader2 className="h-8 w-8 text-indigo-600 animate-spin mx-auto" />
                             <p className="text-sm text-slate-500 font-medium">Fetching support thread...</p>
                         </div>
                     </Card>
                 ) : ticketDetail ? (
-                    <Card className="shadow-sm border-slate-200 bg-white flex flex-col h-[580px]">
+                    <Card className="-200 flex flex-col h-[580px] border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                         {/* Header Details */}
                         <div className="p-4 border-b flex items-center justify-between bg-slate-50/30">
                             <div>
@@ -546,7 +546,7 @@ export default function SupportTicketsClient({ initialTickets, session }: Props)
                         )}
                     </Card>
                 ) : (
-                    <Card className="shadow-sm border-slate-200 bg-white h-[580px] flex items-center justify-center p-8">
+                    <Card className="-200 h-[580px] flex items-center justify-center p-8 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                         <div className="text-center max-w-sm space-y-4">
                             <div className="w-16 h-16 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center mx-auto">
                                 <LifeBuoy className="h-8 w-8 stroke-1" />

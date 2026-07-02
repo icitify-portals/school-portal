@@ -9,9 +9,9 @@ export default function StatusPage() {
             <h2 className="text-3xl font-bold text-slate-900 tracking-tight mb-4">Request Status & Changes</h2>
             <p className="text-slate-500 mb-10">Manage your academic lifecycle and departmental changes.</p>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
-                <Card className="hover:shadow-md transition-shadow cursor-pointer group border-slate-200">
-                    <CardContent className="pt-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-12">
+                <Card className="hover: transition- cursor-pointer group -200 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
+                    <CardContent className="pt-6 p-6">
                         <div className="flex gap-4">
                             <div className="p-3 bg-blue-50 text-blue-600 rounded-xl group-hover:bg-blue-600 group-hover:text-white transition-colors">
                                 <UserPlus className="w-6 h-6" />
@@ -27,8 +27,8 @@ export default function StatusPage() {
                     </CardContent>
                 </Card>
 
-                <Card className="hover:shadow-md transition-shadow cursor-pointer group border-slate-200">
-                    <CardContent className="pt-6">
+                <Card className="hover: transition- cursor-pointer group -200 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
+                    <CardContent className="pt-6 p-6">
                         <div className="flex gap-4">
                             <div className="p-3 bg-orange-50 text-orange-600 rounded-xl group-hover:bg-orange-600 group-hover:text-white transition-colors">
                                 <RefreshCw className="w-6 h-6" />
@@ -50,7 +50,7 @@ export default function StatusPage() {
                     <FileSearch className="w-5 h-5 text-slate-400" />
                     Previous Requests
                 </h3>
-                <Card className="border-none shadow-sm overflow-hidden">
+                <Card className="overflow-hidden border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                     <table className="w-full text-left">
                         <thead>
                             <tr className="bg-slate-50 text-slate-500 text-xs font-bold uppercase tracking-wider">

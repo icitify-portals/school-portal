@@ -33,7 +33,7 @@ export function BroadsheetViewer({
     return (
         <div className="space-y-6">
             {/* Filter Bar */}
-            <Card className="bg-slate-50 border-slate-200 shadow-sm">
+            <Card className="-200 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                 <CardContent className="p-4 flex flex-col md:flex-row gap-4 items-end">
                     <div className="space-y-2 flex-1">
                         <label className="text-xs font-bold uppercase tracking-widest text-slate-500">Academic Session</label>
@@ -83,7 +83,7 @@ export function BroadsheetViewer({
             )}
 
             {initialData && (
-                <Card className="shadow-lg border-slate-200 overflow-hidden">
+                <Card className="-200 overflow-hidden border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                     <div className="bg-slate-900 p-4 text-white flex justify-between items-center">
                         <div>
                             <h2 className="font-black tracking-widest uppercase text-sm">Official Master Broadsheet</h2>

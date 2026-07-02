@@ -19,7 +19,7 @@ export function ResultUploader({ courses, sessions }: { courses: any[], sessions
 
     return (
         <div className="space-y-6">
-            <Card className="bg-slate-50 border-slate-200">
+            <Card className="-200 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                 <CardContent className="p-6 flex flex-col md:flex-row gap-6">
                     <div className="space-y-2 flex-1">
                         <label className="text-xs font-bold uppercase tracking-widest text-slate-500">Target Course</label>

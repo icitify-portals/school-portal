@@ -114,7 +114,7 @@ export default function StudentExcusesPage() {
 
             {/* Submit Form */}
             {showForm && (
-                <Card className="border-none shadow-xl rounded-2xl bg-gradient-to-br from-purple-50 to-indigo-50 overflow-hidden animate-in slide-in-from-top-4 duration-300">
+                <Card className="-to-br from-purple-50 to-indigo-50 overflow-hidden animate-in slide-in-from-top-4 duration-300 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                     <CardContent className="p-6 space-y-5">
                         <h3 className="font-black text-sm uppercase tracking-widest text-purple-700 flex items-center gap-2">
                             <Send className="w-4 h-4" /> Submit New Excuse
@@ -254,7 +254,7 @@ export default function StudentExcusesPage() {
                     ))}
                 </div>
             ) : (
-                <Card className="border-none shadow-xl rounded-2xl bg-slate-50">
+                <Card className=" border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                     <CardContent className="p-10 text-center space-y-3">
                         <FileText className="w-12 h-12 text-slate-300 mx-auto" />
                         <h3 className="text-lg font-black text-slate-900 uppercase">No Excuses Yet</h3>

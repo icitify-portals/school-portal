@@ -66,7 +66,7 @@ export default function HRSettingsPage() {
             </div>
 
             <form onSubmit={handleSave} className="space-y-6">
-                <Card className="border-none shadow-sm overflow-hidden">
+                <Card className="overflow-hidden border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                     <CardHeader className="bg-slate-900 text-white py-6">
                         <div className="flex items-center gap-2">
                             <Mail className="w-5 h-5 text-indigo-400" />
@@ -74,7 +74,7 @@ export default function HRSettingsPage() {
                         </div>
                     </CardHeader>
                     <CardContent className="p-8 space-y-8">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest flex items-center gap-1">
                                     Institutional Sender Name
@@ -129,7 +129,7 @@ export default function HRSettingsPage() {
                     </CardContent>
                 </Card>
 
-                <Card className="border-none shadow-sm overflow-hidden border-t-4 border-emerald-500">
+                <Card className="overflow-hidden -4 -500 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                     <CardHeader className="bg-white">
                         <div className="flex items-center gap-2">
                             <Building2 className="w-5 h-5 text-emerald-600" />

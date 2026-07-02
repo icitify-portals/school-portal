@@ -258,7 +258,7 @@ export default function GraduateDocumentWorkspace() {
           
           {/* A. Dynamic Verification & Eligibility Module */}
           {profiles.length === 0 ? (
-            <Card className="border-none shadow-xl shadow-slate-200/50 rounded-2xl bg-slate-900 text-white overflow-hidden">
+            <Card className="-200/50 text-white overflow-hidden border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
               <CardContent className="p-10 space-y-6">
                 <div className="flex items-center gap-4">
                   <div className="p-4 bg-indigo-600/20 rounded-2xl">
@@ -311,7 +311,7 @@ export default function GraduateDocumentWorkspace() {
               </CardContent>
             </Card>
           ) : (
-            <Card className="border-none shadow-xl shadow-slate-200/50 rounded-2xl overflow-hidden bg-white">
+            <Card className="-200/50 overflow-hidden border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
               <CardHeader className="bg-slate-900 text-white p-8">
                 <CardTitle className="text-xl font-black italic">1. Select Graduation Milestone</CardTitle>
                 <CardDescription className="text-slate-400 font-bold uppercase tracking-widest text-[9px]">
@@ -319,7 +319,7 @@ export default function GraduateDocumentWorkspace() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="p-8 space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Active Profile</label>
                     <Select defaultValue={selectedProfile.id.toString()} onValueChange={handleProfileChange}>
@@ -359,7 +359,7 @@ export default function GraduateDocumentWorkspace() {
 
           {/* B. Apply Form */}
           {selectedProfile && (
-            <Card className="border-none shadow-xl shadow-slate-200/50 rounded-2xl bg-white overflow-hidden">
+            <Card className="-200/50 overflow-hidden border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
               <CardHeader className="p-8 border-b border-slate-100">
                 <CardTitle className="text-lg font-black uppercase tracking-tight text-slate-900 flex items-center gap-2">
                   <FileText className="w-5 h-5 text-indigo-600" /> 2. Complete Application Forms
@@ -376,7 +376,7 @@ export default function GraduateDocumentWorkspace() {
                 ) : (
                   <form onSubmit={handleSubmit} className="space-y-8">
                     
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Request Document Form</label>
                         <Select defaultValue={selectedForm?.id.toString()} onValueChange={handleFormChange}>
@@ -410,7 +410,7 @@ export default function GraduateDocumentWorkspace() {
                     <Separator className="bg-slate-100" />
 
                     {/* Dynamic registry fields */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {renderDynamicFields()}
                     </div>
 
@@ -430,7 +430,7 @@ export default function GraduateDocumentWorkspace() {
                     <Separator className="bg-slate-100" />
 
                     {/* Contact Details */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-1">
                           <Mail className="w-3.5 h-3.5" /> Notification Email
@@ -461,8 +461,7 @@ export default function GraduateDocumentWorkspace() {
                     <div className="bg-slate-900 rounded-[1.5rem] p-6 text-white flex flex-col md:flex-row justify-between items-center gap-4">
                       <div>
                         <p className="text-slate-400 font-bold uppercase tracking-widest text-[9px] mb-1">Bursary Checkout Total</p>
-                        // @ts-expect-error - TS2304: Auto-suppressed for build
-                        <h4 className="text-3xl font-black italic">{settings?.base_currency || '₦'}{getCalculatedPrice().toLocaleString()}</h4>
+                        <h4 className="text-3xl font-black italic">₦{getCalculatedPrice().toLocaleString()}</h4>
                       </div>
                       <Button
                         type="submit"
@@ -485,7 +484,7 @@ export default function GraduateDocumentWorkspace() {
         {/* Right Side: Instructions & Surcharges (Span 1) */}
         <div className="space-y-10">
           
-          <Card className="border-none shadow-xl shadow-slate-200/50 rounded-2xl p-8 space-y-6 bg-white">
+          <Card className="-200/50 p-8 space-y-6 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
             <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400">Institutional Delivery Fees</h4>
             <div className="space-y-4">
               <div className="flex justify-between items-center p-3 bg-slate-50 rounded-xl">
@@ -525,11 +524,11 @@ export default function GraduateDocumentWorkspace() {
             </div>
           </Card>
 
-          <Card className="border-none shadow-xl shadow-slate-200/50 rounded-2xl bg-indigo-650 bg-indigo-600 text-white p-8">
+          <Card className="-200/50 text-white p-8 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
             <h4 className="text-[10px] font-black uppercase tracking-widest text-indigo-200">System Processing Audit</h4>
             <div className="mt-4 space-y-4 text-xs font-medium text-indigo-100">
               <p>
-                The school portal executes <strong>automated transcript calculations</strong>. There is no manual entry by administrators.
+                The FSS Portal executes <strong>automated transcript calculations</strong>. There is no manual entry by administrators.
               </p>
               <p>
                 Transcripts calculate CGPA instantly from the <strong>resultMarks</strong> database table.
@@ -542,7 +541,7 @@ export default function GraduateDocumentWorkspace() {
       </div>
 
       {/* C. Applications Log */}
-      <Card className="border-none shadow-xl shadow-slate-200/50 rounded-2xl overflow-hidden bg-white">
+      <Card className="-200/50 overflow-hidden border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
         <CardHeader className="p-8 border-b border-slate-100">
           <CardTitle className="text-lg font-black uppercase tracking-tight text-slate-900">My Document Applications Queue</CardTitle>
           <CardDescription className="text-slate-400 font-medium">Track your application payment and dispatch history.</CardDescription>
@@ -580,8 +579,7 @@ export default function GraduateDocumentWorkspace() {
                         </Badge>
                       </td>
                       <td className="px-8 py-4 font-black text-slate-800">
-                        // @ts-expect-error - TS2304: Auto-suppressed for build
-                        {settings?.base_currency || '₦'}{parseFloat(app.amountPaid || "0.00").toLocaleString()}
+                        ₦{parseFloat(app.amountPaid || "0.00").toLocaleString()}
                       </td>
                       <td className="px-8 py-4">
                         <Badge className={`rounded-full text-[10px] font-black uppercase tracking-widest ${app.paymentStatus === "paid" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>

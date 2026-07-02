@@ -614,8 +614,7 @@ export default function BursaryReportsPage() {
                                         <Coins className="w-24 h-24 text-emerald-500" />
                                     </div>
                                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Total Collections</p>
-                                    // @ts-expect-error - TS2304: Auto-suppressed for build
-                                    <h3 className="text-3xl font-black text-slate-900 tracking-tight">{settings?.base_currency || '₦'}{totalCollections.toLocaleString()}</h3>
+                                    <h3 className="text-3xl font-black text-slate-900 tracking-tight">₦{totalCollections.toLocaleString()}</h3>
                                     <div className="mt-6 flex items-center text-[10px] text-emerald-600 font-bold uppercase tracking-wider bg-emerald-50 w-fit px-3 py-1 rounded-full">
                                         <TrendingUp className="w-3.5 h-3.5 mr-1" />
                                         Gross Revenue Inflows
@@ -628,8 +627,7 @@ export default function BursaryReportsPage() {
                                         <TrendingDown className="w-24 h-24 text-indigo-500" />
                                     </div>
                                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Total Expenditures</p>
-                                    // @ts-expect-error - TS2304: Auto-suppressed for build
-                                    <h3 className="text-3xl font-black text-slate-900 tracking-tight">{settings?.base_currency || '₦'}{expTotal.toLocaleString()}</h3>
+                                    <h3 className="text-3xl font-black text-slate-900 tracking-tight">₦{expTotal.toLocaleString()}</h3>
                                     <div className="mt-6 flex items-center text-[10px] text-indigo-600 font-bold uppercase tracking-wider bg-indigo-50 w-fit px-3 py-1 rounded-full">
                                         <TrendingDown className="w-3.5 h-3.5 mr-1" />
                                         Disbursed Vouchers
@@ -642,8 +640,7 @@ export default function BursaryReportsPage() {
                                         <AlertCircle className="w-24 h-24 text-rose-500" />
                                     </div>
                                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Outstanding Arrears</p>
-                                    // @ts-expect-error - TS2304: Auto-suppressed for build
-                                    <h3 className="text-3xl font-black text-slate-900 tracking-tight">{settings?.base_currency || '₦'}{arrearsTotal.toLocaleString()}</h3>
+                                    <h3 className="text-3xl font-black text-slate-900 tracking-tight">₦{arrearsTotal.toLocaleString()}</h3>
                                     <div className="mt-6 flex items-center text-[10px] text-rose-600 font-bold uppercase tracking-wider bg-rose-50 w-fit px-3 py-1 rounded-full">
                                         <AlertCircle className="w-3.5 h-3.5 mr-1" />
                                         Accounts Receivable
@@ -835,8 +832,7 @@ export default function BursaryReportsPage() {
                                                                     "text-sm font-black",
                                                                     t.transaction.type === 'credit' ? "text-emerald-600" : "text-rose-600"
                                                                 )}>
-                                                                    // @ts-expect-error - TS2304: Auto-suppressed for build
-                                                                    {t.transaction.type === 'credit' ? '+' : '-'}{settings?.base_currency || '₦'}{parseFloat(t.transaction.amount).toLocaleString()}
+                                                                    {t.transaction.type === 'credit' ? '+' : '-'}₦{parseFloat(t.transaction.amount).toLocaleString()}
                                                                 </span>
                                                             </td>
                                                         </tr>
@@ -939,8 +935,7 @@ export default function BursaryReportsPage() {
 
                                 <div className="bg-white rounded-[2.5rem] p-8 relative overflow-hidden shadow-xl shadow-slate-100 border border-slate-100/50">
                                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Total Paid So Far</p>
-                                    // @ts-expect-error - TS2304: Auto-suppressed for build
-                                    <h3 className="text-3xl font-black text-emerald-600 tracking-tight">{settings?.base_currency || '₦'}{sortedInstallments.reduce((sum, item) => sum + parseFloat(item.amountPaid || "0"), 0).toLocaleString()}</h3>
+                                    <h3 className="text-3xl font-black text-emerald-600 tracking-tight">₦{sortedInstallments.reduce((sum, item) => sum + parseFloat(item.amountPaid || "0"), 0).toLocaleString()}</h3>
                                     <div className="mt-6 flex items-center text-[10px] text-emerald-600 font-bold uppercase tracking-wider bg-emerald-50 w-fit px-3 py-1 rounded-full">
                                         Realized Inflows
                                     </div>
@@ -948,8 +943,7 @@ export default function BursaryReportsPage() {
 
                                 <div className="bg-white rounded-[2.5rem] p-8 relative overflow-hidden shadow-xl shadow-slate-100 border border-slate-100/50">
                                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Outstanding Balances</p>
-                                    // @ts-expect-error - TS2304: Auto-suppressed for build
-                                    <h3 className="text-3xl font-black text-rose-600 tracking-tight">{settings?.base_currency || '₦'}{sortedInstallments.reduce((sum, item) => sum + (parseFloat(item.totalAmount) - parseFloat(item.amountPaid || "0")), 0).toLocaleString()}</h3>
+                                    <h3 className="text-3xl font-black text-rose-600 tracking-tight">₦{sortedInstallments.reduce((sum, item) => sum + (parseFloat(item.totalAmount) - parseFloat(item.amountPaid || "0")), 0).toLocaleString()}</h3>
                                     <div className="mt-6 flex items-center text-[10px] text-rose-600 font-bold uppercase tracking-wider bg-rose-50 w-fit px-3 py-1 rounded-full">
                                         Outstanding Receivables
                                     </div>
@@ -1019,8 +1013,7 @@ export default function BursaryReportsPage() {
                                                                 {item.department?.name || 'General'}
                                                             </td>
                                                             <td className="px-8 py-5 text-xs font-bold text-slate-800">
-                                                                // @ts-expect-error - TS2304: Auto-suppressed for build
-                                                                {settings?.base_currency || '₦'}{total.toLocaleString()}
+                                                                ₦{total.toLocaleString()}
                                                             </td>
                                                             <td className="px-8 py-5">
                                                                 <div className="flex items-center gap-2">
@@ -1029,13 +1022,11 @@ export default function BursaryReportsPage() {
                                                                     </div>
                                                                     <span className="text-[10px] font-black text-indigo-600">{percent.toFixed(1)}%</span>
                                                                 </div>
-                                                                // @ts-expect-error - TS2304: Auto-suppressed for build
-                                                                <p className="text-[9px] text-slate-400 mt-0.5">Paid: {settings?.base_currency || '₦'}{paid.toLocaleString()}</p>
+                                                                <p className="text-[9px] text-slate-400 mt-0.5">Paid: ₦{paid.toLocaleString()}</p>
                                                             </td>
                                                             <td className="px-8 py-5 text-right">
                                                                 <span className="text-sm font-black text-rose-600">
-                                                                    // @ts-expect-error - TS2304: Auto-suppressed for build
-                                                                    {settings?.base_currency || '₦'}{balance.toLocaleString()}
+                                                                    ₦{balance.toLocaleString()}
                                                                 </span>
                                                             </td>
                                                         </tr>

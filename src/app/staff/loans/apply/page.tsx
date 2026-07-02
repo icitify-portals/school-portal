@@ -75,7 +75,7 @@ export default function LoanApplicationPage() {
           <p className="text-slate-500 text-lg">Select a loan product to begin your application</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {templates.map((template) => (
             <div 
               key={template.id}
@@ -135,7 +135,7 @@ export default function LoanApplicationPage() {
           </div>
 
           <form onSubmit={handleApply} className="p-8 space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-bold text-slate-700">Requested Amount (₦)</label>
                 <input 
@@ -147,8 +147,7 @@ export default function LoanApplicationPage() {
                 />
                 <div className="flex items-center gap-1 text-xs text-slate-400">
                   <Info size={12} />
-                  // @ts-expect-error - TS2304: Auto-suppressed for build
-                  Max: {settings?.base_currency || '₦'}{parseFloat(selectedTemplate.maxAmount).toLocaleString()}
+                  Max: ₦{parseFloat(selectedTemplate.maxAmount).toLocaleString()}
                 </div>
               </div>
 
@@ -174,7 +173,7 @@ export default function LoanApplicationPage() {
                 Additional Information
               </h3>
               
-              <div className="grid grid-cols-1 gap-6">
+              <div className="grid grid-cols-1 gap-4">
                 {config.map((field: any, i: number) => (
                   <div key={i} className="space-y-2">
                     <label className="text-sm font-bold text-slate-700">{field.label}</label>

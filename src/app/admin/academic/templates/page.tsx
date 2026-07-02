@@ -86,7 +86,7 @@ export default function ResultTemplateManager() {
         </button>
       </div>
 
-      <div className="grid grid-cols-12 gap-8">
+      <div className="grid grid-cols-12 gap-4">
         {/* Left: Template List */}
         <div className="col-span-12 lg:col-span-4 space-y-6">
           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 space-y-4">

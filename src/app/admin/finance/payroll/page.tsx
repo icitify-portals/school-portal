@@ -57,7 +57,7 @@ export default function FinancePayrollDashboard() {
             {loading ? (
                 <div className="flex justify-center p-12"><Loader2 className="w-8 h-8 animate-spin text-slate-400" /></div>
             ) : batches.length === 0 ? (
-                <Card className="border-dashed shadow-none bg-slate-50">
+                <Card className=" border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                     <CardContent className="flex flex-col items-center justify-center p-12 text-center">
                         <CheckCircle2 className="w-12 h-12 text-emerald-400 mb-4" />
                         <h3 className="text-lg font-bold text-slate-800">All Caught Up!</h3>
@@ -65,7 +65,7 @@ export default function FinancePayrollDashboard() {
                     </CardContent>
                 </Card>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {batches.map((batch) => (
                         <Card key={batch.batchId} className="border-emerald-100 shadow-sm hover:shadow-md transition-shadow">
                             <CardHeader className="bg-emerald-50/50 border-b border-emerald-50">

@@ -126,8 +126,8 @@ export default function StaffJournalPage() {
                 </TabsList>
 
                 <TabsContent value="submissions">
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                        <Card className="md:col-span-3 border-none shadow-xl shadow-slate-200/50 dark:shadow-none bg-white dark:bg-slate-900 overflow-hidden rounded-2xl">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <Card className="md:col-span-3 -200/50 dark: dark: overflow-hidden border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                             <CardHeader className="border-b border-slate-50 dark:border-slate-800 pb-4">
                                 <div className="flex justify-between items-center">
                                     <CardTitle className="text-xl font-bold flex items-center">
@@ -209,13 +209,13 @@ export default function StaffJournalPage() {
                         </Card>
 
                         <div className="space-y-6">
-                            <Card className="border-none shadow-lg bg-gradient-to-br from-indigo-700 via-indigo-600 to-indigo-800 text-white rounded-2xl">
-                                <CardHeader className="pb-3">
+                            <Card className="-to-br from-indigo-700 via-indigo-600 to-indigo-800 text-white border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
+                                <CardHeader className="pb-3 bg-slate-50/50 border-b border-slate-100 p-6">
                                     <CardTitle className="text-lg font-bold flex items-center">
                                         <Users className="mr-2 h-5 w-5" /> Editorial Team
                                     </CardTitle>
                                 </CardHeader>
-                                <CardContent className="space-y-4">
+                                <CardContent className="space-y-4 p-6">
                                     <div className="flex items-center gap-3 p-3 bg-white/10 rounded-xl hover:bg-white/20 transition-colors cursor-pointer">
                                         <div className="h-10 w-10 rounded-full bg-white/20 flex items-center justify-center font-bold">AS</div>
                                         <div>
@@ -236,11 +236,11 @@ export default function StaffJournalPage() {
                                 </CardContent>
                             </Card>
 
-                            <Card className="border-slate-200 dark:border-slate-800 rounded-2xl">
-                                <CardHeader className="pb-2">
+                            <Card className="-200 dark:-800 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
+                                <CardHeader className="pb-2 bg-slate-50/50 border-b border-slate-100 p-6">
                                     <CardTitle className="text-sm font-bold uppercase tracking-tight text-slate-500">Live Statistics</CardTitle>
                                 </CardHeader>
-                                <CardContent className="space-y-4 pt-2">
+                                <CardContent className="space-y-4 pt-2 p-6">
                                     <div className="flex justify-between items-end">
                                         <div className="text-slate-500 text-xs font-medium">Acceptance Rate</div>
                                         <div className="text-lg font-black text-slate-900 dark:text-slate-100">22.4%</div>
@@ -263,7 +263,7 @@ export default function StaffJournalPage() {
                 </TabsContent>
 
                 <TabsContent value="announcements">
-                    <Card className="border-none shadow-xl bg-white dark:bg-slate-900 rounded-2xl overflow-hidden">
+                    <Card className="dark: overflow-hidden border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                         <CardHeader className="border-b border-slate-50 flex flex-row justify-between items-center px-6">
                             <div>
                                 <CardTitle className="text-xl font-bold">Public Announcements</CardTitle>

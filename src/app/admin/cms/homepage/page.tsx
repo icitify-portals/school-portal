@@ -125,7 +125,7 @@ export default function HomepageBuilder() {
                     {loading ? (
                         <div className="flex items-center justify-center p-12"><Loader2 className="w-8 h-8 animate-spin text-indigo-500" /></div>
                     ) : sections.length === 0 ? (
-                        <Card className="rounded-2xl border-dashed border-2 bg-slate-50/50 p-12 text-center">
+                        <Card className="/50 p-12 text-center border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                             <div className="text-slate-400 font-medium">No sections added yet. Start building your homepage!</div>
                         </Card>
                     ) : (

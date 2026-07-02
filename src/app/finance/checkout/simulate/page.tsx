@@ -23,7 +23,7 @@ function CheckoutSimulatorContent() {
     const searchParams = useSearchParams();
     const router = useRouter();
     
-    const gateway = searchParams.get("gateway") || "paystack";
+    const gateway = searchParams.get("gateway") || "remita";
     const reference = searchParams.get("reference") || "";
     const amountStr = searchParams.get("amount") || "0";
     const rrr = searchParams.get("rrr") || "";
@@ -122,8 +122,8 @@ function CheckoutSimulatorContent() {
     if (status !== 'idle') {
         return (
             <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
-                <Card className="w-full max-w-md bg-slate-900/50 backdrop-blur-xl border-slate-800 shadow-2xl text-center">
-                    <CardContent className="pt-8 pb-8 flex flex-col items-center">
+                <Card className="w-full max-w-md /50 backdrop-blur-xl -800 text-center border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
+                    <CardContent className="pt-8 pb-8 flex flex-col items-center p-6">
                         {status === 'success' ? (
                             <>
                                 <div className="p-4 bg-emerald-500/10 text-emerald-400 rounded-full mb-4 animate-bounce">
@@ -195,14 +195,13 @@ function CheckoutSimulatorContent() {
                         </Badge>
                     </CardHeader>
                     
-                    <CardContent className="pt-6 space-y-6">
+                    <CardContent className="pt-6 space-y-6 p-6">
                         {/* Transaction Metadata summary */}
                         <div className="bg-slate-950/50 rounded-xl p-4 border border-slate-800/50 flex justify-between items-center">
                             <div>
                                 <p className="text-slate-500 text-xs font-semibold uppercase tracking-wider">Amount Due</p>
                                 <h3 className="text-3xl font-extrabold text-white mt-1">
-                                    // @ts-expect-error - TS2304: Auto-suppressed for build
-                                    {settings?.base_currency || '₦'}{amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    ₦{amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                 </h3>
                             </div>
                             <div className="text-right">
@@ -221,81 +220,19 @@ function CheckoutSimulatorContent() {
                             </div>
                         )}
 
-                        {/* Physical split visualization */}
-                        <div className="space-y-3">
-                            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
-                                <ArrowRightLeft className="w-4 h-4 text-indigo-400" />
-                                Physical Settlement Split Accounts
-                            </h4>
-                            
-                            <div className="bg-slate-950/40 rounded-xl border border-slate-800/80 p-4 space-y-3">
-                                <div className="flex justify-between items-center text-xs text-slate-500 font-semibold border-b border-slate-800 pb-2">
-                                    <span>BENEFICIARY BANK ACCOUNT</span>
-                                    <span>SHARE</span>
-                                </div>
-
-                                <div className="space-y-3">
-                                    <div className="flex justify-between items-center text-sm">
-                                        <div className="flex items-center gap-2">
-                                            <Building2 className="w-4 h-4 text-slate-500" />
-                                            <div>
-                                                <p className="font-semibold text-slate-200">Tuition Settlement A/C</p>
-                                                <p className="text-xs text-slate-500">First Bank • 012345****</p>
-                                            </div>
-                                        </div>
-                                        <span className="font-mono font-bold text-white">
-                                            // @ts-expect-error - TS2304: Auto-suppressed for build
-                                            {settings?.base_currency || '₦'}{(amount * 0.4).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                                        </span>
-                                    </div>
-
-                                    <div className="flex justify-between items-center text-sm">
-                                        <div className="flex items-center gap-2">
-                                            <Building2 className="w-4 h-4 text-slate-500" />
-                                            <div>
-                                                <p className="font-semibold text-slate-200">Developer Settlement A/C</p>
-                                                <p className="text-xs text-slate-500">Jaiz Bank • 987654****</p>
-                                            </div>
-                                        </div>
-                                        <div className="text-right">
-                                            <span className="font-mono font-bold text-white">
-                                                // @ts-expect-error - TS2304: Auto-suppressed for build
-                                                {settings?.base_currency || '₦'}{(amount * 0.1).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                                            </span>
-                                            <Badge className="block mt-1 bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[10px] scale-90 px-1 py-0">
-                                                Developer Share
-                                            </Badge>
-                                        </div>
-                                    </div>
-
-                                    <div className="flex justify-between items-center text-sm">
-                                        <div className="flex items-center gap-2">
-                                            <Building2 className="w-4 h-4 text-slate-500" />
-                                            <div>
-                                                <p className="font-semibold text-slate-200">Laboratory A/C</p>
-                                                <p className="text-xs text-slate-500">GTBank • 567890****</p>
-                                            </div>
-                                        </div>
-                                        <span className="font-mono font-bold text-white">
-                                            // @ts-expect-error - TS2304: Auto-suppressed for build
-                                            {settings?.base_currency || '₦'}{(amount * 0.2).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                                        </span>
-                                    </div>
-
-                                    <div className="flex justify-between items-center text-sm">
-                                        <div className="flex items-center gap-2">
-                                            <Building2 className="w-4 h-4 text-slate-500" />
-                                            <div>
-                                                <p className="font-semibold text-slate-200">School Main Default A/C</p>
-                                                <p className="text-xs text-slate-500">Zenith Bank • 102234****</p>
-                                            </div>
-                                        </div>
-                                        <span className="font-mono font-bold text-white">
-                                            // @ts-expect-error - TS2304: Auto-suppressed for build
-                                            {settings?.base_currency || '₦'}{(amount * 0.3).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                                        </span>
-                                    </div>
-                                </div>
+                        {/* Summary of Fees */}
+                        <div className="bg-slate-950/40 rounded-xl border border-slate-800/80 p-4 space-y-3">
+                            <div className="flex justify-between items-center text-sm">
+                                <span className="text-slate-400">Amount Due</span>
+                                <span className="font-mono font-bold text-slate-200">₦{amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                            </div>
+                            <div className="flex justify-between items-center text-sm">
+                                <span className="text-slate-400">Processing Charges</span>
+                                <span className="font-mono font-bold text-slate-200">₦{(amount * 0.015).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                            </div>
+                            <div className="flex justify-between items-center text-sm border-t border-slate-800 pt-3">
+                                <span className="font-bold text-white">Total Payable</span>
+                                <span className="font-mono font-extrabold text-white text-lg">₦{(amount + amount * 0.015).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                             </div>
                         </div>
 
@@ -318,8 +255,8 @@ function CheckoutSimulatorContent() {
                                 Simulate Cancel/Fail
                             </Button>
 
-                            {gateway === 'remita' && rrr ? (
-                                <div className="w-full">
+                            {gateway === 'remita' && rrr && !rrr.startsWith('RRR-MOCK') && (
+                                <div className="w-full mb-3">
                                     <RemitaInlineCheckout 
                                         rrr={rrr} 
                                         amount={amount} 
@@ -331,25 +268,25 @@ function CheckoutSimulatorContent() {
                                         onClose={() => handleSimulate('failed')} 
                                     />
                                 </div>
-                            ) : (
-                                <Button
-                                    className={`w-full py-6 font-semibold flex items-center justify-center gap-2 text-white bg-emerald-600 hover:bg-emerald-500 border border-emerald-500/35`}
-                                    disabled={loading}
-                                    onClick={() => handleSimulate('completed')}
-                                >
-                                    {loading ? (
-                                        <>
-                                            <Loader2 className="w-5 h-5 animate-spin" />
-                                            Processing Splits...
-                                        </>
-                                    ) : (
-                                        <>
-                                            <CheckCircle2 className="w-5 h-5" />
-                                            Simulate Success
-                                        </>
-                                    )}
-                                </Button>
                             )}
+
+                            <Button
+                                className={`w-full py-6 font-semibold flex items-center justify-center gap-2 text-white bg-emerald-600 hover:bg-emerald-500 border border-emerald-500/35`}
+                                disabled={loading}
+                                onClick={() => handleSimulate('completed')}
+                            >
+                                {loading ? (
+                                    <>
+                                        <Loader2 className="w-5 h-5 animate-spin" />
+                                        Processing Splits...
+                                    </>
+                                ) : (
+                                    <>
+                                        <CheckCircle2 className="w-5 h-5" />
+                                        Simulate Success
+                                    </>
+                                )}
+                            </Button>
                         </div>
                     </CardContent>
                 </Card>

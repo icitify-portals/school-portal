@@ -80,7 +80,7 @@ export default function ProfileStudio() {
         </div>
       </div>
 
-      <div className="grid grid-cols-12 gap-8">
+      <div className="grid grid-cols-12 gap-4">
         {/* Profile Card & Info */}
         <div className="col-span-12 lg:col-span-8 space-y-8">
            {activeTab === 'profile' ? (
@@ -111,7 +111,7 @@ export default function ProfileStudio() {
                       </button>
                    </div>
 
-                   <div className="grid grid-cols-2 gap-8">
+                   <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-2">Email Address</label>
                          <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex items-center gap-3 text-slate-700 font-medium">
@@ -145,7 +145,7 @@ export default function ProfileStudio() {
                    <h2 className="text-2xl font-bold text-slate-900">Security Vault & 2FA</h2>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                    <div className="p-8 bg-slate-900 rounded-[32px] text-white space-y-6 shadow-xl shadow-rose-100">
                       <div className="flex justify-between items-start">
                          <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center text-rose-400">

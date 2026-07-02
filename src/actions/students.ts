@@ -476,3 +476,22 @@ export async function toggleFinancialLock(studentId: number, status: boolean) {
         return { success: false, error: "Failed to update financial lock status." };
     }
 }
+
+export async function updateStudentProfile(userId: number, data: any) {
+    try {
+        const allowed = await hasPermission("admin.students.manage") || await hasRole("admin") || await hasRole("superadmin");
+        if (!allowed) {
+            return { success: false, error: "Unauthorized: Insufficient permissions to modify student profiles" };
+        }
+
+        await db.update(students)
+            .set(data)
+            .where(eq(students.userId, userId));
+            
+        revalidatePath("/admin/students");
+        return { success: true, message: "Student profile updated successfully." };
+    } catch (error: any) {
+        console.error("Update Student Profile Error:", error);
+        return { success: false, error: error.message || "Failed to update student profile." };
+    }
+}

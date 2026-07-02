@@ -41,97 +41,108 @@ export default function LedgerPage() {
     );
 
     return (
-        <div className="p-8 max-w-6xl mx-auto">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-10">
-                <div>
-                    <h2 className="text-3xl font-bold text-slate-900 tracking-tight">General Ledger</h2>
-                    <p className="text-slate-500 mt-1">Institutional transaction log with full audit capability</p>
+    <div className="p-4 sm:p-6 lg:p-8 min-h-screen bg-transparent">
+      <div className="max-w-[1600px] w-full mx-auto space-y-10 text-slate-800">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 bg-slate-900 text-white rounded-[3rem] p-8 lg:p-12 shadow-2xl relative overflow-hidden border border-slate-800">
+            <div className="absolute inset-0 bg-gradient-to-r from-indigo-600/30 to-slate-600/30 opacity-50 mix-blend-overlay" />
+            <div className="relative z-10">
+                <div className="flex items-center gap-4 mb-2">
+                    <BookOpen className="w-12 h-12 text-indigo-400 drop-shadow-md" />
+                    <h2 className="text-4xl lg:text-5xl font-black tracking-tighter uppercase italic drop-shadow-md">
+                        General Ledger
+                    </h2>
                 </div>
-                <div className="relative w-full md:w-96">
-                    <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                    <input
-                        className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all shadow-sm"
-                        placeholder="Search by description, account, or reference..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                    />
-                </div>
+                <p className="text-slate-300 font-medium mt-1 uppercase text-sm tracking-wide opacity-90">
+                    Institutional transaction log with full audit capability
+                </p>
             </div>
+            
+            <div className="relative z-10 w-full md:w-96">
+                <Search className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                    className="w-full pl-12 pr-4 py-3 bg-white/10 border border-white/20 rounded-[1.5rem] text-sm font-bold text-white placeholder-slate-400 focus:bg-white focus:text-slate-900 focus:placeholder-slate-400 outline-none transition-all shadow-inner"
+                    placeholder="Search by description, account..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                />
+            </div>
+        </div>
 
-            <Card className="border-none shadow-sm overflow-hidden border border-slate-100 bg-white">
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left">
-                        <thead>
-                            <tr className="bg-slate-50 text-slate-400 text-[10px] font-extrabold uppercase tracking-widest border-b border-slate-100">
-                                <th className="px-8 py-5">Date / Batch</th>
-                                <th className="px-8 py-5">Account</th>
-                                <th className="px-8 py-5">Description</th>
-                                <th className="px-8 py-5">Debit (NGN)</th>
-                                <th className="px-8 py-5">Credit (NGN)</th>
-                                <th className="px-8 py-5 text-right">Reference</th>
+        <Card className="border border-white/40 shadow-xl shadow-slate-200/50 bg-white/60 backdrop-blur-3xl rounded-[3rem] overflow-hidden">
+            <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                    <thead>
+                        <tr className="bg-slate-900 text-white text-[10px] font-extrabold uppercase tracking-widest border-b border-slate-800">
+                            <th className="px-8 py-6">Date / Batch</th>
+                            <th className="px-8 py-6">Account</th>
+                            <th className="px-8 py-6">Description</th>
+                            <th className="px-8 py-6">Debit (NGN)</th>
+                            <th className="px-8 py-6">Credit (NGN)</th>
+                            <th className="px-8 py-6 text-right">Reference</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/40 bg-white/20">
+                        {loading ? (
+                            <tr>
+                                <td colSpan={6} className="px-8 py-20 text-center">
+                                    <Loader2 className="w-10 h-10 animate-spin mx-auto text-indigo-600" />
+                                </td>
                             </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100">
-                            {loading ? (
-                                <tr>
-                                    <td colSpan={6} className="px-8 py-20 text-center">
-                                        <Loader2 className="w-8 h-8 animate-spin mx-auto text-slate-300" />
+                        ) : filteredEntries.length === 0 ? (
+                            <tr>
+                                <td colSpan={6} className="px-8 py-20 text-center text-slate-500 font-bold uppercase tracking-widest text-xs">No ledger entries found matching your search.</td>
+                            </tr>
+                        ) : (
+                            filteredEntries.map((entry) => (
+                                <tr key={entry.id} className="hover:bg-white/40 transition-colors group">
+                                    <td className="px-8 py-6">
+                                        <div className="flex flex-col">
+                                            <span className="text-base font-black text-slate-800">{new Date(entry.transactionDate).toLocaleDateString()}</span>
+                                            <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 mt-0.5 truncate w-24">#{entry.batchId.split('-')[0]}</span>
+                                        </div>
+                                    </td>
+                                    <td className="px-8 py-6">
+                                        <div className="flex flex-col">
+                                            <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest font-mono">{entry.account?.code}</span>
+                                            <span className="text-base font-black text-slate-800 mt-0.5">{entry.account?.name}</span>
+                                        </div>
+                                    </td>
+                                    <td className="px-8 py-6">
+                                        <p className="text-sm text-slate-600 font-bold">{entry.description}</p>
+                                    </td>
+                                    <td className="px-8 py-6">
+                                        {parseFloat(entry.debit) > 0 ? (
+                                            <div className="flex items-center gap-2 text-indigo-600 font-black text-base">
+                                                <ArrowUpRight className="w-4 h-4 text-indigo-500 drop-shadow-sm" />
+                                                <span>₦{parseFloat(entry.debit).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                            </div>
+                                        ) : (
+                                            <span className="text-slate-300 font-bold">-</span>
+                                        )}
+                                    </td>
+                                    <td className="px-8 py-6">
+                                        {parseFloat(entry.credit) > 0 ? (
+                                            <div className="flex items-center gap-2 text-slate-900 font-black text-base">
+                                                <ArrowDownLeft className="w-4 h-4 text-slate-400" />
+                                                <span>₦{parseFloat(entry.credit).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                            </div>
+                                        ) : (
+                                            <span className="text-slate-300 font-bold">-</span>
+                                        )}
+                                    </td>
+                                    <td className="px-8 py-6 text-right">
+                                        <span className="px-3 py-1.5 rounded-[1rem] border border-white/60 bg-white/85 text-[10px] font-black uppercase tracking-wider font-mono text-slate-600 shadow-sm">
+                                            {entry.reference || "N/A"}
+                                        </span>
                                     </td>
                                 </tr>
-                            ) : filteredEntries.length === 0 ? (
-                                <tr>
-                                    <td colSpan={6} className="px-8 py-20 text-center text-slate-400 italic">No ledger entries found matching your search.</td>
-                                </tr>
-                            ) : (
-                                filteredEntries.map((entry) => (
-                                    <tr key={entry.id} className="hover:bg-slate-50/50 transition-colors group">
-                                        <td className="px-8 py-5">
-                                            <div className="flex flex-col">
-                                                <span className="text-sm font-bold text-slate-700">{new Date(entry.transactionDate).toLocaleDateString()}</span>
-                                                <span className="text-[10px] font-mono text-slate-300 group-hover:text-slate-500 truncate w-24">#{entry.batchId.split('-')[0]}</span>
-                                            </div>
-                                        </td>
-                                        <td className="px-8 py-5">
-                                            <div className="flex flex-col">
-                                                <span className="text-xs font-bold text-slate-400 font-mono">{entry.account?.code}</span>
-                                                <span className="text-sm font-bold text-slate-800">{entry.account?.name}</span>
-                                            </div>
-                                        </td>
-                                        <td className="px-8 py-5">
-                                            <p className="text-sm text-slate-600 font-medium">{entry.description}</p>
-                                        </td>
-                                        <td className="px-8 py-5">
-                                            {parseFloat(entry.debit) > 0 ? (
-                                                <div className="flex items-center gap-2 text-indigo-600 font-extrabold">
-                                                    <ArrowUpRight className="w-3 h-3 opacity-50" />
-                                                    <span>{parseFloat(entry.debit).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                                                </div>
-                                            ) : (
-                                                <span className="text-slate-300">-</span>
-                                            )}
-                                        </td>
-                                        <td className="px-8 py-5">
-                                            {parseFloat(entry.credit) > 0 ? (
-                                                <div className="flex items-center gap-2 text-slate-900 font-extrabold">
-                                                    <ArrowDownLeft className="w-3 h-3 opacity-30" />
-                                                    <span>{parseFloat(entry.credit).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                                                </div>
-                                            ) : (
-                                                <span className="text-slate-300">-</span>
-                                            )}
-                                        </td>
-                                        <td className="px-8 py-5 text-right">
-                                            <Badge variant="outline" className="text-[10px] font-mono border-slate-200 text-slate-500 rounded-lg">
-                                                {entry.reference || "N/A"}
-                                            </Badge>
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-            </Card>
-        </div>
+                            ))
+                        )}
+                    </tbody>
+                </table>
+            </div>
+        </Card>
+      </div>
+    </div>
     );
 }

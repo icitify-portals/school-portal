@@ -99,7 +99,7 @@ export default function BursaryDashboard() {
       </div>
 
       {/* Financial Overview Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
          <div className="bg-white p-8 rounded-[40px] border border-slate-100 shadow-sm space-y-6">
             <div className="flex justify-between items-start">
                <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center">
@@ -112,8 +112,7 @@ export default function BursaryDashboard() {
             </div>
             <div>
                <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Total Revenue</div>
-               // @ts-expect-error - TS2304: Auto-suppressed for build
-               <div className="text-4xl font-black text-slate-900">{settings?.base_currency || '₦'}{overview?.revenue?.toLocaleString() || '0.00'}</div>
+               <div className="text-4xl font-black text-slate-900">₦{overview?.revenue?.toLocaleString() || '0.00'}</div>
             </div>
          </div>
 
@@ -129,8 +128,7 @@ export default function BursaryDashboard() {
             </div>
             <div>
                <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Total Expenditure</div>
-               // @ts-expect-error - TS2304: Auto-suppressed for build
-               <div className="text-4xl font-black text-slate-900">{settings?.base_currency || '₦'}{overview?.expenditure?.toLocaleString() || '0.00'}</div>
+               <div className="text-4xl font-black text-slate-900">₦{overview?.expenditure?.toLocaleString() || '0.00'}</div>
             </div>
          </div>
 
@@ -145,13 +143,12 @@ export default function BursaryDashboard() {
             </div>
             <div>
                <div className="text-xs font-bold text-indigo-200 uppercase tracking-widest mb-1">Available Balance</div>
-               // @ts-expect-error - TS2304: Auto-suppressed for build
-               <div className="text-4xl font-black">{settings?.base_currency || '₦'}{overview?.balance?.toLocaleString() || '0.00'}</div>
+               <div className="text-4xl font-black">₦{overview?.balance?.toLocaleString() || '0.00'}</div>
             </div>
          </div>
       </div>
 
-      <div className="grid grid-cols-12 gap-8">
+      <div className="grid grid-cols-12 gap-4">
         {/* Expenditure Ledger */}
         <div className="col-span-12 lg:col-span-8 space-y-6">
            <div className="bg-white rounded-[40px] border border-slate-100 shadow-xl overflow-hidden">
@@ -199,8 +196,7 @@ export default function BursaryDashboard() {
                                 </div>
                              </td>
                              <td className="px-8 py-6">
-                                // @ts-expect-error - TS2304: Auto-suppressed for build
-                                <div className="text-lg font-black text-slate-900">{settings?.base_currency || '₦'}{parseFloat(item.amount).toLocaleString()}</div>
+                                <div className="text-lg font-black text-slate-900">₦{parseFloat(item.amount).toLocaleString()}</div>
                                 <div className="text-[10px] font-bold text-slate-400 flex items-center gap-1">
                                    <Clock size={10} />
                                    {new Date(item.date).toLocaleDateString()}

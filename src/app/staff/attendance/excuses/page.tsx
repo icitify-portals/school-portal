@@ -194,7 +194,7 @@ export default function StaffExcuseReviewPage() {
                     })}
                 </div>
             ) : (
-                <Card className="border-none shadow-xl rounded-2xl bg-slate-50">
+                <Card className=" border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                     <CardContent className="p-10 text-center space-y-3">
                         <CheckCircle2 className="w-12 h-12 text-slate-300 mx-auto" />
                         <h3 className="text-lg font-black text-slate-900 uppercase">All Clear</h3>

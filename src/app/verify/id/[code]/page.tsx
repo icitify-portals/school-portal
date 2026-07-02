@@ -22,7 +22,7 @@ export default async function IDCardVerificationPage({ params }: { params: Promi
                 </div>
 
                 {res.success ? (
-                    <Card className="border-none shadow-2xl rounded-[40px] overflow-hidden bg-white ring-1 ring-slate-200/50">
+                    <Card className="-[40px] overflow-hidden ring-1 ring-slate-200/50 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                         <div className={`h-24 ${(res as any).card.status === 'active' ? 'bg-indigo-600' : 'bg-red-600'} relative p-6 flex items-center justify-between`}>
                             <div className="flex items-center gap-2">
                                 {(res as any).card.status === 'active' ? (
@@ -45,7 +45,7 @@ export default async function IDCardVerificationPage({ params }: { params: Promi
                                 <p className="text-xs font-black uppercase tracking-[0.2em] text-indigo-600 mt-2">{(res as any).user.designation}</p>
                             </div>
 
-                            <div className="grid grid-cols-1 gap-6">
+                            <div className="grid grid-cols-1 gap-4">
                                 <VerificationDetailItem
                                     icon={<ShieldCheck className="w-4 h-4 text-slate-400" />}
                                     label="Official Identifier"
@@ -74,7 +74,7 @@ export default async function IDCardVerificationPage({ params }: { params: Promi
                         </CardContent>
                     </Card>
                 ) : (
-                    <Card className="border-none shadow-xl rounded-[40px] overflow-hidden bg-white p-12 text-center space-y-6">
+                    <Card className="-[40px] overflow-hidden p-12 text-center space-y-6 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                         <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mx-auto">
                             <ShieldAlert className="w-10 h-10 text-red-500" />
                         </div>

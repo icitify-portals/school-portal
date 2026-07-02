@@ -41,7 +41,7 @@ export default function AdminTransfersPage() {
                 <p className="text-slate-500 font-medium">Manage and process student course change applications</p>
             </div>
 
-            <div className="grid grid-cols-1 gap-6">
+            <div className="grid grid-cols-1 gap-4">
                 {transfers.map((transfer) => (
                     <Card key={transfer.id} className="border-slate-200 shadow-sm rounded-2xl overflow-hidden bg-white">
                         <CardHeader className="p-6 border-b border-slate-100 flex flex-row items-center justify-between">
@@ -62,7 +62,7 @@ export default function AdminTransfersPage() {
                                 </Badge>
                             </div>
                         </CardHeader>
-                        <CardContent className="p-6 grid grid-cols-1 md:grid-cols-3 gap-8">
+                        <CardContent className="p-6 grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div className="space-y-4">
                                 <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Movement</h4>
                                 <div className="flex items-center gap-3">

@@ -42,7 +42,7 @@ export default function PaymentGatewaysPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {gateways.map(gateway => (
                     <Card key={gateway.id} className={gateway.enabled ? 'border-green-200' : 'border-slate-200 opacity-80'}>
-                        <CardHeader className="pb-2 flex flex-row items-center justify-between">
+                        <CardHeader className="pb-2 flex flex-row items-center justify-between bg-slate-50/50 border-b border-slate-100 p-6">
                             <CardTitle className="text-lg font-black flex items-center gap-2">
                                 <span>{gateway.icon}</span> {gateway.name}
                             </CardTitle>
@@ -56,7 +56,7 @@ export default function PaymentGatewaysPage() {
                                 </span>
                             )}
                         </CardHeader>
-                        <CardContent className="space-y-4">
+                        <CardContent className="space-y-4 p-6">
                             <div className="grid grid-cols-2 gap-2 text-sm">
                                 <div>
                                     <p className="text-[10px] font-bold text-slate-400 uppercase">Mode</p>
@@ -94,7 +94,7 @@ export default function PaymentGatewaysPage() {
                 ))}
             </div>
 
-            <Card className="bg-amber-50 border-amber-200">
+            <Card className="-200 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                 <CardContent className="p-4 flex gap-3">
                     <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0" />
                     <div>

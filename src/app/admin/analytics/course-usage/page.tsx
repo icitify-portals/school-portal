@@ -76,8 +76,8 @@ export default function CourseUsageReportPage() {
                 </div>
             )}
 
-            <Card>
-                <CardHeader className="pb-4">
+            <Card className=" border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
+                <CardHeader className="pb-4 bg-slate-50/50 border-b border-slate-100 p-6">
                     <div className="flex items-center gap-2 bg-slate-50 px-3 py-2 rounded-lg w-full max-w-sm border border-slate-200 focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-500 transition-all">
                         <Search className="w-4 h-4 text-slate-400" />
                         <input

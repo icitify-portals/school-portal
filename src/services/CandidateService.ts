@@ -138,7 +138,7 @@ export class CandidateService {
         return {
             profile: application,
             metadata: template,
-            institution: "Institutional School Portal"
+            institution: "Institutional FSS Portal"
         };
     }
 

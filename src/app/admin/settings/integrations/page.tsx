@@ -242,7 +242,7 @@ export default function IntegrationsPage() {
             </Dialog>
 
             {/* Quick Setup Guide */}
-            <Card className="bg-gradient-to-br from-indigo-50 to-blue-50 border-indigo-100">
+            <Card className="-to-br from-indigo-50 to-blue-50 -100 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                 <CardContent className="p-5">
                     <h3 className="font-black text-indigo-900 flex items-center gap-2 mb-3">
                         <Zap className="w-5 h-5" /> Quick Setup Guide

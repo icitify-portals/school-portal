@@ -20,11 +20,11 @@ import { Toaster } from "sonner";
 import { useSession } from "next-auth/react";
 import { AIVoiceCoach } from "@/components/ai/AIVoiceCoach";
 import { AlertTriangle, Lock, GraduationCap, ShieldOff, Ban, EyeOff, Menu, ShieldCheck } from "lucide-react";
-import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { PublicNavbar } from "@/components/PublicNavbar";
 import { PublicFooter } from "@/components/PublicFooter";
 import { IntelligentTutoringSystem } from "@/components/ai/IntelligentTutoringSystem";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
+import { CommandPalette } from "@/components/CommandPalette";
 
 const statusConfig: Record<string, { label: string; color: string; bgColor: string; icon: any; message: string }> = {
     graduated: {
@@ -142,13 +142,11 @@ export function AppContent({ children, enabledModules }: { children: React.React
                     </div>
                     <div className="ml-auto flex items-center gap-2">
                         <NotificationBell />
-                        <LanguageSwitcher />
                     </div>
                 </header>
 
                 {/* Desktop top bar */}
                 <div className="hidden md:flex items-center justify-end px-6 py-3 bg-white border-b border-slate-100 shadow-sm sticky top-0 z-30 gap-4">
-                    <LanguageSwitcher />
                     <NotificationBell />
                 </div>
 
@@ -187,6 +185,7 @@ export function AppContent({ children, enabledModules }: { children: React.React
                     {isAdminArea && <BursaryBot />}
                     {!isAdminArea && !isStaffArea && !isPublic && userRole === 'student' && <IntelligentTutoringSystem />}
                     {!isAdminArea && !isStaffArea && !isPublic && userRole === 'student' && <AIVoiceCoach />}
+                    {!isPublic && <CommandPalette userRole={userRole || 'student'} />}
                 </main>
             </div>
         </div>

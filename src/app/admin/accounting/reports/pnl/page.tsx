@@ -43,57 +43,60 @@ export default function PNLPage() {
     }
 
     return (
-        <div className="p-8 max-w-[1600px] w-full mx-auto">
-            <div className="flex justify-between items-start mb-10">
-                <div>
-                    <h2 className="text-3xl font-bold text-slate-900 tracking-tight flex items-center gap-3">
-                        <FileText className="w-8 h-8 text-orange-600" />
-                        Income Statement
-                    </h2>
-                    <p className="text-slate-500 mt-1">Institutional Profit & Loss for the current fiscal period</p>
+        <div className="p-4 sm:p-6 lg:p-8 min-h-screen bg-transparent">
+          <div className="max-w-[1600px] w-full mx-auto space-y-10 text-slate-800">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 bg-slate-900 text-white rounded-[3rem] p-8 lg:p-12 shadow-2xl relative overflow-hidden border border-slate-800">
+                <div className="absolute inset-0 bg-gradient-to-r from-orange-600/30 to-rose-600/30 opacity-50 mix-blend-overlay" />
+                <div className="relative z-10">
+                    <div className="flex items-center gap-4 mb-2">
+                        <FileText className="w-12 h-12 text-orange-400 drop-shadow-md" />
+                        <h2 className="text-4xl lg:text-5xl font-black tracking-tighter uppercase italic drop-shadow-md">
+                            Income Statement
+                        </h2>
+                    </div>
+                    <p className="text-slate-300 font-medium mt-1 uppercase text-sm tracking-wide opacity-90">
+                        Institutional Profit & Loss for the current fiscal period
+                    </p>
                 </div>
-                <div className="flex gap-3">
-                    <Button variant="outline" className="gap-2 rounded-xl">
-                        <Download className="w-4 h-4" /> Export
+                <div className="relative z-10 flex gap-3">
+                    <Button variant="outline" className="gap-2 h-12 px-6 rounded-2xl bg-white/10 border-white/20 hover:bg-white/20 text-white font-bold backdrop-blur-md transition-all shadow-lg">
+                        <Download className="w-5 h-5" /> Export
                     </Button>
-                    <Button className="bg-orange-600 hover:bg-orange-700 rounded-xl gap-2 shadow-lg shadow-orange-500/20">
-                        <Printer className="w-4 h-4" /> Print Report
+                    <Button className="bg-orange-600 hover:bg-orange-700 text-white font-bold h-12 px-6 rounded-2xl gap-2 shadow-lg shadow-orange-900/50 transition-all border border-orange-500/50">
+                        <Printer className="w-5 h-5" /> Print Report
                     </Button>
                 </div>
             </div>
 
             {/* Top Level Metrics */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-                <Card className="border-none shadow-sm bg-emerald-50 text-emerald-900">
-                    <CardContent className="p-6">
-                        <p className="text-[10px] font-black uppercase tracking-widest opacity-60 mb-1">Total Revenue</p>
-                        // @ts-expect-error - TS2304: Auto-suppressed for build
-                        <h3 className="text-2xl font-black">{settings?.base_currency || '₦'}{report?.totalRevenue?.toLocaleString()}</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <Card className="border border-white/40 shadow-xl shadow-slate-200/50 bg-white/60 backdrop-blur-3xl rounded-[2.5rem] relative overflow-hidden group">
+                    <CardContent className="p-8">
+                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 drop-shadow-sm">Total Revenue</p>
+                        <h3 className="text-4xl font-black text-emerald-600 drop-shadow-md">₦{report?.totalRevenue?.toLocaleString()}</h3>
                     </CardContent>
                 </Card>
-                <Card className="border-none shadow-sm bg-rose-50 text-rose-900">
-                    <CardContent className="p-6">
-                        <p className="text-[10px] font-black uppercase tracking-widest opacity-60 mb-1">Total Expenses</p>
-                        // @ts-expect-error - TS2304: Auto-suppressed for build
-                        <h3 className="text-2xl font-black">{settings?.base_currency || '₦'}{report?.totalExpenses?.toLocaleString()}</h3>
+                <Card className="border border-white/40 shadow-xl shadow-slate-200/50 bg-white/60 backdrop-blur-3xl rounded-[2.5rem] relative overflow-hidden group">
+                    <CardContent className="p-8">
+                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 drop-shadow-sm">Total Expenses</p>
+                        <h3 className="text-4xl font-black text-rose-600 drop-shadow-md">₦{report?.totalExpenses?.toLocaleString()}</h3>
                     </CardContent>
                 </Card>
                 <Card className={cn(
-                    "border-none shadow-sm text-white",
+                    "border border-white/40 shadow-xl shadow-slate-200/50 backdrop-blur-3xl rounded-[2.5rem] text-white relative overflow-hidden group",
                     (report?.netSurplus || 0) >= 0 ? "bg-slate-900" : "bg-rose-600"
                 )}>
-                    <CardContent className="p-6">
-                        <p className="text-[10px] font-black uppercase tracking-widest opacity-60 mb-1">Net Surplus / (Deficit)</p>
-                        // @ts-expect-error - TS2304: Auto-suppressed for build
-                        <h3 className="text-2xl font-black">{settings?.base_currency || '₦'}{report?.netSurplus?.toLocaleString()}</h3>
+                    <CardContent className="p-8">
+                        <p className="text-[10px] font-black uppercase tracking-widest opacity-80 mb-2 drop-shadow-sm">Net Surplus / (Deficit)</p>
+                        <h3 className="text-4xl font-black drop-shadow-md">₦{report?.netSurplus?.toLocaleString()}</h3>
                     </CardContent>
                 </Card>
             </div>
 
             <div className="space-y-8">
                 {/* Revenue Section */}
-                <Card className="border-none shadow-sm overflow-hidden border border-slate-100">
-                    <CardHeader className="bg-slate-50/50 border-b border-slate-100">
+                <Card className="border-none shadow-sm overflow-hidden border border-slate-100 bg-white/60 backdrop-blur-3xl rounded-[3rem]">
+                    <CardHeader className="bg-white/40 border-b border-slate-100 p-6">
                         <CardTitle className="text-sm font-black uppercase tracking-widest text-slate-500 flex items-center gap-2">
                             <ArrowUpCircle className="w-4 h-4 text-emerald-500" />
                             Revenue Streams
@@ -101,19 +104,17 @@ export default function PNLPage() {
                     </CardHeader>
                     <CardContent className="p-0">
                         <table className="w-full">
-                            <tbody className="divide-y divide-slate-50">
+                            <tbody className="divide-y divide-slate-100">
                                 {report?.revenue?.map((acc: any) => (
-                                    <tr key={acc.id} className="group hover:bg-slate-50 transition-colors">
+                                    <tr key={acc.id} className="group hover:bg-slate-50 transition-colors bg-white/20">
                                         <td className="py-4 px-6 text-sm font-bold text-slate-700">{acc.code} - {acc.name}</td>
-                                        // @ts-expect-error - TS2304: Auto-suppressed for build
-                                        <td className="py-4 px-6 text-right font-mono text-emerald-600">{settings?.base_currency || '₦'}{acc.balance.toLocaleString()}</td>
+                                        <td className="py-4 px-6 text-right font-mono text-emerald-600">₦{acc.balance.toLocaleString()}</td>
                                     </tr>
                                 ))}
                                 <tr className="bg-emerald-50/30">
                                     <td className="py-5 px-6 text-sm font-black text-slate-900 uppercase">Total Institutional Revenue</td>
                                     <td className="py-5 px-6 text-right font-black text-emerald-700 border-t-2 border-emerald-100">
-                                        // @ts-expect-error - TS2304: Auto-suppressed for build
-                                        {settings?.base_currency || '₦'}{report?.totalRevenue?.toLocaleString()}
+                                        ₦{report?.totalRevenue?.toLocaleString()}
                                     </td>
                                 </tr>
                             </tbody>
@@ -122,8 +123,8 @@ export default function PNLPage() {
                 </Card>
 
                 {/* Expenses Section */}
-                <Card className="border-none shadow-sm overflow-hidden border border-slate-100">
-                    <CardHeader className="bg-slate-50/50 border-b border-slate-100">
+                <Card className="border-none shadow-sm overflow-hidden border border-slate-100 bg-white/60 backdrop-blur-3xl rounded-[3rem]">
+                    <CardHeader className="bg-white/40 border-b border-slate-100 p-6">
                         <CardTitle className="text-sm font-black uppercase tracking-widest text-slate-500 flex items-center gap-2">
                             <ArrowDownCircle className="w-4 h-4 text-rose-500" />
                             Expenditure Categories
@@ -131,19 +132,17 @@ export default function PNLPage() {
                     </CardHeader>
                     <CardContent className="p-0">
                         <table className="w-full">
-                            <tbody className="divide-y divide-slate-50">
+                            <tbody className="divide-y divide-slate-100">
                                 {report?.expenses?.map((acc: any) => (
-                                    <tr key={acc.id} className="group hover:bg-slate-50 transition-colors">
+                                    <tr key={acc.id} className="group hover:bg-slate-50 transition-colors bg-white/20">
                                         <td className="py-4 px-6 text-sm font-bold text-slate-700">{acc.code} - {acc.name}</td>
-                                        // @ts-expect-error - TS2304: Auto-suppressed for build
-                                        <td className="py-4 px-6 text-right font-mono text-rose-600">{settings?.base_currency || '₦'}{acc.balance.toLocaleString()}</td>
+                                        <td className="py-4 px-6 text-right font-mono text-rose-600">₦{acc.balance.toLocaleString()}</td>
                                     </tr>
                                 ))}
                                 <tr className="bg-rose-50/30">
                                     <td className="py-5 px-6 text-sm font-black text-slate-900 uppercase">Total Operating Expenses</td>
                                     <td className="py-5 px-6 text-right font-black text-rose-700 border-t-2 border-rose-100">
-                                        // @ts-expect-error - TS2304: Auto-suppressed for build
-                                        {settings?.base_currency || '₦'}{report?.totalExpenses?.toLocaleString()}
+                                        ₦{report?.totalExpenses?.toLocaleString()}
                                     </td>
                                 </tr>
                             </tbody>
@@ -155,23 +154,22 @@ export default function PNLPage() {
                 <div className="flex justify-end pt-4">
                     <div className="w-full md:w-1/2 space-y-4">
                         <div className="flex justify-between items-center py-4 border-b border-slate-200">
-                            <p className="text-sm font-bold text-slate-500">Gross Operating Result</p>
-                            // @ts-expect-error - TS2304: Auto-suppressed for build
-                            <p className="text-xl font-bold text-slate-900">{settings?.base_currency || '₦'}{report?.netSurplus?.toLocaleString()}</p>
+                            <p className="text-sm font-black uppercase tracking-widest text-slate-500">Gross Operating Result</p>
+                            <p className="text-2xl font-black text-slate-900">₦{report?.netSurplus?.toLocaleString()}</p>
                         </div>
-                        <div className="flex justify-between items-center py-6 bg-slate-900 text-white px-8 rounded-2xl shadow-xl shadow-slate-200">
+                        <div className="flex justify-between items-center py-8 bg-slate-900 text-white px-10 rounded-[2.5rem] shadow-2xl border border-slate-800">
                             <div>
-                                <p className="text-[10px] font-black uppercase tracking-widest opacity-60">Net Institutional Position</p>
-                                <h4 className="text-2xl font-black">
+                                <p className="text-[10px] font-black uppercase tracking-widest opacity-60 mb-1">Net Institutional Position</p>
+                                <h4 className="text-3xl font-black italic tracking-tighter">
                                     {(report?.netSurplus || 0) >= 0 ? "Surplus" : "Deficit"}
                                 </h4>
                             </div>
-                            // @ts-expect-error - TS2304: Auto-suppressed for build
-                            <h4 className="text-3xl font-black">{settings?.base_currency || '₦'}{report?.netSurplus?.toLocaleString()}</h4>
+                            <h4 className="text-4xl font-black drop-shadow-md">₦{report?.netSurplus?.toLocaleString()}</h4>
                         </div>
                     </div>
                 </div>
             </div>
+          </div>
         </div>
     );
 }

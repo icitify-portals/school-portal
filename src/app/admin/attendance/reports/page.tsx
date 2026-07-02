@@ -71,8 +71,8 @@ export default function AttendanceReportsPage() {
             </div>
 
             {/* Summary Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-                <Card className="border-none shadow-sm bg-blue-50/50 border border-blue-100 relative overflow-hidden group">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-10">
+                <Card className="/50 -100 relative overflow-hidden group border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                     <div className="absolute right-0 top-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
                         <Users className="w-16 h-16 text-blue-600" />
                     </div>
@@ -85,7 +85,7 @@ export default function AttendanceReportsPage() {
                     </CardContent>
                 </Card>
 
-                <Card className="border-none shadow-sm bg-emerald-50/50 border border-emerald-100 relative overflow-hidden group">
+                <Card className="/50 -100 relative overflow-hidden group border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                     <div className="absolute right-0 top-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
                         <LogIn className="w-16 h-16 text-emerald-600" />
                     </div>
@@ -98,7 +98,7 @@ export default function AttendanceReportsPage() {
                     </CardContent>
                 </Card>
 
-                <Card className="border-none shadow-sm bg-orange-50/50 border border-orange-100 relative overflow-hidden group">
+                <Card className="/50 -100 relative overflow-hidden group border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                     <div className="absolute right-0 top-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
                         <Clock className="w-16 h-16 text-orange-600" />
                     </div>
@@ -110,9 +110,9 @@ export default function AttendanceReportsPage() {
                 </Card>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-10">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-10">
                 {/* Hourly Trend (Bar Chart) */}
-                <Card className="lg:col-span-2 border-none shadow-sm border border-slate-100">
+                <Card className="lg:col-span-2 -100 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                     <CardHeader className="flex flex-row items-center justify-between pb-2 border-b border-slate-50/50">
                         <CardTitle className="text-sm font-black uppercase tracking-widest text-slate-500 flex items-center gap-2">
                             <LogIn className="w-4 h-4" /> Hourly Entry Activity
@@ -148,7 +148,7 @@ export default function AttendanceReportsPage() {
                 </Card>
 
                 {/* Historical Trend */}
-                <Card className="border-none shadow-sm border border-slate-100">
+                <Card className="-100 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                     <CardHeader className="border-b border-slate-50/50">
                         <CardTitle className="text-sm font-black uppercase tracking-widest text-slate-500 flex items-center gap-2">
                             <Calendar className="w-4 h-4" /> Last 7 Days
@@ -181,7 +181,7 @@ export default function AttendanceReportsPage() {
             </div>
 
             {/* Detailed Table */}
-            <Card className="border-none shadow-sm overflow-hidden border border-slate-100">
+            <Card className="overflow-hidden -100 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                 <CardHeader className="bg-slate-50/50 border-b border-slate-100 flex flex-row items-center justify-between">
                     <CardTitle className="text-sm font-black uppercase tracking-widest text-slate-500 flex items-center gap-2">
                         <ArrowRightLeft className="w-4 h-4" /> Raw Attendance Logs

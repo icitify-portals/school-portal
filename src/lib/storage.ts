@@ -185,7 +185,7 @@ class S3StorageProvider implements StorageProvider {
 /**
  * Helper to validate file uploads (size and mime type).
  */
-export const validateFile = (file: File, options: { maxSizeMB?: number, allowedTypes?: string[] } = {}) => {
+export const validateClientFile = (file: File, options: { maxSizeMB?: number, allowedTypes?: string[] } = {}) => {
     const { maxSizeMB = 5, allowedTypes = [] } = options;
     const maxSizeBytes = maxSizeMB * 1024 * 1024;
 

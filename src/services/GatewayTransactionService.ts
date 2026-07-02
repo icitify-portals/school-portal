@@ -40,6 +40,12 @@ export class GatewayTransactionService {
             return await res.json();
         }
 
+        if (gateway === "remita") {
+            // Remita doesn't have a simple generic list endpoint without a specific Merchant ID and date range, 
+            // returning a mock or empty for now to satisfy interface.
+            return { status: 'success', data: [] };
+        }
+
         throw new Error(`Listing transactions for ${gateway} is not implemented.`);
     }
 
@@ -66,6 +72,22 @@ export class GatewayTransactionService {
             });
             return await res.json();
         }
+        
+        if (gateway === "remita") {
+            const merchantId = process.env.REMITA_MERCHANT_ID || "2547916";
+            const apiKey = secretKey;
+            const crypto = require('crypto');
+            const hash = crypto.createHash('sha512').update(`${reference}${apiKey}${merchantId}`).digest('hex');
+            
+            const res = await fetch(`https://remitademo.net/remita/exapp/api/v1/send/api/echannelsvc/${merchantId}/${reference}/${hash}/status.reg`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `remitaConsumerKey=${merchantId},remitaConsumerToken=${hash}`
+                }
+            });
+            return await res.json();
+        }
 
         throw new Error(`Searching transactions for ${gateway} is not implemented.`);
     }
@@ -88,6 +110,11 @@ export class GatewayTransactionService {
             if (data.status === "success" && data.data.status === "successful") {
                 status = "success";
                 amount = data.data.amount;
+            }
+        } else if (gateway === "remita") {
+            if (data.status === "00" || data.status === "01") { // 00 means successful, 01 means successful
+                status = "success";
+                amount = data.amount || 0;
             }
         }
 

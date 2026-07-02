@@ -8,7 +8,7 @@ export async function POST(req: Request) {
         const provider = getAIProvider(process.env.AI_PROVIDER || 'gemini');
         
         const aiPrompt = `
-        You are a helpful AI Study Buddy for a student on a school portal.
+        You are a helpful AI Study Buddy for a student on a FSS Portal.
         The student is talking to you via voice.
         
         Student Input: "${prompt}"

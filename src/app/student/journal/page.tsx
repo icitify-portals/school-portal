@@ -287,15 +287,15 @@ export default function StudentJournalPage() {
                 </Dialog>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                 <div className="lg:col-span-2 space-y-6">
-                    <Card className="border-none shadow-md overflow-hidden">
+                    <Card className="overflow-hidden border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                         <div className="h-1 bg-indigo-600 w-full" />
-                        <CardHeader>
+                        <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-6">
                             <CardTitle>My Submissions</CardTitle>
                             <CardDescription>View status and updates for your researchers.</CardDescription>
                         </CardHeader>
-                        <CardContent>
+                        <CardContent className=" p-6">
                             {submissions.length === 0 ? (
                                 <div className="text-center py-16 opacity-60">
                                     <BookOpen className="mx-auto h-12 w-12 text-indigo-400 mb-4" />
@@ -374,11 +374,11 @@ export default function StudentJournalPage() {
                 </div>
 
                 <div className="space-y-6">
-                    <Card className="bg-indigo-900 text-white border-none shadow-lg outline outline-offset-4 outline-indigo-600/20">
-                        <CardHeader>
+                    <Card className="text-white outline outline-offset-4 outline-indigo-600/20 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
+                        <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-6">
                             <CardTitle className="text-indigo-100 italic">Call for Papers</CardTitle>
                         </CardHeader>
-                        <CardContent className="space-y-4">
+                        <CardContent className="space-y-4 p-6">
                             {announcements.length === 0 ? (
                                 <div className="p-3 text-center text-xs text-indigo-200 opacity-50 italic">
                                     No active calls for papers at this time.
@@ -398,7 +398,7 @@ export default function StudentJournalPage() {
                         </CardContent>
                     </Card>
 
-                    <Card className="border-indigo-200 shadow-lg">
+                    <Card className="-200 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                         <CardHeader className="pb-3 bg-slate-50 border-b">
                             <CardTitle className="text-xs font-bold uppercase tracking-tighter flex items-center gap-2">
                                 <Clock className="h-4 w-4 text-indigo-600" />

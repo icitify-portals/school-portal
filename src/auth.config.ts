@@ -40,6 +40,7 @@ export const authConfig = {
         },
         authorized({ auth, request: { nextUrl } }) {
             const isLoggedIn = !!auth?.user;
+            console.log('AUTHORIZED CHECK:', { isLoggedIn, pathname: nextUrl.pathname, session: auth?.user });
             const isLoginPage = nextUrl.pathname === "/login";
             const isRegisterPage = nextUrl.pathname === "/register";
             const isJobsPage = nextUrl.pathname.startsWith("/jobs");
@@ -68,12 +69,12 @@ export const authConfig = {
 
             // Handle login/register pages
             if (isLoginPage || isRegisterPage) {
-                // If already logged in, redirect to 2FA page if pending, else home
+                // If already logged in, redirect to 2FA page if pending, else dashboard
                 if (isLoggedIn) {
                     if (twoFactorPending) {
                         return Response.redirect(new URL("/login/2fa", nextUrl));
                     }
-                    return Response.redirect(new URL("/", nextUrl));
+                    return Response.redirect(new URL("/dashboard", nextUrl));
                 }
                 // Allow access to login/register when not logged in
                 return true;
@@ -83,9 +84,9 @@ export const authConfig = {
             if (!isLoggedIn) return false;
 
             if (isTwoFactorPage) {
-                // If on 2FA page but not pending 2FA, redirect to home
+                // If on 2FA page but not pending 2FA, redirect to dashboard
                 if (!twoFactorPending) {
-                    return Response.redirect(new URL("/", nextUrl));
+                    return Response.redirect(new URL("/dashboard", nextUrl));
                 }
                 return true;
             }
@@ -98,7 +99,7 @@ export const authConfig = {
                 return Response.redirect(new URL("/change-password", nextUrl));
             }
             if (!requiresPasswordChange && isChangePasswordPage) {
-                return Response.redirect(new URL("/", nextUrl));
+                return Response.redirect(new URL("/dashboard", nextUrl));
             }
 
             // Check role permissions for admin pages
@@ -118,12 +119,12 @@ export const authConfig = {
                 if (userRole === 'hod' && (nextUrl.pathname.startsWith("/admin/hod") || nextUrl.pathname.startsWith("/admin/academics") || nextUrl.pathname.startsWith("/admin/academic") || nextUrl.pathname.startsWith("/admin/students") || nextUrl.pathname.startsWith("/admin/hr"))) return true;
                 if (userRole === 'dean' && (nextUrl.pathname.startsWith("/admin/dean") || nextUrl.pathname.startsWith("/admin/academics") || nextUrl.pathname.startsWith("/admin/academic") || nextUrl.pathname.startsWith("/admin/students") || nextUrl.pathname.startsWith("/admin/hr"))) return true;
                 if (userRole === 'staff' && allowedAdminPaths.some(p => nextUrl.pathname.startsWith(p))) return true;
-                return Response.redirect(new URL("/", nextUrl));
+                return Response.redirect(new URL("/dashboard", nextUrl));
             }
 
             if (nextUrl.pathname.startsWith("/parent")) {
                 if (userRole === 'parent' || userRole === 'admin' || userRole === 'superadmin') return true;
-                return Response.redirect(new URL("/", nextUrl));
+                return Response.redirect(new URL("/dashboard", nextUrl));
             }
 
             return true;

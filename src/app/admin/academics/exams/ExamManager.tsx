@@ -58,14 +58,14 @@ export default function ExamManager({
 
     return (
         <div className="space-y-8 pb-20">
-            <Card className="border-none shadow-sm overflow-hidden">
+            <Card className="overflow-hidden border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                 <CardHeader className="bg-slate-50 border-b">
                     <div className="flex justify-between items-center">
                         <CardTitle className="text-sm font-black uppercase tracking-widest text-slate-500">Configuration</CardTitle>
                     </div>
                 </CardHeader>
-                <CardContent className="pt-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <CardContent className="pt-6 p-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
                             <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Department</label>
                             <Select

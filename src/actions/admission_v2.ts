@@ -391,10 +391,8 @@ export async function updateAdmissionApplication(applicationId: number, formData
 
 export async function updateExamVisibility(examId: number, showInstantly: boolean) {
     try {
-        // @ts-expect-error - TS2304: Auto-suppressed for build
         await db.update(admissionEntranceExams)
             .set({ showResultsInstantly: showInstantly })
-            // @ts-expect-error - TS2304: Auto-suppressed for build
             .where(eq(admissionEntranceExams.id, examId));
         revalidatePath(`/admin/admission/exams/${examId}`);
         return { success: true };
@@ -406,10 +404,8 @@ export async function updateExamVisibility(examId: number, showInstantly: boolea
 
 export async function releaseResults(examId: number) {
     try {
-        // @ts-expect-error - TS2304: Auto-suppressed for build
         await db.update(admissionEntranceExams)
             .set({ resultsReleased: true })
-            // @ts-expect-error - TS2304: Auto-suppressed for build
             .where(eq(admissionEntranceExams.id, examId));
         revalidatePath(`/admin/admission/exams/${examId}`);
         return { success: true };

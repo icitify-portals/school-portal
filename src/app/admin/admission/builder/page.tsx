@@ -178,8 +178,7 @@ export default function AdmissionBuilderPage() {
                                 <div className="flex items-center justify-between pt-4 border-t border-slate-50">
                                     <div className="flex flex-col">
                                         <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Fee</p>
-                                        // @ts-expect-error - TS2304: Auto-suppressed for build
-                                        <p className="text-lg font-black text-slate-900">{settings?.base_currency || '₦'}{template.applicationFee.toLocaleString()}</p>
+                                        <p className="text-lg font-black text-slate-900">₦{template.applicationFee.toLocaleString()}</p>
                                     </div>
                                     <Link href={`/admin/admission/builder/${template.id}`}>
                                         <Button className="rounded-2xl bg-slate-900 hover:bg-indigo-600 text-white font-black px-6 py-4 flex gap-2 transition-all">

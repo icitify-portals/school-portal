@@ -60,56 +60,79 @@ export default function RBACPage() {
     if (loading) return <div className="p-20 text-center"><Loader2 className="w-10 h-10 animate-spin mx-auto text-slate-400" /></div>;
 
     return (
-        <div className="p-8 max-w-[1600px] w-full mx-auto">
-            <div className="mb-8">
-                <h2 className="text-3xl font-bold text-slate-900 tracking-tight flex items-center gap-3">
-                    <Shield className="w-8 h-8 text-indigo-600" />
-                    Roles & Permissions
-                </h2>
-                <div className="flex items-center gap-4 mt-1">
-                    <p className="text-slate-500">Granular access control management</p>
+        <div className="p-8 max-w-[1600px] w-full mx-auto space-y-8">
+            {/* Header Section */}
+            <div className="relative overflow-hidden bg-slate-900 rounded-3xl p-8 lg:p-12 text-white shadow-2xl border border-slate-800">
+                <div className="absolute inset-0 bg-gradient-to-r from-indigo-600/30 to-purple-600/30 opacity-50 mix-blend-overlay" />
+                <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                    <div>
+                        <div className="flex items-center gap-3 mb-2">
+                            <Shield className="w-12 h-12 text-indigo-400" />
+                            <h1 className="text-4xl lg:text-5xl font-black tracking-tighter drop-shadow-md">
+                                Roles & Permissions
+                            </h1>
+                        </div>
+                        <p className="text-slate-300 font-medium tracking-tight max-w-2xl text-lg opacity-90">
+                            Granular access control management. Configure roles, define global system permissions, and enforce secure identities.
+                        </p>
+                    </div>
                     <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-7 text-[10px] font-bold uppercase tracking-wider rounded-lg border-indigo-100 text-indigo-600 hover:bg-indigo-50"
                         onClick={async () => {
                             const res = await import("@/actions/rbac").then(m => m.initializeDefaultRoles());
                             if (res.success) window.location.reload();
                         }}
+                        className="bg-indigo-500 hover:bg-indigo-400 text-white font-bold px-6 py-6 rounded-2xl shadow-[0_0_40px_-10px_rgba(99,102,241,0.5)] transition-all uppercase tracking-widest text-xs"
                     >
-                        Initialize Default Roles
+                        <Plus className="w-5 h-5 mr-2" />
+                        Initialize Defaults
                     </Button>
                 </div>
             </div>
 
-            <div className="flex gap-2 mb-6 bg-slate-100 p-1 rounded-xl w-fit">
+            {/* Glassmorphic Tabs */}
+            <div className="flex gap-2 p-1.5 bg-slate-200/50 backdrop-blur-xl rounded-2xl w-fit border border-slate-200 shadow-inner">
                 <button
                     onClick={() => setActiveTab("roles")}
-                    className={cn("px-6 py-2 rounded-lg text-sm font-bold transition-all", activeTab === "roles" ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500 hover:text-slate-700")}
+                    className={cn(
+                        "px-8 py-3 rounded-xl text-sm font-black transition-all uppercase tracking-wider",
+                        activeTab === "roles" 
+                        ? "bg-white text-indigo-700 shadow-md scale-105" 
+                        : "text-slate-500 hover:text-slate-700 hover:bg-white/50"
+                    )}
                 >
                     Roles & Permissions
                 </button>
                 <button
                     onClick={() => setActiveTab("users")}
-                    className={cn("px-6 py-2 rounded-lg text-sm font-bold transition-all", activeTab === "users" ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500 hover:text-slate-700")}
+                    className={cn(
+                        "px-8 py-3 rounded-xl text-sm font-black transition-all uppercase tracking-wider",
+                        activeTab === "users" 
+                        ? "bg-white text-indigo-700 shadow-md scale-105" 
+                        : "text-slate-500 hover:text-slate-700 hover:bg-white/50"
+                    )}
                 >
                     User Role Assignment
                 </button>
             </div>
 
             {activeTab === "roles" ? (
-                <div className="grid grid-cols-1 gap-6">
+                <div className="grid grid-cols-1 gap-4">
                     {roles.map((role) => (
-                        <Card key={role.id} className="border-none shadow-sm overflow-hidden">
-                            <CardHeader className="bg-slate-50 border-b border-slate-100 flex flex-row justify-between items-center">
+                        <Card key={role.id} className="bg-white/60 backdrop-blur-3xl border border-white/40 shadow-xl shadow-slate-200/50 rounded-3xl overflow-hidden hover:shadow-2xl transition-all duration-300 group">
+                            <CardHeader className="bg-gradient-to-r from-white to-slate-50/80 border-b border-slate-100/50 flex flex-row justify-between items-center p-8">
                                 <div>
-                                    <CardTitle className="text-lg text-slate-800 uppercase tracking-wide">{role.name}</CardTitle>
-                                    <p className="text-xs text-slate-500 mt-0.5">{role.description}</p>
+                                    <CardTitle className="text-2xl font-black text-slate-800 uppercase tracking-widest flex items-center gap-3">
+                                        <div className="w-3 h-8 bg-indigo-500 rounded-full" />
+                                        {role.name}
+                                    </CardTitle>
+                                    <p className="text-sm font-medium text-slate-500 mt-2 ml-6">{role.description}</p>
                                 </div>
-                                <ShieldAlert className="w-5 h-5 text-slate-300" />
+                                <div className="w-16 h-16 rounded-2xl bg-indigo-50 flex items-center justify-center group-hover:scale-110 group-hover:bg-indigo-100 transition-all">
+                                    <ShieldAlert className="w-8 h-8 text-indigo-400" />
+                                </div>
                             </CardHeader>
-                            <CardContent className="p-6">
-                                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                            <CardContent className="p-8">
+                                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
                                     {permissions.map((perm) => {
                                         const isAssigned = role.permissions.some((rp: any) => rp.permissionId === perm.id);
                                         return (
@@ -117,14 +140,14 @@ export default function RBACPage() {
                                                 key={perm.id}
                                                 onClick={() => handleTogglePermission(role.id, perm.id, isAssigned)}
                                                 className={cn(
-                                                    "px-3 py-2 rounded-lg text-[10px] font-bold text-center border transition-all truncate",
+                                                    "px-4 py-4 rounded-2xl text-[11px] font-black text-center border-2 transition-all truncate hover:-translate-y-1 hover:shadow-lg uppercase tracking-wider",
                                                     isAssigned
-                                                        ? "bg-indigo-50 border-indigo-200 text-indigo-700"
-                                                        : "bg-white border-slate-200 text-slate-400 hover:border-slate-300"
+                                                        ? "bg-indigo-50 border-indigo-200 text-indigo-700 shadow-indigo-100/50"
+                                                        : "bg-white border-slate-100 text-slate-400 hover:border-slate-300"
                                                 )}
                                                 title={perm.description}
                                             >
-                                                {perm.name}
+                                                {perm.name.replace(/_/g, " ")}
                                             </button>
                                         );
                                     })}
@@ -134,55 +157,57 @@ export default function RBACPage() {
                     ))}
                 </div>
             ) : (
-                <Card className="border-none shadow-sm overflow-hidden text-sm">
-                    <table className="w-full text-left">
-                        <thead>
-                            <tr className="bg-slate-50 text-slate-500 text-xs font-bold uppercase tracking-wider">
-                                <th className="px-6 py-4">User</th>
-                                <th className="px-6 py-4">Current Roles</th>
-                                <th className="px-6 py-4 text-right">Assign New Role</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100">
-                            {users.map((u) => (
-                                <tr key={u.id} className="hover:bg-slate-50/50 transition-colors">
-                                    <td className="px-6 py-4">
-                                        <div className="flex flex-col">
-                                            <span className="font-bold text-slate-700">{u.name}</span>
-                                            <span className="text-xs text-slate-400">{u.email}</span>
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <div className="flex flex-wrap gap-2">
-                                            {u.roles.map((ur: any) => (
-                                                <span key={ur.roleId} className="flex items-center gap-1 px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded-full text-[10px] font-bold">
-                                                    {ur.role.name}
-                                                    <button onClick={() => handleUserRoleAction(u.id, ur.roleId, true)} className="hover:text-red-500">
-                                                        <Trash2 className="w-3 h-3" />
-                                                    </button>
-                                                </span>
-                                            ))}
-                                            {u.roles.length === 0 && <span className="text-slate-300 italic text-[10px]">No roles assigned</span>}
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-4 text-right">
-                                        <select
-                                            className="bg-slate-100 border-none rounded-lg px-2 py-1 text-[10px] font-bold focus:ring-2 focus:ring-indigo-500"
-                                            onChange={(e) => {
-                                                if (e.target.value) handleUserRoleAction(u.id, parseInt(e.target.value), false);
-                                            }}
-                                            value=""
-                                        >
-                                            <option value="">+ Add Role</option>
-                                            {roles.map(r => (
-                                                <option key={r.id} value={r.id}>{r.name}</option>
-                                            ))}
-                                        </select>
-                                    </td>
+                <Card className="/80 backdrop-blur-2xl /50 -200/50 overflow-hidden border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse">
+                            <thead>
+                                <tr className="bg-slate-900 text-white">
+                                    <th className="px-8 py-6 font-black uppercase tracking-widest text-xs rounded-tl-3xl">User Profile</th>
+                                    <th className="px-8 py-6 font-black uppercase tracking-widest text-xs">Current Roles</th>
+                                    <th className="px-8 py-6 font-black uppercase tracking-widest text-xs text-right rounded-tr-3xl">Assign New Role</th>
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                                {users.map((u) => (
+                                    <tr key={u.id} className="hover:bg-indigo-50/30 transition-colors group">
+                                        <td className="px-8 py-6">
+                                            <div className="flex flex-col">
+                                                <span className="font-black text-slate-900 text-lg group-hover:text-indigo-700 transition-colors">{u.name}</span>
+                                                <span className="text-sm font-medium text-slate-500">{u.email}</span>
+                                            </div>
+                                        </td>
+                                        <td className="px-8 py-6">
+                                            <div className="flex flex-wrap gap-2">
+                                                {u.roles.map((ur: any) => (
+                                                    <span key={ur.roleId} className="flex items-center gap-2 px-4 py-2 bg-indigo-100/80 text-indigo-800 rounded-xl text-xs font-black uppercase tracking-widest shadow-sm">
+                                                        {ur.role.name}
+                                                        <button onClick={() => handleUserRoleAction(u.id, ur.roleId, true)} className="hover:text-rose-500 transition-colors p-1 bg-white rounded-lg">
+                                                            <Trash2 className="w-3 h-3" />
+                                                        </button>
+                                                    </span>
+                                                ))}
+                                                {u.roles.length === 0 && <span className="text-slate-300 italic font-medium text-xs uppercase tracking-widest">No roles assigned</span>}
+                                            </div>
+                                        </td>
+                                        <td className="px-8 py-6 text-right">
+                                            <select
+                                                className="bg-slate-100/50 border-2 border-slate-200 rounded-xl px-4 py-3 text-xs font-black uppercase tracking-widest text-slate-700 focus:ring-4 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all hover:bg-slate-100 cursor-pointer"
+                                                onChange={(e) => {
+                                                    if (e.target.value) handleUserRoleAction(u.id, parseInt(e.target.value), false);
+                                                }}
+                                                value=""
+                                            >
+                                                <option value="">+ Assign Role</option>
+                                                {roles.map(r => (
+                                                    <option key={r.id} value={r.id}>{r.name}</option>
+                                                ))}
+                                            </select>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
                 </Card>
             )}
         </div>

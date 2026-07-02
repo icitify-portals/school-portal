@@ -103,7 +103,7 @@ export default function CbtPlayer({ quiz, questions, userId }: { quiz: any; ques
 
     if (!started) {
         return (
-            <Card className="w-full max-w-xl border-none shadow-2xl rounded-3xl overflow-hidden">
+            <Card className="w-full max-w-xl overflow-hidden border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                 <div className="h-2 bg-indigo-600"></div>
                 <CardContent className="p-8 text-center space-y-6">
                     <h1 className="text-2xl font-black text-slate-900">{quiz.title}</h1>
@@ -130,7 +130,7 @@ export default function CbtPlayer({ quiz, questions, userId }: { quiz: any; ques
 
     if (completed) {
         return (
-            <Card className="w-full max-w-xl border-none shadow-2xl rounded-3xl overflow-hidden">
+            <Card className="w-full max-w-xl overflow-hidden border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                 <div className="h-2 bg-emerald-500"></div>
                 <CardContent className="p-8 text-center space-y-6">
                     <CheckCircle className="w-16 h-16 text-emerald-500 mx-auto" />
@@ -173,7 +173,7 @@ export default function CbtPlayer({ quiz, questions, userId }: { quiz: any; ques
             </div>
 
             {/* Question Card */}
-            <Card className="border-none shadow-sm rounded-3xl overflow-hidden">
+            <Card className="overflow-hidden border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                 <CardContent className="p-8 space-y-8">
                     <div className="prose prose-slate max-w-none text-lg">
                         <LatexRenderer content={currentQ.questionText} containsLatex={currentQ.containsLatex} />

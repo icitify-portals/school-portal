@@ -29,12 +29,12 @@ export default async function StockHistoryPage() {
                 <p className="text-slate-500 mt-1">Audit log of all inventory changes and issuances.</p>
             </div>
 
-            <Card className="border-none shadow-sm bg-white">
-                <CardHeader>
+            <Card className=" border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
+                <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-6">
                     <CardTitle>Transactions Log</CardTitle>
                     <CardDescription>Comprehensive list of stock activities.</CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className=" p-6">
                     <Table>
                         <TableHeader>
                             <TableRow>

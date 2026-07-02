@@ -158,7 +158,7 @@ export default function AttendanceSettingsPage() {
                 </Button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {settingCards.map((card) => {
                     const IconComp = card.icon;
                     const colors = colorMap[card.color] || colorMap.blue;
@@ -202,7 +202,7 @@ export default function AttendanceSettingsPage() {
             </div>
 
             {/* Preview section */}
-            <Card className="border-none shadow-xl bg-gradient-to-br from-slate-900 to-slate-800 text-white rounded-2xl overflow-hidden">
+            <Card className="-to-br from-slate-900 to-slate-800 text-white overflow-hidden border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                 <CardContent className="p-8">
                     <h3 className="font-black text-sm uppercase tracking-widest mb-6 opacity-50">Live Preview — Risk Levels</h3>
                     <div className="grid grid-cols-3 gap-4">

@@ -67,7 +67,7 @@ export default async function AdminAnalyticsPage() {
             </div>
 
             {/* Quick Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 {[
                     { label: "Enrolled Students", value: totalStudents[0]?.count || 0, icon: Users, color: "blue", trend: "+12%" },
                     { label: "Global Avg. Score", value: `${Math.round(parseFloat(avgScore[0]?.avg || "0"))}%`, icon: TrendingUp, color: "emerald", trend: "+2.4%" },
@@ -98,17 +98,17 @@ export default async function AdminAnalyticsPage() {
                 ))}
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                 {/* Level-by-Level Distribution */}
-                <Card className="lg:col-span-2 border-none shadow-sm bg-white">
-                    <CardHeader>
+                <Card className="lg:col-span-2 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
+                    <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-6">
                         <CardTitle className="text-lg flex items-center gap-2">
                             <BarChart className="w-5 h-5 text-indigo-500" />
                             Grade Distribution by Level
                         </CardTitle>
                         <CardDescription>Average performance across all academic tiers.</CardDescription>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className=" p-6">
                         <div className="space-y-6">
                             {levelPerformance.map((lp, idx) => (
                                 <div key={idx} className="space-y-2">
@@ -129,18 +129,18 @@ export default async function AdminAnalyticsPage() {
                 </Card>
 
                 {/* Top Performers Spotlight */}
-                <Card className="border-none shadow-sm bg-slate-900 text-white overflow-hidden relative">
+                <Card className="text-white overflow-hidden relative border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                     <div className="absolute top-0 right-0 p-8 opacity-10 rotate-12 scale-150">
                         <Trophy className="w-32 h-32" />
                     </div>
-                    <CardHeader className="relative z-10">
+                    <CardHeader className="relative z-10 bg-slate-50/50 border-b border-slate-100 p-6">
                         <CardTitle className="text-lg text-white flex items-center gap-2">
                             <PieChart className="w-5 h-5 text-indigo-400" />
                             Subject Spotlight
                         </CardTitle>
                         <CardDescription className="text-slate-400">Top subject scores this term.</CardDescription>
                     </CardHeader>
-                    <CardContent className="relative z-10 space-y-6">
+                    <CardContent className="relative z-10 space-y-6 p-6">
                         {topPerformers.map((perf, idx) => (
                             <div key={idx} className="flex items-center gap-4 group">
                                 <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center font-black text-indigo-400 group-hover:bg-indigo-500 group-hover:text-white transition-all">

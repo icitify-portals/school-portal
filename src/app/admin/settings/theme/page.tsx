@@ -109,13 +109,13 @@ export default function ThemeSettingsPage() {
             </div>
 
             {/* Live Preview */}
-            <Card className="overflow-hidden">
-                <CardHeader className="pb-2">
+            <Card className="overflow-hidden border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
+                <CardHeader className="pb-2 bg-slate-50/50 border-b border-slate-100 p-6">
                     <CardTitle className="text-sm font-black uppercase tracking-wider text-slate-500 flex items-center gap-2">
                         <Eye className="w-4 h-4" /> Live Preview
                     </CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className=" p-6">
                     <div className="rounded-xl overflow-hidden border border-slate-200" style={{ fontFamily: settings.FONT_FAMILY }}>
                         {/* Mock sidebar + content */}
                         <div className="flex h-32">
@@ -143,11 +143,11 @@ export default function ThemeSettingsPage() {
             </Card>
 
             {/* Preset Themes */}
-            <Card>
-                <CardHeader className="pb-2">
+            <Card className=" border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
+                <CardHeader className="pb-2 bg-slate-50/50 border-b border-slate-100 p-6">
                     <CardTitle className="text-sm font-black uppercase tracking-wider text-slate-500">Preset Themes</CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className=" p-6">
                     <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
                         {PRESET_THEMES.map(preset => (
                             <button key={preset.name} onClick={() => applyPreset(preset)}
@@ -165,13 +165,13 @@ export default function ThemeSettingsPage() {
             </Card>
 
             {/* Colors */}
-            <Card>
-                <CardHeader className="pb-2">
+            <Card className=" border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
+                <CardHeader className="pb-2 bg-slate-50/50 border-b border-slate-100 p-6">
                     <CardTitle className="text-sm font-black uppercase tracking-wider text-slate-500 flex items-center gap-2">
                         <Palette className="w-4 h-4" /> Colors
                     </CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className=" p-6">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         {[
                             { key: 'COLOR_PRIMARY', label: 'Primary', desc: 'Buttons, links, active states' },
@@ -203,13 +203,13 @@ export default function ThemeSettingsPage() {
 
             {/* Typography & Layout */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Card>
-                    <CardHeader className="pb-2">
+                <Card className=" border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
+                    <CardHeader className="pb-2 bg-slate-50/50 border-b border-slate-100 p-6">
                         <CardTitle className="text-sm font-black uppercase tracking-wider text-slate-500 flex items-center gap-2">
                             <Type className="w-4 h-4" /> Typography
                         </CardTitle>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className=" p-6">
                         <label className="text-xs font-bold text-slate-600 uppercase mb-2 block">Font Family</label>
                         <select
                             value={settings.FONT_FAMILY}
@@ -226,13 +226,13 @@ export default function ThemeSettingsPage() {
                     </CardContent>
                 </Card>
 
-                <Card>
-                    <CardHeader className="pb-2">
+                <Card className=" border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
+                    <CardHeader className="pb-2 bg-slate-50/50 border-b border-slate-100 p-6">
                         <CardTitle className="text-sm font-black uppercase tracking-wider text-slate-500 flex items-center gap-2">
                             <Layout className="w-4 h-4" /> Layout
                         </CardTitle>
                     </CardHeader>
-                    <CardContent className="space-y-4">
+                    <CardContent className="space-y-4 p-6">
                         <div>
                             <label className="text-xs font-bold text-slate-600 uppercase mb-2 block">Sidebar Style</label>
                             <div className="grid grid-cols-3 gap-2">

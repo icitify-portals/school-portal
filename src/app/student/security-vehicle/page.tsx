@@ -119,7 +119,7 @@ export default function StudentVehiclePage() {
 
       {/* Tabs Content */}
       {activeTab === "register" ? (
-        <Card className="border-none shadow-lg overflow-hidden bg-white max-w-2xl mx-auto">
+        <Card className="overflow-hidden max-w-2xl mx-auto border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
           <CardHeader className="border-b border-slate-50 bg-slate-50/50 pb-5">
             <CardTitle className="text-lg font-bold text-slate-900">Vehicle Registration Form</CardTitle>
             <CardDescription>Enter details about your vehicle. All registrations require Chief Security Officer (CSO) approval.</CardDescription>
@@ -211,9 +211,9 @@ export default function StudentVehiclePage() {
         </Card>
       ) : (
         /* Permits List */
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="md:col-span-2 space-y-4">
-            <Card className="border-none shadow-md overflow-hidden bg-white">
+            <Card className="overflow-hidden border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
               <CardHeader className="border-b border-slate-50 bg-slate-50/50">
                 <CardTitle className="text-lg font-bold text-slate-900">Registered Vehicles</CardTitle>
                 <CardDescription>Select an approved vehicle to view and download your QR Gate Pass.</CardDescription>
@@ -278,7 +278,7 @@ export default function StudentVehiclePage() {
           {/* Selected Vehicle Pass Detail */}
           <div className="md:col-span-1">
             {selectedVehicle && selectedVehicle.status === 'approved' ? (
-              <Card className="border-none shadow-lg overflow-hidden bg-gradient-to-b from-indigo-950 to-slate-950 text-white border border-indigo-900 rounded-2xl relative">
+              <Card className="overflow-hidden -to-b from-indigo-950 to-slate-950 text-white -900 relative border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                 {/* Print area */}
                 <div className="p-6 flex flex-col items-center text-center space-y-6" id="gate-pass-print">
                   <div className="flex items-center gap-1.5 border border-indigo-500/30 bg-indigo-500/10 px-3 py-1 rounded-full text-indigo-400 text-xs font-bold">
@@ -366,7 +366,7 @@ export default function StudentVehiclePage() {
                 </div>
               </Card>
             ) : (
-              <Card className="border-dashed border-2 border-slate-200 bg-slate-50/50 p-6 rounded-2xl text-center text-slate-400">
+              <Card className="-200 /50 p-6 text-center text-slate-400 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                 <QrCode className="w-12 h-12 mx-auto mb-3 opacity-20" />
                 Select an approved vehicle to load its security QR Pass card details.
               </Card>

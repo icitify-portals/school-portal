@@ -150,32 +150,52 @@ export default function AccountingDashboard() {
         return settings[m.setting] === "enabled";
     });
     return (
-        <div className="p-8 max-w-6xl mx-auto">
-            <div className="mb-10 text-center lg:text-left">
-                <h2 className="text-3xl font-bold text-slate-900 tracking-tight">Institutional Accounting</h2>
-                <p className="text-slate-500 mt-1">Core financial infrastructure and regulatory reporting</p>
+        <div className="p-4 sm:p-6 lg:p-8 min-h-screen bg-transparent">
+          <div className="max-w-[1600px] w-full mx-auto space-y-10 text-slate-800">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 bg-slate-900 text-white rounded-[3rem] p-8 lg:p-12 shadow-2xl relative overflow-hidden border border-slate-800">
+                <div className="absolute inset-0 bg-gradient-to-r from-indigo-600/30 to-purple-600/30 opacity-50 mix-blend-overlay" />
+                <div className="relative z-10">
+                    <div className="flex items-center gap-4 mb-2">
+                        <FolderTree className="w-12 h-12 text-indigo-400 drop-shadow-md" />
+                        <h2 className="text-4xl lg:text-5xl font-black tracking-tighter uppercase italic drop-shadow-md">
+                            Institutional Accounting
+                        </h2>
+                    </div>
+                    <p className="text-slate-300 font-medium mt-1 uppercase text-sm tracking-wide opacity-90">
+                        Core financial infrastructure and regulatory reporting
+                    </p>
+                </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-                <Card className="border-none shadow-sm bg-indigo-600 text-white">
-                    <CardContent className="p-6">
-                        <p className="text-xs font-bold uppercase tracking-widest opacity-80 mb-2">Total Assets</p>
-                        <h3 className="text-3xl font-extrabold mb-1">₦0.00</h3>
-                        <p className="text-[10px] opacity-70">Aggregated from Asset COA codes</p>
+                <Card className="border border-white/40 shadow-xl shadow-slate-200/50 bg-indigo-600 text-white backdrop-blur-3xl rounded-[2.5rem] hover:shadow-2xl transition-all relative overflow-hidden group">
+                    <CardContent className="p-8">
+                        <p className="text-[10px] font-black uppercase tracking-widest opacity-80 mb-2 drop-shadow-sm">Total Assets</p>
+                        <h3 className="text-4xl font-black mb-1 drop-shadow-md">₦0.00</h3>
+                        <p className="text-xs font-bold opacity-70">Aggregated from Asset COA codes</p>
+                        <div className="absolute top-0 right-0 p-6 opacity-20 group-hover:scale-110 transition-transform">
+                            <BarChart3 className="w-16 h-16" />
+                        </div>
                     </CardContent>
                 </Card>
-                <Card className="border-none shadow-sm bg-slate-900 text-white">
-                    <CardContent className="p-6">
-                        <p className="text-xs font-bold uppercase tracking-widest opacity-80 mb-2">Total Liabilities</p>
-                        <h3 className="text-3xl font-extrabold mb-1">₦0.00</h3>
-                        <p className="text-[10px] opacity-70">Aggregated from Liability COA codes</p>
+                <Card className="border border-white/40 shadow-xl shadow-slate-200/50 bg-slate-900 text-white backdrop-blur-3xl rounded-[2.5rem] hover:shadow-2xl transition-all relative overflow-hidden group">
+                    <CardContent className="p-8">
+                        <p className="text-[10px] font-black uppercase tracking-widest opacity-80 mb-2 drop-shadow-sm">Total Liabilities</p>
+                        <h3 className="text-4xl font-black mb-1 drop-shadow-md">₦0.00</h3>
+                        <p className="text-xs font-bold opacity-70">Aggregated from Liability COA codes</p>
+                        <div className="absolute top-0 right-0 p-6 opacity-20 group-hover:scale-110 transition-transform">
+                            <BarChart3 className="w-16 h-16" />
+                        </div>
                     </CardContent>
                 </Card>
-                <Card className="border-none shadow-sm border border-slate-100">
-                    <CardContent className="p-6">
-                        <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">Net Equity</p>
-                        <h3 className="text-3xl font-extrabold text-slate-900 mb-1">₦0.00</h3>
-                        <p className="text-[10px] text-slate-400">Assets minus Liabilities</p>
+                <Card className="border border-white/40 shadow-xl shadow-slate-200/50 bg-white/60 text-slate-900 backdrop-blur-3xl rounded-[2.5rem] hover:shadow-2xl transition-all relative overflow-hidden group">
+                    <CardContent className="p-8">
+                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 drop-shadow-sm">Net Equity</p>
+                        <h3 className="text-4xl font-black mb-1 drop-shadow-md">₦0.00</h3>
+                        <p className="text-xs font-bold text-slate-500">Assets minus Liabilities</p>
+                        <div className="absolute top-0 right-0 p-6 opacity-5 group-hover:scale-110 transition-transform text-slate-900">
+                            <Scale className="w-16 h-16" />
+                        </div>
                     </CardContent>
                 </Card>
             </div>
@@ -183,18 +203,18 @@ export default function AccountingDashboard() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-16">
                 {filteredModules.map((module) => (
                     <Link key={module.name} href={module.href}>
-                        <Card className="border-none shadow-sm hover:shadow-md transition-all cursor-pointer group overflow-hidden border border-slate-50">
-                            <CardContent className="p-6">
-                                <div className={cn("p-3 rounded-2xl w-fit mb-4 transition-colors", module.bg)}>
-                                    <module.icon className={cn("w-6 h-6", module.color)} />
+                        <Card className="border border-white/40 shadow-xl shadow-slate-200/50 bg-white/60 backdrop-blur-3xl rounded-[2.5rem] hover:shadow-2xl transition-all cursor-pointer group overflow-hidden h-full">
+                            <CardContent className="p-8">
+                                <div className={cn("p-4 rounded-2xl w-fit mb-6 transition-colors shadow-inner", module.bg)}>
+                                    <module.icon className={cn("w-8 h-8 drop-shadow-sm", module.color)} />
                                 </div>
-                                <div className="flex items-center justify-between mb-2">
-                                    <h4 className="font-extrabold text-slate-900 group-hover:text-indigo-600 transition-colors uppercase tracking-tight">
+                                <div className="flex items-center justify-between mb-3">
+                                    <h4 className="font-black text-xl text-slate-900 group-hover:text-indigo-600 transition-colors uppercase tracking-tight">
                                         {module.name}
                                     </h4>
-                                    <ArrowRight className="w-4 h-4 text-slate-300 group-hover:text-indigo-600 transition-all -translate-x-2 group-hover:translate-x-0" />
+                                    <ArrowRight className="w-5 h-5 text-slate-300 group-hover:text-indigo-600 transition-all -translate-x-2 group-hover:translate-x-0" />
                                 </div>
-                                <p className="text-sm text-slate-500 leading-relaxed font-medium">
+                                <p className="text-sm text-slate-500 font-medium">
                                     {module.description}
                                 </p>
                             </CardContent>
@@ -204,37 +224,37 @@ export default function AccountingDashboard() {
             </div>
 
             {/* Module Configuration Section */}
-            <div className="pt-10 border-t border-slate-100">
-                <div className="flex items-center gap-3 mb-6">
-                    <div className="p-2 bg-slate-900 rounded-lg text-white">
-                        <Settings2 className="w-5 h-5" />
+            <div className="pt-10 border-t border-slate-200/50">
+                <div className="flex items-center gap-4 mb-8">
+                    <div className="p-3 bg-slate-900 rounded-[1.5rem] text-white shadow-md">
+                        <Settings2 className="w-6 h-6" />
                     </div>
                     <div>
-                        <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">Institutional Modules</h3>
-                        <p className="text-xs text-slate-500 font-medium">Activate or deactivate advanced institutional ERP suites</p>
+                        <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tight italic drop-shadow-sm">Institutional Modules</h3>
+                        <p className="text-sm text-slate-500 font-bold opacity-80 uppercase tracking-widest mt-1">Activate or deactivate advanced institutional ERP suites</p>
                     </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     {modules.filter(m => m.setting).map(m => (
-                        <Card key={m.name} className="border-none shadow-sm bg-slate-50/50">
-                            <CardContent className="p-4 flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                    <div className={cn("p-2 rounded-xl", m.bg)}>
-                                        <m.icon className={cn("w-4 h-4", m.color)} />
+                        <Card key={m.name} className="border border-white/40 shadow-xl shadow-slate-200/50 bg-white/60 backdrop-blur-3xl rounded-[2rem] hover:shadow-2xl transition-all relative overflow-hidden group">
+                            <CardContent className="p-6 flex items-center justify-between">
+                                <div className="flex items-center gap-4">
+                                    <div className={cn("p-3 rounded-[1.2rem] shadow-inner", m.bg)}>
+                                        <m.icon className={cn("w-5 h-5 drop-shadow-sm", m.color)} />
                                     </div>
-                                    <span className="text-sm font-bold text-slate-700">{m.name}</span>
+                                    <span className="text-base font-black uppercase text-slate-800 tracking-tight">{m.name}</span>
                                 </div>
                                 <Button
                                     variant={settings[m.setting!] === "enabled" ? "default" : "outline"}
                                     className={cn(
-                                        "font-bold rounded-lg h-8 px-4",
-                                        settings[m.setting!] === "enabled" ? "bg-slate-900 hover:bg-slate-800" : "text-slate-400"
+                                        "font-black uppercase tracking-widest rounded-xl h-10 px-5 transition-all shadow-md active:scale-95",
+                                        settings[m.setting!] === "enabled" ? "bg-slate-900 hover:bg-slate-800 text-white" : "text-slate-400 hover:text-slate-600 bg-white"
                                     )}
                                     onClick={() => toggleModule(m.setting!)}
                                     disabled={updating === m.setting}
                                 >
-                                    {updating === m.setting ? <Loader2 className="w-3 h-3 animate-spin" /> : (settings[m.setting!] === "enabled" ? "Enabled" : "Disabled")}
+                                    {updating === m.setting ? <Loader2 className="w-4 h-4 animate-spin" /> : (settings[m.setting!] === "enabled" ? "Enabled" : "Disabled")}
                                 </Button>
                             </CardContent>
                         </Card>
@@ -242,5 +262,6 @@ export default function AccountingDashboard() {
                 </div>
             </div>
         </div>
+       </div>
     );
 }

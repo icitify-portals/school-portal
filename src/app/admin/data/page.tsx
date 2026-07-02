@@ -126,7 +126,7 @@ export default function DataExportHubPage() {
                     <TabsTrigger value="users">Users & Roles</TabsTrigger>
                 </TabsList>
 
-                <TabsContent value="all" className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                <TabsContent value="all" className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                     {EXPORT_MODULES.map(module => (
                         <EntityCard
                             key={module.id}
@@ -141,7 +141,7 @@ export default function DataExportHubPage() {
                     ))}
                 </TabsContent>
 
-                <TabsContent value="academic" className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                <TabsContent value="academic" className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                     {EXPORT_MODULES.filter(m => ['faculties', 'departments', 'programmes', 'courses'].includes(m.id)).map(module => (
                         <EntityCard key={module.id} module={module} loading={loading} file={importFiles[module.id]}
                             onDownloadTemplate={() => handleDownloadTemplate(module.id)} onExport={() => handleExport(module.id)} onFileChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFileChange(module.id, e)} onImport={() => handleImport(module.id)}
@@ -149,7 +149,7 @@ export default function DataExportHubPage() {
                     ))}
                 </TabsContent>
 
-                <TabsContent value="users" className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                <TabsContent value="users" className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                     {EXPORT_MODULES.filter(m => m.id === 'staff').map(module => (
                         <EntityCard key={module.id} module={module} loading={loading} file={importFiles[module.id]}
                             onDownloadTemplate={() => handleDownloadTemplate(module.id)} onExport={() => handleExport(module.id)} onFileChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFileChange(module.id, e)} onImport={() => handleImport(module.id)}
@@ -168,8 +168,8 @@ function EntityCard({ module, loading, file, onDownloadTemplate, onExport, onFil
     const isImportLoading = loading[`${module.id}_import`];
 
     return (
-        <Card className="flex flex-col h-full border-slate-200 shadow-sm hover:shadow-md transition-all">
-            <CardHeader className="pb-4">
+        <Card className="flex flex-col h-full -200 hover: transition-all border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
+            <CardHeader className="pb-4 bg-slate-50/50 border-b border-slate-100 p-6">
                 <div className="flex items-start justify-between">
                     <div>
                         <CardTitle className="text-lg">{module.title}</CardTitle>
@@ -180,7 +180,7 @@ function EntityCard({ module, loading, file, onDownloadTemplate, onExport, onFil
                     </div>
                 </div>
             </CardHeader>
-            <CardContent className="flex-1 space-y-4 pt-0">
+            <CardContent className="flex-1 space-y-4 pt-0 p-6">
                 <div className="flex gap-2">
                     <Button variant="outline" className="flex-1 text-xs h-9 gap-2" onClick={onDownloadTemplate} disabled={isTemplateLoading}>
                         {isTemplateLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileSpreadsheet className="w-3.5 h-3.5 text-slate-500" />}

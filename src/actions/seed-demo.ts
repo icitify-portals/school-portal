@@ -137,7 +137,7 @@ export async function seedDemoData() {
                 title: "Portal Usage Instructions",
                 slug: "portal-usage",
                 content: `<h2>Portal Navigation & Usage Guide</h2>
-<p>Welcome to the official <strong>School Portal</strong>! This comprehensive guide provides step-by-step instructions on how to navigate and utilize the various modules available to students, staff, and administrators.</p>
+<p>Welcome to the official <strong>FSS Portal</strong>! This comprehensive guide provides step-by-step instructions on how to navigate and utilize the various modules available to students, staff, and administrators.</p>
 
 <hr />
 
@@ -169,7 +169,7 @@ export async function seedDemoData() {
   <p><strong>Note:</strong> Keep your login credentials secure. Log out of public computers after use. For support, contact the IT Admin desk.</p>
 </blockquote>`,
                 metaTitle: "Portal Usage Instructions & Documentation",
-                metaDescription: "Learn how to use the school portal, register courses, request maintenance, and check results.",
+                metaDescription: "Learn how to use the FSS Portal, register courses, request maintenance, and check results.",
                 status: "published" as const,
                 isSystemPage: false,
                 locale: "en",

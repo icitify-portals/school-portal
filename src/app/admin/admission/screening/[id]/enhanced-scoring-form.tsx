@@ -135,13 +135,13 @@ export default function EnhancedScoringForm({
   return (
     <div className="space-y-6">
       {/* Scoring Strategy Info */}
-      <Card className="bg-indigo-50 border-indigo-100">
-        <CardHeader className="pb-3">
+      <Card className="-100 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
+        <CardHeader className="pb-3 bg-slate-50/50 border-b border-slate-100 p-6">
           <CardTitle className="text-sm flex items-center gap-2 text-indigo-700">
             <Calculator className="h-4 w-4" /> Scoring Model
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className=" p-6">
           {getStrategyDisplay()}
           {scoringStrategy === 'IBADAN_50_50' && (
             <div className="mt-3 p-3 bg-amber-50 rounded-lg border border-amber-200">
@@ -268,13 +268,13 @@ export default function EnhancedScoringForm({
 
       {/* Calculated Result */}
       {calculatedResult && (
-        <Card className="bg-emerald-50 border-emerald-100">
-          <CardHeader className="pb-3">
+        <Card className="-100 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
+          <CardHeader className="pb-3 bg-slate-50/50 border-b border-slate-100 p-6">
             <CardTitle className="text-sm flex items-center gap-2 text-emerald-700">
               <Calculator className="h-4 w-4" /> Calculated Aggregate
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className=" p-6">
             <div className="text-center mb-4">
               <p className="text-4xl font-black text-emerald-600">
                 {calculatedResult.aggregateScore?.toFixed(2)}
@@ -323,13 +323,13 @@ export default function EnhancedScoringForm({
       {/* Admission Decision */}
       {admissionDecision && (
         <Card className={admissionDecision.decision === 'admitted' ? "bg-emerald-50 border-emerald-100" : "bg-rose-50 border-rose-100"}>
-          <CardHeader className="pb-3">
+          <CardHeader className="pb-3 bg-slate-50/50 border-b border-slate-100 p-6">
             <CardTitle className={`text-sm flex items-center gap-2 ${admissionDecision.decision === 'admitted' ? "text-emerald-700" : "text-rose-700"}`}>
               {admissionDecision.decision === 'admitted' ? <CheckCircle2 className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
               Admission Decision: {admissionDecision.decision === 'admitted' ? 'ADMITTED' : 'NOT ADMITTED'}
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className=" p-6">
             <p className="text-sm">
               Aggregate Score: <strong>{admissionDecision.aggregateScore?.toFixed(2)}</strong>
               {admissionDecision.decision === 'admitted'

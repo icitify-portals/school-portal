@@ -29,9 +29,9 @@ export default function CourseRegistrationPage() {
                 </div>
             </div>
 
-            <div className="grid gap-6">
-                <Card className="border-blue-100 bg-blue-50/30">
-                    <CardContent className="pt-6">
+            <div className="grid gap-4">
+                <Card className="-100 /30 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
+                    <CardContent className="pt-6 p-6">
                         <div className="flex gap-4">
                             <AlertCircle className="w-5 h-5 text-blue-600 shrink-0" />
                             <div>
@@ -45,7 +45,7 @@ export default function CourseRegistrationPage() {
                     </CardContent>
                 </Card>
 
-                <Card className="border-slate-200 overflow-hidden">
+                <Card className="-200 overflow-hidden border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                     <CardHeader className="bg-slate-50/50 border-b">
                         <CardTitle className="text-lg">Available Courses</CardTitle>
                         <CardDescription>Select the courses you wish to register for this semester.</CardDescription>

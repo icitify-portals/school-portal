@@ -166,286 +166,294 @@ export default function FixedAssetsPage() {
     }
 
     return (
-        <div className="p-8 max-w-6xl mx-auto">
-            <div className="flex justify-between items-start mb-10 text-center lg:text-left">
-                <div>
-                    <h2 className="text-3xl font-bold text-slate-900 tracking-tight flex items-center gap-3">
-                        <Hammer className="w-8 h-8 text-amber-600" />
+    <div className="p-4 sm:p-6 lg:p-8 min-h-screen bg-transparent">
+      <div className="max-w-[1600px] w-full mx-auto space-y-10 text-slate-800">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 bg-slate-900 text-white rounded-[3rem] p-8 lg:p-12 shadow-2xl relative overflow-hidden border border-slate-800">
+            <div className="absolute inset-0 bg-gradient-to-r from-amber-600/30 to-slate-600/30 opacity-50 mix-blend-overlay" />
+            <div className="relative z-10">
+                <div className="flex items-center gap-4 mb-2">
+                    <Hammer className="w-12 h-12 text-amber-400 drop-shadow-md" />
+                    <h2 className="text-4xl lg:text-5xl font-black tracking-tighter uppercase italic drop-shadow-md">
                         Fixed Asset Registry
                     </h2>
-                    <p className="text-slate-500 mt-1">Institutional property tracking and automated depreciation manager</p>
                 </div>
-                <div className="flex gap-3">
-                    <Button
-                        variant="outline"
-                        className="gap-2 rounded-xl border-slate-200"
-                        onClick={handleRunDepreciation}
-                        disabled={runningDep}
-                    >
-                        {runningDep ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
-                        Run Monthly Depreciation
-                    </Button>
-                    <Button
-                        className="bg-amber-600 hover:bg-amber-700 rounded-xl gap-2 shadow-lg shadow-amber-500/20"
-                        onClick={() => setIsAdding(true)}
-                    >
-                        <Plus className="w-4 h-4" /> Register New Asset
-                    </Button>
-                </div>
+                <p className="text-slate-300 font-medium mt-1 uppercase text-sm tracking-wide opacity-90">
+                    Institutional property tracking and automated depreciation manager
+                </p>
             </div>
+            
+            <div className="relative z-10 flex gap-4 w-full md:w-auto shrink-0 flex-wrap">
+                <Button
+                    variant="outline"
+                    className="h-12 px-6 rounded-[1.5rem] font-black uppercase text-xs tracking-wider border-white/20 text-white bg-white/10 hover:bg-white hover:text-slate-900 transition-all gap-2"
+                    onClick={handleRunDepreciation}
+                    disabled={runningDep}
+                >
+                    {runningDep ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
+                    Run Depreciation
+                </Button>
+                <Button
+                    onClick={() => setIsAdding(true)}
+                    className="bg-amber-500 hover:bg-amber-600 text-slate-950 px-8 py-6 rounded-[1.5rem] font-black uppercase text-xs tracking-wider shadow-lg active:scale-95 transition-all gap-2"
+                >
+                    <Plus className="w-4 h-4" />
+                    Register Asset
+                </Button>
+            </div>
+        </div>
 
-            {isAdding && (
-                <Card className="mb-10 border-none shadow-xl bg-white ring-1 ring-slate-100 overflow-hidden animate-in fade-in slide-in-from-top-4 duration-300">
-                    <CardHeader className="bg-slate-50 border-b border-slate-100 py-4">
-                        <CardTitle className="text-sm font-black uppercase tracking-widest text-slate-500">Register Institutional Property</CardTitle>
-                    </CardHeader>
-                    <CardContent className="p-8 grid grid-cols-1 md:grid-cols-3 gap-6">
+        {isAdding && (
+            <Card className="border border-white/40 shadow-xl shadow-slate-200/50 bg-white/60 backdrop-blur-3xl rounded-[3rem] overflow-hidden animate-in slide-in-from-top-8 duration-500">
+                <CardHeader className="p-8 lg:p-10 border-b border-white/40 bg-white/40">
+                    <CardTitle className="text-2xl font-black text-slate-900 italic tracking-tight uppercase">Register Institutional Property</CardTitle>
+                </CardHeader>
+                <CardContent className="p-8 lg:p-10">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div className="space-y-2">
-                            <Label>Asset Name</Label>
-                            <Input placeholder="e.g. Toyota Coaster Bus (2024)" value={name} onChange={e => setName(e.target.value)} />
+                            <Label className="text-xs font-black text-slate-500 uppercase tracking-widest ml-2">Asset Name</Label>
+                            <Input className="rounded-[1rem] border-white/60 bg-white/60 focus:bg-white font-bold h-11 transition-all text-slate-800" placeholder="e.g. Toyota Coaster Bus (2024)" value={name} onChange={e => setName(e.target.value)} />
                         </div>
                         <div className="space-y-2">
-                            <Label>Purchase Date</Label>
-                            <Input type="date" value={purchaseDate} onChange={e => setPurchaseDate(e.target.value)} />
+                            <Label className="text-xs font-black text-slate-500 uppercase tracking-widest ml-2">Purchase Date</Label>
+                            <Input className="rounded-[1rem] border-white/60 bg-white/60 focus:bg-white font-bold h-11 transition-all text-slate-800" type="date" value={purchaseDate} onChange={e => setPurchaseDate(e.target.value)} />
                         </div>
                         <div className="space-y-2">
-                            <Label>Purchase Price (₦)</Label>
-                            <Input type="number" value={purchasePrice} onChange={e => setPurchasePrice(e.target.value)} />
+                            <Label className="text-xs font-black text-slate-500 uppercase tracking-widest ml-2">Purchase Price (₦)</Label>
+                            <Input className="rounded-[1rem] border-white/60 bg-white/60 focus:bg-white font-bold h-11 transition-all text-slate-800" type="number" value={purchasePrice} onChange={e => setPurchasePrice(e.target.value)} />
                         </div>
                         <div className="space-y-2">
-                            <Label>Salvage Value (₦)</Label>
-                            <Input type="number" value={salvageValue} onChange={e => setSalvageValue(e.target.value)} />
+                            <Label className="text-xs font-black text-slate-500 uppercase tracking-widest ml-2">Salvage Value (₦)</Label>
+                            <Input className="rounded-[1rem] border-white/60 bg-white/60 focus:bg-white font-bold h-11 transition-all text-slate-800" type="number" value={salvageValue} onChange={e => setSalvageValue(e.target.value)} />
                         </div>
                         <div className="space-y-2">
-                            <Label>Useful Life (Years)</Label>
-                            <Input type="number" value={usefulLife} onChange={e => setUsefulLife(e.target.value)} />
+                            <Label className="text-xs font-black text-slate-500 uppercase tracking-widest ml-2">Useful Life (Years)</Label>
+                            <Input className="rounded-[1rem] border-white/60 bg-white/60 focus:bg-white font-bold h-11 transition-all text-slate-800" type="number" value={usefulLife} onChange={e => setUsefulLife(e.target.value)} />
                         </div>
                         <div className="space-y-2">
-                            <Label>Asset GL Account</Label>
-                            <select className="w-full p-2 rounded-lg border border-slate-200 text-sm" value={glAccountId} onChange={e => setGlAccountId(e.target.value)}>
+                            <Label className="text-xs font-black text-slate-500 uppercase tracking-widest ml-2">Asset GL Account</Label>
+                            <select className="w-full px-5 rounded-[1rem] border border-white/60 bg-white/60 focus:bg-white focus:ring-4 focus:ring-indigo-500/20 outline-none font-bold transition-all shadow-inner text-slate-800 h-11" value={glAccountId} onChange={e => setGlAccountId(e.target.value)}>
                                 <option value="">Select Account...</option>
                                 {coa.filter(a => a.category === 'asset').map(a => <option key={a.id} value={a.id}>{a.code} - {a.name}</option>)}
                             </select>
                         </div>
                         <div className="space-y-2">
-                            <Label>Depreciation Expense Account</Label>
-                            <select className="w-full p-2 rounded-lg border border-slate-200 text-sm" value={depAccountId} onChange={e => setDepAccountId(e.target.value)}>
+                            <Label className="text-xs font-black text-slate-500 uppercase tracking-widest ml-2">Depreciation Expense Account</Label>
+                            <select className="w-full px-5 rounded-[1rem] border border-white/60 bg-white/60 focus:bg-white focus:ring-4 focus:ring-indigo-500/20 outline-none font-bold transition-all shadow-inner text-slate-800 h-11" value={depAccountId} onChange={e => setDepAccountId(e.target.value)}>
                                 <option value="">Select Account...</option>
                                 {coa.filter(a => a.category === 'expense').map(a => <option key={a.id} value={a.id}>{a.code} - {a.name}</option>)}
                             </select>
                         </div>
                         <div className="space-y-2">
-                            <Label>Accum. Dep. (Contra-Asset)</Label>
-                            <select className="w-full p-2 rounded-lg border border-slate-200 text-sm" value={accumDepAccountId} onChange={e => setAccumDepAccountId(e.target.value)}>
+                            <Label className="text-xs font-black text-slate-500 uppercase tracking-widest ml-2">Accum. Dep. (Contra-Asset)</Label>
+                            <select className="w-full px-5 rounded-[1rem] border border-white/60 bg-white/60 focus:bg-white focus:ring-4 focus:ring-indigo-500/20 outline-none font-bold transition-all shadow-inner text-slate-800 h-11" value={accumDepAccountId} onChange={e => setAccumDepAccountId(e.target.value)}>
                                 <option value="">Select Account...</option>
                                 {coa.filter(a => a.category === 'asset').map(a => <option key={a.id} value={a.id}>{a.code} - {a.name}</option>)}
                             </select>
                         </div>
                         <div className="md:col-span-3 flex justify-end gap-3 mt-4">
-                            <Button variant="outline" onClick={() => setIsAdding(false)}>Cancel</Button>
-                            <Button className="bg-slate-900 hover:bg-slate-800 text-white" onClick={handleCreate}>Save Asset & Generate Schedule</Button>
+                            <Button variant="outline" className="rounded-xl font-bold uppercase text-xs tracking-wider" onClick={() => setIsAdding(false)}>Cancel</Button>
+                            <Button className="bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold uppercase text-xs tracking-wider" onClick={handleCreate}>Save Asset & Generate Schedule</Button>
                         </div>
-                    </CardContent>
-                </Card>
-            )}
-
-            {actionType && selectedAsset && (
-                <Card className="mb-10 border-none shadow-xl bg-white ring-1 ring-amber-100 overflow-hidden animate-in fade-in slide-in-from-top-4 duration-300">
-                    <CardHeader className={`border-b border-slate-100 py-4 ${actionType === 'dispose' ? 'bg-rose-50' :
-                        actionType === 'revalue' ? 'bg-emerald-50' :
-                            'bg-blue-50'
-                        }`}>
-                        <CardTitle className="text-sm font-black uppercase tracking-widest text-slate-700 flex flex-col">
-                            <span>{actionType === 'dispose' ? 'Dispose Asset' : actionType === 'revalue' ? 'Revalue Asset' : 'Log Maintenance'}</span>
-                            <span className="text-slate-500 font-medium normal-case mt-1">{selectedAsset.name}</span>
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent className="p-8">
-                        <form onSubmit={handleActionSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            {actionType === 'dispose' && (
-                                <>
-                                    <div className="space-y-2">
-                                        <Label>Disposal Amount (₦)</Label>
-                                        <Input type="number" name="disposalAmount" required placeholder="Amount received" />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label>Receiving Bank Account</Label>
-                                        <select name="bankAccountId" required className="w-full p-2 rounded-lg border border-slate-200 text-sm">
-                                            <option value="">Select Account...</option>
-                                            {coa.filter(a => a.category === 'asset').map(a => <option key={a.id} value={a.id}>{a.code} - {a.name}</option>)}
-                                        </select>
-                                    </div>
-                                    <div className="space-y-2 md:col-span-2">
-                                        <Label>Reason for Disposal</Label>
-                                        <Input name="reason" required placeholder="e.g Sold to third party, Scrapped" />
-                                    </div>
-                                </>
-                            )}
-
-                            {actionType === 'revalue' && (
-                                <>
-                                    <div className="space-y-2">
-                                        <Label>New Valuation (₦)</Label>
-                                        <Input type="number" name="newValuation" required placeholder="Updated market value" />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label>Reason for Revaluation</Label>
-                                        <Input name="reason" required placeholder="e.g Inflation Adjustment, Damage Impairment" />
-                                    </div>
-                                </>
-                            )}
-
-                            {actionType === 'maintenance' && (
-                                <>
-                                    <div className="space-y-2 md:col-span-2">
-                                        <Label>Maintenance Title</Label>
-                                        <Input name="title" required placeholder="e.g Routine Servicing" />
-                                    </div>
-                                    <div className="space-y-2 md:col-span-2">
-                                        <Label>Description</Label>
-                                        <Input name="description" placeholder="Details of work done" />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label>Cost (₦)</Label>
-                                        <Input type="number" name="cost" required defaultValue={0} />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label>Paying Bank Account (Optional)</Label>
-                                        <select name="creditAccountId" className="w-full p-2 rounded-lg border border-slate-200 text-sm">
-                                            <option value="">Select Account (leaves unposted if empty)</option>
-                                            {coa.filter(a => a.category === 'asset').map(a => <option key={a.id} value={a.id}>{a.code} - {a.name}</option>)}
-                                        </select>
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label>Performed By</Label>
-                                        <Input name="performedBy" placeholder="Vendor / Technician Name" />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label>Next Service Date</Label>
-                                        <Input type="date" name="nextServiceDate" />
-                                    </div>
-                                </>
-                            )}
-
-                            <div className="md:col-span-2 flex justify-end gap-3 mt-4 pt-4 border-t border-slate-100">
-                                <Button type="button" variant="outline" onClick={() => setActionType(null)}>Cancel</Button>
-                                <Button type="submit" disabled={actionLoading} className="bg-slate-900 hover:bg-slate-800 text-white min-w-[120px]">
-                                    {actionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Confirm Action'}
-                                </Button>
-                            </div>
-                        </form>
-                    </CardContent>
-                </Card>
-            )
-            }
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {assets.map((asset) => {
-                    const Icon = getAssetIcon(asset.name);
-                    const totalDep = asset.depreciationLogs.reduce((sum: number, log: any) => sum + parseFloat(log.amount), 0);
-                    const bookValue = parseFloat(asset.purchasePrice) - totalDep;
-
-                    return (
-                        <Card key={asset.id} className="border-none shadow-sm hover:shadow-md transition-all border border-slate-50 overflow-hidden group">
-                            <CardHeader className="bg-slate-50/50 p-6 flex flex-row items-start justify-between">
-                                <div className="p-3 bg-white rounded-2xl shadow-sm group-hover:bg-amber-50 transition-colors">
-                                    <Icon className="w-6 h-6 text-amber-600" />
-                                </div>
-                                <div className="text-right">
-                                    <p className="text-[10px] font-black uppercase text-slate-400">Book Value</p>
-                                    // @ts-expect-error - TS2304: Auto-suppressed for build
-                                    <p className="text-lg font-bold text-slate-900">{settings?.base_currency || '₦'}{bookValue.toLocaleString()}</p>
-                                </div>
-                            </CardHeader>
-                            <CardContent className="p-6">
-                                <h4 className="font-extrabold text-slate-900 uppercase tracking-tight mb-1">{asset.name}</h4>
-                                <div className="flex items-center gap-2 text-xs text-slate-400 font-bold mb-4" suppressHydrationWarning>
-                                    <CalendarDays className="w-3 h-3" />
-                                    Purchased {new Date(asset.purchaseDate).toLocaleDateString()}
-                                </div>
-
-                                <div className="space-y-3 pt-4 border-t border-slate-100">
-                                    <div className="flex justify-between text-xs font-medium">
-                                        <span className="text-slate-400">Original Cost</span>
-                                        // @ts-expect-error - TS2304: Auto-suppressed for build
-                                        <span className="text-slate-700 font-bold">{settings?.base_currency || '₦'}{parseFloat(asset.purchasePrice).toLocaleString()}</span>
-                                    </div>
-                                    <div className="flex justify-between text-xs font-medium">
-                                        <span className="text-slate-400">Accum. Depreciation</span>
-                                        // @ts-expect-error - TS2304: Auto-suppressed for build
-                                        <span className="text-rose-600 font-bold">- {settings?.base_currency || '₦'}{totalDep.toLocaleString()}</span>
-                                    </div>
-                                    <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden mt-4">
-                                        <div
-                                            className="bg-amber-500 h-full transition-all duration-1000"
-                                            style={{ width: `${(totalDep / parseFloat(asset.purchasePrice)) * 100}%` }}
-                                        />
-                                    </div>
-                                    <p className="text-[9px] text-center font-bold uppercase text-slate-400 pt-1">
-                                        {(totalDep / parseFloat(asset.purchasePrice) * 100).toFixed(1)}% Depreciated
-                                    </p>
-                                </div>
-                            </CardContent>
-                            <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex flex-col gap-3">
-                                <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-slate-400">
-                                    <div className="flex items-center gap-2">
-                                        <History className="w-3 h-3" />
-                                        {asset.depreciationLogs.length} Periods
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <ArrowUpRight className="w-3 h-3" />
-                                        Life: {asset.usefulLifeYears}Y
-                                    </div>
-                                </div>
-
-                                {asset.status !== 'disposed' && (
-                                    <div className="flex gap-2 pt-2 border-t border-slate-200 w-full">
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            className="flex-1 h-8 text-[10px] border-blue-200 text-blue-700 bg-blue-50/50 hover:bg-blue-100"
-                                            onClick={() => { setSelectedAsset(asset); setActionType('maintenance'); }}
-                                        >
-                                            <Wrench className="w-3 h-3 mr-1" /> Maint
-                                        </Button>
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            className="flex-1 h-8 text-[10px] border-emerald-200 text-emerald-700 bg-emerald-50/50 hover:bg-emerald-100"
-                                            onClick={() => { setSelectedAsset(asset); setActionType('revalue'); }}
-                                        >
-                                            <TrendingUp className="w-3 h-3 mr-1" /> Revalue
-                                        </Button>
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            className="flex-1 h-8 text-[10px] border-rose-200 text-rose-700 bg-rose-50/50 hover:bg-rose-100"
-                                            onClick={() => { setSelectedAsset(asset); setActionType('dispose'); }}
-                                        >
-                                            <Trash2 className="w-3 h-3 mr-1" /> Dispose
-                                        </Button>
-                                    </div>
-                                )}
-                                {asset.status === 'disposed' && (
-                                    <div className="text-center py-1 bg-red-50 text-red-600 rounded-md text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-1">
-                                        <CheckCircle2 className="w-3 h-3" /> Disposed
-                                    </div>
-                                )}
-                            </div>
-                        </Card>
-                    );
-                })}
-            </div>
-
-            {
-                assets.length === 0 && (
-                    <div className="text-center py-20 bg-slate-50/50 rounded-2xl border-2 border-dashed border-slate-200 mt-10">
-                        <Hammer className="w-12 h-12 text-slate-200 mx-auto mb-4" />
-                        <h3 className="text-xl font-bold text-slate-900">No Institutional Assets</h3>
-                        <p className="text-slate-500 max-w-[300px] mx-auto mt-2">Start registering buildings, vehicles, and equipment to track their institutional value.</p>
                     </div>
-                )
-            }
-        </div >
-    );
+                </CardContent>
+            </Card>
+        )}
+
+        {actionType && selectedAsset && (
+            <Card className="border border-white/40 shadow-xl bg-white/60 backdrop-blur-3xl rounded-[3rem] overflow-hidden animate-in slide-in-from-top-8 duration-500">
+                <CardHeader className={`p-8 lg:p-10 border-b border-white/40 ${actionType === 'dispose' ? 'bg-rose-500/10 text-rose-900' :
+                    actionType === 'revalue' ? 'bg-emerald-500/10 text-emerald-900' :
+                        'bg-blue-500/10 text-blue-900'
+                    }`}>
+                    <CardTitle className="text-2xl font-black italic tracking-tight uppercase flex flex-col gap-1">
+                        <span>{actionType === 'dispose' ? 'Dispose Asset' : actionType === 'revalue' ? 'Revalue Asset' : 'Log Maintenance'}</span>
+                        <span className="text-slate-500 font-bold normal-case text-sm tracking-wide mt-1">{selectedAsset.name}</span>
+                    </CardTitle>
+                </CardHeader>
+                <CardContent className="p-8 lg:p-10">
+                    <form onSubmit={handleActionSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {actionType === 'dispose' && (
+                            <>
+                                <div className="space-y-2">
+                                    <Label className="text-xs font-black text-slate-500 uppercase tracking-widest ml-2">Disposal Amount (₦)</Label>
+                                    <Input className="rounded-[1rem] border-white/60 bg-white/60 focus:bg-white font-bold h-11 transition-all text-slate-800" type="number" name="disposalAmount" required placeholder="Amount received" />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label className="text-xs font-black text-slate-500 uppercase tracking-widest ml-2">Receiving Bank Account</Label>
+                                    <select name="bankAccountId" required className="w-full px-5 rounded-[1rem] border border-white/60 bg-white/60 focus:bg-white focus:ring-4 focus:ring-indigo-500/20 outline-none font-bold transition-all shadow-inner text-slate-800 h-11">
+                                        <option value="">Select Account...</option>
+                                        {coa.filter(a => a.category === 'asset').map(a => <option key={a.id} value={a.id}>{a.code} - {a.name}</option>)}
+                                    </select>
+                                </div>
+                                <div className="space-y-2 md:col-span-2">
+                                    <Label className="text-xs font-black text-slate-500 uppercase tracking-widest ml-2">Reason for Disposal</Label>
+                                    <Input className="rounded-[1rem] border-white/60 bg-white/60 focus:bg-white font-bold h-11 transition-all text-slate-800" name="reason" required placeholder="e.g Sold to third party, Scrapped" />
+                                </div>
+                            </>
+                        )}
+
+                        {actionType === 'revalue' && (
+                            <>
+                                <div className="space-y-2">
+                                    <Label className="text-xs font-black text-slate-500 uppercase tracking-widest ml-2">New Valuation (₦)</Label>
+                                    <Input className="rounded-[1rem] border-white/60 bg-white/60 focus:bg-white font-bold h-11 transition-all text-slate-800" type="number" name="newValuation" required placeholder="Updated market value" />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label className="text-xs font-black text-slate-500 uppercase tracking-widest ml-2">Reason for Revaluation</Label>
+                                    <Input className="rounded-[1rem] border-white/60 bg-white/60 focus:bg-white font-bold h-11 transition-all text-slate-800" name="reason" required placeholder="e.g Inflation Adjustment, Damage Impairment" />
+                                </div>
+                            </>
+                        )}
+
+                        {actionType === 'maintenance' && (
+                            <>
+                                <div className="space-y-2 md:col-span-2">
+                                    <Label className="text-xs font-black text-slate-500 uppercase tracking-widest ml-2">Maintenance Title</Label>
+                                    <Input className="rounded-[1rem] border-white/60 bg-white/60 focus:bg-white font-bold h-11 transition-all text-slate-800" name="title" required placeholder="e.g Routine Servicing" />
+                                </div>
+                                <div className="space-y-2 md:col-span-2">
+                                    <Label className="text-xs font-black text-slate-500 uppercase tracking-widest ml-2">Description</Label>
+                                    <Input className="rounded-[1rem] border-white/60 bg-white/60 focus:bg-white font-bold h-11 transition-all text-slate-800" name="description" placeholder="Details of work done" />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label className="text-xs font-black text-slate-500 uppercase tracking-widest ml-2">Cost (₦)</Label>
+                                    <Input className="rounded-[1rem] border-white/60 bg-white/60 focus:bg-white font-bold h-11 transition-all text-slate-800" type="number" name="cost" required defaultValue={0} />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label className="text-xs font-black text-slate-500 uppercase tracking-widest ml-2">Paying Bank Account (Optional)</Label>
+                                    <select name="creditAccountId" className="w-full px-5 rounded-[1rem] border border-white/60 bg-white/60 focus:bg-white focus:ring-4 focus:ring-indigo-500/20 outline-none font-bold transition-all shadow-inner text-slate-800 h-11">
+                                        <option value="">Select Account (leaves unposted if empty)</option>
+                                        {coa.filter(a => a.category === 'asset').map(a => <option key={a.id} value={a.id}>{a.code} - {a.name}</option>)}
+                                    </select>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label className="text-xs font-black text-slate-500 uppercase tracking-widest ml-2">Performed By</Label>
+                                    <Input className="rounded-[1rem] border-white/60 bg-white/60 focus:bg-white font-bold h-11 transition-all text-slate-800" name="performedBy" placeholder="Vendor / Technician Name" />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label className="text-xs font-black text-slate-500 uppercase tracking-widest ml-2">Next Service Date</Label>
+                                    <Input className="rounded-[1rem] border-white/60 bg-white/60 focus:bg-white font-bold h-11 transition-all text-slate-800" type="date" name="nextServiceDate" />
+                                </div>
+                            </>
+                        )}
+
+                        <div className="md:col-span-2 flex justify-end gap-3 mt-4 pt-4 border-t border-slate-100">
+                            <Button type="button" variant="outline" className="rounded-xl font-bold uppercase text-xs tracking-wider" onClick={() => setActionType(null)}>Cancel</Button>
+                            <Button type="submit" disabled={actionLoading} className="bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold uppercase text-xs tracking-wider min-w-[120px]">
+                                {actionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Confirm Action'}
+                            </Button>
+                        </div>
+                    </form>
+                </CardContent>
+            </Card>
+        )}
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {assets.map((asset) => {
+                const Icon = getAssetIcon(asset.name);
+                const totalDep = asset.depreciationLogs.reduce((sum: number, log: any) => sum + parseFloat(log.amount), 0);
+                const bookValue = parseFloat(asset.purchasePrice) - totalDep;
+
+                return (
+                    <Card key={asset.id} className="border border-white/40 shadow-xl shadow-slate-200/50 bg-white/60 backdrop-blur-3xl rounded-[3rem] overflow-hidden group hover:shadow-2xl transition-all h-full flex flex-col justify-between">
+                        <CardHeader className="bg-white/40 p-8 flex flex-row items-center justify-between border-b border-white/40">
+                            <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl shadow-sm group-hover:bg-amber-500/20 transition-colors">
+                                <Icon className="w-8 h-8 text-amber-700" />
+                            </div>
+                            <div className="text-right">
+                                <p className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Book Value</p>
+                                <p className="text-xl font-black text-slate-800">₦{bookValue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                            </div>
+                        </CardHeader>
+                        <CardContent className="p-8 space-y-6 flex-1 flex flex-col justify-between">
+                            <div>
+                                <h4 className="text-lg font-black text-slate-800 uppercase tracking-tight mb-1 group-hover:text-amber-700 transition-colors">{asset.name}</h4>
+                                <div className="flex items-center gap-2 text-xs text-slate-400 font-bold mb-4" suppressHydrationWarning>
+                                    <CalendarDays className="w-4 h-4 text-slate-400" />
+                                    <span>Purchased {new Date(asset.purchaseDate).toLocaleDateString()}</span>
+                                </div>
+                            </div>
+
+                            <div className="space-y-3 pt-4 border-t border-white/60">
+                                <div className="flex justify-between text-xs font-bold uppercase tracking-wider">
+                                    <span className="text-slate-400">Original Cost</span>
+                                    <span className="text-slate-700">₦{parseFloat(asset.purchasePrice).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                </div>
+                                <div className="flex justify-between text-xs font-bold uppercase tracking-wider">
+                                    <span className="text-slate-400">Accum. Depreciation</span>
+                                    <span className="text-rose-600">- ₦{totalDep.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                </div>
+                                <div className="w-full bg-slate-200/80 h-2.5 rounded-full overflow-hidden mt-4 shadow-inner border border-white/40">
+                                    <div
+                                        className="bg-gradient-to-r from-amber-500 to-amber-600 h-full transition-all duration-1000 shadow-md"
+                                        style={{ width: `${(totalDep / parseFloat(asset.purchasePrice)) * 100}%` }}
+                                    />
+                                </div>
+                                <p className="text-[10px] text-center font-black uppercase text-slate-400 pt-1 tracking-wider">
+                                    {(totalDep / parseFloat(asset.purchasePrice) * 100).toFixed(1)}% Depreciated
+                                </p>
+                            </div>
+                        </CardContent>
+
+                        <div className="px-8 py-6 bg-white/40 border-t border-white/40 flex flex-col gap-4">
+                            <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-slate-400">
+                                <div className="flex items-center gap-2">
+                                    <History className="w-4 h-4 text-slate-450" />
+                                    <span>{asset.depreciationLogs.length} Periods</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <ArrowUpRight className="w-4 h-4 text-slate-450" />
+                                    <span>Life: {asset.usefulLifeYears}Y</span>
+                                </div>
+                            </div>
+
+                            {asset.status !== 'disposed' && (
+                                <div className="flex gap-2 pt-2 border-t border-white/40 w-full">
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="flex-1 h-9 text-[10px] font-black uppercase tracking-wider border-blue-200 text-blue-700 bg-blue-50/50 hover:bg-blue-100/80 rounded-xl active:scale-95 transition-all shadow-sm"
+                                        onClick={() => { setSelectedAsset(asset); setActionType('maintenance'); }}
+                                    >
+                                        <Wrench className="w-3.5 h-3.5 mr-1" /> Maint
+                                    </Button>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="flex-1 h-9 text-[10px] font-black uppercase tracking-wider border-emerald-200 text-emerald-700 bg-emerald-50/50 hover:bg-emerald-100/80 rounded-xl active:scale-95 transition-all shadow-sm"
+                                        onClick={() => { setSelectedAsset(asset); setActionType('revalue'); }}
+                                    >
+                                        <TrendingUp className="w-3.5 h-3.5 mr-1" /> Revalue
+                                    </Button>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="flex-1 h-9 text-[10px] font-black uppercase tracking-wider border-rose-200 text-rose-700 bg-rose-50/50 hover:bg-rose-100/80 rounded-xl active:scale-95 transition-all shadow-sm"
+                                        onClick={() => { setSelectedAsset(asset); setActionType('dispose'); }}
+                                    >
+                                        <Trash2 className="w-3.5 h-3.5 mr-1" /> Dispose
+                                    </Button>
+                                </div>
+                            )}
+                            {asset.status === 'disposed' && (
+                                <div className="text-center py-2 bg-red-100 text-red-700 border border-red-200 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-1.5 shadow-sm">
+                                    <CheckCircle2 className="w-4 h-4" /> Disposed
+                                </div>
+                            )}
+                        </div>
+                    </Card>
+                );
+            })}
+        </div>
+
+        {assets.length === 0 && (
+            <div className="text-center py-24 bg-white/40 backdrop-blur-3xl rounded-[3rem] border border-white/40 shadow-xl shadow-slate-200/50 mt-10">
+                <Hammer className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+                <h3 className="text-2xl font-black text-slate-800 italic uppercase">No Institutional Assets</h3>
+                <p className="text-slate-500 max-w-[300px] mx-auto mt-2 font-bold text-xs uppercase tracking-widest">Start registering buildings, vehicles, and equipment to track their institutional value.</p>
+            </div>
+        )}
+      </div>
+    </div>
+  );
 }

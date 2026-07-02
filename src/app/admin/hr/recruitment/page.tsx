@@ -166,7 +166,7 @@ export default function AdminRecruitmentPage() {
                 </Button>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
                 {/* Vacancy List Side Rail */}
                 <div className="lg:col-span-1 space-y-4">
                     <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 px-2">Active Vacancies</h3>
@@ -205,7 +205,7 @@ export default function AdminRecruitmentPage() {
 
                 {/* Applicant Pipeline */}
                 <div className="lg:col-span-3">
-                    <Card className="border-none shadow-sm overflow-hidden min-h-[500px]">
+                    <Card className="overflow-hidden min-h-[500px] border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                         <table className="w-full text-left">
                             <thead className="bg-slate-50/50">
                                 <tr className="text-[10px] uppercase font-black text-slate-400 tracking-widest border-b border-slate-100">
@@ -292,7 +292,7 @@ export default function AdminRecruitmentPage() {
             {/* Post Vacancy Form Overlay */}
             {showPostForm && (
                 <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                    <Card className="w-full max-w-2xl border-none shadow-2xl animate-in zoom-in-95 duration-200 overflow-y-auto max-h-[90vh]">
+                    <Card className="w-full max-w-2xl animate-in zoom-in-95 duration-200 overflow-y-auto max-h-[90vh] border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                         <CardHeader className="flex flex-row justify-between items-center bg-slate-900 text-white rounded-t-2xl sticky top-0 z-10">
                             <CardTitle className="text-lg font-black uppercase tracking-widest italic flex items-center gap-2">
                                 <Sparkles className="w-4 h-4 text-indigo-400" />
@@ -302,9 +302,9 @@ export default function AdminRecruitmentPage() {
                                 <XCircle className="w-5 h-5" />
                             </button>
                         </CardHeader>
-                        <CardContent className="pt-8">
+                        <CardContent className="pt-8 p-6">
                             <form onSubmit={handlePostVacancy} className="space-y-6">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div className="space-y-1">
                                         <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Job Title</label>
                                         <input
@@ -381,7 +381,7 @@ export default function AdminRecruitmentPage() {
             {/* Analysis Result Modal */}
             {selectedApplicantAnalysis && (
                 <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                    <Card className="w-full max-w-lg border-none shadow-2xl animate-in zoom-in-95 duration-200">
+                    <Card className="w-full max-w-lg animate-in zoom-in-95 duration-200 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                         <CardHeader className="flex flex-row justify-between items-center bg-indigo-900 text-white rounded-t-2xl">
                             <div>
                                 <CardTitle className="text-lg font-black uppercase tracking-widest italic flex items-center gap-2">
@@ -394,7 +394,7 @@ export default function AdminRecruitmentPage() {
                                 <XCircle className="w-5 h-5" />
                             </button>
                         </CardHeader>
-                        <CardContent className="pt-6 space-y-6">
+                        <CardContent className="pt-6 space-y-6 p-6">
                             <div className="flex items-center justify-center py-4">
                                 <div className="text-center">
                                     <div className={cn(

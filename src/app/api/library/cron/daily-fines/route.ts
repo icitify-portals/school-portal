@@ -62,7 +62,7 @@ export async function GET(req: Request) {
                     .where(eq(libraryPatronMetadata.userId, loan.patronId));
             });
 
-            // Trigger Webhook to School Portal Finance API (Simulation)
+            // Trigger Webhook to FSS Portal Finance API (Simulation)
             console.log(`[WEBHOOK] Flagging Student ID ${loan.patronId} for fine: ${currentFineAmount}`);
             // await fetch(`${process.env.PORTAL_API_URL}/webhooks/restrict-patron`, { ... });
 

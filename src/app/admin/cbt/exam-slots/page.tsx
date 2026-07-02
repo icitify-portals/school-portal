@@ -2,7 +2,7 @@ import ExamSlotManager from "@/components/admin/cbt/ExamSlotManager";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-    title: "Exam Slot Management | School Portal",
+    title: "Exam Slot Management | FSS Portal",
     description: "Centrally manage examination and quiz time slots.",
 };
 

@@ -103,13 +103,13 @@ export default function InflowsPage() {
             </div>
 
             {isAdding && (
-                <Card className="mb-10 border-none shadow-md bg-slate-50">
-                    <CardHeader>
+                <Card className="mb-10 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
+                    <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-6">
                         <CardTitle className="text-lg">Record Received Funds</CardTitle>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className=" p-6">
                         <form onSubmit={handleSubmit} className="space-y-6">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="space-y-1">
                                     <label className="text-xs font-bold text-slate-500 uppercase">Source / Provider</label>
                                     <input
@@ -136,7 +136,7 @@ export default function InflowsPage() {
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="space-y-1">
                                     <label className="text-xs font-bold text-slate-500 uppercase">Purpose / Category</label>
                                     <input
@@ -217,8 +217,7 @@ export default function InflowsPage() {
                                     <div className="text-right">
                                         <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Receipt Amount</p>
                                         <p className={cn("text-3xl font-extrabold", inflow.status === 'reversed' ? "text-slate-300 line-through" : "text-blue-600")}>
-                                            // @ts-expect-error - TS2304: Auto-suppressed for build
-                                            {settings?.base_currency || '₦'}{parseFloat(inflow.amount).toLocaleString()}
+                                            ₦{parseFloat(inflow.amount).toLocaleString()}
                                         </p>
 
                                         <div className="mt-4 flex justify-end">

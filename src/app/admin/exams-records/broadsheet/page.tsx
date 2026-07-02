@@ -33,32 +33,41 @@ export default async function BroadsheetPage({
     }
 
     return (
-        <div className="p-6 max-w-[1600px] mx-auto space-y-6">
-            <div className="flex justify-between items-center">
-                <div>
-                    <h1 className="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-3">
-                        <Target className="w-8 h-8 text-indigo-600" />
-                        Senate Broadsheet
-                    </h1>
-                    <p className="text-slate-500 mt-1 text-sm font-medium">
-                        Compile and review comprehensive class results for official Senate approval.
-                    </p>
+        <div className="p-4 sm:p-6 lg:p-8 min-h-screen">
+          <div className="max-w-[1600px] w-full mx-auto space-y-8">
+            <div className="relative overflow-hidden bg-slate-900 rounded-3xl p-8 lg:p-12 text-white shadow-2xl border border-slate-800">
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-600/30 to-indigo-600/30 opacity-50 mix-blend-overlay" />
+                <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                    <div>
+                        <div className="flex items-center gap-3 mb-2">
+                            <Target className="w-12 h-12 text-blue-400" />
+                            <h1 className="text-4xl lg:text-5xl font-black tracking-tighter drop-shadow-md italic uppercase">
+                                Senate Broadsheet
+                            </h1>
+                        </div>
+                        <p className="text-slate-300 font-medium tracking-tight max-w-2xl text-lg opacity-90">
+                            Compile and review comprehensive class results for official Senate approval.
+                        </p>
+                    </div>
                 </div>
             </div>
 
             {errorMsg && (
-                <div className="p-4 bg-red-50 text-red-700 border border-red-200 rounded-lg flex gap-3 items-center">
+                <div className="p-4 bg-red-500/10 text-red-500 border border-red-500/20 rounded-2xl flex gap-3 items-center backdrop-blur-sm">
                     <AlertTriangle className="w-5 h-5" />
                     <span className="font-medium">{errorMsg}</span>
                 </div>
             )}
 
-            <BroadsheetViewer 
-                groups={groups} 
-                sessions={sessions} 
-                initialData={broadsheetData} 
-                currentFilters={{ groupId, sessionId, semester }}
-            />
+            <div className="bg-white/60 backdrop-blur-3xl p-6 rounded-[3rem] border border-white/40 shadow-xl shadow-slate-200/50 relative overflow-hidden">
+                <BroadsheetViewer 
+                    groups={groups} 
+                    sessions={sessions} 
+                    initialData={broadsheetData} 
+                    currentFilters={{ groupId, sessionId, semester }}
+                />
+            </div>
+          </div>
         </div>
     );
 }

@@ -169,7 +169,7 @@ export default function CommunicationsPage() {
             <div className="hidden lg:flex flex-1 flex-col bg-slate-50/30">
                 {selectedMessage ? (
                     <div className="flex-1 flex flex-col p-8">
-                        <Card className="flex-1 shadow-xl border-none ring-1 ring-slate-200 flex flex-col overflow-hidden rounded-2xl">
+                        <Card className="flex-1 ring-1 ring-slate-200 flex flex-col overflow-hidden border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                             <div className="p-8 border-b bg-white flex items-center justify-between">
                                 <div className="flex items-center gap-4">
                                     <Avatar className="w-12 h-12 shadow-md">
@@ -241,7 +241,7 @@ export default function CommunicationsPage() {
             {/* Compose Modal */}
             {isComposing && (
                 <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-                    <Card className="w-full max-w-2xl shadow-2xl border-none rounded-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
+                    <Card className="w-full max-w-2xl overflow-hidden animate-in fade-in zoom-in duration-200 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                         <div className="p-6 bg-slate-900 text-white flex items-center justify-between">
                             <div className="flex items-center gap-3">
                                 <Send className="w-5 h-5 text-blue-400" />

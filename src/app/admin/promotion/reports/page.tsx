@@ -184,7 +184,7 @@ export default function HodReportsPage() {
             </div>
 
             {/* Controls */}
-            <Card className="border-none shadow-xl rounded-2xl bg-white overflow-hidden">
+            <Card className="overflow-hidden border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                 <CardContent className="p-6">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
@@ -255,7 +255,7 @@ export default function HodReportsPage() {
             {/* On-screen Report Preview */}
             {report && (
                 <div className="space-y-4">
-                    <Card className="border-none shadow-xl rounded-2xl bg-white overflow-hidden">
+                    <Card className="overflow-hidden border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                         <CardContent className="p-6 space-y-6">
                             {/* Report Header (on-screen) */}
                             <div className="text-center space-y-1">

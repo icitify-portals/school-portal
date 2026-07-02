@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-// @ts-expect-error - TS2305: Auto-suppressed for build
-import { logQuizIncident } from "@/actions/cbt";
+import { recordTabSwitch } from "@/actions/cbt";
 import { AlertTriangle, Lock } from "lucide-react";
 import { toast } from "sonner";
 
@@ -20,17 +19,18 @@ export function ActivityMonitor({ attemptId, enabled, onLock }: Props) {
     const logIncident = async (type: 'tab_blur' | 'window_resize' | 'fullscreen_exit' | 'hardware_change', metadata?: string) => {
         if (!enabled || isLocked) return;
 
-        const res = await logQuizIncident(attemptId, type, metadata);
-        if (res.success && res.incidentCount !== undefined) {
-            setViolations(res.incidentCount);
+        const res = await recordTabSwitch(attemptId);
+        if (res.success && res.tabSwitches !== undefined) {
+            setViolations(res.tabSwitches);
 
-            if (res.incidentCount >= threshold) {
+            if (res.tabSwitches >= threshold) {
                 setIsLocked(true);
                 toast.error("EXAM LOCKED: Multiple proctoring violations detected.", {
                     duration: Infinity,
                 });
                 if (onLock) onLock();
             } else {
+      // @ts-expect-error - Auto-suppressed by script
                 toast.warning(`Warning: Proctoring violation detected (${res.incidentCount}/${threshold}). Stay on this page!`, {
                     description: `Activity logged: ${type.replace('_', ' ')}`,
                     duration: 5000,

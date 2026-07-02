@@ -60,7 +60,7 @@ export default function AuditDashboard() {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((stat, i) => (
           <div key={i} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 hover:shadow-md transition-shadow">
             <div className="flex justify-between items-start">
@@ -154,8 +154,7 @@ export default function AuditDashboard() {
                       <div className="text-slate-400 text-xs line-clamp-1">Operational expenditure verification</div>
                     </td>
                     <td className="px-6 py-4 text-right">
-                      // @ts-expect-error - TS2304: Auto-suppressed for build
-                      <div className="text-slate-900 font-bold text-lg">{settings?.base_currency || '₦'}{parseFloat(item.totalSpent).toLocaleString()}</div>
+                      <div className="text-slate-900 font-bold text-lg">₦{parseFloat(item.totalSpent).toLocaleString()}</div>
                       <div className="text-emerald-500 text-xs font-medium">Verified Receipts: Yes</div>
                     </td>
                     <td className="px-6 py-4 text-center">

@@ -47,8 +47,8 @@ export default function RegisterPage() {
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
-            <Card className="w-full max-w-md border-none shadow-xl">
-                <CardHeader className="text-center space-y-1">
+            <Card className="w-full max-w-md border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
+                <CardHeader className="text-center space-y-1 bg-slate-50/50 border-b border-slate-100 p-6">
                     <div className="flex justify-center mb-4">
                         <div className="p-3 bg-indigo-600 rounded-2xl text-white">
                             <UserPlus className="w-10 h-10" />
@@ -57,7 +57,7 @@ export default function RegisterPage() {
                     <CardTitle className="text-2xl font-bold text-slate-900">Create Account</CardTitle>
                     <CardDescription>Join the School Management System</CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className=" p-6">
                     <form onSubmit={handleSubmit} className="space-y-4" suppressHydrationWarning>
                         {error && (
                             <div className="p-3 bg-red-50 text-red-600 rounded-lg text-sm flex gap-2 items-center">

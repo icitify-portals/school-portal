@@ -148,94 +148,98 @@ export default function WorksDirectorDashboard() {
     };
 
     return (
-        <div className="max-w-6xl mx-auto space-y-6 py-6 px-4">
-            {/* Header section with rich gradient badge */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-5">
-                <div>
-                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-indigo-50 text-indigo-600 mb-2 uppercase tracking-wide">
-                        <Wrench className="w-3.5 h-3.5" />
-                        Works Control Center
+        <div className="p-4 sm:p-6 lg:p-8 min-h-screen">
+            <div className="max-w-[1600px] mx-auto space-y-8">
+                {/* Header section with rich gradient badge */}
+                <div className="relative overflow-hidden bg-slate-900 rounded-3xl p-8 lg:p-12 text-white shadow-2xl border border-slate-800">
+                    <div className="absolute inset-0 bg-gradient-to-r from-amber-600/30 to-indigo-600/30 opacity-50 mix-blend-overlay" />
+                    <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                        <div>
+                            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black bg-white/10 text-amber-300 mb-4 uppercase tracking-widest border border-white/10 backdrop-blur-md">
+                                <Wrench className="w-3.5 h-3.5" />
+                                Works Control Center
+                            </div>
+                            <h1 className="text-4xl lg:text-5xl font-black tracking-tighter drop-shadow-md italic text-white">Works & Maintenance</h1>
+                            <p className="text-slate-300 font-medium tracking-tight max-w-2xl text-lg opacity-90 mt-2">Manage school facility maintenance requests, assign technicians, and configure specialties.</p>
+                        </div>
+
+                        <div className="flex bg-white/10 p-1 rounded-2xl self-start md:self-center backdrop-blur-md border border-white/10">
+                            <button
+                                onClick={() => setActiveTab("requests")}
+                                className={`flex items-center gap-2 px-6 py-3 text-xs font-black uppercase tracking-widest rounded-xl transition-all ${
+                                    activeTab === "requests" 
+                                    ? "bg-white text-indigo-600 shadow-lg" 
+                                    : "text-slate-300 hover:text-white hover:bg-white/10"
+                                }`}
+                            >
+                                <ClipboardList className="w-4 h-4" />
+                                Requests ({stats.total})
+                            </button>
+                            <button
+                                onClick={() => setActiveTab("technicians")}
+                                className={`flex items-center gap-2 px-6 py-3 text-xs font-black uppercase tracking-widest rounded-xl transition-all ${
+                                    activeTab === "technicians" 
+                                    ? "bg-white text-indigo-600 shadow-lg" 
+                                    : "text-slate-300 hover:text-white hover:bg-white/10"
+                                }`}
+                            >
+                                <Users className="w-4 h-4" />
+                                Works Crew ({technicians.length})
+                            </button>
+                        </div>
                     </div>
-                    <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Works & Maintenance Dashboard</h1>
-                    <p className="text-sm text-slate-500 font-medium mt-1">Manage school facility maintenance requests, assign technicians, and configure specialties.</p>
                 </div>
 
-                <div className="flex bg-slate-100 p-1 rounded-xl self-start md:self-center">
-                    <button
-                        onClick={() => setActiveTab("requests")}
-                        className={`flex items-center gap-2 px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-lg transition-all ${
-                            activeTab === "requests" 
-                            ? "bg-white text-indigo-600 shadow-sm" 
-                            : "text-slate-500 hover:text-slate-800"
-                        }`}
-                    >
-                        <ClipboardList className="w-3.5 h-3.5" />
-                        Requests ({stats.total})
-                    </button>
-                    <button
-                        onClick={() => setActiveTab("technicians")}
-                        className={`flex items-center gap-2 px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-lg transition-all ${
-                            activeTab === "technicians" 
-                            ? "bg-white text-indigo-600 shadow-sm" 
-                            : "text-slate-500 hover:text-slate-800"
-                        }`}
-                    >
-                        <Users className="w-3.5 h-3.5" />
-                        Works Crew ({technicians.length})
-                    </button>
+                {/* KPI Cards */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                    <Card className="border border-white/40 shadow-xl shadow-slate-200/50 bg-white/60 backdrop-blur-3xl rounded-[2rem] hover:-translate-y-1 transition-all duration-300 overflow-hidden group p-2">
+                        <CardContent className="p-6 flex items-center justify-between">
+                            <div>
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Reports</p>
+                                <h3 className="text-3xl font-black text-slate-900 mt-2 italic tracking-tighter">{stats.total}</h3>
+                            </div>
+                            <div className="p-4 bg-slate-100/50 rounded-2xl text-slate-500 shadow-inner group-hover:scale-110 transition-transform">
+                                <ClipboardList className="w-6 h-6" />
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    <Card className="border border-white/40 shadow-xl shadow-slate-200/50 bg-white/60 backdrop-blur-3xl rounded-[2rem] hover:-translate-y-1 transition-all duration-300 overflow-hidden group p-2">
+                        <CardContent className="p-6 flex items-center justify-between">
+                            <div>
+                                <p className="text-[10px] font-black text-amber-500 uppercase tracking-widest">Pending Dispatch</p>
+                                <h3 className="text-3xl font-black text-amber-600 mt-2 italic tracking-tighter">{stats.pending}</h3>
+                            </div>
+                            <div className="p-4 bg-amber-50 rounded-2xl text-amber-500 shadow-inner group-hover:scale-110 transition-transform">
+                                <Clock className="w-6 h-6" />
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    <Card className="border border-white/40 shadow-xl shadow-slate-200/50 bg-white/60 backdrop-blur-3xl rounded-[2rem] hover:-translate-y-1 transition-all duration-300 overflow-hidden group p-2">
+                        <CardContent className="p-6 flex items-center justify-between">
+                            <div>
+                                <p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">In Progress</p>
+                                <h3 className="text-3xl font-black text-indigo-600 mt-2 italic tracking-tighter">{stats.inProgress}</h3>
+                            </div>
+                            <div className="p-4 bg-indigo-50 rounded-2xl text-indigo-500 shadow-inner group-hover:scale-110 transition-transform">
+                                <Wrench className="w-6 h-6" />
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    <Card className="border border-white/40 shadow-xl shadow-slate-200/50 bg-white/60 backdrop-blur-3xl rounded-[2rem] hover:-translate-y-1 transition-all duration-300 overflow-hidden group p-2">
+                        <CardContent className="p-6 flex items-center justify-between">
+                            <div>
+                                <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Jobs Completed</p>
+                                <h3 className="text-3xl font-black text-emerald-600 mt-2 italic tracking-tighter">{stats.resolved}</h3>
+                            </div>
+                            <div className="p-4 bg-emerald-50 rounded-2xl text-emerald-500 shadow-inner group-hover:scale-110 transition-transform">
+                                <CheckCircle2 className="w-6 h-6" />
+                            </div>
+                        </CardContent>
+                    </Card>
                 </div>
-            </div>
-
-            {/* KPI Cards */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <Card className="border-none shadow-sm bg-white">
-                    <CardContent className="p-4 flex items-center justify-between">
-                        <div>
-                            <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Total Reports</p>
-                            <h3 className="text-2xl font-black text-slate-900 mt-1">{stats.total}</h3>
-                        </div>
-                        <div className="p-2.5 bg-slate-50 rounded-lg text-slate-500">
-                            <ClipboardList className="w-5 h-5" />
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <Card className="border-none shadow-sm bg-white">
-                    <CardContent className="p-4 flex items-center justify-between">
-                        <div>
-                            <p className="text-[10px] font-extrabold text-amber-500 uppercase tracking-widest">Pending Dispatch</p>
-                            <h3 className="text-2xl font-black text-amber-600 mt-1">{stats.pending}</h3>
-                        </div>
-                        <div className="p-2.5 bg-amber-50 rounded-lg text-amber-500">
-                            <Clock className="w-5 h-5" />
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <Card className="border-none shadow-sm bg-white">
-                    <CardContent className="p-4 flex items-center justify-between">
-                        <div>
-                            <p className="text-[10px] font-extrabold text-indigo-500 uppercase tracking-widest">In Progress</p>
-                            <h3 className="text-2xl font-black text-indigo-600 mt-1">{stats.inProgress}</h3>
-                        </div>
-                        <div className="p-2.5 bg-indigo-50 rounded-lg text-indigo-500">
-                            <Wrench className="w-5 h-5" />
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <Card className="border-none shadow-sm bg-white">
-                    <CardContent className="p-4 flex items-center justify-between">
-                        <div>
-                            <p className="text-[10px] font-extrabold text-emerald-500 uppercase tracking-widest">Jobs Completed</p>
-                            <h3 className="text-2xl font-black text-emerald-600 mt-1">{stats.resolved}</h3>
-                        </div>
-                        <div className="p-2.5 bg-emerald-50 rounded-lg text-emerald-500">
-                            <CheckCircle2 className="w-5 h-5" />
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
 
             {loading ? (
                 <div className="p-12 text-center text-slate-400 font-medium">
@@ -243,22 +247,23 @@ export default function WorksDirectorDashboard() {
                 </div>
             ) : activeTab === "requests" ? (
                 /* Requests Management Tab */
-                <Card className="border-none shadow-sm border border-slate-100 overflow-hidden bg-white">
-                    <CardHeader className="border-b border-slate-50 bg-slate-50/50 pb-4">
-                        <CardTitle className="text-lg font-bold text-slate-900">Facility Maintenance Requests</CardTitle>
-                        <CardDescription>Dispatch, reassign, and track campus repair issues.</CardDescription>
+                /* Requests Management Tab */
+                <Card className="bg-white/60 backdrop-blur-3xl border border-white/40 shadow-xl shadow-slate-200/50 rounded-[3rem] overflow-hidden">
+                    <CardHeader className="border-b border-white/40 bg-white/40 pb-6 px-10 pt-10">
+                        <CardTitle className="text-2xl font-black text-slate-900 italic tracking-tighter">Facility Maintenance Requests</CardTitle>
+                        <CardDescription className="font-bold text-slate-500">Dispatch, reassign, and track campus repair issues.</CardDescription>
                     </CardHeader>
                     <CardContent className="p-0 overflow-x-auto">
                         <table className="w-full text-left whitespace-nowrap">
                             <thead>
-                                <tr className="bg-slate-50 border-b border-slate-100 text-[10px] font-extrabold uppercase tracking-widest text-slate-400">
-                                    <th className="px-6 py-4">Request Details</th>
-                                    <th className="px-6 py-4">Category</th>
-                                    <th className="px-6 py-4">Reporter</th>
-                                    <th className="px-6 py-4">Priority</th>
-                                    <th className="px-6 py-4">Status</th>
-                                    <th className="px-6 py-4">Assigned Tech</th>
-                                    <th className="px-6 py-4 text-right">Actions</th>
+                                <tr className="bg-slate-100/30 border-b border-white/40 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                                    <th className="px-10 py-6">Request Details</th>
+                                    <th className="px-10 py-6">Category</th>
+                                    <th className="px-10 py-6">Reporter</th>
+                                    <th className="px-10 py-6">Priority</th>
+                                    <th className="px-10 py-6">Status</th>
+                                    <th className="px-10 py-6">Assigned Tech</th>
+                                    <th className="px-10 py-6 text-right">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-50">
@@ -415,21 +420,22 @@ export default function WorksDirectorDashboard() {
                 </Card>
             ) : (
                 /* Technicians Registry Tab */
-                <Card className="border-none shadow-sm border border-slate-100 overflow-hidden bg-white">
-                    <CardHeader className="border-b border-slate-50 bg-slate-50/50 pb-4">
-                        <CardTitle className="text-lg font-bold text-slate-900">Works & Maintenance Crew</CardTitle>
-                        <CardDescription>Assign technical specialties (Electrician, Plumber, Mechanic) and manage duty status.</CardDescription>
+                /* Technicians Registry Tab */
+                <Card className="bg-white/60 backdrop-blur-3xl border border-white/40 shadow-xl shadow-slate-200/50 rounded-[3rem] overflow-hidden">
+                    <CardHeader className="border-b border-white/40 bg-white/40 pb-6 px-10 pt-10">
+                        <CardTitle className="text-2xl font-black text-slate-900 italic tracking-tighter">Works & Maintenance Crew</CardTitle>
+                        <CardDescription className="font-bold text-slate-500">Assign technical specialties (Electrician, Plumber, Mechanic) and manage duty status.</CardDescription>
                     </CardHeader>
                     <CardContent className="p-0 overflow-x-auto">
                         <table className="w-full text-left whitespace-nowrap">
                             <thead>
-                                <tr className="bg-slate-50 border-b border-slate-100 text-[10px] font-extrabold uppercase tracking-widest text-slate-400">
-                                    <th className="px-6 py-4">Technician Name</th>
-                                    <th className="px-6 py-4">Primary Trade / Specialty</th>
-                                    <th className="px-6 py-4">Contact Email</th>
-                                    <th className="px-6 py-4">Contact Phone</th>
-                                    <th className="px-6 py-4">Duty Status</th>
-                                    <th className="px-6 py-4 text-right">Actions</th>
+                                <tr className="bg-slate-100/30 border-b border-white/40 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                                    <th className="px-10 py-6">Technician Name</th>
+                                    <th className="px-10 py-6">Primary Trade / Specialty</th>
+                                    <th className="px-10 py-6">Contact Email</th>
+                                    <th className="px-10 py-6">Contact Phone</th>
+                                    <th className="px-10 py-6">Duty Status</th>
+                                    <th className="px-10 py-6 text-right">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-50">
@@ -535,6 +541,7 @@ export default function WorksDirectorDashboard() {
                     </CardContent>
                 </Card>
             )}
+        </div>
         </div>
     );
 }

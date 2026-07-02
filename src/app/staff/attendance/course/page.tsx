@@ -99,7 +99,7 @@ export default function StaffCourseAttendancePage() {
             </div>
 
             {/* Course ID Input */}
-            <Card className="border-none shadow-xl rounded-2xl bg-white/80 backdrop-blur-xl">
+            <Card className="/80 backdrop-blur-xl border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                 <CardContent className="p-6">
                     <div className="flex flex-col md:flex-row gap-4 items-end">
                         <div className="flex-1">
@@ -150,7 +150,7 @@ export default function StaffCourseAttendancePage() {
                     </div>
 
                     {/* Manual Mark Card */}
-                    <Card className="border-none shadow-lg rounded-[1.5rem] bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-100">
+                    <Card className="-[1.5rem] -to-r from-indigo-50 to-blue-50 -100 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                         <CardContent className="p-5">
                             <h3 className="font-black text-xs uppercase tracking-widest text-indigo-700 mb-3 flex items-center gap-2">
                                 <UserPlus className="w-4 h-4" /> Manual Attendance Mark
@@ -187,7 +187,7 @@ export default function StaffCourseAttendancePage() {
                     </Card>
 
                     {/* Students Table */}
-                    <Card className="border-none shadow-xl rounded-[1.5rem] overflow-hidden">
+                    <Card className="-[1.5rem] overflow-hidden border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                         <div className="overflow-x-auto">
                             <table className="w-full text-sm">
                                 <thead className="bg-slate-50 border-b">

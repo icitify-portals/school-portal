@@ -104,13 +104,13 @@ export default function ExamSecurityPage() {
             {/* Toggle Sections */}
             {sections.map(section => (
                 <Card key={section.title}>
-                    <CardHeader className="pb-2">
+                    <CardHeader className="pb-2 bg-slate-50/50 border-b border-slate-100 p-6">
                         <CardTitle className="text-sm font-black uppercase tracking-wider text-slate-500 flex items-center gap-2">
                             <section.icon className="w-4 h-4" />
                             {section.title}
                         </CardTitle>
                     </CardHeader>
-                    <CardContent className="space-y-1">
+                    <CardContent className="space-y-1 p-6">
                         {section.items.map(item => (
                             <div key={item.key} className="flex items-center justify-between py-3 border-b border-slate-50 last:border-0">
                                 <div className="flex items-center gap-3">
@@ -133,13 +133,13 @@ export default function ExamSecurityPage() {
             ))}
 
             {/* Numeric Settings */}
-            <Card>
-                <CardHeader className="pb-2">
+            <Card className=" border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
+                <CardHeader className="pb-2 bg-slate-50/50 border-b border-slate-100 p-6">
                     <CardTitle className="text-sm font-black uppercase tracking-wider text-slate-500 flex items-center gap-2">
                         <Clock className="w-4 h-4" /> Limits & Timers
                     </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-4 p-6">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
                             <label className="text-xs font-bold text-slate-600 uppercase">Max Attempts</label>
@@ -177,13 +177,13 @@ export default function ExamSecurityPage() {
             </Card>
 
             {/* IP Whitelist */}
-            <Card>
-                <CardHeader className="pb-2">
+            <Card className=" border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
+                <CardHeader className="pb-2 bg-slate-50/50 border-b border-slate-100 p-6">
                     <CardTitle className="text-sm font-black uppercase tracking-wider text-slate-500 flex items-center gap-2">
                         <Lock className="w-4 h-4" /> IP Whitelist
                     </CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className=" p-6">
                     <p className="text-xs text-slate-400 mb-2">Comma-separated IP addresses. Leave empty to allow all.</p>
                     <textarea
                         value={settings.ipWhitelist || ''}

@@ -10,6 +10,7 @@ const { auth } = NextAuth(authConfig);
  * Replaces the deprecated middleware convention.
  */
 export const proxy = auth((req: NextRequest) => {
+    console.log("PROXY.TS RUNNING - COOKIES:", req.cookies.getAll());
     const url = req.nextUrl;
     const hostname = req.headers.get("host") || "";
     
@@ -43,5 +44,5 @@ export const proxy = auth((req: NextRequest) => {
 export default proxy;
 
 export const config = {
-    matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+    matcher: ["/((?!api/auth|_next/static|_next/image|favicon.ico).*)"],
 };

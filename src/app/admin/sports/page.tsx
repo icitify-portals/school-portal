@@ -64,40 +64,46 @@ export default function SportsAdminPage() {
     );
 
     return (
-        <div className="p-8 max-w-[1600px] w-full mx-auto space-y-12">
-            {/* Hero Header */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-                <div>
-                    <h1 className="text-5xl font-black text-slate-900 flex items-center gap-6 italic tracking-tighter">
-                        <div className="p-4 bg-orange-500 rounded-2xl shadow-2xl shadow-orange-200">
-                            <Trophy className="w-10 h-10 text-white" />
+        <div className="p-4 sm:p-6 lg:p-8 min-h-screen">
+            <div className="max-w-[1600px] w-full mx-auto space-y-8">
+                {/* Header Section */}
+                <div className="relative overflow-hidden bg-slate-900 rounded-3xl p-8 lg:p-12 text-white shadow-2xl border border-slate-800">
+                    <div className="absolute inset-0 bg-gradient-to-r from-orange-600/30 to-rose-600/30 opacity-50 mix-blend-overlay" />
+                    <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                        <div>
+                            <div className="flex items-center gap-3 mb-2">
+                                <Trophy className="w-12 h-12 text-orange-400" />
+                                <h1 className="text-4xl lg:text-5xl font-black tracking-tighter drop-shadow-md italic uppercase">
+                                    Sports & Recreation
+                                </h1>
+                            </div>
+                            <p className="text-slate-300 font-medium tracking-tight max-w-2xl text-lg opacity-90">
+                                Global governance of athletic teams, fixtures, and sports media
+                            </p>
                         </div>
-                        ATHLETICS & SPORTS
-                    </h1>
-                    <p className="text-slate-500 font-black uppercase tracking-[0.3em] text-[10px] mt-4 ml-24">Global governance of teams, fixtures, and sports media</p>
+                        <Button className="bg-white text-slate-900 hover:bg-slate-100 font-black px-8 py-6 rounded-2xl shadow-xl transition-all hover:-translate-y-1 flex gap-3 uppercase text-[10px] tracking-widest group">
+                            <Plus className="w-5 h-5 group-hover:rotate-90 transition-transform duration-500 text-orange-600" /> New Entity
+                        </Button>
+                    </div>
                 </div>
-                <Button className="bg-slate-900 hover:bg-slate-800 text-white font-black px-10 py-8 rounded-2xl shadow-2xl transition-all hover:scale-105 active:scale-95 flex gap-4 uppercase text-[10px] tracking-widest group">
-                    <Plus className="w-6 h-6 group-hover:rotate-90 transition-transform duration-500" /> New Sports Entity
-                </Button>
-            </div>
 
-            <Tabs defaultValue="teams" onValueChange={setActiveTab} className="space-y-8">
-                <TabsList className="bg-slate-100 p-2 rounded-2xl h-auto flex-wrap md:flex-nowrap gap-2">
-                    <TabsTrigger value="teams" className="rounded-full px-8 py-3 data-[state=active]:bg-white data-[state=active]:shadow-lg font-black uppercase text-[10px] tracking-widest gap-2">
-                        <Users className="w-4 h-4" /> Teams
-                    </TabsTrigger>
-                    <TabsTrigger value="fixtures" className="rounded-full px-8 py-3 data-[state=active]:bg-white data-[state=active]:shadow-lg font-black uppercase text-[10px] tracking-widest gap-2">
-                        <Calendar className="w-4 h-4" /> Fixtures
-                    </TabsTrigger>
-                    <TabsTrigger value="inventory" className="rounded-full px-8 py-3 data-[state=active]:bg-white data-[state=active]:shadow-lg font-black uppercase text-[10px] tracking-widest gap-2">
-                        <Box className="w-4 h-4" /> Inventory
-                    </TabsTrigger>
-                    <TabsTrigger value="media" className="rounded-full px-8 py-3 data-[state=active]:bg-white data-[state=active]:shadow-lg font-black uppercase text-[10px] tracking-widest gap-2">
-                        <ImageIcon className="w-4 h-4" /> Gallery
-                    </TabsTrigger>
-                </TabsList>
+                <Tabs defaultValue="teams" onValueChange={setActiveTab} className="space-y-8">
+                    <TabsList className="flex bg-white/60 p-2 rounded-2xl backdrop-blur-3xl border border-white/40 overflow-x-auto max-w-fit shadow-xl shadow-slate-200/50">
+                        <TabsTrigger value="teams" className="rounded-xl px-8 py-3 data-[state=active]:bg-white data-[state=active]:text-orange-600 data-[state=active]:shadow-lg font-black uppercase text-[10px] tracking-widest gap-2 transition-all">
+                            <Users className="w-4 h-4" /> Teams
+                        </TabsTrigger>
+                        <TabsTrigger value="fixtures" className="rounded-xl px-8 py-3 data-[state=active]:bg-white data-[state=active]:text-orange-600 data-[state=active]:shadow-lg font-black uppercase text-[10px] tracking-widest gap-2 transition-all">
+                            <Calendar className="w-4 h-4" /> Fixtures
+                        </TabsTrigger>
+                        <TabsTrigger value="inventory" className="rounded-xl px-8 py-3 data-[state=active]:bg-white data-[state=active]:text-orange-600 data-[state=active]:shadow-lg font-black uppercase text-[10px] tracking-widest gap-2 transition-all">
+                            <Box className="w-4 h-4" /> Inventory
+                        </TabsTrigger>
+                        <TabsTrigger value="media" className="rounded-xl px-8 py-3 data-[state=active]:bg-white data-[state=active]:text-orange-600 data-[state=active]:shadow-lg font-black uppercase text-[10px] tracking-widest gap-2 transition-all">
+                            <ImageIcon className="w-4 h-4" /> Gallery
+                        </TabsTrigger>
+                    </TabsList>
 
-                {/* Teams Content */}
+                    {/* Teams Content */}
                 <TabsContent value="teams" className="animate-in fade-in slide-in-from-bottom-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                         {teams.length === 0 ? (
@@ -113,26 +119,26 @@ export default function SportsAdminPage() {
                             </Card>
                         ) : (
                             teams.map((t) => (
-                                <Card key={t.team.id} className="group border-none shadow-xl rounded-[3rem] overflow-hidden hover:-translate-y-2 transition-all duration-500">
+                                <Card key={t.team.id} className="group border border-white/40 shadow-xl shadow-slate-200/50 bg-white/60 backdrop-blur-3xl rounded-[3rem] overflow-hidden hover:-translate-y-2 transition-all duration-500">
                                     <div className="h-48 bg-slate-900 relative">
                                         <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent opacity-80" />
                                         {t.team.imageUrl ? (
-                                            <img src={t.team.imageUrl} className="w-full h-full object-cover" alt={t.team.name} />
+                                            <img src={t.team.imageUrl} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" alt={t.team.name} />
                                         ) : (
                                             <div className="w-full h-full flex items-center justify-center">
                                                 <Trophy className="w-20 h-20 text-white/5" />
                                             </div>
                                         )}
                                         <div className="absolute bottom-6 left-6 right-6">
-                                            <span className="px-3 py-1 bg-orange-500 rounded-full text-[9px] font-black uppercase tracking-widest text-white mb-2 inline-block">
+                                            <span className="px-3 py-1 bg-orange-500/90 backdrop-blur-sm rounded-full text-[9px] font-black uppercase tracking-widest text-white mb-2 inline-block shadow-lg border border-white/20">
                                                 {t.team.category}
                                             </span>
-                                            <h3 className="text-xl font-black text-white italic uppercase tracking-tight">{t.team.name}</h3>
+                                            <h3 className="text-xl font-black text-white italic uppercase tracking-tight drop-shadow-md">{t.team.name}</h3>
                                         </div>
                                     </div>
-                                    <CardContent className="p-8 space-y-6 bg-white">
-                                        <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl">
-                                            <div className="w-10 h-10 rounded-xl bg-indigo-100 flex items-center justify-center text-indigo-600 font-black">
+                                    <CardContent className="p-8 space-y-6">
+                                        <div className="flex items-center gap-4 p-4 bg-white/50 backdrop-blur-sm rounded-2xl border border-white/40">
+                                            <div className="w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center text-orange-600 font-black shadow-inner">
                                                 {t.coach?.name?.[0] || 'C'}
                                             </div>
                                             <div>
@@ -141,15 +147,15 @@ export default function SportsAdminPage() {
                                             </div>
                                         </div>
                                         <div className="grid grid-cols-2 gap-4">
-                                            <div className="p-4 border border-slate-100 rounded-2xl flex flex-col items-center gap-1">
-                                                <Users className="w-4 h-4 text-slate-400" />
+                                            <div className="p-4 bg-white/50 backdrop-blur-sm border border-white/40 rounded-2xl flex flex-col items-center gap-1 shadow-sm hover:bg-white/80 transition-colors">
+                                                <Users className="w-4 h-4 text-orange-400" />
                                                 <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Roster</span>
-                                                <span className="text-sm font-black">12 Players</span>
+                                                <span className="text-sm font-black text-slate-900">12 Players</span>
                                             </div>
-                                            <div className="p-4 border border-slate-100 rounded-2xl flex flex-col items-center gap-1">
-                                                <Medal className="w-4 h-4 text-slate-400" />
+                                            <div className="p-4 bg-white/50 backdrop-blur-sm border border-white/40 rounded-2xl flex flex-col items-center gap-1 shadow-sm hover:bg-white/80 transition-colors">
+                                                <Medal className="w-4 h-4 text-orange-400" />
                                                 <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Rank</span>
-                                                <span className="text-sm font-black">#3 In League</span>
+                                                <span className="text-sm font-black text-slate-900">#3 In League</span>
                                             </div>
                                         </div>
                                     </CardContent>
@@ -163,48 +169,48 @@ export default function SportsAdminPage() {
                 <TabsContent value="fixtures" className="animate-in fade-in slide-in-from-bottom-4">
                     <div className="space-y-6">
                         {fixtures.map((f) => (
-                            <Card key={f.fixture.id} className="border-none shadow-lg rounded-[2.5rem] overflow-hidden group hover:shadow-2xl transition-all duration-500">
+                                <Card key={f.fixture.id} className="border border-white/40 bg-white/60 backdrop-blur-3xl shadow-xl shadow-slate-200/50 rounded-[2.5rem] overflow-hidden group hover:-translate-y-1 transition-all duration-300">
                                 <div className="flex flex-col md:flex-row items-center p-8 gap-8">
                                     <div className="flex-1 flex items-center justify-end gap-6 text-right">
                                         <div>
-                                            <h4 className="text-xl font-black italic uppercase tracking-tighter">{f.team.name}</h4>
-                                            <p className="text-[9px] font-black text-indigo-600 uppercase tracking-widest">Home Team</p>
+                                            <h4 className="text-xl font-black italic uppercase tracking-tighter text-slate-900">{f.team.name}</h4>
+                                            <p className="text-[9px] font-black text-orange-600 uppercase tracking-widest">Home Team</p>
                                         </div>
-                                        <div className="w-16 h-16 rounded-2xl bg-slate-50 flex items-center justify-center font-black text-2xl text-slate-900 border border-slate-100">
+                                        <div className="w-16 h-16 rounded-2xl bg-white shadow-sm border border-slate-100 flex items-center justify-center font-black text-2xl text-slate-900">
                                             {f.fixture.scoreHome}
                                         </div>
                                     </div>
 
-                                    <div className="flex flex-col items-center gap-2 px-8 py-4 bg-slate-50 rounded-2xl border border-slate-100">
+                                    <div className="flex flex-col items-center gap-2 px-8 py-4 bg-slate-900 rounded-2xl border border-slate-800 shadow-inner shadow-black/20">
                                         <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">VS</span>
                                         <div className={cn(
-                                            "px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest",
-                                            f.fixture.status === 'completed' ? "bg-emerald-100 text-emerald-600" : "bg-orange-100 text-orange-600"
+                                            "px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border border-white/10",
+                                            f.fixture.status === 'completed' ? "bg-emerald-500/20 text-emerald-400" : "bg-orange-500/20 text-orange-400"
                                         )}>
                                             {f.fixture.status}
                                         </div>
                                     </div>
 
                                     <div className="flex-1 flex items-center justify-start gap-6">
-                                        <div className="w-16 h-16 rounded-2xl bg-slate-50 flex items-center justify-center font-black text-2xl text-slate-900 border border-slate-100">
+                                        <div className="w-16 h-16 rounded-2xl bg-white shadow-sm border border-slate-100 flex items-center justify-center font-black text-2xl text-slate-900">
                                             {f.fixture.scoreAway}
                                         </div>
                                         <div>
-                                            <h4 className="text-xl font-black italic uppercase tracking-tighter">{f.fixture.opponent}</h4>
+                                            <h4 className="text-xl font-black italic uppercase tracking-tighter text-slate-900">{f.fixture.opponent}</h4>
                                             <p className="text-[9px] font-black text-rose-600 uppercase tracking-widest">Away / Opponent</p>
                                         </div>
                                     </div>
 
-                                    <div className="md:w-px h-8 bg-slate-100" />
+                                    <div className="md:w-px h-12 bg-slate-200" />
 
-                                    <div className="flex flex-col items-start gap-2">
+                                    <div className="flex flex-col items-start gap-3 pl-4">
                                         <div className="flex items-center gap-3 text-slate-500">
-                                            <MapPin className="w-4 h-4" />
-                                            <span className="text-[10px] font-black uppercase tracking-widest">{f.fixture.venue}</span>
+                                            <MapPin className="w-4 h-4 text-orange-500" />
+                                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-700">{f.fixture.venue}</span>
                                         </div>
                                         <div className="flex items-center gap-3 text-slate-500">
-                                            <Clock className="w-4 h-4" />
-                                            <span className="text-[10px] font-black uppercase tracking-widest">
+                                            <Clock className="w-4 h-4 text-orange-500" />
+                                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-700">
                                                 {new Date(f.fixture.scheduledAt).toLocaleDateString()}
                                             </span>
                                         </div>
@@ -233,6 +239,7 @@ export default function SportsAdminPage() {
                     </div>
                 </TabsContent>
             </Tabs>
+        </div>
         </div>
     );
 }

@@ -65,7 +65,7 @@ export default async function StudentReportCardPage({
             </div>
 
             {/* Official Report Layout */}
-            <Card className="border-2 border-slate-200 shadow-none rounded-none print:border-none">
+            <Card className="-200 print: border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                 <CardContent className="p-12 space-y-12">
                     {/* Institution Header */}
                     <div className="flex justify-between items-center border-b-2 border-indigo-600 pb-8">
@@ -75,7 +75,7 @@ export default async function StudentReportCardPage({
                             </div>
                             <div>
                                 <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tighter">
-                                    {data.student?.unit || "Institutional School Portal"}
+                                    {data.student?.unit || "Institutional FSS Portal"}
                                 </h2>
                                 <p className="text-indigo-600 font-bold uppercase tracking-widest text-sm">Official Progress Report</p>
                             </div>
@@ -88,7 +88,7 @@ export default async function StudentReportCardPage({
                     </div>
 
                     {/* Student Info Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8 bg-slate-50 p-6 border border-slate-100 rounded-2xl">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 p-6 border border-slate-100 rounded-2xl">
                         <div className="flex items-center gap-4">
                             <div className="p-3 bg-white rounded-xl shadow-sm text-indigo-500">
                                 <User className="w-5 h-5" />
@@ -207,7 +207,7 @@ export default async function StudentReportCardPage({
                     </div>
 
                     {/* Remarks Section */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-8 border-t border-slate-100">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-8 border-t border-slate-100">
                         <div className="space-y-2">
                             <p className="text-xs font-black text-slate-400 uppercase">Class Teacher's Remark</p>
                             <p className="text-slate-700 italic leading-relaxed border-b border-slate-200 pb-4">

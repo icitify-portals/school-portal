@@ -116,9 +116,9 @@ export default function AdminTranscriptExplorer() {
                 </div>
             </div>
 
-            <Card className="border-none shadow-xl bg-white/80 backdrop-blur-md rounded-2xl overflow-hidden">
+            <Card className="/80 backdrop-blur-md overflow-hidden border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                 <CardHeader className="bg-slate-900 text-white p-8">
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                         <div className="space-y-2">
                             <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-1">
                                 <Building2 className="w-3 h-3" /> Faculty Filter

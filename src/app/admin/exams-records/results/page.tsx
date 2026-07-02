@@ -251,25 +251,31 @@ export default function ResultViewsPage() {
     };
 
     return (
-        <div className="p-8 max-w-[1600px] w-full mx-auto space-y-8 animate-in fade-in duration-500">
+        <div className="p-4 sm:p-6 lg:p-8 min-h-screen">
+          <div className="max-w-[1600px] w-full mx-auto space-y-8 animate-in fade-in duration-500">
             {/* Header section */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <div>
-                    <h2 className="text-4xl font-black text-slate-900 tracking-tighter flex items-center gap-4">
-                        <Award className="w-10 h-10 text-indigo-600 animate-pulse" />
-                        Result Views
-                    </h2>
-                    <p className="text-slate-500 mt-1 font-medium tracking-tight">
-                        Class-by-class terminal results, transcript verification, and PDF printable report cards
-                    </p>
+            <div className="relative overflow-hidden bg-slate-900 rounded-3xl p-8 lg:p-12 text-white shadow-2xl border border-slate-800">
+                <div className="absolute inset-0 bg-gradient-to-r from-indigo-600/30 to-purple-600/30 opacity-50 mix-blend-overlay" />
+                <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                    <div>
+                        <div className="flex items-center gap-3 mb-2">
+                            <Award className="w-12 h-12 text-indigo-400 animate-pulse" />
+                            <h1 className="text-4xl lg:text-5xl font-black tracking-tighter drop-shadow-md italic uppercase">
+                                Result Views
+                            </h1>
+                        </div>
+                        <p className="text-slate-300 font-medium tracking-tight max-w-2xl text-lg opacity-90">
+                            Class-by-class terminal results, transcript verification, and PDF printable report cards
+                        </p>
+                    </div>
                 </div>
             </div>
 
             {/* Premium Filter Dashboard Panel */}
-            <div className="bg-white rounded-2xl p-8 border border-slate-100 shadow-xl shadow-slate-100/50 space-y-6">
-                <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
+            <div className="bg-white/60 backdrop-blur-3xl rounded-[3rem] p-8 border border-white/40 shadow-xl shadow-slate-200/50 space-y-6">
+                <div className="flex items-center gap-3 border-b border-white/40 pb-4">
                     <SlidersHorizontal className="w-5 h-5 text-indigo-600" />
-                    <h3 className="font-black text-sm uppercase tracking-widest text-slate-900">Result Engine Filters</h3>
+                    <h3 className="font-black text-sm uppercase tracking-widest text-slate-800">Result Engine Filters</h3>
                 </div>
 
                 <div className={cn(
@@ -645,6 +651,7 @@ export default function ResultViewsPage() {
                     </div>
                 )}
             </div>
+          </div>
         </div>
     );
 }

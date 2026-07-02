@@ -9,9 +9,9 @@ export default function PaymentsPage() {
         <div className="p-8 max-w-6xl mx-auto">
             <h2 className="text-3xl font-bold text-slate-900 tracking-tight mb-8">Payments & Wallet</h2>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                <Card className="bg-gradient-to-br from-blue-600 to-indigo-700 text-white border-none shadow-lg overflow-hidden relative">
-                    <CardContent className="pt-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                <Card className="-to-br from-blue-600 to-indigo-700 text-white overflow-hidden relative border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
+                    <CardContent className="pt-6 p-6">
                         <div className="flex justify-between items-start mb-4">
                             <div className="p-2 bg-white/10 rounded-lg">
                                 <Wallet className="w-6 h-6" />
@@ -31,8 +31,8 @@ export default function PaymentsPage() {
                     </div>
                 </Card>
 
-                <Card className="md:col-span-2">
-                    <CardHeader>
+                <Card className="md:col-span-2 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
+                    <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-6">
                         <CardTitle className="text-lg">Quick Actions</CardTitle>
                     </CardHeader>
                     <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -64,12 +64,12 @@ export default function PaymentsPage() {
                 </Card>
             </div>
 
-            <Card>
-                <CardHeader className="flex flex-row items-center justify-between">
+            <Card className=" border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
+                <CardHeader className="flex flex-row items-center justify-between bg-slate-50/50 border-b border-slate-100 p-6">
                     <CardTitle className="text-lg font-bold">Recent Transactions</CardTitle>
                     <Button variant="link" className="text-blue-600 font-semibold p-0 h-auto">View All</Button>
                 </CardHeader>
-                <CardContent>
+                <CardContent className=" p-6">
                     <div className="space-y-6">
                         <div className="flex items-center justify-between group">
                             <div className="flex items-center gap-4">

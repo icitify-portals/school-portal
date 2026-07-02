@@ -35,7 +35,7 @@ export default async function AttendanceHistoryPage() {
     if ("error" in data) {
         return (
             <div className="p-6 md:p-10 max-w-[1600px] w-full mx-auto">
-                <Card className="border-none shadow-xl rounded-2xl bg-red-50">
+                <Card className=" border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                     <CardContent className="p-8 text-center">
                         <XCircle className="w-12 h-12 text-red-400 mx-auto mb-3" />
                         <p className="text-red-600 font-bold">{data.error}</p>
@@ -75,21 +75,21 @@ export default async function AttendanceHistoryPage() {
 
             {/* Summary Cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <Card className="border-none shadow-xl rounded-[1.5rem] bg-white/80 backdrop-blur-xl">
+                <Card className="-[1.5rem] /80 backdrop-blur-xl border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                     <CardContent className="p-5 text-center">
                         <BookOpen className="w-6 h-6 text-blue-500 mx-auto mb-2" />
                         <div className="text-3xl font-black text-slate-900">{summary.totalClasses}</div>
                         <div className="text-[9px] font-black uppercase tracking-widest text-slate-400 mt-1">Total Classes</div>
                     </CardContent>
                 </Card>
-                <Card className="border-none shadow-xl rounded-[1.5rem] bg-white/80 backdrop-blur-xl">
+                <Card className="-[1.5rem] /80 backdrop-blur-xl border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                     <CardContent className="p-5 text-center">
                         <CheckCircle2 className="w-6 h-6 text-emerald-500 mx-auto mb-2" />
                         <div className="text-3xl font-black text-emerald-600">{summary.totalAttended}</div>
                         <div className="text-[9px] font-black uppercase tracking-widest text-slate-400 mt-1">Attended</div>
                     </CardContent>
                 </Card>
-                <Card className="border-none shadow-xl rounded-[1.5rem] bg-white/80 backdrop-blur-xl">
+                <Card className="-[1.5rem] /80 backdrop-blur-xl border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                     <CardContent className="p-5 text-center">
                         <XCircle className="w-6 h-6 text-red-500 mx-auto mb-2" />
                         <div className="text-3xl font-black text-red-600">{summary.totalMissed}</div>
@@ -154,7 +154,7 @@ export default async function AttendanceHistoryPage() {
                     </div>
                 </div>
             ) : (
-                <Card className="border-none shadow-xl rounded-2xl bg-slate-50">
+                <Card className=" border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                     <CardContent className="p-10 text-center space-y-3">
                         <Calendar className="w-12 h-12 text-slate-300 mx-auto" />
                         <h3 className="text-lg font-black text-slate-900 uppercase">No Attendance Records</h3>
@@ -177,7 +177,7 @@ export default async function AttendanceHistoryPage() {
                     <h2 className="text-sm font-black uppercase tracking-widest text-slate-500 flex items-center gap-2">
                         <Clock className="w-4 h-4" /> Recent Sessions
                     </h2>
-                    <Card className="border-none shadow-xl rounded-[1.5rem] overflow-hidden">
+                    <Card className="-[1.5rem] overflow-hidden border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                         <div className="overflow-x-auto">
                             <table className="w-full text-sm">
                                 <thead className="bg-slate-50 border-b">

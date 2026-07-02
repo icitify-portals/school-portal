@@ -60,7 +60,7 @@ export default function ScoringForm({ applicationId, currentScore, currentStatus
 
     return (
         <div className="space-y-6">
-            <div className="grid gap-6 sm:grid-cols-2">
+            <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                     <Label htmlFor="score">Post-UTME / Interview Score</Label>
                     <div className="flex gap-2">

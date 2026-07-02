@@ -58,10 +58,10 @@ export default function ForumsPage() {
                 />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {forumCategories.map((forum) => (
                     <Link key={forum.id} href={`/forums/${forum.id}`}>
-                        <Card className="border-none shadow-sm hover:shadow-xl transition-all cursor-pointer group h-full">
+                        <Card className="hover: transition-all cursor-pointer group h-full border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                             <CardContent className="p-6 flex flex-col h-full">
                                 <div className="flex items-center justify-between mb-4">
                                     <div className={cn(

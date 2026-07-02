@@ -1,4 +1,3 @@
-// @ts-expect-error - TS2305: Auto-suppressed for build
 import { getAuthUser } from "@/actions/auth-actions";
 import { redirect } from "next/navigation";
 import LostFoundClient from "./LostFoundClient";
@@ -6,7 +5,7 @@ import { getLostAndFoundItemsAction, getMyLostItemsAction } from "@/actions/secu
 
 export default async function StudentLostAndFoundPage() {
     const user = await getAuthUser();
-    if (!user || user.role !== "student") {
+    if (!user || (user as any).role !== "student") {
         redirect("/login");
     }
 

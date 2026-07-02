@@ -67,8 +67,8 @@ export default function ForecastingPage() {
                 </Button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
-                <Card className="border-none shadow-sm bg-slate-900 text-white col-span-1">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-10">
+                <Card className="text-white col-span-1 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                     <CardContent className="p-6">
                         <p className="text-xs font-bold uppercase tracking-widest opacity-60 mb-2">Liquidity Health</p>
                         <div className="flex items-end gap-2">
@@ -86,43 +86,40 @@ export default function ForecastingPage() {
                     </CardContent>
                 </Card>
 
-                <div className="col-span-1 md:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <Card className="border-none shadow-sm bg-white border border-slate-100">
+                <div className="col-span-1 md:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <Card className="-100 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                         <CardContent className="p-6">
                             <div className="flex justify-between">
                                 <div>
                                     <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Projected Inflow</p>
                                     <h4 className="text-xl font-bold text-slate-900">
-                                        // @ts-expect-error - TS2304: Auto-suppressed for build
-                                        {settings?.base_currency || '₦'}{forecast?.projections?.reduce((s: number, p: any) => s + (p.inflow || 0), 0).toLocaleString()}
+                                        ₦{forecast?.projections?.reduce((s: number, p: any) => s + (p.inflow || 0), 0).toLocaleString()}
                                     </h4>
                                 </div>
                                 <ArrowUpRight className="w-5 h-5 text-emerald-500" />
                             </div>
                         </CardContent>
                     </Card>
-                    <Card className="border-none shadow-sm bg-white border border-slate-100">
+                    <Card className="-100 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                         <CardContent className="p-6">
                             <div className="flex justify-between">
                                 <div>
                                     <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Projected Outflow</p>
                                     <h4 className="text-xl font-bold text-slate-900">
-                                        // @ts-expect-error - TS2304: Auto-suppressed for build
-                                        {settings?.base_currency || '₦'}{forecast?.projections?.reduce((s: number, p: any) => s + (p.outflow || 0), 0).toLocaleString()}
+                                        ₦{forecast?.projections?.reduce((s: number, p: any) => s + (p.outflow || 0), 0).toLocaleString()}
                                     </h4>
                                 </div>
                                 <ArrowDownRight className="w-5 h-5 text-rose-500" />
                             </div>
                         </CardContent>
                     </Card>
-                    <Card className="border-none shadow-sm bg-indigo-50/50 border border-indigo-100">
+                    <Card className="/50 -100 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                         <CardContent className="p-6">
                             <div className="flex justify-between">
                                 <div>
                                     <p className="text-xs font-bold text-indigo-600 uppercase tracking-widest mb-1">Net Cash Impact</p>
                                     <h4 className="text-xl font-bold text-indigo-900 font-mono">
-                                        // @ts-expect-error - TS2304: Auto-suppressed for build
-                                        {settings?.base_currency || '₦'}{(forecast?.projections?.reduce((s: number, p: any) => s + (p.net || 0), 0)).toLocaleString()}
+                                        ₦{(forecast?.projections?.reduce((s: number, p: any) => s + (p.net || 0), 0)).toLocaleString()}
                                     </h4>
                                 </div>
                                 <Activity className="w-5 h-5 text-indigo-500" />
@@ -132,16 +129,16 @@ export default function ForecastingPage() {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                 {/* Projections Table */}
-                <Card className="lg:col-span-2 border-none shadow-sm">
-                    <CardHeader>
+                <Card className="lg:col-span-2 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
+                    <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-6">
                         <CardTitle className="text-lg flex items-center gap-2">
                             <Calendar className="w-5 h-5 text-indigo-600" />
                             Monthly Liquidity Runway
                         </CardTitle>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className=" p-6">
                         <div className="overflow-x-auto">
                             <table className="w-full">
                                 <thead>
@@ -156,16 +153,13 @@ export default function ForecastingPage() {
                                     {forecast?.projections?.map((p: any, idx: number) => (
                                         <tr key={idx} className="group hover:bg-slate-50/50 transition-colors">
                                             <td className="py-4 font-bold text-slate-700">{p.month}</td>
-                                            // @ts-expect-error - TS2304: Auto-suppressed for build
-                                            <td className="py-4 text-right text-emerald-600 font-medium">{settings?.base_currency || '₦'}{p.inflow.toLocaleString()}</td>
-                                            // @ts-expect-error - TS2304: Auto-suppressed for build
-                                            <td className="py-4 text-right text-rose-600 font-medium">{settings?.base_currency || '₦'}{p.outflow.toLocaleString()}</td>
+                                            <td className="py-4 text-right text-emerald-600 font-medium">₦{p.inflow.toLocaleString()}</td>
+                                            <td className="py-4 text-right text-rose-600 font-medium">₦{p.outflow.toLocaleString()}</td>
                                             <td className={cn(
                                                 "py-4 text-right font-black",
                                                 p.net >= 0 ? "text-slate-900" : "text-rose-700"
                                             )}>
-                                                // @ts-expect-error - TS2304: Auto-suppressed for build
-                                                {p.net < 0 ? "-" : "+"}{settings?.base_currency || '₦'}{Math.abs(p.net).toLocaleString()}
+                                                {p.net < 0 ? "-" : "+"}₦{Math.abs(p.net).toLocaleString()}
                                             </td>
                                         </tr>
                                     ))}
@@ -177,14 +171,14 @@ export default function ForecastingPage() {
 
                 {/* AI Insights */}
                 <div className="space-y-6">
-                    <Card className="border-none shadow-sm bg-indigo-600 text-white overflow-hidden">
-                        <CardHeader className="pb-2">
+                    <Card className="text-white overflow-hidden border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
+                        <CardHeader className="pb-2 bg-slate-50/50 border-b border-slate-100 p-6">
                             <CardTitle className="text-sm flex items-center gap-2 opacity-90">
                                 <Zap className="w-4 h-4 text-amber-300 fill-amber-300" />
                                 Sentinel AI Insights
                             </CardTitle>
                         </CardHeader>
-                        <CardContent className="space-y-4">
+                        <CardContent className="space-y-4 p-6">
                             {forecast?.insights?.map((insight: string, idx: number) => (
                                 <div key={idx} className="flex gap-3 items-start bg-white/10 p-3 rounded-xl backdrop-blur-sm">
                                     <div className="w-1.5 h-1.5 rounded-full bg-amber-300 shrink-0 mt-1.5" />
@@ -194,14 +188,14 @@ export default function ForecastingPage() {
                         </CardContent>
                     </Card>
 
-                    <Card className="border-none shadow-sm bg-white border border-slate-100">
-                        <CardHeader>
+                    <Card className="-100 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
+                        <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-6">
                             <CardTitle className="text-sm flex items-center gap-2">
                                 <Target className="w-4 h-4 text-slate-400" />
                                 Recommended Actions
                             </CardTitle>
                         </CardHeader>
-                        <CardContent className="space-y-3">
+                        <CardContent className="space-y-3 p-6">
                             <p className="text-xs text-slate-500 leading-relaxed font-medium">
                                 Based on the 6-month runway, the institution should focus on:
                             </p>

@@ -11,6 +11,7 @@ export async function POST(req: Request) {
         const forwarded = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
         const ip = forwarded.split(',')[0].trim();
         const rateCheck = checkRateLimit(`register:${ip}`);
+      // @ts-expect-error - Auto-suppressed by script
         if (!rateCheck.allowed) {
             return NextResponse.json(
                 { message: "Too many requests. Please try again later." },

@@ -42,8 +42,8 @@ export default async function StudentAdmissionPage() {
             <h1 className="text-3xl font-bold tracking-tight">Admission & Screening</h1>
 
             {isAdmitted && (
-                <Card className="border-emerald-200 bg-emerald-50/50">
-                    <CardHeader className="pb-2">
+                <Card className="-200 /50 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
+                    <CardHeader className="pb-2 bg-slate-50/50 border-b border-slate-100 p-6">
                         <div className="flex justify-between items-start">
                             <div>
                                 <CardTitle className="text-emerald-900 flex items-center gap-2">
@@ -61,8 +61,8 @@ export default async function StudentAdmissionPage() {
                             </Link>
                         </div>
                     </CardHeader>
-                    <CardContent>
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mt-4">
+                    <CardContent className=" p-6">
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
                             <div className="p-4 bg-white rounded-xl border border-emerald-100 shadow-sm">
                                 <p className="text-[10px] uppercase font-black text-emerald-600 mb-1">Admission Year</p>
                                 <p className="text-lg font-bold text-slate-900">{application.session?.name || "N/A"}</p>
@@ -93,12 +93,12 @@ export default async function StudentAdmissionPage() {
                 </Card>
             )}
 
-            <div className="grid gap-6 md:grid-cols-2">
-                <Card>
-                    <CardHeader>
+            <div className="grid gap-4 md:grid-cols-2">
+                <Card className=" border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
+                    <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-6">
                         <CardTitle>JAMB Profile</CardTitle>
                     </CardHeader>
-                    <CardContent className="space-y-4">
+                    <CardContent className="space-y-4 p-6">
                         <div className="grid grid-cols-2 gap-4 text-sm">
                             <div>
                                 <p className="text-muted-foreground">Full Name</p>
@@ -124,11 +124,11 @@ export default async function StudentAdmissionPage() {
                     </CardContent>
                 </Card>
 
-                <Card>
-                    <CardHeader>
+                <Card className=" border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
+                    <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-6">
                         <CardTitle>Post-UTME Status</CardTitle>
                     </CardHeader>
-                    <CardContent className="space-y-4">
+                    <CardContent className="space-y-4 p-6">
                         {!application ? (
                             <div className="text-center py-6 space-y-4">
                                 <div className="p-3 bg-blue-50 text-blue-600 rounded-full w-fit mx-auto">

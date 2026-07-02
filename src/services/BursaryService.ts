@@ -166,13 +166,11 @@ export class BursaryService {
                 }
 
                 // Department-specific
-                // @ts-expect-error - TS2339: Auto-suppressed for build
-                if (!allocation && student.departmentId) {
+                if (!allocation && student.deptId) {
                     const [deptAlloc] = await tx.select()
                         .from(feeAllocations)
                         .where(and(
-                            // @ts-expect-error - TS2339: Auto-suppressed for build
-                            eq(feeAllocations.deptId, student.departmentId),
+                            eq(feeAllocations.deptId, student.deptId),
                             eq(feeAllocations.sessionId, sessionId)
                         ))
                         .limit(1);
@@ -273,11 +271,10 @@ export class BursaryService {
         };
         note?: string;
     }) {
-        const conditions = [];
+        const conditions = [eq(students.status, 'active')];
         
         if (data.scope === 'department' && data.filters.deptId) {
-            // @ts-expect-error - TS2339: Auto-suppressed for build
-            conditions.push(eq(students.departmentId, data.filters.deptId));
+            conditions.push(eq(students.deptId, data.filters.deptId));
         } else if (data.scope === 'programme' && data.filters.programmeId) {
             conditions.push(eq(students.programmeId, data.filters.programmeId));
         } else if (data.scope === 'level' && data.filters.level) {
@@ -288,8 +285,7 @@ export class BursaryService {
                 .where(eq(departments.facultyId, data.filters.facultyId));
             const deptIds = depts.map(d => d.id);
             if (deptIds.length > 0) {
-                // @ts-expect-error - TS2339: Auto-suppressed for build
-                conditions.push(inArray(students.departmentId, deptIds));
+                conditions.push(inArray(students.deptId, deptIds));
             } else {
                 return { success: false, error: "No departments found for this faculty." };
             }

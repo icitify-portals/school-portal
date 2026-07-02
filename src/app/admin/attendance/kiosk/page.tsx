@@ -19,7 +19,7 @@ export default function KioskPage() {
 
             <GateKiosk />
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 w-full max-w-4xl">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full max-w-4xl">
                 <div className="flex items-center gap-4 bg-white p-6 rounded-2xl shadow-xl border border-slate-50">
                     <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
                         <LogIn className="w-6 h-6" />

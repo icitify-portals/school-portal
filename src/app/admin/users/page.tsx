@@ -128,7 +128,7 @@ function UserManagementPageContent() {
     };
 
     return (
-        <div className="p-8 max-w-[1600px] w-full mx-auto space-y-8">
+        <div className="p-8 pb-32 max-w-[1600px] w-full mx-auto space-y-8">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <h1 className="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-3">
@@ -160,12 +160,12 @@ function UserManagementPageContent() {
             </div>
 
             {showImport && (
-                <Card className="border-2 border-dashed border-indigo-100 bg-indigo-50/30 overflow-hidden animate-in fade-in slide-in-from-top-4 duration-300">
-                    <CardHeader>
+                <Card className="-100 /30 overflow-hidden animate-in fade-in slide-in-from-top-4 duration-300 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
+                    <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-6">
                         <CardTitle className="text-sm font-black uppercase tracking-widest text-indigo-900">Bulk User Import (CSV/XLSX)</CardTitle>
                         <p className="text-xs text-indigo-600">Columns required: <span className="font-bold underline">name, email</span>. Optional: <span className="font-bold">role, type, level, jobTitle</span></p>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className=" p-6">
                         <UniversalImporter
                             title="User Import"
                             description="Upload a CSV or XLSX file with user data"
@@ -176,8 +176,8 @@ function UserManagementPageContent() {
                 </Card>
             )}
 
-            <div className="grid grid-cols-1 gap-6">
-                <Card className="border-none shadow-sm overflow-hidden flex flex-col">
+            <div className="grid grid-cols-1 gap-4">
+                <Card className="overflow-hidden flex flex-col border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                     <CardHeader className="border-b border-slate-50 flex flex-col md:flex-row gap-4 items-start md:items-center justify-between pb-4">
                         <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
                             <div className="relative w-full md:w-64">
@@ -232,6 +232,11 @@ function UserManagementPageContent() {
                         </div>
                     </CardHeader>
                     <CardContent className="p-0">
+                        <DataTablePagination
+                            totalItems={totalCount}
+                            pageSize={pageSize}
+                            currentPage={page}
+                        />
                         <div className="overflow-x-auto">
                             <table className="w-full text-left">
                                 <thead className="bg-slate-50/50">

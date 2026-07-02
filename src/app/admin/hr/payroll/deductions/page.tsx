@@ -64,13 +64,13 @@ export default function DeductionRulesPage() {
                 <p className="text-slate-500">Configure dynamic deduction rules like PAYE and Pension.</p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {/* Rules List */}
                 <div className="md:col-span-2 space-y-4">
                     {loading ? (
                         <div className="flex justify-center p-8"><Loader2 className="w-6 h-6 animate-spin text-slate-400" /></div>
                     ) : rules.length === 0 ? (
-                        <Card className="border-dashed bg-slate-50">
+                        <Card className=" border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                             <CardContent className="p-12 text-center text-slate-500">
                                 No rules configured. Add a new rule to get started.
                             </CardContent>
@@ -105,7 +105,7 @@ export default function DeductionRulesPage() {
                 </div>
 
                 {/* Add Rule Form */}
-                <Card className="shadow-sm h-fit">
+                <Card className="h-fit border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                     <CardHeader className="bg-slate-50 border-b border-slate-100">
                         <CardTitle className="text-lg">Add New Rule</CardTitle>
                     </CardHeader>

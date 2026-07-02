@@ -44,9 +44,9 @@ export default function LibraryAdminPage() {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {/* Fine Calculation Card */}
-                <Card className="border-none shadow-xl shadow-slate-200/50 rounded-2xl overflow-hidden">
+                <Card className="-200/50 overflow-hidden border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                     <CardHeader className="bg-rose-500 text-white p-8">
                         <CardTitle className="flex items-center gap-2 italic uppercase tracking-tight text-xl">
                             <AlertTriangle className="w-6 h-6" />
@@ -69,7 +69,7 @@ export default function LibraryAdminPage() {
                 </Card>
 
                 {/* Circulation Card */}
-                <Card className="border-none shadow-xl shadow-slate-200/50 rounded-2xl overflow-hidden">
+                <Card className="-200/50 overflow-hidden border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                     <CardHeader className="bg-indigo-600 text-white p-8">
                         <CardTitle className="flex items-center gap-2 italic uppercase tracking-tight text-xl">
                             <ArrowRightLeft className="w-6 h-6" />
@@ -91,7 +91,7 @@ export default function LibraryAdminPage() {
                 </Card>
 
                 {/* Inventory Card */}
-                <Card className="border-none shadow-xl shadow-slate-200/50 rounded-2xl overflow-hidden">
+                <Card className="-200/50 overflow-hidden border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                     <CardHeader className="bg-slate-900 text-white p-8">
                         <CardTitle className="flex items-center gap-2 italic uppercase tracking-tight text-xl">
                             <Book className="w-6 h-6" />
@@ -113,7 +113,7 @@ export default function LibraryAdminPage() {
             </div>
 
             {/* Quick Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 {[
                     { label: "Overdue Books", value: "12", color: "text-rose-600" },
                     { label: "Total Fine Revenue", value: "₦4,500", color: "text-emerald-600" },

@@ -20,7 +20,7 @@ import {
     ArrowDownCircle,
     ArrowUpCircle
 } from "lucide-react";
-import { getStudentLedger, getStudentFinancialSummary } from "@/actions/bursary";
+import { getStudentLedger, getStudentFinancialSummary, getBursarySettings } from "@/actions/bursary";
 import { getStudentById } from "@/actions/students";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -31,6 +31,7 @@ export default function AdminStudentLedgerPage() {
     const [ledger, setLedger] = useState<any[]>([]);
     const [summary, setSummary] = useState<any>(null);
     const [student, setStudent] = useState<any>(null);
+    const [settings, setSettings] = useState<any>({});
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState("");
 
@@ -41,14 +42,16 @@ export default function AdminStudentLedgerPage() {
     const fetchData = async () => {
         setLoading(true);
         const studentId = parseInt(id as string);
-        const [ledgerData, summaryData, studentData] = await Promise.all([
+        const [ledgerData, summaryData, studentData, settingsData] = await Promise.all([
             getStudentLedger(studentId),
             getStudentFinancialSummary(studentId),
-            getStudentById(studentId)
+            getStudentById(studentId),
+            getBursarySettings()
         ]);
         setLedger(ledgerData);
         setSummary(summaryData);
         setStudent(studentData);
+        setSettings(settingsData);
         setLoading(false);
     };
 
@@ -143,8 +146,7 @@ export default function AdminStudentLedgerPage() {
                             "text-2xl font-black mt-2",
                             (summary?.outstandingBalance || 0) > 0 ? "text-red-600" : "text-green-600"
                         )}>
-                            // @ts-expect-error - TS2304: Auto-suppressed for build
-                            {settings?.base_currency || '₦'}{summary?.outstandingBalance?.toLocaleString() || "0.00"}
+                            {settings?.base_currency || ₦}{summary?.outstandingBalance?.toLocaleString() || "0.00"}
                         </h3>
                     </CardContent>
                 </Card>
@@ -154,8 +156,7 @@ export default function AdminStudentLedgerPage() {
                     <CardContent className="p-6">
                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Wallet Credit</p>
                         <h3 className="text-2xl font-black mt-2 text-slate-900">
-                            // @ts-expect-error - TS2304: Auto-suppressed for build
-                            {settings?.base_currency || '₦'}{summary?.walletBalance?.toLocaleString() || "0.00"}
+                            {settings?.base_currency || ₦}{summary?.walletBalance?.toLocaleString() || "0.00"}
                         </h3>
                     </CardContent>
                 </Card>
@@ -165,8 +166,7 @@ export default function AdminStudentLedgerPage() {
                     <CardContent className="p-6">
                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Paid (Till Date)</p>
                         <h3 className="text-2xl font-black mt-2 text-slate-900">
-                            // @ts-expect-error - TS2304: Auto-suppressed for build
-                            {settings?.base_currency || '₦'}{summary?.totalPaid?.toLocaleString() || "0.00"}
+                            {settings?.base_currency || ₦}{summary?.totalPaid?.toLocaleString() || "0.00"}
                         </h3>
                     </CardContent>
                 </Card>
@@ -230,19 +230,16 @@ export default function AdminStudentLedgerPage() {
                                         </td>
                                         <td className="px-8 py-4">
                                             {parseFloat(entry.debit) > 0 ? (
-                                                // @ts-expect-error - TS2304: Auto-suppressed for build
-                                                <span className="text-sm font-bold text-red-600">{settings?.base_currency || '₦'}{parseFloat(entry.debit).toLocaleString()}</span>
+                                                <span className="text-sm font-bold text-red-600">{settings?.base_currency || ₦}{parseFloat(entry.debit).toLocaleString()}</span>
                                             ) : "-"}
                                         </td>
                                         <td className="px-8 py-4">
                                             {parseFloat(entry.credit) > 0 ? (
-                                                // @ts-expect-error - TS2304: Auto-suppressed for build
-                                                <span className="text-sm font-bold text-green-600">{settings?.base_currency || '₦'}{parseFloat(entry.credit).toLocaleString()}</span>
+                                                <span className="text-sm font-bold text-green-600">{settings?.base_currency || ₦}{parseFloat(entry.credit).toLocaleString()}</span>
                                             ) : "-"}
                                         </td>
                                         <td className="px-8 py-4 font-black text-slate-900 border-l border-slate-50">
-                                            // @ts-expect-error - TS2304: Auto-suppressed for build
-                                            {settings?.base_currency || '₦'}{parseFloat(entry.balance).toLocaleString()}
+                                            {settings?.base_currency || ₦}{parseFloat(entry.balance).toLocaleString()}
                                         </td>
                                         <td className="px-8 py-4 text-right print:hidden">
                                             <span className="text-[10px] font-mono text-slate-400 bg-slate-50 px-2 py-1 rounded">

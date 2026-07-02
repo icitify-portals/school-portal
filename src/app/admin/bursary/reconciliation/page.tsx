@@ -96,7 +96,7 @@ export default function BankReconciliationPage() {
                 </Button>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
                 {/* Statement History Sidebar */}
                 <div className="lg:col-span-1 space-y-6">
                     <h2 className="text-xs font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
@@ -140,7 +140,7 @@ export default function BankReconciliationPage() {
                         )}
                     </div>
 
-                    <Card className="border-none shadow-sm overflow-hidden">
+                    <Card className="overflow-hidden border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                         <CardContent className="p-0">
                             <table className="w-full text-left">
                                 <thead>
@@ -167,8 +167,7 @@ export default function BankReconciliationPage() {
                                                             Ref: {entry.reference} • {new Date(entry.transactionDate).toLocaleDateString()}
                                                         </p>
                                                         <p className="text-xs font-black text-slate-900 mt-1">
-                                                            // @ts-expect-error - TS2304: Auto-suppressed for build
-                                                            {settings?.base_currency || '₦'}{Number(parseFloat(entry.credit) > 0 ? entry.credit : entry.debit).toLocaleString()}
+                                                            ₦{Number(parseFloat(entry.credit) > 0 ? entry.credit : entry.debit).toLocaleString()}
                                                         </p>
                                                     </div>
                                                 </div>
@@ -228,12 +227,12 @@ export default function BankReconciliationPage() {
             {/* Upload Modal */}
             {showUpload && (
                 <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                    <Card className="w-full max-w-lg border-none shadow-2xl">
-                        <CardHeader className="flex flex-row items-center justify-between">
+                    <Card className="w-full max-w-lg border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
+                        <CardHeader className="flex flex-row items-center justify-between bg-slate-50/50 border-b border-slate-100 p-6">
                             <CardTitle className="text-sm font-black uppercase tracking-widest italic">Institutional Data Upload</CardTitle>
                             <Button variant="ghost" size="icon" onClick={() => setShowUpload(false)}><X className="w-4 h-4" /></Button>
                         </CardHeader>
-                        <CardContent className="space-y-4">
+                        <CardContent className="space-y-4 p-6">
                             <p className="text-xs text-slate-500 font-medium">Paste CSV content (Date, Description, Reference, Debit, Credit) to simulate a bank statement upload.</p>
                             <textarea
                                 className="w-full h-48 bg-slate-50 border border-slate-200 rounded-2xl p-4 text-xs font-mono focus:ring-2 focus:ring-blue-600 outline-none"

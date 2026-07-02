@@ -59,7 +59,7 @@ export default async function HealthAdminDashboard() {
             </div>
 
             {/* Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 {cards.map((stat) => (
                     <Card key={stat.name} className="border-none shadow-sm hover:shadow-md transition-shadow group overflow-hidden relative">
                         <div className={cn("absolute top-0 right-0 p-4 opacity-5 group-hover:scale-110 transition-transform", stat.color)}>
@@ -78,9 +78,9 @@ export default async function HealthAdminDashboard() {
                 ))}
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 {/* Pending Reports */}
-                <Card className="border-none shadow-sm bg-white rounded-2xl overflow-hidden">
+                <Card className="overflow-hidden border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                     <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-6 flex flex-row items-center justify-between">
                         <div>
                             <CardTitle className="text-[10px] font-black uppercase tracking-widest text-indigo-600 mb-1">Incoming Data</CardTitle>
@@ -123,7 +123,7 @@ export default async function HealthAdminDashboard() {
                 </Card>
 
                 {/* Recent Vitals */}
-                <Card className="border-none shadow-sm bg-white rounded-2xl overflow-hidden">
+                <Card className="overflow-hidden border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                     <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-6 flex flex-row items-center justify-between">
                         <div>
                             <CardTitle className="text-[10px] font-black uppercase tracking-widest text-rose-600 mb-1">Clinical Activity</CardTitle>
@@ -158,14 +158,14 @@ export default async function HealthAdminDashboard() {
             </div>
 
             {/* Quick Actions */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {[
                     { title: "Review Queue", desc: "Verify uploaded medical documents", icon: ClipboardList, color: "bg-indigo-600", href: "/admin/health" },
                     { title: "Student Directory", desc: "Search and manage student files", icon: Users, color: "bg-slate-900", href: "/admin/health" },
                     { title: "Screening Logs", desc: "View all vital sign history", icon: Activity, color: "bg-rose-600", href: "/admin/health" },
                 ].map((action) => (
                     <Link key={action.title} href={action.href}>
-                        <Card className="border-none shadow-sm hover:translate-y-[-4px] transition-all group cursor-pointer">
+                        <Card className="hover:translate-y-[-4px] transition-all group cursor-pointer border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                             <CardContent className="p-6 flex items-center gap-5">
                                 <div className={cn("p-4 rounded-2xl text-white shadow-lg group-hover:scale-110 transition-transform", action.color)}>
                                     <action.icon className="w-6 h-6" />

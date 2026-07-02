@@ -288,7 +288,7 @@ export default function StaffDashboardPage() {
                 <div className="lg:col-span-2 space-y-5">
                     
                     {/* Courses & Virtual Classrooms Unified Bento Box */}
-                    <Card className="bg-white border-slate-200 rounded-xl p-5 shadow-sm space-y-4 hover:border-slate-350 transition-all flex flex-col justify-between">
+                    <Card className="-200 p-5 space-y-4 hover:-350 transition-all flex flex-col justify-between border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                         <div>
                             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                                 <h3 className="font-bold text-slate-700 flex items-center gap-2 text-sm uppercase tracking-wider">
@@ -342,7 +342,7 @@ export default function StaffDashboardPage() {
                             
                             {/* HOD Card */}
                             {(isHOD || (session?.user as any)?.role === 'admin') && (
-                                <Card className="bg-white border border-slate-200 rounded-xl p-4.5 shadow-sm flex flex-col justify-between hover:border-slate-350 transition-all border-l-4 border-l-amber-500">
+                                <Card className="-200 p-4.5 flex flex-col justify-between hover:-350 transition-all -4 -amber-500 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                                     <div>
                                         <h4 className="text-xs font-bold text-amber-600 uppercase tracking-widest flex items-center gap-1.5 mb-3">
                                             <Users className="w-4.5 h-4.5" />
@@ -375,7 +375,7 @@ export default function StaffDashboardPage() {
  
                              {/* Dean Card */}
                              {(isDean || (session?.user as any)?.role === 'admin') && (
-                                 <Card className="bg-white border border-slate-200 rounded-xl p-4.5 shadow-sm flex flex-col justify-between hover:border-slate-350 transition-all border-l-4 border-l-emerald-600">
+                                 <Card className="-200 p-4.5 flex flex-col justify-between hover:-350 transition-all -4 -emerald-600 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                                      <div>
                                          <h4 className="text-xs font-bold text-emerald-700 uppercase tracking-widest flex items-center gap-1.5 mb-3">
                                              <Map className="w-4.5 h-4.5" />
@@ -403,7 +403,7 @@ export default function StaffDashboardPage() {
                     )}
 
                     {/* Leave Requests Administration Dashboard */}
-                    <Card className="bg-white border border-slate-200 rounded-xl p-4.5 shadow-sm space-y-4">
+                    <Card className="-200 p-4.5 space-y-4 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                         <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                             <h3 className="font-bold text-slate-700 flex items-center gap-2 text-sm uppercase tracking-wider">
                                 <Clock className="w-5 h-5 text-emerald-600" />
@@ -470,7 +470,7 @@ export default function StaffDashboardPage() {
                 <div className="space-y-5">
                     
                     {/* Academic Console Links: re-arranged in 2-column small bento tiles */}
-                    <Card className="bg-white border border-slate-200 rounded-xl p-4.5 shadow-sm space-y-4">
+                    <Card className="-200 p-4.5 space-y-4 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                         <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-2">
                             Academic Console
                         </h4>
@@ -503,7 +503,7 @@ export default function StaffDashboardPage() {
 
                     {/* K-12 Work Completion Stats (Closes spaces on right side) */}
                     {k12Data && (k12Data.classes?.length > 0 || k12Data.subjects?.length > 0) && (
-                        <Card className="bg-white border border-slate-200 rounded-xl p-4.5 shadow-sm space-y-4">
+                        <Card className="-200 p-4.5 space-y-4 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                             <div>
                                 <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
                                     <CheckCircle className="w-4 h-4 text-emerald-650" />
@@ -546,7 +546,7 @@ export default function StaffDashboardPage() {
             {/* Leave Request Dialog Overlay */}
             {showLeaveForm && (
                 <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                    <Card className="w-full max-w-lg border-slate-200 bg-white shadow-2xl animate-in zoom-in-95 duration-200">
+                    <Card className="w-full max-w-lg -200 animate-in zoom-in-95 duration-200 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                         <CardHeader className="flex flex-row justify-between items-center border-b border-slate-100 pb-3">
                             <CardTitle className="text-base font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
                                 <Plus className="w-4.5 h-4.5 text-emerald-600" />
@@ -556,7 +556,7 @@ export default function StaffDashboardPage() {
                                 <X className="w-4.5 h-4.5 text-slate-400 hover:text-slate-650" />
                             </button>
                         </CardHeader>
-                        <CardContent className="pt-5 text-sm text-slate-600">
+                        <CardContent className="pt-5 text-sm text-slate-600 p-6">
                             <form onSubmit={handleLeaveSubmit} className="space-y-4">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div className="space-y-1">

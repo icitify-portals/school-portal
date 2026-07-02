@@ -61,10 +61,10 @@ export default async function RubricManagementPage() {
                 </Link>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {rubrics.map((rubric) => (
                     <Card key={rubric.id} className="hover:shadow-md transition-shadow group">
-                        <CardHeader className="text-left">
+                        <CardHeader className="text-left bg-slate-50/50 border-b border-slate-100 p-6">
                             <div className="flex justify-between items-start mb-2">
                                 <Badge variant="secondary" className="bg-slate-100 text-slate-600 border-none font-bold text-[10px] uppercase">
                                     {rubric.course?.name || "Global / Template"}

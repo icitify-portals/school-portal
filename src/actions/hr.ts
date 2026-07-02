@@ -318,7 +318,7 @@ export async function processPayroll(month: number, year: number) {
                     </div>
                     <p style="font-size: 14px; color: #6b7280;">You can view the breakdown and authorize payments from the Finance Portal.</p>
                     <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;" />
-                    <p style="font-size: 12px; color: #9ca3af; text-align: center;">${hrSettings['institutional_name'] || 'Institutional School Portal'} | HR Department</p>
+                    <p style="font-size: 12px; color: #9ca3af; text-align: center;">${hrSettings['institutional_name'] || 'Institutional FSS Portal'} | HR Department</p>
                 </div>
             `;
             await sendEmail(
@@ -443,3 +443,23 @@ export async function deleteDeductionRule(id: number) {
     }
 }
 
+
+
+export async function updateStaffProfile(userId: number, data: any) {
+    try {
+        await ensureHRStaff();
+        
+        await db.update(staffProfiles)
+            .set({
+                ...data,
+                updatedAt: new Date()
+            })
+            .where(eq(staffProfiles.userId, userId));
+            
+        revalidatePath("/admin/hr");
+        return { success: true, message: "Staff profile updated successfully." };
+    } catch (error: any) {
+        console.error("Update Staff Profile Error:", error);
+        return { success: false, error: error.message || "Failed to update staff profile." };
+    }
+}

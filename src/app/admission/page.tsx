@@ -275,7 +275,7 @@ export default function AdmissionLandingPage() {
                 <p className="text-[10px] font-black uppercase tracking-[0.4em] flex items-center justify-center gap-2">
                     <ShieldCheck size={14} className="text-emerald-500" /> Secure Multi-Tier Intake Gateway
                 </p>
-                <p className="text-[9px] font-bold text-slate-700 uppercase tracking-widest mt-2">© 2026 School Portal Group. All Rights Reserved.</p>
+                <p className="text-[9px] font-bold text-slate-700 uppercase tracking-widest mt-2">© 2026 FSS Portal Group. All Rights Reserved.</p>
             </div>
         </div>
     );
@@ -347,8 +347,7 @@ function AdmissionCard({ template }: { template: any }) {
                 <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1">
                         <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">Application Fee</p>
-                        // @ts-expect-error - TS2304: Auto-suppressed for build
-                        <p className="text-sm font-black text-white italic">{settings?.base_currency || '₦'}{parseFloat(template.applicationFee).toLocaleString()}</p>
+                        <p className="text-sm font-black text-white italic">₦{parseFloat(template.applicationFee).toLocaleString()}</p>
                     </div>
                     <div className="space-y-1">
                         <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">Deadline</p>

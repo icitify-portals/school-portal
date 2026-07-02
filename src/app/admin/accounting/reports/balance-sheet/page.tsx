@@ -42,43 +42,50 @@ export default function BalanceSheetPage() {
     }
 
     return (
-        <div className="p-8 max-w-6xl mx-auto">
-            <div className="flex justify-between items-start mb-10">
-                <div>
-                    <h2 className="text-3xl font-bold text-slate-900 tracking-tight flex items-center gap-3">
-                        <Scale className="w-8 h-8 text-slate-900" />
-                        Statement of Financial Position
-                    </h2>
-                    <p className="text-slate-500 mt-1">Institutional Balance Sheet (Assets, Liabilities & Equity)</p>
+        <div className="p-4 sm:p-6 lg:p-8 min-h-screen bg-transparent">
+          <div className="max-w-[1600px] w-full mx-auto space-y-10 text-slate-800">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 bg-slate-900 text-white rounded-[3rem] p-8 lg:p-12 shadow-2xl relative overflow-hidden border border-slate-800">
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-600/30 to-slate-600/30 opacity-50 mix-blend-overlay" />
+                <div className="relative z-10">
+                    <div className="flex items-center gap-4 mb-2">
+                        <Scale className="w-12 h-12 text-blue-400 drop-shadow-md" />
+                        <h2 className="text-4xl lg:text-5xl font-black tracking-tighter uppercase italic drop-shadow-md">
+                            Statement of Financial Position
+                        </h2>
+                    </div>
+                    <p className="text-slate-300 font-medium mt-1 uppercase text-sm tracking-wide opacity-90">
+                        Institutional Balance Sheet (Assets, Liabilities & Equity)
+                    </p>
                 </div>
-                <div className="flex gap-3">
-                    <Button variant="outline" className="gap-2 rounded-xl">
-                        <Download className="w-4 h-4" /> Export
+                <div className="relative z-10 flex gap-3">
+                    <Button variant="outline" className="gap-2 h-12 px-6 rounded-2xl bg-white/10 border-white/20 hover:bg-white/20 text-white font-bold backdrop-blur-md transition-all shadow-lg">
+                        <Download className="w-5 h-5" /> Export
                     </Button>
-                    <Button className="bg-slate-900 hover:bg-slate-800 rounded-xl gap-2 shadow-lg shadow-slate-900/20">
-                        <Printer className="w-4 h-4" /> Print Statement
+                    <Button className="bg-blue-600 hover:bg-blue-700 text-white font-bold h-12 px-6 rounded-2xl gap-2 shadow-lg shadow-blue-900/50 transition-all border border-blue-500/50">
+                        <Printer className="w-5 h-5" /> Print Statement
                     </Button>
                 </div>
             </div>
 
             {/* Balancing Status Bar */}
             <div className={cn(
-                "mb-10 p-4 rounded-2xl border flex items-center justify-between px-8",
+                "p-8 rounded-[2.5rem] border flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative overflow-hidden backdrop-blur-3xl shadow-xl mb-10",
                 report?.isBalanced
-                    ? "bg-emerald-50 border-emerald-100 text-emerald-800"
-                    : "bg-rose-50 border-rose-100 text-rose-800"
+                    ? "bg-emerald-600/10 border-emerald-500/30 text-emerald-900 shadow-emerald-500/10"
+                    : "bg-rose-600/10 border-rose-500/30 text-rose-900 shadow-rose-500/10"
             )}>
-                <div className="flex items-center gap-3">
-                    {report?.isBalanced ? <ShieldCheck className="w-6 h-6" /> : <AlertCircle className="w-6 h-6" />}
+                <div className="flex items-center gap-4 relative z-10">
+                    <div className={cn("p-4 rounded-[1.2rem] shadow-inner", report?.isBalanced ? "bg-emerald-500 text-white" : "bg-rose-500 text-white")}>
+                        {report?.isBalanced ? <ShieldCheck className="w-8 h-8 drop-shadow-sm" /> : <AlertCircle className="w-8 h-8 drop-shadow-sm" />}
+                    </div>
                     <div>
-                        <p className="text-sm font-black uppercase tracking-widest">{report?.isBalanced ? "Equation Balanced" : "Balance Mismatch"}</p>
-                        <p className="text-xs opacity-80 font-medium">Assets = Liabilities + Equity (Current status)</p>
+                        <p className="text-xl font-black uppercase tracking-tight italic drop-shadow-sm">{report?.isBalanced ? "Equation Balanced" : "Balance Mismatch"}</p>
+                        <p className="text-xs opacity-70 font-bold uppercase tracking-widest mt-1">Assets = Liabilities + Equity (Current status)</p>
                     </div>
                 </div>
-                <div className="text-right">
-                    <p className="text-[10px] uppercase font-bold opacity-60">Variance</p>
-                    // @ts-expect-error - TS2304: Auto-suppressed for build
-                    <p className="text-lg font-black font-mono">{settings?.base_currency || '₦'}{(report?.totalAssets - (report?.totalLiabilities + report?.totalEquity)).toFixed(2)}</p>
+                <div className="text-left md:text-right relative z-10">
+                    <p className="text-[10px] uppercase font-black tracking-widest opacity-60 mb-1">Variance</p>
+                    <p className="text-3xl font-black drop-shadow-md">₦{Math.abs((report?.totalAssets || 0) - ((report?.totalLiabilities || 0) + (report?.totalEquity || 0))).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
                 </div>
             </div>
 
@@ -99,8 +106,7 @@ export default function BalanceSheetPage() {
                                     {report?.assets?.map((acc: any) => (
                                         <tr key={acc.id} className="bg-white">
                                             <td className="py-4 px-6 text-sm font-bold text-slate-700">{acc.code} - {acc.name}</td>
-                                            // @ts-expect-error - TS2304: Auto-suppressed for build
-                                            <td className="py-4 px-6 text-right font-mono text-slate-900">{settings?.base_currency || '₦'}{acc.balance.toLocaleString()}</td>
+                                            <td className="py-4 px-6 text-right font-mono text-slate-900">₦{acc.balance.toLocaleString()}</td>
                                         </tr>
                                     ))}
                                     {report?.assets?.length === 0 && (
@@ -110,8 +116,7 @@ export default function BalanceSheetPage() {
                                 <tfoot>
                                     <tr className="bg-slate-900 text-white">
                                         <td className="py-5 px-6 text-sm font-black uppercase tracking-widest">Total Assets</td>
-                                        // @ts-expect-error - TS2304: Auto-suppressed for build
-                                        <td className="py-5 px-6 text-right font-black text-xl">{settings?.base_currency || '₦'}{report?.totalAssets?.toLocaleString()}</td>
+                                        <td className="py-5 px-6 text-right font-black text-xl">₦{report?.totalAssets?.toLocaleString()}</td>
                                     </tr>
                                 </tfoot>
                             </table>
@@ -135,8 +140,7 @@ export default function BalanceSheetPage() {
                                     {report?.liabilities?.map((acc: any) => (
                                         <tr key={acc.id} className="bg-white">
                                             <td className="py-4 px-6 text-sm font-bold text-slate-700">{acc.code} - {acc.name}</td>
-                                            // @ts-expect-error - TS2304: Auto-suppressed for build
-                                            <td className="py-4 px-6 text-right font-mono text-slate-900">{settings?.base_currency || '₦'}{acc.balance.toLocaleString()}</td>
+                                            <td className="py-4 px-6 text-right font-mono text-slate-900">₦{acc.balance.toLocaleString()}</td>
                                         </tr>
                                     ))}
                                     {report?.liabilities?.length === 0 && (
@@ -145,8 +149,7 @@ export default function BalanceSheetPage() {
                                 </tbody>
                                 <tr className="bg-rose-50/30">
                                     <td className="py-4 px-6 text-xs font-black text-rose-900 uppercase">Subtotal Liabilities</td>
-                                    // @ts-expect-error - TS2304: Auto-suppressed for build
-                                    <td className="py-4 px-6 text-right font-bold text-rose-900 font-mono">{settings?.base_currency || '₦'}{report?.totalLiabilities?.toLocaleString()}</td>
+                                    <td className="py-4 px-6 text-right font-bold text-rose-900 font-mono">₦{report?.totalLiabilities?.toLocaleString()}</td>
                                 </tr>
                             </table>
                         </CardContent>
@@ -166,8 +169,7 @@ export default function BalanceSheetPage() {
                                     {report?.equity?.map((acc: any) => (
                                         <tr key={acc.id} className="bg-white">
                                             <td className="py-4 px-6 text-sm font-bold text-slate-700">{acc.code} - {acc.name}</td>
-                                            // @ts-expect-error - TS2304: Auto-suppressed for build
-                                            <td className="py-4 px-6 text-right font-mono text-slate-900">{settings?.base_currency || '₦'}{acc.balance.toLocaleString()}</td>
+                                            <td className="py-4 px-6 text-right font-mono text-slate-900">₦{acc.balance.toLocaleString()}</td>
                                         </tr>
                                     ))}
                                     {report?.equity?.length === 0 && (
@@ -176,15 +178,13 @@ export default function BalanceSheetPage() {
                                 </tbody>
                                 <tr className="bg-emerald-50/30">
                                     <td className="py-4 px-6 text-xs font-black text-emerald-900 uppercase">Subtotal Equity</td>
-                                    // @ts-expect-error - TS2304: Auto-suppressed for build
-                                    <td className="py-4 px-6 text-right font-bold text-emerald-900 font-mono">{settings?.base_currency || '₦'}{report?.totalEquity?.toLocaleString()}</td>
+                                    <td className="py-4 px-6 text-right font-bold text-emerald-900 font-mono">₦{report?.totalEquity?.toLocaleString()}</td>
                                 </tr>
                                 <tfoot>
                                     <tr className="bg-slate-800 text-white">
                                         <td className="py-5 px-6 text-sm font-black uppercase tracking-widest">Total Liabilities & Equity</td>
                                         <td className="py-5 px-6 text-right font-black text-xl">
-                                            // @ts-expect-error - TS2304: Auto-suppressed for build
-                                            {settings?.base_currency || '₦'}{(report?.totalLiabilities + report?.totalEquity)?.toLocaleString()}
+                                            ₦{(report?.totalLiabilities + report?.totalEquity)?.toLocaleString()}
                                         </td>
                                     </tr>
                                 </tfoot>
@@ -192,8 +192,8 @@ export default function BalanceSheetPage() {
                         </CardContent>
                     </Card>
                 </div>
-
             </div>
+          </div>
         </div>
     );
 }

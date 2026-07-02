@@ -94,13 +94,13 @@ export default function MatriculationSettingsPage() {
             </div>
 
             {isEditing ? (
-                <Card className="border-none shadow-sm ring-1 ring-slate-100">
+                <Card className="ring-1 ring-slate-100 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                     <CardHeader className="bg-slate-50/50 border-b border-slate-100">
                         <CardTitle className="text-lg font-black text-slate-800">{formData.id ? "Edit Setting" : "Create New Setting"}</CardTitle>
                     </CardHeader>
                     <CardContent className="p-6">
                         <form onSubmit={handleSave} className="space-y-6">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                     <label className="text-xs font-bold uppercase tracking-widest text-slate-500">Nomenclature</label>
                                     <Input 
@@ -200,7 +200,7 @@ export default function MatriculationSettingsPage() {
                         </Button>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {settings.map((s) => (
                             <Card key={s.id} className="border-none shadow-sm ring-1 ring-slate-100 relative group overflow-hidden">
                                 <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500" />

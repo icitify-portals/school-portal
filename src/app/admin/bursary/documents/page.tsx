@@ -111,7 +111,7 @@ export default function BursaryDocumentPricing() {
         
         {/* Left Side: Pricing Rules Grid (Span 2) */}
         <div className="lg:col-span-2 space-y-8">
-          <Card className="border-none shadow-xl shadow-slate-200/50 rounded-2xl overflow-hidden bg-white">
+          <Card className="-200/50 overflow-hidden border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
             <CardHeader className="bg-slate-900 text-white p-8">
               <CardTitle className="text-xl font-black italic">Active Document Pricing Rules</CardTitle>
               <CardDescription className="text-slate-400 font-bold uppercase tracking-widest text-[9px]">
@@ -157,8 +157,7 @@ export default function BursaryDocumentPricing() {
                             </div>
                           </td>
                           <td className="px-8 py-4 text-right font-black text-slate-900 text-sm">
-                            // @ts-expect-error - TS2304: Auto-suppressed for build
-                            {settings?.base_currency || '₦'}{parseFloat(rule.feeAmount).toLocaleString()}
+                            ₦{parseFloat(rule.feeAmount).toLocaleString()}
                           </td>
                         </tr>
                       ))
@@ -172,7 +171,7 @@ export default function BursaryDocumentPricing() {
 
         {/* Right Side: Configure Form Box (Span 1) */}
         <div>
-          <Card className="border-none shadow-xl shadow-slate-200/50 rounded-2xl p-8 space-y-6 bg-white border border-slate-100">
+          <Card className="-200/50 p-8 space-y-6 -100 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
             <div>
               <h3 className="text-lg font-black text-slate-900 uppercase italic">Set Document Price</h3>
               <p className="text-slate-400 text-xs font-bold uppercase tracking-wider mt-1">Configure Surcharges & Bank Splits</p>

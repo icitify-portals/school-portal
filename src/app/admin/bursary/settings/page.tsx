@@ -233,14 +233,14 @@ export default function BursarySettingsPage() {
                 <p className="text-slate-500 mt-1">Configure financial policies, gateways, split settling rules, and ledger mappings</p>
             </div>
 
-            <div className="grid grid-cols-1 gap-6">
+            <div className="grid grid-cols-1 gap-4">
                 {/* 0. GLOBAL FINANCIAL & CURRENCY */}
-                <Card className="border border-slate-100 shadow-sm rounded-2xl overflow-hidden">
+                <Card className="-100 overflow-hidden border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                     <CardHeader className="bg-slate-50/50 border-b border-slate-100">
                         <CardTitle className="text-base font-bold text-slate-800">Global Financial & Currency</CardTitle>
                     </CardHeader>
-                    <CardContent className="space-y-6 pt-6">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <CardContent className="space-y-6 pt-6 p-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <label className="text-sm font-bold text-slate-700">Base Currency</label>
                                 <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tight">The default currency for the institution</p>
@@ -260,15 +260,15 @@ export default function BursarySettingsPage() {
                 </Card>
 
                 {/* 0.5. FINANCIAL LOCKING RULES */}
-                <Card className="border border-slate-100 shadow-sm rounded-2xl overflow-hidden">
+                <Card className="-100 overflow-hidden border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                     <CardHeader className="bg-slate-50/50 border-b border-slate-100 flex flex-row items-center justify-between">
                         <CardTitle className="text-base font-bold text-slate-800 flex items-center gap-2">
                             <Lock className="w-5 h-5 text-rose-500" />
                             Financial Locking Rules
                         </CardTitle>
                     </CardHeader>
-                    <CardContent className="space-y-6 pt-6">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <CardContent className="space-y-6 pt-6 p-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <label className="text-sm font-bold text-slate-700">Lock Type</label>
                                 <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tight">How to restrict owing students</p>
@@ -298,11 +298,11 @@ export default function BursarySettingsPage() {
                 </Card>
 
                 {/* 1. PAYMENT CONFIGURATION CARD */}
-                <Card className="border border-slate-100 shadow-sm rounded-2xl overflow-hidden">
+                <Card className="-100 overflow-hidden border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                     <CardHeader className="bg-slate-50/50 border-b border-slate-100">
                         <CardTitle className="text-base font-bold text-slate-800">Payment Configuration</CardTitle>
                     </CardHeader>
-                    <CardContent className="space-y-6 pt-6">
+                    <CardContent className="space-y-6 pt-6 p-6">
                         <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
                             <div>
                                 <p className="font-bold text-slate-900">Payment Mode</p>
@@ -345,14 +345,14 @@ export default function BursarySettingsPage() {
                 </Card>
 
                 {/* PART PAYMENT CONFIGURATION CARD */}
-                <Card className="border border-slate-100 shadow-sm rounded-2xl overflow-hidden bg-slate-50/10">
+                <Card className="-100 overflow-hidden /10 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                     <CardHeader className="bg-slate-50/50 border-b border-slate-100">
                         <CardTitle className="text-base font-bold text-slate-800 flex items-center gap-2">
                             <CreditCard className="w-5 h-5 text-indigo-500" />
                             Installment & Part Payment Policy Defaults
                         </CardTitle>
                     </CardHeader>
-                    <CardContent className="space-y-6 pt-6">
+                    <CardContent className="space-y-6 pt-6 p-6">
                         <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
                             <div>
                                 <p className="font-bold text-slate-900">Enable Installment Payments</p>
@@ -367,7 +367,7 @@ export default function BursarySettingsPage() {
                             </Button>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <label className="text-sm font-bold text-slate-700">Default Minimum Initial Installment (%)</label>
                                 <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tight">Minimum percentage required for the first payment</p>
@@ -398,15 +398,15 @@ export default function BursarySettingsPage() {
                 </Card>
 
                 {/* 2. SPLIT PAYMENT GATEWAY bearer RULES */}
-                <Card className="border border-slate-100 shadow-sm rounded-2xl overflow-hidden bg-slate-50/10">
+                <Card className="-100 overflow-hidden /10 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                     <CardHeader className="bg-slate-50/50 border-b border-slate-100 flex flex-row justify-between items-center">
                         <CardTitle className="text-base font-bold text-slate-800 flex items-center gap-2">
                             <ArrowRightLeft className="w-5 h-5 text-indigo-500" />
                             Multi-Gateway split Payments & Bearer Rules
                         </CardTitle>
                     </CardHeader>
-                    <CardContent className="pt-6 space-y-6">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <CardContent className="pt-6 space-y-6 p-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Active Payment Gateway</label>
                                 <select
@@ -462,7 +462,7 @@ export default function BursarySettingsPage() {
                         </div>
 
                         {/* Installment Payment Rules */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 bg-white rounded-xl border border-slate-200">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-white rounded-xl border border-slate-200">
                             <div className="space-y-2">
                                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Allow Installment Payments</label>
                                 <div className="flex items-center gap-2 mt-2">
@@ -540,14 +540,14 @@ export default function BursarySettingsPage() {
                 </Card>
 
                 {/* 3. SETTLEMENT ACCOUNTS MANAGER */}
-                <Card className="border border-slate-100 shadow-sm rounded-2xl overflow-hidden">
+                <Card className="-100 overflow-hidden border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                     <CardHeader className="bg-slate-50/50 border-b border-slate-100 flex flex-row items-center justify-between">
                         <CardTitle className="text-base font-bold text-slate-800 flex items-center gap-2">
                             <Landmark className="w-5 h-5 text-indigo-500" />
                             Settlement Accounts Console
                         </CardTitle>
                     </CardHeader>
-                    <CardContent className="pt-6 space-y-6">
+                    <CardContent className="pt-6 space-y-6 p-6">
                         {/* List registered settlements */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {settlements.map((acct) => (
@@ -699,11 +699,11 @@ export default function BursarySettingsPage() {
                 </Card>
 
                 {/* 4. FEE ITEM MAPPINGS */}
-                <Card className="border border-slate-100 shadow-sm rounded-2xl overflow-hidden bg-slate-50/10">
+                <Card className="-100 overflow-hidden /10 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                     <CardHeader className="bg-slate-50/50 border-b border-slate-100">
                         <CardTitle className="text-base font-bold text-slate-800">Fee Items Settlement Account Mappings</CardTitle>
                     </CardHeader>
-                    <CardContent className="pt-6">
+                    <CardContent className="pt-6 p-6">
                         <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
                             <table className="w-full text-left border-collapse text-xs">
                                 <thead>
@@ -723,7 +723,7 @@ export default function BursarySettingsPage() {
                                                     {item.category}
                                                 </Badge>
                                             </td>
-                                            <td className="p-4 font-mono text-slate-700">{settings?.base_currency || '₦'}{parseFloat(item.defaultAmount).toLocaleString()}</td>
+                                            <td className="p-4 font-mono text-slate-700">₦{parseFloat(item.defaultAmount).toLocaleString()}</td>
                                             <td className="p-4">
                                                 <select
                                                     className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs focus:ring-1 focus:ring-indigo-500 bg-white outline-none w-full max-w-xs"
@@ -747,14 +747,14 @@ export default function BursarySettingsPage() {
                 </Card>
 
                 {/* 5. RECEIPT CUSTOMIZATION */}
-                <Card className="border border-slate-100 shadow-sm rounded-2xl overflow-hidden bg-indigo-50/10">
+                <Card className="-100 overflow-hidden /10 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                     <CardHeader className="bg-slate-50/50 border-b border-slate-100">
                         <CardTitle className="text-base font-bold text-slate-800 flex items-center gap-2">
                             <Sparkles className="w-5 h-5 text-indigo-500" />
                             Receipt Customization Template
                         </CardTitle>
                     </CardHeader>
-                    <CardContent className="space-y-6 pt-6">
+                    <CardContent className="space-y-6 pt-6 p-6">
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                             {[
                                 { id: 'modern', name: 'Modern', desc: 'Sleek, colorful, and highly premium look.' },
@@ -800,14 +800,14 @@ export default function BursarySettingsPage() {
                 </Card>
 
                 {/* 6. GL ACCOUNT MAPPING CARD */}
-                <Card className="border border-slate-100 shadow-sm rounded-2xl overflow-hidden">
+                <Card className="-100 overflow-hidden border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                     <CardHeader className="bg-slate-50/50 border-b border-slate-100 flex flex-row items-center justify-between">
                         <CardTitle className="text-base font-bold text-slate-800 flex items-center gap-2">
                             <Landmark className="w-5 h-5 text-indigo-500" />
                             GL Account Mapping (GL Mappings)
                         </CardTitle>
                     </CardHeader>
-                    <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6">
+                    <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-6">
                         {glSettings.map((item) => (
                             <div key={item.key} className="space-y-2">
                                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">{item.label}</label>
@@ -841,11 +841,11 @@ export default function BursarySettingsPage() {
                 </Card>
 
                 {/* 7. APPROVAL WORKFLOW CARD */}
-                <Card className="border border-slate-100 shadow-sm rounded-2xl overflow-hidden">
+                <Card className="-100 overflow-hidden border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                     <CardHeader className="bg-slate-50/50 border-b border-slate-100">
                         <CardTitle className="text-base font-bold text-slate-800">Approval Workflow</CardTitle>
                     </CardHeader>
-                    <CardContent className="space-y-4 pt-6">
+                    <CardContent className="space-y-4 pt-6 p-6">
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="font-bold text-slate-900">Require Approval for Fee Structures</p>
@@ -863,14 +863,14 @@ export default function BursarySettingsPage() {
                 </Card>
 
                 {/* 8. PAYMENT GATEWAY API KEYS */}
-                <Card className="border border-slate-100 shadow-sm rounded-2xl overflow-hidden">
+                <Card className="-100 overflow-hidden border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                     <CardHeader className="bg-slate-50/50 border-b border-slate-100">
                         <CardTitle className="text-base font-bold text-slate-800 flex items-center gap-2">
                             <CreditCard className="w-5 h-5 text-indigo-500" />
                             Payment Gateway Integrations Credentials
                         </CardTitle>
                     </CardHeader>
-                    <CardContent className="space-y-6 pt-6">
+                    <CardContent className="space-y-6 pt-6 p-6">
                         {[
                             { name: "Paystack API Key", key: "gateway_paystack_key", help: "Secret Key from Paystack Dashboard" },
                             { name: "Flutterwave Secret Key", key: "gateway_flutterwave_key", help: "Secret Key (FLWSECK-X)" },

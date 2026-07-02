@@ -108,7 +108,7 @@ export default function InventoryDashboard() {
          </div>
       )}
 
-      <div className="grid grid-cols-12 gap-8">
+      <div className="grid grid-cols-12 gap-4">
         {/* Inventory Master Ledger */}
         <div className="col-span-12 lg:col-span-8 space-y-6">
            <div className="bg-white rounded-[40px] border border-slate-100 shadow-xl overflow-hidden">

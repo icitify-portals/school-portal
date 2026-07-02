@@ -113,8 +113,8 @@ export default function EnvConfigPage() {
                 </AlertDescription>
             </Alert>
 
-            <Card className="border-slate-200 shadow-sm">
-                <CardHeader>
+            <Card className="-200 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
+                <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-6">
                     <div className="flex justify-between items-center">
                         <div>
                             <CardTitle className="text-lg">Configuration Keys</CardTitle>
@@ -125,7 +125,7 @@ export default function EnvConfigPage() {
                         </Button>
                     </div>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-4 p-6">
                     {variables.length === 0 ? (
                         <div className="py-8 text-center text-slate-500 border border-dashed rounded-lg">
                             No environment variables found.

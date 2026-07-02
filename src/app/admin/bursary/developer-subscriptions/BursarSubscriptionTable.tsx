@@ -50,7 +50,7 @@ export default function BursarSubscriptionTable({ initialData }: { initialData: 
     };
 
     return (
-        <Card>
+        <Card className=" border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
             <div className="p-4 flex items-center justify-between border-b bg-slate-50 dark:bg-slate-900">
                 <div className="text-sm">
                     <span className="font-semibold">{selected.length}</span> selected • Total: <span className="font-bold text-lg text-blue-600">₦{totalSelectedAmount.toLocaleString()}</span>

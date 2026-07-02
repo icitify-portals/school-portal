@@ -11,73 +11,80 @@ export default function ExamsRecordsAdminPage() {
 
     return (
         <div className="p-8 max-w-[1600px] w-full mx-auto space-y-8">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <div>
-                    <h2 className="text-4xl font-black text-slate-900 tracking-tighter flex items-center gap-4">
-                        <GraduationCap className="w-10 h-10 text-indigo-600" />
-                        Exams and Records
-                    </h2>
-                    <p className="text-slate-500 mt-1 font-medium tracking-tight">Academic history, transcript processing, and record verification</p>
+            <div className="relative overflow-hidden bg-slate-900 rounded-3xl p-8 lg:p-12 text-white shadow-2xl border border-slate-800">
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-600/30 to-indigo-600/30 opacity-50 mix-blend-overlay" />
+                <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                    <div>
+                        <div className="flex items-center gap-3 mb-2">
+                            <GraduationCap className="w-12 h-12 text-indigo-400" />
+                            <h1 className="text-4xl lg:text-5xl font-black tracking-tighter drop-shadow-md">
+                                Exams & Records
+                            </h1>
+                        </div>
+                        <p className="text-slate-300 font-medium tracking-tight max-w-2xl text-lg opacity-90">
+                            Academic history, transcript processing, Senate broadsheets, and record verification.
+                        </p>
+                    </div>
                 </div>
             </div>
 
             {/* Quick Actions Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <a href="/admin/exams-records/broadsheet" className="group">
-                    <div className="bg-white border border-slate-200 p-6 rounded-2xl shadow-sm hover:shadow-md hover:border-indigo-300 transition-all">
-                        <div className="w-12 h-12 bg-indigo-50 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                            <Target className="w-6 h-6 text-indigo-600" />
+                    <div className="bg-white/60 backdrop-blur-3xl border border-white/40 shadow-xl shadow-slate-200/50 rounded-3xl p-8 hover:-translate-y-1 hover:shadow-2xl transition-all duration-300">
+                        <div className="w-16 h-16 bg-indigo-50 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 group-hover:bg-indigo-100 transition-all shadow-inner">
+                            <Target className="w-8 h-8 text-indigo-600" />
                         </div>
-                        <h3 className="text-lg font-bold text-slate-900">Senate Broadsheet</h3>
-                        <p className="text-sm text-slate-500 mt-1">Compile and view official class results for Senate approval.</p>
+                        <h3 className="text-xl font-black text-slate-800 uppercase tracking-widest">Senate Broadsheet</h3>
+                        <p className="text-sm font-medium text-slate-500 mt-2">Compile and view official class results for Senate approval.</p>
                     </div>
                 </a>
                 <a href="/admin/exams-records/upload" className="group">
-                    <div className="bg-white border border-slate-200 p-6 rounded-2xl shadow-sm hover:shadow-md hover:emerald-300 transition-all">
-                        <div className="w-12 h-12 bg-emerald-50 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                            <Users className="w-6 h-6 text-emerald-600" />
+                    <div className="bg-white/60 backdrop-blur-3xl border border-white/40 shadow-xl shadow-slate-200/50 rounded-3xl p-8 hover:-translate-y-1 hover:shadow-2xl transition-all duration-300">
+                        <div className="w-16 h-16 bg-emerald-50 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 group-hover:bg-emerald-100 transition-all shadow-inner">
+                            <Users className="w-8 h-8 text-emerald-600" />
                         </div>
-                        <h3 className="text-lg font-bold text-slate-900">Bulk Result Upload</h3>
-                        <p className="text-sm text-slate-500 mt-1">Upload CA and Exam scores via CSV for processing.</p>
+                        <h3 className="text-xl font-black text-slate-800 uppercase tracking-widest">Bulk Result Upload</h3>
+                        <p className="text-sm font-medium text-slate-500 mt-2">Upload CA and Exam scores via CSV for processing.</p>
                     </div>
                 </a>
                 <a href="/admin/exams-records/carry-overs" className="group">
-                    <div className="bg-white border border-slate-200 p-6 rounded-2xl shadow-sm hover:shadow-md hover:amber-300 transition-all">
-                        <div className="w-12 h-12 bg-amber-50 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                            <Search className="w-6 h-6 text-amber-600" />
+                    <div className="bg-white/60 backdrop-blur-3xl border border-white/40 shadow-xl shadow-slate-200/50 rounded-3xl p-8 hover:-translate-y-1 hover:shadow-2xl transition-all duration-300">
+                        <div className="w-16 h-16 bg-amber-50 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 group-hover:bg-amber-100 transition-all shadow-inner">
+                            <Search className="w-8 h-8 text-amber-600" />
                         </div>
-                        <h3 className="text-lg font-bold text-slate-900">Carry-Over Tracker</h3>
-                        <p className="text-sm text-slate-500 mt-1">Monitor and enforce mandatory course retakes.</p>
+                        <h3 className="text-xl font-black text-slate-800 uppercase tracking-widest">Carry-Over Tracker</h3>
+                        <p className="text-sm font-medium text-slate-500 mt-2">Monitor and enforce mandatory course retakes.</p>
                     </div>
                 </a>
             </div>
 
-            <div className="flex gap-4 w-full md:w-auto p-1.5 bg-slate-100 rounded-2xl border border-slate-200/50 w-fit">
-                    <button
-                        onClick={() => setActiveTab('graduating')}
-                        className={cn(
-                            "px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all duration-300 flex items-center gap-2",
-                            activeTab === 'graduating'
-                                ? "bg-white text-indigo-600 shadow-sm ring-1 ring-slate-200"
-                                : "text-slate-500 hover:text-slate-700"
-                        )}
-                    >
-                        <Target className="w-4 h-4" />
-                        Graduating
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('search')}
-                        className={cn(
-                            "px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all duration-300 flex items-center gap-2",
-                            activeTab === 'search'
-                                ? "bg-white text-indigo-600 shadow-sm ring-1 ring-slate-200"
-                                : "text-slate-500 hover:text-slate-700"
-                        )}
-                    >
-                        <Search className="w-4 h-4" />
-                        All Students
-                    </button>
-                </div>
+            <div className="flex gap-2 p-1.5 bg-slate-200/50 backdrop-blur-xl rounded-2xl w-fit border border-slate-200 shadow-inner">
+                <button
+                    onClick={() => setActiveTab('graduating')}
+                    className={cn(
+                        "px-8 py-3 rounded-xl text-sm font-black transition-all uppercase tracking-wider flex items-center gap-2",
+                        activeTab === 'graduating'
+                            ? "bg-white text-indigo-700 shadow-md scale-105"
+                            : "text-slate-500 hover:text-slate-700 hover:bg-white/50"
+                    )}
+                >
+                    <Target className="w-4 h-4" />
+                    Graduating
+                </button>
+                <button
+                    onClick={() => setActiveTab('search')}
+                    className={cn(
+                        "px-8 py-3 rounded-xl text-sm font-black transition-all uppercase tracking-wider flex items-center gap-2",
+                        activeTab === 'search'
+                            ? "bg-white text-indigo-700 shadow-md scale-105"
+                            : "text-slate-500 hover:text-slate-700 hover:bg-white/50"
+                    )}
+                >
+                    <Search className="w-4 h-4" />
+                    All Students
+                </button>
+            </div>
 
             <div className="pt-4">
                 {activeTab === 'graduating' ? (

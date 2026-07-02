@@ -695,7 +695,7 @@ export function Sidebar({ enabledModules = {}, mobileOpen = false, onClose }: {
                 "flex flex-col h-screen w-64 border-r",
                 isStudent ? "bg-white border-slate-100 text-slate-800 shadow-sm" : "text-white border-white/10"
             )}
-            style={isStudent ? {} : { backgroundColor: 'var(--brand-secondary, #0f172a)' }}
+            style={{ backgroundColor: 'var(--brand-secondary, #0f172a)' }}
         >
             <div className="p-6">
                 <div className="flex items-center gap-3">
@@ -713,7 +713,7 @@ export function Sidebar({ enabledModules = {}, mobileOpen = false, onClose }: {
                     <div>
                         <h1 className={cn(
                             "text-lg font-black truncate w-40 uppercase tracking-tighter",
-                            isStudent ? "text-emerald-800" : "bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent"
+                            "bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent"
                         )}>
                             {isStudent ? "Student Portal" : (branding?.INST_NAME || "SchoolPortal")}
                         </h1>
@@ -730,8 +730,8 @@ export function Sidebar({ enabledModules = {}, mobileOpen = false, onClose }: {
             {availableUnits.length > 1 && (
                 <div className="px-6 mb-4">
                     <div className={cn(
-                        "rounded-2xl p-4 border",
-                        isStudent ? "bg-slate-50 border-slate-100" : "bg-white/5 border-white/10"
+                        "mt-6 rounded-2xl p-3 shadow-inner relative overflow-hidden",
+                        "bg-white/5 border-white/10"
                     )}>
                         <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block">Active Branch</label>
                         <select 
@@ -739,7 +739,7 @@ export function Sidebar({ enabledModules = {}, mobileOpen = false, onClose }: {
                             onChange={(e) => switchUnit(Number(e.target.value))}
                             className={cn(
                                 "w-full text-xs font-bold rounded-lg p-2 border focus:ring-2 focus:ring-indigo-500 outline-none",
-                                isStudent ? "bg-white text-slate-800 border-slate-200" : "bg-slate-800 text-white border-white/10"
+                                "bg-slate-800 text-white border-white/10"
                             )}
                         >
                             {availableUnits.map((u) => (
@@ -759,31 +759,24 @@ export function Sidebar({ enabledModules = {}, mobileOpen = false, onClose }: {
                     const isSubItemActive = hasSubItems && item.subItems?.some(sub => pathname === sub.href);
                     const isActive = pathname === item.href || isSubItemActive;
 
-                    const itemClassName = isStudent
-                        ? cn(
-                            "flex items-center justify-between w-full px-3 py-2 rounded-xl transition-all hover:bg-slate-50 group mb-0.5 relative overflow-hidden",
-                            isActive ? "text-emerald-700 bg-emerald-50 font-extrabold after:absolute after:right-0 after:top-0 after:bottom-0 after:w-1 after:bg-emerald-700" : "text-slate-600 hover:text-slate-900 font-bold"
-                          )
-                        : cn(
-                            "flex items-center justify-between w-full px-3 py-2 rounded-xl transition-all hover:bg-white/10 group mb-0.5",
-                            isActive ? "text-white bg-indigo-600 shadow-xl shadow-indigo-600/20" : "text-white/90 hover:text-white"
-                          );
+                    const itemClassName = cn(
+                        "flex items-center justify-between w-full px-3 py-2 rounded-xl transition-all duration-200 hover:bg-white/10 active:scale-[0.98] group mb-0.5",
+                        isActive ? "text-white bg-indigo-600 shadow-xl shadow-indigo-600/20" : "text-white/90 hover:text-white"
+                    );
 
-                    const linkClassName = isStudent
+                    const linkClassName = hasSubItems
                         ? cn(
-                            "flex items-center gap-3 px-3 py-2 rounded-xl transition-all hover:bg-slate-50 group mb-0.5 relative overflow-hidden",
-                            pathname === item.href ? "text-emerald-700 bg-emerald-50 font-extrabold after:absolute after:right-0 after:top-0 after:bottom-0 after:w-1 after:bg-emerald-700" : "text-slate-600 hover:text-slate-900 font-bold"
+                            "flex items-center gap-3 w-full px-3 py-2 rounded-xl transition-all duration-200 hover:bg-white/10 active:scale-[0.98] group mb-0.5 relative overflow-hidden",
+                            pathname === item.href ? "text-white bg-indigo-600 shadow-xl shadow-indigo-600/20" : "text-white/90 hover:text-white"
                           )
                         : cn(
-                            "flex items-center gap-3 px-3 py-2 rounded-xl transition-all hover:bg-white/10 group mb-0.5",
+                            "flex items-center gap-3 w-full px-3 py-2 rounded-xl transition-all duration-200 hover:bg-white/10 active:scale-[0.98] group mb-0.5",
                             pathname === item.href ? "text-white shadow-xl bg-indigo-600 shadow-indigo-600/20" : "text-white/90 hover:text-white"
                           );
 
-                    const iconClassName = isStudent
-                        ? cn("w-5 h-5", isActive || pathname === item.href ? "text-emerald-700" : "text-slate-400 group-hover:text-emerald-600")
-                        : cn("w-5 h-5", isActive || pathname === item.href ? "text-white" : "text-slate-400 group-hover:text-indigo-300");
+                    const iconClassName = cn("w-5 h-5", isActive || pathname === item.href ? "text-white" : "text-slate-400 group-hover:text-indigo-300");
 
-                    const chevronColor = isStudent ? "text-slate-400 group-hover:text-slate-600" : "text-white/50 group-hover:text-white";
+                    const chevronColor = "text-white/50 group-hover:text-white";
 
                     return (
                         <div key={item.name} className="space-y-1">
@@ -814,26 +807,18 @@ export function Sidebar({ enabledModules = {}, mobileOpen = false, onClose }: {
                             {hasSubItems && isOpen && (
                                 <div className={cn(
                                     "ml-9 space-y-0.5 pl-2 mb-1",
-                                    isStudent ? "border-l border-slate-200" : "border-l border-slate-700/50"
+                                    "border-l border-slate-700/50"
                                 )}>
                                     {item.subItems?.map((sub) => (
                                         <Link
                                             key={sub.name}
                                             href={sub.href}
-                                            className={isStudent
-                                                ? cn(
-                                                    "block px-3 py-1.5 text-[11px] font-bold rounded-lg transition-all",
-                                                    pathname === sub.href
-                                                        ? "bg-emerald-50 text-emerald-700"
-                                                        : "text-slate-500 hover:text-slate-800 hover:bg-slate-50"
-                                                  )
-                                                : cn(
-                                                    "block px-3 py-1.5 text-[11px] font-black rounded-lg transition-all",
-                                                    pathname === sub.href
-                                                        ? "bg-white/20 text-white"
-                                                        : "text-white/70 hover:text-white hover:bg-white/5"
-                                                  )
-                                            }
+                                            className={cn(
+                                                "block px-3 py-1.5 text-[11px] font-bold rounded-lg transition-all",
+                                                pathname === sub.href
+                                                    ? "bg-indigo-600/20 text-white"
+                                                    : "text-slate-400 hover:text-white hover:bg-white/5"
+                                            )}
                                         >
                                             {sub.name.replace("Course", isK12 ? "Subject" : "Course").replace("course", isK12 ? "subject" : "course")}
                                         </Link>

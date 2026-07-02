@@ -147,7 +147,7 @@ export default async function BookDetailsPage({ params }: { params: Promise<{ id
                         <h2 className="text-4xl font-black tracking-tight">Expand Your Knowledge</h2>
                         <p className="text-slate-500 font-bold italic">Related resources based on your interest.</p>
                     </div>
-                    <div className="grid grid-cols-2 lg:grid-cols-5 gap-8">
+                    <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
                         {recommendations.map((rec, i) => (
                             <Link href={`/books/${rec.id}`} key={i} className="group space-y-4">
                                 <div className="aspect-[2/3] bg-slate-900 rounded-[30px] overflow-hidden shadow-xl transition-all group-hover:-translate-y-4">

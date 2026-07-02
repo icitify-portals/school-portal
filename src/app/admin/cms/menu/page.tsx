@@ -248,7 +248,7 @@ export default function MenuManagerPage() {
             </div>
 
             {/* ── Menu Style Picker ────────────────────── */}
-            <Card className="p-5 rounded-2xl border-slate-100 shadow-sm">
+            <Card className="p-5 -100 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                 <div className="flex items-center gap-2 mb-4">
                     <Layers className="w-4 h-4 text-indigo-600" />
                     <span className="text-xs font-black uppercase tracking-widest text-slate-500">
@@ -298,7 +298,7 @@ export default function MenuManagerPage() {
             </Card>
 
             {/* ── Items + Editor ───────────────────────── */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                 {/* Item list */}
                 <div className="lg:col-span-2 space-y-4">
                     {loading ? (
@@ -306,7 +306,7 @@ export default function MenuManagerPage() {
                             <RefreshCw className="w-8 h-8 text-indigo-600 animate-spin" />
                         </div>
                     ) : menus.length === 0 ? (
-                        <Card className="p-12 text-center border-dashed border-2 border-slate-200 rounded-2xl">
+                        <Card className="p-12 text-center -200 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                             <Globe className="w-12 h-12 text-slate-300 mx-auto mb-4" />
                             <p className="text-slate-400 font-medium">No items in this slot for this locale yet.</p>
                             <Button onClick={() => handleAdd()} className="mt-4 bg-indigo-600 rounded-xl font-bold px-6">
@@ -344,7 +344,7 @@ export default function MenuManagerPage() {
                 {/* Editor Panel */}
                 <div className="space-y-6">
                     {editingItem ? (
-                        <Card className="p-6 rounded-2xl shadow-xl border-slate-100 sticky top-8">
+                        <Card className="p-6 -100 sticky top-8 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                             <h3 className="text-lg font-black mb-6 flex items-center gap-2 uppercase tracking-tighter">
                                 <Settings className="w-5 h-5 text-indigo-600" />
                                 Item Settings
@@ -429,7 +429,7 @@ export default function MenuManagerPage() {
                     )}
 
                     {/* Style legend */}
-                    <Card className="p-4 rounded-2xl border-slate-100 shadow-sm">
+                    <Card className="p-4 -100 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                         <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-3 flex items-center gap-1">
                             <Info className="w-3 h-3" /> Style Guide
                         </p>

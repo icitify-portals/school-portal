@@ -12,7 +12,8 @@ import {
     X,
     QrCode,
     Loader2,
-    ShieldAlert
+    ShieldAlert,
+    Edit
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { UniversalImporter } from "@/components/UniversalImporter";
@@ -22,6 +23,9 @@ import { cn } from "@/lib/utils";
 import { AccountManagementModal } from "@/components/admin/AccountManagementModal";
 import { generateIdentityQRCodeAction } from "@/actions/utility-actions";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { StaffProfileEditorModal } from "@/components/admin/StaffProfileEditorModal";
+import { useSearchParams } from "next/navigation";
+import { DataTablePagination } from "@/components/DataTablePagination";
 
 interface StaffDirectoryClientProps {
     initialStaff: any[];
@@ -37,7 +41,12 @@ export function StaffDirectoryClient({ initialStaff, nonStaffUsers, departments,
     const [gradeFilter, setGradeFilter] = useState("");
     const [showImporter, setShowImporter] = useState(false);
     const [selectedUser, setSelectedUser] = useState<any | null>(null);
+    const [editStaff, setEditStaff] = useState<any | null>(null);
     const router = useRouter();
+    const searchParams = useSearchParams();
+
+    const page = parseInt(searchParams.get("page") || "1");
+    const pageSize = parseInt(searchParams.get("pageSize") || "10");
 
     const [qrStaff, setQrStaff] = useState<any | null>(null);
     const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
@@ -84,6 +93,8 @@ export function StaffDirectoryClient({ initialStaff, nonStaffUsers, departments,
 
         return matchesSearch && matchesCategory && matchesDepartment && matchesGrade;
     });
+
+    const paginatedStaff = filteredStaff.slice((page - 1) * pageSize, page * pageSize);
 
     return (
         <div className="space-y-8">
@@ -253,6 +264,11 @@ export function StaffDirectoryClient({ initialStaff, nonStaffUsers, departments,
                                 </div>
                             </div>
                         </div>
+                        <DataTablePagination
+                            totalItems={filteredStaff.length}
+                            pageSize={pageSize}
+                            currentPage={page}
+                        />
                         <div className="overflow-x-auto">
                             <table className="w-full text-left">
                                 <thead className="bg-slate-50 text-slate-500 text-[10px] uppercase font-black tracking-widest border-b border-slate-100">
@@ -266,7 +282,7 @@ export function StaffDirectoryClient({ initialStaff, nonStaffUsers, departments,
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100 italic">
-                                    {filteredStaff.map((s) => (
+                                    {paginatedStaff.map((s) => (
                                         <tr key={s.id} className="hover:bg-slate-50 transition-colors">
                                             <td className="px-6 py-4">
                                                 <div className="flex items-center gap-3">
@@ -320,6 +336,15 @@ export function StaffDirectoryClient({ initialStaff, nonStaffUsers, departments,
                                                     <Button
                                                         variant="ghost"
                                                         size="sm"
+                                                        onClick={() => setEditStaff(s)}
+                                                        className="h-8 px-3 text-[10px] font-black uppercase tracking-widest text-emerald-600 hover:bg-emerald-50 rounded-lg flex items-center justify-center gap-1"
+                                                    >
+                                                        <Edit className="w-3.5 h-3.5" />
+                                                        Edit
+                                                    </Button>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
                                                         onClick={() => setSelectedUser(s.user)}
                                                         className="h-8 px-3 text-[10px] font-black uppercase tracking-widest text-indigo-600 hover:bg-indigo-50 rounded-lg"
                                                     >
@@ -329,7 +354,7 @@ export function StaffDirectoryClient({ initialStaff, nonStaffUsers, departments,
                                             )}
                                         </tr>
                                     ))}
-                                    {filteredStaff.length === 0 && (
+                                    {paginatedStaff.length === 0 && (
                                         <tr>
                                             <td colSpan={canManageStaff ? 6 : 5} className="px-6 py-12 text-center text-slate-400 italic">
                                                 No staff records found matching your search.
@@ -339,6 +364,11 @@ export function StaffDirectoryClient({ initialStaff, nonStaffUsers, departments,
                                 </tbody>
                             </table>
                         </div>
+                        <DataTablePagination
+                            totalItems={filteredStaff.length}
+                            pageSize={pageSize}
+                            currentPage={page}
+                        />
                     </div>
                 </div>
             </div>
@@ -347,6 +377,13 @@ export function StaffDirectoryClient({ initialStaff, nonStaffUsers, departments,
                 user={selectedUser} 
                 onClose={() => setSelectedUser(null)}
                 onUpdate={() => router.refresh()}
+            />
+
+            <StaffProfileEditorModal 
+                staff={editStaff} 
+                departments={departments} 
+                onClose={() => setEditStaff(null)} 
+                onUpdate={() => router.refresh()} 
             />
 
             {/* Staff ID QR Modal */}

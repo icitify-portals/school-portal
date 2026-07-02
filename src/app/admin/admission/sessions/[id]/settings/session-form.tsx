@@ -92,15 +92,15 @@ export default function AdmissionSessionForm({ session, isNew }: Props) {
 
     return (
         <form onSubmit={handleSubmit} className="space-y-8">
-            <div className="grid gap-6 md:grid-cols-2">
+            <div className="grid gap-4 md:grid-cols-2">
                 {/* Basic Settings */}
-                <Card>
-                    <CardHeader>
+                <Card className=" border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
+                    <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-6">
                         <CardTitle className="text-lg flex items-center gap-2">
                             <Settings2 className="h-5 w-5 text-indigo-500" /> Basic Configuration
                         </CardTitle>
                     </CardHeader>
-                    <CardContent className="space-y-4">
+                    <CardContent className="space-y-4 p-6">
                         <div className="space-y-2">
                             <Label htmlFor="name">Session Name</Label>
                             <Input
@@ -174,13 +174,13 @@ export default function AdmissionSessionForm({ session, isNew }: Props) {
                 </Card>
 
                 {/* Branding & Instructions */}
-                <Card>
-                    <CardHeader>
+                <Card className=" border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
+                    <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-6">
                         <CardTitle className="text-lg flex items-center gap-2">
                             <Sparkles className="h-5 w-5 text-amber-500" /> Instructions & Branding
                         </CardTitle>
                     </CardHeader>
-                    <CardContent className="space-y-4">
+                    <CardContent className="space-y-4 p-6">
                         <div className="space-y-2">
                             <Label htmlFor="logo">Branding Logo URL</Label>
                             <Input
@@ -205,8 +205,8 @@ export default function AdmissionSessionForm({ session, isNew }: Props) {
             </div>
 
             {/* Dynamic Field Builder */}
-            <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0">
+            <Card className=" border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 bg-slate-50/50 border-b border-slate-100 p-6">
                     <CardTitle className="text-lg flex items-center gap-2">
                         <Plus className="h-5 w-5 text-emerald-500" /> Custom Form Fields
                     </CardTitle>
@@ -214,7 +214,7 @@ export default function AdmissionSessionForm({ session, isNew }: Props) {
                         <Plus className="h-4 w-4 mr-2" /> Add Field
                     </Button>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-4 p-6">
                     {fields.length === 0 ? (
                         <div className="text-center py-6 text-slate-500 bg-slate-50 rounded-lg border-2 border-dashed">
                             No custom fields added. Only standard profile data will be collected.

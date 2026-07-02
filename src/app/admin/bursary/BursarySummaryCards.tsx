@@ -88,21 +88,26 @@ export function BursarySummaryCards({ session }: { session?: string }) {
     ];
 
     return (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             {cards.map((card, index) => (
-                <Card key={index} className="border-none shadow-sm overflow-hidden relative">
-                    <div className={cn("absolute right-0 top-0 w-24 h-24 rounded-full -mr-8 -mt-8 opacity-20", card.bg)} />
+                <Card key={index} className="border border-white/40 shadow-xl shadow-slate-200/50 bg-white/60 backdrop-blur-3xl rounded-[2rem] overflow-hidden relative group hover:shadow-2xl transition-all">
+                    <div className={cn("absolute right-0 top-0 w-32 h-32 rounded-full -mr-10 -mt-10 opacity-30 transition-transform group-hover:scale-110 duration-500", card.bg)} />
                     <CardContent className="p-6 relative z-10">
                         <div className="flex items-center justify-between mb-4">
-                            <div className={cn("p-2.5 rounded-lg", card.bg)}>
-                                <card.icon className={cn("w-5 h-5", card.color)} />
+                            <div className={cn("p-3 rounded-2xl border shadow-sm", 
+                                card.color.includes("emerald") ? "bg-emerald-50 text-emerald-700 border-emerald-250" :
+                                card.color.includes("blue") ? "bg-blue-50 text-blue-700 border-blue-250" :
+                                card.color.includes("rose") ? "bg-rose-50 text-rose-700 border-rose-250" :
+                                "bg-amber-50 text-amber-700 border-amber-250"
+                            )}>
+                                <card.icon className="w-6 h-6" />
                             </div>
                         </div>
-                        <p className="text-sm font-medium text-slate-500 mb-1">{card.title}</p>
-                        <h3 className="text-2xl font-bold text-slate-900 mb-2">
+                        <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">{card.title}</p>
+                        <h3 className="text-2xl font-black text-slate-800 tracking-tight mb-2">
                             {formatCurrency(card.amount)}
                         </h3>
-                        <p className="text-xs text-slate-400">
+                        <p className="text-xs font-bold text-slate-500 uppercase tracking-wide opacity-80">
                             {card.trend}
                         </p>
                     </CardContent>

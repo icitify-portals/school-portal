@@ -29,26 +29,26 @@ export default async function AdmissionSessionsPage() {
                 </Link>
             </div>
 
-            <div className="grid gap-6 md:grid-cols-3">
-                <Card className="bg-indigo-50 border-indigo-100">
-                    <CardHeader className="pb-2">
+            <div className="grid gap-4 md:grid-cols-3">
+                <Card className="-100 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
+                    <CardHeader className="pb-2 bg-slate-50/50 border-b border-slate-100 p-6">
                         <CardTitle className="text-sm font-medium text-indigo-600 uppercase tracking-wider">Total Cycles</CardTitle>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className=" p-6">
                         <div className="text-3xl font-bold text-indigo-900">{sessions.length}</div>
                     </CardContent>
                 </Card>
-                <Card className="bg-emerald-50 border-emerald-100">
-                    <CardHeader className="pb-2">
+                <Card className="-100 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
+                    <CardHeader className="pb-2 bg-slate-50/50 border-b border-slate-100 p-6">
                         <CardTitle className="text-sm font-medium text-emerald-600 uppercase tracking-wider">Active Cycles</CardTitle>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className=" p-6">
                         <div className="text-3xl font-bold text-emerald-900">{sessions.filter(s => s.isActive).length}</div>
                     </CardContent>
                 </Card>
             </div>
 
-            <Card className="overflow-hidden border-slate-200">
+            <Card className="overflow-hidden -200 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                 <CardHeader className="bg-slate-50 border-b border-slate-200">
                     <CardTitle className="text-lg text-slate-700 font-semibold">Configured Sessions</CardTitle>
                 </CardHeader>
@@ -86,8 +86,7 @@ export default async function AdmissionSessionsPage() {
                                         <TableCell>
                                             <div className="flex items-center gap-1 font-medium text-slate-900">
                                                 <CreditCard className="h-3.5 w-3.5 text-slate-400" />
-                                                // @ts-expect-error - TS2304: Auto-suppressed for build
-                                                {settings?.base_currency || '₦'}{Number(session.applicationFee).toLocaleString()}
+                                                ₦{Number(session.applicationFee).toLocaleString()}
                                             </div>
                                         </TableCell>
                                         <TableCell>

@@ -72,12 +72,12 @@ export default function LibraryFinancePage() {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <Card className={`col-span-1 border-2 shadow-none ${hasFines ? 'bg-rose-50 border-rose-200' : 'bg-emerald-50 border-emerald-200'}`}>
-                    <CardHeader>
+                    <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-6">
                         <CardTitle className="text-lg">Total Amount Due</CardTitle>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className=" p-6">
                         <div className="text-4xl font-black mb-4">
                             ₦{totalOwed}
                         </div>
@@ -105,12 +105,12 @@ export default function LibraryFinancePage() {
                     </CardContent>
                 </Card>
 
-                <Card className="col-span-1 md:col-span-2 shadow-md">
-                    <CardHeader>
+                <Card className="col-span-1 md:col-span-2 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
+                    <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-6">
                         <CardTitle>Overdue Fines Ledger</CardTitle>
                         <CardDescription>Detailed breakdown of daily late fees.</CardDescription>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className=" p-6">
                         {fines.length === 0 ? (
                             <div className="text-center py-12 text-muted-foreground">
                                 No unpaid fines found.

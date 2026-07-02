@@ -50,19 +50,22 @@ export default async function StudentTranscriptPage(props: {
     }
 
     return (
-        <div className="min-h-screen bg-slate-50 p-4 lg:p-8">
+        <div className="min-h-screen bg-transparent p-4 sm:p-6 lg:p-8">
             <div className="max-w-[210mm] mx-auto space-y-6">
-                <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-white p-6 rounded-2xl shadow-sm border border-slate-200 no-print">
-                    <div className="flex items-center gap-4">
-                        <div className="p-3 bg-indigo-50 rounded-xl">
-                            <FileText className="w-6 h-6 text-indigo-600" />
+                <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-slate-900 text-white p-8 rounded-[3rem] shadow-2xl border border-slate-800 no-print relative overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-r from-indigo-600/30 to-purple-600/30 opacity-50 mix-blend-overlay" />
+                    <div className="flex items-center gap-4 relative z-10">
+                        <div className="p-4 bg-white/10 rounded-2xl border border-white/20 backdrop-blur-md">
+                            <FileText className="w-8 h-8 text-indigo-400 drop-shadow-md" />
                         </div>
                         <div>
-                            <h1 className="text-2xl font-black text-slate-900 tracking-tight">Academic Transcript</h1>
-                            <p className="text-sm text-slate-500 font-medium">Official student personal transcript record</p>
+                            <h1 className="text-3xl font-black text-white tracking-tighter uppercase italic drop-shadow-md">Academic Transcript</h1>
+                            <p className="text-xs text-slate-300 font-bold uppercase tracking-widest mt-1 opacity-90">Official student personal transcript record</p>
                         </div>
                     </div>
-                    <TranscriptDownloader fileName={`Transcript_${data.student.matricNumber.replace(/\//g, '_')}`} />
+                    <div className="relative z-10">
+                        <TranscriptDownloader fileName={`Transcript_${data.student.matricNumber.replace(/\//g, '_')}`} />
+                    </div>
                 </div>
 
                 <TranscriptFilters sessions={sessions} />

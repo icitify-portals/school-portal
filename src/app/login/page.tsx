@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { getBrandingSettings } from "@/actions/settings";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { GraduationCap, AlertCircle, Loader2 } from "lucide-react";
@@ -13,7 +14,15 @@ export default function LoginPage() {
     const [password, setPassword] = useState("");
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
+    const [branding, setBranding] = useState<any>(null);
     const router = useRouter();
+
+    useEffect(() => {
+        // Fetch branding settings safely from client
+        getBrandingSettings()
+            .then(data => setBranding(data))
+            .catch(err => console.error(err));
+    }, []);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -28,9 +37,15 @@ export default function LoginPage() {
             });
 
             if (result?.error) {
-                setError("Invalid email or password");
+                // Use the explicit error message if provided by auth, otherwise fallback
+                const message = (result as any).code || result.error;
+                if (message === "CredentialsSignin") {
+                    setError("Invalid email or password");
+                } else {
+                    setError(message);
+                }
             } else {
-                router.push("/");
+                router.push("/dashboard");
                 router.refresh();
             }
         } catch (err) {
@@ -42,17 +57,19 @@ export default function LoginPage() {
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
-            <Card className="w-full max-w-md border-none shadow-xl">
-                <CardHeader className="text-center space-y-1">
+            <Card className="w-full max-w-md border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
+                <CardHeader className="text-center space-y-1 bg-slate-50/50 border-b border-slate-100 p-6">
                     <div className="flex justify-center mb-4">
-                        <div className="p-3 bg-blue-600 rounded-2xl text-white">
-                            <GraduationCap className="w-10 h-10" />
-                        </div>
+                        <img 
+                            src={branding?.INST_LOGO || "https://fssibadan.edu.ng/wp-content/uploads/2026/06/header-logo.png"} 
+                            alt={branding?.INST_NAME || "School Logo"} 
+                            className="h-16 object-contain" 
+                        />
                     </div>
                     <CardTitle className="text-2xl font-bold text-slate-900">Sign In</CardTitle>
-                    <CardDescription>Enter your credentials to access the School Portal</CardDescription>
+                    <CardDescription>Enter your credentials to access the FSS Portal</CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className=" p-6">
                     <form onSubmit={handleSubmit} className="space-y-4" suppressHydrationWarning>
                         {error && (
                             <div className="p-3 bg-red-50 text-red-600 rounded-lg text-sm flex gap-2 items-center">
@@ -61,13 +78,13 @@ export default function LoginPage() {
                             </div>
                         )}
                         <div className="space-y-2">
-                            <label className="text-sm font-semibold text-slate-700">Email Address</label>
+                            <label className="text-sm font-semibold text-slate-700">Email / Matric Number</label>
                             <input
-                                type="email"
+                                type="text"
                                 required
                                 suppressHydrationWarning
                                 className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-slate-900 bg-white"
-                                placeholder="name@school.edu"
+                                placeholder="name@school.edu or Matric No"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                             />
@@ -102,57 +119,19 @@ export default function LoginPage() {
                         </Button>
                     </form>
 
-                    {/* OAuth Divider */}
-                    <div className="flex items-center gap-3 my-5">
-                        <div className="flex-1 h-px bg-slate-200"></div>
-                        <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">or continue with</span>
-                        <div className="flex-1 h-px bg-slate-200"></div>
-                    </div>
-
-                    {/* OAuth Buttons */}
-                    <div className="grid grid-cols-2 gap-3">
-                        <button
-                            onClick={() => signIn("google", { callbackUrl: "/" })}
-                            className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition-all font-bold text-sm text-slate-700"
-                        >
-                            <svg className="w-5 h-5" viewBox="0 0 24 24">
-                                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" />
-                                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-                                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
-                                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+                    {/* Back to Homepage Button */}
+                    <div className="mt-6">
+                        <Link href="/" className="flex items-center justify-center gap-2 w-full px-4 py-3 rounded-xl border-2 border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition-all font-bold text-sm text-slate-700">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                             </svg>
-                            Google
-                        </button>
-                        <button
-                            onClick={() => signIn("microsoft-entra-id", { callbackUrl: "/" })}
-                            className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition-all font-bold text-sm text-slate-700"
-                        >
-                            <svg className="w-5 h-5" viewBox="0 0 24 24">
-                                <rect x="1" y="1" width="10" height="10" fill="#F25022" />
-                                <rect x="13" y="1" width="10" height="10" fill="#7FBA00" />
-                                <rect x="1" y="13" width="10" height="10" fill="#00A4EF" />
-                                <rect x="13" y="13" width="10" height="10" fill="#FFB900" />
-                            </svg>
-                            Microsoft
-                        </button>
-                    </div>
-
-                    <p className="text-center text-sm text-slate-600 pt-4">
-                        Don&apos;t have an account?{" "}
-                        <Link href="/register" className="text-blue-600 font-bold hover:underline">
-                            Register Now
+                            Back to Homepage
                         </Link>
-                    </p>
+                    </div>
+
+
                 </CardContent>
             </Card>
-            <div className="text-center mt-6">
-                <Link href="/" className="inline-flex items-center gap-2 text-sm font-bold text-slate-400 hover:text-slate-800 transition-colors uppercase tracking-widest text-[10px]">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                    </svg>
-                    Back to Homepage
-                </Link>
-            </div>
         </div>
     );
 }

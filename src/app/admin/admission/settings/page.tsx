@@ -62,7 +62,7 @@ export default function AdmissionSettingsPage() {
                 <p className="text-slate-500">Manage external integrations and admission configurations.</p>
             </div>
 
-            <Card className="border border-slate-200/80 shadow-sm overflow-hidden">
+            <Card className="-200/80 overflow-hidden border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                 <CardHeader className="bg-gradient-to-r from-slate-50 to-white border-b border-slate-100">
                     <div className="flex items-center gap-3">
                         <div className="bg-indigo-100 p-2 rounded-lg text-indigo-700 animate-pulse">
@@ -151,8 +151,8 @@ export default function AdmissionSettingsPage() {
 
             <AdmissionPolicyEditor />
 
-            <Card>
-                <CardHeader>
+            <Card className=" border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
+                <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-6">
                     <div className="flex items-center gap-3">
                         <div className="bg-green-100 p-2 rounded-lg">
                             <RefreshCw className="w-6 h-6 text-green-700" />
@@ -163,7 +163,7 @@ export default function AdmissionSettingsPage() {
                         </div>
                     </div>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-4 p-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
                             <Label htmlFor="apiKey">API Key</Label>
@@ -262,12 +262,12 @@ function AdmissionPolicyEditor() {
     };
 
     return (
-        <Card>
-            <CardHeader>
+        <Card className=" border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
+            <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-6">
                 <CardTitle>Admission Policy Configuration</CardTitle>
                 <CardDescription>Set cut-off marks and catchment areas per programme.</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-6 p-6">
                 <div className="space-y-2">
                     <Label>Select Programme</Label>
                     <Select value={selectedProgId} onValueChange={handleProgChange}>
@@ -387,12 +387,12 @@ function ExaminationBodiesManager() {
     };
 
     return (
-        <Card>
-            <CardHeader>
+        <Card className=" border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
+            <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-6">
                 <CardTitle>Examination Bodies</CardTitle>
                 <CardDescription>Manage the allowed examination bodies (e.g. WAEC, NECO) available for O-Level submission.</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-6 p-6">
                 <div className="flex gap-2">
                     <Input 
                         placeholder="e.g. WAEC" 

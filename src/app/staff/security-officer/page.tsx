@@ -195,10 +195,10 @@ export default function SecurityOfficerPage() {
 
       {/* Main Console Area */}
       {activeTab === "gate" && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Scan Controls */}
           <div className="md:col-span-2 space-y-6">
-            <Card className="border-none shadow-md bg-white">
+            <Card className=" border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
               <CardHeader className="border-b border-slate-50 bg-slate-50/50">
                 <CardTitle className="text-lg font-bold text-slate-900">Gate Access Control Scanner</CardTitle>
                 <CardDescription>Select gate name, log direction, and scan/submit the vehicle's QR pass.</CardDescription>
@@ -296,7 +296,7 @@ export default function SecurityOfficerPage() {
 
           {/* Quick Stats sidebar */}
           <div className="space-y-4">
-            <Card className="border-none shadow-md bg-white">
+            <Card className=" border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
               <CardHeader className="pb-3 border-b border-slate-50 bg-slate-50/50">
                 <CardTitle className="text-sm font-bold text-slate-800">Traffic Quick-Feed</CardTitle>
               </CardHeader>
@@ -329,7 +329,7 @@ export default function SecurityOfficerPage() {
       )}
 
       {activeTab === "patrol" && (
-        <Card className="border-none shadow-md bg-white max-w-2xl mx-auto">
+        <Card className="max-w-2xl mx-auto border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
           <CardHeader className="border-b border-slate-50 bg-slate-50/50">
             <CardTitle className="text-lg font-bold text-slate-900">Security Checkpoint Patrol Log</CardTitle>
             <CardDescription>Select the strategic position you are scanning and write any security remarks/notes.</CardDescription>
@@ -373,7 +373,7 @@ export default function SecurityOfficerPage() {
       )}
 
       {activeTab === "incident" && (
-        <Card className="border-none shadow-md bg-white max-w-2xl mx-auto">
+        <Card className="max-w-2xl mx-auto border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
           <CardHeader className="border-b border-slate-50 bg-slate-50/50 pb-5">
             <CardTitle className="text-lg font-bold text-slate-900">Security Incident Form</CardTitle>
             <CardDescription>Log security incidents or hazardous situations directly to the CSO command office.</CardDescription>
@@ -461,9 +461,9 @@ export default function SecurityOfficerPage() {
       )}
 
       {activeTab === "feed" && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Patrol Log Feed */}
-          <Card className="border-none shadow-md bg-white">
+          <Card className=" border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
             <CardHeader className="border-b border-slate-50 bg-slate-50/50">
               <CardTitle className="text-md font-bold text-slate-900 flex items-center gap-1.5">
                 <ClipboardList className="w-5 h-5 text-indigo-600" /> Recent Patrol Logs
@@ -492,7 +492,7 @@ export default function SecurityOfficerPage() {
           </Card>
 
           {/* Gate scan Feed */}
-          <Card className="border-none shadow-md bg-white">
+          <Card className=" border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
             <CardHeader className="border-b border-slate-50 bg-slate-50/50">
               <CardTitle className="text-md font-bold text-slate-900 flex items-center gap-1.5">
                 <Car className="w-5 h-5 text-indigo-600" /> Gate Traffic Activity

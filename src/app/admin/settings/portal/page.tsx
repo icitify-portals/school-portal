@@ -125,6 +125,7 @@ export default function PortalSettingsPage() {
                 INST_NAME: "SchoolPortal",
                 INST_MOTTO: "",
                 INST_LOGO: "",
+                SCHOOL_ADDRESS: "",
                 COLOR_PRIMARY: "#4f46e5",
                 COLOR_SECONDARY: "#0f172a"
             });
@@ -431,6 +432,15 @@ export default function PortalSettingsPage() {
                                         />
                                     </div>
                                     <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1 italic">School Address</label>
+                                        <Input
+                                            value={branding.SCHOOL_ADDRESS || ""}
+                                            onChange={(e) => setBranding({ ...branding, SCHOOL_ADDRESS: e.target.value })}
+                                            placeholder="e.g. 123 Education Way, City"
+                                            className="rounded-2xl border-slate-200 py-6 font-bold shadow-sm focus:ring-indigo-500"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
                                         <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1 italic">Portal Homepage Page</label>
                                         <Select
                                             value={branding.HOMEPAGE_PAGE_ID || "default"}
@@ -578,7 +588,7 @@ export default function PortalSettingsPage() {
             {
                 showAddModal && (
                     <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                        <Card className="w-full max-w-md border-none shadow-2xl rounded-[3rem] overflow-hidden animate-in fade-in zoom-in duration-300">
+                        <Card className="w-full max-w-md border-none shadow-2xl rounded-[3rem] overflow-hidden animate-in fade-in zoom-in duration-300 bg-white">
                             <CardHeader className="bg-slate-900 text-white p-8">
                                 <CardTitle className="text-2xl font-black italic uppercase">Initialize Session</CardTitle>
                             </CardHeader>
@@ -667,7 +677,7 @@ export default function PortalSettingsPage() {
             {
                 showEditModal && (
                     <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                        <Card className="w-full max-w-md border-none shadow-2xl rounded-[3rem] overflow-hidden animate-in fade-in zoom-in duration-300">
+                        <Card className="w-full max-w-md border-none shadow-2xl rounded-[3rem] overflow-hidden animate-in fade-in zoom-in duration-300 bg-white">
                             <CardHeader className="bg-slate-900 text-white p-8">
                                 <CardTitle className="text-2xl font-black italic uppercase">Edit Session</CardTitle>
                             </CardHeader>

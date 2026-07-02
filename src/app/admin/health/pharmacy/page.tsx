@@ -28,12 +28,12 @@ export default async function PharmacyPage() {
                 </div>
             </div>
 
-            <Card className="border-t-4 border-t-emerald-500 shadow-md">
-                <CardHeader>
+            <Card className="-4 -emerald-500 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
+                <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-6">
                     <CardTitle>Current Stock</CardTitle>
                     <CardDescription>A live overview of all medical items in the clinic.</CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className=" p-6">
                     {inventory.length === 0 ? (
                         <div className="text-center py-12 text-muted-foreground bg-gray-50 rounded-lg border border-dashed">
                             <Pill className="w-12 h-12 mx-auto text-gray-400 mb-4" />

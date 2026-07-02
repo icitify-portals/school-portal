@@ -16,7 +16,7 @@ export default async function HRStaffDirectoryPage() {
     const nonStaffUsers = allUsers.filter(u => !staff.some(s => s.userId === u.id) && u.role !== 'admin');
 
     return (
-        <div className="p-8 bg-slate-50 min-h-screen">
+        <div className="p-4 sm:p-6 lg:p-8 min-h-screen bg-transparent pb-32">
             <StaffDirectoryClient
                 initialStaff={staff}
                 nonStaffUsers={nonStaffUsers}

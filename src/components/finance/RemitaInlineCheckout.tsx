@@ -30,7 +30,7 @@ export function RemitaInlineCheckout({
     const [isPaying, setIsPaying] = useState(false);
 
     const makePayment = () => {
-        if (!isScriptLoaded || typeof window === "undefined") {
+        if (typeof window === "undefined") {
             console.error("Remita script not loaded yet");
             return;
         }
@@ -75,13 +75,13 @@ export function RemitaInlineCheckout({
         <>
             <Script 
                 src="https://remitademo.net/payment/v1/remita-pay-inline.bundle.js" 
-                strategy="lazyOnload"
+                strategy="afterInteractive"
                 onLoad={() => setIsScriptLoaded(true)}
             />
 
             <Button
                 onClick={makePayment}
-                disabled={!isScriptLoaded || isPaying}
+                disabled={isPaying}
                 className="w-full py-6 font-semibold flex items-center justify-center gap-2 text-white bg-indigo-600 hover:bg-indigo-500 border border-indigo-500/35"
             >
                 {isPaying ? (

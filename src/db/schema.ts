@@ -266,6 +266,7 @@ export const students = mysqlTable('students', {
   genotype: varchar('genotype', { length: 10 }),
   nationality: varchar('nationality', { length: 100 }).default('Nigerian'),
   modeOfEntry: varchar('mode_of_entry', { length: 50 }).default('UTME'),
+  studyMode: mysqlEnum('study_mode', ['full-time', 'part-time']).default('full-time'),
   graduatedAt: datetime('graduated_at'),
   classOfDegree: varchar('class_of_degree', { length: 100 }),
   deletedAt: datetime('deleted_at'),
@@ -346,7 +347,7 @@ export const medicalDispensations = mysqlTable('medical_dispensations', {
   notes: text('notes'),
 });
 
-export const medicalExcusats = mysqlTable('medical_excusats', {
+export const medicalExcuses = mysqlTable('medical_excuses', {
   id: int('id').autoincrement().primaryKey(),
   studentId: int('student_id').references(() => students.id).notNull(),
   issuedBy: int('issued_by').references(() => users.id).notNull(),
@@ -6497,13 +6498,13 @@ export const medicalDispensationsRelations = relations(medicalDispensations, ({ 
   }),
 }));
 
-export const medicalExcusatsRelations = relations(medicalExcusats, ({ one }) => ({
+export const medicalExcusesRelations = relations(medicalExcuses, ({ one }) => ({
   student: one(students, {
-    fields: [medicalExcusats.studentId],
+    fields: [medicalExcuses.studentId],
     references: [students.id],
   }),
   issuer: one(users, {
-    fields: [medicalExcusats.issuedBy],
+    fields: [medicalExcuses.issuedBy],
     references: [users.id],
   }),
 }));
@@ -7049,3 +7050,16 @@ export const developerSubscriptionsRelations = relations(developerSubscriptions,
   student: one(students, { fields: [developerSubscriptions.studentId], references: [students.id] }),
   session: one(academicSessions, { fields: [developerSubscriptions.academicSessionId], references: [academicSessions.id] }),
 }));
+
+// --- SYSTEM BACKUPS ---
+export const system_backups = mysqlTable('system_backups', {
+  id: int('id').autoincrement().primaryKey(),
+  filename: varchar('filename', { length: 255 }).notNull(),
+  sizeBytes: int('size_bytes'),
+  type: mysqlEnum('type', ['database', 'files']).default('database').notNull(),
+  status: mysqlEnum('status', ['pending', 'in_progress', 'completed', 'failed']).default('pending').notNull(),
+  wasabiUrl: text('wasabi_url'),
+  errorMessage: text('error_message'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
+});

@@ -131,17 +131,17 @@ export default function BackupSettings() {
                 </Button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* AWS S3 */}
-                <Card>
-                    <CardHeader className="pb-3">
+                <Card className=" border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
+                    <CardHeader className="pb-3 bg-slate-50/50 border-b border-slate-100 p-6">
                         <CardTitle className="text-base flex items-center gap-2">
                             <Cloud className="w-4 h-4 text-orange-500" />
                             Amazon S3
                         </CardTitle>
                         <CardDescription>Primary cloud backup storage</CardDescription>
                     </CardHeader>
-                    <CardContent className="space-y-4">
+                    <CardContent className="space-y-4 p-6">
                         <div className="space-y-1">
                             <Label>Region</Label>
                             <Input value={s3Config.region} onChange={e => setS3Config({...s3Config, region: e.target.value})} placeholder="us-east-1" />
@@ -165,15 +165,15 @@ export default function BackupSettings() {
                 </Card>
 
                 {/* Wasabi */}
-                <Card>
-                    <CardHeader className="pb-3">
+                <Card className=" border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
+                    <CardHeader className="pb-3 bg-slate-50/50 border-b border-slate-100 p-6">
                         <CardTitle className="text-base flex items-center gap-2">
                             <Cloud className="w-4 h-4 text-green-500" />
                             Wasabi Hot Storage
                         </CardTitle>
                         <CardDescription>Secondary redundant backup storage</CardDescription>
                     </CardHeader>
-                    <CardContent className="space-y-4">
+                    <CardContent className="space-y-4 p-6">
                         <div className="space-y-1">
                             <Label>Region</Label>
                             <Input value={wasabiConfig.region} onChange={e => setWasabiConfig({...wasabiConfig, region: e.target.value})} placeholder="us-east-1" />
@@ -198,15 +198,15 @@ export default function BackupSettings() {
             </div>
 
             {/* Backup History */}
-            <Card>
-                <CardHeader>
+            <Card className=" border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
+                <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-6">
                     <CardTitle className="text-base flex items-center gap-2">
                         <HardDrive className="w-4 h-4 text-slate-500" />
                         Local Backup History
                     </CardTitle>
                     <CardDescription>Recent backups stored on the server.</CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className=" p-6">
                     <div className="divide-y divide-slate-100">
                         {history.length === 0 ? (
                             <p className="py-4 text-center text-sm text-slate-400 font-mono italic">No backup records found.</p>

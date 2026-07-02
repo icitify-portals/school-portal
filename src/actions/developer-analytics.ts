@@ -4,7 +4,7 @@ import mysql from "mysql2/promise";
 import { hasRole } from "@/lib/rbac";
 
 const baseUri = process.env.DATABASE_URL || "mysql://root:@localhost:3306/school_portal";
-const databases = ["school_portal", "portal_AJAT_ACADEMY", "portal_CITADEL_UNI"];
+const databases = ["school_portal"];
 
 export async function getCrossTenantDeveloperRevenue() {
     if (!(await hasRole("icitify_dev"))) throw new Error("Unauthorized");

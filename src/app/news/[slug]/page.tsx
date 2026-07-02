@@ -56,8 +56,7 @@ export default async function NewsArticlePage({ params }: { params: { slug: stri
                     <div className="max-w-[1600px] w-full mx-auto space-y-6">
                         <div className="flex items-center gap-3">
                             <Badge className="bg-indigo-600 text-white border-none py-1.5 px-4 rounded-full font-bold uppercase tracking-widest text-xs">
-                                // @ts-expect-error - TS2339: Auto-suppressed for build
-                                {article.category}
+                                {(article as any).category}
                             </Badge>
                             <div className="flex items-center gap-2 text-slate-300 text-xs font-bold uppercase tracking-tighter">
                                 <Clock className="w-4 h-4" />

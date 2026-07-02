@@ -7,8 +7,18 @@ import { v4 as uuidv4 } from "uuid";
 import bcrypt from "bcryptjs";
 import { NotificationService } from "@/services/NotificationService";
 import { sendEmail } from "@/lib/mail";
+import { auth } from "@/auth";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+
+export async function getAuthUser() {
+    try {
+        const session = await auth();
+        return session?.user || null;
+    } catch (e) {
+        return null;
+    }
+}
 
 export async function forgotPassword(email: string) {
     try {
@@ -47,7 +57,7 @@ export async function forgotPassword(email: string) {
                 </div>
                 <p style="color: #64748b; font-size: 14px;">This link will expire in 1 hour. If you didn't request this, you can safely ignore this email.</p>
                 <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 30px 0;">
-                <p style="color: #94a3b8; font-size: 12px;">School Portal Identity Services</p>
+                <p style="color: #94a3b8; font-size: 12px;">FSS Portal Identity Services</p>
             </div>`
         );
 
@@ -93,8 +103,6 @@ export async function resetPasswordWithToken(token: string, password: string) {
     }
 }
 
-import { auth } from '@/auth';
-
 export async function changePasswordForced(password: string) {
     try {
         const session = await auth();
@@ -114,4 +122,3 @@ export async function changePasswordForced(password: string) {
         return { success: false, error: 'An unexpected error occurred. Please try again.' };
     }
 }
-

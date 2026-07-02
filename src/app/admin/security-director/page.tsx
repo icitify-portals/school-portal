@@ -160,8 +160,8 @@ export default function SecurityDirectorPage() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="border-none shadow-md bg-white">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className=" border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
           <CardContent className="p-6 flex items-center justify-between">
             <div>
               <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Active Patrol Rounds</p>
@@ -174,7 +174,7 @@ export default function SecurityDirectorPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-none shadow-md bg-white">
+        <Card className=" border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
           <CardContent className="p-6 flex items-center justify-between">
             <div>
               <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Open Incident Cases</p>
@@ -187,7 +187,7 @@ export default function SecurityDirectorPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-none shadow-md bg-white">
+        <Card className=" border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
           <CardContent className="p-6 flex items-center justify-between">
             <div>
               <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Today's Gate Traffic</p>
@@ -200,7 +200,7 @@ export default function SecurityDirectorPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-none shadow-md bg-white">
+        <Card className=" border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
           <CardContent className="p-6 flex items-center justify-between">
             <div>
               <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Pending Vehicle Passes</p>
@@ -215,12 +215,12 @@ export default function SecurityDirectorPage() {
       </div>
 
       {/* Main Grid Sections */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         
         {/* Left Column: Vehicle passes & Strategic checkpoints */}
         <div className="lg:col-span-2 space-y-6">
           {/* Pending Vehicle Passes */}
-          <Card className="border-none shadow-md bg-white">
+          <Card className=" border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
             <CardHeader className="border-b border-slate-50 bg-slate-50/50">
               <CardTitle className="text-md font-bold text-slate-900">Vehicle Pass Permits Pending Approval</CardTitle>
               <CardDescription>Review plate numbers and vehicle details submitted by staff and students.</CardDescription>
@@ -280,7 +280,7 @@ export default function SecurityDirectorPage() {
           </Card>
 
           {/* Incident Cases Management */}
-          <Card className="border-none shadow-md bg-white">
+          <Card className=" border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
             <CardHeader className="border-b border-slate-50 bg-slate-50/50">
               <CardTitle className="text-md font-bold text-slate-900">Incident Logs & Case Files</CardTitle>
               <CardDescription>Track active security alerts. Update statuses or write case resolution logs.</CardDescription>
@@ -358,7 +358,7 @@ export default function SecurityDirectorPage() {
         {/* Right Column: Strategic positions creation */}
         <div className="space-y-6">
           {/* Create Strategic Position Checkpoint */}
-          <Card className="border-none shadow-md bg-white">
+          <Card className=" border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
             <CardHeader className="border-b border-slate-50 bg-slate-50/50">
               <CardTitle className="text-md font-bold text-slate-900">Add Patrol Checkpoint</CardTitle>
               <CardDescription>Define a strategic campus position and print its matching QR Placard.</CardDescription>
@@ -426,7 +426,7 @@ export default function SecurityDirectorPage() {
       {/* Incident resolution Modal */}
       {selectedIncident && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 flex items-center justify-center p-4 backdrop-blur-sm">
-          <Card className="w-full max-w-md border-none shadow-2xl bg-white animate-in zoom-in-95 duration-150">
+          <Card className="w-full max-w-md animate-in zoom-in-95 duration-150 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
             <CardHeader className="border-b border-slate-50 bg-slate-50/50">
               <CardTitle className="text-lg font-bold text-slate-900">Update Case File Notes</CardTitle>
               <CardDescription>Change status and enter investigation reports for: <strong>"{selectedIncident.title}"</strong></CardDescription>
@@ -472,7 +472,7 @@ export default function SecurityDirectorPage() {
       {/* Checkpoint Print Placard Modal */}
       {selectedCheckpointForPrint && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 flex items-center justify-center p-4 backdrop-blur-sm">
-          <Card className="w-full max-w-sm border-none shadow-2xl bg-white text-slate-900 animate-in zoom-in-95 duration-150">
+          <Card className="w-full max-w-sm text-slate-900 animate-in zoom-in-95 duration-150 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
             <CardHeader className="border-b border-slate-50 bg-slate-50/50 flex flex-row justify-between items-center">
               <div>
                 <CardTitle className="text-sm font-bold">Patrol Checkpoint Placard</CardTitle>

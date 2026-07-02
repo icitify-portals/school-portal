@@ -1,7 +1,7 @@
 import { getStudentHealthData } from "@/actions/health";
 import { getStudentByUserId } from "@/actions/students";
 import { db } from "@/db/db";
-import { medicalExcusats } from "@/db/schema";
+import { medicalExcuses } from "@/db/schema";
 import { eq, and, lte, gte } from "drizzle-orm";
 import { auth } from "@/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -29,29 +29,29 @@ export default async function HealthDashboardPage() {
                 'bg-amber-50 text-amber-600 border-amber-200';
 
     const now = new Date();
-    const activeExcusats = await db.select().from(medicalExcusats).where(
+    const activeExcuses = await db.select().from(medicalExcuses).where(
         and(
-            eq(medicalExcusats.studentId, studentData.id),
-            eq(medicalExcusats.status, 'active'),
-            lte(medicalExcusats.startDate, now),
-            gte(medicalExcusats.endDate, now)
+            eq(medicalExcuses.studentId, studentData.id),
+            eq(medicalExcuses.status, 'active'),
+            lte(medicalExcuses.startDate, now),
+            gte(medicalExcuses.endDate, now)
         )
     ).limit(1);
-    const activeExcusat = activeExcusats[0];
+    const activeExcuse = activeExcuses[0];
 
     const StatusIcon =
         health.healthStatus === 'cleared' ? CheckCircle2 :
             health.healthStatus === 'flagged' ? AlertCircle : Clock;
 
     return (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {activeExcusat && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {activeExcuse && (
                 <div className="col-span-1 md:col-span-3 bg-red-600 text-white p-6 rounded-xl flex items-center gap-4 shadow-lg animate-in fade-in slide-in-from-top-4">
                     <AlertCircle className="w-10 h-10 flex-shrink-0" />
                     <div>
                         <h2 className="text-xl font-bold tracking-tight">Active Medical Sick Leave</h2>
                         <p className="text-red-100 font-medium mt-1">
-                            You are currently on an Official Medical Sick Leave from {activeExcusat.startDate.toLocaleDateString()} to {activeExcusat.endDate.toLocaleDateString()}.
+                            You are currently on an Official Medical Sick Leave from {activeExcuse.startDate.toLocaleDateString()} to {activeExcuse.endDate.toLocaleDateString()}.
                             Your academic attendances and activities have been excused.
                         </p>
                     </div>
@@ -75,13 +75,13 @@ export default async function HealthDashboardPage() {
                 </CardContent>
             </Card>
 
-            <Card className="border-none shadow-sm border border-slate-100/50">
-                <CardHeader>
+            <Card className="-100/50 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
+                <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-6">
                     <CardTitle className="text-sm font-bold uppercase tracking-widest text-slate-500 flex items-center gap-2">
                         <Droplet className="w-4 h-4 text-rose-500" /> Basic Info
                     </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-4 p-6">
                     <div className="flex justify-between items-center bg-slate-50 p-3 rounded-lg">
                         <span className="text-xs font-semibold text-slate-500">Blood Group</span>
                         <span className="font-bold text-slate-900">{health.bloodGroup || 'N/A'}</span>
@@ -99,18 +99,18 @@ export default async function HealthDashboardPage() {
                 </CardContent>
             </Card>
 
-            <Card className="col-span-1 md:col-span-2 border-none shadow-sm border border-slate-100/50 bg-slate-900 text-white relative overflow-hidden">
+            <Card className="col-span-1 md:col-span-2 -100/50 text-white relative overflow-hidden border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                 <div className="absolute top-0 right-0 p-8 opacity-10">
                     <Activity className="w-48 h-48" />
                 </div>
-                <CardHeader>
+                <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-6">
                     <CardTitle className="text-sm font-bold uppercase tracking-widest text-emerald-400 flex items-center gap-2">
                         <HeartPulse className="w-4 h-4" /> Latest Vitals Readout
                     </CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className=" p-6">
                     {latestVitals ? (
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-4 relative z-10">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4 relative z-10">
                             <div>
                                 <p className="text-[10px] uppercase font-bold text-slate-400 mb-1">Blood Pressure</p>
                                 <p className="text-3xl font-black">{latestVitals.bloodPressure || '--'}</p>

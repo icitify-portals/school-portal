@@ -83,10 +83,10 @@ export default function NexusControlCenter() {
         </div>
       </div>
 
-      <div className="grid grid-cols-12 gap-8">
+      <div className="grid grid-cols-12 gap-4">
         {/* Main Orchestration Panel */}
         <div className="col-span-12 lg:col-span-8 space-y-8">
-           <div className="grid grid-cols-2 gap-6">
+           <div className="grid grid-cols-2 gap-4">
               <button 
                 onClick={() => setSetupMode(false)}
                 className={`p-8 rounded-[40px] border transition-all text-left space-y-4 ${!setupMode ? 'bg-indigo-600 border-indigo-400 text-white shadow-2xl' : 'bg-slate-900 border-slate-800 hover:border-slate-700'}`}
@@ -123,7 +123,7 @@ export default function NexusControlCenter() {
                  <h2 className="text-2xl font-bold text-white uppercase tracking-tight">Sync Configuration</h2>
               </div>
 
-              <div className="grid grid-cols-2 gap-8 relative z-10">
+              <div className="grid grid-cols-2 gap-4 relative z-10">
                  <div className="space-y-3">
                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Target Node ID</label>
                     <input 

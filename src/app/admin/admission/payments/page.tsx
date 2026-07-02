@@ -58,38 +58,50 @@ export default function AdmissionPaymentsPage() {
     });
 
     return (
-        <div className="p-8 max-w-[1600px] w-full mx-auto space-y-8">
-            <div className="flex justify-between items-center">
-                <div>
-                    <h1 className="text-4xl font-black text-slate-900 flex items-center gap-4 italic">
-                        <CreditCard className="w-10 h-10 text-indigo-600" />
-                        ADMISSION REVENUE
-                    </h1>
-                    <p className="text-slate-500 font-bold uppercase tracking-widest text-[10px] mt-2">Verify and confirm intake application payments</p>
+        <div className="p-4 sm:p-6 lg:p-8 min-h-screen">
+            <div className="max-w-[1600px] w-full mx-auto space-y-8">
+                {/* Header Section */}
+                <div className="relative overflow-hidden bg-slate-900 rounded-3xl p-8 lg:p-12 text-white shadow-2xl border border-slate-800">
+                    <div className="absolute inset-0 bg-gradient-to-r from-emerald-600/30 to-teal-600/30 opacity-50 mix-blend-overlay" />
+                    <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                        <div>
+                            <div className="flex items-center gap-3 mb-2">
+                                <CreditCard className="w-12 h-12 text-emerald-400" />
+                                <h1 className="text-4xl lg:text-5xl font-black tracking-tighter drop-shadow-md italic uppercase">
+                                    ADMISSION REVENUE
+                                </h1>
+                            </div>
+                            <p className="text-slate-300 font-medium tracking-tight max-w-2xl text-lg opacity-90">
+                                Verify and confirm intake application payments
+                            </p>
+                        </div>
+                        
+                        <div className="flex bg-white/10 p-1.5 rounded-2xl backdrop-blur-md border border-white/10 shadow-inner gap-2 flex-wrap">
+                            <button className="flex items-center gap-2 px-6 py-4 text-xs font-black uppercase tracking-widest rounded-xl transition-all whitespace-nowrap bg-emerald-600 text-white hover:bg-emerald-500 shadow-lg hover:-translate-y-1">
+                                <Download className="w-4 h-4" /> Export Ledger
+                            </button>
+                        </div>
+                    </div>
                 </div>
-                <Button className="bg-slate-900 text-white font-black px-6 py-6 rounded-2xl shadow-lg transition-all flex gap-3 uppercase text-xs tracking-widest">
-                    <Download className="w-5 h-5" /> Export Ledger
-                </Button>
-            </div>
 
             <div className="flex gap-4">
                 <div className="relative flex-1">
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                     <input 
-                        className="w-full pl-12 pr-4 py-5 rounded-2xl border-none shadow-sm focus:ring-2 focus:ring-indigo-500 bg-white font-bold text-sm"
+                        className="w-full pl-12 pr-4 py-5 rounded-2xl border-none shadow-sm focus:ring-2 focus:ring-emerald-500 bg-white/80 backdrop-blur-3xl font-bold text-sm"
                         placeholder="Search by candidate name or form type..."
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                     />
                 </div>
-                <div className="flex bg-white p-1.5 rounded-2xl shadow-sm border border-slate-50">
+                <div className="flex bg-white/60 backdrop-blur-3xl p-1.5 rounded-2xl shadow-sm border border-slate-200">
                     {["all", "pending", "paid"].map((f) => (
                         <button
                             key={f}
                             onClick={() => setFilter(f)}
                             className={cn(
                                 "px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
-                                filter === f ? "bg-indigo-600 text-white shadow-lg" : "text-slate-400 hover:text-slate-600"
+                                filter === f ? "bg-emerald-600 text-white shadow-lg" : "text-slate-500 hover:text-slate-700 hover:bg-white/50"
                             )}
                         >
                             {f}
@@ -98,7 +110,7 @@ export default function AdmissionPaymentsPage() {
                 </div>
             </div>
 
-            <Card className="border-none shadow-xl rounded-[2.5rem] overflow-hidden">
+            <Card className="border border-white/40 shadow-xl shadow-slate-200/50 bg-white/60 backdrop-blur-3xl rounded-[3rem] overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full text-left">
                         <thead>
@@ -150,8 +162,7 @@ export default function AdmissionPaymentsPage() {
                                                 </div>
                                             </td>
                                             <td className="px-8 py-6 font-black text-slate-900 italic">
-                                                // @ts-expect-error - TS2304: Auto-suppressed for build
-                                                {settings?.base_currency || '₦'}{app.template.applicationFee.toLocaleString()}
+                                                ₦{app.template.applicationFee.toLocaleString()}
                                             </td>
                                             <td className="px-8 py-6">
                                                 <span className={cn(
@@ -185,6 +196,7 @@ export default function AdmissionPaymentsPage() {
                     </table>
                 </div>
             </Card>
+        </div>
         </div>
     );
 }

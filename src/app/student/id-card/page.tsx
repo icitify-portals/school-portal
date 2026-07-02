@@ -101,7 +101,7 @@ export default async function StudentIDCardPage() {
 
                 {/* Information & Actions */}
                 <div className="space-y-8">
-                    <Card className="border-none shadow-sm rounded-[32px] overflow-hidden bg-white">
+                    <Card className="-[32px] overflow-hidden border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                         <CardHeader className="bg-slate-900 text-white p-8">
                             <CardTitle className="text-xl font-black uppercase italic tracking-tight">HR Issuance Policy</CardTitle>
                             <CardDescription className="text-slate-400 font-medium">Identity governance and access control guidelines.</CardDescription>
@@ -148,7 +148,7 @@ export default async function StudentIDCardPage() {
                         </CardContent>
                     </Card>
 
-                    <Card className="border-none shadow-sm rounded-[32px] overflow-hidden bg-white">
+                    <Card className="-[32px] overflow-hidden border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                         <CardHeader className="p-8 border-b border-slate-50">
                             <CardTitle className="text-lg font-black uppercase italic tracking-tight">Coordination Services</CardTitle>
                         </CardHeader>

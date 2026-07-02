@@ -208,12 +208,12 @@ export default function SecurityGateway() {
           )}
         </div>
 
-        <div className="grid lg:grid-cols-3 gap-6">
+        <div className="grid lg:grid-cols-3 gap-4">
           {/* Scanner Section */}
           <div className="lg:col-span-2 space-y-4">
             {/* Scanner Card */}
-            <Card className="bg-slate-800 border-slate-700 text-white">
-              <CardHeader className="flex flex-row items-center justify-between">
+            <Card className="-700 text-white border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
+              <CardHeader className="flex flex-row items-center justify-between bg-slate-50/50 border-b border-slate-100 p-6">
                 <CardTitle className="flex items-center gap-2">
                   <Camera className="w-5 h-5" />
                   QR Scanner
@@ -233,7 +233,7 @@ export default function SecurityGateway() {
                   </Button>
                 </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className=" p-6">
                 <div className="relative">
                   {isScanning ? (
                     <div className="relative rounded-lg overflow-hidden bg-black">
@@ -298,8 +298,7 @@ export default function SecurityGateway() {
                           {lastScan.finesOwed && lastScan.finesOwed !== "0.00" && (
                             <div className="flex items-center gap-2 text-amber-600">
                               <DollarSign className="w-4 h-4" />
-                              // @ts-expect-error - TS2304: Auto-suppressed for build
-                              <span className="font-medium">Outstanding Fines: {settings?.base_currency || '₦'}{lastScan.finesOwed}</span>
+                              <span className="font-medium">Outstanding Fines: ₦{lastScan.finesOwed}</span>
                             </div>
                           )}
                         </div>
@@ -325,8 +324,8 @@ export default function SecurityGateway() {
 
           {/* Recent Activity */}
           <div className="space-y-4">
-            <Card className="bg-slate-800 border-slate-700 text-white">
-              <CardHeader className="flex flex-row items-center justify-between">
+            <Card className="-700 text-white border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
+              <CardHeader className="flex flex-row items-center justify-between bg-slate-50/50 border-b border-slate-100 p-6">
                 <CardTitle className="flex items-center gap-2">
                   <Clock className="w-5 h-5" />
                   Recent Activity
@@ -335,7 +334,7 @@ export default function SecurityGateway() {
                   <RefreshCw className="w-4 h-4" />
                 </Button>
               </CardHeader>
-              <CardContent>
+              <CardContent className=" p-6">
                 <div className="space-y-3 max-h-96 overflow-y-auto">
                   {recentScans.length === 0 ? (
                     <p className="text-center text-slate-400 py-8">No recent activity</p>
@@ -366,11 +365,11 @@ export default function SecurityGateway() {
             </Card>
 
             {/* Quick Stats */}
-            <Card className="bg-slate-800 border-slate-700 text-white">
-              <CardHeader>
+            <Card className="-700 text-white border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
+              <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-6">
                 <CardTitle className="text-lg">Today's Statistics</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className=" p-6">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="text-center">
                     <div className="text-2xl font-bold text-green-500">

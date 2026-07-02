@@ -129,9 +129,9 @@ export default async function ResultsPage() {
         console.error("Results page data fetch error:", error);
     }
     const branding = {
-        name: brandingRows.find(r => r.settingKey === 'institution_name')?.settingValue || "School Portal",
+        name: brandingRows.find(r => r.settingKey === 'institution_name')?.settingValue || "FSS Portal",
         motto: brandingRows.find(r => r.settingKey === 'institution_motto')?.settingValue || "Excellence in Learning",
-        logoUrl: brandingRows.find(r => r.settingKey === 'institution_logo')?.settingValue || undefined
+        logoUrl: brandingRows.find(r => r.settingKey === 'institution_logo')?.settingValue || "https://fssibadan.edu.ng/wp-content/uploads/2026/06/header-logo.png"
     };
 
     // 6. Fetch Official Signatures (Server Side)

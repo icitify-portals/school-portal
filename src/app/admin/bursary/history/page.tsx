@@ -94,7 +94,7 @@ export default function TransactionHistoryPage() {
                 </div>
             </div>
 
-            <Card className="border-none shadow-sm overflow-hidden">
+            <Card className="overflow-hidden border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                 <div className="overflow-x-auto">
                     <table className="w-full text-left">
                         <thead>
@@ -138,8 +138,7 @@ export default function TransactionHistoryPage() {
                                             </div>
                                         </td>
                                         <td className="px-8 py-4 font-black text-slate-900">
-                                            // @ts-expect-error - TS2304: Auto-suppressed for build
-                                            {settings?.base_currency || '₦'}{parseFloat(tx.amount).toLocaleString()}
+                                            ₦{parseFloat(tx.amount).toLocaleString()}
                                         </td>
                                         <td className="px-8 py-4 text-xs">
                                             <div className="flex items-center gap-1.5">

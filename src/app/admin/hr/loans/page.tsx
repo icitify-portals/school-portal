@@ -60,137 +60,157 @@ export default function HRLoansDashboard() {
     );
 
     return (
-        <div className="space-y-6">
-            <div>
-                <h1 className="text-2xl font-bold tracking-tight text-slate-900">Staff Financials Tracking</h1>
-                <p className="text-slate-500">Read-only view of staff loans and advances for HR records and payroll deductions tracking.</p>
-            </div>
-
-            <div className="flex items-center gap-2 max-w-sm">
-                <div className="relative flex-1">
-                    <Search className="absolute left-2 top-2.5 h-4 w-4 text-slate-400" />
-                    <Input 
-                        placeholder="Search staff by name or ID..." 
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-8"
-                    />
+    <div className="p-4 sm:p-6 lg:p-8 min-h-screen bg-transparent">
+      <div className="max-w-[1600px] w-full mx-auto space-y-10 text-slate-800">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 bg-slate-900 text-white rounded-[3rem] p-8 lg:p-12 shadow-2xl relative overflow-hidden border border-slate-800">
+            <div className="absolute inset-0 bg-gradient-to-r from-emerald-650/30 to-indigo-600/30 opacity-50 mix-blend-overlay" />
+            <div className="relative z-10">
+                <div className="flex items-center gap-4 mb-2">
+                    <Wallet className="w-12 h-12 text-indigo-400 drop-shadow-md" />
+                    <h2 className="text-4xl lg:text-5xl font-black tracking-tighter uppercase italic drop-shadow-md">
+                        Staff Financials
+                    </h2>
                 </div>
-                <Button variant="outline" size="icon"><Filter className="w-4 h-4" /></Button>
+                <p className="text-slate-300 font-medium mt-1 uppercase text-sm tracking-wide opacity-90">
+                    Read-only tracking of staff loans and advances for HR records and payroll deductions
+                </p>
             </div>
-
-            <Tabs defaultValue="loans" className="w-full">
-                <TabsList className="mb-4">
-                    <TabsTrigger value="loans" className="flex items-center"><Wallet className="w-4 h-4 mr-2" /> Staff Loans</TabsTrigger>
-                    <TabsTrigger value="advances" className="flex items-center"><CreditCard className="w-4 h-4 mr-2" /> Cash Advances</TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="loans">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Staff Loan Applications</CardTitle>
-                            <CardDescription>Track the status of term loans across the organization.</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            {loading ? (
-                                <div className="flex justify-center p-8"><Loader2 className="w-6 h-6 animate-spin text-slate-400" /></div>
-                            ) : (
-                                <div className="overflow-x-auto">
-                                    <table className="w-full text-sm text-left">
-                                        <thead className="bg-slate-50 border-b text-slate-500 uppercase text-xs font-bold">
-                                            <tr>
-                                                <th className="px-6 py-4">Date</th>
-                                                <th className="px-6 py-4">Staff Member</th>
-                                                <th className="px-6 py-4">Loan Type</th>
-                                                <th className="px-6 py-4">Amount (₦)</th>
-                                                <th className="px-6 py-4">Period</th>
-                                                <th className="px-6 py-4">Status</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {filteredLoans.length === 0 ? (
-                                                <tr>
-                                                    <td colSpan={6} className="px-6 py-8 text-center text-slate-500 italic">No loan applications found.</td>
-                                                </tr>
-                                            ) : (
-                                                filteredLoans.map(loan => (
-                                                    <tr key={loan.id} className="border-b last:border-0 hover:bg-slate-50">
-                                                        <td className="px-6 py-4 whitespace-nowrap text-slate-500">
-                                                            {loan.createdAt ? format(new Date(loan.createdAt), 'MMM dd, yyyy') : '-'}
-                                                        </td>
-                                                        <td className="px-6 py-4">
-                                                            <div className="font-medium text-slate-900">
-                                                                {loan.staff?.user?.firstName} {loan.staff?.user?.lastName}
-                                                            </div>
-                                                            <div className="text-xs text-slate-500">{loan.staff?.staffId}</div>
-                                                        </td>
-                                                        <td className="px-6 py-4 font-medium text-slate-700">{loan.template?.name || "General Loan"}</td>
-                                                        <td className="px-6 py-4 font-medium text-slate-900">{Number(loan.amount).toLocaleString()}</td>
-                                                        <td className="px-6 py-4 text-slate-600">{loan.repaymentPeriodMonths} months</td>
-                                                        <td className="px-6 py-4">{getStatusBadge(loan.status)}</td>
-                                                    </tr>
-                                                ))
-                                            )}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            )}
-                        </CardContent>
-                    </Card>
-                </TabsContent>
-
-                <TabsContent value="advances">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Cash Advances</CardTitle>
-                            <CardDescription>Track short-term cash advances taken by staff for official purposes.</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            {loading ? (
-                                <div className="flex justify-center p-8"><Loader2 className="w-6 h-6 animate-spin text-slate-400" /></div>
-                            ) : (
-                                <div className="overflow-x-auto">
-                                    <table className="w-full text-sm text-left">
-                                        <thead className="bg-slate-50 border-b text-slate-500 uppercase text-xs font-bold">
-                                            <tr>
-                                                <th className="px-6 py-4">Date</th>
-                                                <th className="px-6 py-4">Staff Member</th>
-                                                <th className="px-6 py-4">Purpose</th>
-                                                <th className="px-6 py-4">Amount (₦)</th>
-                                                <th className="px-6 py-4">Status</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {filteredAdvances.length === 0 ? (
-                                                <tr>
-                                                    <td colSpan={5} className="px-6 py-8 text-center text-slate-500 italic">No cash advance requests found.</td>
-                                                </tr>
-                                            ) : (
-                                                filteredAdvances.map(adv => (
-                                                    <tr key={adv.id} className="border-b last:border-0 hover:bg-slate-50">
-                                                        <td className="px-6 py-4 whitespace-nowrap text-slate-500">
-                                                            {adv.createdAt ? format(new Date(adv.createdAt), 'MMM dd, yyyy') : '-'}
-                                                        </td>
-                                                        <td className="px-6 py-4">
-                                                            <div className="font-medium text-slate-900">
-                                                                {adv.staff?.user?.firstName} {adv.staff?.user?.lastName}
-                                                            </div>
-                                                            <div className="text-xs text-slate-500">{adv.staff?.staffId}</div>
-                                                        </td>
-                                                        <td className="px-6 py-4 font-medium text-slate-700 max-w-xs truncate" title={adv.purpose}>{adv.purpose}</td>
-                                                        <td className="px-6 py-4 font-medium text-slate-900">{Number(adv.requestedAmount).toLocaleString()}</td>
-                                                        <td className="px-6 py-4">{getStatusBadge(adv.status)}</td>
-                                                    </tr>
-                                                ))
-                                            )}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            )}
-                        </CardContent>
-                    </Card>
-                </TabsContent>
-            </Tabs>
+            
+            <div className="relative z-10 w-full sm:w-80 shrink-0">
+                <Search className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                    type="text"
+                    placeholder="Search staff by name or ID..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full pl-12 pr-4 py-3 bg-white/10 border border-white/25 rounded-[1.2rem] text-sm font-bold text-white placeholder-slate-400 focus:bg-white focus:text-slate-900 outline-none transition-all shadow-inner"
+                />
+            </div>
         </div>
-    );
+
+        <Tabs defaultValue="loans" className="w-full space-y-8">
+            <TabsList className="bg-white/60 backdrop-blur-3xl border border-white/60 p-2 rounded-[2rem] h-auto shadow-xl shadow-slate-200/40 inline-flex">
+                <TabsTrigger 
+                    value="loans" 
+                    className="flex items-center gap-2 px-8 py-4 rounded-[1.5rem] text-sm font-black uppercase tracking-wider text-slate-500 data-[state=active]:bg-slate-900 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all"
+                >
+                    <Wallet className="w-4 h-4" /> Staff Loans
+                </TabsTrigger>
+                <TabsTrigger 
+                    value="advances" 
+                    className="flex items-center gap-2 px-8 py-4 rounded-[1.5rem] text-sm font-black uppercase tracking-wider text-slate-500 data-[state=active]:bg-slate-900 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all"
+                >
+                    <CreditCard className="w-4 h-4" /> Cash Advances
+                </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="loans">
+                <Card className="border border-white/40 shadow-xl shadow-slate-200/50 bg-white/60 backdrop-blur-3xl rounded-[3rem] overflow-hidden">
+                    <CardHeader className="p-8 lg:p-10 border-b border-white/40 bg-white/40">
+                        <CardTitle className="text-2xl font-black text-slate-900 italic tracking-tight uppercase">Staff Loan Applications</CardTitle>
+                        <CardDescription className="text-slate-500 font-bold uppercase tracking-wider text-xs">Track the status of term loans across the organization.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                        {loading ? (
+                            <div className="flex justify-center py-20"><Loader2 className="w-10 h-10 animate-spin text-indigo-650" /></div>
+                        ) : (
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left">
+                                    <thead>
+                                        <tr className="bg-slate-900 text-white text-[10px] font-extrabold uppercase tracking-widest border-b border-slate-800">
+                                            <th className="px-8 py-6">Date</th>
+                                            <th className="px-8 py-6">Staff Member</th>
+                                            <th className="px-8 py-6">Loan Type</th>
+                                            <th className="px-8 py-6">Amount</th>
+                                            <th className="px-8 py-6">Period</th>
+                                            <th className="px-8 py-6">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-white/40 bg-white/20">
+                                        {filteredLoans.length === 0 ? (
+                                            <tr>
+                                                <td colSpan={6} className="px-8 py-16 text-center text-slate-500 font-bold uppercase tracking-widest text-xs">No loan applications found.</td>
+                                            </tr>
+                                        ) : (
+                                            filteredLoans.map(loan => (
+                                                <tr key={loan.id} className="hover:bg-white/40 transition-colors group">
+                                                    <td className="px-8 py-6 whitespace-nowrap text-sm font-bold text-slate-500 font-mono">
+                                                        {loan.createdAt ? format(new Date(loan.createdAt), 'MMM dd, yyyy') : '-'}
+                                                    </td>
+                                                    <td className="px-8 py-6">
+                                                        <div className="font-black text-slate-900 text-base">
+                                                            {loan.staff?.user?.firstName} {loan.staff?.user?.lastName}
+                                                        </div>
+                                                        <div className="text-[10px] text-slate-500 font-black uppercase tracking-wider mt-0.5">{loan.staff?.staffId}</div>
+                                                    </td>
+                                                    <td className="px-8 py-6 text-sm font-extrabold text-slate-700 uppercase tracking-wide">{loan.template?.name || "General Loan"}</td>
+                                                    <td className="px-8 py-6 text-lg font-black text-slate-900">₦{Number(loan.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                                                    <td className="px-8 py-6 text-sm font-bold text-slate-655">{loan.repaymentPeriodMonths} months</td>
+                                                    <td className="px-8 py-6">{getStatusBadge(loan.status)}</td>
+                                                </tr>
+                                            ))
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+            </TabsContent>
+
+            <TabsContent value="advances">
+                <Card className="border border-white/40 shadow-xl shadow-slate-200/50 bg-white/60 backdrop-blur-3xl rounded-[3rem] overflow-hidden">
+                    <CardHeader className="p-8 lg:p-10 border-b border-white/40 bg-white/40">
+                        <CardTitle className="text-2xl font-black text-slate-900 italic tracking-tight uppercase">Cash Advances</CardTitle>
+                        <CardDescription className="text-slate-500 font-bold uppercase tracking-wider text-xs">Track short-term cash advances taken by staff for official purposes.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                        {loading ? (
+                            <div className="flex justify-center py-20"><Loader2 className="w-10 h-10 animate-spin text-indigo-655" /></div>
+                        ) : (
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left">
+                                    <thead>
+                                        <tr className="bg-slate-900 text-white text-[10px] font-extrabold uppercase tracking-widest border-b border-slate-800">
+                                            <th className="px-8 py-6">Date</th>
+                                            <th className="px-8 py-6">Staff Member</th>
+                                            <th className="px-8 py-6">Purpose</th>
+                                            <th className="px-8 py-6">Amount</th>
+                                            <th className="px-8 py-6">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-white/40 bg-white/20">
+                                        {filteredAdvances.length === 0 ? (
+                                            <tr>
+                                                <td colSpan={5} className="px-8 py-16 text-center text-slate-500 font-bold uppercase tracking-widest text-xs">No cash advance requests found.</td>
+                                            </tr>
+                                        ) : (
+                                            filteredAdvances.map(adv => (
+                                                <tr key={adv.id} className="hover:bg-white/40 transition-colors group">
+                                                    <td className="px-8 py-6 whitespace-nowrap text-sm font-bold text-slate-500 font-mono">
+                                                        {adv.createdAt ? format(new Date(adv.createdAt), 'MMM dd, yyyy') : '-'}
+                                                    </td>
+                                                    <td className="px-8 py-6">
+                                                        <div className="font-black text-slate-900 text-base">
+                                                            {adv.staff?.user?.firstName} {adv.staff?.user?.lastName}
+                                                        </div>
+                                                        <div className="text-[10px] text-slate-500 font-black uppercase tracking-wider mt-0.5">{adv.staff?.staffId}</div>
+                                                    </td>
+                                                    <td className="px-8 py-6 font-bold text-slate-700 max-w-xs truncate" title={adv.purpose}>{adv.purpose}</td>
+                                                    <td className="px-8 py-6 text-lg font-black text-slate-900">₦{Number(adv.requestedAmount).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                                                    <td className="px-8 py-6">{getStatusBadge(adv.status)}</td>
+                                                </tr>
+                                            ))
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+            </TabsContent>
+        </Tabs>
+      </div>
+    </div>
+  );
 }

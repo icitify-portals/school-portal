@@ -24,7 +24,7 @@ export default async function AdminIDCardManagementPage() {
                     <p className="text-slate-500 font-medium tracking-tight">ICT Unit management dashboard for official identity cards.</p>
                 </div>
                 <div className="flex gap-4">
-                    <Card className="bg-white border-none shadow-sm px-6 py-4 flex items-center gap-4 rounded-2xl">
+                    <Card className="px-6 py-4 flex items-center gap-4 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                         <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center">
                             <ShieldCheck className="w-6 h-6 text-indigo-600" />
                         </div>
@@ -36,7 +36,7 @@ export default async function AdminIDCardManagementPage() {
                 </div>
             </div>
 
-            <Card className="border-none shadow-sm rounded-[32px] overflow-hidden bg-white">
+            <Card className="-[32px] overflow-hidden border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                 <CardHeader className="p-8 border-b border-slate-50 flex flex-row items-center justify-between space-y-0">
                     <div>
                         <CardTitle className="text-xl font-black uppercase italic tracking-tight">Issued ID Cards</CardTitle>
