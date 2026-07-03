@@ -166,7 +166,7 @@ export default function AdminStudentLedgerPage() {
                     <CardContent className="p-6">
                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Paid (Till Date)</p>
                         <h3 className="text-2xl font-black mt-2 text-slate-900">
-                            {settings?.base_currency || ₦}{summary?.totalPaid?.toLocaleString() || "0.00"}
+                            {settings?.base_currency || "₦"}{summary?.totalPaid?.toLocaleString() || "0.00"}
                         </h3>
                     </CardContent>
                 </Card>
