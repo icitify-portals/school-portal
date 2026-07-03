@@ -230,16 +230,16 @@ export default function AdminStudentLedgerPage() {
                                         </td>
                                         <td className="px-8 py-4">
                                             {parseFloat(entry.debit) > 0 ? (
-                                                <span className="text-sm font-bold text-red-600">{settings?.base_currency || ₦}{parseFloat(entry.debit).toLocaleString()}</span>
+                                                <span className="text-sm font-bold text-red-600">{settings?.base_currency || "₦"}{parseFloat(entry.debit).toLocaleString()}</span>
                                             ) : "-"}
                                         </td>
                                         <td className="px-8 py-4">
                                             {parseFloat(entry.credit) > 0 ? (
-                                                <span className="text-sm font-bold text-green-600">{settings?.base_currency || ₦}{parseFloat(entry.credit).toLocaleString()}</span>
+                                                <span className="text-sm font-bold text-green-600">{settings?.base_currency || "₦"}{parseFloat(entry.credit).toLocaleString()}</span>
                                             ) : "-"}
                                         </td>
                                         <td className="px-8 py-4 font-black text-slate-900 border-l border-slate-50">
-                                            {settings?.base_currency || ₦}{parseFloat(entry.balance).toLocaleString()}
+                                            {settings?.base_currency || "₦"}{parseFloat(entry.balance).toLocaleString()}
                                         </td>
                                         <td className="px-8 py-4 text-right print:hidden">
                                             <span className="text-[10px] font-mono text-slate-400 bg-slate-50 px-2 py-1 rounded">
