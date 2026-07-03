@@ -146,7 +146,7 @@ export default function AdminStudentLedgerPage() {
                             "text-2xl font-black mt-2",
                             (summary?.outstandingBalance || 0) > 0 ? "text-red-600" : "text-green-600"
                         )}>
-                            {settings?.base_currency || ₦}{summary?.outstandingBalance?.toLocaleString() || "0.00"}
+                            {settings?.base_currency || "₦"}{summary?.outstandingBalance?.toLocaleString() || "0.00"}
                         </h3>
                     </CardContent>
                 </Card>

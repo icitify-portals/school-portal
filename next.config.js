@@ -30,7 +30,7 @@ const securityHeaders = [
       // Fonts
       "font-src 'self' https://fonts.gstatic.com data:",
       // Images: allow self, data URIs, and common external image hosts
-      "img-src 'self' data: blob: https://images.unsplash.com https://*.unsplash.com https://cloudflare-ipfs.com",
+      "img-src 'self' data: blob: https://images.unsplash.com https://*.unsplash.com https://cloudflare-ipfs.com https://*.wasabisys.com",
       // Media (video/audio)
       "media-src 'self' blob:",
       // API + WebSocket connections
@@ -60,6 +60,7 @@ const securityHeaders = [
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  output: 'standalone',
   reactStrictMode: false,
   async headers() {
     return [
@@ -80,6 +81,11 @@ const nextConfig = {
       {
         protocol: 'https',
         hostname: '*.unsplash.com',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: '*.wasabisys.com',
         pathname: '/**',
       },
     ],
