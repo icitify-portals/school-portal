@@ -54,7 +54,7 @@ export default function RegisterPage() {
                         </div>
                     </div>
                     <CardTitle className="text-2xl font-bold text-slate-900">Create Account</CardTitle>
-                    <CardDescription>Join the School Management System</CardDescription>
+                    <CardDescription>Join Federal School of Statistics</CardDescription>
                 </CardHeader>
                 <CardContent className=" p-6">
                     <form onSubmit={handleSubmit} className="space-y-4" suppressHydrationWarning>
