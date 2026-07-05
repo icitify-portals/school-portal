@@ -438,7 +438,7 @@ const adminMenuItems: MenuItem[] = [
         subItems: [
             { name: "Master Analytics", href: "/admin/security-director/analytics" },
             { name: "Visitor Management", href: "/admin/security-director/visitors" },
-            { name: "Key Management", href: "/admin/security-director/key-management" },
+            { name: "2026/2027 Application Form", href: "/register" },
             { name: "Lost & Found", href: "/admin/security-director/lost-and-found" },
             { name: "Gate Scan & Patrols", href: "/staff/security-officer" },
         ]

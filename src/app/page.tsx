@@ -35,6 +35,9 @@ export default async function HomePage() {
                         </p>
                         
                         <div className="flex flex-wrap gap-4">
+                            <Link href="/register" className="inline-flex h-14 items-center justify-center rounded-2xl bg-emerald-600 px-8 text-sm font-bold uppercase tracking-wider text-white hover:bg-emerald-700 transition-colors shadow-xl shadow-emerald-500/25">
+                                2026/2027 Application Form <ArrowRight className="ml-2 w-4 h-4" />
+                            </Link>
                             {session ? (
                                 <Link href="/dashboard" className="inline-flex h-14 items-center justify-center rounded-2xl bg-indigo-600 px-8 text-sm font-bold uppercase tracking-wider text-white hover:bg-indigo-700 transition-colors shadow-xl shadow-indigo-500/25">
                                     Enter Dashboard <ArrowRight className="ml-2 w-4 h-4" />
@@ -44,9 +47,6 @@ export default async function HomePage() {
                                     Login to Portal <ArrowRight className="ml-2 w-4 h-4" />
                                 </Link>
                             )}
-                            <Link href="#guides" className="inline-flex h-14 items-center justify-center rounded-2xl border-2 border-white/10 bg-white/5 px-8 text-sm font-bold uppercase tracking-wider text-white hover:bg-white/10 transition-colors backdrop-blur-sm">
-                                View Guides
-                            </Link>
                         </div>
                     </div>
                 </div>
