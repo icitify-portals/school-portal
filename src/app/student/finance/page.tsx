@@ -493,12 +493,12 @@ export default function StudentFinancePage() {
                                                 </div>
                                             </div>
 
-                                            <div className="border-t border-slate-200/60 pt-4 mb-4">
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div className="border-t border-slate-200/60 pt-4 mb-4 max-h-32 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent pr-2">
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                                     {bill.items?.map((item) => (
-                                                        <div key={item.id} className="flex justify-between items-center text-xs">
-                                                            <span className="text-slate-500 font-medium">{item.feeItem?.name}</span>
-                                                            <span className="font-extrabold text-slate-800">₦{parseFloat(item.amount).toLocaleString()}</span>
+                                                        <div key={item.id} className="flex justify-between items-center text-xs bg-slate-50 p-2 rounded-lg">
+                                                            <span className="text-slate-500 font-medium truncate mr-2" title={item.feeItem?.name}>{item.feeItem?.name}</span>
+                                                            <span className="font-extrabold text-slate-800 shrink-0">₦{parseFloat(item.amount).toLocaleString()}</span>
                                                         </div>
                                                     ))}
                                                 </div>
@@ -543,23 +543,23 @@ export default function StudentFinancePage() {
             {/* Premium Checkout Modal */}
             {isCheckoutOpen && selectedBill && (
                 <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-50 flex items-center justify-center p-4">
-                    <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-lg overflow-hidden border border-slate-100 relative animate-in fade-in zoom-in-95 duration-200">
+                    <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-lg overflow-hidden border border-slate-100 relative animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col">
                         {/* Close button */}
                         <button 
                             onClick={() => setIsCheckoutOpen(false)}
-                            className="absolute top-6 right-6 p-2 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all"
+                            className="absolute top-6 right-6 p-2 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all z-10"
                         >
                             <X className="w-5 h-5" />
                         </button>
 
-                        <div className="p-8">
-                            <div className="flex items-center gap-3 mb-6">
-                                <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                        <div className="p-6 overflow-y-auto">
+                            <div className="flex items-center gap-3 mb-4">
+                                <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
                                     <CreditCard className="w-5 h-5" />
                                 </div>
                                 <div>
-                                    <h3 className="text-xl font-black text-slate-900">Secure Checkout</h3>
-                                    <p className="text-xs text-slate-500">Bill ID: {selectedBill.billNumber}</p>
+                                    <h3 className="text-lg font-black text-slate-900">Secure Checkout</h3>
+                                    <p className="text-[10px] text-slate-500">Bill ID: {selectedBill.billNumber}</p>
                                 </div>
                             </div>
 
@@ -572,17 +572,17 @@ export default function StudentFinancePage() {
                                     <p className="text-xs text-slate-400">Your student ledger balance has been credited successfully. Receipts are now viewable.</p>
                                 </div>
                             ) : (
-                                <form onSubmit={handleCheckoutSubmit} className="space-y-6">
+                                <form onSubmit={handleCheckoutSubmit} className="space-y-4">
                                     {/* Bill summary box */}
-                                    <div className="bg-slate-50 rounded-2xl p-6 border border-slate-100 space-y-3">
+                                    <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100 space-y-2">
                                         <div className="flex justify-between items-center text-xs">
-                                            <span className="text-slate-400 font-bold uppercase tracking-wider">Academic Term:</span>
+                                            <span className="text-slate-400 font-bold uppercase tracking-wider text-[9px]">Academic Term:</span>
                                             <span className="font-extrabold text-indigo-600 uppercase">
                                                 {AcademicNomenclature.getLabel(selectedBill.session?.currentSemester || "1", settings)}
                                             </span>
                                         </div>
                                         <div className="flex justify-between items-center text-xs">
-                                            <span className="text-slate-400 font-bold uppercase tracking-wider">Outstanding:</span>
+                                            <span className="text-slate-400 font-bold uppercase tracking-wider text-[9px]">Outstanding:</span>
                                             <span className="font-extrabold text-slate-800">
                                                 ₦{(parseFloat(selectedBill.totalAmount) - parseFloat(selectedBill.amountPaid || "0.00")).toLocaleString()}
                                             </span>
@@ -655,9 +655,9 @@ export default function StudentFinancePage() {
                                     })()}
 
                                     {/* Secure Payment Mode Select */}
-                                    <div className="space-y-3">
-                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Select Secure Payment Mode</label>
-                                        <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Select Secure Payment Mode</label>
+                                        <div className="grid grid-cols-2 gap-3">
                                             <button
                                                 type="button"
                                                 onClick={() => setPaymentMode('gateway')}
@@ -688,14 +688,6 @@ export default function StudentFinancePage() {
                                                 <p className="text-[9px] text-slate-400 leading-tight mt-1">Instant debit (Bal: ₦{walletBalanceText})</p>
                                             </button>
                                         </div>
-                                    </div>
-
-                                    {/* Direct cashier message */}
-                                    <div className="flex gap-2.5 p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                                        <ShieldAlert className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
-                                        <p className="text-[10px] text-slate-500 leading-relaxed font-medium">
-                                            Students have no manual bank teller deposit privileges. Manual verification handles bank drafts, cashiers, and tellers exclusively.
-                                        </p>
                                     </div>
 
                                     {/* Wallet validation message */}
