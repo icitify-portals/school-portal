@@ -12,7 +12,6 @@ export default function RegisterPage() {
         name: "",
         email: "",
         password: "",
-        role: "student",
     });
     const [error, setError] = useState("");
     const [success, setSuccess] = useState(false);
@@ -107,18 +106,7 @@ export default function RegisterPage() {
                                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                             />
                         </div>
-                        <div className="space-y-2">
-                            <label className="text-sm font-semibold text-slate-700">Role</label>
-                            <select
-                                className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all bg-white text-slate-900"
-                                value={formData.role}
-                                onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                            >
-                                <option value="student">Student</option>
-                                <option value="staff">Staff</option>
-                                <option value="admin">Admin</option>
-                            </select>
-                        </div>
+
                         <Button
                             type="submit"
                             disabled={loading || success}
