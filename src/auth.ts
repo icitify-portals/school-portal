@@ -5,7 +5,7 @@ class InvalidCredentialsError extends CredentialsSignin {
 }
 
 class AccountLockedError extends CredentialsSignin {
-    code = "Account is temporarily locked due to multiple failed attempts.";
+    code = "Account is temporarily locked due to multiple failed attempts. Please try again in 2 minutes.";
 }
 import { DrizzleAdapter } from "@auth/drizzle-adapter";
 import Credentials from "next-auth/providers/credentials";
@@ -184,7 +184,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                     let lockoutUntil = null;
                     if (attempts >= 3) {
                         // SECURITY FIX: Increased from 2 minutes to 15 minutes to resist brute-force attacks
-                        lockoutUntil = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes lockout
+                        lockoutUntil = new Date(Date.now() + 2 * 60 * 1000); // 2 minutes lockout
                     }
 
                     await db.update(users)
