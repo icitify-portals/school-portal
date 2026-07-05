@@ -32,8 +32,8 @@ export const ModernReceipt = ({ transaction, student, branding, bursar, arrears 
                 {/* Header */}
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10 border-b border-slate-100 pb-8">
                     <div className="flex items-center gap-4">
-                        {branding.INST_LOGO ? (
-                            <img src={branding.INST_LOGO} alt="Logo" className="w-16 h-16 object-contain rounded-2xl" />
+                        {(branding?.INST_LOGO?.trim() && branding.INST_LOGO !== 'null') ? (
+                            <img src={branding.INST_LOGO} alt="Logo" className="w-16 h-16 object-contain rounded-2xl" onError={(e) => { e.currentTarget.src = "/logo.png"; }} />
                         ) : (
                             <div className="w-16 h-16 bg-slate-900 rounded-2xl flex items-center justify-center text-white">
                                 <Landmark className="w-8 h-8" />
@@ -75,7 +75,8 @@ export const ModernReceipt = ({ transaction, student, branding, bursar, arrears 
                         <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-3">Transaction Details</h4>
                         <div className="space-y-1">
                             <p className="text-sm font-bold text-slate-700 uppercase">Method: {transaction.gateway === "wallet" ? "Student Wallet" : (transaction.gateway || 'Manual')}</p>
-                            <p className="text-xs font-mono text-slate-400 truncate max-w-[250px] ml-auto">Ref: {transaction.gatewayReference || "SCHOOL-INTERNAL"}</p>
+                            <p className="text-xs font-mono text-slate-400 truncate max-w-[250px] ml-auto">RRR: {transaction.gatewayReference || "N/A"}</p>
+                            <p className="text-xs font-mono text-slate-400 truncate max-w-[250px] ml-auto">Txn Ref: TRX-{transaction.id}</p>
                             <p className="text-xs text-slate-500">Status: <span className="text-emerald-500 font-bold uppercase italic">{transaction.status}</span></p>
                         </div>
                     </div>
@@ -140,7 +141,7 @@ export const ModernReceipt = ({ transaction, student, branding, bursar, arrears 
                         </div>
                         <div className="text-center">
                             <div className="w-20 h-20 bg-slate-50 rounded-full mb-2 mx-auto border-2 border-slate-100 flex items-center justify-center opacity-40 grayscale">
-                                {branding.INST_LOGO ? <img src={branding.INST_LOGO} className="w-10 opacity-30" /> : <Receipt className="w-8" />}
+                                {(branding?.INST_LOGO?.trim() && branding.INST_LOGO !== 'null') ? <img src={branding.INST_LOGO} className="w-10 opacity-30" onError={(e) => { e.currentTarget.src = "/logo.png"; }} /> : <Receipt className="w-8" />}
                             </div>
                             <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">School Stamp</p>
                         </div>
@@ -362,11 +363,11 @@ export const HeritageReceipt = ({ transaction, student, branding, bursar, arrear
             {/* Header: School Logo & Details */}
             <div className="flex flex-col md:flex-row justify-between items-center border-b-2 border-slate-800 pb-4 mb-6">
                 <div className="flex items-center gap-4">
-                    {branding.INST_LOGO ? (
-                        <img src={branding.INST_LOGO} alt="Logo" className="w-16 h-16 object-contain" />
+                    {(branding?.INST_LOGO?.trim() && branding.INST_LOGO !== 'null') ? (
+                        <img src={branding.INST_LOGO} alt="Logo" className="w-16 h-16 object-contain" onError={(e) => { e.currentTarget.src = "/logo.png"; }} />
                     ) : (
-                        <div className="w-14 h-14 bg-slate-900 flex items-center justify-center text-white rounded-xl">
-                            <Landmark className="w-7 h-7" />
+                        <div className="w-16 h-16 border-2 border-black flex items-center justify-center font-bold text-xs uppercase text-center p-1">
+                            Logo
                         </div>
                     )}
                     <div className="text-left">
@@ -384,15 +385,21 @@ export const HeritageReceipt = ({ transaction, student, branding, bursar, arrear
                 </div>
             </div>
 
-            {/* Receipt No & Date Row */}
             <div className="flex justify-between items-center mb-6">
-                <div className="flex items-center gap-4">
-                    <span className="bg-emerald-700 text-white font-extrabold uppercase tracking-widest text-xs py-1 px-4 rounded-lg">
-                        RECEIPT
-                    </span>
-                    <span className="font-mono text-sm font-bold text-slate-800 font-sans">
-                        No: <span className="text-red-600 font-bold">#{transaction.id?.toString().padStart(6, "0")}</span>
-                    </span>
+                <div className="flex flex-col gap-1">
+                    <div className="flex items-center gap-4">
+                        <span className="bg-emerald-700 text-white font-extrabold uppercase tracking-widest text-xs py-1 px-4 rounded-lg">
+                            RECEIPT
+                        </span>
+                        <span className="font-mono text-sm font-bold text-slate-800 font-sans">
+                            No: <span className="text-red-600 font-bold">#{transaction.id?.toString().padStart(6, "0")}</span>
+                        </span>
+                    </div>
+                    <div className="text-xs font-mono text-slate-500 mt-2">
+                        <span>RRR: {transaction.gatewayReference || "N/A"}</span>
+                        <span className="mx-2">|</span>
+                        <span>Txn Ref: TRX-{transaction.id}</span>
+                    </div>
                 </div>
                 <div className="flex items-center gap-1 text-xs font-sans">
                     <span className="text-slate-400 uppercase tracking-widest">Date:</span>

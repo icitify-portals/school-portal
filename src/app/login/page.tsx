@@ -61,9 +61,10 @@ export default function LoginPage() {
                 <CardHeader className="text-center space-y-1 bg-slate-50/50 border-b border-slate-100 p-6">
                     <div className="flex justify-center mb-4">
                         <img 
-                            src={branding?.INST_LOGO || "/logo.png"} 
+                            src={branding?.INST_LOGO?.trim() && branding.INST_LOGO !== 'null' ? branding.INST_LOGO : "/logo.png"} 
                             alt={branding?.INST_NAME || "School Logo"} 
                             className="h-16 object-contain" 
+                            onError={(e) => { e.currentTarget.src = "/logo.png"; }}
                         />
                     </div>
                     <CardTitle className="text-2xl font-bold text-slate-900">Sign In</CardTitle>

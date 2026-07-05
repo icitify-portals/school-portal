@@ -75,11 +75,12 @@ export const SchoolBillTemplate = ({
             <div className="flex justify-between items-center mb-1">
                 {/* School Logo */}
                 <div className="flex-shrink-0 flex flex-col items-center justify-center w-[80px]">
-                    {branding.INST_LOGO ? (
+                    {(branding?.INST_LOGO?.trim() && branding.INST_LOGO !== 'null') ? (
                         <img
                             src={branding.INST_LOGO}
                             alt="School Logo"
                             className="w-[60px] h-[60px] object-contain"
+                            onError={(e) => { e.currentTarget.src = "/logo.png"; }}
                         />
                     ) : (
                         <div className="w-[60px] h-[60px] bg-slate-100 rounded-lg flex items-center justify-center text-slate-400 text-[10px] font-bold uppercase">
