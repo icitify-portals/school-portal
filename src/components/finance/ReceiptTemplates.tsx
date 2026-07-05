@@ -88,7 +88,7 @@ export const ModernReceipt = ({ transaction, student, branding, bursar, arrears 
                     <div className="flex flex-col md:flex-row justify-between items-center gap-6 border-b border-white/10 pb-6 mb-6">
                         <div>
                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Payment Purpose</p>
-                            <h3 className="text-lg font-bold italic tracking-tight">{transaction.purpose}</h3>
+                            <h3 className="text-lg font-bold italic tracking-tight">{transaction.purpose} ({termLabel})</h3>
                             <p className="text-xs text-indigo-300 font-medium uppercase mt-1">{termLabel}</p>
                         </div>
                         <div className="text-center md:text-right">
@@ -159,10 +159,10 @@ export const ClassicReceipt = ({ transaction, student, branding, bursar, arrears
     );
 
     return (
-        <div id="receipt-content" className="max-w-2xl mx-auto bg-white p-12 border-4 border-double border-slate-900 relative print:border-2 print:p-8">
-            <div className="text-center border-b-2 border-slate-900 pb-6 mb-8">
+        <div id="receipt-content" className="max-w-2xl mx-auto bg-white p-12 border-4 border-double border-slate-900 relative print:border-2 print:p-4 print:my-0 break-inside-avoid">
+            <div className="text-center border-b-2 border-slate-900 pb-6 mb-8 print:mb-4 print:pb-4">
                 <h1 className="text-3xl font-serif font-bold text-slate-900 uppercase tracking-tighter mb-1">{branding.INST_NAME}</h1>
-                <p className="text-sm font-serif italic text-slate-600 mb-4">{branding.INST_MOTTO}</p>
+                <p className="text-sm font-serif italic text-slate-600 mb-4 print:mb-2">{branding.INST_MOTTO}</p>
                 <div className="flex justify-center gap-8 text-[10px] font-bold uppercase tracking-widest text-slate-500">
                     <span className="flex items-center gap-1"><Mail className="w-3 h-3" /> support@{branding.INST_NAME.toLowerCase().replace(/\s+/g, '')}.edu.ng</span>
                     <span className="flex items-center gap-1"><Phone className="w-3 h-3" /> +234 000 000 0000</span>
@@ -200,7 +200,7 @@ export const ClassicReceipt = ({ transaction, student, branding, bursar, arrears
                     </tr>
                     <tr className="border-b border-slate-100">
                         <td className="py-3 text-[10px] font-bold text-slate-400 uppercase">Payment For:</td>
-                        <td className="py-3 text-right font-bold text-slate-900">{transaction.purpose}</td>
+                        <td className="py-3 text-right font-bold text-slate-900">{transaction.purpose} ({termLabel})</td>
                     </tr>
                     <tr className="border-b border-slate-100">
                         <td className="py-3 text-[10px] font-bold text-slate-400 uppercase">Payment Method:</td>
@@ -260,7 +260,7 @@ export const MinimalistReceipt = ({ transaction, student, branding, bursar, arre
     );
 
     return (
-        <div id="receipt-content" className="max-w-xl mx-auto bg-white p-8 md:p-12 print:p-4">
+        <div id="receipt-content" className="max-w-xl mx-auto bg-white p-8 md:p-12 print:p-4 print:m-0 break-inside-avoid">
             <div className="flex justify-between items-start mb-16">
                 <div>
                     <h1 className="text-xl font-bold tracking-tight text-slate-900">{branding.INST_NAME}</h1>
@@ -285,7 +285,7 @@ export const MinimalistReceipt = ({ transaction, student, branding, bursar, arre
 
                 <div className="py-4 flex justify-between items-center text-sm border-b border-slate-100">
                     <div>
-                        <p className="font-medium text-slate-800">{transaction.purpose}</p>
+                        <p className="font-medium text-slate-800">{transaction.purpose} ({termLabel})</p>
                         <p className="text-[10px] text-slate-400 mt-0.5 uppercase">
                             Paid via {transaction.gateway === "wallet" ? "Student Wallet" : transaction.gateway}
                         </p>
@@ -358,7 +358,7 @@ export const HeritageReceipt = ({ transaction, student, branding, bursar, arrear
     const isDraft = ["paystack", "flutterwave", "remita", "wallet"].includes(transaction.gateway || "");
 
     return (
-        <div id="receipt-content" className="max-w-2xl mx-auto bg-amber-50/10 p-10 border-2 border-slate-800 rounded-2xl shadow-xl print:shadow-none print:border-none print:p-0 font-serif">
+        <div id="receipt-content" className="max-w-2xl mx-auto bg-amber-50/10 p-10 border-2 border-slate-800 rounded-2xl shadow-xl print:shadow-none print:border-none print:p-0 font-serif print:m-0 break-inside-avoid">
             {/* Header: School Logo & Details */}
             <div className="flex flex-col md:flex-row justify-between items-center border-b-2 border-slate-800 pb-4 mb-6">
                 <div className="flex items-center gap-4">
@@ -379,7 +379,7 @@ export const HeritageReceipt = ({ transaction, student, branding, bursar, arrear
                     </div>
                 </div>
                 <div className="text-right text-xs mt-4 md:mt-0 font-sans text-slate-600 max-w-xs leading-normal">
-                    <p>{branding.INST_ADDRESS || "PMB 5030, Ibadan, Oyo State"}</p>
+                    <p>{branding.INST_ADDRESS || "Along Ajibode Shasha Road, Behind NISER Shasha Ojoo, Ibadan, Oyo State Nigeria"}</p>
                     <p>Tel: {branding.INST_PHONE || "+234 000 000 0000"}</p>
                 </div>
             </div>
@@ -421,7 +421,7 @@ export const HeritageReceipt = ({ transaction, student, branding, bursar, arrear
                 <div className="flex items-end gap-2">
                     <span className="whitespace-nowrap font-bold text-slate-700">Being the transaction of:</span>
                     <div className="flex-1 border-b border-dashed border-slate-600 pb-0.5 px-4 text-left italic font-bold text-blue-950 font-sans tracking-wide">
-                        {transaction.purpose}
+                        {transaction.purpose} ({termLabel})
                     </div>
                 </div>
             </div>

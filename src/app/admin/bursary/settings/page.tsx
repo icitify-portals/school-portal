@@ -27,7 +27,8 @@ import {
     createSettlementAccount, 
     getFeeItemsWithSettlement, 
     linkFeeItemToSettlementAccount,
-    createGatewaySubaccountAction
+    createGatewaySubaccountAction,
+    deleteSettlementAccount
 } from "@/actions/bursary";
 import { getCOA } from "@/actions/accounting";
 import { cn } from "@/lib/utils";
@@ -148,6 +149,24 @@ export default function BursarySettingsPage() {
             toast.error(err.message || "Failed to create account.");
         } finally {
             setAddingSettlement(false);
+        }
+    };
+
+    const handleDeleteSettlement = async (id: number) => {
+        if (!confirm("Are you sure you want to delete this settlement account? Fees associated with it will no longer be settled to it.")) return;
+        try {
+            const res = await deleteSettlementAccount(id);
+            if (res.success) {
+                toast.success("Settlement account deleted.");
+                const freshSettlements = await getSettlementAccounts();
+                setSettlements(freshSettlements);
+                const freshFeeItems = await getFeeItemsWithSettlement();
+                setFeeItemsList(freshFeeItems);
+            } else {
+                toast.error(res.error || "Failed to delete account.");
+            }
+        } catch (error) {
+            toast.error("An error occurred.");
         }
     };
 
@@ -571,15 +590,25 @@ export default function BursarySettingsPage() {
                                     {/* Action to map subaccount code */}
                                     <div className="mt-4 pt-3 border-t border-slate-100 flex justify-between items-center">
                                         <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Gateway Mappings</span>
-                                        <Button 
-                                            size="sm" 
-                                            variant="outline"
-                                            className="text-xs font-semibold py-1 px-3 text-indigo-600 hover:text-indigo-700"
-                                            onClick={() => setMappingAcctId(acct.id)}
-                                        >
-                                            <Link className="w-3.5 h-3.5 mr-1" />
-                                            Map Subaccount
-                                        </Button>
+                                        <div className="flex items-center gap-2">
+                                            <Button 
+                                                size="sm" 
+                                                variant="outline"
+                                                className="text-xs font-semibold py-1 px-3 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+                                                onClick={() => handleDeleteSettlement(acct.id)}
+                                            >
+                                                Delete
+                                            </Button>
+                                            <Button 
+                                                size="sm" 
+                                                variant="outline"
+                                                className="text-xs font-semibold py-1 px-3 text-indigo-600 hover:text-indigo-700"
+                                                onClick={() => setMappingAcctId(acct.id)}
+                                            >
+                                                <Link className="w-3.5 h-3.5 mr-1" />
+                                                Map Subaccount
+                                            </Button>
+                                        </div>
                                     </div>
                                 </div>
                             ))}

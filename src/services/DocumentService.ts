@@ -463,7 +463,7 @@ export class DocumentService {
         doc.setFontSize(8);
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(71, 85, 105);
-        doc.text('No 23, Tanimowo Layout, Abayomi, Iwo Road, Ibadan', 78, 23.5, { align: 'center' });
+        doc.text('Along Ajibode Shasha Road, Behind NISER Shasha Ojoo, Ibadan, Oyo State Nigeria', 78, 23.5, { align: 'center' });
         doc.text('07031055352; 08133004845', 78, 27.5, { align: 'center' });
 
         // Term/Session box header
@@ -891,7 +891,7 @@ export class DocumentService {
         doc.setFontSize(8);
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(71, 85, 105);
-        doc.text('No 23, Tanimowo Layout, Abayomi, Iwo Road, Ibadan', 78, 23.5, { align: 'center' });
+        doc.text('Along Ajibode Shasha Road, Behind NISER Shasha Ojoo, Ibadan, Oyo State Nigeria', 78, 23.5, { align: 'center' });
         doc.text('07031055352; 08133004845', 78, 27.5, { align: 'center' });
 
         // Term/Session box header

@@ -30,7 +30,7 @@ const securityHeaders = [
       // Fonts
       "font-src 'self' https://fonts.gstatic.com data:",
       // Images: allow self, data URIs, and common external image hosts
-      "img-src 'self' data: blob: https://images.unsplash.com https://*.unsplash.com https://cloudflare-ipfs.com https://*.wasabisys.com",
+      "img-src 'self' data: blob: https://images.unsplash.com https://*.unsplash.com https://cloudflare-ipfs.com https://*.wasabisys.com https://s3.eu-west-1.wasabisys.com https://*.s3.eu-west-1.wasabisys.com https://fssibadan.edu.ng https://*.fssibadan.edu.ng https://portal.fssibadan.edu.ng",
       // Media (video/audio)
       "media-src 'self' blob:",
       // API + WebSocket connections
@@ -85,7 +85,17 @@ const nextConfig = {
       },
       {
         protocol: 'https',
-        hostname: '*.wasabisys.com',
+        hostname: '**.wasabisys.com',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'fssibadan.edu.ng',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: '*.fssibadan.edu.ng',
         pathname: '/**',
       },
     ],

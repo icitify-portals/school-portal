@@ -26,9 +26,9 @@ export default async function ReceiptPreviewPage({
         return acc;
     }, {} as Record<string, string>);
 
-    const institutionName = settingsMap.institution_name || 'FEDERAL POLYTECHNIC NIGERIA';
-    const institutionAddress = settingsMap.institution_address || 'P.M.B. 1234, Main Campus Road, City, State.';
-    const logoUrl = settingsMap.institution_logo || 'https://fssibadan.edu.ng/wp-content/uploads/2026/06/header-logo.png'; // Fallback placeholder
+    const institutionName = settingsMap.institution_name || settingsMap.portal_name || settingsMap.INST_NAME || 'FEDERAL POLYTECHNIC NIGERIA';
+    const institutionAddress = settingsMap.institution_address || settingsMap.school_address || settingsMap.INST_ADDRESS || 'P.M.B. 1234, Main Campus Road, City, State.';
+    const logoUrl = settingsMap.institution_logo || settingsMap.portal_logo || settingsMap.INST_LOGO || '/logo.png'; // Fallback placeholder
     const signatureUrl = settingsMap.bursar_signature || 'https://upload.wikimedia.org/wikipedia/commons/f/f3/Curzon_signature.svg'; // Fallback signature placeholder
 
     return (

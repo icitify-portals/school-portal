@@ -61,7 +61,7 @@ export default function LoginPage() {
                 <CardHeader className="text-center space-y-1 bg-slate-50/50 border-b border-slate-100 p-6">
                     <div className="flex justify-center mb-4">
                         <img 
-                            src={branding?.INST_LOGO || "https://fssibadan.edu.ng/wp-content/uploads/2026/06/header-logo.png"} 
+                            src={branding?.INST_LOGO || "/logo.png"} 
                             alt={branding?.INST_NAME || "School Logo"} 
                             className="h-16 object-contain" 
                         />

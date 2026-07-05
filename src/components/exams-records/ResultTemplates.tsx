@@ -45,7 +45,7 @@ export const RowelSchoolsReportCard = ({ data, term, templateCode = 'rowel_schoo
                     </div>
                     <div>
                         <h1 className="text-3xl font-black text-slate-900 tracking-tight leading-none mb-1">The Rowel Schools</h1>
-                        <p className="text-slate-500 font-medium text-xs">No 23, Tanimowo Layout, Abayomi, Iwo Road, Ibadan</p>
+                        <p className="text-slate-500 font-medium text-xs">Along Ajibode Shasha Road, Behind NISER Shasha Ojoo, Ibadan, Oyo State Nigeria</p>
                         <p className="text-slate-400 font-bold text-[10px] tracking-wider mt-0.5">07031055352; 08133004845</p>
                     </div>
                 </div>
@@ -400,7 +400,7 @@ export const RowelSchools002ReportCard = ({ data, term, templateCode = '002' }: 
                         <h1 className="text-3xl font-black text-slate-900 tracking-tight leading-none mb-1">
                             {templateCode === '002' ? 'The Rowel Schools' : 'Rowel Group of Schools'}
                         </h1>
-                        <p className="text-slate-500 font-medium text-xs">No 23, Tanimowo Layout, Abayomi, Iwo Road, Ibadan</p>
+                        <p className="text-slate-500 font-medium text-xs">Along Ajibode Shasha Road, Behind NISER Shasha Ojoo, Ibadan, Oyo State Nigeria</p>
                         <p className="text-slate-400 font-bold text-[10px] tracking-wider mt-0.5">07031055352; 08133004845</p>
                     </div>
                 </div>

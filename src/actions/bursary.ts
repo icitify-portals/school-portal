@@ -193,6 +193,20 @@ export async function createFeeStructure(data: {
     }
 }
 
+export async function deleteSettlementAccount(id: number) {
+    try {
+        await ensureBursaryStaff();
+        // Nullify foreign keys in feeItems first to avoid constraint errors
+        await db.update(feeItems).set({ settlementAccountId: null }).where(eq(feeItems.settlementAccountId, id));
+        await db.delete(settlementAccounts).where(eq(settlementAccounts.id, id));
+        revalidatePath("/admin/bursary/settings");
+        return { success: true };
+    } catch (error) {
+        console.error("Failed to delete settlement account:", error);
+        return { success: false, error: "Failed to delete settlement account" };
+    }
+}
+
 export async function updateFeeStructure(id: number, data: any) {
     try {
         const [existing] = await db.select().from(feeStructures).where(eq(feeStructures.id, id));
