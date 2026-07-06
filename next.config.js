@@ -24,7 +24,7 @@ const securityHeaders = [
     value: [
       "default-src 'self'",
       // Allow inline scripts (required for Next.js hydration and DevTools)
-      "script-src 'self' 'unsafe-eval' 'unsafe-inline'",
+      "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://remitademo.net https://login.remita.net",
       // Styles: inline allowed (required for Tailwind / template CSS injection)
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       // Fonts
@@ -34,9 +34,9 @@ const securityHeaders = [
       // Media (video/audio)
       "media-src 'self' blob:",
       // API + WebSocket connections
-      "connect-src 'self' wss: ws: https://api.paystack.co https://api.flutterwave.com https://*.livekit.cloud",
-      // Frames: disallow all (iframes used only for PDFs via object src)
-      "frame-src 'self'",
+      "connect-src 'self' wss: ws: https://api.paystack.co https://api.flutterwave.com https://*.livekit.cloud https://remitademo.net https://login.remita.net",
+      // Frames: disallow all (iframes used only for PDFs via object src) except Remita checkout iframe
+      "frame-src 'self' https://remitademo.net https://login.remita.net",
       // Objects (PDF iframe fallback)
       "object-src 'none'",
       // Form submissions only to self
