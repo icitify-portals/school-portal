@@ -103,12 +103,31 @@ export async function resetPasswordWithToken(token: string, password: string) {
     }
 }
 
-export async function changePasswordForced(password: string) {
+export async function changePasswordForced(password: string, dob?: string) {
     try {
         const session = await auth();
         if (!session?.user?.id) return { success: false, error: 'Unauthorized' };
 
         const userId = parseInt(session.user.id);
+        
+        // If user is a student, check for DOB
+        const [userRecord] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+        if (userRecord && userRecord.role === 'student') {
+            const { students } = await import('@/db/schema');
+            const [studentRecord] = await db.select().from(students).where(eq(students.userId, userId)).limit(1);
+            
+            if (studentRecord) {
+                if (!studentRecord.dob && !dob) {
+                    return { success: false, error: 'Date of Birth is required for first-time setup.', requireDob: true };
+                }
+                
+                if (!studentRecord.dob && dob) {
+                    // Update the student's DOB
+                    await db.update(students).set({ dob }).where(eq(students.userId, userId));
+                }
+            }
+        }
+
         const passwordHash = await bcrypt.hash(password, 10);
 
         await db.update(users).set({

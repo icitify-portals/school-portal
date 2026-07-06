@@ -59,6 +59,12 @@ export default function ProfilePage() {
     async function handleUpdate(e: React.FormEvent) {
         e.preventDefault();
         if (!session?.user) return;
+        
+        if (profile?.isDeadlinePassed) {
+            toast.error("Profile updates are currently locked. Please contact administration.");
+            return;
+        }
+
         setIsSaving(true);
 
         const userId = profile.userId || parseInt((session.user as any).id);
@@ -364,7 +370,7 @@ export default function ProfilePage() {
                                                         )}
                                                     </div>
 
-                                                    {!profile.ninVerified ? (
+                                                    {!profile.ninVerified && !profile.isDeadlinePassed ? (
                                                         <div className="flex gap-2">
                                                             <Input
                                                                 placeholder="Enter 11-digit NIN"
@@ -383,7 +389,7 @@ export default function ProfilePage() {
                                                     ) : (
                                                         <div className="h-14 flex items-center px-6 bg-emerald-50 rounded-2xl border border-emerald-100 text-xs font-bold text-emerald-700 gap-3">
                                                             <CheckCircle2 className="w-4 h-4" />
-                                                            National Identity Synchronized: {profile.nin}
+                                                            {profile.ninVerified ? `National Identity Synchronized: ${profile.nin}` : "NIN verification currently disabled."}
                                                         </div>
                                                     )}
                                                     <p className="text-[9px] font-bold text-slate-400 uppercase leading-relaxed">
@@ -398,7 +404,7 @@ export default function ProfilePage() {
                                                         Identity Card Photographic Capture
                                                     </Label>
 
-                                                    {profile.isProfileLocked ? (
+                                                    {profile.isProfileLocked || profile.isDeadlinePassed ? (
                                                         <div className="space-y-4">
                                                             <div className="h-14 flex items-center px-6 bg-amber-50 rounded-2xl border border-amber-100 text-xs font-bold text-amber-700 gap-3">
                                                                 <ShieldCheck className="w-4 h-4 text-emerald-600" />

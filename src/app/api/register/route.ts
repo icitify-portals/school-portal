@@ -8,16 +8,16 @@ import { checkRateLimit } from "@/lib/api-auth";
 export async function POST(req: Request) {
     try {
         // SECURITY FIX H-1a: Rate-limit registrations to prevent bulk account creation.
-        const forwarded = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
-        const ip = forwarded.split(',')[0].trim();
-        const rateCheck = checkRateLimit(`register:${ip}`);
-      // @ts-expect-error - Auto-suppressed by script
-        if (!rateCheck.allowed) {
-            return NextResponse.json(
-                { message: "Too many requests. Please try again later." },
-                { status: 429, headers: { 'Retry-After': '60' } }
-            );
-        }
+        // Rate limiting removed per user request
+        // const forwarded = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
+        // const ip = forwarded.split(',')[0].trim();
+        // const rateCheck = await checkRateLimit(`register:${ip}`);
+        // if (!rateCheck.allowed) {
+        //     return NextResponse.json(
+        //         { message: "Too many requests. Please try again later." },
+        //         { status: 429, headers: { 'Retry-After': '60' } }
+        //     );
+        // }
 
         const body = await req.json();
         // SECURITY FIX H-1b: Destructure only the fields we trust from the request body.

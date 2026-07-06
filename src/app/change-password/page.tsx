@@ -10,7 +10,9 @@ import { signOut } from "next-auth/react";
 export default function ChangePasswordPage() {
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
-    const [status, setStatus] = useState<{ success?: boolean; message?: string; error?: string } | null>(null);
+    const [dob, setDob] = useState("");
+    const [requireDob, setRequireDob] = useState(false);
+    const [status, setStatus] = useState<{ success?: boolean; message?: string; error?: string; requireDob?: boolean } | null>(null);
     const [loading, setLoading] = useState(false);
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -25,17 +27,27 @@ export default function ChangePasswordPage() {
             return;
         }
 
+        if (requireDob && !dob) {
+            setStatus({ success: false, error: "Please enter your Date of Birth." });
+            return;
+        }
+
         setLoading(true);
         setStatus(null);
 
         try {
-            const result = await changePasswordForced(password);
-            setStatus(result);
-            if (result.success) {
-                // Force logout so token refreshes with updated requiresPasswordChange flag
-                setTimeout(() => {
-                    signOut({ callbackUrl: '/login' });
-                }, 2000);
+            const result = await changePasswordForced(password, requireDob ? dob : undefined);
+            if (result.requireDob) {
+                setRequireDob(true);
+                setStatus({ success: false, error: result.error });
+            } else {
+                setStatus(result);
+                if (result.success) {
+                    // Force logout so token refreshes with updated requiresPasswordChange flag
+                    setTimeout(() => {
+                        signOut({ callbackUrl: '/login' });
+                    }, 2000);
+                }
             }
         } catch (err) {
             setStatus({ success: false, error: "An error occurred. Please try again." });
@@ -67,6 +79,20 @@ export default function ChangePasswordPage() {
                         
                         {!status?.success && (
                             <>
+                                {requireDob && (
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-semibold text-slate-700">Date of Birth</label>
+                                        <div className="relative">
+                                            <input
+                                                type="date"
+                                                required
+                                                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-slate-900 bg-white"
+                                                value={dob}
+                                                onChange={(e) => setDob(e.target.value)}
+                                            />
+                                        </div>
+                                    </div>
+                                )}
                                 <div className="space-y-2">
                                     <label className="text-sm font-semibold text-slate-700">New Password</label>
                                     <div className="relative">

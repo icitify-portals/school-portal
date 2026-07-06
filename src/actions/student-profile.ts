@@ -147,9 +147,21 @@ export async function getLoggedUserProfile() {
         } else {
             const studentProfile = await fetchStudentProfile();
             if (studentProfile) {
+                const { systemSettings } = await import("@/db/schema");
+                const [deadlineSetting] = await db.select().from(systemSettings).where(eq(systemSettings.settingKey, 'student_profile_update_deadline')).limit(1);
+                
+                let isDeadlinePassed = false;
+                if (deadlineSetting && deadlineSetting.settingValue) {
+                    const deadline = new Date(deadlineSetting.settingValue);
+                    if (!isNaN(deadline.getTime()) && new Date() > deadline) {
+                        isDeadlinePassed = true;
+                    }
+                }
+
                 return {
                     ...studentProfile,
-                    isStaffProfile: false
+                    isStaffProfile: false,
+                    isDeadlinePassed
                 };
             }
         }

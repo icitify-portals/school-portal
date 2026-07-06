@@ -1978,7 +1978,7 @@ export async function resolveOnlinePaymentAction(reference: string, status: 'com
                         .set({ paymentStatus: 'paid' })
                         .where(eq(admissionApplicationsV2.id, applicationId));
                     
-                    return { success: true, status: 'completed' };
+                    return { success: true, status: 'completed', transactionId: txRecord.id };
                 }
             }
 
@@ -2055,7 +2055,7 @@ export async function resolveOnlinePaymentAction(reference: string, status: 'com
                 console.error("Automated GL Posting failed inside resolveOnlinePaymentAction:", glError);
             }
 
-            return { success: true, status: 'completed' };
+            return { success: true, status: 'completed', transactionId: txRecord.id };
         });
     } catch (error) {
         console.error("Failed to resolve online payment:", error);

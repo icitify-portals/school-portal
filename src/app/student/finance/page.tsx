@@ -28,13 +28,15 @@ import {
     getStudentFinancialSummary, 
     getBursarySettings,
     payBillWithWalletAction,
-    initializeOnlineCheckoutAction
+    initializeOnlineCheckoutAction,
+    resolveOnlinePaymentAction
 } from "@/actions/bursary";
 import { getStudentByUserId } from "@/actions/students";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { AcademicNomenclature } from "@/lib/nomenclature";
+import { RemitaInlineCheckout } from "@/components/finance/RemitaInlineCheckout";
 
 interface LedgerEntry {
     id: number;
@@ -100,6 +102,7 @@ export default function StudentFinancePage() {
     const [checkoutLoading, setCheckoutLoading] = useState(false);
     const [checkoutSuccess, setCheckoutSuccess] = useState(false);
     const [checkoutError, setCheckoutError] = useState("");
+    const [remitaData, setRemitaData] = useState<{rrr: string, reference: string} | null>(null);
 
     // Search filter state
     const [filterQuery, setFilterQuery] = useState("");
@@ -147,6 +150,7 @@ export default function StudentFinancePage() {
         setPaymentMode('gateway');
         setCheckoutError("");
         setCheckoutSuccess(false);
+        setRemitaData(null);
         setIsCheckoutOpen(true);
     };
 
@@ -202,7 +206,9 @@ export default function StudentFinancePage() {
                 // Online gateway payment
                 const res = await initializeOnlineCheckoutAction(student.id, selectedBill.id, selectedAmount);
 
-                if (res.success && res.checkoutUrl) {
+                if (res.success && res.rrr) {
+                    setRemitaData({ rrr: res.rrr, reference: res.reference || "" });
+                } else if (res.success && res.checkoutUrl) {
                     setCheckoutSuccess(true);
                     setTimeout(() => {
                         setIsCheckoutOpen(false);
@@ -570,6 +576,54 @@ export default function StudentFinancePage() {
                                     </div>
                                     <h4 className="text-xl font-black text-slate-900">Payment Authorized!</h4>
                                     <p className="text-xs text-slate-400">Your student ledger balance has been credited successfully. Receipts are now viewable.</p>
+                                </div>
+                            ) : remitaData ? (
+                                <div className="py-6 flex flex-col items-center justify-center text-center space-y-4">
+                                    <h4 className="text-xl font-black text-slate-900">Complete Remita Payment</h4>
+                                    <p className="text-xs text-slate-500 mb-4">Please complete your payment using the secure Remita gateway.</p>
+                                    <div className="w-full">
+                                        <RemitaInlineCheckout 
+                                            rrr={remitaData.rrr} 
+                                            amount={selectedAmount} 
+                                            email={session?.user?.email || "student@fssibadan.edu.ng"} 
+                                            firstName={student.firstName} 
+                                            lastName={student.lastName} 
+                                            onSuccess={async () => {
+                                                setCheckoutLoading(true);
+                                                try {
+                                                    const verify = await resolveOnlinePaymentAction(remitaData.reference, 'completed', selectedBill.id);
+                                                    if (verify.success) {
+                                                        setCheckoutSuccess(true);
+                                                        setTimeout(() => {
+                                                            setIsCheckoutOpen(false);
+                                                            if (verify.transactionId) {
+                                                                window.location.href = `/finance/receipt/${verify.transactionId}`;
+                                                            } else {
+                                                                fetchData();
+                                                            }
+                                                        }, 1500);
+                                                    } else {
+                                                        setCheckoutError("Payment verification failed. Please contact admin.");
+                                                        setRemitaData(null);
+                                                    }
+                                                } catch (err) {
+                                                    setCheckoutError("Error verifying payment.");
+                                                    setRemitaData(null);
+                                                }
+                                                setCheckoutLoading(false);
+                                            }} 
+                                            onError={() => {
+                                                setCheckoutError("Remita payment failed or was cancelled.");
+                                                setRemitaData(null);
+                                            }} 
+                                            onClose={() => {
+                                                // Handle close
+                                            }} 
+                                        />
+                                    </div>
+                                    <Button variant="ghost" className="mt-4 text-xs font-bold text-slate-500" onClick={() => setRemitaData(null)}>
+                                        Cancel Payment
+                                    </Button>
                                 </div>
                             ) : (
                                 <form onSubmit={handleCheckoutSubmit} className="space-y-4">
