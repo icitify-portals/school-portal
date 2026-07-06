@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Script from "next/script";
 import { Button } from "@/components/ui/button";
 import { Loader2, CreditCard } from "lucide-react";
+import { toast } from "sonner";
 
 interface RemitaInlineCheckoutProps {
     rrr: string;
@@ -43,32 +44,38 @@ export function RemitaInlineCheckout({
 
         setIsPaying(true);
 
-        const paymentEngine = RmPaymentEngine.init({
-            key: process.env.NEXT_PUBLIC_REMITA_PUBLIC_KEY || "",
-            customerId: email,
-            firstName: firstName,
-            lastName: lastName,
-            email: email,
-            amount: amount,
-            rrr: rrr,
-            extendedData: {
-                customFields: [{ name: "rrr", value: rrr }]
-            },
-            onSuccess: (response: any) => {
-                setIsPaying(false);
-                onSuccess(response);
-            },
-            onError: (response: any) => {
-                setIsPaying(false);
-                onError(response);
-            },
-            onClose: () => {
-                setIsPaying(false);
-                onClose();
-            }
-        });
+        try {
+            const paymentEngine = RmPaymentEngine.init({
+                key: process.env.NEXT_PUBLIC_REMITA_PUBLIC_KEY || "QzAwMDAyNzEyNTl8MTEwNjE4Njc3MzZ8MThkNGYwY2E0YWZkNmM4MmEwOGEyZDkxYWMwMGMyYWFlNjRlYmY4MzM0OGNlMjcxZDU4NTkyZTNkZTI5YWNkNzEzN2ZkMWI4ZmE5OTQ0NDg3YmM0YjFlNGM2NjExMGYzZDZmMGUzY2I5MmY2YWZlMDVmMzBhY2QzNzEzOWQwNDc=", // Fallback to demo key if missing
+                customerId: email,
+                firstName: firstName,
+                lastName: lastName,
+                email: email,
+                amount: amount,
+                rrr: rrr,
+                extendedData: {
+                    customFields: [{ name: "rrr", value: rrr }]
+                },
+                onSuccess: (response: any) => {
+                    setIsPaying(false);
+                    onSuccess(response);
+                },
+                onError: (response: any) => {
+                    setIsPaying(false);
+                    onError(response);
+                },
+                onClose: () => {
+                    setIsPaying(false);
+                    onClose();
+                }
+            });
 
-        paymentEngine.showPaymentWidget();
+            paymentEngine.showPaymentWidget();
+        } catch (error: any) {
+            console.error("Remita Initialization Error:", error);
+            setIsPaying(false);
+            toast.error(error?.message || "Failed to initialize Remita Payment Engine. Please check your API keys.");
+        }
     };
 
     return (
