@@ -186,12 +186,12 @@ function CheckoutSimulatorContent() {
                         <div>
                             <CardTitle className="text-xl font-bold flex items-center gap-2">
                                 <CreditCard className={`w-5 h-5 ${theme.text}`} />
-                                Sandbox Payment Gateway
+                                Payment Gateway Checkout
                             </CardTitle>
-                            <p className="text-slate-400 text-xs mt-1">Simulating split transaction flow</p>
+                            <p className="text-slate-400 text-xs mt-1">Complete your transaction securely</p>
                         </div>
                         <Badge className="bg-slate-800 text-slate-300 border-slate-700 px-3 py-1 text-xs">
-                            {theme.name} Mode
+                            {theme.name}
                         </Badge>
                     </CardHeader>
                     
@@ -236,23 +236,24 @@ function CheckoutSimulatorContent() {
                             </div>
                         </div>
 
-                        {/* Security Disclaimer */}
+                        {/* Payment Instructions */}
                         <div className="bg-indigo-950/20 border border-indigo-500/15 rounded-xl p-4 flex gap-3">
                             <ShieldCheck className="w-5 h-5 text-indigo-400 shrink-0 mt-0.5" />
-                            <p className="text-xs text-slate-400 leading-relaxed">
-                                You are in a secure sandbox testing environment. No real funds will be deducted from your bank card. Clicking complete successfully will settle the splits dynamically according to the active fee-bearer rule.
-                            </p>
+                            <div className="text-xs text-slate-400 leading-relaxed space-y-2">
+                                <p><strong>Option 1 (Online):</strong> Click the secure payment button below to pay using your card or bank account.</p>
+                                {rrr && <p><strong>Option 2 (Bank Branch):</strong> Print or copy your RRR and take it to any participating bank. After paying, return to your dashboard and click "Re-query" to instantly fetch your receipt.</p>}
+                            </div>
                         </div>
 
                         {/* Simulation Actions */}
                         <div className="flex flex-col sm:flex-row gap-3 pt-2">
                             <Button
-                                className="bg-rose-600 hover:bg-rose-500 text-white w-full py-6 font-semibold flex items-center justify-center gap-2 border border-rose-500/35"
+                                className="bg-slate-800 hover:bg-slate-700 text-white w-full py-6 font-semibold flex items-center justify-center gap-2 border border-slate-700"
                                 disabled={loading}
-                                onClick={() => handleSimulate('failed')}
+                                onClick={() => router.push("/student/finance")}
                             >
-                                <XCircle className="w-5 h-5" />
-                                Simulate Cancel/Fail
+                                <Building2 className="w-5 h-5" />
+                                Return to Dashboard
                             </Button>
 
                             {gateway === 'remita' && rrr && !rrr.startsWith('RRR-MOCK') && (
