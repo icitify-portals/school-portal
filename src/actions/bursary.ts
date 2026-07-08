@@ -2178,11 +2178,12 @@ export async function resolveOnlinePaymentAction(reference: string, status: 'com
                         return { success: true, status: 'failed' };
                     }
                     
+                    const meta = payTx.metadata ? JSON.parse(payTx.metadata as string) : {};
+                    const rrr = meta.rrr || '';
+                    
                     const { verifyPayment } = await import('@/actions/payment-gateways');
-                    const verification = await verifyPayment((payTx.paymentGateway as any) || 'remita', reference);
+                    const verification = await verifyPayment((payTx.paymentGateway as any) || 'remita', reference, rrr);
                     if (!verification.success || !verification.verified) {
-                        const meta = payTx.metadata ? JSON.parse(payTx.metadata as string) : {};
-                        const rrr = meta.rrr || '';
                         if (!rrr.startsWith('RRR-MOCK')) {
                             return { success: false, error: verification.error || "Gateway verification failed. Payment not confirmed." };
                         }
