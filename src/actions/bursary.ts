@@ -1059,7 +1059,6 @@ export async function getAllUnifiedTransactions(filters?: { status?: string, cat
             const topupQuery = db.select({
                 id: payment_transactions.id,
                 amount: payment_transactions.amount,
-                type: sql<string>`'credit'`, // Top-ups are inherently credits
                 purpose: payment_transactions.transactionType,
                 status: payment_transactions.status,
                 gateway: payment_transactions.paymentGateway,
