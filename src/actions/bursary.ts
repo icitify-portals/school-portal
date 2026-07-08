@@ -1029,10 +1029,11 @@ export async function getAllUnifiedTransactions(filters?: { status?: string, cat
                     firstName: students.firstName,
                     lastName: students.lastName,
                     matricNumber: students.matricNumber,
-                    contactEmail: students.contactEmail
+                    contactEmail: users.email
                 }
             }).from(transactions)
               .leftJoin(students, eq(transactions.studentId, students.id))
+              .leftJoin(users, eq(students.userId, users.id))
               .orderBy(desc(transactions.createdAt));
               
             const fees = await feeQuery;
@@ -1070,7 +1071,7 @@ export async function getAllUnifiedTransactions(filters?: { status?: string, cat
                     firstName: students.firstName,
                     lastName: students.lastName,
                     matricNumber: students.matricNumber,
-                    contactEmail: students.contactEmail
+                    contactEmail: users.email
                 }
             }).from(payment_transactions)
               .leftJoin(users, eq(payment_transactions.userId, users.id))
@@ -1114,10 +1115,11 @@ export async function getAllUnifiedTransactions(filters?: { status?: string, cat
                     firstName: students.firstName,
                     lastName: students.lastName,
                     matricNumber: students.matricNumber,
-                    contactEmail: students.contactEmail
+                    contactEmail: users.email
                 }
             }).from(walletTransactions)
               .leftJoin(students, eq(walletTransactions.studentId, students.id))
+              .leftJoin(users, eq(students.userId, users.id))
               .orderBy(desc(walletTransactions.createdAt));
 
             const usages = await usageQuery;
@@ -1188,7 +1190,14 @@ export async function requeryUnifiedTransaction(txId: number, sourceTable: 'tran
 
     try {
         const { verifyPayment } = await import('@/actions/payment-gateways');
-        const verification = await verifyPayment(gateway, reference);
+        
+        let activeGateway = gateway;
+        if (activeGateway === 'paystack' && !process.env.PAYSTACK_SECRET_KEY) {
+            if (process.env.REMITA_SECRET_KEY) activeGateway = 'remita';
+            else if (process.env.FLW_SECRET_KEY) activeGateway = 'flutterwave';
+        }
+
+        const verification = await verifyPayment(activeGateway, reference);
 
         if (verification.success) {
             const newStatus = verification.verified ? 'completed' : 'failed';

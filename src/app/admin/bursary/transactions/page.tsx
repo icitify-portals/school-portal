@@ -79,7 +79,9 @@ export default function UnifiedTransactionsPage() {
             tx.student?.lastName?.toLowerCase().includes(search.toLowerCase()) ||
             tx.gatewayReference?.toLowerCase().includes(search.toLowerCase());
             
-        const matchesStatus = statusFilter === 'all' || tx.status === statusFilter;
+        const matchesStatus = statusFilter === 'all' || 
+            (statusFilter === 'completed' && ['completed', 'paid', 'success', 'successful'].includes(tx.status?.toLowerCase())) ||
+            (statusFilter !== 'completed' && tx.status === statusFilter);
         
         let matchesCategory = true;
         if (categoryFilter === 'fee_payment') matchesCategory = tx.sourceTable === 'transactions';
