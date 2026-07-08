@@ -181,13 +181,11 @@ export async function verifyPayment(gateway: string, reference: string, rrr?: st
             const apiKey = secretKey;
             const crypto = require('crypto');
             
-            // If RRR is provided, we should check status via RRR since Remita Inline processes payments against the RRR.
-            // If no RRR is provided, fallback to checking by txReference (orderId).
-            const identifier = rrr || reference;
-            const hash = crypto.createHash('sha512').update(`${identifier}${apiKey}${merchantId}`).digest('hex');
+            // Revert back to using reference (orderId) and echannelsvc endpoint, but ensure we use demo.remita.net
+            // because ecomm endpoint is blocked by WAF and remitademo.net is the old database.
+            const hash = crypto.createHash('sha512').update(`${reference}${apiKey}${merchantId}`).digest('hex');
             
-            // Use the ecomm status endpoint which supports checking via RRR or OrderID on demo.remita.net
-            const res = await fetch(`https://demo.remita.net/remita/ecomm/${merchantId}/${identifier}/${hash}/status.reg`, {
+            const res = await fetch(`https://demo.remita.net/remita/exapp/api/v1/send/api/echannelsvc/${merchantId}/${reference}/${hash}/status.reg`, {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
