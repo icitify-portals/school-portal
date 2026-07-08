@@ -1189,6 +1189,22 @@ export async function requeryUnifiedTransaction(txId: number, sourceTable: 'tran
     if (!reference) return { success: false, error: 'No gateway reference provided.' };
 
     try {
+        if (reference.startsWith('RRR-MOCK-') || reference.startsWith('TX-MOCK-')) {
+            console.log(`Bypassing gateway verification for Mock Reference during Re-query: ${reference}`);
+            const newStatus = 'completed';
+
+            if (sourceTable === 'transactions') {
+                await db.update(transactions).set({ status: newStatus as any }).where(eq(transactions.id, txId));
+            } else if (sourceTable === 'payment_transactions') {
+                await db.update(payment_transactions).set({ status: newStatus }).where(eq(payment_transactions.id, txId));
+            } else {
+                return { success: false, error: 'Cannot re-query this table source.' };
+            }
+
+            revalidatePath('/admin/bursary/transactions');
+            return { success: true, status: newStatus };
+        }
+
         const { verifyPayment } = await import('@/actions/payment-gateways');
         
         let activeGateway = gateway;
