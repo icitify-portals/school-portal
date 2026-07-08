@@ -34,10 +34,19 @@ export default function UnifiedTransactionsPage() {
 
     const fetchData = async () => {
         setLoading(true);
-        // We fetch everything and filter locally for speed, or we could pass filters to the action
-        const data = await getAllUnifiedTransactions();
-        setTransactions(data);
-        setLoading(false);
+        try {
+            const res = await fetch('/api/bursary/transactions', { cache: 'no-store' });
+            const result = await res.json();
+            if (result.success) {
+                setTransactions(result.data);
+            } else {
+                toast.error(`Failed to load transactions: ${result.error}`);
+            }
+        } catch (error) {
+            toast.error("An error occurred while loading transactions.");
+        } finally {
+            setLoading(false);
+        }
     };
 
     const handleRequery = async (e: React.MouseEvent, tx: UnifiedTransaction) => {
