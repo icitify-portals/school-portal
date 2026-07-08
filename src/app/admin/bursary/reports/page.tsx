@@ -111,6 +111,7 @@ interface ReportTransaction {
         purpose: string;
         gateway: string;
         gatewayReference?: string | null;
+        rrr?: string | null;
         createdAt: string | Date;
     };
     student?: {
@@ -304,7 +305,8 @@ export default function BursaryReportsPage() {
             Amount: d.transaction.amount,
             Type: d.transaction.type,
             Gateway: d.transaction.gateway === 'wallet' ? 'Student Wallet' : (d.transaction.gateway || 'Manual'),
-            Reference: d.transaction.gatewayReference || 'N/A'
+            Reference: d.transaction.gatewayReference || 'N/A',
+            RRR: d.transaction.rrr || 'N/A'
         }));
 
         const csv = Papa.unparse(csvData);
@@ -814,6 +816,8 @@ export default function BursaryReportsPage() {
                                                             <td className="px-8 py-5">
                                                                 <p className="text-sm font-extrabold text-slate-800">{t.transaction.purpose}</p>
                                                                 <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">{t.student?.firstName} {t.student?.lastName}</p>
+                                                                {t.transaction.gatewayReference && <p className="text-[10px] text-slate-400 font-mono mt-0.5">Ref: {t.transaction.gatewayReference}</p>}
+                                                                {t.transaction.rrr && <p className="text-[10px] text-slate-400 font-mono mt-0.5">RRR: {t.transaction.rrr}</p>}
                                                             </td>
                                                             <td className="px-8 py-5 text-xs font-mono font-bold text-slate-600">
                                                                 {t.student?.matricNumber || 'NOT REGISTERED'}

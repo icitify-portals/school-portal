@@ -41,6 +41,30 @@ export async function getDailySummary(dateStr: string) {
             )
         );
 
+        const transactionsList = await db.select({
+            id: transactions.id,
+            amount: transactions.amount,
+            type: transactions.type,
+            purpose: transactions.purpose,
+            status: transactions.status,
+            gateway: transactions.gateway,
+            gatewayReference: transactions.gatewayReference,
+            rrr: transactions.rrr,
+            createdAt: transactions.createdAt,
+            studentName: sql<string>`CONCAT(${students.firstName}, ' ', ${students.lastName})`,
+            matricNumber: students.matricNumber,
+        })
+        .from(transactions)
+        .leftJoin(students, eq(transactions.studentId, students.id))
+        .where(
+            and(
+                eq(transactions.status, 'completed'),
+                gte(transactions.createdAt, startDate),
+                lt(transactions.createdAt, endDate)
+            )
+        )
+        .orderBy(sql`${transactions.createdAt} DESC`);
+
         // 2. Academics: Students & Enrollments
         const [studentStats] = await db.select({ count: count() })
         .from(students)
@@ -97,7 +121,8 @@ export async function getDailySummary(dateStr: string) {
             data: {
                 payments: {
                     count: paymentStats.count || 0,
-                    revenue: paymentStats.totalSum || 0
+                    revenue: paymentStats.totalSum || 0,
+                    transactionsList: transactionsList || []
                 },
                 academics: {
                     newStudents: studentStats.count || 0,

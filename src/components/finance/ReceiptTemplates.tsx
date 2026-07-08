@@ -75,7 +75,7 @@ export const ModernReceipt = ({ transaction, student, branding, bursar, arrears 
                         <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-3">Transaction Details</h4>
                         <div className="space-y-1">
                             <p className="text-sm font-bold text-slate-700 uppercase">Method: {transaction.gateway === "wallet" ? "Student Wallet" : (transaction.gateway || 'Manual')}</p>
-                            <p className="text-xs font-mono text-slate-400 truncate max-w-[250px] ml-auto">RRR: {transaction.gatewayReference || "N/A"}</p>
+                            <p className="text-xs font-mono text-slate-400 truncate max-w-[250px] ml-auto">RRR: {transaction.rrr || transaction.gatewayReference || "N/A"}</p>
                             <p className="text-xs font-mono text-slate-400 truncate max-w-[250px] ml-auto">Txn Ref: TRX-{transaction.id}</p>
                             <p className="text-xs text-slate-500">Status: <span className="text-emerald-500 font-bold uppercase italic">{transaction.status}</span></p>
                         </div>
@@ -178,6 +178,7 @@ export const ClassicReceipt = ({ transaction, student, branding, bursar, arrears
                 <div className="text-right">
                     <p className="text-2xl font-black text-slate-900 uppercase italic">Official Receipt</p>
                     <p className="text-xs font-bold text-slate-500">{new Date(transaction.createdAt).toLocaleDateString('en-US')}</p>
+                    <p className="text-[10px] font-mono text-slate-400 mt-1 uppercase">RRR: {transaction.rrr || transaction.gatewayReference || "N/A"}</p>
                 </div>
             </div>
 
@@ -270,6 +271,7 @@ export const MinimalistReceipt = ({ transaction, student, branding, bursar, arre
                 <div className="text-right">
                     <p className="text-[10px] font-medium text-slate-400 uppercase tracking-widest mb-1">Receipt ID</p>
                     <p className="text-sm font-bold text-slate-900">#{transaction.id}</p>
+                    <p className="text-[10px] text-slate-400 mt-2">RRR: {transaction.rrr || transaction.gatewayReference || "N/A"}</p>
                 </div>
             </div>
 
@@ -396,7 +398,7 @@ export const HeritageReceipt = ({ transaction, student, branding, bursar, arrear
                         </span>
                     </div>
                     <div className="text-xs font-mono text-slate-500 mt-2">
-                        <span>RRR: {transaction.gatewayReference || "N/A"}</span>
+                        <span>RRR: {transaction.rrr || transaction.gatewayReference || "N/A"}</span>
                         <span className="mx-2">|</span>
                         <span>Txn Ref: TRX-{transaction.id}</span>
                     </div>

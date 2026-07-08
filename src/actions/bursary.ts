@@ -28,7 +28,9 @@ import {
     expenditureRequests,
     settlementAccounts,
     gatewaySubaccounts,
-    budgets
+    budgets,
+    payment_transactions,
+    walletTransactions
 } from "@/db/schema";
 import { eq, and, desc, sql, inArray, gte, lte, ne, sum } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
@@ -984,6 +986,176 @@ export async function disburseExpenditure(id: number) {
     }
 }
 
+export type UnifiedTransaction = {
+    id: number;
+    sourceTable: 'transactions' | 'payment_transactions' | 'wallet_transactions';
+    amount: string | number;
+    type: 'credit' | 'debit';
+    purpose: string;
+    status: string;
+    gateway: string | null;
+    gatewayReference: string | null;
+    rrr: string | null;
+    createdAt: Date | null;
+    student: {
+        id: number;
+        firstName: string;
+        lastName: string;
+        matricNumber: string | null;
+        contactEmail: string | null;
+    } | null;
+};
+
+export async function getAllUnifiedTransactions(filters?: { status?: string, category?: string }) {
+    try {
+        const results: UnifiedTransaction[] = [];
+        const fStatus = filters?.status && filters.status !== 'all' ? filters.status : null;
+        const fCat = filters?.category && filters.category !== 'all' ? filters.category : null;
+
+        // 1. Fee Payments (transactions table)
+        if (!fCat || fCat === 'fee_payment') {
+            const feeQuery = db.select({
+                id: transactions.id,
+                amount: transactions.amount,
+                type: transactions.type,
+                purpose: transactions.purpose,
+                status: transactions.status,
+                gateway: transactions.gateway,
+                gatewayReference: transactions.gatewayReference,
+                rrr: transactions.rrr,
+                createdAt: transactions.createdAt,
+                student: {
+                    id: students.id,
+                    firstName: students.firstName,
+                    lastName: students.lastName,
+                    matricNumber: students.matricNumber,
+                    contactEmail: students.contactEmail
+                }
+            }).from(transactions)
+              .leftJoin(students, eq(transactions.studentId, students.id))
+              .orderBy(desc(transactions.createdAt));
+              
+            const fees = await feeQuery;
+            for (const f of fees) {
+                if (fStatus && f.status !== fStatus) continue;
+                results.push({
+                    id: f.id,
+                    sourceTable: 'transactions',
+                    amount: f.amount,
+                    type: f.type as 'credit' | 'debit',
+                    purpose: f.purpose,
+                    status: f.status || 'pending',
+                    gateway: f.gateway,
+                    gatewayReference: f.gatewayReference,
+                    rrr: f.rrr,
+                    createdAt: f.createdAt,
+                    student: f.student
+                });
+            }
+        }
+
+        // 2. Wallet Top-ups (payment_transactions table)
+        if (!fCat || fCat === 'wallet_topup') {
+            const topupQuery = db.select({
+                id: payment_transactions.id,
+                amount: payment_transactions.amount,
+                type: sql<string>`'credit'`, // Top-ups are inherently credits
+                purpose: payment_transactions.transactionType,
+                status: payment_transactions.status,
+                gateway: payment_transactions.paymentGateway,
+                gatewayReference: payment_transactions.transactionReference,
+                rrr: payment_transactions.gatewayTransactionId,
+                createdAt: payment_transactions.createdAt,
+                student: {
+                    id: students.id,
+                    firstName: students.firstName,
+                    lastName: students.lastName,
+                    matricNumber: students.matricNumber,
+                    contactEmail: students.contactEmail
+                }
+            }).from(payment_transactions)
+              .leftJoin(users, eq(payment_transactions.userId, users.id))
+              .leftJoin(students, eq(users.id, students.userId))
+              .orderBy(desc(payment_transactions.createdAt));
+
+            const topups = await topupQuery;
+            for (const t of topups) {
+                if (fStatus && t.status !== fStatus) continue;
+                // Only consider wallet topups
+                if (t.purpose !== 'wallet_topup') continue;
+                
+                results.push({
+                    id: t.id,
+                    sourceTable: 'payment_transactions',
+                    amount: t.amount,
+                    type: 'credit',
+                    purpose: "Wallet Top-up",
+                    status: t.status || 'pending',
+                    gateway: t.gateway,
+                    gatewayReference: t.gatewayReference,
+                    rrr: t.rrr,
+                    createdAt: t.createdAt,
+                    student: t.student
+                });
+            }
+        }
+
+        // 3. Internal Wallet Usage (wallet_transactions table)
+        if (!fCat || fCat === 'wallet_usage') {
+            const usageQuery = db.select({
+                id: walletTransactions.id,
+                amount: walletTransactions.amount,
+                type: walletTransactions.type,
+                purpose: walletTransactions.purpose,
+                status: walletTransactions.status,
+                gatewayReference: walletTransactions.reference,
+                createdAt: walletTransactions.createdAt,
+                student: {
+                    id: students.id,
+                    firstName: students.firstName,
+                    lastName: students.lastName,
+                    matricNumber: students.matricNumber,
+                    contactEmail: students.contactEmail
+                }
+            }).from(walletTransactions)
+              .leftJoin(students, eq(walletTransactions.studentId, students.id))
+              .orderBy(desc(walletTransactions.createdAt));
+
+            const usages = await usageQuery;
+            for (const u of usages) {
+                if (fStatus && u.status !== fStatus) continue;
+                results.push({
+                    id: u.id,
+                    sourceTable: 'wallet_transactions',
+                    amount: u.amount,
+                    type: u.type as 'credit' | 'debit',
+                    purpose: u.purpose,
+                    status: u.status || 'pending',
+                    gateway: 'internal', // It's an internal wallet transfer
+                    gatewayReference: u.gatewayReference,
+                    rrr: null, // Wallet transactions don't have an external RRR
+                    createdAt: u.createdAt,
+                    student: u.student
+                });
+            }
+        }
+
+        // Sort unified results by createdAt desc
+        results.sort((a, b) => {
+            const dateA = a.createdAt ? a.createdAt.getTime() : 0;
+            const dateB = b.createdAt ? b.createdAt.getTime() : 0;
+            return dateB - dateA;
+        });
+
+        // Optional: you might want to paginate this in a real-world scenario if the array gets too large.
+        // Returning top 300 to avoid overwhelming the frontend UI during UAT
+        return results.slice(0, 300);
+    } catch (error) {
+        console.error("Failed to fetch unified transactions:", error);
+        return [];
+    }
+}
+
 export async function getTransactions() {
     try {
         const data = await db.select({
@@ -1008,6 +1180,35 @@ export async function getTransactions() {
     } catch (error) {
         console.error("Failed to fetch transactions:", error);
         return [];
+    }
+}
+
+export async function requeryUnifiedTransaction(txId: number, sourceTable: 'transactions' | 'payment_transactions' | 'wallet_transactions', gateway: string, reference: string) {
+    if (!gateway || gateway === 'internal') return { success: false, error: 'Internal transactions cannot be re-queried.' };
+    if (!reference) return { success: false, error: 'No gateway reference provided.' };
+
+    try {
+        const { verifyPayment } = await import('@/actions/payment-gateways');
+        const verification = await verifyPayment(gateway, reference);
+
+        if (verification.success) {
+            const newStatus = verification.verified ? 'completed' : 'failed';
+
+            if (sourceTable === 'transactions') {
+                await db.update(transactions).set({ status: newStatus as any }).where(eq(transactions.id, txId));
+            } else if (sourceTable === 'payment_transactions') {
+                await db.update(payment_transactions).set({ status: newStatus }).where(eq(payment_transactions.id, txId));
+            } else {
+                return { success: false, error: 'Cannot re-query this table source.' };
+            }
+
+            revalidatePath('/admin/bursary/transactions');
+            return { success: true, status: newStatus };
+        } else {
+            return { success: false, error: verification.error || 'Verification failed at gateway.' };
+        }
+    } catch (error: any) {
+        return { success: false, error: error.message };
     }
 }
 
@@ -1945,6 +2146,34 @@ export async function resolveOnlinePaymentAction(reference: string, status: 'com
             // 1. Fetch the transaction
             const [txRecord] = await tx.select().from(transactions).where(eq(transactions.gatewayReference, reference)).limit(1);
             if (!txRecord) {
+                const [payTx] = await tx.select().from(payment_transactions).where(eq(payment_transactions.transactionReference, reference)).limit(1);
+                if (payTx) {
+                    if (payTx.status !== 'pending') return { success: true, message: "Transaction already resolved." };
+                    if (status === 'failed') {
+                        await tx.update(payment_transactions).set({ status: 'failed' }).where(eq(payment_transactions.transactionReference, reference));
+                        return { success: true, status: 'failed' };
+                    }
+                    await tx.update(payment_transactions).set({ status: 'paid' }).where(eq(payment_transactions.transactionReference, reference));
+                    
+                    const [student] = await tx.select().from(students).where(eq(students.userId, payTx.userId)).limit(1);
+                    if (student) {
+                        let billId = undefined;
+                        try {
+                            const meta = payTx.metadata ? JSON.parse(payTx.metadata as string) : {};
+                            billId = meta.billId;
+                        } catch(e) {}
+                        
+                        await processPayment({
+                            studentId: student.id,
+                            amount: payTx.amount,
+                            purpose: payTx.transactionType,
+                            gateway: (payTx.paymentGateway as any) || 'remita',
+                            gatewayReference: reference,
+                            billId: billId
+                        });
+                        return { success: true, status: 'completed' };
+                    }
+                }
                 throw new Error(`Transaction with reference ${reference} not found.`);
             }
 

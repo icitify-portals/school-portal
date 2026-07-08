@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Script from "next/script";
 import { Button } from "@/components/ui/button";
 import { Loader2, CreditCard } from "lucide-react";
 import { toast } from "sonner";
@@ -39,6 +38,8 @@ export function RemitaInlineCheckout({
         const RmPaymentEngine = (window as any).RmPaymentEngine;
         if (!RmPaymentEngine) {
             console.error("RmPaymentEngine not found on window object");
+            toast.error("Payment engine is still loading. Please wait a moment and try again.");
+            setIsPaying(false);
             return;
         }
 
@@ -53,6 +54,8 @@ export function RemitaInlineCheckout({
                 email: email,
                 amount: amount,
                 rrr: rrr,
+                processRrr: true,
+                transactionId: `TX-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
                 extendedData: {
                     customFields: [{ name: "rrr", value: rrr }]
                 },
@@ -78,14 +81,37 @@ export function RemitaInlineCheckout({
         }
     };
 
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+
+        if ((window as any).RmPaymentEngine) {
+            setIsScriptLoaded(true);
+            return;
+        }
+
+        const scriptId = "remita-inline-script";
+        if (document.getElementById(scriptId)) return; // Already injected
+
+        const script = document.createElement("script");
+        script.id = scriptId;
+        script.src = "https://demo.remita.net/payment/v1/remita-pay-inline.bundle.js";
+        script.async = true;
+        
+        script.onload = () => {
+            // Give it a tiny bit of time to execute and attach to window
+            setTimeout(() => setIsScriptLoaded(true), 200);
+        };
+        
+        script.onerror = () => {
+            console.error("Failed to load Remita script");
+            toast.error("Failed to load Remita payment engine. Please check your network connection or adblocker.", { duration: 5000 });
+        };
+        
+        document.body.appendChild(script);
+    }, []);
+
     return (
         <>
-            <Script 
-                src="https://remitademo.net/payment/v1/remita-pay-inline.bundle.js" 
-                strategy="afterInteractive"
-                onLoad={() => setIsScriptLoaded(true)}
-            />
-
             <Button
                 onClick={makePayment}
                 disabled={isPaying}

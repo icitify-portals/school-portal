@@ -202,6 +202,69 @@ export default function AdminDailySummaryPage() {
                 </Card>
 
             </div>
+
+            {/* Daily Transactions Audit Table */}
+            <div className="pt-8">
+                <Card className="border-none shadow-xl shadow-slate-100/50 rounded-[2.5rem] overflow-hidden border border-slate-100">
+                    <CardHeader className="bg-slate-50/50 p-8 border-b border-slate-100">
+                        <CardTitle className="text-lg font-black flex items-center gap-3 tracking-tight text-slate-900">
+                            <Banknote className="w-5 h-5 text-indigo-600" />
+                            Daily Transactions Detail
+                        </CardTitle>
+                    </CardHeader>
+                    <div className="overflow-x-auto bg-white">
+                        <table className="w-full text-left">
+                            <thead>
+                                <tr className="bg-slate-50/40 text-slate-500 text-[10px] font-black uppercase tracking-widest border-b border-slate-100">
+                                    <th className="px-8 py-5">Time</th>
+                                    <th className="px-8 py-5">Transaction Details</th>
+                                    <th className="px-8 py-5">Student</th>
+                                    <th className="px-8 py-5">Gateway</th>
+                                    <th className="px-8 py-5 text-right">Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                                {loading ? (
+                                    <tr>
+                                        <td colSpan={5} className="px-8 py-10 text-center text-slate-400 font-medium text-xs">Loading transactions...</td>
+                                    </tr>
+                                ) : (!summary?.payments?.transactionsList || summary.payments.transactionsList.length === 0) ? (
+                                    <tr>
+                                        <td colSpan={5} className="px-8 py-10 text-center text-slate-400 font-medium text-xs">No successful transactions recorded for this day.</td>
+                                    </tr>
+                                ) : (
+                                    summary.payments.transactionsList.map((tx: any, idx: number) => (
+                                        <tr key={idx} className="hover:bg-slate-50 transition-colors">
+                                            <td className="px-8 py-4 whitespace-nowrap text-xs text-slate-600 font-medium">
+                                                {new Date(tx.createdAt).toLocaleTimeString()}
+                                            </td>
+                                            <td className="px-8 py-4 text-xs">
+                                                <p className="font-bold text-slate-900">{tx.purpose}</p>
+                                                <p className="text-slate-400 font-mono mt-0.5">Ref: {tx.gatewayReference}</p>
+                                                {tx.rrr && <p className="text-slate-400 font-mono mt-0.5">RRR: {tx.rrr}</p>}
+                                            </td>
+                                            <td className="px-8 py-4 text-xs text-slate-600">
+                                                <p className="font-bold">{tx.studentName || 'Unknown Student'}</p>
+                                                <p className="font-mono text-[10px] text-slate-400">{tx.matricNumber || 'No Matric'}</p>
+                                            </td>
+                                            <td className="px-8 py-4 whitespace-nowrap text-xs">
+                                                <span className="inline-flex items-center px-2 py-1 rounded bg-slate-100 text-slate-600 font-black uppercase tracking-wider">
+                                                    {tx.gateway === 'wallet' ? 'Student Wallet' : (tx.gateway || 'Manual')}
+                                                </span>
+                                            </td>
+                                            <td className="px-8 py-4 whitespace-nowrap text-xs font-black text-slate-900 text-right">
+                                                <span className={tx.type === 'credit' ? 'text-emerald-600' : 'text-rose-600'}>
+                                                    {tx.type === 'credit' ? '+' : '-'}₦{parseFloat(tx.amount).toLocaleString()}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </Card>
+            </div>
         </div>
     );
 }

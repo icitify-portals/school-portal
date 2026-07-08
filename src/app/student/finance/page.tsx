@@ -206,7 +206,7 @@ export default function StudentFinancePage() {
                 // Online gateway payment
                 const res = await initializeOnlineCheckoutAction(student.id, selectedBill.id, selectedAmount);
 
-                if (res.success && res.rrr) {
+                if (res.success && res.rrr && !res.rrr.startsWith('RRR-MOCK-')) {
                     setRemitaData({ rrr: res.rrr, reference: res.reference || "" });
                 } else if (res.success && res.checkoutUrl) {
                     setCheckoutSuccess(true);

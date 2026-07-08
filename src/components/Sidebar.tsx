@@ -238,7 +238,7 @@ const adminMenuItems: MenuItem[] = [
             { name: "Document Pricing Settings", href: "/admin/bursary/documents" },
             { name: "Scholarships & Trusts", href: "/admin/bursary/scholarships" },
             { name: "Bank Reconciliation", href: "/admin/bursary/reconciliation" },
-            { name: "Transaction History", href: "/admin/bursary/history" },
+            { name: "All Transactions", href: "/admin/bursary/transactions" },
             { name: "School Bills", href: "/admin/bursary/bills" },
             { name: "Refund Management", href: "/admin/bursary/refunds" },
             { name: "Platform Subscriptions", href: "/admin/bursary/developer-subscriptions" },
