@@ -193,7 +193,7 @@ export async function verifyPayment(gateway: string, reference: string) {
             verified = data.status === '00' || data.status === '01'; // 00 means successful, 01 means successful
             amount = data.amount || 0;
             if (!verified) {
-                return { error: data.message || `Transaction failed (Status Code: ${data.status || 'Unknown'})` };
+                return { error: data.message || `Transaction failed. Response: ${JSON.stringify(data)}` };
             }
         }
 
