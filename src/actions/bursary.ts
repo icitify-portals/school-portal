@@ -1193,7 +1193,7 @@ export async function requeryUnifiedTransaction(txId: number, sourceTable: 'tran
         
         let activeGateway = gateway;
         if (activeGateway === 'paystack' && !process.env.PAYSTACK_SECRET_KEY) {
-            if (process.env.REMITA_SECRET_KEY) activeGateway = 'remita';
+            if (process.env.REMITA_SECRET_KEY || process.env.REMITA_API_KEY) activeGateway = 'remita';
             else if (process.env.FLW_SECRET_KEY) activeGateway = 'flutterwave';
         }
 

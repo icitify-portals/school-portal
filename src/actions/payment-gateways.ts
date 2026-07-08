@@ -149,7 +149,7 @@ export async function verifyPayment(gateway: string, reference: string) {
         const def = GATEWAY_DEFS[gateway];
         if (!def) return { error: "Unknown gateway" };
 
-        const secretKey = process.env[`${def.envPrefix}_SECRET_KEY`];
+        const secretKey = process.env[`${def.envPrefix}_SECRET_KEY`] || process.env[`${def.envPrefix}_API_KEY`];
         if (!secretKey) return { error: `${def.name} not configured` };
 
         let verified = false;
@@ -162,6 +162,9 @@ export async function verifyPayment(gateway: string, reference: string) {
             const data = await res.json();
             verified = data.data?.status === 'success';
             amount = (data.data?.amount || 0) / 100;
+            if (!verified) {
+                return { error: data.message || `Transaction not successful (${data.data?.status || 'Unknown'})` };
+            }
 
         } else if (gateway === 'flutterwave') {
             const res = await fetch(`https://api.flutterwave.com/v3/transactions/verify_by_reference?tx_ref=${reference}`, {
@@ -170,6 +173,9 @@ export async function verifyPayment(gateway: string, reference: string) {
             const data = await res.json();
             verified = data.data?.status === 'successful';
             amount = data.data?.amount || 0;
+            if (!verified) {
+                return { error: data.message || `Transaction not successful (${data.data?.status || 'Unknown'})` };
+            }
         } else if (gateway === 'remita') {
             const merchantId = process.env.REMITA_MERCHANT_ID || "2547916";
             const apiKey = secretKey;
@@ -186,6 +192,9 @@ export async function verifyPayment(gateway: string, reference: string) {
             const data = await res.json();
             verified = data.status === '00' || data.status === '01'; // 00 means successful, 01 means successful
             amount = data.amount || 0;
+            if (!verified) {
+                return { error: data.message || `Transaction failed (Status Code: ${data.status || 'Unknown'})` };
+            }
         }
 
         return { success: true, verified, amount, gateway };
