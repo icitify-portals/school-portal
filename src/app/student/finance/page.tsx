@@ -703,12 +703,21 @@ export default function StudentFinancePage() {
                                                 <input
                                                     type="number"
                                                     required
+                                                    min={minPayment}
+                                                    max={outstanding}
                                                     className="w-full bg-slate-50 border border-slate-100 rounded-2xl h-12 px-4 focus:ring-2 focus:ring-indigo-500 transition-all font-black text-slate-800 placeholder:text-slate-400 text-lg"
                                                     placeholder="Enter amount (NGN)"
                                                     value={selectedAmount || ""}
                                                     onChange={(e) => {
                                                         const val = parseFloat(e.target.value);
                                                         setSelectedAmount(isNaN(val) ? 0 : val);
+                                                    }}
+                                                    onBlur={() => {
+                                                        if (selectedAmount < minPayment) {
+                                                            setSelectedAmount(minPayment);
+                                                        } else if (selectedAmount > outstanding) {
+                                                            setSelectedAmount(outstanding);
+                                                        }
                                                     }}
                                                 />
 

@@ -59,10 +59,12 @@ export class PaystackAdapter implements PaymentGatewayAdapter {
         console.log(`Payer: ${payerEmail}, Reference: ${txReference}, Total: ₦${totalAmount}`);
         
         // Map splits to Paystack kobo format
-        const subaccountsPayload = splits.map(item => ({
-            subaccount: item.subaccountCode || `ACCT_MOCK_${item.bankCode}_${item.accountNumber}`,
-            share: Math.round(item.amount * 100) // in kobo
-        }));
+        const subaccountsPayload = splits
+            .filter(item => item.subaccountCode && !item.subaccountCode.startsWith('ACCT_MOCK'))
+            .map(item => ({
+                subaccount: item.subaccountCode,
+                share: Math.round(item.amount * 100) // in kobo
+            }));
 
         // Determine Paystack fee bearer
         let paystackBearer: 'account' | 'subaccount' | 'all' = 'account';
@@ -72,27 +74,65 @@ export class PaystackAdapter implements PaymentGatewayAdapter {
             paystackBearer = 'all';
         }
 
-        const payload = {
+        const payload: any = {
             email: payerEmail,
             amount: Math.round(totalAmount * 100), // in kobo
             reference: txReference,
-            split: {
+            callback_url: `https://portal.fssibadan.edu.ng/student/finance`
+        };
+
+        if (subaccountsPayload.length > 0) {
+            payload.split = {
                 type: "flat",
                 bearer: paystackBearer,
                 subaccounts: subaccountsPayload
-            }
-        };
+            };
+        }
 
         console.log("Paystack API Payload:\n", JSON.stringify(payload, null, 2));
 
-        // We redirect the user to our simulated payment gateway page
-        const checkoutUrl = `/finance/checkout/simulate?gateway=paystack&reference=${txReference}&amount=${totalAmount}`;
-        
-        return {
-            success: true,
-            checkoutUrl,
-            reference: txReference
-        };
+        try {
+            const secretKey = process.env.PAYSTACK_SECRET_KEY;
+            if (!secretKey) {
+                console.error("Missing PAYSTACK_SECRET_KEY");
+                return {
+                    success: false,
+                    reference: txReference,
+                    error: "Gateway configuration error."
+                };
+            }
+            const res = await fetch("https://api.paystack.co/transaction/initialize", {
+                method: "POST",
+                headers: {
+                    "Authorization": `Bearer ${secretKey}`,
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(payload)
+            });
+
+            const data = await res.json();
+            if (data.status) {
+                return {
+                    success: true,
+                    checkoutUrl: data.data.authorization_url,
+                    reference: txReference
+                };
+            } else {
+                console.error("Paystack Init Failed:", data);
+                return {
+                    success: false,
+                    reference: txReference,
+                    error: data.message || "Failed to initialize Paystack payment."
+                };
+            }
+        } catch (error) {
+            console.error("Error connecting to Paystack API:", error);
+            return {
+                success: false,
+                reference: txReference,
+                error: "Network error connecting to Paystack."
+            };
+        }
     }
 }
 
