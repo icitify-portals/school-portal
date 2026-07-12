@@ -1,5 +1,5 @@
 import { auth } from "@/auth";
-import { getBrandingSettings } from "@/actions/settings";
+import { getSettingByKey } from "@/actions/settings";
 import Link from "next/link";
 import { ArrowRight, BookOpen, UserPlus, Users, GraduationCap, ShieldCheck, CreditCard, ChevronRight, HelpCircle } from "lucide-react";
 
@@ -7,9 +7,11 @@ export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
     const session = await auth();
-    const branding = await getBrandingSettings();
-    const logoUrl = branding?.INST_LOGO?.trim() && branding.INST_LOGO !== 'null' ? branding.INST_LOGO : "/logo.png";
-    const instName = branding?.INST_NAME || "Smart Portal";
+    const rawLogo = await getSettingByKey('portal_logo');
+    const rawName = await getSettingByKey('portal_name');
+    
+    const logoUrl = rawLogo?.trim() && rawLogo !== 'null' ? rawLogo : "/logo.png";
+    const instName = rawName || "Smart Portal";
 
     return (
         <div className="min-h-screen bg-slate-50 selection:bg-indigo-500/30">
@@ -20,9 +22,8 @@ export default async function HomePage() {
                         <img 
                             src={logoUrl} 
                             alt={instName} 
-                            className="h-12 w-auto object-contain bg-white rounded-lg p-1" 
+                            className="h-16 md:h-20 w-auto object-contain bg-white/10 backdrop-blur-sm rounded-xl p-2 shadow-lg" 
                         />
-                        <span className="text-xl font-bold text-white tracking-tight">{instName}</span>
                     </div>
                 </div>
             </header>
@@ -178,7 +179,7 @@ export default async function HomePage() {
                     <img 
                         src={logoUrl} 
                         alt={instName} 
-                        className="h-12 w-auto object-contain bg-white rounded-lg p-1 mb-6" 
+                        className="h-16 md:h-20 w-auto object-contain bg-white/10 backdrop-blur-sm rounded-xl p-2 mb-6 shadow-lg" 
                     />
                     <p className="text-slate-500 text-sm font-medium">
                         &copy; {new Date().getFullYear()} {instName}. All rights reserved.
