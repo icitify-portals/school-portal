@@ -1,4 +1,5 @@
 import { auth } from "@/auth";
+import { getBrandingSettings } from "@/actions/settings";
 import Link from "next/link";
 import { ArrowRight, BookOpen, UserPlus, Users, GraduationCap, ShieldCheck, CreditCard, ChevronRight, HelpCircle } from "lucide-react";
 
@@ -6,11 +7,28 @@ export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
     const session = await auth();
+    const branding = await getBrandingSettings();
+    const logoUrl = branding?.INST_LOGO?.trim() && branding.INST_LOGO !== 'null' ? branding.INST_LOGO : "/logo.png";
+    const instName = branding?.INST_NAME || "Smart Portal";
 
     return (
         <div className="min-h-screen bg-slate-50 selection:bg-indigo-500/30">
+            {/* Header */}
+            <header className="absolute top-0 w-full z-50 py-6">
+                <div className="max-w-7xl mx-auto px-4 flex justify-between items-center">
+                    <div className="flex items-center gap-3">
+                        <img 
+                            src={logoUrl} 
+                            alt={instName} 
+                            className="h-12 w-auto object-contain bg-white rounded-lg p-1" 
+                        />
+                        <span className="text-xl font-bold text-white tracking-tight">{instName}</span>
+                    </div>
+                </div>
+            </header>
+
             {/* Hero Section */}
-            <section className="relative pt-32 pb-20 overflow-hidden bg-slate-950 flex items-center min-h-[70vh]">
+            <section className="relative pt-40 pb-20 overflow-hidden bg-slate-950 flex items-center min-h-[70vh]">
                 <div className="absolute inset-0 z-0">
                     <div className="absolute inset-0 bg-[linear-gradient(to_right,#4f4f4f2e_1px,transparent_1px),linear-gradient(to_bottom,#4f4f4f2e_1px,transparent_1px)] bg-[size:14px_24px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]"></div>
                     <div className="absolute top-0 right-1/4 w-96 h-96 bg-indigo-500/20 rounded-full blur-[100px]" />
@@ -153,6 +171,20 @@ export default async function HomePage() {
                     </div>
                 </div>
             </section>
+
+            {/* Footer */}
+            <footer className="py-12 bg-slate-950 border-t border-slate-900">
+                <div className="max-w-7xl mx-auto px-4 text-center flex flex-col items-center">
+                    <img 
+                        src={logoUrl} 
+                        alt={instName} 
+                        className="h-12 w-auto object-contain bg-white rounded-lg p-1 mb-6" 
+                    />
+                    <p className="text-slate-500 text-sm font-medium">
+                        &copy; {new Date().getFullYear()} {instName}. All rights reserved.
+                    </p>
+                </div>
+            </footer>
         </div>
     );
 }
