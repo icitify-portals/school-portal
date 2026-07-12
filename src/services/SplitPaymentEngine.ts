@@ -271,24 +271,30 @@ export class RemitaAdapter implements PaymentGatewayAdapter {
                 data = JSON.parse(text);
             }
             
+            console.log("Remita Raw Response:", data);
+
             if (data && (data.statuscode === "025" || data.statuscode === "00") && (data.rrr || data.RRR)) {
                 rrr = data.rrr || data.RRR;
             } else {
-                // If API fails or is not accessible, fallback to mock for testing
                 console.error("Remita RRR Generation failed. API Response:", data);
-                rrr = `RRR-MOCK-${Math.floor(100000000000 + Math.random() * 900000000000)}`;
+                return {
+                    success: false,
+                    reference: txReference,
+                    error: `Remita Error: ${data.status || 'Failed to generate RRR'}`
+                };
             }
         } catch (error) {
             console.error("Error connecting to Remita API:", error);
-            rrr = `RRR-MOCK-${Math.floor(100000000000 + Math.random() * 900000000000)}`;
+            return {
+                success: false,
+                reference: txReference,
+                error: "Network error connecting to Remita."
+            };
         }
         
-        // Redirect to simulated page
-        const checkoutUrl = `/finance/checkout/simulate?gateway=remita&reference=${txReference}&amount=${totalAmount}&rrr=${rrr}`;
-
         return {
             success: true,
-            checkoutUrl,
+            checkoutUrl: "",
             reference: txReference,
             rrr
         };
