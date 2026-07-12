@@ -214,18 +214,21 @@ export class RemitaAdapter implements PaymentGatewayAdapter {
         const merchantId = process.env.REMITA_MERCHANT_ID || "19201597339";
         const apiKey = process.env.REMITA_API_KEY || "6NYU4646";
 
-        let serviceTypeId = "8817651539"; // Default: ND1 / Fallback
+        let serviceTypeId = process.env.REMITA_SERVICE_TYPE_ID || "8817651539"; // Fallback to env or default
         const level = String(meta?.studentLevel || "").toLowerCase();
         
-        // Match string names (ND 2) or numeric levels (200)
-        if ((level.includes('nd') && level.includes('2')) || level === '200') {
-            serviceTypeId = "1172909756"; // ND2
-        } else if ((level.includes('hnd') && level.includes('1')) || level === '300') {
-            serviceTypeId = "8817962375"; // HND1
-        } else if ((level.includes('hnd') && level.includes('2')) || level === '400') {
-            serviceTypeId = "1173000079"; // HND2
-        } else if ((level.includes('nd') && level.includes('1')) || level === '100') {
-            serviceTypeId = "8817651539"; // ND1
+        // Only use specific service types if we don't have a global override in env, or if we strictly want dynamic mapping.
+        // For now, if the env var is set to something other than the default, we should probably prefer the env var for wallet/general topups.
+        if (meta?.studentLevel) {
+            if ((level.includes('nd') && level.includes('2')) || level === '200') {
+                serviceTypeId = "1172909756"; // ND2
+            } else if ((level.includes('hnd') && level.includes('1')) || level === '300') {
+                serviceTypeId = "8817962375"; // HND1
+            } else if ((level.includes('hnd') && level.includes('2')) || level === '400') {
+                serviceTypeId = "1173000079"; // HND2
+            } else if ((level.includes('nd') && level.includes('1')) || level === '100') {
+                serviceTypeId = "8817651539"; // ND1
+            }
         }
 
         const payload: any = {
