@@ -47,7 +47,7 @@ export function RemitaInlineCheckout({
 
         try {
             const paymentEngine = RmPaymentEngine.init({
-                key: process.env.NEXT_PUBLIC_REMITA_PUBLIC_KEY || "QzAwMDAyNzEyNTl8MTEwNjE4Njc3MzZ8MThkNGYwY2E0YWZkNmM4MmEwOGEyZDkxYWMwMGMyYWFlNjRlYmY4MzM0OGNlMjcxZDU4NTkyZTNkZTI5YWNkNzEzN2ZkMWI4ZmE5OTQ0NDg3YmM0YjFlNGM2NjExMGYzZDZmMGUzY2I5MmY2YWZlMDVmMzBhY2QzNzEzOWQwNDc=", // Fallback to demo key if missing
+                key: process.env.NEXT_PUBLIC_REMITA_PUBLIC_KEY || "RlNTSUJBREFOfDE5MjAxNTk3MzM5fGY4NzhmZmU1MmYwOTE4NTVmMTM5MWY0Yjc3NjAyNTJmNWNmMmU1YWRiYWIyNDNhY2Q5ZWVlNmRkYjJmYmU2ZTY3NzFkMTVhZWQ1ZDAyMWViMmI1NTlkNzM4YTFjMTJiOGRiMDIwZDU4NGY2NmVjM2FiOWJmYWZiNDZmM2YzY2M4", // Live FSS Ibadan Key
                 customerId: email,
                 firstName: firstName,
                 lastName: lastName,
@@ -94,7 +94,7 @@ export function RemitaInlineCheckout({
 
         const script = document.createElement("script");
         script.id = scriptId;
-        script.src = "https://demo.remita.net/payment/v1/remita-pay-inline.bundle.js";
+        script.src = "https://login.remita.net/payment/v1/remita-pay-inline.bundle.js";
         script.async = true;
         
         script.onload = () => {

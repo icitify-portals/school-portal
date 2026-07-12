@@ -7064,3 +7064,18 @@ export const system_backups = mysqlTable('system_backups', {
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
 });
+
+// --- PAYSTACK DEVELOPER FEES (MANDATORY GATEWAY) ---
+export const paystackDeveloperFees = mysqlTable('paystack_developer_fees', {
+  id: int('id').primaryKey().autoincrement(),
+  email: varchar('email', { length: 255 }).notNull(),
+  identifier: varchar('identifier', { length: 255 }).notNull(), // userId, applicationId, or studentId
+  type: mysqlEnum('type', ['admission_form', 'school_fees']).notNull(),
+  sessionId: int('session_id').references(() => academicSessions.id),
+  amount: decimal('amount', { precision: 12, scale: 2 }).notNull(),
+  reference: varchar('reference', { length: 100 }).unique().notNull(), // Paystack ref
+  status: mysqlEnum('status', ['pending', 'paid', 'failed']).default('pending'),
+  paidAt: timestamp('paid_at'),
+  createdAt: timestamp('created_at').defaultNow()
+});
+

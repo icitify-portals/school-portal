@@ -38,7 +38,8 @@ export interface PaymentGatewayAdapter {
         totalAmount: number,
         txReference: string,
         splits: SplitItem[],
-        feeAllocationRule: 'developer' | 'default' | 'subaccounts' | 'student' | 'prorated'
+        feeAllocationRule: 'developer' | 'default' | 'subaccounts' | 'student' | 'prorated',
+        meta?: Record<string, any>
     ): Promise<GatewayCheckoutResponse>;
 }
 
@@ -51,7 +52,8 @@ export class PaystackAdapter implements PaymentGatewayAdapter {
         totalAmount: number,
         txReference: string,
         splits: SplitItem[],
-        feeAllocationRule: 'developer' | 'default' | 'subaccounts' | 'student' | 'prorated'
+        feeAllocationRule: 'developer' | 'default' | 'subaccounts' | 'student' | 'prorated',
+        meta?: Record<string, any>
     ): Promise<GatewayCheckoutResponse> {
         console.log("=== PAYSTACK SPLIT PAYMENT INITIALIZATION ===");
         console.log(`Payer: ${payerEmail}, Reference: ${txReference}, Total: ₦${totalAmount}`);
@@ -103,7 +105,8 @@ export class FlutterwaveAdapter implements PaymentGatewayAdapter {
         totalAmount: number,
         txReference: string,
         splits: SplitItem[],
-        feeAllocationRule: 'developer' | 'default' | 'subaccounts' | 'student' | 'prorated'
+        feeAllocationRule: 'developer' | 'default' | 'subaccounts' | 'student' | 'prorated',
+        meta?: Record<string, any>
     ): Promise<GatewayCheckoutResponse> {
         console.log("=== FLUTTERWAVE SPLIT PAYMENT INITIALIZATION ===");
         console.log(`Payer: ${payerEmail}, Reference: ${txReference}, Total: ₦${totalAmount}`);
@@ -152,7 +155,8 @@ export class RemitaAdapter implements PaymentGatewayAdapter {
         totalAmount: number,
         txReference: string,
         splits: SplitItem[],
-        feeAllocationRule: 'developer' | 'default' | 'subaccounts' | 'student' | 'prorated'
+        feeAllocationRule: 'developer' | 'default' | 'subaccounts' | 'student' | 'prorated',
+        meta?: Record<string, any>
     ): Promise<GatewayCheckoutResponse> {
         console.log("=== REMITA SPLIT PAYMENT INITIALIZATION (DYNAMIC INLINE) ===");
         console.log(`Payer: ${payerEmail}, Reference: ${txReference}, Total: ₦${totalAmount}`);
@@ -167,9 +171,22 @@ export class RemitaAdapter implements PaymentGatewayAdapter {
             deductFeeFrom: "0" // "0" ensures fee is borne by the payer (student)
         }));
 
-        const merchantId = process.env.REMITA_MERCHANT_ID || "2547916";
-        const serviceTypeId = process.env.REMITA_SERVICE_TYPE_ID || "4430731";
-        const apiKey = process.env.REMITA_API_KEY || "1946";
+        const merchantId = process.env.REMITA_MERCHANT_ID || "19201597339";
+        const apiKey = process.env.REMITA_API_KEY || "6NYU4646";
+
+        let serviceTypeId = "8817651539"; // Default: ND1 / Fallback
+        const level = String(meta?.studentLevel || "").toLowerCase();
+        
+        // Match string names (ND 2) or numeric levels (200)
+        if ((level.includes('nd') && level.includes('2')) || level === '200') {
+            serviceTypeId = "1172909756"; // ND2
+        } else if ((level.includes('hnd') && level.includes('1')) || level === '300') {
+            serviceTypeId = "8817962375"; // HND1
+        } else if ((level.includes('hnd') && level.includes('2')) || level === '400') {
+            serviceTypeId = "1173000079"; // HND2
+        } else if ((level.includes('nd') && level.includes('1')) || level === '100') {
+            serviceTypeId = "8817651539"; // ND1
+        }
 
         const payload: any = {
             merchantId,
@@ -195,7 +212,7 @@ export class RemitaAdapter implements PaymentGatewayAdapter {
 
         let rrr = "";
         try {
-            const res = await fetch('https://demo.remita.net/remita/exapp/api/v1/send/api/echannelsvc/merchant/api/paymentinit', {
+            const res = await fetch('https://login.remita.net/remita/exapp/api/v1/send/api/echannelsvc/merchant/api/paymentinit', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -500,7 +517,8 @@ export class SplitPaymentEngine {
             checkoutTotal,
             txRef,
             splits,
-            feeBearerRule
+            feeBearerRule,
+            { studentLevel: student.level || "" }
         );
         
         if (result.rrr) {
@@ -636,7 +654,8 @@ export class SplitPaymentEngine {
             checkoutTotal,
             txRef,
             splits,
-            feeBearerRule
+            feeBearerRule,
+            { studentLevel: "ND 1" }
         );
         
         if (result.rrr) {

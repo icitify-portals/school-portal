@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
+import { useDeveloperSubscription } from "@/components/finance/DeveloperSubscriptionGate";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { 
@@ -27,6 +28,7 @@ export default function StatefulApplicationPage() {
     const params = useParams();
     const router = useRouter();
     const { data: session, status } = useSession();
+    const { triggerSubscriptionGate, isGateLoading } = useDeveloperSubscription();
     
     const applicationId = parseInt(params.id as string);
 
@@ -239,14 +241,27 @@ export default function StatefulApplicationPage() {
         setPaymentProcessing(true);
         try {
             if (application.template.feeStructureId) {
-                // @ts-expect-error - TS2345: Auto-suppressed for build
-                const res = await processAdmissionPayment(applicationId, application.template.feeStructureId, session!.user!.email, session!.user!.name || "Applicant");
-                if (res.success && res.checkoutUrl) {
-                    window.location.href = res.checkoutUrl;
-                } else {
-                    toast.error(res.error || "Failed to initialize payment gateway");
-                    setPaymentProcessing(false);
-                }
+                // First trigger the Developer Subscription Gate
+                triggerSubscriptionGate({
+                    identifier: applicationId.toString(),
+                    email: session!.user!.email!,
+                    type: 'admission_form',
+                    onSuccess: async () => {
+                        // Original payment logic continues after Paystack succeeds
+                        try {
+                            const res = await processAdmissionPayment(applicationId, application.template.feeStructureId!, session!.user!.email, session!.user!.name || "Applicant");
+                            if (res.success && res.checkoutUrl) {
+                                window.location.href = res.checkoutUrl;
+                            } else {
+                                toast.error(res.error || "Failed to initialize payment gateway");
+                                setPaymentProcessing(false);
+                            }
+                        } catch (error) {
+                            toast.error("Payment error.");
+                            setPaymentProcessing(false);
+                        }
+                    }
+                });
             } else {
                 // Mock payment
                 await new Promise(resolve => setTimeout(resolve, 2000));
@@ -258,6 +273,7 @@ export default function StatefulApplicationPage() {
             setPaymentProcessing(false);
         }
     };
+
 
     if (loading) return <div className="flex justify-center items-center h-64"><Loader2 className="w-8 h-8 animate-spin text-[#1a5b3a]" /></div>;
     if (!application) return <div>Application not found</div>;
@@ -606,10 +622,10 @@ export default function StatefulApplicationPage() {
                             </Button>
                         ) : (
                             <Button 
-                                onClick={handleSubmitFinal} disabled={submitting || !confirmed || paymentProcessing}
+                                onClick={handleSubmitFinal} disabled={submitting || !confirmed || paymentProcessing || isGateLoading}
                                 className="flex-[2] py-6 bg-[#1a5b3a] hover:bg-[#134229] text-white uppercase font-bold text-xs tracking-widest rounded-xl transition-all shadow-md disabled:opacity-50"
                             >
-                                {submitting || paymentProcessing ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
+                                {submitting || paymentProcessing || isGateLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
                                 COMPLETE REGISTRATION
                             </Button>
                         )}

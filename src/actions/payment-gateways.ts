@@ -101,13 +101,13 @@ export async function initiatePayment(gateway: string, amount: number, reference
             else return { error: data.message || "Flutterwave initialization failed" };
 
         } else if (gateway === 'remita') {
-            const merchantId = process.env.REMITA_MERCHANT_ID || "2547916";
-            const serviceTypeId = process.env.REMITA_SERVICE_TYPE_ID || "4430731";
-            const apiKey = secretKey;
+            const merchantId = process.env.REMITA_MERCHANT_ID || "19201597339";
+            const serviceTypeId = process.env.REMITA_SERVICE_TYPE_ID || "8817651539"; // ND1 Default
+            const apiKey = process.env.REMITA_API_KEY || "6NYU4646";
             const crypto = require('crypto');
             const hash = crypto.createHash('sha512').update(`${merchantId}${serviceTypeId}${reference}${amount}${apiKey}`).digest('hex');
             
-            const res = await fetch('https://remitademo.net/remita/exapp/api/v1/send/api/echannelsvc/merchant/api/paymentinit', {
+            const res = await fetch('https://login.remita.net/remita/exapp/api/v1/send/api/echannelsvc/merchant/api/paymentinit', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -177,15 +177,13 @@ export async function verifyPayment(gateway: string, reference: string, rrr?: st
                 return { error: data.message || `Transaction not successful (${data.data?.status || 'Unknown'})` };
             }
         } else if (gateway === 'remita') {
-            const merchantId = process.env.REMITA_MERCHANT_ID || "2547916";
-            const apiKey = secretKey;
+            const merchantId = process.env.REMITA_MERCHANT_ID || "19201597339";
+            const apiKey = process.env.REMITA_API_KEY || "6NYU4646";
             const crypto = require('crypto');
             
-            // Revert back to using reference (orderId) and echannelsvc endpoint, but ensure we use demo.remita.net
-            // because ecomm endpoint is blocked by WAF and remitademo.net is the old database.
             const hash = crypto.createHash('sha512').update(`${reference}${apiKey}${merchantId}`).digest('hex');
             
-            const res = await fetch(`https://demo.remita.net/remita/exapp/api/v1/send/api/echannelsvc/${merchantId}/${reference}/${hash}/status.reg`, {
+            const res = await fetch(`https://login.remita.net/remita/exapp/api/v1/send/api/echannelsvc/${merchantId}/${reference}/${hash}/status.reg`, {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
@@ -193,14 +191,6 @@ export async function verifyPayment(gateway: string, reference: string, rrr?: st
                 }
             });
             const data = await res.json();
-            
-            // Remita Demo Environment is currently returning 500 Internal Server Error for valid transactions
-            // or blocking with WAF. If we are using the Demo Merchant ID, we bypass this strict server check 
-            // to allow students to complete their payment flow.
-            if (merchantId === "2547916" && (data.responseCode === 500 || data.responseCode === "500" || data.status === null)) {
-                console.log("Remita Demo Error Bypassed. Assuming Success.");
-                return { success: true, verified: true, amount: 0, gateway: 'remita' };
-            }
             
             verified = data.status === '00' || data.status === '01'; // 00 means successful, 01 means successful
             amount = data.amount || 0;

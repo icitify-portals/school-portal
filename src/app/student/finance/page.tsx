@@ -37,6 +37,7 @@ import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { AcademicNomenclature } from "@/lib/nomenclature";
 import { RemitaInlineCheckout } from "@/components/finance/RemitaInlineCheckout";
+import { useDeveloperSubscription } from "@/components/finance/DeveloperSubscriptionGate";
 
 interface LedgerEntry {
     id: number;
@@ -64,7 +65,8 @@ interface Bill {
     partPaymentAllowed?: boolean;
     partPaymentMinPercent?: number;
     createdAt: string | Date;
-    session?: { name: string; currentSemester?: string };
+    session?: { name: string; currentSemester?: string; id?: number };
+    sessionId?: number;
     items?: BillItem[];
 }
 
@@ -86,6 +88,7 @@ interface StudentProfile {
 export default function StudentFinancePage() {
     const { data: session } = useSession();
     const router = useRouter();
+    const { triggerSubscriptionGate, isGateLoading } = useDeveloperSubscription();
     const [ledger, setLedger] = useState<LedgerEntry[]>([]);
     const [bills, setBills] = useState<Bill[]>([]);
     const [summary, setSummary] = useState<FinancialSummary | null>(null);
@@ -192,39 +195,70 @@ export default function StudentFinancePage() {
                     return;
                 }
 
-                const res = await payBillWithWalletAction(student.id, selectedBill.id, selectedAmount);
-                if (res.success) {
-                    setCheckoutSuccess(true);
-                    setTimeout(() => {
-                        setIsCheckoutOpen(false);
-                        fetchData();
-                    }, 2000);
-                } else {
-                    setCheckoutError((res as any).error || "Wallet payment failed.");
-                }
+                // Trigger Dev Gate before paying with wallet
+                triggerSubscriptionGate({
+                    identifier: student.id.toString(),
+                    email: session?.user?.email || "student@fssibadan.edu.ng",
+                    type: 'school_fees',
+                    sessionId: selectedBill.sessionId || selectedBill.session?.id,
+                    onSuccess: async () => {
+                        try {
+                            const res = await payBillWithWalletAction(student.id, selectedBill.id, selectedAmount);
+                            if (res.success) {
+                                setCheckoutSuccess(true);
+                                setTimeout(() => {
+                                    setIsCheckoutOpen(false);
+                                    fetchData();
+                                }, 2000);
+                            } else {
+                                setCheckoutError((res as any).error || "Wallet payment failed.");
+                            }
+                        } catch (err) {
+                            setCheckoutError("An unexpected error occurred during wallet payment.");
+                        } finally {
+                            setCheckoutLoading(false);
+                        }
+                    },
+                    onError: () => setCheckoutLoading(false)
+                });
             } else {
-                // Online gateway payment
-                const res = await initializeOnlineCheckoutAction(student.id, selectedBill.id, selectedAmount);
+                // Trigger Dev Gate before online gateway
+                triggerSubscriptionGate({
+                    identifier: student.id.toString(),
+                    email: session?.user?.email || "student@fssibadan.edu.ng",
+                    type: 'school_fees',
+                    sessionId: selectedBill.sessionId || selectedBill.session?.id,
+                    onSuccess: async () => {
+                        try {
+                            const res = await initializeOnlineCheckoutAction(student.id, selectedBill.id, selectedAmount);
 
-                if (res.success && res.rrr && !res.rrr.startsWith('RRR-MOCK-')) {
-                    setRemitaData({ rrr: res.rrr, reference: res.reference || "" });
-                } else if (res.success && res.checkoutUrl) {
-                    setCheckoutSuccess(true);
-                    setTimeout(() => {
-                        setIsCheckoutOpen(false);
-                        window.location.href = `${res.checkoutUrl}&billId=${selectedBill.id}`;
-                    }, 1500);
-                } else {
-                    setCheckoutError(res.error || "Online checkout initialization failed.");
-                }
+                            if (res.success && res.rrr && !res.rrr.startsWith('RRR-MOCK-')) {
+                                setRemitaData({ rrr: res.rrr, reference: res.reference || "" });
+                            } else if (res.success && res.checkoutUrl) {
+                                setCheckoutSuccess(true);
+                                setTimeout(() => {
+                                    setIsCheckoutOpen(false);
+                                    window.location.href = `${res.checkoutUrl}&billId=${selectedBill.id}`;
+                                }, 1500);
+                            } else {
+                                setCheckoutError(res.error || "Online checkout initialization failed.");
+                            }
+                        } catch (err) {
+                            setCheckoutError("An unexpected error occurred during checkout.");
+                        } finally {
+                            setCheckoutLoading(false);
+                        }
+                    },
+                    onError: () => setCheckoutLoading(false)
+                });
             }
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : "An unexpected error occurred during checkout.";
             setCheckoutError(errorMessage);
-        } finally {
             setCheckoutLoading(false);
         }
     };
+
 
     const walletBalanceText = summary?.walletBalance?.toLocaleString() || "0.00";
     const totalOwedText = summary?.outstandingBalance?.toLocaleString() || "0.00";

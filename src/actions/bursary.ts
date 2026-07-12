@@ -2199,7 +2199,7 @@ export async function resolveOnlinePaymentAction(reference: string, status: 'com
                             billId = meta.billId;
                         } catch(e) {}
                         
-                        await processPayment({
+                        const processed = await processPayment({
                             studentId: student.id,
                             amount: payTx.amount,
                             purpose: payTx.transactionType,
@@ -2207,7 +2207,7 @@ export async function resolveOnlinePaymentAction(reference: string, status: 'com
                             gatewayReference: reference,
                             billId: billId
                         });
-                        return { success: true, status: 'completed' };
+                        return { success: true, status: 'completed', transactionId: processed.transactionId };
                     }
                 }
                 throw new Error(`Transaction with reference ${reference} not found.`);
