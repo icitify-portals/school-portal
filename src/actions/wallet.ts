@@ -50,6 +50,10 @@ export async function initializeWalletTopUp(amount: number, gateway: 'remita' | 
             'student' // Fee allocation rule
         );
 
+        if (!checkoutResponse.success) {
+            return { success: false, error: checkoutResponse.error || "Payment gateway initialization failed" };
+        }
+
         // Extract RRR if remita
         let rrr = null;
         if (gateway === 'remita') {
