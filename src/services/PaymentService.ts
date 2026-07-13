@@ -98,7 +98,7 @@ export class PaymentService {
         let rrr = "RRR-MOCK-12345";
         try {
             const isLive = process.env.REMITA_ENV === 'live' || process.env.REMITA_MERCHANT_ID !== "2547916";
-            const baseUrl = isLive ? "https://login.remita.net" : "https://remitademo.net";
+            const baseUrl = isLive ? "https://login.remita.net" : "https://demo.remita.net";
 
             const res = await fetch(`${baseUrl}/remita/exapp/api/v1/send/api/echannelsvc/merchant/api/paymentinit`, {
                 method: 'POST',

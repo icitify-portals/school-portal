@@ -85,7 +85,7 @@ export function useDeveloperSubscription() {
                 return;
             }
 
-            if (!isScriptLoaded || !(window as any).PaystackPop) {
+            if (!(window as any).PaystackPop) {
                 toast.error("Payment engine is still loading. Please try again in a few seconds.");
                 setIsLoading(false);
                 if (onError) onError();
