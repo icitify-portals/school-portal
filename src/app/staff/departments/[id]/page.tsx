@@ -1,10 +1,9 @@
-import { getCourses } from "@/actions/courses";
-import { getDepartments } from "@/actions/departments";
+import { getDepartmentDetails } from "@/actions/departments";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, UserCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export const metadata = {
@@ -14,15 +13,9 @@ export const metadata = {
 
 export default async function StaffDepartmentCoursesPage({ params }: { params: { id: string } }) {
     const departmentId = parseInt(params.id);
-    
-    const [allCourses, allDepartments] = await Promise.all([
-        getCourses(),
-        getDepartments()
-    ]);
+    const data = await getDepartmentDetails(departmentId);
 
-    const department = allDepartments.find(d => d.id === departmentId);
-
-    if (!department) {
+    if (!data || !data.department) {
         return (
             <div className="container mx-auto py-8 text-center">
                 <h1 className="text-2xl font-bold mb-4">Department Not Found</h1>
@@ -33,16 +26,15 @@ export default async function StaffDepartmentCoursesPage({ params }: { params: {
         );
     }
 
-    // Filter courses that belong to this department
-    const deptCourses = allCourses.filter(c => 
-        c.departmentSettings?.some((s: any) => s.deptId === departmentId)
-    ).map(c => {
-        const setting = c.departmentSettings?.find((s: any) => s.deptId === departmentId);
+    const { department, courses } = data;
+
+    // Filter and map courses
+    const deptCourses = courses.map(c => {
         return {
             ...c,
-            semester: setting?.semester,
-            level: setting?.level,
-            status: setting?.status
+            semester: c.settings?.semester,
+            level: c.settings?.level,
+            status: c.settings?.status
         };
     });
 
@@ -101,10 +93,11 @@ export default async function StaffDepartmentCoursesPage({ params }: { params: {
                                 <Table>
                                     <TableHeader>
                                         <TableRow>
-                                            <TableHead className="w-[150px]">Code</TableHead>
+                                            <TableHead className="w-[120px]">Code</TableHead>
                                             <TableHead>Course Title</TableHead>
-                                            <TableHead className="w-[100px] text-center">Units</TableHead>
-                                            <TableHead className="w-[150px]">Status</TableHead>
+                                            <TableHead className="w-[80px] text-center">Units</TableHead>
+                                            <TableHead className="w-[120px]">Status</TableHead>
+                                            <TableHead className="w-[200px]">Lecturers</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
@@ -117,6 +110,20 @@ export default async function StaffDepartmentCoursesPage({ params }: { params: {
                                                     <Badge variant={course.status === 'compulsory' ? 'default' : 'secondary'}>
                                                         {course.status ? course.status.toUpperCase() : 'N/A'}
                                                     </Badge>
+                                                </TableCell>
+                                                <TableCell>
+                                                    {course.lecturers && course.lecturers.length > 0 ? (
+                                                        <div className="flex flex-col gap-1">
+                                                            {course.lecturers.map((lecturer: any, idx: number) => (
+                                                                <div key={idx} className="flex items-center text-sm text-muted-foreground">
+                                                                    <UserCircle2 className="w-3 h-3 mr-1" />
+                                                                    {lecturer.title} {lecturer.lastName} {lecturer.firstName}
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    ) : (
+                                                        <span className="text-xs text-muted-foreground italic">Unassigned</span>
+                                                    )}
                                                 </TableCell>
                                             </TableRow>
                                         ))}
