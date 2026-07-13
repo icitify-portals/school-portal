@@ -182,7 +182,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                     // Record failed attempt
                     const attempts = (user.failedLoginAttempts || 0) + 1;
                     let lockoutUntil = null;
-                    if (attempts >= 3) {
+                    if (attempts >= 5) {
                         // SECURITY FIX: Increased from 2 minutes to 15 minutes to resist brute-force attacks
                         lockoutUntil = new Date(Date.now() + 3 * 60 * 1000); // 3 minutes lockout
                     }

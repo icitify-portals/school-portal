@@ -255,7 +255,7 @@ export class RemitaAdapter implements PaymentGatewayAdapter {
 
         let rrr = "";
         try {
-            const res = await fetch('https://login.remita.net/remita/exapp/api/v1/send/api/echannelsvc/merchant/api/paymentinit', {
+            const res = await fetch('https://remitademo.net/remita/exapp/api/v1/send/api/echannelsvc/merchant/api/paymentinit', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

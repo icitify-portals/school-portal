@@ -15,18 +15,6 @@ export default async function HomePage() {
 
     return (
         <div className="min-h-screen bg-slate-50 selection:bg-indigo-500/30">
-            {/* Header */}
-            <header className="absolute top-0 w-full z-50 py-6">
-                <div className="max-w-7xl mx-auto px-4 flex justify-between items-center">
-                    <div className="flex items-center gap-3">
-                        <img 
-                            src={logoUrl} 
-                            alt={instName} 
-                            className="h-16 md:h-20 w-auto object-contain bg-white/10 backdrop-blur-sm rounded-xl p-2 shadow-lg" 
-                        />
-                    </div>
-                </div>
-            </header>
 
             {/* Hero Section */}
             <section className="relative pt-40 pb-20 overflow-hidden bg-slate-950 flex items-center min-h-[70vh]">
@@ -173,19 +161,7 @@ export default async function HomePage() {
                 </div>
             </section>
 
-            {/* Footer */}
-            <footer className="py-12 bg-slate-950 border-t border-slate-900">
-                <div className="max-w-7xl mx-auto px-4 text-center flex flex-col items-center">
-                    <img 
-                        src={logoUrl} 
-                        alt={instName} 
-                        className="h-16 md:h-20 w-auto object-contain bg-white/10 backdrop-blur-sm rounded-xl p-2 mb-6 shadow-lg" 
-                    />
-                    <p className="text-slate-500 text-sm font-medium">
-                        &copy; {new Date().getFullYear()} {instName}. All rights reserved.
-                    </p>
-                </div>
-            </footer>
+
         </div>
     );
 }

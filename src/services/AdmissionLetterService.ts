@@ -38,19 +38,59 @@ export class AdmissionLetterService {
         }
 
         // 2. Fetch the correct Admission Letter template
+        const isPartTime = formTemplate.studyMode?.toLowerCase().includes('part-time') || student.studyMode?.toLowerCase().includes('part-time');
+        const isHND = formTemplate.name?.toUpperCase().includes('HND');
+        
+        let targetTemplateName = 'Admission Letter - Full-Time ND';
+        if (isPartTime && isHND) targetTemplateName = 'Admission Letter - Daily Part-Time HND';
+        else if (isPartTime && !isHND) targetTemplateName = 'Admission Letter - Daily Part-Time ND';
+        else if (!isPartTime && isHND) targetTemplateName = 'Admission Letter - Full-Time HND';
+        else targetTemplateName = 'Admission Letter - Full-Time ND';
+
         const template = await db.select()
             .from(documentTemplates)
             .where(and(
                 eq(documentTemplates.type, 'admission_letter'),
-                eq(documentTemplates.level, unit.academicTier === 'tertiary' ? 'tertiary' : 'secondary'), // Simplification
+                eq(documentTemplates.name, targetTemplateName),
                 eq(documentTemplates.isActive, true)
             ))
             .limit(1);
 
-        if (!template[0]) throw new Error("No active admission letter template found for this level.");
+        // Fallback for legacy
+        if (!template[0]) {
+            const fallbackTemplate = await db.select()
+                .from(documentTemplates)
+                .where(and(
+                    eq(documentTemplates.type, 'admission_letter'),
+                    eq(documentTemplates.level, unit.academicTier === 'tertiary' ? 'tertiary' : 'secondary'),
+                    eq(documentTemplates.isActive, true)
+                ))
+                .limit(1);
+            if (fallbackTemplate[0]) {
+                template[0] = fallbackTemplate[0];
+            } else {
+                throw new Error(`No active admission letter template found for ${targetTemplateName}.`);
+            }
+        }
 
         // 3. Inject Placeholders
         const academicNumberLabel = unit.academicTier === 'tertiary' ? 'Matriculation Number' : 'Admission Number';
+        const admissionYearString = student.admissionYear?.toString() || new Date().getFullYear().toString();
+        const academicSession = `${admissionYearString}/${parseInt(admissionYearString) + 1}`;
+
+        // Ref No logic
+        const serialStr = application[0].admission_applications_v2.id.toString().padStart(3, '0');
+        const shortYear = admissionYearString.slice(-2);
+        const shortNextYear = (parseInt(admissionYearString) + 1).toString().slice(-2);
+        const yearRef = `${shortYear}-${shortNextYear}`;
+
+        let refNo = `FSS/IB/ND/ADM/${yearRef}/${serialStr}`;
+        if (isPartTime && isHND) refNo = `FSS/IB/DPPHND/ADM/${yearRef}/${serialStr}`;
+        else if (isPartTime && !isHND) refNo = `FSS/IB/DPPND/ADM/${yearRef}/${serialStr}`;
+        else if (!isPartTime && isHND) refNo = `FSS/IB/HND/ADM/${yearRef}/${serialStr}`;
+
+        const acceptanceFee = isHND ? '25,000:00' : '35,000:00';
+        const acceptanceFeeWords = isHND ? 'Twenty-five thousand naira' : 'Thirty-five thousand naira';
         
         let html = template[0].templateHtml;
         const replacements: Record<string, string> = {
@@ -59,12 +99,19 @@ export class AdmissionLetterService {
             '{{academic_number_label}}': academicNumberLabel,
             '{{institution_name}}': unit.name,
             '{{date}}': new Date().toLocaleDateString(),
-            '{{admission_year}}': student.admissionYear?.toString() || new Date().getFullYear().toString(),
+            '{{admission_year}}': admissionYearString,
+            '{{academic_session}}': academicSession,
             // @ts-expect-error - TS2339: Auto-suppressed for build
             '{{study_mode}}': student.studyMode || 'Full-Time',
             '{{mode_of_entry}}': student.modeOfEntry || 'Direct',
             '{{programme_name}}': formTemplate.name,
-            '{{jamb_reg_no}}': student.jambNumber || 'N/A'
+            '{{department_name}}': formTemplate.name.replace(/^(ND|HND) /i, '').trim() || 'Business Administration and Management',
+            '{{jamb_reg_no}}': student.jambNumber || 'N/A',
+            '{{ref_no}}': refNo,
+            '{{resumption_date}}': '7th October, 2024',
+            '{{lecture_start_date}}': '14th October, 2024',
+            '{{acceptance_fee}}': acceptanceFee,
+            '{{acceptance_fee_words}}': acceptanceFeeWords
         };
 
         for (const [key, value] of Object.entries(replacements)) {

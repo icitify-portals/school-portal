@@ -107,7 +107,7 @@ export async function initiatePayment(gateway: string, amount: number, reference
             const crypto = require('crypto');
             const hash = crypto.createHash('sha512').update(`${merchantId}${serviceTypeId}${reference}${amount}${apiKey}`).digest('hex');
             
-            const res = await fetch('https://login.remita.net/remita/exapp/api/v1/send/api/echannelsvc/merchant/api/paymentinit', {
+            const res = await fetch('https://remitademo.net/remita/exapp/api/v1/send/api/echannelsvc/merchant/api/paymentinit', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -183,7 +183,7 @@ export async function verifyPayment(gateway: string, reference: string, rrr?: st
             
             const hash = crypto.createHash('sha512').update(`${reference}${apiKey}${merchantId}`).digest('hex');
             
-            const res = await fetch(`https://login.remita.net/remita/exapp/api/v1/send/api/echannelsvc/${merchantId}/${reference}/${hash}/status.reg`, {
+            const res = await fetch(`https://remitademo.net/remita/exapp/api/v1/send/api/echannelsvc/${merchantId}/${reference}/${hash}/status.reg`, {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',

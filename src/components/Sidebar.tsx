@@ -603,7 +603,7 @@ export function Sidebar({ enabledModules = {}, mobileOpen = false, onClose }: {
     };
 
     const rawMenuItems = (() => {
-        if (role === 'admin' || role === 'superadmin' || role === 'registrar' || role === 'bursar' || role === 'librarian' || role === 'admission_officer') {
+        if (role === 'admin' || role === 'superadmin' || role === 'registrar' || role === 'bursar' || role === 'librarian' || role === 'admission_officer' || role === 'icitify_dev') {
             return adminMenuItems;
         } else if (role === 'dvc') {
             return dvcMenuItems;

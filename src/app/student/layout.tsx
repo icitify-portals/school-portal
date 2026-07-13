@@ -1,4 +1,5 @@
 import { FinancialLockEnforcer } from '@/components/finance/FinancialLockEnforcer';
+import { MedicalLockEnforcer } from '@/components/medical/MedicalLockEnforcer';
 import { auth } from "@/auth";
 import { db } from "@/db";
 import { students, bursarySettings, studentBills, conductLogs } from "@/db/schema";
@@ -103,7 +104,9 @@ export default async function StudentLayout({
                     </div>
                 </div>
             )}
-            {children}
+            <MedicalLockEnforcer healthStatus={studentRecord.healthStatus}>
+                {children}
+            </MedicalLockEnforcer>
         </FinancialLockEnforcer>
     );
 }

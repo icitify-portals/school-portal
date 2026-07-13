@@ -2821,6 +2821,7 @@ export const studentsRelations = relations(students, ({ one, many }) => ({
   appointments: many(medicalAppointments),
   siwesPlacements: many(siwesPlacements),
   parentMappings: many(parentStudentMappings),
+  medicalRecords: many(studentMedicalRecords),
 }));
 
 export const siwesPlacementsRelations = relations(siwesPlacements, ({ one, many }) => ({
@@ -7079,3 +7080,27 @@ export const paystackDeveloperFees = mysqlTable('paystack_developer_fees', {
   createdAt: timestamp('created_at').defaultNow()
 });
 
+// --- STUDENT MEDICAL RECORDS ---
+export const studentMedicalRecords = mysqlTable('student_medical_records', {
+  id: int('id').autoincrement().primaryKey(),
+  studentId: int('student_id').references(() => students.id).notNull(),
+  commonIllness: varchar('common_illness', { length: 255 }),
+  illnessFrequency: varchar('illness_frequency', { length: 100 }),
+  lastOccurrence: varchar('last_occurrence', { length: 100 }),
+  illnessDescription: text('illness_description'),
+  weight: varchar('weight', { length: 50 }),
+  height: varchar('height', { length: 50 }),
+  bloodPressure: varchar('blood_pressure', { length: 50 }),
+  allergies: text('allergies'),
+  medicalHistory: text('medical_history'),
+  currentMedications: text('current_medications'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow().onUpdateNow()
+});
+
+export const studentMedicalRecordsRelations = relations(studentMedicalRecords, ({ one }) => ({
+  student: one(students, {
+    fields: [studentMedicalRecords.studentId],
+    references: [students.id]
+  })
+}));

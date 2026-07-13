@@ -97,22 +97,34 @@ export function PublicFooter() {
                                 <h3 className="text-lg font-bold mb-6 uppercase tracking-widest text-[11px] text-indigo-400">Contact Us</h3>
                                 <ul className="space-y-6 text-sm">
                                     <li className="flex gap-4">
-                                        <div className="p-2 bg-white/5 rounded-lg h-fit text-indigo-400">
+                                        <div className="p-2 bg-white/5 rounded-lg h-fit text-indigo-400 mt-1">
                                             <MapPin className="w-4 h-4" />
                                         </div>
-                                        <span className="text-slate-400">123 Education Boulevard, Academic City, State 90210</span>
+                                        <div className="flex flex-col">
+                                            <span className="font-semibold text-slate-300">Contact us:</span>
+                                            <span className="text-slate-400">Federal School of Statistics, Along Ajibode Shasha road, Behind NISER, Shasha-Ojoo, Ibadan.</span>
+                                            
+                                            <span className="font-semibold text-slate-300 mt-2">Postal address:</span>
+                                            <span className="text-slate-400">P. O. 20753 University of Ibadan Post office</span>
+                                        </div>
                                     </li>
                                     <li className="flex gap-4">
-                                        <div className="p-2 bg-white/5 rounded-lg h-fit text-indigo-400">
+                                        <div className="p-2 bg-white/5 rounded-lg h-fit text-indigo-400 mt-1">
                                             <Phone className="w-4 h-4" />
                                         </div>
-                                        <span className="text-slate-400">+1 (555) 123-4567</span>
+                                        <div className="flex flex-col">
+                                            <span className="text-slate-400">+234 708 180 8456</span>
+                                            <span className="text-slate-400">+234 703 651 6563</span>
+                                        </div>
                                     </li>
                                     <li className="flex gap-4">
-                                        <div className="p-2 bg-white/5 rounded-lg h-fit text-indigo-400">
+                                        <div className="p-2 bg-white/5 rounded-lg h-fit text-indigo-400 mt-1">
                                             <Mail className="w-4 h-4" />
                                         </div>
-                                        <span className="text-slate-400">info@schoolportal.edu</span>
+                                        <div className="flex flex-col">
+                                            <span className="text-slate-400">info@fssibadan.edu.ng</span>
+                                            <span className="text-slate-400">fssibadan@gmail.com</span>
+                                        </div>
                                     </li>
                                 </ul>
                             </div>
