@@ -1,7 +1,7 @@
 import { db } from "@/db";
 import { students, studentMedicalRecords } from "@/db/schema";
 import { eq } from "drizzle-orm";
-import { getCurrentUser } from "@/auth";
+import { auth } from "@/auth";
 import MedicalFormClient from "./MedicalFormClient";
 import { redirect } from "next/navigation";
 
@@ -10,7 +10,8 @@ export const metadata = {
 };
 
 export default async function MedicalFormPage() {
-  const user = await getCurrentUser();
+  const session = await auth();
+  const user = session?.user;
   if (!user || user.role !== "student") {
     redirect("/login");
   }

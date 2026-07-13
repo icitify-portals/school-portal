@@ -3,11 +3,12 @@
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { students, studentMedicalRecords } from "@/db/schema";
-import { getCurrentUser } from "@/auth";
+import { auth } from "@/auth";
 
 export async function submitMedicalForm(formData: any) {
   try {
-    const user = await getCurrentUser();
+    const session = await auth();
+  const user = session?.user;
     if (!user || user.role !== "student") {
       return { success: false, message: "Unauthorized. Please log in as a student." };
     }
