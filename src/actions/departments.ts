@@ -1,7 +1,7 @@
 "use server";
 
 import { db } from "@/db";
-import { departments, programmes, courseDepartmentSettings, courses, staffProfiles, courseAssignments } from "@/db/schema";
+import { departments, programmes, courseDepartmentSettings, courses, staffProfiles, courseLecturers } from "@/db/schema";
 import { eq, inArray, getTableColumns } from "drizzle-orm";
 
 export async function getDepartments() {
@@ -45,7 +45,7 @@ export async function getDepartmentDetails(deptId: number) {
       const coursesData = await db.select().from(courses).where(inArray(courses.id, courseIds));
       
       // Get assignments for these courses
-      const assignments = await db.select().from(courseAssignments).where(inArray(courseAssignments.courseId, courseIds));
+      const assignments = await db.select().from(courseLecturers).where(inArray(courseLecturers.courseId, courseIds));
       
       const staffIds = assignments.map(a => a.staffId).filter(id => id !== null) as number[];
       
