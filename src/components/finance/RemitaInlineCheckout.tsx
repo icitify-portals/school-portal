@@ -90,11 +90,20 @@ export function RemitaInlineCheckout({
         }
 
         const scriptId = "remita-inline-script";
-        if (document.getElementById(scriptId)) return; // Already injected
+        const existingScript = document.getElementById(scriptId);
+        if (existingScript) {
+            if ((window as any).RmPaymentEngine) {
+                setIsScriptLoaded(true);
+            } else {
+                existingScript.addEventListener('load', () => setIsScriptLoaded(true));
+            }
+            return;
+        }
 
         const script = document.createElement("script");
         script.id = scriptId;
-        script.src = "https://remitademo.net/payment/v1/remita-pay-inline.bundle.js";
+        const isLive = process.env.NEXT_PUBLIC_REMITA_ENV === 'live' || process.env.NEXT_PUBLIC_REMITA_PUBLIC_KEY?.length > 10;
+        script.src = isLive ? "https://login.remita.net/payment/v1/remita-pay-inline.bundle.js" : "https://remitademo.net/payment/v1/remita-pay-inline.bundle.js";
         script.async = true;
         
         script.onload = () => {

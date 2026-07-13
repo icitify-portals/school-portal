@@ -19,7 +19,16 @@ export function useDeveloperSubscription() {
         }
 
         const scriptId = "paystack-inline-script";
-        if (document.getElementById(scriptId)) return;
+        const existingScript = document.getElementById(scriptId);
+        
+        if (existingScript) {
+            if ((window as any).PaystackPop) {
+                setIsScriptLoaded(true);
+            } else {
+                existingScript.addEventListener('load', () => setIsScriptLoaded(true));
+            }
+            return;
+        }
 
         const script = document.createElement("script");
         script.id = scriptId;
