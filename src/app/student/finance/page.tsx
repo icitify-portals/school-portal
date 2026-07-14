@@ -37,7 +37,7 @@ import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { AcademicNomenclature } from "@/lib/nomenclature";
 import { RemitaInlineCheckout } from "@/components/finance/RemitaInlineCheckout";
-import { useDeveloperSubscription } from "@/components/finance/DeveloperSubscriptionGate";
+
 
 interface LedgerEntry {
     id: number;
@@ -88,7 +88,7 @@ interface StudentProfile {
 export default function StudentFinancePage() {
     const { data: session } = useSession();
     const router = useRouter();
-    const { triggerSubscriptionGate, isGateLoading } = useDeveloperSubscription();
+
     const [ledger, setLedger] = useState<LedgerEntry[]>([]);
     const [bills, setBills] = useState<Bill[]>([]);
     const [summary, setSummary] = useState<FinancialSummary | null>(null);
@@ -195,62 +195,44 @@ export default function StudentFinancePage() {
                     return;
                 }
 
-                // Trigger Dev Gate before paying with wallet
-                triggerSubscriptionGate({
-                    identifier: student.id.toString(),
-                    email: session?.user?.email || "student@fssibadan.edu.ng",
-                    type: 'school_fees',
-                    sessionId: selectedBill.sessionId || selectedBill.session?.id,
-                    onSuccess: async () => {
-                        try {
-                            const res = await payBillWithWalletAction(student.id, selectedBill.id, selectedAmount);
-                            if (res.success) {
-                                setCheckoutSuccess(true);
-                                setTimeout(() => {
-                                    setIsCheckoutOpen(false);
-                                    fetchData();
-                                }, 2000);
-                            } else {
-                                setCheckoutError((res as any).error || "Wallet payment failed.");
-                            }
-                        } catch (err) {
-                            setCheckoutError("An unexpected error occurred during wallet payment.");
-                        } finally {
-                            setCheckoutLoading(false);
-                        }
-                    },
-                    onError: () => setCheckoutLoading(false)
-                });
+                // Proceed directly to wallet payment
+                try {
+                    const res = await payBillWithWalletAction(student.id, selectedBill.id, selectedAmount);
+                    if (res.success) {
+                        setCheckoutSuccess(true);
+                        setTimeout(() => {
+                            setIsCheckoutOpen(false);
+                            fetchData();
+                        }, 2000);
+                    } else {
+                        setCheckoutError((res as any).error || "Wallet payment failed.");
+                    }
+                } catch (err) {
+                    setCheckoutError("An unexpected error occurred during wallet payment.");
+                } finally {
+                    setCheckoutLoading(false);
+                }
             } else {
-                // Trigger Dev Gate before online gateway
-                triggerSubscriptionGate({
-                    identifier: student.id.toString(),
-                    email: session?.user?.email || "student@fssibadan.edu.ng",
-                    type: 'school_fees',
-                    sessionId: selectedBill.sessionId || selectedBill.session?.id,
-                    onSuccess: async () => {
-                        try {
-                            const res = await initializeOnlineCheckoutAction(student.id, selectedBill.id, selectedAmount);
+                // Proceed directly to online checkout
+                try {
+                    const res = await initializeOnlineCheckoutAction(student.id, selectedBill.id, selectedAmount);
 
-                            if (res.success && res.rrr && !res.rrr.startsWith('RRR-MOCK-')) {
-                                setRemitaData({ rrr: res.rrr, reference: res.reference || "" });
-                            } else if (res.success && res.checkoutUrl) {
-                                setCheckoutSuccess(true);
-                                setTimeout(() => {
-                                    setIsCheckoutOpen(false);
-                                    window.location.href = `${res.checkoutUrl}&billId=${selectedBill.id}`;
-                                }, 1500);
-                            } else {
-                                setCheckoutError(res.error || "Online checkout initialization failed.");
-                            }
-                        } catch (err) {
-                            setCheckoutError("An unexpected error occurred during checkout.");
-                        } finally {
-                            setCheckoutLoading(false);
-                        }
-                    },
-                    onError: () => setCheckoutLoading(false)
-                });
+                    if (res.success && res.rrr && !res.rrr.startsWith('RRR-MOCK-')) {
+                        setRemitaData({ rrr: res.rrr, reference: res.reference || "" });
+                    } else if (res.success && res.checkoutUrl) {
+                        setCheckoutSuccess(true);
+                        setTimeout(() => {
+                            setIsCheckoutOpen(false);
+                            window.location.href = `${res.checkoutUrl}&billId=${selectedBill.id}`;
+                        }, 1500);
+                    } else {
+                        setCheckoutError(res.error || "Online checkout initialization failed.");
+                    }
+                } catch (err) {
+                    setCheckoutError("An unexpected error occurred during checkout.");
+                } finally {
+                    setCheckoutLoading(false);
+                }
             }
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : "An unexpected error occurred during checkout.";

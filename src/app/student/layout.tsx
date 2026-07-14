@@ -2,10 +2,13 @@ import { FinancialLockEnforcer } from '@/components/finance/FinancialLockEnforce
 import { MedicalLockEnforcer } from '@/components/medical/MedicalLockEnforcer';
 import { auth } from "@/auth";
 import { db } from "@/db";
-import { students, bursarySettings, studentBills, conductLogs } from "@/db/schema";
+import { students, bursarySettings, studentBills, conductLogs, academicSessions, developerSubscriptionSettings } from "@/db/schema";
 import { eq, inArray, and } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { AlertTriangle, Lock } from "lucide-react";
+import { SubscriptionLockEnforcer } from "@/components/finance/SubscriptionLockEnforcer";
+import { getBursarySettings } from "@/actions/bursary";
+import { checkDeveloperFeeStatus } from "@/actions/paystack-developer-subscription";
 
 export default async function StudentLayout({
     children,
@@ -25,6 +28,26 @@ export default async function StudentLayout({
 
     if (!studentRecord) {
         return <>{children}</>;
+    }
+
+    const activeSession = await db.query.academicSessions.findFirst({
+        // @ts-expect-error
+        where: eq(academicSessions.isCurrent, true)
+    });
+
+    const devSettings = await db.query.developerSubscriptionSettings.findFirst();
+
+    // Developer Subscription Fee Enforcement
+    const isSubscriptionEnforced = devSettings?.isActive === true;
+    let isLockedBySubscription = false;
+    
+    if (isSubscriptionEnforced && activeSession) {
+        const isSubscriptionPaid = await checkDeveloperFeeStatus(
+            studentRecord.id.toString(),
+            'school_fees',
+            activeSession.id
+        );
+        isLockedBySubscription = !isSubscriptionPaid;
     }
 
     const settings = await db.query.bursarySettings.findFirst() || {
@@ -73,7 +96,8 @@ export default async function StudentLayout({
     return (
         // @ts-expect-error - TS2322: Auto-suppressed for build
         <FinancialLockEnforcer isHardLock={isHardLock}>
-            {isDisciplinarilyLocked && (
+            <SubscriptionLockEnforcer isLocked={isLockedBySubscription}>
+                {isDisciplinarilyLocked && (
                  <div className="fixed inset-0 z-[9999] bg-slate-900/95 backdrop-blur-md flex items-center justify-center p-4">
                     <div className="bg-white max-w-md w-full rounded-2xl shadow-2xl overflow-hidden border border-rose-100">
                         <div className="bg-rose-600 p-6 flex flex-col items-center text-center">
@@ -107,6 +131,7 @@ export default async function StudentLayout({
             <MedicalLockEnforcer healthStatus={studentRecord.healthStatus}>
                 {children}
             </MedicalLockEnforcer>
+            </SubscriptionLockEnforcer>
         </FinancialLockEnforcer>
     );
 }

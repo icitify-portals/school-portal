@@ -26,8 +26,9 @@ import {
 import { cn } from "@/lib/utils";
 import { db } from "@/db/db";
 import { users, departments, programmes, courses, students, jambCandidates, admissionSessions, academicSessions, faculties, institutionalUnits } from "@/db/schema";
-import { count, eq, and, desc } from "drizzle-orm";
+import { count, eq, and, desc, sql } from "drizzle-orm";
 import { cookies } from "next/headers";
+import ActiveStudentsModal from "./_components/ActiveStudentsModal";
 
 export const dynamic = "force-dynamic";
 
@@ -48,6 +49,7 @@ export default async function AdminDashboardPage() {
     }
 
     let statsData: any[] = [[], [], [], [], [], [], [], [], []];
+    let activeStudentsBreakdown: any[] = [];
     try {
         statsData = await Promise.all([
             db.select({ value: count() }).from(students),
@@ -59,22 +61,37 @@ export default async function AdminDashboardPage() {
             db.select({ value: count() }).from(admissionSessions).where(eq(admissionSessions.isActive, true)),
             db.select().from(academicSessions).where(eq(academicSessions.isCurrent, true)).limit(1),
             db.select({ value: count() }).from(faculties),
+            db.select({ value: count() }).from(students).where(eq(students.status, 'active')),
+            db.select({ value: count() }).from(students).where(eq(students.status, 'graduated')),
         ]);
+
+        const breakdownResult = await db.execute(sql`
+            SELECT p.name AS programme, COUNT(s.id) AS student_count 
+            FROM students s 
+            JOIN programmes p ON s.programme_id = p.id 
+            WHERE s.status = 'active' 
+            GROUP BY p.name 
+            ORDER BY student_count DESC
+        `);
+        activeStudentsBreakdown = breakdownResult[0] as any[];
     } catch (error) {
         console.error("Admin dashboard stats fetch error:", error);
     }
 
-    const activeAcademicSession = statsData[7][0];
-    const facultyCount = statsData[8][0]?.value.toString() || "0";
-    const programmeCount = statsData[2][0]?.value.toString() || "0";
+    const activeAcademicSession = statsData[7]?.[0];
+    const facultyCount = statsData[8]?.[0]?.value.toString() || "0";
+    const programmeCount = statsData[2]?.[0]?.value.toString() || "0";
+    const activeStudentCount = statsData[9]?.[0]?.value.toString() || "0";
+    const graduatedStudentCount = statsData[10]?.[0]?.value.toString() || "0";
 
     const adminStats = [
-        { name: "Total Students", value: statsData[0][0]?.value.toString() || "0", icon: Users, color: "text-blue-600", bg: "bg-gradient-to-br from-blue-500 to-blue-600", href: "/admin/students", colSpan: "md:col-span-2 xl:col-span-2" },
-        { name: "Total Staff", value: statsData[5][0]?.value.toString() || "0", icon: GraduationCap, color: "text-indigo-600", bg: "bg-gradient-to-br from-indigo-500 to-indigo-600", href: "/admin/hr", colSpan: "md:col-span-1 xl:col-span-1" },
+        { name: "Active Students", value: activeStudentCount, icon: Users, color: "text-blue-600", bg: "bg-gradient-to-br from-blue-500 to-blue-600", href: "/admin/students", colSpan: "md:col-span-1 xl:col-span-1" },
+        { name: "Graduated Students", value: graduatedStudentCount, icon: GraduationCap, color: "text-indigo-600", bg: "bg-gradient-to-br from-indigo-500 to-indigo-600", href: "/admin/students?filter=graduated", colSpan: "md:col-span-1 xl:col-span-1" },
+        { name: "Total Staff", value: statsData[5]?.[0]?.value.toString() || "0", icon: Users, color: "text-emerald-600", bg: "bg-gradient-to-br from-emerald-500 to-emerald-600", href: "/admin/hr", colSpan: "md:col-span-1 xl:col-span-1" },
         { name: "Faculties", value: facultyCount, icon: Award, color: "text-rose-600", bg: "bg-gradient-to-br from-rose-500 to-rose-600", href: "/admin/faculties", colSpan: "md:col-span-1 xl:col-span-1" },
         { name: "Programmes", value: programmeCount, icon: BookOpen, color: "text-amber-600", bg: "bg-gradient-to-br from-amber-500 to-amber-600", href: "/admin/programmes", colSpan: "md:col-span-1 xl:col-span-1" },
-        { name: "Depts & Units", value: statsData[1][0]?.value.toString() || "0", icon: Home, color: "text-emerald-600", bg: "bg-gradient-to-br from-emerald-500 to-emerald-600", href: "/admin/departments", colSpan: "md:col-span-1 xl:col-span-1" },
-        { name: "Active Admissions", value: statsData[6][0]?.value.toString() || "0", icon: UserCheck, color: "text-purple-600", bg: "bg-gradient-to-br from-purple-500 to-purple-600", href: "/admin/admission", colSpan: "md:col-span-2 xl:col-span-2" },
+        { name: "Depts & Units", value: statsData[1]?.[0]?.value.toString() || "0", icon: Home, color: "text-emerald-600", bg: "bg-gradient-to-br from-emerald-500 to-emerald-600", href: "/admin/departments", colSpan: "md:col-span-1 xl:col-span-1" },
+        { name: "Active Admissions", value: statsData[6]?.[0]?.value.toString() || "0", icon: UserCheck, color: "text-purple-600", bg: "bg-gradient-to-br from-purple-500 to-purple-600", href: "/admin/admission", colSpan: "md:col-span-2 xl:col-span-2" },
     ];
     return (
         <div className="p-4 md:p-6 max-w-[1600px] w-full mx-auto space-y-6">
@@ -94,9 +111,17 @@ export default async function AdminDashboardPage() {
                     <h2 className="text-4xl font-black tracking-tighter">Admin Command Center</h2>
                     <p className="text-slate-400 font-medium text-sm mt-1 max-w-lg leading-relaxed">System-wide monitoring, academic configurations, and administrative oversight.</p>
                 </div>
-                <div className="px-4 py-2 bg-white/10 backdrop-blur-md text-emerald-400 rounded-2xl border border-white/10 flex items-center gap-2">
-                    <Activity className="w-4 h-4 animate-pulse" />
-                    <span className="text-xs font-black uppercase tracking-widest">System Stable</span>
+                <div className="flex flex-col gap-3">
+                    {activeAcademicSession && (
+                        <div className="px-4 py-2 bg-indigo-500/20 text-indigo-300 rounded-2xl border border-indigo-500/30 flex items-center gap-2">
+                            <Calendar className="w-4 h-4" />
+                            <span className="text-xs font-black uppercase tracking-widest">Active Session: {activeAcademicSession.name}</span>
+                        </div>
+                    )}
+                    <div className="px-4 py-2 bg-white/10 backdrop-blur-md text-emerald-400 rounded-2xl border border-white/10 flex items-center gap-2">
+                        <Activity className="w-4 h-4 animate-pulse" />
+                        <span className="text-xs font-black uppercase tracking-widest">System Stable</span>
+                    </div>
                 </div>
             </div>
 
@@ -120,7 +145,13 @@ export default async function AdminDashboardPage() {
                         </Card>
                     );
 
-                    return stat.href ? (
+                    return stat.name === "Active Students" ? (
+                        <div key={stat.name} className={stat.colSpan}>
+                            <ActiveStudentsModal breakdown={activeStudentsBreakdown}>
+                                {CardElement}
+                            </ActiveStudentsModal>
+                        </div>
+                    ) : stat.href ? (
                         <Link key={stat.name} href={stat.href} className={cn("block group active:scale-95 transition-transform", stat.colSpan)}>
                             {CardElement}
                         </Link>

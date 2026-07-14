@@ -13,11 +13,13 @@ import {
     applicantOLevelSubjects,
     users,
     students,
-    systemSettings
+    systemSettings,
+    feeStructures
 } from "@/db/schema";
 import { eq, and, desc, asc, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { sendInAppNotification } from "./notifications";
+import { checkDeveloperFeeStatus } from "./paystack-developer-subscription";
 
 /**
  * Form Template Actions
@@ -729,6 +731,16 @@ export async function getApplicantApplication(applicationId: number, applicantId
             )
         );
         
+        if (app) {
+            const isProcessingFeePaid = await checkDeveloperFeeStatus(applicationId.toString(), 'admission_form');
+            // @ts-expect-error
+            app.isProcessingFeePaid = isProcessingFeePaid;
+            
+            const [ninModeSetting] = await db.select().from(systemSettings).where(eq(systemSettings.settingKey, 'NIN_VERIFICATION_MODE'));
+            // @ts-expect-error
+            app.ninVerificationMode = ninModeSetting?.settingValue || 'simulator'; // default to simulator
+        }
+
         return app || null;
     } catch (error) {
         console.error("Fetch application error:", error);
@@ -791,20 +803,65 @@ export async function verifyNinAction(nin: string) {
             return { success: false, error: "This NIN has already been used in another application." };
         }
 
-        // Simulating highly robust sandbox National Identity registry lookup
-        const mockDatabase: Record<string, any> = {
-            "12345678901": { firstName: "Abubakar", lastName: "Alao", dob: "2010-05-15", gender: "Male" },
-            "98765432109": { firstName: "Chinedu", lastName: "Okafor", dob: "2011-08-22", gender: "Male" },
-            "55555555555": { firstName: "Aminat", lastName: "Sanni", dob: "2009-12-03", gender: "Female" },
-            "11111111111": { firstName: "Folake", lastName: "Adewale", dob: "2012-04-10", gender: "Female" }
-        };
+        // Fetch verification settings
+        const [modeSetting] = await db.select().from(systemSettings).where(eq(systemSettings.settingKey, 'NIN_VERIFICATION_MODE'));
+        const [providerSetting] = await db.select().from(systemSettings).where(eq(systemSettings.settingKey, 'NIN_LIVE_PROVIDER'));
+        
+        const mode = modeSetting?.settingValue || 'simulator';
+        const provider = providerSetting?.settingValue || 'dojah';
 
-        const result = mockDatabase[nin] || {
-            firstName: "Verified",
-            lastName: `Applicant-${nin.slice(-4)}`,
-            dob: "2010-01-01",
-            gender: "Female"
-        };
+        let result: any = null;
+
+        if (mode === 'live') {
+            if (provider === 'dojah') {
+                const res = await fetch(`https://api.dojah.io/api/v1/kyc/nin?nin=${nin}`, {
+                    headers: { 'Authorization': `${process.env.DOJAH_API_KEY}`, 'AppId': `${process.env.DOJAH_APP_ID}` }
+                });
+                const data = await res.json();
+                if (!res.ok || !data.entity) return { success: false, error: data.error || "Dojah NIN verification failed." };
+                result = { firstName: data.entity.first_name, lastName: data.entity.last_name, dob: data.entity.date_of_birth, gender: data.entity.gender };
+            } else if (provider === 'verifyme') {
+                const res = await fetch(`https://vapi.verifyme.ng/v1/verifications/identities/nin/${nin}`, {
+                    method: 'POST', headers: { 'Authorization': `Bearer ${process.env.VERIFYME_API_KEY}` }
+                });
+                const data = await res.json();
+                if (!res.ok || !data.data) return { success: false, error: data.message || "VerifyMe NIN verification failed." };
+                result = { firstName: data.data.firstname, lastName: data.data.lastname, dob: data.data.birthdate, gender: data.data.gender };
+            } else if (provider === 'smileid') {
+                const res = await fetch('https://api.smileidentity.com/v1/id_verification', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ partner_id: process.env.SMILEID_PARTNER_ID, id_number: nin, id_type: 'NIN' })
+                });
+                const data = await res.json();
+                if (!res.ok || data.ResultCode !== '1012') return { success: false, error: data.ResultText || "SmileID NIN verification failed." };
+                result = { firstName: data.FullData.First_Name, lastName: data.FullData.Surname, dob: data.FullData.Date_Of_Birth, gender: data.FullData.Gender };
+            } else if (provider === 'monnify') {
+                const res = await fetch('https://api.monnify.com/api/v1/nin/match', {
+                    method: 'POST', headers: { 'Authorization': `Bearer ${process.env.MONNIFY_API_KEY}` },
+                    body: JSON.stringify({ nin })
+                });
+                const data = await res.json();
+                if (!res.ok || !data.responseBody) return { success: false, error: data.responseMessage || "Monnify NIN verification failed." };
+                result = { firstName: data.responseBody.firstName, lastName: data.responseBody.lastName, dob: data.responseBody.dateOfBirth, gender: data.responseBody.gender };
+            }
+        } else {
+            // Simulator Mode
+            const mockDatabase: Record<string, any> = {
+                "12345678901": { firstName: "Abubakar", lastName: "Alao", dob: "2010-05-15", gender: "Male" },
+                "98765432109": { firstName: "Chinedu", lastName: "Okafor", dob: "2011-08-22", gender: "Male" },
+                "55555555555": { firstName: "Aminat", lastName: "Sanni", dob: "2009-12-03", gender: "Female" },
+                "11111111111": { firstName: "Folake", lastName: "Adewale", dob: "2012-04-10", gender: "Female" }
+            };
+
+            result = mockDatabase[nin] || {
+                firstName: "Verified",
+                lastName: `Applicant-${nin.slice(-4)}`,
+                dob: "2010-01-01",
+                gender: "Female"
+            };
+        }
+
+        if (!result) return { success: false, error: "NIN Verification failed." };
 
         return {
             success: true,
@@ -812,11 +869,12 @@ export async function verifyNinAction(nin: string) {
             firstName: result.firstName,
             lastName: result.lastName,
             dob: result.dob,
-            gender: result.gender
+            gender: result.gender,
+            verified: true
         };
-    } catch (error) {
-        console.error("NIN Verification error:", error);
-        return { success: false, error: "Identity registry query failed." };
+    } catch (error: any) {
+        console.error("NIN verify action error:", error);
+        return { success: false, error: error.message || "Failed to verify NIN." };
     }
 }
 

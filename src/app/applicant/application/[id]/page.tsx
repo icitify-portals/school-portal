@@ -169,7 +169,7 @@ export default function StatefulApplicationPage() {
         const currentSection = application.template.sections[currentStep];
         if (currentSection) {
             const hasNinField = currentSection.fields.some((f: any) => f.systemKey === 'nin');
-            if (hasNinField && !verifiedNinData?.verified && !verifiedNinData?.firstName) {
+            if (hasNinField && application?.ninVerificationMode !== 'disabled' && !verifiedNinData?.verified && !verifiedNinData?.firstName) {
                 toast.error("You must verify your NIN before proceeding.");
                 return;
             }
@@ -241,27 +241,19 @@ export default function StatefulApplicationPage() {
         setPaymentProcessing(true);
         try {
             if (application.template.feeStructureId) {
-                // First trigger the Developer Subscription Gate
-                triggerSubscriptionGate({
-                    identifier: applicationId.toString(),
-                    email: session!.user!.email!,
-                    type: 'admission_form',
-                    onSuccess: async () => {
-                        // Original payment logic continues after Paystack succeeds
-                        try {
-                            const res = await processAdmissionPayment(applicationId, application.template.feeStructureId!, session!.user!.email, session!.user!.name || "Applicant");
-                            if (res.success && res.checkoutUrl) {
-                                window.location.href = res.checkoutUrl;
-                            } else {
-                                toast.error(res.error || "Failed to initialize payment gateway");
-                                setPaymentProcessing(false);
-                            }
-                        } catch (error) {
-                            toast.error("Payment error.");
-                            setPaymentProcessing(false);
-                        }
+                // Proceed directly to payment
+                try {
+                    const res = await processAdmissionPayment(applicationId, application.template.feeStructureId!, session!.user!.email, session!.user!.name || "Applicant");
+                    if (res.success && res.checkoutUrl) {
+                        window.location.href = res.checkoutUrl;
+                    } else {
+                        toast.error(res.error || "Failed to initialize payment gateway");
+                        setPaymentProcessing(false);
                     }
-                });
+                } catch (error) {
+                    toast.error("Payment error.");
+                    setPaymentProcessing(false);
+                }
             } else {
                 // Mock payment
                 await new Promise(resolve => setTimeout(resolve, 2000));
@@ -274,6 +266,17 @@ export default function StatefulApplicationPage() {
         }
     };
 
+    const handleProcessingFee = () => {
+        triggerSubscriptionGate({
+            identifier: applicationId.toString(),
+            email: session!.user!.email!,
+            type: 'admission_form',
+            onSuccess: async () => {
+                toast.success("Processing fee paid successfully!");
+                window.location.reload();
+            }
+        });
+    };
 
     if (loading) return <div className="flex justify-center items-center h-64"><Loader2 className="w-8 h-8 animate-spin text-[#1a5b3a]" /></div>;
     if (!application) return <div>Application not found</div>;
@@ -300,6 +303,29 @@ export default function StatefulApplicationPage() {
                     className="w-full bg-[#1a5b3a] hover:bg-[#134229] text-white font-bold py-8 rounded-2xl uppercase text-sm tracking-widest transition-all flex items-center justify-center gap-3"
                 >
                     {paymentProcessing ? <Loader2 className="w-6 h-6 animate-spin" /> : <><CreditCard className="w-5 h-5" /> Pay to Unlock Form</>}
+                </Button>
+            </Card>
+        );
+    }
+
+    // Secondary Payment Wall: Processing Fee
+    if (application.paymentStatus === 'paid' && !application.isProcessingFeePaid) {
+        return (
+            <Card className="bg-white border border-rose-200 max-w-2xl mx-auto mt-12 p-12 text-center space-y-8 rounded-[2rem] shadow-xl">
+                <div className="w-24 h-24 bg-rose-50 rounded-full flex items-center justify-center mx-auto">
+                    <Lock className="w-10 h-10 text-rose-600" />
+                </div>
+                <div className="space-y-4">
+                    <h2 className="text-3xl font-black text-gray-900 uppercase">Processing Fee Required</h2>
+                    <p className="text-gray-500 font-medium uppercase text-sm leading-relaxed">
+                        Your form fee was successful! To finalize your access to the application portal, please pay the mandatory processing fee via Paystack.
+                    </p>
+                </div>
+                <Button 
+                    onClick={handleProcessingFee} disabled={isGateLoading}
+                    className="w-full bg-[#1a5b3a] hover:bg-[#134229] text-white font-bold py-8 rounded-2xl uppercase text-sm tracking-widest transition-all flex items-center justify-center gap-3"
+                >
+                    {isGateLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : <><CreditCard className="w-5 h-5" /> Pay Processing Fee</>}
                 </Button>
             </Card>
         );
@@ -362,7 +388,7 @@ export default function StatefulApplicationPage() {
                         <>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                 {currentSection?.fields?.map((field: any) => {
-                                    const isSystemLocked = verifiedNinData && (
+                                    const isSystemLocked = application?.ninVerificationMode !== 'disabled' && verifiedNinData && (
                                         field.systemKey === 'firstName' || field.systemKey === 'lastName' ||
                                         field.systemKey === 'dob' || field.systemKey === 'gender'
                                     );
@@ -374,7 +400,7 @@ export default function StatefulApplicationPage() {
                                            field.systemKey === 'gender' ? verifiedNinData.gender : "")
                                         : (formData[field.label] || "");
 
-                                    if (field.systemKey === 'nin') {
+                                    if (field.systemKey === 'nin' && application?.ninVerificationMode !== 'disabled') {
                                         return (
                                             <div key={field.id} className="space-y-4 col-span-1 md:col-span-2 bg-gray-50 p-6 rounded-2xl border border-gray-200">
                                                 <div className="flex flex-col md:flex-row gap-4 items-end">

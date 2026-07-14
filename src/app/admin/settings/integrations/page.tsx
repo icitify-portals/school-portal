@@ -5,7 +5,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
     Plug, Video, CreditCard, BarChart3, CheckCircle, XCircle,
-    ExternalLink, Loader2, Globe, Zap
+    ExternalLink, Loader2, Globe, Zap, ShieldCheck
 } from "lucide-react";
 import { getConferencingStatus } from "@/actions/video-conferencing";
 import { getPortalSettings, updateSystemSetting } from "@/actions/settings";
@@ -21,12 +21,14 @@ import {
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { BookOpen } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function IntegrationsPage() {
     const [vcStatus, setVcStatus] = useState<any>(null);
     const [settings, setSettings] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [isConfigOpen, setIsConfigOpen] = useState(false);
+    const [isNinConfigOpen, setIsNinConfigOpen] = useState(false);
     const [selectedIntegration, setSelectedIntegration] = useState<any>(null);
     const [saving, setSaving] = useState(false);
 
@@ -34,6 +36,8 @@ export default function IntegrationsPage() {
     const [loginId, setLoginId] = useState("");
     const [password, setPassword] = useState("");
     const [prefix, setPrefix] = useState("");
+    const [ninMode, setNinMode] = useState("simulator");
+    const [ninProvider, setNinProvider] = useState("dojah");
 
     useEffect(() => {
         const fetchAll = async () => {
@@ -62,12 +66,22 @@ export default function IntegrationsPage() {
             await updateSystemSetting("orcid_client_id", loginId, "academic");
             await updateSystemSetting("orcid_client_secret", password, "academic", true);
         }
-        
         const newSettings = await getPortalSettings();
         setSettings(newSettings);
         setSaving(false);
         setIsConfigOpen(false);
         toast.success(`${selectedIntegration.name} configuration saved!`);
+    };
+
+    const handleSaveNin = async () => {
+        setSaving(true);
+        await updateSystemSetting("NIN_VERIFICATION_MODE", ninMode, "identity");
+        await updateSystemSetting("NIN_LIVE_PROVIDER", ninProvider, "identity");
+        const newSettings = await getPortalSettings();
+        setSettings(newSettings);
+        setSaving(false);
+        setIsNinConfigOpen(false);
+        toast.success("NIN Verification settings saved!");
     };
 
     const StatusBadge = ({ configured }: { configured: boolean }) => (
@@ -105,6 +119,24 @@ export default function IntegrationsPage() {
                         setLoginId(findSetting("orcid_client_id"));
                         setPassword("");
                         setIsConfigOpen(true);
+                    }
+                }
+            ]
+        },
+        {
+            category: "Identity Verification (KYC)",
+            icon: ShieldCheck,
+            color: "text-rose-600",
+            items: [
+                {
+                    name: "NIN Verification",
+                    desc: "Configure National Identity lookup mode and provider",
+                    envVars: ["DOJAH_API_KEY", "VERIFYME_API_KEY"],
+                    configured: true,
+                    onConfigure: () => {
+                        setNinMode(findSetting('NIN_VERIFICATION_MODE') || 'simulator');
+                        setNinProvider(findSetting('NIN_LIVE_PROVIDER') || 'dojah');
+                        setIsNinConfigOpen(true);
                     }
                 }
             ]
@@ -235,6 +267,55 @@ export default function IntegrationsPage() {
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setIsConfigOpen(false)}>Cancel</Button>
                         <Button className="bg-indigo-600" onClick={handleSaveAcademic} disabled={saving}>
+                            {saving ? "Saving..." : "Save Configuration"}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={isNinConfigOpen} onOpenChange={setIsNinConfigOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Configure NIN Verification</DialogTitle>
+                        <DialogDescription>
+                            Select the verification mode and active API provider for applicant NIN resolution.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                            <Label>Verification Mode</Label>
+                            <select 
+                                className="w-full bg-white border border-gray-300 rounded-xl px-4 py-2 font-medium"
+                                value={ninMode} 
+                                onChange={e => setNinMode(e.target.value)}
+                            >
+                                <option value="disabled">Disabled (Manual Name Entry)</option>
+                                <option value="simulator">Simulator (Free Mock Data)</option>
+                                <option value="live">Live API (NIMC Production)</option>
+                            </select>
+                        </div>
+                        {ninMode === 'live' && (
+                            <div className="space-y-2">
+                                <Label>Live Provider</Label>
+                                <select 
+                                    className="w-full bg-white border border-gray-300 rounded-xl px-4 py-2 font-medium"
+                                    value={ninProvider} 
+                                    onChange={e => setNinProvider(e.target.value)}
+                                >
+                                    <option value="dojah">Dojah</option>
+                                    <option value="verifyme">VerifyMe Nigeria</option>
+                                    <option value="smileid">SmileID</option>
+                                    <option value="monnify">Monnify</option>
+                                </select>
+                                <p className="text-xs text-slate-500 mt-2">
+                                    Make sure {ninProvider.toUpperCase()}_API_KEY is configured in your environment variables.
+                                </p>
+                            </div>
+                        )}
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsNinConfigOpen(false)}>Cancel</Button>
+                        <Button className="bg-indigo-600" onClick={handleSaveNin} disabled={saving}>
                             {saving ? "Saving..." : "Save Configuration"}
                         </Button>
                     </DialogFooter>
