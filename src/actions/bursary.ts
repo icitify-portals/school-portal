@@ -1213,7 +1213,20 @@ export async function requeryUnifiedTransaction(txId: number, sourceTable: 'tran
             else if (process.env.FLW_SECRET_KEY) activeGateway = 'flutterwave';
         }
 
-        const verification = await verifyPayment(activeGateway, reference);
+        let rrrToPass = undefined;
+        if (sourceTable === 'payment_transactions' && payTx) {
+            rrrToPass = payTx.gatewayTransactionId || undefined;
+            if (!rrrToPass && payTx.metadata) {
+                try {
+                    const metaObj = typeof payTx.metadata === 'string' ? JSON.parse(payTx.metadata) : payTx.metadata;
+                    rrrToPass = metaObj.rrr;
+                } catch(e) {}
+            }
+        } else if (sourceTable === 'transactions' && txRecord) {
+            rrrToPass = txRecord.rrr || undefined;
+        }
+
+        const verification = await verifyPayment(activeGateway, reference, rrrToPass);
 
         if (verification.success) {
             const newStatus = verification.verified ? 'completed' : 'failed';

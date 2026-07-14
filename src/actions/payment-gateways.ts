@@ -185,11 +185,22 @@ export async function verifyPayment(gateway: string, reference: string, rrr?: st
             const apiKey = isLive ? "6NYU4646" : (process.env.REMITA_API_KEY || "6NYU4646");
             const crypto = require('crypto');
             
-            const hash = crypto.createHash('sha512').update(`${reference}${apiKey}${merchantId}`).digest('hex');
-            
             const baseUrl = isLive ? 'https://login.remita.net' : 'https://demo.remita.net';
             
-            const res = await fetch(`${baseUrl}/remita/exapp/api/v1/send/api/echannelsvc/${merchantId}/${reference}/${hash}/status.reg`, {
+            let url = '';
+            let hash = '';
+            
+            if (rrr && rrr.trim().length > 0) {
+                // Verify by RRR (More reliable for inline transactions)
+                hash = crypto.createHash('sha512').update(`${rrr}${apiKey}${merchantId}`).digest('hex');
+                url = `${baseUrl}/remita/exapp/api/v1/send/api/echannelsvc/${merchantId}/${rrr}/${hash}/status.reg`;
+            } else {
+                // Verify by Order ID
+                hash = crypto.createHash('sha512').update(`${reference}${apiKey}${merchantId}`).digest('hex');
+                url = `${baseUrl}/remita/exapp/api/v1/send/api/echannelsvc/${merchantId}/${reference}/${hash}/status.reg`;
+            }
+            
+            const res = await fetch(url, {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
