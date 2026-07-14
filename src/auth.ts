@@ -138,16 +138,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                 }
 
                 if (!isAuthenticated) {
-                    if (!user.password) {
-                        throw new InvalidCredentialsError();
+                    let passwordMatched = false;
+                    
+                    if (user.password) {
+                        passwordMatched = await bcrypt.compare(
+                            credentials.password as string,
+                            user.password
+                        );
                     }
                     
-                    isAuthenticated = await bcrypt.compare(
-                        credentials.password as string,
-                        user.password
-                    );
-                    
-                    if (!isAuthenticated) {
+                    if (!passwordMatched) {
                         // Check for default fallback passwords
                         const providedPassword = credentials.password as string;
                         
