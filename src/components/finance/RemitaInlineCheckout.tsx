@@ -46,8 +46,13 @@ export function RemitaInlineCheckout({
         setIsPaying(true);
 
         try {
+            const isLive = process.env.NEXT_PUBLIC_REMITA_ENV !== 'demo';
+            const publicKey = isLive 
+                ? "RlNTSUJBREFOfDE5MjAxNTk3MzM5fGY4NzhmZmU1MmYwOTE4NTVmMTM5MWY0Yjc3NjAyNTJmNWNmMmU1YWRiYWIyNDNhY2Q5ZWVlNmRkYjJmYmU2ZTY3NzFkMTVhZWQ1ZDAyMWViMmI1NTlkNzM4YTFjMTJiOGRiMDIwZDU4NGY2NmVjM2FiOWJmYWZiNDZmM2YzY2M4" 
+                : (process.env.NEXT_PUBLIC_REMITA_PUBLIC_KEY || "RlNTSUJBREFOfDE5MjAxNTk3MzM5fGY4NzhmZmU1MmYwOTE4NTVmMTM5MWY0Yjc3NjAyNTJmNWNmMmU1YWRiYWIyNDNhY2Q5ZWVlNmRkYjJmYmU2ZTY3NzFkMTVhZWQ1ZDAyMWViMmI1NTlkNzM4YTFjMTJiOGRiMDIwZDU4NGY2NmVjM2FiOWJmYWZiNDZmM2YzY2M4");
+
             const paymentEngine = RmPaymentEngine.init({
-                key: process.env.NEXT_PUBLIC_REMITA_PUBLIC_KEY || "RlNTSUJBREFOfDE5MjAxNTk3MzM5fGY4NzhmZmU1MmYwOTE4NTVmMTM5MWY0Yjc3NjAyNTJmNWNmMmU1YWRiYWIyNDNhY2Q5ZWVlNmRkYjJmYmU2ZTY3NzFkMTVhZWQ1ZDAyMWViMmI1NTlkNzM4YTFjMTJiOGRiMDIwZDU4NGY2NmVjM2FiOWJmYWZiNDZmM2YzY2M4", // Live FSS Ibadan Key
+                key: publicKey,
                 customerId: email,
                 firstName: firstName,
                 lastName: lastName,
