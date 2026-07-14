@@ -595,10 +595,19 @@ export function Sidebar({ enabledModules = {}, mobileOpen = false, onClose }: {
                                 }
                             }
                             return true;
-                        })
+                        }).sort((a, b) => a.name.localeCompare(b.name))
                     };
                 }
                 return item;
+            })
+            .sort((a, b) => {
+                const nameA = a.name.toLowerCase();
+                const nameB = b.name.toLowerCase();
+                if (nameA.includes("dashboard")) return -1;
+                if (nameB.includes("dashboard")) return 1;
+                if (nameA === "profile") return 1;
+                if (nameB === "profile") return -1;
+                return nameA.localeCompare(nameB);
             });
     };
 

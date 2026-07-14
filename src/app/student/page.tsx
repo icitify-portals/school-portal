@@ -39,6 +39,7 @@ import { cookies } from "next/headers";
 import { db } from "@/db/db";
 import { eq, and } from "drizzle-orm";
 import { institutionalUnits, medicalExcuses } from "@/db/schema";
+import DeveloperSubscriptionBanner from "@/components/finance/DeveloperSubscriptionBanner";
 
 export const dynamic = "force-dynamic";
 
@@ -189,6 +190,8 @@ export default async function StudentDashboard() {
         <div className="p-4 sm:p-6 lg:p-8 min-h-screen bg-transparent">
             <div className="space-y-6 max-w-[1600px] w-full mx-auto text-slate-800">
             
+            <DeveloperSubscriptionBanner />
+
             {/* Header Greeting Banner (FSS Style Bento) */}
             <div className="flex flex-col md:flex-row items-center gap-6 bg-slate-900 text-white rounded-[3rem] p-8 lg:p-12 shadow-2xl relative overflow-hidden border border-slate-800">
                 <div className="absolute inset-0 bg-gradient-to-r from-emerald-600/30 to-teal-600/30 opacity-50 mix-blend-overlay" />

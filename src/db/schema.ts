@@ -7028,6 +7028,9 @@ export const developerSubscriptionSettings = mysqlTable('developer_subscription_
   feeName: varchar('fee_name', { length: 255 }).notNull().default('Platform Subscription Fee'),
   feeAmount: decimal('fee_amount', { precision: 12, scale: 2 }).notNull(),
   billingCycle: mysqlEnum('billing_cycle', ['per_term', 'per_semester', 'per_annum']).notNull().default('per_term'),
+  durationMonths: int('duration_months').default(4),
+  syncWithCalendar: boolean('sync_with_calendar').default(false),
+  lockWeek: int('lock_week').default(4),
   isActive: boolean('is_active').default(true),
   updatedBy: int('updated_by').references(() => users.id),
   createdAt: timestamp('created_at').defaultNow(),
@@ -7044,6 +7047,7 @@ export const developerSubscriptions = mysqlTable('developer_subscriptions', {
   status: mysqlEnum('status', ['unpaid', 'part_paid', 'paid', 'exempt']).default('unpaid'),
   paymentReference: varchar('payment_reference', { length: 100 }),
   paidBy: mysqlEnum('paid_by', ['student', 'parent', 'school_bulk']),
+  validUntil: datetime('valid_until'),
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
 });

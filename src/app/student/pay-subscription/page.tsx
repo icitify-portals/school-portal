@@ -59,8 +59,8 @@ export default function PaySubscriptionPage() {
                 return;
             }
 
-            if (!initRes.success || !initRes.data) {
-                toast.error(initRes.error || "Failed to initialize subscription fee");
+            if (!initRes.success || !(initRes as any).reference) {
+                toast.error((initRes as any).error || "Failed to initialize subscription fee");
                 setIsLoading(false);
                 return;
             }
@@ -72,10 +72,10 @@ export default function PaySubscriptionPage() {
             }
 
             const handler = (window as any).PaystackPop.setup({
-                key: initRes.data.key,
-                email: initRes.data.email,
-                amount: initRes.data.amount,
-                ref: initRes.data.reference,
+                key: (initRes as any).publicKey,
+                email: session?.user?.email || "",
+                amount: (initRes as any).amount * 100,
+                ref: (initRes as any).reference,
                 currency: "NGN",
                 callback: async function(response: any) {
                     const verifyRes = await verifyDeveloperFee(response.reference);

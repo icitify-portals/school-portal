@@ -14,6 +14,9 @@ export default function DeveloperFeeSettingsForm({ initialData }: { initialData?
     const [feeName, setFeeName] = useState(initialData?.feeName || "Platform Subscription Fee");
     const [feeAmount, setFeeAmount] = useState(initialData?.feeAmount || "0");
     const [billingCycle, setBillingCycle] = useState(initialData?.billingCycle || "per_term");
+    const [durationMonths, setDurationMonths] = useState(initialData?.durationMonths || 4);
+    const [syncWithCalendar, setSyncWithCalendar] = useState(initialData?.syncWithCalendar || false);
+    const [lockWeek, setLockWeek] = useState(initialData?.lockWeek || 4);
     const [isActive, setIsActive] = useState(initialData?.isActive ?? true);
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -24,6 +27,9 @@ export default function DeveloperFeeSettingsForm({ initialData }: { initialData?
                 feeName,
                 feeAmount: parseFloat(feeAmount),
                 billingCycle,
+                durationMonths: parseInt(durationMonths),
+                syncWithCalendar,
+                lockWeek: parseInt(lockWeek),
                 isActive
             });
             toast.success("Subscription settings updated!");
@@ -58,6 +64,30 @@ export default function DeveloperFeeSettingsForm({ initialData }: { initialData?
                         <SelectItem value="per_annum">Per Annum (Session)</SelectItem>
                     </SelectContent>
                 </Select>
+            </div>
+
+            <div className="flex items-center justify-between border p-4 rounded-lg">
+                <div className="space-y-0.5">
+                    <Label className="text-base">Sync Expiry With Global Calendar</Label>
+                    <p className="text-sm text-muted-foreground">
+                        If enabled, subscription expiry dates strictly match the Global Calendar's term/semester end dates instead of fixed months.
+                    </p>
+                </div>
+                <Switch checked={syncWithCalendar} onCheckedChange={setSyncWithCalendar} />
+            </div>
+
+            {!syncWithCalendar && (
+                <div className="space-y-2">
+                    <Label>Default Duration (Months)</Label>
+                    <Input type="number" min="1" max="12" value={durationMonths} onChange={(e) => setDurationMonths(e.target.value)} required />
+                    <p className="text-xs text-muted-foreground">How many months this subscription covers if calendar sync is disabled.</p>
+                </div>
+            )}
+
+            <div className="space-y-2">
+                <Label>Lock Week Enforement</Label>
+                <Input type="number" min="1" max="16" value={lockWeek} onChange={(e) => setLockWeek(e.target.value)} required />
+                <p className="text-xs text-muted-foreground">Week number to enforce portal lock (e.g., 4 = Week 4). Daily notifications start before this.</p>
             </div>
 
             <div className="flex items-center justify-between border p-4 rounded-lg">

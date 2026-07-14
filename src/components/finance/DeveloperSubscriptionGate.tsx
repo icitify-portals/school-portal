@@ -72,8 +72,8 @@ export function useDeveloperSubscription() {
         try {
             const initRes = await initiateDeveloperFee(identifier, email, type, sessionId);
             
-            if (initRes.error || !initRes.success) {
-                toast.error(initRes.error || "Failed to initiate developer subscription");
+            if ((initRes as any).error || !initRes.success) {
+                toast.error((initRes as any).error || "Failed to initiate developer subscription");
                 setIsLoading(false);
                 if (onError) onError();
                 return;
@@ -93,10 +93,11 @@ export function useDeveloperSubscription() {
             }
 
             const handler = (window as any).PaystackPop.setup({
-                key: initRes.publicKey,
+                key: (initRes as any).publicKey,
                 email: email,
-                amount: initRes.amount * 100, // Kobo
-                ref: initRes.reference,
+                amount: ((initRes as any).amount || 0) * 100, // in kobo
+                currency: "NGN",
+                ref: (initRes as any).reference,
                 callback: async function (response: any) {
                     setIsLoading(true); 
                     toast.loading("Verifying payment...", { id: "verify-paystack" });
