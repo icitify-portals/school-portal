@@ -101,14 +101,14 @@ export async function initiatePayment(gateway: string, amount: number, reference
             else return { error: data.message || "Flutterwave initialization failed" };
 
         } else if (gateway === 'remita') {
-            const merchantId = process.env.REMITA_MERCHANT_ID || "19201597339";
-            const serviceTypeId = process.env.REMITA_SERVICE_TYPE_ID || "8817651539"; // ND1 Default
-            const apiKey = process.env.REMITA_API_KEY || "6NYU4646";
+            const isLive = process.env.REMITA_ENV !== 'demo';
+            const merchantId = isLive ? "19201597339" : (process.env.REMITA_MERCHANT_ID || "19201597339");
+            const serviceTypeId = isLive ? "8817651539" : (process.env.REMITA_SERVICE_TYPE_ID || "8817651539"); // ND1 Default
+            const apiKey = isLive ? "6NYU4646" : (process.env.REMITA_API_KEY || "6NYU4646");
             const crypto = require('crypto');
             const hash = crypto.createHash('sha512').update(`${merchantId}${serviceTypeId}${reference}${amount}${apiKey}`).digest('hex');
             
-            const isLive = process.env.REMITA_ENV !== 'demo';
-            const baseUrl = isLive ? 'https://login.remita.net' : 'https://remitademo.net';
+            const baseUrl = isLive ? 'https://login.remita.net' : 'https://demo.remita.net';
             
             const res = await fetch(`${baseUrl}/remita/exapp/api/v1/send/api/echannelsvc/merchant/api/paymentinit`, {
                 method: 'POST',
@@ -180,14 +180,14 @@ export async function verifyPayment(gateway: string, reference: string, rrr?: st
                 return { error: data.message || `Transaction not successful (${data.data?.status || 'Unknown'})` };
             }
         } else if (gateway === 'remita') {
-            const merchantId = process.env.REMITA_MERCHANT_ID || "19201597339";
-            const apiKey = process.env.REMITA_API_KEY || "6NYU4646";
+            const isLive = process.env.REMITA_ENV !== 'demo';
+            const merchantId = isLive ? "19201597339" : (process.env.REMITA_MERCHANT_ID || "19201597339");
+            const apiKey = isLive ? "6NYU4646" : (process.env.REMITA_API_KEY || "6NYU4646");
             const crypto = require('crypto');
             
             const hash = crypto.createHash('sha512').update(`${reference}${apiKey}${merchantId}`).digest('hex');
             
-            const isLive = process.env.REMITA_ENV !== 'demo';
-            const baseUrl = isLive ? 'https://login.remita.net' : 'https://remitademo.net';
+            const baseUrl = isLive ? 'https://login.remita.net' : 'https://demo.remita.net';
             
             const res = await fetch(`${baseUrl}/remita/exapp/api/v1/send/api/echannelsvc/${merchantId}/${reference}/${hash}/status.reg`, {
                 method: 'GET',
