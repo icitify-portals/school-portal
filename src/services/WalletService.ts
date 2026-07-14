@@ -1,7 +1,8 @@
 import { db } from "@/db/db";
 import { 
     students, 
-    walletTransactions 
+    walletTransactions,
+    payment_transactions
 } from "@/db/schema";
 import { eq, sql, and, desc } from "drizzle-orm";
 
@@ -74,9 +75,18 @@ export class WalletService {
      * Retrieves the complete transaction history for a student's wallet.
      */
     static async getWalletHistory(studentId: number) {
-        return await db.select()
+        const history = await db.select({
+            tx: walletTransactions,
+            pt: payment_transactions
+        })
             .from(walletTransactions)
+            .leftJoin(payment_transactions, eq(walletTransactions.reference, payment_transactions.transactionReference))
             .where(eq(walletTransactions.studentId, studentId))
             .orderBy(desc(walletTransactions.createdAt));
+            
+        return history.map(h => ({
+            ...h.tx,
+            paymentTransactionId: h.pt?.id || null
+        }));
     }
 }

@@ -242,8 +242,20 @@ export default function StudentWalletPortal() {
                                    </div>
                                 </div>
                              </div>
-                             <div className={`text-lg font-black ${tx.type === 'credit' ? 'text-emerald-600' : 'text-slate-900'}`}>
-                                {tx.type === 'credit' ? '+' : '-'}₦{parseFloat(tx.amount).toLocaleString()}
+                             <div className="flex flex-col items-end">
+                                <div className={`text-lg font-black ${tx.type === 'credit' ? 'text-emerald-600' : 'text-slate-900'}`}>
+                                   {tx.type === 'credit' ? '+' : '-'}₦{parseFloat(tx.amount).toLocaleString()}
+                                </div>
+                                {tx.paymentTransactionId && (
+                                   <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="mt-1 h-6 px-2 rounded-md text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 font-black text-[9px] uppercase tracking-wider gap-1"
+                                      onClick={() => window.open(`/finance/receipt/${tx.paymentTransactionId}`, '_blank')}
+                                   >
+                                      <Receipt size={10} /> Receipt
+                                   </Button>
+                                )}
                              </div>
                           </div>
                        ))}

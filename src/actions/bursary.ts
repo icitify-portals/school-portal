@@ -1238,7 +1238,7 @@ export async function requeryUnifiedTransaction(txId: number, sourceTable: 'tran
 
 export async function getTransactionForReceipt(id: number) {
     try {
-        const data = await db.select({
+        let data = await db.select({
             transaction: transactions,
             student: students,
             programme: {
@@ -1251,14 +1251,60 @@ export async function getTransactionForReceipt(id: number) {
             .where(eq(transactions.id, id))
             .limit(1);
 
-        if (data.length === 0) return null;
+        let txData: any = data.length > 0 ? data[0] : null;
+
+        if (!txData) {
+            // Check payment_transactions for wallet topups
+            const ptData = await db.select({
+                pt: payment_transactions,
+            })
+            .from(payment_transactions)
+            .where(eq(payment_transactions.id, id))
+            .limit(1);
+
+            if (ptData.length === 0) return null;
+            const pt = ptData[0].pt;
+
+            // Get student info using userId
+            const studentData = await db.select({
+                student: students,
+                programme: { name: programmes.name }
+            })
+            .from(students)
+            .leftJoin(programmes, eq(students.programmeId, programmes.id))
+            .where(eq(students.userId, pt.userId))
+            .limit(1);
+
+            if (studentData.length === 0) return null;
+
+            const meta = pt.metadata ? (typeof pt.metadata === 'string' ? JSON.parse(pt.metadata) : pt.metadata) : {};
+
+            // Build mock transaction
+            const mockTx = {
+                id: pt.id,
+                gateway: pt.paymentGateway,
+                amount: pt.amount,
+                sessionId: null, // Wallet topup doesn't belong to a specific session
+                rrr: meta.rrr || pt.transactionReference,
+                gatewayReference: pt.transactionReference,
+                createdAt: pt.createdAt,
+                purpose: pt.transactionType === 'wallet_topup' ? "Wallet Top-up" : "Online Payment",
+                status: pt.status
+            };
+
+            txData = {
+                transaction: mockTx,
+                student: studentData[0].student,
+                programme: studentData[0].programme
+            };
+        }
 
         const branding = await getBrandingSettings();
         const bursarySettings = await getBursarySettings();
-        const bursar = await OfficialService.getBursarSignature(data[0].student?.unitId || undefined);
+        const bursar = await OfficialService.getBursarSignature(txData.student?.unitId || undefined);
 
         // Fetch overall outstanding arrears
-        const studentId = data[0].student?.id;
+        const studentId = txData.student?.id;
         let arrears = 0;
         if (studentId) {
             const unpaidBills = await db.select({
