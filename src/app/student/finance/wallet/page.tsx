@@ -350,7 +350,7 @@ export default function StudentWalletPortal() {
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Select Deposit Amount</label>
                     <div className="grid grid-cols-3 gap-3">
-                      {[5000, 10000, 20000, 50000, 100000].map((amt) => (
+                      {[500, 1000, 5000, 10000, 20000, 50000].map((amt) => (
                         <button
                           key={amt}
                           type="button"
