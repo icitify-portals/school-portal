@@ -255,7 +255,7 @@ export class RemitaAdapter implements PaymentGatewayAdapter {
 
         let rrr = "";
         try {
-            const isLive = process.env.REMITA_ENV === 'live' || process.env.REMITA_MERCHANT_ID !== "2547916";
+            const isLive = process.env.REMITA_ENV !== 'demo';
             const baseUrl = isLive ? "https://login.remita.net" : "https://demo.remita.net";
             
             const res = await fetch(`${baseUrl}/remita/exapp/api/v1/send/api/echannelsvc/merchant/api/paymentinit`, {
