@@ -456,7 +456,11 @@ export default function StudentFinancePage() {
                                                 ) : "-"}
                                             </td>
                                             <td className="px-8 py-5 text-sm font-black text-slate-900">
-                                                ₦{parseFloat(entry.balance).toLocaleString()}
+                                                {String(entry.id).startsWith('w-') ? (
+                                                    <span className="text-xs text-slate-400 uppercase tracking-widest font-bold">Wallet Tx</span>
+                                                ) : (
+                                                    `₦${parseFloat(entry.balance).toLocaleString()}`
+                                                )}
                                             </td>
                                             <td className="px-8 py-5 font-mono text-[10px] text-slate-400 group-hover:text-slate-600">
                                                 #{entry.transactionId || "SYS-" + entry.id}

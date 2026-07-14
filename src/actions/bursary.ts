@@ -398,10 +398,45 @@ export async function getStudentLedger(studentId: number) {
             ? await db.select().from(transactions).where(sql`${transactions.id} in (${sql.join(tIds, sql`,`)})`)
             : [];
 
-        return ledger.map(l => ({
+        const mappedLedger = ledger.map(l => ({
             ...l,
-            transaction: txs.find(t => t.id === l.transactionId)
+            id: `l-${l.id}`,
+            transaction: txs.find(t => t.id === l.transactionId) || null
         }));
+
+        // Fetch wallet transactions to merge into the ledger
+        const wTx = await db.select({
+            id: walletTransactions.id,
+            studentId: walletTransactions.studentId,
+            amount: walletTransactions.amount,
+            type: walletTransactions.type,
+            purpose: walletTransactions.purpose,
+            createdAt: walletTransactions.createdAt,
+            reference: walletTransactions.reference,
+            ptId: payment_transactions.id
+        })
+        .from(walletTransactions)
+        .leftJoin(payment_transactions, eq(walletTransactions.reference, payment_transactions.transactionReference))
+        .where(eq(walletTransactions.studentId, studentId))
+        .orderBy(desc(walletTransactions.createdAt));
+
+        const mappedWTx = wTx.map(w => ({
+            id: `w-${w.id}`,
+            studentId: w.studentId,
+            transactionId: w.ptId, 
+            description: w.purpose || `Wallet ${w.type === 'credit' ? 'Top-up' : 'Deduction'}`,
+            debit: w.type === 'debit' ? w.amount : "0.00",
+            credit: w.type === 'credit' ? w.amount : "0.00",
+            balance: "0.00", 
+            createdAt: w.createdAt,
+            transaction: null
+        }));
+
+        // Combine and sort descending by date
+        const combined = [...mappedLedger, ...mappedWTx] as any[];
+        combined.sort((a, b) => new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime());
+
+        return combined;
     } catch (error) {
         console.error("Failed to fetch student ledger:", error);
         return [];
