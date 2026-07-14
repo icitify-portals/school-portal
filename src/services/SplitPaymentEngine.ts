@@ -200,7 +200,6 @@ export class RemitaAdapter implements PaymentGatewayAdapter {
     ): Promise<GatewayCheckoutResponse> {
         console.log("=== REMITA SPLIT PAYMENT INITIALIZATION (DYNAMIC INLINE) ===");
         console.log(`Payer: ${payerEmail}, Reference: ${txReference}, Total: ₦${totalAmount}`);
-        
         // Remita line items take beneficiary details inline dynamically
         const lineItems = splits.map((item, index) => ({
             lineItemsId: (index + 1).toString(),
@@ -211,14 +210,16 @@ export class RemitaAdapter implements PaymentGatewayAdapter {
             deductFeeFrom: "0" // "0" ensures fee is borne by the payer (student)
         }));
 
-        const merchantId = process.env.REMITA_MERCHANT_ID || "19201597339";
-        const apiKey = process.env.REMITA_API_KEY || "6NYU4646";
+        const isLive = process.env.REMITA_ENV !== 'demo';
+        
+        // Force live credentials if isLive is true
+        const merchantId = isLive ? "19201597339" : (process.env.REMITA_MERCHANT_ID || "19201597339");
+        const apiKey = isLive ? "6NYU4646" : (process.env.REMITA_API_KEY || "6NYU4646");
 
-        let serviceTypeId = process.env.REMITA_SERVICE_TYPE_ID || "8817651539"; // Fallback to env or default
+        let serviceTypeId = isLive ? "8817651539" : (process.env.REMITA_SERVICE_TYPE_ID || "8817651539"); // Default to ND1
         const level = String(meta?.studentLevel || "").toLowerCase();
         
-        // Only use specific service types if we don't have a global override in env, or if we strictly want dynamic mapping.
-        // For now, if the env var is set to something other than the default, we should probably prefer the env var for wallet/general topups.
+        // Dynamically assign Service Type ID based on student level
         if (meta?.studentLevel) {
             if ((level.includes('nd') && level.includes('2')) || level === '200') {
                 serviceTypeId = "1172909756"; // ND2
@@ -255,7 +256,6 @@ export class RemitaAdapter implements PaymentGatewayAdapter {
 
         let rrr = "";
         try {
-            const isLive = process.env.REMITA_ENV !== 'demo';
             const baseUrl = isLive ? "https://login.remita.net" : "https://demo.remita.net";
             
             const res = await fetch(`${baseUrl}/remita/exapp/api/v1/send/api/echannelsvc/merchant/api/paymentinit`, {
