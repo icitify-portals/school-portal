@@ -272,8 +272,8 @@ export function PublicNavbar() {
                     <div className="flex justify-between items-center">
                         {/* Logo */}
                         <Link href="/" className="flex items-center gap-2 group">
-                            <div className="p-2 bg-indigo-500 rounded-xl shadow-lg shadow-indigo-500/20 group-hover:scale-110 transition-transform">
-                                <ShieldCheck className="w-6 h-6 text-white" />
+                            <div className="p-1 bg-white/10 rounded-xl shadow-lg shadow-indigo-500/20 group-hover:scale-110 transition-transform">
+                                <img src="/fss_logo.png" alt="FSS Logo" className="w-8 h-8 object-contain" />
                             </div>
                             <span className="text-xl font-black tracking-tighter uppercase italic text-white">
                                 FSS<span className="text-indigo-400">Portal</span>

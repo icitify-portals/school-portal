@@ -28,11 +28,11 @@ export function PublicFooter() {
                     {/* Brand Section — always shown */}
                     <div className="space-y-6">
                         <div className="flex items-center gap-2">
-                            <div className="p-2 bg-indigo-600 rounded-xl">
-                                <ShieldCheck className="w-6 h-6 text-white" />
+                            <div className="p-1 bg-white/10 rounded-xl">
+                                <img src="/fss_logo.png" alt="FSS Logo" className="w-8 h-8 object-contain" />
                             </div>
                             <span className="text-xl font-black tracking-tighter uppercase italic">
-                                School<span className="text-indigo-400">Portal</span>
+                                FSS<span className="text-indigo-400">Portal</span>
                             </span>
                         </div>
                         <p className="text-slate-400 leading-relaxed text-sm">
@@ -135,7 +135,7 @@ export function PublicFooter() {
                 {/* Bottom bar */}
                 <div className="border-t border-white/5 pt-10 flex flex-col md:flex-row justify-between items-center gap-6">
                     <p className="text-slate-500 text-xs">
-                        &copy; {new Date().getFullYear()} SchoolPortal Management System. All rights reserved.
+                        &copy; {new Date().getFullYear()} FSSPortal Management System. All rights reserved.
                     </p>
                     <div className="flex gap-8 text-xs text-slate-500 font-bold uppercase tracking-widest">
                         {/* Flat footer links with no children */}

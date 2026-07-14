@@ -135,10 +135,10 @@ export function AppContent({ children, enabledModules }: { children: React.React
                         <Menu className="w-6 h-6" />
                     </button>
                     <div className="flex items-center gap-2">
-                        <div className="p-1.5 bg-indigo-600 rounded-lg">
-                            <ShieldCheck className="w-4 h-4 text-white" />
-                        </div>
-                        <span className="font-black text-sm truncate">SchoolPortal</span>
+                          <div className="p-1 bg-white rounded-lg">
+                              <img src="/fss_logo.png" alt="FSS Logo" className="w-5 h-5 object-contain" />
+                          </div>
+                          <span className="font-black text-sm truncate">FSSPortal</span>
                     </div>
                     <div className="ml-auto flex items-center gap-2">
                         <NotificationBell />

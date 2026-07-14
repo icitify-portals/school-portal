@@ -40,8 +40,7 @@ export default async function ConductPage() {
 
     // Resolve names manually or via an additional query, or just join the users table twice via aliases
     // For simplicity, we can fetch all users and map them here, or use aliased joins
-    // @ts-expect-error - TS2339: Auto-suppressed for build
-    const allUsers = await db.select({ id: users.id, name: users.name, matricNo: users.matricNo }).from(users);
+    const allUsers = await db.select({ id: users.id, name: users.name, matricNo: users.schoolPortalId }).from(users);
     const userMap = new Map(allUsers.map(u => [u.id, u]));
 
     const formattedLogs = logs.map(log => {

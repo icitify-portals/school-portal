@@ -724,7 +724,7 @@ export function Sidebar({ enabledModules = {}, mobileOpen = false, onClose }: {
                             "text-lg font-black truncate w-40 uppercase tracking-tighter",
                             "bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent"
                         )}>
-                            {isStudent ? "Student Portal" : (branding?.INST_NAME || "SchoolPortal")}
+                            {isStudent ? "Student Portal" : (branding?.INST_NAME || "FSSPortal")}
                         </h1>
                         {!isStudent && branding?.INST_MOTTO && (
                             <p className="text-[8px] text-slate-500 uppercase font-black tracking-widest truncate w-40">

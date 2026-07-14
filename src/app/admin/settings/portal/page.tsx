@@ -122,7 +122,7 @@ export default function PortalSettingsPage() {
     const handleResetBranding = () => {
         if (confirm("Are you sure you want to reset branding to defaults?")) {
             setBranding({
-                INST_NAME: "SchoolPortal",
+                INST_NAME: "FSSPortal",
                 INST_MOTTO: "",
                 INST_LOGO: "",
                 SCHOOL_ADDRESS: "",

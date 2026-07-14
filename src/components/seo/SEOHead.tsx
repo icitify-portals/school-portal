@@ -45,7 +45,7 @@ export const SEOHead = ({
   dcDescription,
   dcDate,
 }: SEOProps) => {
-  const siteName = "SchoolPortal";
+  const siteName = "FSSPortal";
   const fullTitle = title ? `${title} | ${siteName}` : siteName;
 
   return (

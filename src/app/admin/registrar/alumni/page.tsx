@@ -12,8 +12,7 @@ export default async function AlumniPage() {
         id: students.id,
         status: students.status,
         isProfileLocked: students.isProfileLocked,
-        // @ts-expect-error - TS2339: Auto-suppressed for build
-        studentMatricNo: users.matricNo,
+        studentMatricNo: students.matricNumber,
         studentName: users.name,
         departmentName: departments.name,
         clearanceStatus: graduationClearances.status,

@@ -27,7 +27,7 @@ export const generateScholarlyArticleSchema = (article: any) => ({
   "datePublished": article.publishedDate || article.createdAt,
   "publisher": {
     "@type": "Organization",
-    "name": article.journal?.name || "SchoolPortal Journals",
+    "name": article.journal?.name || "FSSPortal Journals",
     "logo": {
       "@type": "ImageObject",
       "url": article.journal?.logoUrl || "https://schoolportal.com/logo.png"
@@ -53,7 +53,7 @@ export const generateBookSchema = (book: any) => ({
   "description": book.description,
   "publisher": {
     "@type": "Organization",
-    "name": "SchoolPortal Library"
+    "name": "FSSPortal Library"
   }
 });
 
@@ -65,7 +65,7 @@ export const generateCourseSchema = (course: any) => ({
   "description": course.description,
   "provider": {
     "@type": "Organization",
-    "name": "SchoolPortal eLearning",
+    "name": "FSSPortal eLearning",
     "sameAs": "https://schoolportal.com"
   }
 });

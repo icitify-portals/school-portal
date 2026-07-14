@@ -12,7 +12,7 @@ export async function sendEmail(to: string, subject: string, html: string, from?
 
     try {
         const { data, error } = await resend.emails.send({
-            from: from || 'SchoolPortal <payroll@resend.dev>',
+            from: from || 'FSSPortal <payroll@resend.dev>',
             to: [to],
             subject: subject,
             html: html,

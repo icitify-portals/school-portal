@@ -26,7 +26,7 @@ export async function generateTwoFactorSetupAction() {
         }
 
         const secret = generateBase32Secret();
-        const issuer = "SchoolPortal";
+        const issuer = "FSSPortal";
         const email = session.user.email;
         const otpauthUri = `otpauth://totp/${encodeURIComponent(issuer)}:${encodeURIComponent(email)}?secret=${secret}&issuer=${encodeURIComponent(issuer)}`;
 
