@@ -102,7 +102,7 @@ export function RemitaInlineCheckout({
 
         const script = document.createElement("script");
         script.id = scriptId;
-        const isLive = process.env.NEXT_PUBLIC_REMITA_ENV === 'live' || process.env.NEXT_PUBLIC_REMITA_PUBLIC_KEY?.length > 10;
+        const isLive = process.env.NEXT_PUBLIC_REMITA_ENV !== 'demo';
         script.src = isLive ? "https://login.remita.net/payment/v1/remita-pay-inline.bundle.js" : "https://demo.remita.net/payment/v1/remita-pay-inline.bundle.js";
         script.async = true;
         

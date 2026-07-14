@@ -18,10 +18,12 @@ import {
   Sparkles
 } from 'lucide-react';
 import { getStudentWalletStatusAction, simulateTopUpAction } from '@/actions/wallet-actions';
+import { resolveOnlinePaymentAction } from '@/actions/bursary';
 import { useSession } from "next-auth/react";
 import { getStudentByUserId } from "@/actions/students";
 import { Button } from "@/components/ui/button";
 import { useRouter } from 'next/navigation';
+import { RemitaInlineCheckout } from "@/components/finance/RemitaInlineCheckout";
 
 interface StudentProfile {
   id: number;
@@ -56,6 +58,7 @@ export default function StudentWalletPortal() {
   const [isTopUpOpen, setIsTopUpOpen] = useState(false);
   const [customAmount, setCustomAmount] = useState("");
   const [topUpSuccess, setTopUpSuccess] = useState(false);
+  const [remitaData, setRemitaData] = useState<{ rrr: string, reference: string, amount: number } | null>(null);
 
   const loadWallet = useCallback(async (studentId: number) => {
     const res = await getStudentWalletStatusAction(studentId);
@@ -98,8 +101,11 @@ export default function StudentWalletPortal() {
     const { initializeWalletTopUp } = await import('@/actions/wallet');
     const res = await initializeWalletTopUp(amount, 'remita');
     
-    if (res.success && res.checkoutUrl) {
-      // Redirect to the Remita Checkout Gateway
+    if (res.success && res.rrr) {
+      setRemitaData({ rrr: res.rrr, reference: res.reference, amount });
+      setToppingUp(false);
+    } else if (res.success && res.checkoutUrl) {
+      // Redirect to the Remita Checkout Gateway (if not inline)
       window.location.href = res.checkoutUrl;
     } else {
       alert(res.error || "Failed to initialize top-up");
@@ -288,8 +294,56 @@ export default function StudentWalletPortal() {
                     <CheckCircle2 className="w-12 h-12" />
                   </div>
                   <h4 className="text-xl font-black text-slate-900">Wallet Funded!</h4>
-                  <p className="text-xs text-slate-400">Mock gateway credited the funds successfully.</p>
+                  <p className="text-xs text-slate-400">Payment was successful. Processing receipt...</p>
                 </div>
+              ) : remitaData ? (
+                  <div className="space-y-6">
+                    <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 flex justify-between items-center">
+                      <span className="text-sm font-medium text-slate-500">Amount</span>
+                      <span className="text-lg font-black text-slate-900">₦{remitaData.amount.toLocaleString()}</span>
+                    </div>
+                    <div className="w-full">
+                      <RemitaInlineCheckout 
+                        rrr={remitaData.rrr} 
+                        amount={remitaData.amount} 
+                        email={session?.user?.email || "student@fssibadan.edu.ng"} 
+                        firstName={student?.firstName || ""} 
+                        lastName={student?.lastName || ""} 
+                        onSuccess={async () => {
+                          setToppingUp(true);
+                          try {
+                            const verify = await resolveOnlinePaymentAction(remitaData.reference, 'completed');
+                            if (verify.success) {
+                              setTopUpSuccess(true);
+                              setTimeout(() => {
+                                setIsTopUpOpen(false);
+                                setRemitaData(null);
+                                setTopUpSuccess(false);
+                                if (student?.id) loadWallet(student.id);
+                              }, 2000);
+                            } else {
+                              alert("Payment verification failed. Please contact admin.");
+                              setRemitaData(null);
+                            }
+                          } catch (err) {
+                            alert("Error verifying payment.");
+                            setRemitaData(null);
+                          }
+                          setToppingUp(false);
+                        }} 
+                        onError={() => {
+                          alert("Remita payment failed or was cancelled.");
+                          setRemitaData(null);
+                        }} 
+                        onClose={() => {
+                          // Handle close
+                        }} 
+                      />
+                    </div>
+                    <Button variant="ghost" className="w-full mt-4 text-xs font-bold text-slate-500" onClick={() => setRemitaData(null)}>
+                      Cancel Payment
+                    </Button>
+                  </div>
               ) : (
                 <div className="space-y-6">
                   {/* Quick select amounts */}
