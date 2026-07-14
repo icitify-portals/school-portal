@@ -1214,16 +1214,22 @@ export async function requeryUnifiedTransaction(txId: number, sourceTable: 'tran
         }
 
         let rrrToPass = undefined;
-        if (sourceTable === 'payment_transactions' && payTx) {
-            rrrToPass = payTx.gatewayTransactionId || undefined;
-            if (!rrrToPass && payTx.metadata) {
-                try {
-                    const metaObj = typeof payTx.metadata === 'string' ? JSON.parse(payTx.metadata) : payTx.metadata;
-                    rrrToPass = metaObj.rrr;
-                } catch(e) {}
+        if (sourceTable === 'payment_transactions') {
+            const [payTx] = await db.select().from(payment_transactions).where(eq(payment_transactions.id, txId)).limit(1);
+            if (payTx) {
+                rrrToPass = payTx.gatewayTransactionId || undefined;
+                if (!rrrToPass && payTx.metadata) {
+                    try {
+                        const metaObj = typeof payTx.metadata === 'string' ? JSON.parse(payTx.metadata) : payTx.metadata;
+                        rrrToPass = metaObj.rrr;
+                    } catch(e) {}
+                }
             }
-        } else if (sourceTable === 'transactions' && txRecord) {
-            rrrToPass = txRecord.rrr || undefined;
+        } else if (sourceTable === 'transactions') {
+            const [txRecord] = await db.select().from(transactions).where(eq(transactions.id, txId)).limit(1);
+            if (txRecord) {
+                rrrToPass = txRecord.rrr || undefined;
+            }
         }
 
         const verification = await verifyPayment(activeGateway, reference, rrrToPass);
