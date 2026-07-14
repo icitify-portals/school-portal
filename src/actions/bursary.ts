@@ -1329,9 +1329,28 @@ export async function getTransactionForReceipt(id: number) {
             .where(eq(students.userId, pt.userId))
             .limit(1);
 
-            if (studentData.length === 0) return null;
-
             const meta = pt.metadata ? (typeof pt.metadata === 'string' ? JSON.parse(pt.metadata) : pt.metadata) : {};
+
+            let student = studentData.length > 0 ? studentData[0].student : null;
+            let programme = studentData.length > 0 ? studentData[0].programme : null;
+
+            if (!student) {
+                // Fallback for applicants or legacy users without a student record
+                const [user] = await db.select().from(users).where(eq(users.id, pt.userId)).limit(1);
+                if (user) {
+                    student = {
+                        id: 0,
+                        userId: user.id,
+                        firstName: meta.fullname ? meta.fullname.split(' ')[0] : user.name.split(' ')[0],
+                        lastName: meta.fullname ? meta.fullname.split(' ').slice(1).join(' ') : user.name.split(' ').slice(1).join(' '),
+                        matricNumber: meta.matric_no || meta.jamb_reg || user.email,
+                        currentLevel: 100,
+                    } as any;
+                    programme = { name: meta.programme || meta.course || "N/A" } as any;
+                } else {
+                    return null;
+                }
+            }
 
             // Build mock transaction
             const mockTx = {
@@ -1348,8 +1367,8 @@ export async function getTransactionForReceipt(id: number) {
 
             txData = {
                 transaction: mockTx,
-                student: studentData[0].student,
-                programme: studentData[0].programme
+                student: student,
+                programme: programme
             };
         }
 
