@@ -224,17 +224,30 @@ export default function StatefulApplicationPage() {
 
         if (application.template.flowType === 'form_first' && application.paymentStatus !== 'paid') {
             handlePayment();
+            setSubmitting(false);
         } else {
-            // @ts-expect-error - TS2345: Auto-suppressed for build
-            const res = await submitApplicationFinal(applicationId, parseInt(session!.user!.id));
-            if (res.success) {
-                toast.success("Application submitted successfully!");
-                router.push("/applicant");
-            } else {
-                toast.error("Failed to submit");
-            }
+            // Application fee is paid or not required first.
+            // Stage 2: Enforce Paystack processing fee sequentially
+            triggerSubscriptionGate({
+                identifier: applicationId.toString(),
+                email: session!.user!.email!,
+                type: 'admission_form',
+                onSuccess: async () => {
+                    // @ts-expect-error - TS2345: Auto-suppressed for build
+                    const res = await submitApplicationFinal(applicationId, parseInt(session!.user!.id));
+                    if (res.success) {
+                        toast.success("Application submitted successfully!");
+                        router.push("/applicant");
+                    } else {
+                        toast.error("Failed to submit");
+                        setSubmitting(false);
+                    }
+                },
+                onError: () => {
+                    setSubmitting(false);
+                }
+            });
         }
-        setSubmitting(false);
     };
 
     const handlePayment = async () => {

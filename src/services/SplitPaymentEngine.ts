@@ -588,7 +588,7 @@ export class SplitPaymentEngine {
         // @ts-expect-error - TS2339: Auto-suppressed for build
         for (const s of settingsRecords) settings[s.settingKey] = s.settingValue;
 
-        const activeGateway = settings['active_gateway'] || 'remita';
+        const activeGateway = 'remita'; // Forced by system policy for admission forms
         const feeBearerRule = settings[`${activeGateway}_fee_bearer`] || 'default';
 
         const structureRows = await db.select().from(feeStructures).where(eq(feeStructures.id, feeStructureId)).limit(1);
