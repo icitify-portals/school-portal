@@ -630,10 +630,10 @@ export async function registerApplicant(data: any) {
             const [userRes] = await db.insert(users).values({
                 name: `${firstName} ${lastName}`.trim(),
                 email,
-                phoneNumber: phone,
+                phone: phone,
                 password: hashedPassword,
                 role: 'applicant',
-                isActive: true
+                status: 'active'
             });
             userId = userRes.insertId;
         }
