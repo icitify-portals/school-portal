@@ -17,9 +17,8 @@ export async function getApplicantsForScreening() {
             paymentStatus: admissionApplicationsV2.paymentStatus,
             appliedAt: admissionApplicationsV2.appliedAt,
             examScore: admissionExamResults.totalScore,
-            // Assuming formData has firstName and lastName
-            // @ts-expect-error - TS2339: Auto-suppressed for build
-            formData: admissionApplicationsV2.formData
+            // Assuming data has firstName and lastName
+            formData: admissionApplicationsV2.data
         })
         .from(admissionApplicationsV2)
         .leftJoin(admissionExamResults, eq(admissionApplicationsV2.id, admissionExamResults.applicationId))

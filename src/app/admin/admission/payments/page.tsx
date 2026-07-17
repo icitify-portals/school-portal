@@ -52,7 +52,7 @@ export default function AdmissionPaymentsPage() {
 
     const filteredApps = applications.filter(app => {
         const matchesSearch = app.template.name.toLowerCase().includes(search.toLowerCase()) ||
-                             (app.formData && app.formData.toLowerCase().includes(search.toLowerCase()));
+                             (app.data && app.data.toLowerCase().includes(search.toLowerCase()));
         const matchesFilter = filter === "all" ? true : app.paymentStatus === filter;
         return matchesSearch && matchesFilter;
     });
@@ -137,7 +137,7 @@ export default function AdmissionPaymentsPage() {
                                 </tr>
                             ) : (
                                 filteredApps.map((app) => {
-                                    const data = JSON.parse(app.formData || "{}");
+                                    const data = JSON.parse(app.data || "{}");
                                     const candidateName = data.firstName ? `${data.firstName} ${data.lastName}` : "Unnamed Candidate";
                                     
                                     return (

@@ -13,8 +13,7 @@ export default async function WaitlistPage() {
         rankPosition: admissionWaitlists.rankPosition,
         status: admissionWaitlists.status,
         createdAt: admissionWaitlists.createdAt,
-        // @ts-expect-error - TS2339: Auto-suppressed for build
-        applicationData: admissionApplicationsV2.formData,
+        applicationData: admissionApplicationsV2.data,
         applicantPhoto: admissionApplicationsV2.applicantPhoto
     })
     .from(admissionWaitlists)

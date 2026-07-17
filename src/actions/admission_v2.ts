@@ -52,7 +52,15 @@ async function requireApplicant() {
  */
 
 export async function getAdmissionTemplates() {
-    return await getFormTemplates();
+    try {
+        return await db.query.admissionFormTemplates.findMany({
+            where: eq(admissionFormTemplates.isActive, true),
+            orderBy: [desc(admissionFormTemplates.createdAt)]
+        });
+    } catch (error) {
+        console.error("[getAdmissionTemplates] Failed to fetch templates:", error);
+        return [];
+    }
 }
 
 export async function getFormTemplates() {

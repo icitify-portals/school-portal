@@ -18,8 +18,7 @@ export default async function InterviewsPage() {
         score: admissionInterviews.score,
         notes: admissionInterviews.notes,
         interviewerName: users.name,
-        // @ts-expect-error - TS2339: Auto-suppressed for build
-        applicationData: admissionApplicationsV2.formData,
+        applicationData: admissionApplicationsV2.data,
         applicantPhoto: admissionApplicationsV2.applicantPhoto
     })
     .from(admissionInterviews)

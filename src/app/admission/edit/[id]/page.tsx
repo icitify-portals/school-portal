@@ -40,8 +40,7 @@ export default function EditAdmissionPage() {
         const slip = await getExamSlipData(id);
         if (slip) {
             setData(slip);
-            // @ts-expect-error - TS2339: Auto-suppressed for build
-            setFormData(JSON.parse(slip.formData || "{}"));
+            setFormData(JSON.parse(slip.data || "{}"));
             const accessRes = await requestEditAccess(id);
             setAccess(accessRes);
         }

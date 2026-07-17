@@ -6,6 +6,7 @@ import {
     updateSectionsOrder 
 } from '../../actions/admission_v2';
 import { db } from '@/db/db';
+import { auth } from '@/auth';
 
 vi.mock('next/cache', () => ({
     revalidatePath: vi.fn(),
@@ -17,6 +18,25 @@ describe('Admission Engine Actions', () => {
     });
 
     describe('verifyNinAction', () => {
+        beforeEach(() => {
+            vi.mocked(auth).mockResolvedValue({
+                user: { id: '2', name: 'Applicant User', email: 'applicant@school.com', role: 'applicant' }
+            });
+            // Mock DB queries to return empty arrays (simulator mode)
+            const mockWhere = vi.fn().mockResolvedValue([]);
+            (db.select as any).mockReturnValue({
+                from: vi.fn(() => ({
+                    where: mockWhere,
+                })),
+            });
+        });
+
+        afterEach(() => {
+            vi.mocked(auth).mockResolvedValue({
+                user: { id: '1', name: 'Admin User', email: 'admin@school.com', role: 'admin' }
+            });
+        });
+
         it('should return error for empty or invalid length NIN', async () => {
             const result1 = await verifyNinAction('');
             expect(result1.success).toBe(false);

@@ -32,7 +32,7 @@ export default function AdmissionSlipPage() {
     if (loading) return <div className="min-h-screen flex justify-center items-center"><Loader2 className="w-10 h-10 animate-spin text-indigo-500" /></div>;
     if (!data) return <div className="min-h-screen flex justify-center items-center font-black text-2xl italic uppercase text-slate-300">Slip Not Found</div>;
 
-    const formData = JSON.parse(data.formData || "{}");
+    const formData = JSON.parse(data.data || "{}");
     const exam = data.template.exams?.[0];
 
     return (

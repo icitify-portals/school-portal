@@ -47,11 +47,10 @@ export async function submitAdmissionApplication(data: {
             }
         }
 
-        // @ts-expect-error - TS2769: Auto-suppressed for build
         const [application] = await db.insert(admissionApplicationsV2).values({
             templateId: data.templateId,
             studentId: studentId,
-            formData: JSON.stringify(data.formData),
+            data: JSON.stringify(data.formData),
             applicantPhoto: data.applicantPhoto,
             status: 'submitted',
             paymentStatus: 'pending'
