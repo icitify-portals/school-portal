@@ -81,12 +81,14 @@ export default async function AdminDashboardPage() {
     const activeAcademicSession = statsData[7]?.[0];
     const facultyCount = statsData[8]?.[0]?.value.toString() || "0";
     const programmeCount = statsData[2]?.[0]?.value.toString() || "0";
+    const totalStudentCount = statsData[0]?.[0]?.value.toString() || "0";
     const activeStudentCount = statsData[9]?.[0]?.value.toString() || "0";
     const graduatedStudentCount = statsData[10]?.[0]?.value.toString() || "0";
 
     const adminStats = [
-        { name: "Active Students", value: activeStudentCount, icon: Users, color: "text-blue-600", bg: "bg-gradient-to-br from-blue-500 to-blue-600", href: "/admin/students", colSpan: "md:col-span-1 xl:col-span-1" },
-        { name: "Graduated Students", value: graduatedStudentCount, icon: GraduationCap, color: "text-indigo-600", bg: "bg-gradient-to-br from-indigo-500 to-indigo-600", href: "/admin/students?filter=graduated", colSpan: "md:col-span-1 xl:col-span-1" },
+        { name: "Total Enrolled", value: totalStudentCount, icon: Users, color: "text-slate-600", bg: "bg-gradient-to-br from-slate-500 to-slate-600", href: "/admin/students", colSpan: "md:col-span-1 xl:col-span-1" },
+        { name: "Active Students", value: activeStudentCount, icon: UserCheck, color: "text-emerald-600", bg: "bg-gradient-to-br from-emerald-500 to-emerald-600", href: "/admin/students?filter=active", colSpan: "md:col-span-1 xl:col-span-1" },
+        { name: "Graduated", value: graduatedStudentCount, icon: GraduationCap, color: "text-indigo-600", bg: "bg-gradient-to-br from-indigo-500 to-indigo-600", href: "/admin/students?filter=graduated", colSpan: "md:col-span-1 xl:col-span-1" },
         { name: "Total Staff", value: statsData[5]?.[0]?.value.toString() || "0", icon: Users, color: "text-emerald-600", bg: "bg-gradient-to-br from-emerald-500 to-emerald-600", href: "/admin/hr", colSpan: "md:col-span-1 xl:col-span-1" },
         { name: "Faculties", value: facultyCount, icon: Award, color: "text-rose-600", bg: "bg-gradient-to-br from-rose-500 to-rose-600", href: "/admin/faculties", colSpan: "md:col-span-1 xl:col-span-1" },
         { name: "Programmes", value: programmeCount, icon: BookOpen, color: "text-amber-600", bg: "bg-gradient-to-br from-amber-500 to-amber-600", href: "/admin/programmes", colSpan: "md:col-span-1 xl:col-span-1" },
