@@ -53,10 +53,10 @@ async function requireApplicant() {
 
 export async function getAdmissionTemplates() {
     try {
-        return await db.query.admissionFormTemplates.findMany({
-            where: eq(admissionFormTemplates.isActive, true),
-            orderBy: [desc(admissionFormTemplates.createdAt)]
-        });
+        return await db.select()
+            .from(admissionFormTemplates)
+            .where(eq(admissionFormTemplates.isActive, true))
+            .orderBy(desc(admissionFormTemplates.createdAt));
     } catch (error) {
         console.error("[getAdmissionTemplates] Failed to fetch templates:", error);
         return [];
@@ -64,11 +64,11 @@ export async function getAdmissionTemplates() {
 }
 
 export async function getFormTemplates() {
-    await requireAdmin();
     try {
-        return await db.query.admissionFormTemplates.findMany({
-            orderBy: [desc(admissionFormTemplates.createdAt)]
-        });
+        await requireAdmin();
+        return await db.select()
+            .from(admissionFormTemplates)
+            .orderBy(desc(admissionFormTemplates.createdAt));
     } catch (error) {
         console.error("[getFormTemplates] Failed to fetch form templates:", error);
         return [];
@@ -76,28 +76,34 @@ export async function getFormTemplates() {
 }
 
 export async function getFormTemplate(id: number) {
-    await requireAdmin();
-    return getTemplateWithSections(id);
+    try {
+        await requireAdmin();
+        return await getTemplateWithSections(id);
+    } catch (error) {
+        console.error("[getFormTemplate] Failed to fetch template:", error);
+        return null;
+    }
 }
 
 async function getTemplateWithSections(templateId: number) {
     try {
-        const template = await db.query.admissionFormTemplates.findFirst({
-            where: eq(admissionFormTemplates.id, templateId)
-        });
+        const [template] = await db.select()
+            .from(admissionFormTemplates)
+            .where(eq(admissionFormTemplates.id, templateId))
+            .limit(1);
         if (!template) return null;
 
-        const sections = await db.query.admissionFormSections.findMany({
-            where: eq(admissionFormSections.templateId, templateId),
-            orderBy: [asc(admissionFormSections.order)]
-        });
+        const sections = await db.select()
+            .from(admissionFormSections)
+            .where(eq(admissionFormSections.templateId, templateId))
+            .orderBy(asc(admissionFormSections.order));
 
         const sectionIds = sections.map(s => s.id);
         const fields = sectionIds.length > 0
-            ? await db.query.admissionFormFields.findMany({
-                where: (f, { inArray }) => inArray(f.sectionId, sectionIds),
-                orderBy: [asc(admissionFormFields.order)]
-            })
+            ? await db.select()
+                .from(admissionFormFields)
+                .where(inArray(admissionFormFields.sectionId, sectionIds))
+                .orderBy(asc(admissionFormFields.order))
             : [];
 
         return { ...template, sections: sections.map(s => ({ ...s, fields: fields.filter(f => f.sectionId === s.id) })) };
@@ -108,8 +114,8 @@ async function getTemplateWithSections(templateId: number) {
 }
 
 export async function saveFormTemplate(data: any) {
-    await requireAdmin();
     try {
+        await requireAdmin();
         const { id, name, level, slug, description, flowType, feeStructureId, applicationFee, lateFee, startDate, endDate, lateEndDate, minAge, isActive, ninVerificationConfig } = data;
         
         if (id) {
@@ -139,8 +145,8 @@ export async function saveFormTemplate(data: any) {
 }
 
 export async function deleteFormTemplate(id: number) {
-    await requireAdmin();
     try {
+        await requireAdmin();
         const sections = await db.select({ id: admissionFormSections.id })
             .from(admissionFormSections)
             .where(eq(admissionFormSections.templateId, id));
@@ -184,8 +190,8 @@ export async function bulkDeleteFormTemplates(ids: number[]) {
  */
 
 export async function saveFormSection(data: any) {
-    await requireAdmin();
     try {
+        await requireAdmin();
         const { id, templateId, title, order } = data;
         if (id) {
             await db.update(admissionFormSections)
@@ -205,8 +211,8 @@ export async function saveFormSection(data: any) {
 }
 
 export async function deleteFormSection(id: number, templateId: number) {
-    await requireAdmin();
     try {
+        await requireAdmin();
         await db.delete(admissionFormSections).where(eq(admissionFormSections.id, id));
         revalidatePath(`/admin/admission/forms/${templateId}`);
         return { success: true };
@@ -221,8 +227,8 @@ export async function deleteFormSection(id: number, templateId: number) {
  */
 
 export async function saveFormField(data: any) {
-    await requireAdmin();
     try {
+        await requireAdmin();
         const { id, sectionId, templateId, label, type, placeholder, options, isRequired, order, isSystemField, systemKey, helpText, defaultValue, validationRules, conditionalLogic, width } = data;
         if (id) {
             await db.update(admissionFormFields)
@@ -242,8 +248,8 @@ export async function saveFormField(data: any) {
 }
 
 export async function deleteFormField(id: number, templateId: number) {
-    await requireAdmin();
     try {
+        await requireAdmin();
         await db.delete(admissionFormFields).where(eq(admissionFormFields.id, id));
         revalidatePath(`/admin/admission/forms/${templateId}`);
         return { success: true };
@@ -254,8 +260,8 @@ export async function deleteFormField(id: number, templateId: number) {
 }
 
 export async function updateFieldsOrder(fields: { id: number, order: number }[], templateId: number) {
-    await requireAdmin();
     try {
+        await requireAdmin();
         await db.transaction(async (tx) => {
             for (const field of fields) {
                 await tx.update(admissionFormFields)
