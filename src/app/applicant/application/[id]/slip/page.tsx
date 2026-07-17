@@ -6,7 +6,7 @@ import { useSession } from "next-auth/react";
 import QRCode from "qrcode";
 import { getApplicantApplication, getApplicantOLevelData } from "@/actions/admission_v2";
 import { getBrandingSettings } from "@/actions/settings";
-import { generateVerificationUrl } from "@/lib/form-number";
+import { generateVerificationUrl } from "@/lib/verification-url";
 import { Loader2, Printer, ArrowLeft, User, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 

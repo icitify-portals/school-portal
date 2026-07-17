@@ -22,9 +22,6 @@ import { getFaculties } from "@/actions/faculties";
 import { getDepartments } from "@/actions/departments";
 import { getProgrammes } from "@/actions/programmes";
 import { cn } from "@/lib/utils";
-import { db } from "@/db/db";
-import { feeAllocations } from "@/db/schema";
-import { eq } from "drizzle-orm";
 
 export default function AllocationsPage() {
     const [structures, setStructures] = useState<any[]>([]);

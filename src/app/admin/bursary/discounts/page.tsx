@@ -13,9 +13,6 @@ import {
     ShieldCheck,
     Percent
 } from "lucide-react";
-import { db } from "@/db/db";
-import { discounts, students, users } from "@/db/schema";
-import { eq, and } from "drizzle-orm";
 import { approveDiscountWithAuth as approveDiscount } from "@/actions/bursary";
 import { useSession } from "next-auth/react";
 import { Badge } from "@/components/ui/badge";

@@ -38,7 +38,4 @@ export function generateFormHash(
     return crypto.createHash("sha256").update(payload).digest("hex").substring(0, 16).toUpperCase();
 }
 
-export function generateVerificationUrl(formNumber: string): string {
-    const base = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-    return `${base}/verify/${encodeURIComponent(formNumber)}`;
-}
+

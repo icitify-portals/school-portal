@@ -30,7 +30,6 @@ import {
   createDocumentForm
 } from "@/actions/graduate-documents";
 import { getAcademicSessions } from "@/actions/transcripts";
-import { db } from "@/db/db";
 import { toast } from "sonner";
 
 export default function RegistryDocumentQueue() {

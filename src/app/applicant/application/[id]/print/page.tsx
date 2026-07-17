@@ -2,43 +2,11 @@
 
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
-import { getApplicantApplication } from "@/actions/admission_v2";
+import { getApplicantApplication, getApplicantOLevelData } from "@/actions/admission_v2";
 import { getBrandingSettings } from "@/actions/settings";
-import { db } from "@/db";
-import { applicantOLevelSittings, applicantOLevelSubjects, examinationBodies } from "@/db/schema";
-import { eq, inArray } from "drizzle-orm";
 import { Loader2, Printer, ArrowLeft, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSession } from "next-auth/react";
-
-async function getOLevelData(applicationId: number, applicantId: number) {
-    try {
-        const sittings = await db.query.applicantOLevelSittings.findMany({
-            where: eq(applicantOLevelSittings.applicationId, applicationId),
-        });
-        if (sittings.length === 0) return [];
-
-        const sittingIds = sittings.map((s) => s.id);
-        const subjects = await db.query.applicantOLevelSubjects.findMany({
-            where: inArray(applicantOLevelSubjects.sittingId, sittingIds),
-        });
-
-        const bodies = await db.select().from(examinationBodies);
-        const bodyMap = new Map(bodies.map((b) => [b.id, b.name]));
-
-        return sittings
-            .sort((a, b) => a.sittingNumber - b.sittingNumber)
-            .map((s) => ({
-                ...s,
-                examBodyName: bodyMap.get(s.examBodyId) || "N/A",
-                subjects: subjects
-                    .filter((sub) => sub.sittingId === s.id)
-                    .sort((a, b) => a.id - b.id),
-            }));
-    } catch {
-        return [];
-    }
-}
 
 export default function ApplicationPrintPage() {
     const params = useParams();
@@ -65,7 +33,7 @@ export default function ApplicationPrintPage() {
 
         if (appData) {
             setData(appData);
-            const olevelData = await getOLevelData(id, parseInt(session!.user!.id));
+            const olevelData = await getApplicantOLevelData(id, parseInt(session!.user!.id));
             setOlevels(olevelData);
         }
         setLoading(false);
