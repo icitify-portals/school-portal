@@ -238,8 +238,8 @@ export class RemitaAdapter implements PaymentGatewayAdapter {
             amount: totalAmount.toString(),
             orderId: txReference,
             payerEmail: payerEmail,
-            payerName: payerEmail.split('@')[0], // Add payerName which is sometimes required
-            payerPhone: "09000000000" // Add a dummy phone number
+            payerName: meta?.payerName || payerEmail.split('@')[0],
+            payerPhone: meta?.payerPhone || "09000000000" // Fallback only if the applicant truly has no phone on file
         };
         
         // In Demo environment, the lineItems (split payment) feature usually fails because 
@@ -407,25 +407,47 @@ export class SplitPaymentEngine {
         const currentPaid = parseFloat(bill.amountPaid || "0.00");
         const outstanding = billTotal - currentPaid;
 
-        // Installment payment validations
-        const allowed = settings['allow_installment_payments'] === "true";
-        const minPercent = parseFloat(settings['minimum_installment_percentage'] || "60");
-        const minAllowedAmount = allowed ? (billTotal * minPercent) / 100 : billTotal;
+        // Installment payment validations — supports tuition-only installment mode
+        if (bill.tuitionInstallmentEnabled) {
+            const installPct = parseFloat(bill.tuitionInstallmentPercentage || "60") / 100;
+            let tuitionTotal = 0;
+            let otherTotal = 0;
 
-        if (currentPaid < 0.01) {
-            // Initial payment: must meet the minimum required installment percentage
-            if (selectedAmount < minAllowedAmount - 0.01) {
-                return { success: false, reference: "", error: `Minimum initial installment payment of ₦${minAllowedAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })} (${minPercent}%) is required.` };
+            for (const bi of billItemRows) {
+                const itemAmt = parseFloat(bi.item.amount);
+                if (bi.feeItem?.category === 'tuition') {
+                    tuitionTotal += itemAmt;
+                } else {
+                    otherTotal += itemAmt;
+                }
+            }
+
+            if (currentPaid < 0.01) {
+                const tuitionPart = tuitionTotal * installPct;
+                const minFirstPayment = otherTotal + tuitionPart;
+
+                if (selectedAmount < (minFirstPayment - 0.01) && Math.abs(selectedAmount - outstanding) > 0.01) {
+                    return { success: false, reference: "", error: `In tuition-installment mode, you must pay all non-tuition items (₦${otherTotal.toLocaleString()}) plus ${(installPct * 100).toFixed(0)}% of tuition (₦${tuitionPart.toLocaleString()}). Minimum first payment: ₦${minFirstPayment.toLocaleString()}` };
+                }
+            }
+        } else {
+            const allowed = settings['allow_installment_payments'] === "true";
+            const minPercent = parseFloat(settings['minimum_installment_percentage'] || "60");
+            const minAllowedAmount = allowed ? (billTotal * minPercent) / 100 : billTotal;
+
+            if (currentPaid < 0.01) {
+                if (selectedAmount < minAllowedAmount - 0.01) {
+                    return { success: false, reference: "", error: `Minimum initial installment payment of ₦${minAllowedAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })} (${minPercent}%) is required.` };
+                }
+            }
+
+            if (!allowed && Math.abs(selectedAmount - outstanding) > 0.01) {
+                return { success: false, reference: "", error: `Installments are not enabled for this payment. Full payment of ₦${outstanding.toLocaleString()} is required.` };
             }
         }
 
         if (selectedAmount > outstanding + 0.01) {
             return { success: false, reference: "", error: `Payment amount exceeds outstanding bill balance of ₦${outstanding.toLocaleString()}.` };
-        }
-
-        // If part payment is disabled, require full payment
-        if (!allowed && Math.abs(selectedAmount - outstanding) > 0.01) {
-            return { success: false, reference: "", error: `Installments are not enabled for this payment. Full payment of ₦${outstanding.toLocaleString()} is required.` };
         }
 
         // 4. Pro-rate fee items across checkout amount (for part-payments)
@@ -604,9 +626,12 @@ export class SplitPaymentEngine {
           
         const items = itemRows.map(r => ({ ...r.item, feeItem: r.feeItem }));
 
-        // @ts-expect-error - TS2339: Auto-suppressed for build
-        const billTotal = parseFloat(structure.totalAmount);
-        
+        // feeStructures has no stored total — derive it from its line items
+        const billTotal = items.reduce((sum, item) => sum + parseFloat(item.amount as string || "0"), 0);
+        if (billTotal <= 0) {
+            return { success: false, reference: "", error: "This fee structure has no fee items configured. Please add at least one item with an amount." };
+        }
+
         let splits: SplitItem[] = [];
         let totalAllocated = 0;
 
@@ -699,6 +724,9 @@ export class SplitPaymentEngine {
             gatewayReference: txRef
         });
 
+        // Look up the applicant's real phone number so we don't send a dummy value to the gateway
+        const applicantUser = await db.query.users.findFirst({ where: eq(users.email, applicantEmail) });
+
         // @ts-expect-error - TS2576: Auto-suppressed for build
         const adapter = this.getAdapter(activeGateway);
         const result = await adapter.initializeSplitPayment(
@@ -707,7 +735,7 @@ export class SplitPaymentEngine {
             txRef,
             splits,
             feeBearerRule,
-            { studentLevel: "ND 1" }
+            { studentLevel: "ND 1", payerName: applicantName, payerPhone: applicantUser?.phone }
         );
         
         if (result.rrr) {

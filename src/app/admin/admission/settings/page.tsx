@@ -228,10 +228,22 @@ function AdmissionPolicyEditor() {
         setSelectedProgId(id);
         const prog = programmes.find(p => p.id.toString() === id);
         if (prog) {
+            let parsedAreas = [];
+            if (prog.catchmentAreas) {
+                if (Array.isArray(prog.catchmentAreas)) {
+                    parsedAreas = prog.catchmentAreas;
+                } else if (typeof prog.catchmentAreas === 'string') {
+                    try {
+                        parsedAreas = JSON.parse(prog.catchmentAreas);
+                    } catch (e) {
+                        parsedAreas = [];
+                    }
+                }
+            }
             setPolicy({
                 cutOffMark: prog.cutOffMark || 180,
                 meritQuota: prog.meritQuota || 45,
-                catchmentAreas: prog.catchmentAreas ? JSON.parse(prog.catchmentAreas).join(", ") : ""
+                catchmentAreas: parsedAreas.join(", ")
             });
         }
     };

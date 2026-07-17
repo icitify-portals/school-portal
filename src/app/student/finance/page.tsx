@@ -20,7 +20,8 @@ import {
     Coins,
     Sparkles,
     ShieldAlert,
-    BookOpen
+    BookOpen,
+    GraduationCap
 } from "lucide-react";
 import { 
     getStudentLedger, 
@@ -519,15 +520,64 @@ export default function StudentFinancePage() {
                                                 </div>
                                             </div>
 
-                                            <div className="border-t border-slate-200/60 pt-4 mb-4 max-h-32 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent pr-2">
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                                    {bill.items?.map((item) => (
-                                                        <div key={item.id} className="flex justify-between items-center text-xs bg-slate-50 p-2 rounded-lg">
-                                                            <span className="text-slate-500 font-medium truncate mr-2" title={item.feeItem?.name}>{item.feeItem?.name}</span>
-                                                            <span className="font-extrabold text-slate-800 shrink-0">₦{parseFloat(item.amount).toLocaleString()}</span>
-                                                        </div>
-                                                    ))}
-                                                </div>
+                                            <div className="border-t border-slate-200/60 pt-4 mb-4">
+                                                <table className="w-full text-xs">
+                                                    <thead>
+                                                        <tr className="text-[9px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">
+                                                            <th className="pb-2 text-left">Fee Item</th>
+                                                            <th className="pb-2 text-right">Original</th>
+                                                            <th className="pb-2 text-right">Aid</th>
+                                                            <th className="pb-2 text-right">Net Due</th>
+                                                            <th className="pb-2 text-right">Paid</th>
+                                                            <th className="pb-2 text-center">Status</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {bill.items?.map((item) => {
+                                                            const itemPaid = parseFloat(item.amountPaid || "0.00");
+                                                            const itemNet = parseFloat(item.amount);
+                                                            const itemAid = (parseFloat(item.scholarshipApplied || "0.00") + parseFloat(item.discountApplied || "0.00"));
+                                                            const itemOrig = parseFloat(item.originalAmount || item.amount);
+                                                            const itemStatus = itemPaid >= itemNet ? 'paid' : itemPaid > 0 ? 'partial' : 'unpaid';
+                                                            return (
+                                                                <tr key={item.id} className="border-b border-slate-50">
+                                                                    <td className="py-2 pr-2 font-semibold text-slate-700 truncate max-w-[140px]" title={item.feeItem?.name}>
+                                                                        {item.feeItem?.name || `Item #${item.feeItemId}`}
+                                                                    </td>
+                                                                    <td className="py-2 text-right text-slate-400">₦{itemOrig.toLocaleString()}</td>
+                                                                    <td className="py-2 text-right text-indigo-500">{itemAid > 0 ? `-₦${itemAid.toLocaleString()}` : '-'}</td>
+                                                                    <td className="py-2 text-right font-bold text-slate-800">₦{itemNet.toLocaleString()}</td>
+                                                                    <td className="py-2 text-right font-bold text-emerald-600">₦{itemPaid.toLocaleString()}</td>
+                                                                    <td className="py-2 text-center">
+                                                                        <span className={cn(
+                                                                            "inline-block px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider",
+                                                                            itemStatus === 'paid' ? "text-emerald-600 bg-emerald-50" :
+                                                                            itemStatus === 'partial' ? "text-amber-600 bg-amber-50" : "text-slate-400 bg-slate-50"
+                                                                        )}>
+                                                                            {itemStatus === 'paid' ? 'Paid' : itemStatus === 'partial' ? 'Part' : 'Due'}
+                                                                        </span>
+                                                                    </td>
+                                                                </tr>
+                                                            );
+                                                        })}
+                                                    </tbody>
+                                                </table>
+                                                {bill.tuitionInstallmentEnabled && (
+                                                    <div className="mt-2 flex items-center gap-2 text-[9px] font-bold text-amber-600 bg-amber-50 px-3 py-1.5 rounded-lg">
+                                                        <GraduationCap className="w-3 h-3" />
+                                                        Tuition Installment Mode: {bill.tuitionInstallmentPercentage || 60}% of tuition due now. Balance by {bill.tuitionInstallmentDeadline ? new Date(bill.tuitionInstallmentDeadline).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'End of Semester'}.
+                                                    </div>
+                                                )}
+                                                {(parseFloat(bill.totalScholarshipApplied || "0") > 0 || parseFloat(bill.totalDiscountApplied || "0") > 0) && (
+                                                    <div className="mt-1 flex gap-3 text-[9px] font-bold text-slate-500">
+                                                        {parseFloat(bill.totalScholarshipApplied || "0") > 0 && (
+                                                            <span className="text-indigo-500">Scholarship: -₦{parseFloat(bill.totalScholarshipApplied).toLocaleString()}</span>
+                                                        )}
+                                                        {parseFloat(bill.totalDiscountApplied || "0") > 0 && (
+                                                            <span className="text-blue-500">Discount: -₦{parseFloat(bill.totalDiscountApplied).toLocaleString()}</span>
+                                                        )}
+                                                    </div>
+                                                )}
                                             </div>
 
                                             {bill.note && (

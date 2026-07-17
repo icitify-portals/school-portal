@@ -43,6 +43,7 @@ export const authConfig = {
             console.log('AUTHORIZED CHECK:', { isLoggedIn, pathname: nextUrl.pathname, session: auth?.user });
             const isLoginPage = nextUrl.pathname === "/login";
             const isRegisterPage = nextUrl.pathname === "/register";
+            const isAdmissionPage = nextUrl.pathname.startsWith("/admission");
             const isJobsPage = nextUrl.pathname.startsWith("/jobs");
             const isAdminPage = nextUrl.pathname.startsWith("/admin");
             const isTwoFactorPage = nextUrl.pathname === "/login/2fa";
@@ -58,7 +59,7 @@ export const authConfig = {
                 nextUrl.pathname === "/api/push";                // Push notification subscription (pre-auth)
 
             // Allow public API routes and public pages
-            if (isPublicApiRoute || isJobsPage) return true;
+            if (isPublicApiRoute || isJobsPage || isAdmissionPage) return true;
 
             // If user is logged in, check if 2FA verification is pending
             const twoFactorPending = (auth?.user as any)?.twoFactorPending;

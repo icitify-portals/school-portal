@@ -18,7 +18,9 @@ import {
     Building2,
     Layers,
     ChevronRight,
-    CheckCircle2
+    CheckCircle2,
+    GraduationCap,
+    Clock,
 } from "lucide-react";
 import {
     generateBillForStudent,
@@ -57,6 +59,11 @@ export default function BursaryBillsPage() {
     const [submitting, setSubmitting] = useState(false);
     const [resultData, setResultData] = useState<{ count: number, failed: number } | null>(null);
 
+    // Tuition Installment Mode
+    const [tuitionInstallmentEnabled, setTuitionInstallmentEnabled] = useState(false);
+    const [tuitionInstallmentPercent, setTuitionInstallmentPercent] = useState("60");
+    const [tuitionInstallmentDeadline, setTuitionInstallmentDeadline] = useState("");
+
     // Bills List & Installment overrides state
     const [billsList, setBillsList] = useState<any[]>([]);
     const [billsLoading, setBillsLoading] = useState(false);
@@ -89,14 +96,19 @@ export default function BursaryBillsPage() {
         return () => clearTimeout(delayDebounceFn);
     }, [searchQuery]);
 
-    const handleToggleInstallment = async (billId: number, currentAllowed: boolean, minPercent: number) => {
+    const handleToggleInstallment = async (billId: number, currentEnabled: boolean, percent: number) => {
         setUpdatingBillId(billId);
-        const newAllowed = !currentAllowed;
-        // @ts-expect-error - TS2554: Auto-suppressed for build
-        const res = await updateBillInstallmentSettings(billId, newAllowed, minPercent);
+        const newEnabled = !currentEnabled;
+        const deadline = new Date();
+        deadline.setMonth(deadline.getMonth() + 6); // Default: end of second semester
+        const res = await updateBillInstallmentSettings(billId, {
+            tuitionInstallmentEnabled: newEnabled,
+            tuitionInstallmentPercentage: percent,
+            tuitionInstallmentDeadline: newEnabled ? deadline : undefined,
+        });
         if (res.success) {
-            toast.success("Installment settings updated.");
-            setBillsList(prev => prev.map(b => b.id === billId ? { ...b, partPaymentAllowed: newAllowed } : b));
+            toast.success(newEnabled ? "Tuition installment mode enabled." : "Tuition installment mode disabled.");
+            setBillsList(prev => prev.map(b => b.id === billId ? { ...b, tuitionInstallmentEnabled: newEnabled } : b));
         } else {
             // @ts-expect-error - TS2339: Auto-suppressed for build
             toast.error(res.error || "Failed to update settings.");
@@ -104,17 +116,36 @@ export default function BursaryBillsPage() {
         setUpdatingBillId(null);
     };
 
-    const handleMinPercentChange = async (billId: number, allowed: boolean, newPercent: number) => {
+    const handleMinPercentChange = async (billId: number, enabled: boolean, newPercent: number) => {
         if (isNaN(newPercent) || newPercent < 1 || newPercent > 100) return;
         setUpdatingBillId(billId);
-        // @ts-expect-error - TS2554: Auto-suppressed for build
-        const res = await updateBillInstallmentSettings(billId, allowed, newPercent);
+        const res = await updateBillInstallmentSettings(billId, {
+            tuitionInstallmentEnabled: enabled,
+            tuitionInstallmentPercentage: newPercent,
+        });
         if (res.success) {
-            toast.success(`Minimum installment set to ${newPercent}%.`);
-            setBillsList(prev => prev.map(b => b.id === billId ? { ...b, partPaymentMinPercent: newPercent } : b));
+            toast.success(`Tuition installment set to ${newPercent}%.`);
+            setBillsList(prev => prev.map(b => b.id === billId ? { ...b, tuitionInstallmentPercentage: newPercent.toString() } : b));
         } else {
             // @ts-expect-error - TS2339: Auto-suppressed for build
             toast.error(res.error || "Failed to update percentage.");
+        }
+        setUpdatingBillId(null);
+    };
+
+    const handleDeadlineChange = async (billId: number, enabled: boolean, percent: number, deadline: string) => {
+        if (!deadline) return;
+        setUpdatingBillId(billId);
+        const res = await updateBillInstallmentSettings(billId, {
+            tuitionInstallmentEnabled: enabled,
+            tuitionInstallmentPercentage: percent,
+            tuitionInstallmentDeadline: new Date(deadline),
+        });
+        if (res.success) {
+            toast.success(`Deadline updated.`);
+        } else {
+            // @ts-expect-error - TS2339: Auto-suppressed for build
+            toast.error(res.error || "Failed to update deadline.");
         }
         setUpdatingBillId(null);
     };
@@ -144,12 +175,19 @@ export default function BursaryBillsPage() {
 
         setSubmitting(true);
         try {
+            const billOpts = {
+                tuitionInstallmentEnabled,
+                tuitionInstallmentPercentage: parseInt(tuitionInstallmentPercent),
+                tuitionInstallmentDeadline: tuitionInstallmentDeadline ? new Date(tuitionInstallmentDeadline) : undefined,
+            };
+
             if (genMode === 'single') {
                 if (!selectedStudent) return alert("Select student");
                 const res = await generateBillForStudent({
                     studentId: parseInt(selectedStudent),
                     sessionId: parseInt(selectedSession),
-                    note: billNote
+                    note: billNote,
+                    ...billOpts,
                 });
                 if (res.success) {
                     alert("Bill generated successfully!");
@@ -168,7 +206,8 @@ export default function BursaryBillsPage() {
                         level: selectedLevel ? parseInt(selectedLevel) : undefined,
                         programmeId: selectedProg ? parseInt(selectedProg) : undefined
                     },
-                    note: billNote
+                    note: billNote,
+                    ...billOpts,
                 });
 
                 if (res.success) {
@@ -369,6 +408,56 @@ export default function BursaryBillsPage() {
                                     />
                                 </div>
 
+                                {/* Tuition Installment Mode */}
+                                <div className="border border-slate-200 rounded-xl p-4 space-y-4">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-3">
+                                            <GraduationCap className="w-5 h-5 text-indigo-500" />
+                                            <div>
+                                                <p className="text-sm font-bold text-slate-800">Tuition-Only Installment Mode</p>
+                                                <p className="text-[10px] text-slate-500">Student pays 100% of non-tuition items + {tuitionInstallmentPercent}% of tuition up front</p>
+                                            </div>
+                                        </div>
+                                        <label className="relative inline-flex items-center cursor-pointer">
+                                            <input
+                                                type="checkbox"
+                                                checked={tuitionInstallmentEnabled}
+                                                onChange={() => setTuitionInstallmentEnabled(!tuitionInstallmentEnabled)}
+                                                className="sr-only peer"
+                                            />
+                                            <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                                        </label>
+                                    </div>
+                                    {tuitionInstallmentEnabled && (
+                                        <div className="grid grid-cols-2 gap-4 pl-8">
+                                            <div className="space-y-1">
+                                                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Tuition Installment %</label>
+                                                <div className="flex items-center gap-2">
+                                                    <input
+                                                        type="number"
+                                                        min="1"
+                                                        max="99"
+                                                        value={tuitionInstallmentPercent}
+                                                        onChange={(e) => setTuitionInstallmentPercent(e.target.value)}
+                                                        className="w-20 h-9 px-2 text-center font-mono text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500 font-bold bg-white"
+                                                    />
+                                                    <span className="text-sm font-bold text-slate-500">%</span>
+                                                    <span className="text-[10px] text-slate-400 ml-2">(Due now — balance by semester end)</span>
+                                                </div>
+                                            </div>
+                                            <div className="space-y-1">
+                                                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Deadline (End of Second Semester)</label>
+                                                <input
+                                                    type="date"
+                                                    value={tuitionInstallmentDeadline}
+                                                    onChange={(e) => setTuitionInstallmentDeadline(e.target.value)}
+                                                    className="w-full h-9 px-3 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-white"
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+
                                 <div className="flex justify-end gap-3 pt-2">
                                     <Button type="button" variant="ghost" onClick={() => setIsGenerating(false)} className="text-slate-500">Cancel</Button>
                                     <Button type="submit" disabled={submitting} className="bg-indigo-600 hover:bg-indigo-700 px-8 h-11 rounded-xl gap-2 transition-all">
@@ -462,35 +551,44 @@ export default function BursaryBillsPage() {
                                                         <p className="text-[10px] text-slate-400">Owed: ₦{outstanding.toLocaleString()}</p>
                                                     </td>
                                                     <td className="px-8 py-5">
-                                                        <div className="flex items-center gap-6">
+                                                        <div className="flex flex-col gap-2">
                                                             <div className="flex items-center gap-2">
                                                                 <label className="relative inline-flex items-center cursor-pointer">
                                                                     <input
                                                                         type="checkbox"
                                                                         disabled={isUpdating}
-                                                                        checked={bill.partPaymentAllowed !== false}
-                                                                        onChange={() => handleToggleInstallment(bill.id, bill.partPaymentAllowed !== false, bill.partPaymentMinPercent ?? 60)}
+                                                                        checked={bill.tuitionInstallmentEnabled === true}
+                                                                        onChange={() => handleToggleInstallment(bill.id, bill.tuitionInstallmentEnabled === true, parseInt(bill.tuitionInstallmentPercentage || "60"))}
                                                                         className="sr-only peer"
                                                                     />
                                                                     <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600 opacity-80 peer-disabled:opacity-50"></div>
                                                                 </label>
-                                                                <span className="text-[10px] font-bold text-slate-500 uppercase w-12">
-                                                                    {bill.partPaymentAllowed === false ? "No" : "Yes"}
+                                                                <span className="text-[10px] font-bold text-slate-500 uppercase w-20">
+                                                                    {bill.tuitionInstallmentEnabled === true ? "Tuition" : "Standard"}
                                                                 </span>
                                                             </div>
-                                                            <div className="flex items-center gap-1.5">
-                                                                <input
-                                                                    type="number"
-                                                                    min="1"
-                                                                    max="100"
-                                                                    disabled={bill.partPaymentAllowed === false || isUpdating}
-                                                                    defaultValue={bill.partPaymentMinPercent ?? 60}
-                                                                    onBlur={(e) => handleMinPercentChange(bill.id, bill.partPaymentAllowed !== false, parseInt(e.target.value))}
-                                                                    className="w-12 h-8 px-1 text-center font-mono text-xs border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:opacity-40 font-bold bg-white"
-                                                                />
-                                                                <span className="text-xs text-slate-400 font-bold">%</span>
-                                                            </div>
-                                                            {isUpdating && <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-600" />}
+                                                            {bill.tuitionInstallmentEnabled === true && (
+                                                                <div className="flex items-center gap-2 pl-[52px]">
+                                                                    <input
+                                                                        type="number"
+                                                                        min="1"
+                                                                        max="100"
+                                                                        disabled={isUpdating}
+                                                                        defaultValue={parseInt(bill.tuitionInstallmentPercentage || "60")}
+                                                                        onBlur={(e) => handleMinPercentChange(bill.id, true, parseInt(e.target.value))}
+                                                                        className="w-12 h-7 px-1 text-center font-mono text-[10px] border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:opacity-40 font-bold bg-white"
+                                                                    />
+                                                                    <span className="text-[10px] text-slate-400 font-bold">%</span>
+                                                                    <input
+                                                                        type="date"
+                                                                        disabled={isUpdating}
+                                                                        defaultValue={bill.tuitionInstallmentDeadline ? new Date(bill.tuitionInstallmentDeadline).toISOString().split('T')[0] : ''}
+                                                                        onBlur={(e) => e.target.value && handleDeadlineChange(bill.id, true, parseInt(bill.tuitionInstallmentPercentage || "60"), e.target.value)}
+                                                                        className="w-28 h-7 px-1 text-[10px] border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:opacity-40 bg-white"
+                                                                    />
+                                                                </div>
+                                                            )}
+                                                            {isUpdating && <Loader2 className="w-3 h-3 animate-spin text-indigo-600" />}
                                                         </div>
                                                     </td>
                                                     <td className="px-8 py-5">

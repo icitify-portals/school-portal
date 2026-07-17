@@ -1,60 +1,52 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getAdmissionTemplates, getAdmissionEngineSetting } from "@/actions/admission_v2";
+import { getAdmissionTemplates } from "@/actions/admission_v2";
 import { 
-    School, 
-    BookOpen, 
-    GraduationCap, 
+    GraduationCap,
     ArrowRight, 
-    Calendar, 
-    CheckCircle2, 
-    Clock, 
-    ChevronRight,
     Search,
     Loader2,
     Sparkles,
     ShieldCheck,
     Fingerprint,
-    HelpCircle
+    HelpCircle,
+    Clock,
+    FileText,
+    CreditCard,
+    UserCheck,
+    Mail,
+    Info,
+    Zap
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 
+
 export default function AdmissionLandingPage() {
+    const router = useRouter();
     const [templates, setTemplates] = useState<any[]>([]);
-    const [engineMode, setEngineMode] = useState<string>("multi_level");
     const [loading, setLoading] = useState(true);
-    const [activePathway, setActivePathway] = useState<'primary' | 'secondary' | 'tertiary' | null>(null);
     const [search, setSearch] = useState("");
 
     useEffect(() => {
-        fetchTemplatesAndSettings();
-        
-        // Handle URL direct levels routing (e.g. /admission?level=primary)
-        const params = new URLSearchParams(window.location.search);
-        const lvl = params.get('level');
-        if (lvl && ['primary', 'secondary', 'tertiary'].includes(lvl)) {
-            setActivePathway(lvl as any);
-        }
+        fetchTemplates();
     }, []);
 
-    const fetchTemplatesAndSettings = async () => {
+    const fetchTemplates = async () => {
         setLoading(true);
-        const [tplList, mode] = await Promise.all([
-            getAdmissionTemplates(),
-            getAdmissionEngineSetting()
-        ]);
+        const tplList = await getAdmissionTemplates();
         setTemplates(tplList || []);
-        setEngineMode(mode || "multi_level");
-        
-        // If engine mode is tertiary-only, default to tertiary pathway directly
-        if (mode === "jamb_only") {
-            setActivePathway("tertiary");
-        }
         setLoading(false);
+    };
+
+    const startApplication = () => {
+        if (templates.length > 0) {
+            router.push(`/admission/${templates[0].slug}`);
+        }
     };
 
     if (loading) return (
@@ -66,212 +58,154 @@ export default function AdmissionLandingPage() {
         </div>
     );
 
-    // Apply filters based on search and level pathway selector
-    const filteredTemplates = templates.filter(t => {
-        const matchesSearch = t.name.toLowerCase().includes(search.toLowerCase()) || t.slug.toLowerCase().includes(search.toLowerCase());
-        
-        if (engineMode === "jamb_only") {
-            return matchesSearch && t.level === 'tertiary';
-        }
-        
-        if (activePathway) {
-            return matchesSearch && t.level === activePathway;
-        }
-        
-        return matchesSearch;
-    });
+    const filteredTemplates = templates.filter(t =>
+        t.name.toLowerCase().includes(search.toLowerCase()) ||
+        t.slug.toLowerCase().includes(search.toLowerCase())
+    );
 
     return (
         <div className="min-h-screen bg-slate-950 text-white overflow-x-hidden font-sans">
-            {/* Header Stage */}
-            <div className="relative pt-32 pb-48 px-8 border-b border-slate-900 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-slate-950 to-slate-950">
+            {/* Hero */}
+            <div className="relative pt-32 pb-56 px-8 border-b border-slate-900 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-slate-950 to-slate-950">
                 <div className="absolute inset-0 overflow-hidden pointer-events-none">
                     <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-emerald-600/10 rounded-full blur-[120px] -translate-y-1/2" />
                     <div className="absolute bottom-0 right-1/4 w-[600px] h-[600px] bg-indigo-600/10 rounded-full blur-[120px] translate-y-1/2" />
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-emerald-500/5 rounded-full blur-[200px]" />
                 </div>
 
-                <div className="max-w-6xl mx-auto relative z-10 text-center space-y-10">
-                    <div className="inline-flex items-center gap-2 px-4 py-2 bg-slate-900 border border-slate-800 rounded-full backdrop-blur-md">
+                <div className="max-w-6xl mx-auto relative z-10 text-center space-y-12">
+                    <div className="inline-flex items-center gap-2 px-5 py-2.5 bg-slate-900/80 border border-slate-800 rounded-full backdrop-blur-md shadow-xl">
                         <Sparkles className="w-4 h-4 text-emerald-400" />
-                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-300">2026 Intake Portal Active</span>
+                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-300">FSS Ibadan — 2026/2027 Intake Portal</span>
                     </div>
                     
-                    <div className="space-y-4">
+                    <div className="space-y-6">
                         <h1 className="text-6xl md:text-8xl font-black text-white italic uppercase tracking-tighter leading-none">
-                            ACADEMIC <br />
-                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-indigo-400">ADMISSIONS</span>
+                            ADMISSION <br />
+                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-emerald-300 to-indigo-400">EXERCISE</span>
                         </h1>
                         <p className="text-slate-400 font-bold uppercase tracking-widest text-xs max-w-2xl mx-auto leading-relaxed">
-                            Begin your pathway to outstanding scholarly growth. Select your level to proceed with your enrollment.
+                            Federal School of Statistics, Ibadan — Admission for the 2026/2027 Academic Session
                         </p>
                     </div>
 
-                    {activePathway && engineMode !== "jamb_only" && (
-                        <Button 
-                            onClick={() => {
-                                setActivePathway(null);
-                                window.history.pushState({}, "", "/admission");
-                            }}
-                            variant="ghost" 
-                            className="rounded-full border border-slate-800 text-slate-400 font-black px-6 py-4 uppercase text-[9px] tracking-widest hover:bg-slate-900 hover:text-white"
-                        >
-                            ← Back to Pathways
-                        </Button>
-                    )}
+                    <div className="flex items-center justify-center gap-4">
+                        <button onClick={startApplication}
+                            className="bg-emerald-600 hover:bg-emerald-500 text-white font-black py-5 px-10 rounded-2xl uppercase text-xs tracking-widest transition-all shadow-xl shadow-emerald-500/20 hover:shadow-emerald-500/40 flex items-center gap-3 group">
+                            Start Application <Zap className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                        </button>
+                        <Link href="/admission/status">
+                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-slate-300 transition-colors cursor-pointer border border-slate-800 py-4 px-8 rounded-2xl hover:border-slate-700">
+                                Track Existing Application →
+                            </span>
+                        </Link>
+                    </div>
                 </div>
             </div>
 
-            <div className="max-w-6xl mx-auto px-8 -mt-24 pb-32">
-                {/* 1. Pathways Selection Stage */}
-                {engineMode === 'multi_level' && !activePathway ? (
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                        <PathwayCard 
-                            title="Primary School"
-                            level="primary"
-                            icon={<School className="w-10 h-10" />}
-                            desc="Foundation programs, early development, and interactive elementary intake classes."
-                            onClick={() => {
-                                setActivePathway("primary");
-                                window.history.pushState({}, "", "/admission?level=primary");
-                            }}
-                            color="from-amber-500/20 to-amber-500/5 hover:border-amber-500/40"
-                            iconColor="text-amber-500"
-                        />
-                        <PathwayCard 
-                            title="Secondary School"
-                            level="secondary"
-                            icon={<BookOpen className="w-10 h-10" />}
-                            desc="Junior and Senior high schools offering high-fidelity academic preparations."
-                            onClick={() => {
-                                setActivePathway("secondary");
-                                window.history.pushState({}, "", "/admission?level=secondary");
-                            }}
-                            color="from-indigo-500/20 to-indigo-500/5 hover:border-indigo-500/40"
-                            iconColor="text-indigo-400"
-                        />
-                        <PathwayCard 
-                            title="Tertiary Admissions"
-                            level="tertiary"
-                            icon={<GraduationCap className="w-10 h-10" />}
-                            desc="Universities, Polytechnics, Diplomas, and Post-UTME screening applications."
-                            onClick={() => {
-                                setActivePathway("tertiary");
-                                window.history.pushState({}, "", "/admission?level=tertiary");
-                            }}
-                            color="from-emerald-500/20 to-emerald-500/5 hover:border-emerald-500/40"
-                            iconColor="text-emerald-400"
-                        />
+            <div className="max-w-6xl mx-auto px-8 -mt-32 pb-32">
+                <div className="space-y-16">
+                    {/* How to Apply — Instruction Card */}
+                    <div className="bg-gradient-to-br from-slate-900 via-slate-900 to-slate-950 rounded-[3rem] p-10 md:p-14 border border-slate-800/80 shadow-2xl relative overflow-hidden group hover:border-emerald-500/20 transition-all duration-500">
+                        <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-600/5 rounded-full blur-[100px]" />
+                        <div className="absolute bottom-0 left-0 w-64 h-64 bg-indigo-600/5 rounded-full blur-[80px]" />
+                        <div className="relative z-10 space-y-10">
+                            <div className="flex items-center gap-4">
+                                <div className="w-14 h-14 bg-gradient-to-br from-emerald-600/20 to-indigo-600/20 rounded-2xl flex items-center justify-center border border-emerald-500/20 shadow-lg">
+                                    <Info className="w-7 h-7 text-emerald-400" />
+                                </div>
+                                <div>
+                                    <h2 className="text-3xl font-black italic uppercase tracking-tighter">How to Apply</h2>
+                                    <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest mt-1">Tertiary Admission Guide 2026/2027</p>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                                <StepItem 
+                                    number="01"
+                                    title="Create Profile"
+                                    desc="Register with your surname, first name, email, and phone. Set a strong password to secure your account."
+                                    icon={<UserCheck className="w-5 h-5 text-emerald-400" />}
+                                    gradient="from-emerald-600/20 to-emerald-900/20"
+                                />
+                                <StepItem 
+                                    number="02"
+                                    title="Verify Email"
+                                    desc="Check your inbox and click the verification link to activate your account before proceeding."
+                                    icon={<Mail className="w-5 h-5 text-indigo-400" />}
+                                    gradient="from-indigo-600/20 to-indigo-900/20"
+                                />
+                                <StepItem 
+                                    number="03"
+                                    title="Pay Application Fee"
+                                    desc="Select Full-Time or Part-Time mode. Pay the application fee securely via Remita to proceed."
+                                    icon={<CreditCard className="w-5 h-5 text-emerald-400" />}
+                                    gradient="from-emerald-600/20 to-emerald-900/20"
+                                />
+                                <StepItem 
+                                    number="04"
+                                    title="Complete & Submit"
+                                    desc="Fill in your bio-data, O-Level results, and upload required documents. Review and submit for screening."
+                                    icon={<FileText className="w-5 h-5 text-indigo-400" />}
+                                    gradient="from-indigo-600/20 to-indigo-900/20"
+                                />
+                            </div>
+
+                            <div className="bg-slate-950/80 border border-slate-800/60 rounded-2xl p-6 flex flex-col md:flex-row items-start md:items-center gap-6 shadow-inner">
+                                <div className="flex items-center gap-3">
+                                    <Clock className="w-5 h-5 text-amber-400 shrink-0" />
+                                    <span className="text-sm font-bold text-slate-300">Deadline: <span className="text-amber-400">Varies by programme</span></span>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <Fingerprint className="w-5 h-5 text-emerald-400 shrink-0" />
+                                    <span className="text-sm font-bold text-slate-300">NIN verification required</span>
+                                </div>
+                                <div className="md:ml-auto">
+                                    <button onClick={startApplication}
+                                        className="bg-emerald-600 hover:bg-emerald-500 text-white font-black py-4 px-8 rounded-xl uppercase text-[10px] tracking-widest transition-all shadow-lg shadow-emerald-500/10 hover:shadow-emerald-500/30 flex items-center gap-2">
+                                        Start Application <ArrowRight className="w-4 h-4" />
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                ) : (
-                    /* 2. Active Channel Showcase */
-                    <div className="space-y-12">
-                        {/* Search and Filters */}
-                        <div className="flex flex-col md:flex-row gap-6 items-center justify-between bg-slate-900/60 p-6 rounded-2xl border border-slate-900 backdrop-blur-md">
+
+                    {/* Programmes Section */}
+                    <div className="space-y-8 scroll-mt-20">
+                        <div className="flex flex-col md:flex-row gap-6 items-center justify-between bg-slate-900/60 p-6 rounded-2xl border border-slate-800/60 backdrop-blur-md">
                             <div className="relative w-full md:w-96">
                                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-                                <input 
-                                    className="w-full pl-12 pr-4 py-4 rounded-xl border-none outline-none bg-slate-950 font-bold text-sm text-white placeholder-slate-500"
-                                    placeholder="Search active templates..."
+                                <input
+                                    className="w-full pl-12 pr-4 py-4 rounded-xl border border-slate-800 outline-none bg-slate-950 font-bold text-sm text-white placeholder-slate-500 focus:border-emerald-500/50 transition-colors"
+                                    placeholder="Search programmes..."
                                     value={search}
                                     onChange={(e) => setSearch(e.target.value)}
                                 />
                             </div>
-
                             <div className="flex items-center gap-3">
-                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Intake Pathway:</span>
-                                <span className="px-4 py-1.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-full text-[10px] font-black uppercase tracking-widest">
-                                    {activePathway || "tertiary"} Level
-                                </span>
+                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">{filteredTemplates.length} Programme{filteredTemplates.length !== 1 ? 's' : ''}</span>
                             </div>
                         </div>
 
-                        {/* Tertiary Special: Show JAMB CAPS portal card if Tertiary is active */}
-                        {(activePathway === 'tertiary' || engineMode === 'jamb_only') && (
-                            <div className="bg-gradient-to-r from-emerald-950/80 via-slate-900/80 to-slate-900/80 rounded-[3rem] p-12 border border-emerald-500/10 relative overflow-hidden group shadow-2xl">
-                                <div className="absolute top-0 right-0 p-12 opacity-5 group-hover:scale-110 transition-transform duration-700">
-                                    <Fingerprint className="w-64 h-64 text-white" />
-                                </div>
-                                <div className="max-w-2xl relative z-10 space-y-6">
-                                    <span className="px-3 py-1.5 bg-emerald-500/20 border border-emerald-500/30 rounded-full text-[9px] font-black tracking-widest text-emerald-400 uppercase">
-                                        Degree Verification
-                                    </span>
-                                    <h3 className="text-4xl font-black text-white italic uppercase tracking-tighter">JAMB CAPS Claim Portal</h3>
-                                    <p className="text-slate-400 font-bold italic text-sm leading-relaxed">
-                                        For university and polytechnic candidates who sat for the UTME exam. Confirm your screening qualifications, verify subject combinations, and claim your school profile.
-                                    </p>
-                                    <Link href="/admission/claim">
-                                        <Button className="bg-emerald-600 text-white font-black py-6 px-10 rounded-2xl uppercase text-[10px] tracking-widest hover:bg-emerald-500 shadow-xl shadow-emerald-500/10 transition-all mt-4">
-                                            Claim My Admission Profile <ArrowRight className="w-4 h-4 ml-2" />
-                                        </Button>
-                                    </Link>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Form Templates Grid */}
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                             {filteredTemplates.length > 0 ? (
                                 filteredTemplates.map((template) => (
                                     <AdmissionCard key={template.id} template={template} />
                                 ))
                             ) : (
-                                <div className="col-span-3 py-20 text-center bg-slate-900/40 rounded-[3rem] border border-slate-900">
+                                <div className="col-span-3 py-20 text-center bg-slate-900/40 rounded-[3rem] border border-slate-800/60">
                                     <HelpCircle className="w-12 h-12 text-slate-700 mx-auto" />
-                                    <h3 className="text-xl font-black text-slate-500 italic uppercase mt-4">No Direct Forms Active</h3>
-                                    <p className="text-slate-600 font-bold uppercase tracking-widest text-[9px] mt-2">There are no direct applications configured for this pathway.</p>
+                                    <h3 className="text-xl font-black text-slate-500 italic uppercase mt-4">No Active Programmes</h3>
+                                    <p className="text-slate-600 font-bold uppercase tracking-widest text-[9px] mt-2">Check back later or contact the admissions office.</p>
                                 </div>
                             )}
-                        </div>
-                    </div>
-                )}
-
-                {/* FAQ / Info Section */}
-                <div className="mt-40 grid grid-cols-1 md:grid-cols-2 gap-20 items-center">
-                    <div className="space-y-8">
-                        <div className="space-y-2">
-                            <h2 className="text-5xl font-black text-white italic uppercase tracking-tighter leading-none">Smart Admission <br /> Technology</h2>
-                            <p className="text-slate-500 font-bold uppercase tracking-widest text-xs italic">Efficiency at every step of your intake.</p>
-                        </div>
-                        <div className="grid grid-cols-1 gap-6">
-                            <FeatureItem 
-                                title="NIN Spell Verification" 
-                                desc="JIT spelling and bio checks directly integrated into intake sheets via NIN." 
-                                icon={<Fingerprint className="w-5 h-5 text-emerald-400" />}
-                            />
-                            <FeatureItem 
-                                title="Dynamic Age Verification" 
-                                desc="Automated age verification based on template constraints." 
-                                icon={<Clock className="w-5 h-5 text-indigo-400" />}
-                            />
-                            <FeatureItem 
-                                title="Instant Decisioning" 
-                                desc="Receive status updates and download admission letters immediately." 
-                                icon={<CheckCircle2 className="w-5 h-5 text-emerald-400" />}
-                            />
-                        </div>
-                    </div>
-                    <div className="bg-slate-900 rounded-[4rem] p-12 relative overflow-hidden group border border-slate-800 shadow-2xl">
-                        <div className="absolute top-0 right-0 p-12 opacity-5 group-hover:scale-110 transition-transform duration-700">
-                            <School className="w-64 h-64 text-white" />
-                        </div>
-                        <div className="relative z-10 space-y-8">
-                            <div className="w-16 h-16 bg-slate-950 rounded-2xl flex items-center justify-center text-emerald-400 shadow-xl border border-slate-800">
-                                <Search className="w-8 h-8" />
-                            </div>
-                            <h3 className="text-3xl font-black text-white italic uppercase tracking-tighter">Already Applied?</h3>
-                            <p className="text-slate-400 font-bold italic leading-relaxed">Checking your status is easy. Use your dynamic Application ID to track payment clearing, exam slips, or edit requests.</p>
-                            <Link href="/admission/status">
-                                <Button className="w-full bg-white text-slate-950 font-black py-8 rounded-2xl uppercase text-xs tracking-widest hover:bg-slate-100 transition-all mt-4">
-                                    Track My Application
-                                </Button>
-                            </Link>
                         </div>
                     </div>
                 </div>
             </div>
 
             {/* Footer */}
-            <div className="bg-slate-950 border-t border-slate-900 py-12 text-center text-slate-600">
+            <div className="bg-slate-950 border-t border-slate-800/60 py-12 text-center text-slate-600">
                 <p className="text-[10px] font-black uppercase tracking-[0.4em] flex items-center justify-center gap-2">
                     <ShieldCheck size={14} className="text-emerald-500" /> Secure Multi-Tier Intake Gateway
                 </p>
@@ -281,56 +215,35 @@ export default function AdmissionLandingPage() {
     );
 }
 
-function PathwayCard({ title, level, icon, desc, onClick, color, iconColor }: { 
-    title: string, level: string, icon: any, desc: string, onClick: () => void, color: string, iconColor: string 
-}) {
+function StepItem({ number, title, desc, icon, gradient }: { number: string; title: string; desc: string; icon: any; gradient: string }) {
     return (
-        <div 
-            onClick={onClick}
-            className={cn(
-                "group bg-gradient-to-b border border-slate-900 p-10 rounded-[3rem] shadow-xl hover:shadow-2xl transition-all duration-500 hover:-translate-y-4 cursor-pointer relative overflow-hidden flex flex-col justify-between h-[360px]",
-                color
-            )}
-        >
-            <div className="space-y-6 relative z-10">
-                <div className={cn("w-20 h-20 bg-slate-950 border border-slate-800 rounded-2xl flex items-center justify-center transition-all group-hover:scale-110 shadow-lg", iconColor)}>
+        <div className={cn("bg-slate-950/60 border border-slate-800/50 rounded-2xl p-6 space-y-4 group hover:border-emerald-500/30 transition-all duration-300 hover:-translate-y-1")}>
+            <div className="flex items-center justify-between">
+                <div className={cn("w-12 h-12 bg-gradient-to-br rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300", gradient)}>
                     {icon}
                 </div>
-                <div className="space-y-3">
-                    <h3 className="text-3xl font-black text-white italic uppercase tracking-tight leading-none">{title}</h3>
-                    <p className="text-slate-400 font-bold text-xs leading-relaxed italic">{desc}</p>
-                </div>
+                <span className="text-[9px] font-black text-slate-600 uppercase tracking-widest">Step {number}</span>
             </div>
-            
-            <div className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-slate-300 relative z-10 group-hover:text-white transition-colors">
-                Select Pathway <ArrowRight className="w-4 h-4 ml-1 group-hover:translate-x-2 transition-transform" />
+            <div>
+                <h4 className="text-lg font-black text-white italic uppercase tracking-tight group-hover:text-emerald-400 transition-colors">{title}</h4>
+                <p className="text-sm font-bold text-slate-400 italic leading-relaxed mt-1">{desc}</p>
             </div>
         </div>
     );
 }
 
 function AdmissionCard({ template }: { template: any }) {
-    const icons: any = {
-        primary: <School className="w-8 h-8" />,
-        secondary: <BookOpen className="w-8 h-8" />,
-        tertiary: <GraduationCap className="w-8 h-8" />
-    };
-
-    const colors: any = {
-        primary: "bg-amber-500",
-        secondary: "bg-indigo-600",
-        tertiary: "bg-emerald-600"
-    };
-
+    const levelColor = template.level === 'tertiary' ? 'from-emerald-600 to-emerald-700' : template.level === 'secondary' ? 'from-indigo-600 to-indigo-700' : 'from-amber-600 to-amber-700';
     return (
-        <Card className="group relative bg-slate-900/60 rounded-[3rem] shadow-xl hover:shadow-2xl border border-slate-900 transition-all duration-500 hover:-translate-y-4 overflow-hidden">
-            <div className={cn("h-40 relative flex items-center justify-center", colors[template.level])}>
-                <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors" />
+        <Card className="group relative bg-slate-900/60 rounded-[3rem] shadow-xl hover:shadow-2xl border border-slate-800/60 transition-all duration-500 hover:-translate-y-4 overflow-hidden hover:border-emerald-500/20">
+            <div className={`h-40 relative flex items-center justify-center bg-gradient-to-br ${levelColor} overflow-hidden`}>
+                <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors duration-500" />
+                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-[radial-gradient(ellipse_at_center,_rgba(255,255,255,0.15)_0%,_transparent_70%)]" />
                 <div className="relative z-10 text-white transform group-hover:scale-110 transition-transform duration-700">
-                    {icons[template.level]}
+                    <GraduationCap className="w-8 h-8" />
                 </div>
-                <div className="absolute bottom-6 left-8 bg-white/20 backdrop-blur-md px-4 py-1.5 rounded-full text-[9px] font-black text-white uppercase tracking-widest">
-                    {template.level} Level
+                <div className={`absolute bottom-6 left-8 bg-white/20 backdrop-blur-md px-4 py-1.5 rounded-full text-[9px] font-black text-white uppercase tracking-widest shadow-lg`}>
+                    {template.level}
                 </div>
             </div>
             
@@ -340,43 +253,29 @@ function AdmissionCard({ template }: { template: any }) {
                         {template.name}
                     </h3>
                     <p className="text-slate-400 font-bold text-xs italic line-clamp-2">
-                        {template.description || "Start your enrollment process for the upcoming session."}
+                        {template.description || "Start your enrollment for the upcoming session."}
                     </p>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-4 p-4 bg-slate-900/40 rounded-2xl border border-slate-800/40">
                     <div className="space-y-1">
-                        <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">Application Fee</p>
-                        <p className="text-sm font-black text-white italic">₦{parseFloat(template.applicationFee).toLocaleString()}</p>
+                        <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">Fee</p>
+                        <p className="text-sm font-black text-white">₦{parseFloat(template.applicationFee).toLocaleString()}</p>
                     </div>
                     <div className="space-y-1">
                         <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">Deadline</p>
-                        <p className="text-sm font-black text-white italic">{format(new Date(template.endDate), 'MMM dd')}</p>
+                        <p className="text-sm font-black text-white">{format(new Date(template.endDate), 'MMM dd, yyyy')}</p>
                     </div>
                 </div>
 
                 <Link href={`/admission/${template.slug}`}>
-                    <Button className="w-full bg-slate-900 text-white border border-slate-800 font-black py-8 rounded-2xl flex justify-between items-center px-8 hover:bg-emerald-600 transition-all uppercase text-[10px] tracking-widest shadow-xl">
+                    <Button className="w-full bg-gradient-to-r from-emerald-600 to-emerald-500 text-white border-0 font-black py-7 rounded-2xl flex justify-between items-center px-8 hover:from-emerald-500 hover:to-emerald-400 transition-all uppercase text-[10px] tracking-widest shadow-xl shadow-emerald-500/10 hover:shadow-emerald-500/30 group/btn">
                         Apply Now
-                        <ChevronRight className="w-4 h-4" />
+                        <ArrowRight className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform" />
                     </Button>
                 </Link>
             </CardContent>
         </Card>
-    );
-}
-
-function FeatureItem({ title, desc, icon }: { title: string, desc: string, icon: any }) {
-    return (
-        <div className="flex gap-6 group">
-            <div className="w-14 h-14 bg-slate-900 border border-slate-800 shadow-lg rounded-[1.5rem] flex items-center justify-center transition-all duration-500 group-hover:scale-110">
-                {icon}
-            </div>
-            <div className="space-y-1">
-                <h4 className="text-lg font-black text-white italic uppercase tracking-tight">{title}</h4>
-                <p className="text-sm font-bold text-slate-400 italic leading-relaxed">{desc}</p>
-            </div>
-        </div>
     );
 }
 

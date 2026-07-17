@@ -22,7 +22,7 @@ import {
 
 export default async function FraudAuditDashboard() {
     // 1. Detect Unbalanced Batches
-    const unbalancedBatches = await db.execute(sql`
+    const [unbalancedBatches] = await db.execute(sql`
         SELECT batch_id, SUM(debit) as total_debit, SUM(credit) as total_credit, description
         FROM ${generalLedger}
         GROUP BY batch_id

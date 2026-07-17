@@ -2,8 +2,10 @@
 
 import { auth } from "@/auth";
 import { db } from "@/db/db";
-import { notifications } from "@/db/schema";
-import { eq, and, inArray, desc } from "drizzle-orm";
+import { notifications, users } from "@/db/schema";
+import { eq, and, inArray, desc, sql } from "drizzle-orm";
+import { sendEmail } from "@/lib/mail";
+import { config } from "@/lib/config";
 
 /**
  * Fetch unread notifications for the currently logged-in user.
@@ -115,6 +117,66 @@ export async function markAllAsRead() {
 }
 
 /**
+ * Fetch ALL notifications for the currently logged-in user (for inbox page).
+ */
+export async function getAllNotifications(page: number = 1, limit: number = 20) {
+    try {
+        const session = await auth();
+        if (!session?.user?.id) return { success: false, error: "Unauthorized" };
+
+        const userId = parseInt(session.user.id);
+        const offset = (page - 1) * limit;
+
+        const items = await db.select()
+            .from(notifications)
+            .where(eq(notifications.userId, userId))
+            .orderBy(desc(notifications.createdAt))
+            .limit(limit)
+            .offset(offset);
+
+        const [countResult] = await db.select({ count: sql<number>`count(*)` })
+            .from(notifications)
+            .where(eq(notifications.userId, userId));
+
+        return { 
+            success: true, 
+            data: items, 
+            total: countResult?.count || 0,
+            page,
+            totalPages: Math.ceil((countResult?.count || 0) / limit)
+        };
+    } catch (error) {
+        console.error("Failed to fetch notifications:", error);
+        return { success: false, error: "Internal Server Error" };
+    }
+}
+
+/**
+ * Get count of unread notifications for the bell badge.
+ */
+export async function getUnreadNotificationCount() {
+    try {
+        const session = await auth();
+        if (!session?.user?.id) return { success: true, count: 0 };
+
+        const userId = parseInt(session.user.id);
+
+        const [result] = await db.select({ count: sql<number>`count(*)` })
+            .from(notifications)
+            .where(
+                and(
+                    eq(notifications.userId, userId),
+                    eq(notifications.isRead, false)
+                )
+            );
+
+        return { success: true, count: result?.count || 0 };
+    } catch (error) {
+        return { success: true, count: 0 };
+    }
+}
+
+/**
  * Utility function to be imported and used by other server actions to trigger an in-app notification.
  */
 export async function sendInAppNotification({
@@ -143,9 +205,19 @@ export async function sendInAppNotification({
             isRead: false,
             isToasted: false,
         });
-        
-        // Note: If channel is 'both' or 'email', integration with Resend/Nodemailer would go here.
-        // Integration with web-push can also be triggered here if desired.
+
+        if (channel === "both" || channel === "email") {
+            const [user] = await db.select({ email: users.email }).from(users).where(eq(users.id, userId)).limit(1);
+            if (user?.email) {
+                const html = `<div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+                    <h2 style="color: #4f46e5;">${title}</h2>
+                    <p style="font-size: 16px; color: #374151;">${message}</p>
+                    <hr style="margin: 20px 0; border: none; border-top: 1px solid #eee;" />
+                    <p style="font-size: 12px; color: #9ca3af;">This is an automated alert from your FSS Portal.</p>
+                </div>`;
+                await sendEmail(user.email, title, html, config.mail.from);
+            }
+        }
 
         return { success: true };
     } catch (error) {

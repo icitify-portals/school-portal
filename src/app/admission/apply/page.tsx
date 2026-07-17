@@ -18,6 +18,9 @@ import {
   GraduationCap
 } from 'lucide-react';
 import { getActiveAdmissionForm, submitAdmissionApplication, getAdmissionTemplates } from '@/actions/admission-application';
+import { COUNTRY_NAMES } from '@/lib/countries';
+import { cn } from '@/lib/utils';
+import naija from 'naija-state-local-government';
 
 export default function AdmissionApplicationPortal() {
   const [step, setStep] = useState(0);
@@ -169,13 +172,13 @@ export default function AdmissionApplicationPortal() {
 
              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {currentSection?.fields?.map((field: any) => (
-                   <div key={field.id} className="space-y-2">
+                   <div key={field.id} className={cn("space-y-2", field.width === 'half' ? "col-span-1" : "col-span-1 md:col-span-2")}>
                       <label className="text-sm font-bold text-slate-700 flex items-center gap-1">
                         {field.label}
                         {field.isRequired && <span className="text-rose-500">*</span>}
                       </label>
                       
-                      {field.type === 'text' || field.type === 'email' || field.type === 'number' ? (
+                      {field.type === 'text' || field.type === 'email' || field.type === 'number' || field.type === 'phone' || field.type === 'date' || field.type === 'time' || field.type === 'url' ? (
                          <input 
                            type={field.type}
                            placeholder={field.placeholder || `Enter ${field.label}...`}
@@ -190,11 +193,135 @@ export default function AdmissionApplicationPortal() {
                            onChange={(e) => handleInputChange(field.systemKey || field.label, e.target.value)}
                          >
                             <option value="">Select Option...</option>
-                            {/* Assuming options are comma-separated in the db */}
-                            {field.options?.split(',').map((opt: string) => (
-                               <option key={opt} value={opt}>{opt.trim()}</option>
+                            {field.options?.split(/[,\n]/).map((opt: string) => opt.trim()).filter(Boolean).map((opt: string) => (
+                               <option key={opt} value={opt}>{opt}</option>
                             ))}
                          </select>
+                      ) : field.type === 'gender' ? (
+                         <select
+                           className="w-full px-6 py-4 rounded-2xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none font-bold transition-all bg-white"
+                           value={formData[field.systemKey || field.label] || ''}
+                           onChange={(e) => handleInputChange(field.systemKey || field.label, e.target.value)}
+                         >
+                            <option value="">Select Sex...</option>
+                            <option value="Male">Male</option>
+                            <option value="Female">Female</option>
+                         </select>
+                      ) : field.type === 'blood_group' ? (
+                         <select
+                           className="w-full px-6 py-4 rounded-2xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none font-bold transition-all bg-white"
+                           value={formData[field.systemKey || field.label] || ''}
+                           onChange={(e) => handleInputChange(field.systemKey || field.label, e.target.value)}
+                         >
+                            <option value="">Select Blood Group...</option>
+                            {(field.options || "A+, A-, B+, B-, AB+, AB-, O+, O-").split(/[,\n]/).map((o: string) => o.trim()).filter(Boolean).map((opt: string) => (
+                               <option key={opt} value={opt}>{opt}</option>
+                            ))}
+                         </select>
+                      ) : field.type === 'phenotype' ? (
+                         <select
+                           className="w-full px-6 py-4 rounded-2xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none font-bold transition-all bg-white"
+                           value={formData[field.systemKey || field.label] || ''}
+                           onChange={(e) => handleInputChange(field.systemKey || field.label, e.target.value)}
+                         >
+                            <option value="">Select Phenotype...</option>
+                            {(field.options || "AA, AS, AC, SS, SC, CC").split(/[,\n]/).map((o: string) => o.trim()).filter(Boolean).map((opt: string) => (
+                               <option key={opt} value={opt}>{opt}</option>
+                            ))}
+                         </select>
+                      ) : field.type === 'nationality' ? (
+                         <select
+                           className="w-full px-6 py-4 rounded-2xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none font-bold transition-all bg-white"
+                           value={formData[field.systemKey || field.label] || ''}
+                           onChange={(e) => handleInputChange(field.systemKey || field.label, e.target.value)}
+                         >
+                            <option value="">Select Nationality...</option>
+                            {COUNTRY_NAMES.map((country) => (
+                               <option key={country} value={country}>{country}</option>
+                            ))}
+                         </select>
+                      ) : field.type === 'state' ? (
+                         <select
+                           className="w-full px-6 py-4 rounded-2xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none font-bold transition-all bg-white"
+                           value={formData[field.systemKey || field.label] || ''}
+                           onChange={(e) => handleInputChange(field.systemKey || field.label, e.target.value)}
+                         >
+                            <option value="">Select State...</option>
+                            {naija.states().map((state: string) => (
+                               <option key={state} value={state}>{state}</option>
+                            ))}
+                         </select>
+                      ) : field.type === 'lga' ? (
+                         <select
+                           className="w-full px-6 py-4 rounded-2xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none font-bold transition-all bg-white"
+                           value={formData[field.systemKey || field.label] || ''}
+                           onChange={(e) => handleInputChange(field.systemKey || field.label, e.target.value)}
+                         >
+                            <option value="">Select L.G.A...</option>
+                            {(() => {
+                               const stateField = currentSection?.fields?.find((f: any) => f.type === 'state');
+                               const selectedState = stateField ? (formData[stateField.systemKey || stateField.label] || '') : '';
+                               if (selectedState) {
+                                  try {
+                                     const lgas = naija.lgas(selectedState).lgas;
+                                     return lgas.map((lga: string) => (
+                                        <option key={lga} value={lga}>{lga}</option>
+                                     ));
+                                  } catch { return null; }
+                               }
+                               return null;
+                            })()}
+                         </select>
+                      ) : field.type === 'radio' ? (
+                         <div className="flex flex-wrap gap-4">
+                            {field.options?.split(/[,\n]/).map((o: string) => o.trim()).filter(Boolean).map((opt: string) => (
+                               <label key={opt} className="flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 hover:border-indigo-400 cursor-pointer transition-colors">
+                                  <input
+                                     type="radio"
+                                     name={`field_${field.id}`}
+                                     value={opt}
+                                     checked={formData[field.systemKey || field.label] === opt}
+                                     onChange={(e) => handleInputChange(field.systemKey || field.label, e.target.value)}
+                                     className="accent-indigo-600"
+                                  />
+                                  <span className="text-sm font-medium text-slate-700">{opt}</span>
+                               </label>
+                            ))}
+                         </div>
+                      ) : field.type === 'checkbox' ? (
+                         <label className="flex items-center gap-3 px-4 py-3 rounded-xl border border-slate-200 hover:border-indigo-400 cursor-pointer transition-colors">
+                            <input
+                               type="checkbox"
+                               checked={!!formData[field.systemKey || field.label]}
+                               onChange={(e) => handleInputChange(field.systemKey || field.label, e.target.checked)}
+                               className="w-5 h-5 rounded accent-indigo-600"
+                            />
+                            <span className="text-sm font-medium text-slate-700">{field.placeholder || "Yes"}</span>
+                         </label>
+                      ) : field.type === 'checkbox_group' ? (
+                         <div className="flex flex-wrap gap-3">
+                            {field.options?.split(/[,\n]/).map((o: string) => o.trim()).filter(Boolean).map((opt: string) => (
+                               <label key={opt} className="flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 hover:border-indigo-400 cursor-pointer transition-colors">
+                                  <input
+                                     type="checkbox"
+                                     checked={Array.isArray(formData[field.systemKey || field.label]) && formData[field.systemKey || field.label].includes(opt)}
+                                     onChange={(e) => {
+                                        const key = field.systemKey || field.label;
+                                        const current = Array.isArray(formData[key]) ? [...formData[key]] : [];
+                                        if (e.target.checked) {
+                                           current.push(opt);
+                                        } else {
+                                           const idx = current.indexOf(opt);
+                                           if (idx > -1) current.splice(idx, 1);
+                                        }
+                                        handleInputChange(key, current);
+                                     }}
+                                     className="accent-indigo-600"
+                                  />
+                                  <span className="text-sm font-medium text-slate-700">{opt}</span>
+                               </label>
+                            ))}
+                         </div>
                       ) : field.type === 'textarea' ? (
                          <textarea 
                            className="col-span-full w-full h-32 px-6 py-4 rounded-2xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none font-medium transition-all"
@@ -208,6 +335,14 @@ export default function AdmissionApplicationPortal() {
                             </div>
                             <div className="text-sm font-bold text-slate-600">Click to upload document or drag and drop</div>
                             <div className="text-xs text-slate-400">PDF, PNG or JPG (Max 5MB)</div>
+                         </div>
+                      ) : field.type === 'image' ? (
+                         <div className="col-span-full">
+                            {field.options && (
+                               <div className="bg-white border border-slate-200 rounded-xl p-4">
+                                  <img src={field.options} alt={field.label} className="max-w-full h-auto max-h-64 rounded-lg object-contain mx-auto" />
+                               </div>
+                            )}
                          </div>
                       ) : null}
                    </div>

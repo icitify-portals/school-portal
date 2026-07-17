@@ -4,6 +4,7 @@ import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { User, LogOut, FileText, Home } from "lucide-react";
+import { NotificationBell } from "./NotificationBell";
 
 export const metadata: Metadata = {
     title: "Applicant Portal",
@@ -38,6 +39,10 @@ export default async function ApplicantLayout({
                     <Link href="/applicant" className="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-400 font-bold text-sm hover:bg-slate-800 hover:text-white transition-colors">
                         <FileText className="w-4 h-4" />
                         My Applications
+                    </Link>
+                    <Link href="/applicant/notifications" className="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-400 font-bold text-sm hover:bg-slate-800 hover:text-white transition-colors">
+                        <NotificationBell />
+                        Notifications
                     </Link>
                 </nav>
 

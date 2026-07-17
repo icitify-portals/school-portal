@@ -7,6 +7,7 @@ export const users = mysqlTable('users', {
   schoolPortalId: varchar('school_portal_id', { length: 255 }).unique(),
   name: varchar('name', { length: 255 }).notNull(),
   email: varchar('email', { length: 255 }).unique().notNull(),
+  emailVerified: boolean('email_verified').default(false),
   password: varchar('password', { length: 255 }).notNull(),
   requiresPasswordChange: boolean('requires_password_change').default(false),
   role: mysqlEnum('role', ['admin', 'staff', 'student', 'dvc', 'healthadmin', 'applicant', 'fresher', 'superadmin', 'parent', 'icitify_dev', 'bursar', 'registrar', 'librarian', 'hod', 'dean', 'admission_officer']).default('student'),
@@ -23,6 +24,7 @@ export const users = mysqlTable('users', {
   twoFactorSecret: text('two_factor_secret'),
   twoFactorBackupCodes: text('two_factor_backup_codes'),
   twoFactorMethod: mysqlEnum('two_factor_method', ['app', 'email', 'sms']).default('app'),
+  signatureUrl: varchar('signature_url', { length: 255 }), // Added for standalone result processing module (e.g. Registrar/HOD signatures)
 });
 
 export const userPermissions = mysqlTable('user_permissions', {
@@ -976,6 +978,11 @@ export const studentBills = mysqlTable('student_bills', {
   currency: varchar('currency', { length: 10 }).default('NGN'),
   totalAmount: decimal('total_amount', { precision: 12, scale: 2 }).notNull(),
   amountPaid: decimal('amount_paid', { precision: 12, scale: 2 }).default('0.00'),
+  totalScholarshipApplied: decimal('total_scholarship_applied', { precision: 12, scale: 2 }).default('0.00'),
+  totalDiscountApplied: decimal('total_discount_applied', { precision: 12, scale: 2 }).default('0.00'),
+  tuitionInstallmentEnabled: boolean('tuition_installment_enabled').default(false),
+  tuitionInstallmentPercentage: decimal('tuition_installment_percentage', { precision: 5, scale: 2 }).default('60'),
+  tuitionInstallmentDeadline: datetime('tuition_installment_deadline'),
   status: mysqlEnum('status', ['pending', 'partially_paid', 'paid']).default('pending'),
   note: text('note'),
   createdAt: timestamp('created_at').defaultNow(),
@@ -985,7 +992,11 @@ export const studentBillItems = mysqlTable('student_bill_items', {
   id: int('id').autoincrement().primaryKey(),
   billId: int('bill_id').references(() => studentBills.id).notNull(),
   feeItemId: int('fee_item_id').references(() => feeItems.id).notNull(),
+  originalAmount: decimal('original_amount', { precision: 12, scale: 2 }).notNull(),
   amount: decimal('amount', { precision: 12, scale: 2 }).notNull(),
+  scholarshipApplied: decimal('scholarship_applied', { precision: 12, scale: 2 }).default('0.00'),
+  discountApplied: decimal('discount_applied', { precision: 12, scale: 2 }).default('0.00'),
+  amountPaid: decimal('amount_paid', { precision: 12, scale: 2 }).default('0.00'),
 });
 
 export const externalInflows = mysqlTable('external_inflows', {
@@ -5703,6 +5714,7 @@ export const admissionFormTemplates = mysqlTable('admission_form_templates', {
   lateEndDate: datetime('late_end_date'),
   minAge: int('min_age'),
   isActive: boolean('is_active').default(true),
+  ninVerificationConfig: text('nin_verification_config'), // JSON: { enabled, provider, required, autoFill }
   createdAt: timestamp('created_at').defaultNow(),
 });
 
@@ -5730,6 +5742,11 @@ export const admissionFormFields = mysqlTable('admission_form_fields', {
   order: int('order').default(0),
   isSystemField: boolean('is_system_field').default(false),
   systemKey: varchar('system_key', { length: 100 }), // e.g. "firstName", "dob"
+  helpText: varchar('help_text', { length: 500 }), // Field description/help text
+  defaultValue: varchar('default_value', { length: 255 }), // Default field value
+  validationRules: text('validation_rules'), // JSON: { minLength, maxLength, pattern, min, max, patternMessage }
+  conditionalLogic: text('conditional_logic'), // JSON: { enabled, sourceField, operator, value }
+  width: varchar('width', { length: 10 }).default('full'), // 'full' or 'half'
 });
 export const admissionApplicationsV2 = mysqlTable('admission_applications_v2', {
   id: int('id').autoincrement().primaryKey(),
@@ -5740,6 +5757,9 @@ export const admissionApplicationsV2 = mysqlTable('admission_applications_v2', {
   paymentStatus: mysqlEnum('payment_status', ['pending', 'paid', 'failed']).default('pending'),
   paymentReference: varchar('payment_reference', { length: 100 }),
   data: text('data'), // Dynamic JSON answers
+  applicationNumber: varchar('application_number', { length: 50 }).unique(),
+  formNumber: varchar('form_number', { length: 50 }).unique(),
+  formHash: varchar('form_hash', { length: 64 }),
   nin: varchar('nin', { length: 11 }).unique(),
   applicantPhoto: varchar('applicant_photo', { length: 255 }),
   ageAtAdmission: int('age_at_admission'),
@@ -5749,6 +5769,8 @@ export const admissionApplicationsV2 = mysqlTable('admission_applications_v2', {
   admissionNotes: text('admission_notes'),
   pin: varchar('pin', { length: 255 }), // Hashed or plaintext PIN for candidate portal access
   acceptancePaymentStatus: mysqlEnum('acceptance_payment_status', ['pending', 'paid', 'not_applicable']).default('pending'),
+  applicationMode: mysqlEnum('application_mode', ['full_time', 'part_time']),
+  jambRegNumber: varchar('jamb_reg_number', { length: 20 }),
   appliedAt: timestamp('applied_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
 }, (table) => ({
@@ -6678,6 +6700,22 @@ export const grievancesRelations = relations(grievances, ({ one }) => ({
 
 // --- WORKS & MAINTENANCE MODULE ---
 
+export const emailVerificationTokens = mysqlTable('email_verification_tokens', {
+  id: int('id').autoincrement().primaryKey(),
+  userId: int('user_id').references(() => users.id).notNull(),
+  token: varchar('token', { length: 255 }).unique().notNull(),
+  expiresAt: timestamp('expires_at').notNull(),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const applicantVerificationTokens = mysqlTable('applicant_verification_tokens', {
+  id: int('id').autoincrement().primaryKey(),
+  userId: int('user_id').references(() => users.id).notNull(),
+  token: varchar('token', { length: 255 }).unique().notNull(),
+  expiresAt: timestamp('expires_at').notNull(),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
 export const maintenanceStaffProfiles = mysqlTable('maintenance_staff_profiles', {
   id: int('id').autoincrement().primaryKey(),
   userId: int('user_id').references(() => users.id).unique().notNull(),
@@ -7106,5 +7144,97 @@ export const studentMedicalRecordsRelations = relations(studentMedicalRecords, (
   student: one(students, {
     fields: [studentMedicalRecords.studentId],
     references: [students.id]
+  })
+}));
+
+// --- STANDALONE RESULT PROCESSING MODULE ---
+
+export const gradingScales = mysqlTable('grading_scales', {
+  id: int('id').autoincrement().primaryKey(),
+  name: varchar('name', { length: 255 }).notNull(),
+  description: text('description'),
+  maxCgpa: decimal('max_cgpa', { precision: 3, scale: 2 }).notNull(), // e.g. 4.00, 5.00
+  rules: text('rules').notNull(), // JSON mapping e.g. {"A": 5, "B": 4}
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow().onUpdateNow()
+});
+
+export const resultBatches = mysqlTable('result_batches', {
+  id: int('id').autoincrement().primaryKey(),
+  adminId: int('admin_id').references(() => users.id).notNull(),
+  academicSessionId: int('academic_session_id').references(() => academicSessions.id).notNull(),
+  semester: mysqlEnum('semester', ['1', '2', '3']).notNull(), // 3 for summer/extra
+  gradingScaleId: int('grading_scale_id').references(() => gradingScales.id).notNull(),
+  status: mysqlEnum('status', ['pending', 'published']).default('pending'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow().onUpdateNow()
+});
+
+export const studentResults = mysqlTable('student_results', {
+  id: int('id').autoincrement().primaryKey(),
+  studentId: int('student_id').references(() => students.id).notNull(),
+  courseId: int('course_id').references(() => courses.id).notNull(),
+  batchId: int('batch_id').references(() => resultBatches.id).notNull(),
+  score: decimal('score', { precision: 5, scale: 2 }), // Allow for decimal scores
+  grade: varchar('grade', { length: 5 }).notNull(),
+  gradePoint: decimal('grade_point', { precision: 4, scale: 2 }).notNull(),
+  creditLoad: int('credit_load').notNull(),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const studentTranscripts = mysqlTable('student_transcripts', {
+  id: int('id').autoincrement().primaryKey(),
+  studentId: int('student_id').references(() => students.id).notNull(),
+  academicSessionId: int('academic_session_id').references(() => academicSessions.id).notNull(),
+  semester: mysqlEnum('semester', ['1', '2', '3']).notNull(),
+  cgpa: decimal('cgpa', { precision: 4, scale: 2 }).notNull(),
+  gpa: decimal('gpa', { precision: 4, scale: 2 }).notNull(),
+  totalCreditsEarned: int('total_credits_earned').notNull(),
+  totalCreditsAttempted: int('total_credits_attempted').notNull(),
+  isPublished: boolean('is_published').default(false),
+  publishedAt: datetime('published_at'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow().onUpdateNow()
+});
+
+export const resultBatchesRelations = relations(resultBatches, ({ one, many }) => ({
+  admin: one(users, {
+    fields: [resultBatches.adminId],
+    references: [users.id]
+  }),
+  academicSession: one(academicSessions, {
+    fields: [resultBatches.academicSessionId],
+    references: [academicSessions.id]
+  }),
+  gradingScale: one(gradingScales, {
+    fields: [resultBatches.gradingScaleId],
+    references: [gradingScales.id]
+  }),
+  studentResults: many(studentResults)
+}));
+
+export const studentResultsRelations = relations(studentResults, ({ one }) => ({
+  student: one(students, {
+    fields: [studentResults.studentId],
+    references: [students.id]
+  }),
+  course: one(courses, {
+    fields: [studentResults.courseId],
+    references: [courses.id]
+  }),
+  batch: one(resultBatches, {
+    fields: [studentResults.batchId],
+    references: [resultBatches.id]
+  })
+}));
+
+export const studentTranscriptsRelations = relations(studentTranscripts, ({ one }) => ({
+  student: one(students, {
+    fields: [studentTranscripts.studentId],
+    references: [students.id]
+  }),
+  academicSession: one(academicSessions, {
+    fields: [studentTranscripts.academicSessionId],
+    references: [academicSessions.id]
   })
 }));

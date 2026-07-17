@@ -250,7 +250,7 @@ export default function AdmissionReportsPage() {
                                         </span>
                                     </td>
                                     <td className="px-10 py-8 text-right">
-                                        <Link href={`/admin/admission/builder/${t.id}`}>
+                                        <Link href={`/admin/admission/forms/${t.id}`}>
                                             <Button variant="ghost" className="rounded-2xl hover:bg-white hover:shadow-lg p-4 group transition-all">
                                                 <ChevronRight className="w-6 h-6 text-slate-300 group-hover:text-indigo-600" />
                                             </Button>

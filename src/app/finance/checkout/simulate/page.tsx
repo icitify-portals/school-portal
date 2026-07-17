@@ -27,6 +27,9 @@ function CheckoutSimulatorContent() {
     const reference = searchParams.get("reference") || "";
     const amountStr = searchParams.get("amount") || "0";
     const rrr = searchParams.get("rrr") || "";
+    const payerEmail = searchParams.get("email") || "student@school.edu";
+    const payerFirstName = searchParams.get("firstName") || "Student";
+    const payerLastName = searchParams.get("lastName") || "Payer";
 
     const [amount, setAmount] = useState<number>(0);
     const [loading, setLoading] = useState(false);
@@ -261,9 +264,9 @@ function CheckoutSimulatorContent() {
                                     <RemitaInlineCheckout 
                                         rrr={rrr} 
                                         amount={amount} 
-                                        email={"student@school.edu"} 
-                                        firstName={"Student"} 
-                                        lastName={"Payer"} 
+                                        email={payerEmail} 
+                                        firstName={payerFirstName} 
+                                        lastName={payerLastName} 
                                         onSuccess={(response) => handleSimulate('completed')} 
                                         onError={(response) => handleSimulate('failed')} 
                                         onClose={() => handleSimulate('failed')} 

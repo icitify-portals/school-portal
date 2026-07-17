@@ -62,13 +62,27 @@ interface MenuItem {
     role?: string;
 }
 
+const applicantMenuItems: MenuItem[] = [
+    { name: "Admission Dashboard", icon: LayoutDashboard, href: "/admission" },
+    {
+        name: "My Application",
+        icon: FileText,
+        subItems: [
+            { name: "Apply Now", href: "/admission" },
+            { name: "Track Status", href: "/admission/status" },
+            { name: "Instructions", href: "/admission" },
+        ]
+    },
+    { name: "Profile", icon: User, href: "/profile" },
+];
+
 const studentMenuItems: MenuItem[] = [
     { name: "Dashboard", icon: LayoutDashboard, href: "/" },
     {
         name: "Academics",
         icon: GraduationCap,
         subItems: [
-            { name: "Admission Status", href: "/student/admission", module: "admission" },
+            { name: "Admission Status", href: "/admission", module: "admission" },
             { name: "Course Registration", href: "/student/registration" },
             { name: "Add/Drop Module", href: "/student/registration/add-drop" },
             { name: "My Registrations", href: "/student/registration" },
@@ -182,6 +196,8 @@ const adminMenuItems: MenuItem[] = [
             { name: "Academic Transcripts", href: "/admin/academics/transcripts" },
             { name: "Graduate Document Requests", href: "/admin/exams-records/documents" },
             { name: "Result Views", href: "/admin/exams-records/results" },
+            { name: "Result Processing (Batches)", href: "/admin/result-module" },
+            { name: "Grading Scales", href: "/admin/result-module/scales" },
             { name: "Quality Assurance", href: "/admin/quality-assurance" },
         ]
     },
@@ -234,6 +250,7 @@ const adminMenuItems: MenuItem[] = [
             { name: "Discounts", href: "/admin/bursary/discounts" },
             { name: "Expenditure Requests", href: "/admin/bursary/expenditure" },
             { name: "External Inflows", href: "/admin/bursary/inflows" },
+            { name: "Admission Payments", href: "/admin/bursary/admission-payments" },
             { name: "Exam Clearance", href: "/admin/bursary/clearance" },
             { name: "Document Pricing Settings", href: "/admin/bursary/documents" },
             { name: "Scholarships & Trusts", href: "/admin/bursary/scholarships" },
@@ -295,8 +312,18 @@ const adminMenuItems: MenuItem[] = [
         module: "admission",
         subItems: [
             { name: "Admission Dashboard", href: "/admin/admission" },
+            { name: "Form Builder", href: "/admin/admission/forms" },
+            { name: "Applications (V2)", href: "/admin/admission/v2" },
+            { name: "Leads (Prospects)", href: "/admin/admission/leads" },
             { name: "Screening & Scoring", href: "/admin/admission/screening" },
+            { name: "Scoring Models", href: "/admin/admission/scoring" },
+            { name: "Interviews", href: "/admin/admission/interviews" },
+            { name: "Waitlist", href: "/admin/admission/waitlist" },
+            { name: "Candidate Validation", href: "/admin/admission/validation" },
+            { name: "Programme Requirements", href: "/admin/admission/validation/requirements" },
+            { name: "Admission Payments", href: "/admin/admission/payments" },
             { name: "Admission Sessions", href: "/admin/admission/sessions" },
+            { name: "Intake Analytics", href: "/admin/admission/reports" },
             { name: "Admission Settings", href: "/admin/admission/settings" },
         ]
     },
@@ -438,7 +465,6 @@ const adminMenuItems: MenuItem[] = [
         subItems: [
             { name: "Master Analytics", href: "/admin/security-director/analytics" },
             { name: "Visitor Management", href: "/admin/security-director/visitors" },
-            { name: "2026/2027 Application Form", href: "/register" },
             { name: "Lost & Found", href: "/admin/security-director/lost-and-found" },
             { name: "Gate Scan & Patrols", href: "/staff/security-officer" },
         ]
@@ -648,6 +674,8 @@ export function Sidebar({ enabledModules = {}, mobileOpen = false, onClose }: {
             return parentMenuItems;
         } else if (role === 'staff') {
             return staffMenuItems;
+        } else if (role === 'applicant') {
+            return applicantMenuItems;
         } else {
             return studentMenuItems;
         }
@@ -696,7 +724,7 @@ export function Sidebar({ enabledModules = {}, mobileOpen = false, onClose }: {
         );
     };
 
-    const isStudent = role === 'student';
+    const isStudent = role === 'student' || role === 'applicant';
 
     const sidebarContent = (
         <div 

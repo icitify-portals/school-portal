@@ -4,6 +4,9 @@ import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
 import { checkRateLimit } from "@/lib/api-auth";
+import crypto from "crypto";
+import { sendEmail } from "@/lib/mail";
+import { emailVerificationTokens } from "@/db/schema";
 
 export async function POST(req: Request) {
     try {
@@ -67,17 +70,42 @@ export async function POST(req: Request) {
         // Hash password
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        // Insert user — role is always 'student' for public self-registration
-        await db.insert(users).values({
+        // Insert user — role is always 'applicant' for public self-registration
+        const [insertResult] = await db.insert(users).values({
             email: normalizedEmail,
             name: name.trim(),
             password: hashedPassword,
-            role: "student", // SECURITY: never accept role from request body
+            role: "applicant", // SECURITY: never accept role from request body
             requiresPasswordChange: false,
+            emailVerified: false,
         });
 
+        const userId = insertResult.insertId;
+
+        // Generate verification token
+        const token = crypto.randomBytes(32).toString('hex');
+        const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
+        await db.insert(emailVerificationTokens).values({
+            userId,
+            token,
+            expiresAt,
+        });
+
+        // Send email
+        const verificationLink = `${process.env.NEXT_PUBLIC_APP_URL || 'https://portal.fssibadan.edu.ng'}/verify-email?token=${token}`;
+        const emailHtml = `
+            <h2>Welcome to Federal School of Statistics, Ibadan</h2>
+            <p>Dear ${name},</p>
+            <p>Please verify your email address by clicking the link below:</p>
+            <a href="${verificationLink}">Verify Email</a>
+            <p>This link will expire in 24 hours.</p>
+        `;
+        
+        await sendEmail(normalizedEmail, 'Verify your Email - FSS Ibadan', emailHtml);
+
         return NextResponse.json(
-            { message: "User registered successfully" },
+            { message: "User registered successfully. Please check your email to verify your account." },
             { status: 201 }
         );
     } catch (error: any) {

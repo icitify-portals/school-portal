@@ -52,7 +52,7 @@ export default async function ApplicantDashboard() {
                     </div>
                     <h3 className="text-2xl font-black text-slate-900 mb-2 tracking-tight">Your Journey Starts Here</h3>
                     <p className="text-slate-500 font-medium mb-8 max-w-sm">You haven't started any admission applications yet. Browse programs to apply.</p>
-                    <Link href="/">
+                    <Link href="/applicant/new-application">
                         <Button className="bg-indigo-600 hover:bg-indigo-700 text-white font-black px-8 py-6 rounded-2xl text-sm uppercase tracking-widest shadow-xl shadow-indigo-200">
                             Browse Programs
                         </Button>
@@ -113,7 +113,7 @@ export default async function ApplicantDashboard() {
                     ))}
                     
                     {/* Add New Application Tile (Bento Style) */}
-                    <Link href="/" className="md:col-span-1 border-2 border-dashed border-slate-200 hover:border-indigo-300 hover:bg-indigo-50/50 rounded-[2rem] flex flex-col items-center justify-center p-8 min-h-[300px] transition-all group text-center cursor-pointer">
+                    <Link href="/applicant/new-application" className="md:col-span-1 border-2 border-dashed border-slate-200 hover:border-indigo-300 hover:bg-indigo-50/50 rounded-[2rem] flex flex-col items-center justify-center p-8 min-h-[300px] transition-all group text-center cursor-pointer">
                         <div className="w-16 h-16 bg-slate-100 group-hover:bg-indigo-100 rounded-[1.5rem] flex items-center justify-center mb-4 transition-colors">
                             <Sparkles className="w-8 h-8 text-slate-400 group-hover:text-indigo-600" />
                         </div>

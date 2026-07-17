@@ -7,7 +7,11 @@ class InvalidCredentialsError extends CredentialsSignin {
 class AccountLockedError extends CredentialsSignin {
     code = "Account is temporarily locked due to multiple failed attempts. Please try again in 3 minutes.";
 }
-import { DrizzleAdapter } from "@auth/drizzle-adapter";
+
+class EmailNotVerifiedError extends CredentialsSignin {
+    code = "Please verify your email before logging in. Check your inbox for the verification link.";
+}
+// DrizzleAdapter removed — JWT session strategy manages sessions in tokens, no DB adapter needed
 import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
 import MicrosoftEntraID from "next-auth/providers/microsoft-entra-id";
@@ -83,7 +87,7 @@ async function authenticateWithLDAP(email: string, password: string): Promise<bo
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
     ...authConfig,
-    adapter: DrizzleAdapter(db),
+    // adapter removed: JWT strategy manages sessions in signed tokens, no DB tables required
     providers: [
         // Email/Password credentials
         Credentials({
@@ -128,6 +132,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                 if (user.lockoutUntil && new Date(user.lockoutUntil) > new Date()) {
                     console.warn(`Attempted login on locked account: ${user.email}`);
                     throw new AccountLockedError();
+                }
+
+                // Check if email is verified for applicant roles
+                // Only block if explicitly false (new registrations) — null/undefined (existing accounts) still allowed
+                if (user.emailVerified === false && user.role === 'applicant') {
+                    throw new EmailNotVerifiedError();
                 }
 
                 // Try LDAP first (if configured), then local password

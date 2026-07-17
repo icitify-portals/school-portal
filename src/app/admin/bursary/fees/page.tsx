@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,6 +17,9 @@ import {
 import {
     getFeeItems,
     createFeeItem,
+    deleteFeeItem,
+    bulkDeleteFeeItems,
+    bulkDeleteFeeStructures,
     getFeeStructures,
     createFeeStructure,
     updateFeeStructure,
@@ -43,6 +46,9 @@ export default function FeesPage() {
     const [loading, setLoading] = useState(true);
     const [isAdding, setIsAdding] = useState(false);
     
+    // Multi-select State
+    const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+
     // View Details State
     const [expandedStructureId, setExpandedStructureId] = useState<number | null>(null);
 
@@ -142,10 +148,55 @@ export default function FeesPage() {
         if (res.success) fetchData();
     };
 
+    const toggleSelect = (id: number) => {
+        setSelectedIds(prev => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id); else next.add(id);
+            return next;
+        });
+    };
+
+    const toggleSelectAll = () => {
+        const list = activeTab === 'items' ? feeItemsList : feeStructuresList;
+        if (selectedIds.size === list.length) {
+            setSelectedIds(new Set());
+        } else {
+            setSelectedIds(new Set(list.map((i: any) => i.id)));
+        }
+    };
+
+    const handleBulkDelete = async () => {
+        if (selectedIds.size === 0) return;
+        const label = activeTab === 'items' ? 'fee items' : 'fee structures';
+        if (!confirm(`Delete ${selectedIds.size} selected ${label}?`)) return;
+        const ids = Array.from(selectedIds);
+        const res = activeTab === 'items'
+            ? await bulkDeleteFeeItems(ids)
+            : await bulkDeleteFeeStructures(ids);
+        if (res.success) {
+            setSelectedIds(new Set());
+            fetchData();
+        } else {
+            alert(res.error);
+        }
+    };
+
+    const handleDeleteItem = async (id: number) => {
+        if (!confirm("Delete this fee item? It will be removed from all structures.")) return;
+        const res = await deleteFeeItem(id);
+        if (res.success) {
+            setSelectedIds(new Set());
+            fetchData();
+        } else {
+            alert(res.error);
+        }
+    };
+
     const handleDelete = async (id: number) => {
         if (!confirm("Are you sure you want to delete this fee structure?")) return;
         const res = await deleteFeeStructure(id);
         if (res.success) {
+            setSelectedIds(new Set());
             fetchData();
         } else {
             alert(res.error);
@@ -563,28 +614,53 @@ export default function FeesPage() {
             )}
 
             <Card className="overflow-hidden border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
+                {(selectedIds.size > 0) && (
+                    <div className="mb-3 flex items-center gap-3 px-4 py-3 bg-indigo-50 border border-indigo-200 rounded-xl">
+                        <span className="text-sm font-bold text-indigo-700">{selectedIds.size} selected</span>
+                        <button onClick={handleBulkDelete}
+                            className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold transition-colors">
+                            Delete Selected
+                        </button>
+                        <button onClick={() => setSelectedIds(new Set())}
+                            className="px-5 py-2 text-slate-500 hover:text-slate-700 text-xs font-bold transition-colors">
+                            Clear Selection
+                        </button>
+                    </div>
+                )}
                 <table className="w-full text-left">
                     <thead>
                         <tr className="bg-slate-50 text-slate-500 text-xs font-bold uppercase tracking-wider">
+                            <th className="px-6 py-4 w-10">
+                                <input type="checkbox"
+                                    className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                                    checked={selectedIds.size > 0 && selectedIds.size === (activeTab === 'items' ? feeItemsList.length : feeStructuresList.length)}
+                                    onChange={toggleSelectAll} />
+                            </th>
                             <th className="px-6 py-4">{activeTab === 'items' ? "ID" : "Name"}</th>
                             <th className="px-6 py-4">{activeTab === 'items' ? "Fee Name" : "Academic Year"}</th>
                             <th className="px-6 py-4">{activeTab === 'items' ? "Currency" : "Level"}</th>
                             <th className="px-6 py-4">{activeTab === 'items' ? "Required" : "Items"}</th>
-                            <th className="px-6 py-4 text-right">Status / Actions</th>
+                            <th className="px-6 py-4 text-right">Actions</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                         {loading ? (
-                            <tr>
-                                <td colSpan={5} className="px-6 py-10 text-center">
+                                <tr>
+                                <td colSpan={6} className="px-6 py-10 text-center">
                                     <Loader2 className="w-6 h-6 animate-spin mx-auto text-slate-400" />
                                 </td>
                             </tr>
                         ) : activeTab === 'items' ? (
                             feeItemsList.length === 0 ? (
-                                <tr><td colSpan={5} className="px-6 py-10 text-center text-slate-500">No items found.</td></tr>
+                                <tr><td colSpan={6} className="px-6 py-10 text-center text-slate-500">No items found.</td></tr>
                             ) : feeItemsList.map(item => (
-                                <tr key={item.id} className="hover:bg-slate-50/50">
+                                <tr key={item.id} className={cn("hover:bg-slate-50/50 transition-colors", selectedIds.has(item.id) && "bg-indigo-50/50")}>
+                                    <td className="px-6 py-4">
+                                        <input type="checkbox"
+                                            className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                                            checked={selectedIds.has(item.id)}
+                                            onChange={() => toggleSelect(item.id)} />
+                                    </td>
                                     <td className="px-6 py-4 text-sm font-mono text-slate-400">#{item.id}</td>
                                     <td className="px-6 py-4 text-sm font-bold text-slate-700">{item.name}</td>
                                     <td className="px-6 py-4 text-sm text-slate-500">{item.currency || 'NGN'}</td>
@@ -594,16 +670,22 @@ export default function FeesPage() {
                                         </span>
                                     </td>
                                     <td className="px-6 py-4 text-right">
-                                        <button className="p-2 text-slate-400 hover:text-red-500"><Trash2 className="w-4 h-4" /></button>
+                                        <button onClick={() => handleDeleteItem(item.id)} className="p-2 text-slate-400 hover:text-red-500"><Trash2 className="w-4 h-4" /></button>
                                     </td>
                                 </tr>
                             ))
                         ) : (
                             feeStructuresList.length === 0 ? (
-                                <tr><td colSpan={5} className="px-6 py-10 text-center text-slate-500">No structures found.</td></tr>
+                                <tr><td colSpan={6} className="px-6 py-10 text-center text-slate-500">No structures found.</td></tr>
                             ) : feeStructuresList.map(s => (
                                 <React.Fragment key={s.id}>
-                                <tr className="hover:bg-slate-50/50 transition-colors cursor-pointer" onClick={() => setExpandedStructureId(expandedStructureId === s.id ? null : s.id)}>
+                                <tr className={cn("hover:bg-slate-50/50 transition-colors cursor-pointer", selectedIds.has(s.id) && "bg-indigo-50/50")} onClick={() => setExpandedStructureId(expandedStructureId === s.id ? null : s.id)}>
+                                    <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
+                                        <input type="checkbox"
+                                            className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                                            checked={selectedIds.has(s.id)}
+                                            onChange={() => toggleSelect(s.id)} />
+                                    </td>
                                     <td className="px-6 py-4">
                                         <div className="flex items-center gap-3">
                                             <div className="p-2 bg-indigo-50 rounded-lg">

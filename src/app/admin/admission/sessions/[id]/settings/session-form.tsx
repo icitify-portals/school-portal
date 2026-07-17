@@ -41,9 +41,15 @@ export default function AdmissionSessionForm({ session, isNew }: Props) {
         isActive: session?.isActive !== undefined ? session.isActive : true,
     });
 
-    const [fields, setFields] = useState<DynamicField[]>(
-        session?.dynamicFields ? JSON.parse(session.dynamicFields) : []
-    );
+    const [fields, setFields] = useState<DynamicField[]>(() => {
+        if (!session?.dynamicFields) return [];
+        try {
+            const parsed = JSON.parse(session.dynamicFields);
+            return Array.isArray(parsed) ? parsed : [];
+        } catch {
+            return [];
+        }
+    });
 
     const router = useRouter();
     const { toast } = useToast();

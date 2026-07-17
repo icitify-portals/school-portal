@@ -1,6 +1,6 @@
 import { db } from "@/db/db";
-import { transactions, directPayments, students, users, studentBills, studentLedger, walletTransactions } from "@/db/schema";
-import { eq, and, sql, desc } from "drizzle-orm";
+import { transactions, directPayments, students, users, studentBills, studentBillItems, studentLedger, walletTransactions, feeItems } from "@/db/schema";
+import { eq, and, sql, desc, inArray } from "drizzle-orm";
 import crypto from "crypto";
 
 export type PaymentContext = 'Main' | 'Admission' | 'Hostel' | 'Other';
@@ -173,28 +173,59 @@ export class PaymentService {
             const currentPaid = parseFloat(bill.amountPaid || "0.00");
             const outstanding = totalAmount - currentPaid;
 
-            // Installment payment validations
-            // @ts-expect-error - TS2339: Auto-suppressed for build
-            const allowed = bill.partPaymentAllowed !== false;
-            // @ts-expect-error - TS2339: Auto-suppressed for build
-            const minPercent = bill.partPaymentMinPercent ?? 60;
-            const minAllowedAmount = allowed ? (totalAmount * minPercent) / 100 : totalAmount;
+            const billItems = await tx.select({
+                item: studentBillItems,
+                feeItem: feeItems,
+            })
+            .from(studentBillItems)
+            .innerJoin(feeItems, eq(studentBillItems.feeItemId, feeItems.id))
+            .where(eq(studentBillItems.billId, billId));
 
-            if (currentPaid < 0.01) {
-                // Initial payment: must meet the minimum required installment percentage
-                if (amount < minAllowedAmount - 0.01) {
-                    throw new Error(`Minimum initial installment payment of ₦${minAllowedAmount.toLocaleString()} (${minPercent}%) is required.`);
+            if (bill.tuitionInstallmentEnabled) {
+                const installPct = parseFloat(bill.tuitionInstallmentPercentage || "60") / 100;
+                let tuitionTotal = 0;
+                let otherTotal = 0;
+
+                for (const bi of billItems) {
+                    const itemAmt = parseFloat(bi.item.amount);
+                    if (bi.feeItem.category === 'tuition') {
+                        tuitionTotal += itemAmt;
+                    } else {
+                        otherTotal += itemAmt;
+                    }
+                }
+
+                if (currentPaid < 0.01) {
+                    const tuitionPart = tuitionTotal * installPct;
+                    const minFirstPayment = otherTotal + tuitionPart;
+
+                    if (amount < (minFirstPayment - 0.01) && Math.abs(amount - outstanding) > 0.01) {
+                        throw new Error(
+                            `In tuition-installment mode, you must pay all non-tuition items (₦${otherTotal.toLocaleString()}) ` +
+                            `plus ${(installPct * 100).toFixed(0)}% of tuition (₦${tuitionPart.toLocaleString()}). ` +
+                            `Minimum first payment: ₦${minFirstPayment.toLocaleString()}`
+                        );
+                    }
+                }
+            } else {
+                const allowed = bill.tuitionInstallmentEnabled === true;
+                const minPercent = parseFloat(bill.tuitionInstallmentPercentage || "60");
+                const minAllowedAmount = allowed ? (totalAmount * minPercent) / 100 : totalAmount;
+
+                if (currentPaid < 0.01) {
+                    if (amount < minAllowedAmount - 0.01 && Math.abs(amount - outstanding) > 0.01) {
+                        throw new Error(`Minimum initial installment payment of ₦${minAllowedAmount.toLocaleString()} (${minPercent}%) is required.`);
+                    }
+                }
+
+                if (!allowed && Math.abs(amount - outstanding) > 0.01) {
+                    throw new Error(`Installments are not enabled for this payment. Full payment of ₦${outstanding.toFixed(2)} is required.`);
                 }
             }
 
             const newPaid = currentPaid + amount;
             if (newPaid > totalAmount + 0.01) {
                 throw new Error(`Payment amount exceeds outstanding bill balance. Max payable: ₦${outstanding.toFixed(2)}`);
-            }
-
-            // If part payment is disabled, require full payment
-            if (!allowed && Math.abs(amount - outstanding) > 0.01) {
-                throw new Error(`Installments are not enabled for this payment. Full payment of ₦${outstanding.toFixed(2)} is required.`);
             }
 
             // 3. Update student wallet balance
@@ -226,7 +257,52 @@ export class PaymentService {
                 gatewayReference: walletTxRef
             });
 
-            // 6. Update student bill status
+            // 6. Update student bill items - allocate payment proportionally
+            const itemOutstandingTotals: { id: number; paidSoFar: number; itemAmount: number; outstanding: number }[] = [];
+
+            for (const bi of billItems) {
+                const itemAmt = parseFloat(bi.item.amount);
+                const paidSoFar = parseFloat(bi.item.amountPaid || "0.00");
+                const itemOustanding = itemAmt - paidSoFar;
+                if (itemOustanding > 0) {
+                    itemOutstandingTotals.push({ id: bi.item.id, paidSoFar, itemAmount: itemAmt, outstanding: itemOustanding });
+                }
+            }
+
+            const totalOutstanding = itemOutstandingTotals.reduce((s, i) => s + i.outstanding, 0);
+            let remainingAmount = amount;
+
+            // In tuition-installment mode: settle non-tuition items first
+            if (bill.tuitionInstallmentEnabled) {
+                const nonTuitionItems = billItems.filter(bi => bi.feeItem.category !== 'tuition');
+                for (const bi of nonTuitionItems) {
+                    const itemAmt = parseFloat(bi.item.amount);
+                    const paidSoFar = parseFloat(bi.item.amountPaid || "0.00");
+                    const needed = itemAmt - paidSoFar;
+                    if (needed > 0 && remainingAmount > 0) {
+                        const payNow = Math.min(needed, remainingAmount);
+                        await tx.update(studentBillItems)
+                            .set({ amountPaid: (paidSoFar + payNow).toFixed(2) })
+                            .where(eq(studentBillItems.id, bi.item.id));
+                        remainingAmount -= payNow;
+                    }
+                }
+            }
+
+            // Allocate remaining proportionally across all items still outstanding
+            for (const io of itemOutstandingTotals) {
+                if (remainingAmount <= 0) break;
+                const propShare = (io.outstanding / totalOutstanding) * amount;
+                const payNow = Math.min(propShare, io.outstanding, remainingAmount);
+                if (payNow > 0) {
+                    await tx.update(studentBillItems)
+                        .set({ amountPaid: (io.paidSoFar + payNow).toFixed(2) })
+                        .where(eq(studentBillItems.id, io.id));
+                    remainingAmount -= payNow;
+                }
+            }
+
+            // 7. Update student bill status
             let billStatus: 'pending' | 'partially_paid' | 'paid' = 'partially_paid';
             if (Math.abs(newPaid - totalAmount) < 0.01) {
                 billStatus = 'paid';

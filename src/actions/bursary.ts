@@ -105,6 +105,49 @@ export async function createFeeItem(data: any) {
     }
 }
 
+export async function deleteFeeItem(id: number) {
+    try {
+        await db.delete(feeStructureItems).where(eq(feeStructureItems.feeItemId, id));
+        await db.delete(feeItems).where(eq(feeItems.id, id));
+        revalidatePath("/admin/bursary/fees");
+        return { success: true };
+    } catch (error) {
+        console.error("Failed to delete fee item:", error);
+        return { success: false, error: "Cannot delete fee item. It might be linked to existing records." };
+    }
+}
+
+export async function bulkDeleteFeeItems(ids: number[]) {
+    try {
+        if (ids.length === 0) return { success: true };
+        await db.transaction(async (tx) => {
+            await tx.delete(feeStructureItems).where(inArray(feeStructureItems.feeItemId, ids));
+            await tx.delete(feeItems).where(inArray(feeItems.id, ids));
+        });
+        revalidatePath("/admin/bursary/fees");
+        return { success: true };
+    } catch (error) {
+        console.error("Failed to bulk delete fee items:", error);
+        return { success: false, error: "Failed to delete selected fee items." };
+    }
+}
+
+export async function bulkDeleteFeeStructures(ids: number[]) {
+    try {
+        if (ids.length === 0) return { success: true };
+        await db.transaction(async (tx) => {
+            await tx.delete(feeStructureItems).where(inArray(feeStructureItems.feeStructureId, ids));
+            await tx.delete(feeAllocations).where(inArray(feeAllocations.feeStructureId, ids));
+            await tx.delete(feeStructures).where(inArray(feeStructures.id, ids));
+        });
+        revalidatePath("/admin/bursary/fees");
+        return { success: true };
+    } catch (error) {
+        console.error("Failed to bulk delete fee structures:", error);
+        return { success: false, error: "Failed to delete selected fee structures." };
+    }
+}
+
 // --- Fee Structures ---
 export async function getFeeStructures() {
     try {
@@ -121,16 +164,23 @@ export async function getFeeStructures() {
 
         const allUsers = await db.select().from(users);
 
-        return structures.map(s => ({
-            ...s,
-            items: allItemsRaw
+        return structures.map(s => {
+            const items = allItemsRaw
                 .filter(i => i.structureItem.feeStructureId === s.id)
                 .map(i => ({
                     ...i.structureItem,
                     item: i.item
-                })),
-            approvedBy: allUsers.find(u => u.id === s.approvedBy)
-        }));
+                }));
+            // feeStructures has no stored total — derive it from its line items
+            const totalAmount = items.reduce((sum, i) => sum + parseFloat(i.amount as string || "0"), 0);
+
+            return {
+                ...s,
+                items,
+                totalAmount,
+                approvedBy: allUsers.find(u => u.id === s.approvedBy)
+            };
+        });
     } catch (error) {
         console.error("Failed to fetch fee structures:", error);
         return [];
@@ -664,10 +714,18 @@ export async function generateBillForStudent(data: {
     studentId: number;
     sessionId: number;
     note?: string;
+    tuitionInstallmentEnabled?: boolean;
+    tuitionInstallmentPercentage?: number;
+    tuitionInstallmentDeadline?: Date;
 }) {
     try {
         await ensureBursaryStaff();
-        const res = await BursaryService.processSingleStudentBill(data.studentId, data.sessionId, data.note);
+        const res = await BursaryService.processSingleStudentBill(data.studentId, data.sessionId, {
+            note: data.note,
+            tuitionInstallmentEnabled: data.tuitionInstallmentEnabled,
+            tuitionInstallmentPercentage: data.tuitionInstallmentPercentage,
+            tuitionInstallmentDeadline: data.tuitionInstallmentDeadline,
+        });
 
         revalidatePath("/student/finance");
         revalidatePath("/admin/bursary/bills");
@@ -689,6 +747,9 @@ export async function generateBatchBills(data: {
         programmeId?: number;
     };
     note?: string;
+    tuitionInstallmentEnabled?: boolean;
+    tuitionInstallmentPercentage?: number;
+    tuitionInstallmentDeadline?: Date;
 }) {
     try {
         await ensureBursaryStaff();
@@ -1021,7 +1082,7 @@ export async function disburseExpenditure(id: number) {
     }
 }
 
-export type UnifiedTransaction = {
+type UnifiedTransaction = {
     id: number;
     sourceTable: 'transactions' | 'payment_transactions' | 'wallet_transactions';
     amount: string | number;
@@ -2552,8 +2613,28 @@ export async function getFeeItemsWithSettlement() {
 }
 
 // Added to resolve Next.js build module resolution errors
-export async function updateBillInstallmentSettings(billId: number, data: any) {
-    return { success: false, message: "Not implemented yet" };
+export async function updateBillInstallmentSettings(billId: number, data: {
+    tuitionInstallmentEnabled?: boolean;
+    tuitionInstallmentPercentage?: number;
+    tuitionInstallmentDeadline?: Date;
+}) {
+    try {
+        await ensureBursaryStaff();
+        const updateData: any = {};
+        if (data.tuitionInstallmentEnabled !== undefined) updateData.tuitionInstallmentEnabled = data.tuitionInstallmentEnabled;
+        if (data.tuitionInstallmentPercentage !== undefined) updateData.tuitionInstallmentPercentage = data.tuitionInstallmentPercentage.toString();
+        if (data.tuitionInstallmentDeadline !== undefined) updateData.tuitionInstallmentDeadline = data.tuitionInstallmentDeadline;
+
+        await db.update(studentBills)
+            .set(updateData)
+            .where(eq(studentBills.id, billId));
+
+        revalidatePath("/admin/bursary/bills");
+        return { success: true };
+    } catch (error) {
+        console.error("Failed to update bill installment settings:", error);
+        return { success: false, error: "Failed to update settings" };
+    }
 }
 
 
@@ -2603,4 +2684,74 @@ export async function getInstallmentReport() { return { success: false, data: []
 
 // Added to resolve Next.js build module resolution errors
 export async function deanApproveExpenditureRequest(id: any) { return { success: false, data: null }; }
+
+/**
+ * Per-Fee-Item Collection Report — shows total collected per fee item
+ * with breakdown by department, level, and programme.
+ */
+export async function getFeeItemCollectionReport(filters: {
+    startDate?: Date;
+    endDate?: Date;
+    deptId?: number;
+    programmeId?: number;
+    level?: number;
+    feeItemId?: number;
+}) {
+    try {
+        await ensureBursaryStaff();
+
+        const conditions: any[] = [];
+        // Filter bills by date, then aggregate items from those bills
+        if (filters.startDate || filters.endDate) {
+            const billConditions: any[] = [];
+            if (filters.startDate) billConditions.push(gte(studentBills.createdAt, filters.startDate));
+            if (filters.endDate) billConditions.push(lte(studentBills.createdAt, filters.endDate));
+            const filteredBillIds = await db.select({ id: studentBills.id })
+                .from(studentBills)
+                .where(and(...billConditions));
+            const ids = filteredBillIds.map(b => b.id);
+            if (ids.length > 0) {
+                conditions.push(inArray(studentBillItems.billId, ids));
+            } else {
+                conditions.push(sql`1 = 0`);
+            }
+        }
+
+        // All fee items with their collection stats
+        const feeItemsList = await db.select({
+            id: feeItems.id,
+            name: feeItems.name,
+            category: feeItems.category,
+            defaultAmount: feeItems.defaultAmount,
+            totalBillable: sql<number>`COALESCE(SUM(CAST(${studentBillItems.amount} AS DECIMAL(12,2))), 0)`,
+            totalPaid: sql<number>`COALESCE(SUM(CAST(${studentBillItems.amountPaid} AS DECIMAL(12,2))), 0)`,
+            totalScholarship: sql<number>`COALESCE(SUM(CAST(${studentBillItems.scholarshipApplied} AS DECIMAL(12,2))), 0)`,
+            totalDiscount: sql<number>`COALESCE(SUM(CAST(${studentBillItems.discountApplied} AS DECIMAL(12,2))), 0)`,
+            studentCount: sql<number>`COUNT(DISTINCT ${studentBills.studentId})`,
+        })
+            .from(feeItems)
+            .leftJoin(studentBillItems, eq(feeItems.id, studentBillItems.feeItemId))
+            .leftJoin(studentBills, eq(studentBillItems.billId, studentBills.id))
+            .where(conditions.length > 0 ? and(...conditions) : undefined)
+            .groupBy(feeItems.id, feeItems.name, feeItems.category, feeItems.defaultAmount)
+            .orderBy(feeItems.category, feeItems.name);
+
+        const formatted = feeItemsList.map(item => ({
+            ...item,
+            totalBillable: parseFloat(String(item.totalBillable)),
+            totalPaid: parseFloat(String(item.totalPaid)),
+            totalScholarship: parseFloat(String(item.totalScholarship)),
+            totalDiscount: parseFloat(String(item.totalDiscount)),
+            outstanding: parseFloat(String(item.totalBillable)) - parseFloat(String(item.totalPaid)),
+            collectionRate: parseFloat(String(item.totalBillable)) > 0
+                ? Math.round((parseFloat(String(item.totalPaid)) / parseFloat(String(item.totalBillable))) * 100)
+                : 0,
+        }));
+
+        return { success: true, data: formatted };
+    } catch (error) {
+        console.error("Failed to fetch fee item collection report:", error);
+        return { success: false, error: "Failed to generate report", data: [] };
+    }
+}
 

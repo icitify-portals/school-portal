@@ -7,7 +7,7 @@ import { useDeveloperSubscription } from "@/components/finance/DeveloperSubscrip
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { 
-    Loader2, Save, ArrowRight, ArrowLeft, CheckCircle2, Lock, CreditCard, CheckSquare, GraduationCap, Users
+    Loader2, Save, ArrowRight, ArrowLeft, CheckCircle2, Lock, CreditCard, CheckSquare, GraduationCap, Users, Printer
 } from "lucide-react";
 import { 
     getApplicantApplication, 
@@ -19,10 +19,17 @@ import {
     saveOLevelResultsAction
 } from "@/actions/admission_v2";
 import OLevelSubmission from "@/components/forms/OLevelSubmission";
+import PhotoCapture from "@/components/forms/PhotoCapture";
 // @ts-expect-error - TS7016: Auto-suppressed for build
 import naija from 'naija-state-local-government';
+import { COUNTRY_NAMES } from "@/lib/countries";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+
+function FieldError({ error }: { error?: string }) {
+    if (!error) return null;
+    return <p className="text-xs text-rose-600 font-medium px-1 mt-1">{error}</p>;
+}
 
 export default function StatefulApplicationPage() {
     const params = useParams();
@@ -41,6 +48,10 @@ export default function StatefulApplicationPage() {
     const [submitting, setSubmitting] = useState(false);
     const [eligibilityError, setEligibilityError] = useState<string | null>(null);
     const [confirmed, setConfirmed] = useState(false); // Review Checkbox
+    // Instructions/mode selection is now handled upfront on the dedicated
+    // /admission/[slug]/instructions page, so this in-wizard step is skipped by default.
+    const [hasAcknowledgedInstructions, setHasAcknowledgedInstructions] = useState(true);
+    const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
     // NIN
     const [ninInput, setNinInput] = useState("");
@@ -72,6 +83,19 @@ export default function StatefulApplicationPage() {
                     if (parsed.__ninData) setVerifiedNinData(parsed.__ninData);
                 } catch (e) {
                     setFormData(data.data);
+                }
+            } else {
+                // Apply default values from template fields
+                const defaults: any = {};
+                data.template?.sections?.forEach((sec: any) => {
+                    sec.fields?.forEach((field: any) => {
+                        if (field.defaultValue) {
+                            defaults[field.label] = field.defaultValue;
+                        }
+                    });
+                });
+                if (Object.keys(defaults).length > 0) {
+                    setFormData(defaults);
                 }
             }
             const bodies = await getExaminationBodies();
@@ -121,6 +145,124 @@ export default function StatefulApplicationPage() {
         return Math.abs(ageDate.getUTCFullYear() - 1970);
     };
 
+    const validateField = (field: any, value: any): string | null => {
+        // Required validation
+        if (field.isRequired && (!value || (typeof value === 'string' && value.trim() === ''))) {
+            return `${field.label} is required`;
+        }
+
+        // Skip further validation if empty and not required
+        if (!value || (typeof value === 'string' && value.trim() === '')) {
+            return null;
+        }
+
+        // Parse validation rules
+        let rules: any = {};
+        try {
+            rules = typeof field.validationRules === 'string' ? JSON.parse(field.validationRules) : (field.validationRules || {});
+        } catch {
+            return null;
+        }
+
+        const strValue = String(value);
+
+        // Min length
+        if (rules.minLength && strValue.length < rules.minLength) {
+            return `${field.label} must be at least ${rules.minLength} characters`;
+        }
+
+        // Max length
+        if (rules.maxLength && strValue.length > rules.maxLength) {
+            return `${field.label} must be no more than ${rules.maxLength} characters`;
+        }
+
+        // Min value (for numbers)
+        if (rules.min !== undefined && !isNaN(Number(value)) && Number(value) < rules.min) {
+            return `${field.label} must be at least ${rules.min}`;
+        }
+
+        // Max value (for numbers)
+        if (rules.max !== undefined && !isNaN(Number(value)) && Number(value) > rules.max) {
+            return `${field.label} must be no more than ${rules.max}`;
+        }
+
+        // Pattern (regex)
+        if (rules.pattern) {
+            try {
+                const regex = new RegExp(rules.pattern);
+                if (!regex.test(strValue)) {
+                    return rules.patternMessage || `${field.label} does not match the required format`;
+                }
+            } catch {
+                // Invalid regex, skip
+            }
+        }
+
+        // Email validation
+        if (field.type === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(strValue)) {
+            return `${field.label} must be a valid email address`;
+        }
+
+        // Phone validation
+        if (field.type === 'phone' && !/^[\d\s\-+()]{7,20}$/.test(strValue)) {
+            return `${field.label} must be a valid phone number`;
+        }
+
+        // URL validation
+        if (field.type === 'url' && strValue && !/^https?:\/\/.+/.test(strValue)) {
+            return `${field.label} must be a valid URL starting with http:// or https://`;
+        }
+
+        return null;
+    };
+
+    const validateCurrentSection = (): boolean => {
+        if (!application?.template?.sections?.[currentStep]) return true;
+        
+        const section = application.template.sections[currentStep];
+        const errors: Record<string, string> = {};
+
+        for (const field of section.fields) {
+            // Skip NIN field if verification is disabled
+            if (field.systemKey === 'nin' && application?.ninVerificationMode === 'disabled') continue;
+            
+            const error = validateField(field, formData[field.label]);
+            if (error) {
+                errors[field.id] = error;
+            }
+        }
+
+        setValidationErrors(errors);
+        return Object.keys(errors).length === 0;
+    };
+
+    const evaluateCondition = (field: any): boolean => {
+        if (!field.conditionalLogic) return true;
+        
+        try {
+            const logic = typeof field.conditionalLogic === 'string' ? JSON.parse(field.conditionalLogic) : field.conditionalLogic;
+            if (!logic.enabled || !logic.sourceField) return true;
+
+            const sourceValue = formData[logic.sourceField];
+            const targetValue = logic.value;
+
+            switch (logic.operator) {
+                case 'equals':
+                    return String(sourceValue).toLowerCase() === String(targetValue).toLowerCase();
+                case 'notEquals':
+                    return String(sourceValue).toLowerCase() !== String(targetValue).toLowerCase();
+                case 'contains':
+                    return String(sourceValue).toLowerCase().includes(String(targetValue).toLowerCase());
+                case 'notEmpty':
+                    return sourceValue !== undefined && sourceValue !== null && String(sourceValue).trim() !== '';
+                default:
+                    return true;
+            }
+        } catch {
+            return true;
+        }
+    };
+
     const handleVerifyNin = async () => {
         if (ninInput.length !== 11) {
             toast.error("Please enter a valid 11-digit NIN.");
@@ -133,14 +275,18 @@ export default function StatefulApplicationPage() {
             
             const updatedForm = { ...formData, NIN: ninInput };
             
-            application.template.sections.forEach((sec: any) => {
-                sec.fields.forEach((f: any) => {
-                    if (f.systemKey === 'firstName') updatedForm[f.label] = res.firstName;
-                    if (f.systemKey === 'lastName') updatedForm[f.label] = res.lastName;
-                    if (f.systemKey === 'dob') updatedForm[f.label] = res.dob;
-                    if (f.systemKey === 'gender') updatedForm[f.label] = res.gender;
+            // Only overwrite the applicant's answers with NIN registry data if
+            // the template's "Auto-fill from NIN" setting is enabled (default: on).
+            if (application?.ninAutoFill !== false) {
+                application.template.sections.forEach((sec: any) => {
+                    sec.fields.forEach((f: any) => {
+                        if (f.systemKey === 'firstName') updatedForm[f.label] = res.firstName;
+                        if (f.systemKey === 'lastName') updatedForm[f.label] = res.lastName;
+                        if (f.systemKey === 'dob') updatedForm[f.label] = res.dob;
+                        if (f.systemKey === 'gender') updatedForm[f.label] = res.gender;
+                    });
                 });
-            });
+            }
 
             setFormData(updatedForm);
             
@@ -166,10 +312,17 @@ export default function StatefulApplicationPage() {
             return;
         }
         
+        // Validate current section
+        if (!validateCurrentSection()) {
+            toast.error("Please fix the validation errors before proceeding.");
+            return;
+        }
+        
         const currentSection = application.template.sections[currentStep];
         if (currentSection) {
             const hasNinField = currentSection.fields.some((f: any) => f.systemKey === 'nin');
-            if (hasNinField && application?.ninVerificationMode !== 'disabled' && !verifiedNinData?.verified && !verifiedNinData?.firstName) {
+            const ninIsRequired = application?.ninRequired !== false;
+            if (hasNinField && ninIsRequired && application?.ninVerificationMode !== 'disabled' && !verifiedNinData?.verified && !verifiedNinData?.firstName) {
                 toast.error("You must verify your NIN before proceeding.");
                 return;
             }
@@ -186,6 +339,7 @@ export default function StatefulApplicationPage() {
 
         if (currentStep < application.template.sections.length) {
             setCurrentStep(currentStep + 1);
+            setValidationErrors({});
             window.scrollTo(0, 0);
         }
     };
@@ -200,6 +354,24 @@ export default function StatefulApplicationPage() {
     const handleSubmitFinal = async () => {
         if (!confirmed) {
             toast.error("Please confirm that all information is correct.");
+            return;
+        }
+
+        // Validate all sections
+        const allErrors: Record<string, string> = {};
+        for (const section of application.template.sections) {
+            for (const field of section.fields) {
+                if (field.systemKey === 'nin' && application?.ninVerificationMode === 'disabled') continue;
+                const error = validateField(field, formData[field.label]);
+                if (error) {
+                    allErrors[field.id] = error;
+                }
+            }
+        }
+        
+        if (Object.keys(allErrors).length > 0) {
+            setValidationErrors(allErrors);
+            toast.error("Please fix all validation errors before submitting.");
             return;
         }
 
@@ -259,6 +431,15 @@ export default function StatefulApplicationPage() {
                     const res = await processAdmissionPayment(applicationId, application.template.feeStructureId!, session!.user!.email, session!.user!.name || "Applicant");
                     if (res.success && res.checkoutUrl) {
                         window.location.href = res.checkoutUrl;
+                    } else if (res.success && res.rrr) {
+                        // Remita payment redirection — pass the applicant's real identity through
+                        // so the inline checkout widget doesn't use dummy demo values
+                        const amount = application.template.calculatedFee || parseFloat(application.template.applicationFee);
+                        const nameParts = (session!.user!.name || "Applicant").trim().split(/\s+/);
+                        const firstName = encodeURIComponent(nameParts[0] || "Applicant");
+                        const lastName = encodeURIComponent(nameParts.slice(1).join(" ") || nameParts[0] || "Applicant");
+                        const email = encodeURIComponent(session!.user!.email || "");
+                        window.location.href = `/finance/checkout/simulate?gateway=remita&reference=${res.reference}&amount=${amount}&rrr=${res.rrr}&email=${email}&firstName=${firstName}&lastName=${lastName}`;
                     } else {
                         toast.error(res.error || "Failed to initialize payment gateway");
                         setPaymentProcessing(false);
@@ -294,6 +475,42 @@ export default function StatefulApplicationPage() {
     if (loading) return <div className="flex justify-center items-center h-64"><Loader2 className="w-8 h-8 animate-spin text-[#1a5b3a]" /></div>;
     if (!application) return <div>Application not found</div>;
 
+    // Instructions Step (Always First)
+    if (!hasAcknowledgedInstructions) {
+        return (
+            <Card className="bg-white max-w-3xl mx-auto mt-8 p-10 space-y-8 rounded-[2rem] shadow-xl border-none">
+                <div className="space-y-4 text-center">
+                    <h1 className="text-3xl font-black text-slate-900 uppercase tracking-tighter">Application Instructions</h1>
+                    <div className="inline-flex items-center px-4 py-1.5 rounded-full bg-indigo-50 text-indigo-700 text-xs font-bold uppercase tracking-widest">
+                        {application.template.name}
+                    </div>
+                </div>
+                
+                <div className="bg-slate-50 p-8 rounded-2xl border border-slate-100 text-slate-700 text-sm leading-relaxed space-y-4">
+                    {application.template.description ? (
+                        <div dangerouslySetInnerHTML={{ __html: application.template.description.replace(/\n/g, '<br/>') }} />
+                    ) : (
+                        <ul className="list-disc pl-5 space-y-2">
+                            <li>Please ensure all information provided is accurate and verifiable.</li>
+                            <li>Upload required documents in the specified format and size limits.</li>
+                            <li>Payment of the application fee is required to unlock the full form.</li>
+                            <li>You can save your progress at any time and return later.</li>
+                        </ul>
+                    )}
+                </div>
+
+                <div className="pt-4 border-t border-slate-100">
+                    <Button 
+                        onClick={() => setHasAcknowledgedInstructions(true)}
+                        className="w-full bg-[#1a5b3a] hover:bg-[#134229] text-white font-bold py-6 rounded-xl uppercase text-sm tracking-widest transition-all shadow-md"
+                    >
+                        I understand, proceed to payment
+                    </Button>
+                </div>
+            </Card>
+        );
+    }
+
     // Payment Wall for Payment-First Flow
     if (application.template.flowType === 'payment_first' && application.paymentStatus !== 'paid') {
         return (
@@ -309,7 +526,7 @@ export default function StatefulApplicationPage() {
                 </div>
                 <div className="p-6 bg-gray-50 rounded-2xl border border-gray-200 flex justify-between items-center">
                     <span className="text-xs font-bold uppercase tracking-widest text-gray-600">Application Fee</span>
-                    <span className="text-xl font-black text-[#1a5b3a]">₦{parseFloat(application.template.applicationFee).toLocaleString()}</span>
+                    <span className="text-xl font-black text-[#1a5b3a]">₦{(application.template.calculatedFee || parseFloat(application.template.applicationFee)).toLocaleString()}</span>
                 </div>
                 <Button 
                     onClick={handlePayment} disabled={paymentProcessing}
@@ -356,9 +573,14 @@ export default function StatefulApplicationPage() {
                         Your application is currently: <span className="text-[#1a5b3a] font-black">{application.status}</span>
                     </p>
                 </div>
-                <Button onClick={() => router.push('/applicant')} variant="outline" className="w-full bg-white border-gray-300 text-gray-800 hover:bg-gray-50 py-6 rounded-xl">
-                    Return to Dashboard
-                </Button>
+                <div className="flex gap-4">
+                    <Button onClick={() => router.push(`/applicant/application/${applicationId}/slip`)} className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-6 rounded-xl uppercase font-bold text-xs tracking-widest shadow-xl">
+                        <Printer className="w-4 h-4 mr-2" /> Print Slip
+                    </Button>
+                    <Button onClick={() => router.push('/applicant')} variant="outline" className="flex-1 bg-white border-gray-300 text-gray-800 hover:bg-gray-50 py-6 rounded-xl uppercase font-bold text-xs tracking-widest">
+                        Return to Dashboard
+                    </Button>
+                </div>
             </Card>
         );
     }
@@ -372,7 +594,20 @@ export default function StatefulApplicationPage() {
         <div className="max-w-4xl mx-auto space-y-8 pb-12 mt-8">
             <div className="flex justify-between items-end px-4">
                 <div className="space-y-1">
-                    <div className="text-xs font-bold uppercase tracking-widest text-[#1a5b3a]">{application.template.level}</div>
+                    <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold uppercase tracking-widest text-[#1a5b3a]">{application.template.level}</span>
+                        {application.applicationMode && (
+                            <span className={cn(
+                                "text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border",
+                                application.applicationMode === 'full_time'
+                                    ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                    : "bg-indigo-50 text-indigo-700 border-indigo-200"
+                            )}>
+                                {application.applicationMode === 'full_time' ? 'Full-Time' : 'Part-Time'}
+                                {application.jambRegNumber ? ` · JAMB: ${application.jambRegNumber}` : ''}
+                            </span>
+                        )}
+                    </div>
                     <h1 className="text-3xl font-black text-gray-900 uppercase tracking-tight">{application.template.name}</h1>
                 </div>
                 <Button 
@@ -401,7 +636,10 @@ export default function StatefulApplicationPage() {
                         <>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                 {currentSection?.fields?.map((field: any) => {
-                                    const isSystemLocked = application?.ninVerificationMode !== 'disabled' && verifiedNinData && (
+                                    // Check conditional logic
+                                    if (!evaluateCondition(field)) return null;
+
+                                    const isSystemLocked = application?.ninVerificationMode !== 'disabled' && application?.ninAutoFill !== false && verifiedNinData && (
                                         field.systemKey === 'firstName' || field.systemKey === 'lastName' ||
                                         field.systemKey === 'dob' || field.systemKey === 'gender'
                                     );
@@ -414,11 +652,14 @@ export default function StatefulApplicationPage() {
                                         : (formData[field.label] || "");
 
                                     if (field.systemKey === 'nin' && application?.ninVerificationMode !== 'disabled') {
+                                        const ninIsRequired = application?.ninRequired !== false;
                                         return (
                                             <div key={field.id} className="space-y-4 col-span-1 md:col-span-2 bg-gray-50 p-6 rounded-2xl border border-gray-200">
                                                 <div className="flex flex-col md:flex-row gap-4 items-end">
                                                     <div className="flex-1 space-y-2">
-                                                        <label className="text-xs font-bold text-gray-700 px-1">{field.label} <span className="text-rose-500">*</span></label>
+                                                        <label className="text-xs font-bold text-gray-700 px-1">
+                                                            {field.label} {ninIsRequired ? <span className="text-rose-500">*</span> : <span className="text-gray-400 normal-case">(Optional)</span>}
+                                                        </label>
                                                         <input 
                                                             type="text" maxLength={11} disabled={verifiedNinData?.firstName}
                                                             className="w-full bg-white border border-gray-300 rounded-xl px-4 py-3 font-medium text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-[#1a5b3a] focus:border-transparent outline-none transition-all"
@@ -433,51 +674,101 @@ export default function StatefulApplicationPage() {
                                                         {verifyingNin ? <Loader2 className="w-4 h-4 animate-spin" /> : "Verify Identity"}
                                                     </Button>
                                                 </div>
+                                                {!ninIsRequired && !verifiedNinData?.firstName && (
+                                                    <p className="text-[11px] text-gray-500">NIN verification is optional for this form — you may skip this and continue.</p>
+                                                )}
                                             </div>
                                         );
                                     }
 
                                     return (
-                                        <div key={field.id} className={cn("space-y-2", field.type === 'textarea' && "md:col-span-2")}>
+                                        <div key={field.id} className={cn("space-y-2", field.width === 'half' ? "col-span-1" : "col-span-1 md:col-span-2")}>
                                             <label className="text-xs font-bold text-gray-700 px-1">
                                                 {field.label} {field.isRequired && <span className="text-rose-500">*</span>}
                                             </label>
+                                            {field.helpText && (
+                                                <p className="text-[11px] text-gray-500 px-1">{field.helpText}</p>
+                                            )}
                                             
                                             {field.type === 'text' || field.type === 'email' || field.type === 'phone' || field.type === 'number' || field.type === 'date' || field.type === 'time' || field.type === 'url' ? (
-                                                <input 
-                                                    type={field.type} readOnly={isSystemLocked}
-                                                    className={cn(
-                                                        "w-full bg-white border border-gray-300 rounded-xl px-4 py-3 font-medium text-gray-900 focus:ring-2 focus:ring-[#1a5b3a] focus:border-transparent outline-none transition-all",
-                                                        isSystemLocked && "opacity-60 bg-gray-50 cursor-not-allowed"
-                                                    )}
-                                                    placeholder={field.placeholder} required={field.isRequired && !isSystemLocked}
-                                                    value={displayValue} onChange={(e) => handleInputChange(field.label, e.target.value, field.systemKey)}
-                                                />
+                                                <>
+                                                    <input 
+                                                        type={field.type} readOnly={isSystemLocked}
+                                                        className={cn(
+                                                            "w-full bg-white border border-gray-300 rounded-xl px-4 py-3 font-medium text-gray-900 focus:ring-2 focus:ring-[#1a5b3a] focus:border-transparent outline-none transition-all",
+                                                            isSystemLocked && "opacity-60 bg-gray-50 cursor-not-allowed",
+                                                            validationErrors[field.id] && "border-rose-300 focus:ring-rose-500"
+                                                        )}
+                                                        placeholder={field.placeholder} required={field.isRequired && !isSystemLocked}
+                                                        value={displayValue} onChange={(e) => handleInputChange(field.label, e.target.value, field.systemKey)}
+                                                    />
+                                                    <FieldError error={validationErrors[field.id]} />
+                                                </>
                                             ) : field.type === 'select' ? (
-                                                <select 
-                                                    disabled={isSystemLocked}
-                                                    className={cn(
-                                                        "w-full bg-white border border-gray-300 rounded-xl px-4 py-3 font-medium text-gray-900 appearance-none focus:ring-2 focus:ring-[#1a5b3a] focus:border-transparent outline-none transition-all",
-                                                        isSystemLocked && "opacity-60 bg-gray-50 cursor-not-allowed"
-                                                    )}
-                                                    required={field.isRequired && !isSystemLocked} value={displayValue}
+                                                <>
+                                                    <select 
+                                                        disabled={isSystemLocked}
+                                                        className={cn(
+                                                            "w-full bg-white border border-gray-300 rounded-xl px-4 py-3 font-medium text-gray-900 appearance-none focus:ring-2 focus:ring-[#1a5b3a] focus:border-transparent outline-none transition-all",
+                                                            isSystemLocked && "opacity-60 bg-gray-50 cursor-not-allowed",
+                                                            validationErrors[field.id] && "border-rose-300 focus:ring-rose-500"
+                                                        )}
+                                                        required={field.isRequired && !isSystemLocked} value={displayValue}
+                                                        onChange={(e) => handleInputChange(field.label, e.target.value)}
+                                                    >
+                                                        <option value="">Select...</option>
+                                                        {field.options?.split(',').map((opt: string) => (
+                                                            <option key={opt} value={opt.trim()}>{opt.trim()}</option>
+                                                        ))}
+                                                    </select>
+                                                    <FieldError error={validationErrors[field.id]} />
+                                                </>
+                                            ) : field.type === 'gender' ? (
+                                                <select
+                                                    className="w-full bg-white border border-gray-300 rounded-xl px-4 py-3 font-medium text-gray-900 appearance-none focus:ring-2 focus:ring-[#1a5b3a] focus:border-transparent outline-none transition-all"
+                                                    required={field.isRequired}
+                                                    value={displayValue || ""}
                                                     onChange={(e) => handleInputChange(field.label, e.target.value)}
                                                 >
-                                                    <option value="">Select...</option>
-                                                    {field.options?.split(',').map((opt: string) => (
-                                                        <option key={opt} value={opt.trim()}>{opt.trim()}</option>
+                                                    <option value="">Select Sex...</option>
+                                                    <option value="Male">Male</option>
+                                                    <option value="Female">Female</option>
+                                                </select>
+                                            ) : field.type === 'blood_group' ? (
+                                                <select
+                                                    className="w-full bg-white border border-gray-300 rounded-xl px-4 py-3 font-medium text-gray-900 appearance-none focus:ring-2 focus:ring-[#1a5b3a] focus:border-transparent outline-none transition-all"
+                                                    required={field.isRequired}
+                                                    value={displayValue || ""}
+                                                    onChange={(e) => handleInputChange(field.label, e.target.value)}
+                                                >
+                                                    <option value="">Select Blood Group...</option>
+                                                    {(field.options || "A+, A-, B+, B-, AB+, AB-, O+, O-").split(/[,\n]/).map((o: string) => o.trim()).filter(Boolean).map((opt: string) => (
+                                                        <option key={opt} value={opt}>{opt}</option>
+                                                    ))}
+                                                </select>
+                                            ) : field.type === 'phenotype' ? (
+                                                <select
+                                                    className="w-full bg-white border border-gray-300 rounded-xl px-4 py-3 font-medium text-gray-900 appearance-none focus:ring-2 focus:ring-[#1a5b3a] focus:border-transparent outline-none transition-all"
+                                                    required={field.isRequired}
+                                                    value={displayValue || ""}
+                                                    onChange={(e) => handleInputChange(field.label, e.target.value)}
+                                                >
+                                                    <option value="">Select Phenotype...</option>
+                                                    {(field.options || "AA, AS, AC, SS, SC, CC").split(/[,\n]/).map((o: string) => o.trim()).filter(Boolean).map((opt: string) => (
+                                                        <option key={opt} value={opt}>{opt}</option>
                                                     ))}
                                                 </select>
                                             ) : field.type === 'nationality' ? (
                                                 <select 
                                                     className="w-full bg-white border border-gray-300 rounded-xl px-4 py-3 font-medium text-gray-900 appearance-none focus:ring-2 focus:ring-[#1a5b3a] focus:border-transparent outline-none transition-all"
                                                     required={field.isRequired} 
-                                                    value={displayValue || "Nigeria"}
+                                                    value={displayValue || ""}
                                                     onChange={(e) => handleInputChange(field.label, e.target.value)}
                                                 >
-                                                    <option value="Nigeria">Nigeria</option>
-                                                    <option value="Ghana">Ghana</option>
-                                                    <option value="Other">Other</option>
+                                                    <option value="">Select Nationality...</option>
+                                                    {COUNTRY_NAMES.map((country) => (
+                                                        <option key={country} value={country}>{country}</option>
+                                                    ))}
                                                 </select>
                                             ) : field.type === 'state' ? (
                                                 <select 
@@ -517,6 +808,18 @@ export default function StatefulApplicationPage() {
                                                         return null;
                                                     })()}
                                                 </select>
+                                            ) : field.type === 'image' ? (
+                                                <div className="md:col-span-2">
+                                                    {field.options && (
+                                                        <div className="bg-white border border-gray-200 rounded-xl p-4">
+                                                            <img
+                                                                src={field.options}
+                                                                alt={field.label}
+                                                                className="max-w-full h-auto max-h-64 rounded-lg object-contain mx-auto"
+                                                            />
+                                                        </div>
+                                                    )}
+                                                </div>
                                             ) : field.type === 'olevel_result' ? (
                                                 <div className="md:col-span-2">
                                                     <OLevelSubmission 
@@ -525,12 +828,26 @@ export default function StatefulApplicationPage() {
                                                         examBodies={examBodies}
                                                     />
                                                 </div>
+                                            ) : field.type === 'file' ? (
+                                                <div className="md:col-span-2">
+                                                    <PhotoCapture 
+                                                        value={formData[field.label] || ""}
+                                                        onChange={(val) => handleInputChange(field.label, val)}
+                                                        label={field.label}
+                                                    />
+                                                </div>
                                             ) : field.type === 'textarea' ? (
-                                                <textarea 
-                                                    className="w-full bg-white border border-gray-300 rounded-xl px-4 py-3 font-medium text-gray-900 min-h-[100px] focus:ring-2 focus:ring-[#1a5b3a] focus:border-transparent outline-none transition-all"
-                                                    placeholder={field.placeholder} required={field.isRequired && !isSystemLocked} readOnly={isSystemLocked}
-                                                    value={formData[field.label] || ""} onChange={(e) => handleInputChange(field.label, e.target.value)}
-                                                />
+                                                <>
+                                                    <textarea 
+                                                        className={cn(
+                                                            "w-full bg-white border border-gray-300 rounded-xl px-4 py-3 font-medium text-gray-900 min-h-[100px] focus:ring-2 focus:ring-[#1a5b3a] focus:border-transparent outline-none transition-all",
+                                                            validationErrors[field.id] && "border-rose-300 focus:ring-rose-500"
+                                                        )}
+                                                        placeholder={field.placeholder} required={field.isRequired && !isSystemLocked} readOnly={isSystemLocked}
+                                                        value={formData[field.label] || ""} onChange={(e) => handleInputChange(field.label, e.target.value)}
+                                                    />
+                                                    <FieldError error={validationErrors[field.id]} />
+                                                </>
                                             ) : field.type === 'radio' ? (
                                                 <div className="space-y-2 mt-2">
                                                     {field.options?.split(',').map((opt: string) => (
@@ -600,29 +917,98 @@ export default function StatefulApplicationPage() {
 
                     {isReviewStep && (
                         <div className="space-y-6">
-                            <div className="bg-[#f8fbf9] border border-green-100 p-6 rounded-2xl mb-8">
-                                <div className="flex items-center gap-3 text-[#1a5b3a] mb-4">
-                                    <GraduationCap className="w-6 h-6" />
-                                    <h4 className="font-black text-lg">Academic Information</h4>
+                            <div className="bg-blue-50 border border-blue-100 p-6 rounded-2xl mb-6">
+                                <div className="flex items-center gap-3 text-blue-700 mb-4">
+                                    <CheckCircle2 className="w-6 h-6" />
+                                    <h4 className="font-black text-lg">Review Your Application</h4>
                                 </div>
-                                <div className="space-y-2 text-sm text-gray-700">
-                                    <p><span className="font-bold">Faculty:</span> {formData["Faculty"] || "N/A"}</p>
-                                    <p><span className="font-bold">Department:</span> {formData["Department"] || "N/A"}</p>
-                                    <p><span className="font-bold">Level:</span> {formData["Level"] || "N/A"}</p>
-                                </div>
+                                <p className="text-sm text-blue-600">Please review all your information before submitting. Click on any section to make changes.</p>
                             </div>
 
-                            <div className="bg-[#f8fbf9] border border-green-100 p-6 rounded-2xl mb-8">
-                                <div className="flex items-center gap-3 text-[#1a5b3a] mb-4">
-                                    <Users className="w-6 h-6" />
-                                    <h4 className="font-black text-lg">Next of Kin</h4>
+                            {application.template.sections.map((section: any, sectionIndex: number) => (
+                                <div key={section.id} className="bg-[#f8fbf9] border border-green-100 p-6 rounded-2xl mb-4">
+                                    <div className="flex items-center justify-between mb-4">
+                                        <div className="flex items-center gap-3 text-[#1a5b3a]">
+                                            <div className="w-8 h-8 bg-[#1a5b3a] text-white rounded-full flex items-center justify-center text-sm font-black">
+                                                {sectionIndex + 1}
+                                            </div>
+                                            <h4 className="font-black text-lg">{section.title}</h4>
+                                        </div>
+                                        <Button 
+                                            type="button"
+                                            onClick={() => setCurrentStep(sectionIndex)}
+                                            variant="ghost" 
+                                            className="text-[#1a5b3a] hover:bg-green-50 text-xs font-bold uppercase"
+                                        >
+                                            Edit
+                                        </Button>
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                                        {section.fields.map((field: any) => {
+                                            // Skip conditional fields that shouldn't show
+                                            if (!evaluateCondition(field)) return null;
+                                            
+                                            const value = formData[field.label];
+                                            const displayValue = Array.isArray(value) ? value.join(', ') 
+                                                : field.type === 'checkbox' ? (value ? 'Yes' : 'No')
+                                                : field.type === 'olevel_result' ? null
+                                                : field.type === 'file' ? (value ? 'Uploaded' : 'Not uploaded')
+                                                : value || 'N/A';
+
+                                            if (field.type === 'olevel_result') {
+                                                if (Array.isArray(value) && value.length > 0) {
+                                                    return (
+                                                        <div key={field.id} className="md:col-span-2 space-y-3">
+                                                            <span className="text-xs font-bold text-gray-500 uppercase">{field.label}</span>
+                                                            {value.map((sitting: any, sIdx: number) => (
+                                                                <div key={sIdx} className="bg-gray-50 rounded-xl p-4 space-y-2">
+                                                                    <div className="flex items-center gap-3 text-xs font-bold text-gray-600">
+                                                                        <span className="bg-indigo-600 text-white w-6 h-6 rounded-lg flex items-center justify-center text-[10px]">{sIdx + 1}</span>
+                                                                        <span>{sitting.examBodyId ? examBodies.find((b: any) => b.id.toString() === sitting.examBodyId.toString())?.name || 'N/A' : 'N/A'}</span>
+                                                                        <span>|</span>
+                                                                        <span>{sitting.examYear || 'N/A'}</span>
+                                                                        <span>|</span>
+                                                                        <span>Reg: {sitting.examNumber || 'N/A'}</span>
+                                                                    </div>
+                                                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-1">
+                                                                        {(sitting.subjects || []).filter((s: any) => s.subjectName).map((sub: any, subIdx: number) => (
+                                                                            <div key={subIdx} className="flex items-center gap-2 text-[11px]">
+                                                                                <span className="font-semibold text-gray-700">{sub.subjectName}</span>
+                                                                                <span className="font-black text-indigo-600">{sub.grade}</span>
+                                                                            </div>
+                                                                        ))}
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    );
+                                                }
+                                                return (
+                                                    <div key={field.id} className="md:col-span-2 flex flex-col">
+                                                        <span className="text-xs font-bold text-gray-500 uppercase">{field.label}</span>
+                                                        <span className="text-gray-400 italic text-sm">Not submitted</span>
+                                                    </div>
+                                                );
+                                            }
+
+                                            if (field.type === 'image') {
+                                                return null;
+                                            }
+                                            
+                                            return (
+                                                <div key={field.id} className={field.type === 'olevel_result' ? "" : "flex flex-col"}>
+                                                    {field.type === 'olevel_result' ? null : (
+                                                        <>
+                                                            <span className="text-xs font-bold text-gray-500 uppercase">{field.label}</span>
+                                                            <span className="text-gray-800 font-medium">{displayValue}</span>
+                                                        </>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
                                 </div>
-                                <div className="space-y-2 text-sm text-gray-700">
-                                    <p><span className="font-bold">Name:</span> {formData["Next of Kin Name"] || "N/A"}</p>
-                                    <p><span className="font-bold">Address:</span> {formData["Next of Kin Address"] || "N/A"}</p>
-                                    <p><span className="font-bold">Phone:</span> {formData["Next of Kin Phone 1"] || "N/A"}</p>
-                                </div>
-                            </div>
+                            ))}
 
                             <div className="mt-8 pt-8 border-t border-gray-200">
                                 <label className="flex items-start gap-3 cursor-pointer group">

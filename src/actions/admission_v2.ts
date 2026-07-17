@@ -6,20 +6,46 @@ import {
     admissionFormSections, 
     admissionFormFields,
     admissionApplicationsV2,
-    // @ts-expect-error - TS2724: Auto-suppressed for build
-    admissionApplicantsV2,
+    admissionEntranceExams,
     examinationBodies,
     applicantOLevelSittings,
     applicantOLevelSubjects,
     users,
     students,
     systemSettings,
-    feeStructures
+    feeStructures,
+    feeStructureItems,
+    emailVerificationTokens
 } from "@/db/schema";
-import { eq, and, desc, asc, sql } from "drizzle-orm";
+import { eq, and, desc, asc, sql, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { auth } from "@/auth";
+import crypto from "crypto";
 import { sendInAppNotification } from "./notifications";
 import { checkDeveloperFeeStatus } from "./paystack-developer-subscription";
+import { sendEmail } from "@/lib/mail";
+import { generateFormNumber, generateFormHash } from "@/lib/form-number";
+import { NotificationService } from "@/services/NotificationService";
+
+const ADMIN_ROLES = ['admin', 'superadmin', 'icitify_dev', 'dvc', 'registrar', 'admission_officer'];
+
+async function requireAdmin() {
+    const session = await auth();
+    if (!session?.user) throw new Error("Unauthorized: Please log in");
+    if (!ADMIN_ROLES.includes(session.user.role as string)) {
+        throw new Error("Forbidden: You do not have permission to perform this action");
+    }
+    return session;
+}
+
+async function requireApplicant() {
+    const session = await auth();
+    if (!session?.user) throw new Error("Unauthorized: Please log in");
+    if (session.user.role !== 'applicant') {
+        throw new Error("Forbidden: Only applicants can perform this action");
+    }
+    return session;
+}
 
 /**
  * Form Template Actions
@@ -30,63 +56,118 @@ export async function getAdmissionTemplates() {
 }
 
 export async function getFormTemplates() {
+    await requireAdmin();
     try {
         return await db.query.admissionFormTemplates.findMany({
-            with: {
-                sections: {
-                    with: {
-                        fields: true
-                    },
-                    orderBy: (sections, { asc }) => [asc(sections.order)]
-                }
-            },
             orderBy: [desc(admissionFormTemplates.createdAt)]
         });
     } catch (error) {
-        console.error("Failed to fetch form templates:", error);
+        console.error("[getFormTemplates] Failed to fetch form templates:", error);
         return [];
     }
 }
 
 export async function getFormTemplate(id: number) {
+    await requireAdmin();
+    return getTemplateWithSections(id);
+}
+
+async function getTemplateWithSections(templateId: number) {
     try {
-        return await db.query.admissionFormTemplates.findFirst({
-            where: eq(admissionFormTemplates.id, id),
-            with: {
-                sections: {
-                    with: {
-                        fields: true
-                    },
-                    orderBy: (sections, { asc }) => [asc(sections.order)]
-                }
-            }
+        const template = await db.query.admissionFormTemplates.findFirst({
+            where: eq(admissionFormTemplates.id, templateId)
         });
+        if (!template) return null;
+
+        const sections = await db.query.admissionFormSections.findMany({
+            where: eq(admissionFormSections.templateId, templateId),
+            orderBy: [asc(admissionFormSections.order)]
+        });
+
+        const sectionIds = sections.map(s => s.id);
+        const fields = sectionIds.length > 0
+            ? await db.query.admissionFormFields.findMany({
+                where: (f, { inArray }) => inArray(f.sectionId, sectionIds),
+                orderBy: [asc(admissionFormFields.order)]
+            })
+            : [];
+
+        return { ...template, sections: sections.map(s => ({ ...s, fields: fields.filter(f => f.sectionId === s.id) })) };
     } catch (error) {
-        console.error("Failed to fetch form template:", error);
+        console.error("Failed to fetch template with sections:", error);
         return null;
     }
 }
 
 export async function saveFormTemplate(data: any) {
+    await requireAdmin();
     try {
-        const { id, name, level, slug, description, flowType, feeStructureId, applicationFee, lateFee, startDate, endDate, lateEndDate, minAge, isActive } = data;
+        const { id, name, level, slug, description, flowType, feeStructureId, applicationFee, lateFee, startDate, endDate, lateEndDate, minAge, isActive, ninVerificationConfig } = data;
         
         if (id) {
             await db.update(admissionFormTemplates)
-                .set({ name, level, slug, description, flowType, feeStructureId, applicationFee, lateFee, startDate, endDate, lateEndDate, minAge, isActive })
+                .set({ name, level, slug, description, flowType, feeStructureId, applicationFee, lateFee, startDate, endDate, lateEndDate, minAge, isActive, ninVerificationConfig })
                 .where(eq(admissionFormTemplates.id, id));
-            revalidatePath(`/admin/admission/builder/${id}`);
+            revalidatePath(`/admin/admission/forms/${id}`);
             return { success: true, id };
         } else {
             const [result] = await db.insert(admissionFormTemplates).values({
-                name, level, slug, description, flowType, feeStructureId, applicationFee, lateFee, startDate, endDate, lateEndDate, minAge, isActive
+                name, level, slug, description, flowType, feeStructureId, applicationFee, lateFee, startDate, endDate, lateEndDate, minAge, isActive, ninVerificationConfig
             });
-            revalidatePath("/admin/admission/builder");
+            revalidatePath("/admin/admission/forms");
             return { success: true, id: result.insertId };
         }
-    } catch (error) {
+    } catch (error: any) {
         console.error("Failed to save form template:", error);
-        return { success: false, error: "Failed to save template" };
+        const msg = error?.message || String(error);
+        if (msg.includes("Duplicate") && msg.includes("slug")) {
+            return { success: false, error: `A template with the slug "${slug}" already exists. Please use a different slug.` };
+        }
+        if (msg.includes("Duplicate") && msg.includes("name")) {
+            return { success: false, error: `A template with the name "${name}" already exists.` };
+        }
+        return { success: false, error: msg };
+    }
+}
+
+export async function deleteFormTemplate(id: number) {
+    await requireAdmin();
+    try {
+        const sections = await db.select({ id: admissionFormSections.id })
+            .from(admissionFormSections)
+            .where(eq(admissionFormSections.templateId, id));
+        const sectionIds = sections.map(s => s.id);
+        if (sectionIds.length > 0) {
+            await db.delete(admissionFormFields).where(inArray(admissionFormFields.sectionId, sectionIds));
+        }
+        await db.delete(admissionFormSections).where(eq(admissionFormSections.templateId, id));
+        await db.delete(admissionFormTemplates).where(eq(admissionFormTemplates.id, id));
+        revalidatePath("/admin/admission/forms");
+        return { success: true };
+    } catch (error: any) {
+        console.error("Failed to delete form template:", error);
+        return { success: false, error: error?.message || "Failed to delete template" };
+    }
+}
+
+export async function bulkDeleteFormTemplates(ids: number[]) {
+    await requireAdmin();
+    try {
+        if (!ids.length) return { success: false, error: "No templates selected" };
+        const sections = await db.select({ id: admissionFormSections.id })
+            .from(admissionFormSections)
+            .where(inArray(admissionFormSections.templateId, ids));
+        const sectionIds = sections.map(s => s.id);
+        if (sectionIds.length > 0) {
+            await db.delete(admissionFormFields).where(inArray(admissionFormFields.sectionId, sectionIds));
+        }
+        await db.delete(admissionFormSections).where(inArray(admissionFormSections.templateId, ids));
+        await db.delete(admissionFormTemplates).where(inArray(admissionFormTemplates.id, ids));
+        revalidatePath("/admin/admission/forms");
+        return { success: true };
+    } catch (error: any) {
+        console.error("Failed to bulk delete form templates:", error);
+        return { success: false, error: error?.message || "Failed to delete templates" };
     }
 }
 
@@ -95,6 +176,7 @@ export async function saveFormTemplate(data: any) {
  */
 
 export async function saveFormSection(data: any) {
+    await requireAdmin();
     try {
         const { id, templateId, title, order } = data;
         if (id) {
@@ -106,7 +188,7 @@ export async function saveFormSection(data: any) {
                 templateId, title, order
             });
         }
-        revalidatePath(`/admin/admission/builder/${templateId}`);
+        revalidatePath(`/admin/admission/forms/${templateId}`);
         return { success: true };
     } catch (error) {
         console.error("Failed to save form section:", error);
@@ -115,9 +197,10 @@ export async function saveFormSection(data: any) {
 }
 
 export async function deleteFormSection(id: number, templateId: number) {
+    await requireAdmin();
     try {
         await db.delete(admissionFormSections).where(eq(admissionFormSections.id, id));
-        revalidatePath(`/admin/admission/builder/${templateId}`);
+        revalidatePath(`/admin/admission/forms/${templateId}`);
         return { success: true };
     } catch (error) {
         console.error("Failed to delete form section:", error);
@@ -130,18 +213,19 @@ export async function deleteFormSection(id: number, templateId: number) {
  */
 
 export async function saveFormField(data: any) {
+    await requireAdmin();
     try {
-        const { id, sectionId, templateId, label, type, placeholder, options, isRequired, order, isSystemField, systemKey } = data;
+        const { id, sectionId, templateId, label, type, placeholder, options, isRequired, order, isSystemField, systemKey, helpText, defaultValue, validationRules, conditionalLogic, width } = data;
         if (id) {
             await db.update(admissionFormFields)
-                .set({ label, type, placeholder, options, isRequired, order, isSystemField, systemKey })
+                .set({ label, type, placeholder, options, isRequired, order, isSystemField, systemKey, helpText, defaultValue, validationRules, conditionalLogic, width })
                 .where(eq(admissionFormFields.id, id));
         } else {
             await db.insert(admissionFormFields).values({
-                sectionId, label, type, placeholder, options, isRequired, order, isSystemField, systemKey
+                sectionId, label, type, placeholder, options, isRequired, order, isSystemField, systemKey, helpText, defaultValue, validationRules, conditionalLogic, width
             });
         }
-        revalidatePath(`/admin/admission/builder/${templateId}`);
+        revalidatePath(`/admin/admission/forms/${templateId}`);
         return { success: true };
     } catch (error) {
         console.error("Failed to save form field:", error);
@@ -150,9 +234,10 @@ export async function saveFormField(data: any) {
 }
 
 export async function deleteFormField(id: number, templateId: number) {
+    await requireAdmin();
     try {
         await db.delete(admissionFormFields).where(eq(admissionFormFields.id, id));
-        revalidatePath(`/admin/admission/builder/${templateId}`);
+        revalidatePath(`/admin/admission/forms/${templateId}`);
         return { success: true };
     } catch (error) {
         console.error("Failed to delete form field:", error);
@@ -161,6 +246,7 @@ export async function deleteFormField(id: number, templateId: number) {
 }
 
 export async function updateFieldsOrder(fields: { id: number, order: number }[], templateId: number) {
+    await requireAdmin();
     try {
         await db.transaction(async (tx) => {
             for (const field of fields) {
@@ -169,7 +255,7 @@ export async function updateFieldsOrder(fields: { id: number, order: number }[],
                     .where(eq(admissionFormFields.id, field.id));
             }
         });
-        revalidatePath(`/admin/admission/builder/${templateId}`);
+        revalidatePath(`/admin/admission/forms/${templateId}`);
         return { success: true };
     } catch (error) {
         console.error("Failed to update fields order:", error);
@@ -183,20 +269,28 @@ export async function updateFieldsOrder(fields: { id: number, order: number }[],
 
 export async function getPublicFormTemplate(slug: string) {
     try {
-        return await db.query.admissionFormTemplates.findFirst({
+        const template = await db.query.admissionFormTemplates.findFirst({
             where: and(
                 eq(admissionFormTemplates.slug, slug),
                 eq(admissionFormTemplates.isActive, true)
-            ),
-            with: {
-                sections: {
-                    with: {
-                        fields: true
-                    },
-                    orderBy: (sections, { asc }) => [asc(sections.order)]
-                }
-            }
+            )
         });
+        if (!template) return null;
+
+        const sections = await db.query.admissionFormSections.findMany({
+            where: eq(admissionFormSections.templateId, template.id),
+            orderBy: [asc(admissionFormSections.order)]
+        });
+
+        const sectionIds = sections.map(s => s.id);
+        const fields = sectionIds.length > 0
+            ? await db.query.admissionFormFields.findMany({
+                where: (f, { inArray }) => inArray(f.sectionId, sectionIds),
+                orderBy: [asc(admissionFormFields.order)]
+            })
+            : [];
+
+        return { ...template, sections: sections.map(s => ({ ...s, fields: fields.filter(f => f.sectionId === s.id) })) };
     } catch (error) {
         console.error("Failed to fetch public form template:", error);
         return null;
@@ -225,17 +319,38 @@ export async function submitAdmissionApplication(data: any) {
             return { success: false, error: `You must be at least ${template.minAge} years old for this admission.` };
         }
 
-        // @ts-expect-error - TS2769: Auto-suppressed for build
+        // Generate unique form number
+        const formNumber = await generateFormNumber(template.level);
+
+        // Generate security hash
+        const applicantName = `${formData.firstName || ""} ${formData.lastName || ""}`.trim() || "Applicant";
+        const dob = formData.dob || formData.dateOfBirth || "";
+        const formHash = generateFormHash(formNumber, applicantName, dob, applicantPhoto || "");
+
         const [result] = await db.insert(admissionApplicationsV2).values({
             templateId,
-            formData: JSON.stringify(formData),
+            data: JSON.stringify(formData),
             applicantPhoto,
             ageAtAdmission,
+            formNumber,
+            formHash,
             status: 'submitted',
             paymentStatus: 'pending'
         });
 
-        return { success: true, applicationId: result.insertId };
+        const applicantEmail = formData.email || "";
+        if (applicantEmail) {
+            const template = await db.query.admissionFormTemplates.findFirst({
+                where: eq(admissionFormTemplates.id, templateId)
+            });
+            NotificationService.sendApplicationSubmittedByEmail(applicantEmail, {
+                applicantName,
+                formNumber,
+                templateName: template?.name || "Admission Application"
+            }).catch((err) => console.error("Failed to send submission email:", err));
+        }
+
+        return { success: true, applicationId: result.insertId, formNumber };
     } catch (error) {
         console.error("Failed to submit admission application:", error);
         return { success: false, error: "Failed to submit application" };
@@ -243,6 +358,7 @@ export async function submitAdmissionApplication(data: any) {
 }
 
 export async function getAdmissionApplications(templateId?: number) {
+    await requireAdmin();
     try {
         const query = db.query.admissionApplicationsV2.findMany({
             where: templateId ? eq(admissionApplicationsV2.templateId, templateId) : undefined,
@@ -260,7 +376,13 @@ export async function getAdmissionApplications(templateId?: number) {
 }
 
 export async function confirmAdmissionPayment(applicationId: number, reference: string) {
+    await requireAdmin();
     try {
+        const application = await db.query.admissionApplicationsV2.findFirst({
+            where: eq(admissionApplicationsV2.id, applicationId),
+            with: { template: true }
+        });
+
         await db.update(admissionApplicationsV2)
             .set({ 
                 paymentStatus: 'paid', 
@@ -269,6 +391,21 @@ export async function confirmAdmissionPayment(applicationId: number, reference: 
             })
             .where(eq(admissionApplicationsV2.id, applicationId));
         
+        if (application) {
+            const formData = typeof application.data === 'string' ? JSON.parse(application.data || '{}') : (application.data || {});
+            const applicantEmail = formData.email || "";
+            const applicantName = `${formData.firstName || ""} ${formData.lastName || ""}`.trim() || "Applicant";
+            if (applicantEmail) {
+                NotificationService.sendPaymentConfirmed(applicantEmail, {
+                    applicantName,
+                    formNumber: application.formNumber || undefined,
+                    paymentType: "Application Fee",
+                    templateName: application.template?.name || "Admission Application",
+                    reference
+                }).catch((err) => console.error("Failed to send payment email:", err));
+            }
+        }
+
         revalidatePath("/admin/admission/payments");
         return { success: true };
     } catch (error) {
@@ -278,6 +415,7 @@ export async function confirmAdmissionPayment(applicationId: number, reference: 
 }
 
 export async function getAdmissionSummary() {
+    await requireAdmin();
     try {
         const templates = await db.query.admissionFormTemplates.findMany({
             with: {
@@ -351,9 +489,15 @@ export async function requestEditAccess(applicationId: number) {
 }
 
 export async function confirmEditFinePayment(applicationId: number, reference: string) {
+    await requireAdmin();
     try {
         const expiresAt = new Date();
         expiresAt.setHours(expiresAt.getHours() + 24); // 24 hour window
+
+        const application = await db.query.admissionApplicationsV2.findFirst({
+            where: eq(admissionApplicationsV2.id, applicationId),
+            with: { template: true }
+        });
 
         await db.update(admissionApplicationsV2)
             .set({
@@ -363,6 +507,19 @@ export async function confirmEditFinePayment(applicationId: number, reference: s
             })
             .where(eq(admissionApplicationsV2.id, applicationId));
 
+        if (application) {
+            const formData = typeof application.data === 'string' ? JSON.parse(application.data || '{}') : (application.data || {});
+            const applicantEmail = formData.email || "";
+            const applicantName = `${formData.firstName || ""} ${formData.lastName || ""}`.trim() || "Applicant";
+            if (applicantEmail) {
+                NotificationService.sendEditWindowOpened(applicantEmail, {
+                    applicantName,
+                    templateName: application.template?.name || "Admission Application",
+                    expiresAt
+                }).catch((err) => console.error("Failed to send edit window email:", err));
+            }
+        }
+
         return { success: true, expiresAt };
     } catch (error) {
         console.error("Failed to confirm edit fine:", error);
@@ -371,6 +528,7 @@ export async function confirmEditFinePayment(applicationId: number, reference: s
 }
 
 export async function updateAdmissionApplication(applicationId: number, formData: any) {
+    await requireAdmin();
     try {
         // Double check access window in action
         const access = await requestEditAccess(applicationId);
@@ -378,8 +536,7 @@ export async function updateAdmissionApplication(applicationId: number, formData
 
         await db.update(admissionApplicationsV2)
             .set({
-                // @ts-expect-error - TS2353: Auto-suppressed for build
-                formData: JSON.stringify(formData),
+                data: JSON.stringify(formData),
                 updatedAt: new Date()
             })
             .where(eq(admissionApplicationsV2.id, applicationId));
@@ -392,6 +549,7 @@ export async function updateAdmissionApplication(applicationId: number, formData
 }
 
 export async function updateExamVisibility(examId: number, showInstantly: boolean) {
+    await requireAdmin();
     try {
         await db.update(admissionEntranceExams)
             .set({ showResultsInstantly: showInstantly })
@@ -405,6 +563,7 @@ export async function updateExamVisibility(examId: number, showInstantly: boolea
 }
 
 export async function releaseResults(examId: number) {
+    await requireAdmin();
     try {
         await db.update(admissionEntranceExams)
             .set({ resultsReleased: true })
@@ -418,7 +577,14 @@ export async function releaseResults(examId: number) {
 }
 
 export async function updateAdmissionStatus(applicationId: number, status: any, notes: string) {
+    await requireAdmin();
     try {
+        // Get application details before update
+        const application = await db.query.admissionApplicationsV2.findFirst({
+            where: eq(admissionApplicationsV2.id, applicationId),
+            with: { template: true }
+        });
+
         await db.update(admissionApplicationsV2)
             .set({ 
                 status: status,
@@ -426,6 +592,33 @@ export async function updateAdmissionStatus(applicationId: number, status: any, 
                 updatedAt: new Date()
             })
             .where(eq(admissionApplicationsV2.id, applicationId));
+        
+        // Send email notification based on status
+        if (application?.template) {
+            const formData = typeof application.data === 'string' ? JSON.parse(application.data || '{}') : (application.data || {});
+            const applicantEmail = formData.email || "";
+            const applicantName = formData.surname 
+                ? (formData.middleName 
+                    ? `${formData.surname} ${formData.firstName} ${formData.middleName}`.trim()
+                    : `${formData.surname} ${formData.firstName}`.trim())
+                : `${formData.firstName || ''} ${formData.lastName || ''}`.trim() || 'Applicant';
+            
+            if (status === 'rejected' && applicantEmail) {
+                NotificationService.sendAdmissionRejectedByEmail(applicantEmail, {
+                    applicantName,
+                    templateName: application.template.name,
+                    reason: notes || undefined,
+                    userId: application.applicantId || undefined
+                }).catch((err) => console.error("Failed to send rejection email:", err));
+            } else if (status === 'admitted' && applicantEmail) {
+                NotificationService.sendApplicationUnderReview(applicantEmail, {
+                    applicantName,
+                    formNumber: application.formNumber || undefined,
+                    templateName: application.template.name,
+                    userId: application.applicantId || undefined
+                }).catch((err) => console.error("Failed to send admitted notification:", err));
+            }
+        }
         
         revalidatePath("/admin/admission/reports");
         return { success: true };
@@ -459,6 +652,7 @@ export async function getApplicantStatusData(applicationId: number) {
 }
 
 export async function confirmAcceptancePayment(applicationId: number, reference: string) {
+    await requireAdmin();
     try {
         await db.update(admissionApplicationsV2)
             .set({ 
@@ -479,6 +673,7 @@ export async function confirmAcceptancePayment(applicationId: number, reference:
 }
 
 export async function finalizeStudentAdmission(applicationId: number) {
+    await requireAdmin();
     try {
         const application = await db.query.admissionApplicationsV2.findFirst({
             where: eq(admissionApplicationsV2.id, applicationId),
@@ -498,18 +693,23 @@ export async function finalizeStudentAdmission(applicationId: number) {
             return { success: false, error: "Acceptance fee has not been paid." };
         }
 
-        // @ts-expect-error - TS2339: Auto-suppressed for build
-        const formData = JSON.parse(application.formData || "{}");
+        const formData = typeof application.data === 'string' ? JSON.parse(application.data || "{}") : (application.data || {});
 
-        // Resilient scanning for JAMB registration number in dynamic forms
-        let jambRegNo = "";
-        for (const key of Object.keys(formData)) {
-            if (key.toLowerCase().includes("jamb") && formData[key]) {
-                jambRegNo = String(formData[key]).trim();
-                break;
+        // Prefer the dedicated applicationMode/jambRegNumber columns (set during the
+        // Full-Time/Part-Time instructions step). Fall back to scanning dynamic form
+        // fields for a legacy/manually-added "JAMB" field for older applications.
+        let jambRegNo = application.jambRegNumber || "";
+        if (!jambRegNo) {
+            for (const key of Object.keys(formData)) {
+                if (key.toLowerCase().includes("jamb") && formData[key]) {
+                    jambRegNo = String(formData[key]).trim();
+                    break;
+                }
             }
         }
-        const isJambCandidate = !!jambRegNo && !jambRegNo.toLowerCase().includes("temp") && !jambRegNo.toLowerCase().includes("direct");
+        const isJambCandidate = application.applicationMode
+            ? application.applicationMode === 'full_time'
+            : (!!jambRegNo && !jambRegNo.toLowerCase().includes("temp") && !jambRegNo.toLowerCase().includes("direct"));
         const studyMode = isJambCandidate ? "Full-Time" : "Part-Time";
         const studyModeCode = isJambCandidate ? "FT" : "PT";
         const modeOfEntry = isJambCandidate ? "JAMB" : "Direct";
@@ -527,11 +727,19 @@ export async function finalizeStudentAdmission(applicationId: number) {
         const formattedSeq = sequence.toString().padStart(4, '0');
         const matricNumber = `FSS/IB/${year}/${studyModeCode}/${progName}/${formattedSeq}`;
 
-        // 1. Create User
+        // 1. Create User - Handle new name structure (surname, firstName, middleName)
+        const userFullName = formData.surname 
+            ? (formData.middleName 
+                ? `${formData.surname} ${formData.firstName} ${formData.middleName}`.trim()
+                : `${formData.surname} ${formData.firstName}`.trim())
+            : `${formData.firstName || ''} ${formData.lastName || ''}`.trim() || formData.fullName || `Applicant ${application.id}`;
+        
+        const defaultPasswordHash = await hash("Password123", 10);
         const [userResult] = await db.insert(users).values({
-            name: `${formData.firstName || ''} ${formData.lastName || ''}`.trim() || formData.fullName || `Applicant ${application.id}`,
+            name: userFullName,
             email: formData.email || formData.guardianEmail || `applicant${application.id}@portal.edu`,
-            password: "$2a$12$R.uX0X.uX0X.uX0X.uX0X.uX0X.uX0X.uX0X.uX0X.uX0X.uX", // "Password123"
+            password: defaultPasswordHash, // Default: "Password123" — must be changed on first login
+            requiresPasswordChange: true,
             role: 'student',
             phone: formData.phone || formData.guardianPhone,
             imageUrl: application.applicantPhoto,
@@ -545,7 +753,7 @@ export async function finalizeStudentAdmission(applicationId: number) {
         await db.insert(students).values({
             userId: userId,
             firstName: formData.firstName || formData.fullName?.split(' ')[0],
-            lastName: formData.lastName || formData.fullName?.split(' ').slice(1).join(' '),
+            lastName: formData.surname || formData.lastName || formData.fullName?.split(' ').slice(1).join(' '),
             matricNumber: matricNumber,
             jambNumber: jambRegNo || null,
             modeOfEntry: modeOfEntry,
@@ -581,6 +789,23 @@ export async function finalizeStudentAdmission(applicationId: number) {
         revalidatePath(`/admission/status/${applicationId}`);
         revalidatePath("/admin/admission/reports");
         
+        // Send admission accepted email
+        const applicantName = formData.surname 
+            ? (formData.middleName 
+                ? `${formData.surname} ${formData.firstName} ${formData.middleName}`.trim()
+                : `${formData.surname} ${formData.firstName}`.trim())
+            : `${formData.firstName || ''} ${formData.lastName || ''}`.trim() || 'Applicant';
+        
+        const applicantEmail = formData.email || "";
+        if (applicantEmail) {
+            NotificationService.sendAdmissionAcceptedByEmail(applicantEmail, {
+                applicantName,
+                matricNumber,
+                templateName: template.name,
+                userId
+            }).catch((err) => console.error("Failed to send accepted email:", err));
+        }
+        
         await sendInAppNotification({
             userId: userId,
             title: "Admission Accepted!",
@@ -598,6 +823,7 @@ export async function finalizeStudentAdmission(applicationId: number) {
 import { SplitPaymentEngine } from "@/services/SplitPaymentEngine";
 
 export async function processAdmissionPayment(applicationId: number, feeStructureId: number, applicantEmail: string, applicantName: string) {
+    await requireApplicant();
     try {
         const engine = new SplitPaymentEngine();
         const res = await engine.checkoutAdmissionForm(applicationId, feeStructureId, applicantEmail, applicantName);
@@ -608,34 +834,87 @@ export async function processAdmissionPayment(applicationId: number, feeStructur
     }
 }
 
-import { hash } from "bcryptjs";
+import { hash, compare } from "bcryptjs";
 
 export async function registerApplicant(data: any) {
     try {
-        const { templateId, firstName, lastName, email, phone, password } = data;
+        const { templateId, surname, firstName, middleName, email, phone, password } = data;
+
+        // Validate required fields
+        if (!templateId || !surname || !firstName || !email || !phone || !password) {
+            return { success: false, error: "All required fields must be filled." };
+        }
+
+        // Validate password strength
+        if (password.length < 8) {
+            return { success: false, error: "Password must be at least 8 characters long." };
+        }
 
         // 1. Check if user exists
         const existingUser = await db.query.users.findFirst({
-            where: eq(users.email, email)
+            where: eq(users.email, email.toLowerCase())
         });
 
         let userId;
 
         if (existingUser) {
+            // Check if email is verified
+            if (!existingUser.emailVerified) {
+                return { success: false, error: "This email is registered but not yet verified. Please check your inbox for the verification link or contact support." };
+            }
+
+            // This email is already registered — verify the submitted password matches
+            // the existing account instead of silently attaching a new draft to it.
+            const passwordMatches = existingUser.password
+                ? await compare(password, existingUser.password)
+                : false;
+            if (!passwordMatches) {
+                return { success: false, error: "An account with this email already exists. Please log in instead, or use 'Forgot Password' if you don't remember your credentials." };
+            }
             userId = existingUser.id;
         } else {
-            // Create user
+            // Create user with new name structure
             const hashedPassword = await hash(password, 10);
-            // @ts-expect-error - TS2769: Auto-suppressed for build
+            const fullName = middleName 
+                ? `${surname} ${firstName} ${middleName}`.trim()
+                : `${surname} ${firstName}`.trim();
+            
             const [userRes] = await db.insert(users).values({
-                name: `${firstName} ${lastName}`.trim(),
-                email,
+                name: fullName,
+                email: email.toLowerCase(),
                 phone: phone,
                 password: hashedPassword,
                 role: 'applicant',
-                status: 'active'
+                status: 'active',
+                emailVerified: false,
             });
             userId = userRes.insertId;
+
+            // Generate and send verification email for new users only
+            const token = crypto.randomBytes(32).toString('hex');
+            const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+            await db.insert(emailVerificationTokens).values({
+                userId,
+                token,
+                expiresAt,
+            });
+
+            const verificationLink = `${process.env.NEXT_PUBLIC_APP_URL || 'https://portal.fssibadan.edu.ng'}/verify-email?token=${token}`;
+            const emailHtml = `
+                <h2>Welcome to Federal School of Statistics, Ibadan</h2>
+                <p>Dear ${fullName},</p>
+                <p>Thank you for starting your admission application. Please verify your email address by clicking the link below:</p>
+                <a href="${verificationLink}" style="display:inline-block;padding:12px 24px;background:#059669;color:white;text-decoration:none;border-radius:8px;font-weight:bold;">Verify Email</a>
+                <p>This link will expire in 24 hours.</p>
+                <p>After verification, you can log in and continue your application.</p>
+            `;
+            
+            try {
+                await sendEmail(email.toLowerCase(), 'Verify your Email - FSS Ibadan Admission', emailHtml);
+            } catch (emailErr) {
+                console.error("Failed to send verification email:", emailErr);
+            }
         }
 
         // 2. Create Draft Application
@@ -646,14 +925,23 @@ export async function registerApplicant(data: any) {
             paymentStatus: 'pending'
         });
 
-        return { success: true, applicationId: appRes.insertId };
+        return { 
+            success: true, 
+            applicationId: appRes.insertId,
+            requiresVerification: !existingUser 
+        };
     } catch (error: any) {
         console.error("Applicant Registration Error:", error);
-        return { success: false, error: error.message };
+        if (error.code === 'ER_DUP_ENTRY') {
+            return { success: false, error: "An account with this email already exists." };
+        }
+        return { success: false, error: error.message || "Registration failed. Please try again." };
     }
 }
 
 export async function getExaminationBodies() {
+    const session = await auth();
+    if (!session?.user) throw new Error("Unauthorized: Please log in");
     try {
         return await db.select().from(examinationBodies).where(eq(examinationBodies.isActive, true));
     } catch (error) {
@@ -663,6 +951,7 @@ export async function getExaminationBodies() {
 }
 
 export async function saveOLevelResultsAction(applicationId: number, applicantId: number, sittings: any[]) {
+    await requireApplicant();
     try {
         // Clear previous entries
         const existingSittings = await db.select().from(applicantOLevelSittings)
@@ -705,40 +994,57 @@ export async function saveOLevelResultsAction(applicationId: number, applicantId
 }
 
 export async function getApplicantApplication(applicationId: number, applicantId: number) {
+    await requireApplicant();
     try {
-        const [app] = await db.select({
-            id: admissionApplicationsV2.id,
-            status: admissionApplicationsV2.status,
-            paymentStatus: admissionApplicationsV2.paymentStatus,
-            data: admissionApplicationsV2.data,
-            template: {
-                id: admissionFormTemplates.id,
-                name: admissionFormTemplates.name,
-                flowType: admissionFormTemplates.flowType,
-                applicationFee: admissionFormTemplates.applicationFee,
-                feeStructureId: admissionFormTemplates.feeStructureId,
-                // @ts-expect-error - TS2339: Auto-suppressed for build
-                sections: admissionFormTemplates.sections,
-                minAge: admissionFormTemplates.minAge
-            }
-        })
-        .from(admissionApplicationsV2)
-        .innerJoin(admissionFormTemplates, eq(admissionApplicationsV2.templateId, admissionFormTemplates.id))
-        .where(
-            and(
+        const app = await db.query.admissionApplicationsV2.findFirst({
+            where: and(
                 eq(admissionApplicationsV2.id, applicationId),
                 eq(admissionApplicationsV2.applicantId, applicantId)
             )
-        );
+        });
         
         if (app) {
+            const template = await getTemplateWithSections(app.templateId);
+            // @ts-expect-error
+            app.template = template;
             const isProcessingFeePaid = await checkDeveloperFeeStatus(applicationId.toString(), 'admission_form');
             // @ts-expect-error
             app.isProcessingFeePaid = isProcessingFeePaid;
             
-            const [ninModeSetting] = await db.select().from(systemSettings).where(eq(systemSettings.settingKey, 'NIN_VERIFICATION_MODE'));
+            // Parse NIN verification config from template
+            let ninVerificationMode = 'disabled';
+            let ninRequired = true;
+            let ninAutoFill = true;
+            if (app.template?.ninVerificationConfig) {
+                try {
+                    const ninConfig = typeof app.template.ninVerificationConfig === 'string' 
+                        ? JSON.parse(app.template.ninVerificationConfig) 
+                        : app.template.ninVerificationConfig;
+                    ninVerificationMode = ninConfig.enabled ? ninConfig.provider || 'simulator' : 'disabled';
+                    ninRequired = ninConfig.enabled ? (ninConfig.required !== false) : true;
+                    ninAutoFill = ninConfig.enabled ? (ninConfig.autoFill !== false) : true;
+                } catch {
+                    ninVerificationMode = 'disabled';
+                }
+            }
             // @ts-expect-error
-            app.ninVerificationMode = ninModeSetting?.settingValue || 'simulator'; // default to simulator
+            app.ninVerificationMode = ninVerificationMode;
+            // @ts-expect-error
+            app.ninRequired = ninRequired;
+            // @ts-expect-error
+            app.ninAutoFill = ninAutoFill;
+
+            // Calculate exact fee from structure
+            if (app.template.feeStructureId) {
+                const items = await db.select().from(feeStructureItems).where(eq(feeStructureItems.feeStructureId, app.template.feeStructureId));
+                const total = items.reduce((acc, curr) => acc + parseFloat(curr.amount as string), 0);
+                // @ts-expect-error
+                app.template.calculatedFee = total;
+            } else {
+                // Fallback to static applicationFee
+                // @ts-expect-error
+                app.template.calculatedFee = parseFloat(app.template.applicationFee || "0");
+            }
         }
 
         return app || null;
@@ -749,6 +1055,7 @@ export async function getApplicantApplication(applicationId: number, applicantId
 }
 
 export async function saveApplicationDraft(applicationId: number, applicantId: number, formData: any) {
+    await requireApplicant();
     try {
         const ninValue = formData?.['NIN'] || formData?.__ninData?.nin || null;
         await db.update(admissionApplicationsV2)
@@ -772,7 +1079,122 @@ export async function saveApplicationDraft(applicationId: number, applicantId: n
 }
 
 export async function submitApplicationFinal(applicationId: number, applicantId: number) {
+    await requireApplicant();
     try {
+        const application = await db.query.admissionApplicationsV2.findFirst({
+            where: eq(admissionApplicationsV2.id, applicationId)
+        });
+
+        if (!application) {
+            return { success: false, error: "Application not found" };
+        }
+
+        const template = await getTemplateWithSections(application.templateId);
+
+        // Enforce Full-Time applicants have a verified JAMB Registration Number
+        if (application.applicationMode === 'full_time' && !application.jambRegNumber) {
+            return { success: false, error: "A JAMB Registration Number is required for Full-Time applications. Please go back and complete this step." };
+        }
+
+        // Server-side validation
+        const formData = typeof application.data === 'string' ? JSON.parse(application.data || '{}') : (application.data || {});
+        const validationErrors: string[] = [];
+
+        for (const section of template?.sections || []) {
+            for (const field of section.fields) {
+                // Skip NIN field if verification is disabled
+                if (field.systemKey === 'nin') continue;
+                
+                const value = formData[field.label];
+
+                // Required validation
+                if (field.isRequired && (!value || (typeof value === 'string' && value.trim() === ''))) {
+                    validationErrors.push(`${field.label} is required`);
+                    continue;
+                }
+
+                // Skip further validation if empty and not required
+                if (!value || (typeof value === 'string' && value.trim() === '')) continue;
+
+                const strValue = String(value);
+
+                // Parse validation rules
+                let rules: any = {};
+                try {
+                    rules = typeof field.validationRules === 'string' ? JSON.parse(field.validationRules) : (field.validationRules || {});
+                } catch { continue; }
+
+                // Min length
+                if (rules.minLength && strValue.length < rules.minLength) {
+                    validationErrors.push(`${field.label} must be at least ${rules.minLength} characters`);
+                }
+
+                // Max length
+                if (rules.maxLength && strValue.length > rules.maxLength) {
+                    validationErrors.push(`${field.label} must be no more than ${rules.maxLength} characters`);
+                }
+
+                // Min value
+                if (rules.min !== undefined && !isNaN(Number(value)) && Number(value) < rules.min) {
+                    validationErrors.push(`${field.label} must be at least ${rules.min}`);
+                }
+
+                // Max value
+                if (rules.max !== undefined && !isNaN(Number(value)) && Number(value) > rules.max) {
+                    validationErrors.push(`${field.label} must be no more than ${rules.max}`);
+                }
+
+                // Pattern
+                if (rules.pattern) {
+                    try {
+                        const regex = new RegExp(rules.pattern);
+                        if (!regex.test(strValue)) {
+                            validationErrors.push(rules.patternMessage || `${field.label} does not match the required format`);
+                        }
+                    } catch { /* invalid regex, skip */ }
+                }
+
+                // Email validation
+                if (field.type === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(strValue)) {
+                    validationErrors.push(`${field.label} must be a valid email address`);
+                }
+
+                // Phone validation
+                if (field.type === 'phone' && !/^[\d\s\-+()]{7,20}$/.test(strValue)) {
+                    validationErrors.push(`${field.label} must be a valid phone number`);
+                }
+
+                // URL validation
+                if (field.type === 'url' && strValue && !/^https?:\/\/.+/.test(strValue)) {
+                    validationErrors.push(`${field.label} must be a valid URL starting with http:// or https://`);
+                }
+            }
+        }
+
+        if (validationErrors.length > 0) {
+            return { success: false, error: `Validation failed: ${validationErrors.join('; ')}` };
+        }
+
+        // Send email notification
+        if (template) {
+            const applicantName = formData.surname 
+                ? (formData.middleName 
+                    ? `${formData.surname} ${formData.firstName} ${formData.middleName}`.trim()
+                    : `${formData.surname} ${formData.firstName}`.trim())
+                : `${formData.firstName || ''} ${formData.lastName || ''}`.trim() || 'Applicant';
+            
+            const applicantEmail = formData.email || "";
+            if (applicantEmail) {
+                NotificationService.sendApplicationSubmittedByEmail(applicantEmail, {
+                    applicantName,
+                    formNumber: application.formNumber || undefined,
+                    applicationNumber: application.applicationNumber || undefined,
+                    templateName: template.name,
+                    userId: applicantId
+                }).catch((err) => console.error("Failed to send submission email:", err));
+            }
+        }
+
         await db.update(admissionApplicationsV2)
             .set({ status: 'submitted' })
             .where(
@@ -781,6 +1203,7 @@ export async function submitApplicationFinal(applicationId: number, applicantId:
                     eq(admissionApplicationsV2.applicantId, applicantId)
                 )
             );
+
         return { success: true };
     } catch (error: any) {
         return { success: false, error: error.message };
@@ -792,6 +1215,7 @@ export async function submitApplicationFinal(applicationId: number, applicantId:
  */
 
 export async function verifyNinAction(nin: string) {
+    await requireApplicant();
     try {
         if (!nin || nin.length !== 11 || !/^\d+$/.test(nin)) {
             return { success: false, error: "NIN must be exactly 11 numeric digits." };
@@ -879,6 +1303,7 @@ export async function verifyNinAction(nin: string) {
 }
 
 export async function getAdmissionEngineSetting() {
+    await requireAdmin();
     try {
         const [setting] = await db.select()
             .from(systemSettings)
@@ -893,6 +1318,7 @@ export async function getAdmissionEngineSetting() {
 }
 
 export async function saveAdmissionEngineSetting(engineType: string) {
+    await requireAdmin();
     try {
         const [existing] = await db.select()
             .from(systemSettings)
@@ -921,6 +1347,7 @@ export async function saveAdmissionEngineSetting(engineType: string) {
 }
 
 export async function updateSectionsOrder(sections: { id: number, order: number }[], templateId: number) {
+    await requireAdmin();
     try {
         await db.transaction(async (tx) => {
             for (const sec of sections) {
@@ -929,7 +1356,7 @@ export async function updateSectionsOrder(sections: { id: number, order: number 
                     .where(eq(admissionFormSections.id, sec.id));
             }
         });
-        revalidatePath(`/admin/admission/builder/${templateId}`);
+        revalidatePath(`/admin/admission/forms/${templateId}`);
         return { success: true };
     } catch (error) {
         console.error("Failed to update sections order:", error);
@@ -938,6 +1365,7 @@ export async function updateSectionsOrder(sections: { id: number, order: number 
 }
 
 export async function getAllExaminationBodies() {
+    await requireAdmin();
     try {
         return await db.select().from(examinationBodies).orderBy(examinationBodies.name);
     } catch (error) {
@@ -946,6 +1374,7 @@ export async function getAllExaminationBodies() {
 }
 
 export async function addExaminationBody(name: string) {
+    await requireAdmin();
     try {
         await db.insert(examinationBodies).values({ name, isActive: true });
         revalidatePath("/admin/admission/settings");
@@ -956,6 +1385,7 @@ export async function addExaminationBody(name: string) {
 }
 
 export async function updateExaminationBody(id: number, isActive: boolean) {
+    await requireAdmin();
     try {
         await db.update(examinationBodies).set({ isActive }).where(eq(examinationBodies.id, id));
         revalidatePath("/admin/admission/settings");
@@ -966,11 +1396,267 @@ export async function updateExaminationBody(id: number, isActive: boolean) {
 }
 
 export async function deleteExaminationBody(id: number) {
+    await requireAdmin();
     try {
         await db.delete(examinationBodies).where(eq(examinationBodies.id, id));
         revalidatePath("/admin/admission/settings");
         return { success: true };
     } catch (e: any) {
         return { success: false, error: "Cannot delete this exam body because it is currently in use by applicants." };
+    }
+}
+
+export async function verifyApplicationByFormNumber(formNumber: string) {
+    try {
+        const app = await db.query.admissionApplicationsV2.findFirst({
+            where: eq(admissionApplicationsV2.formNumber, formNumber),
+        });
+        if (!app) return null;
+
+        const template = await db.query.admissionFormTemplates.findFirst({
+            where: eq(admissionFormTemplates.id, app.templateId),
+        });
+
+        let formData: any = {};
+        try {
+            formData = typeof app.data === "string" ? JSON.parse(app.data) : app.data || {};
+        } catch {}
+
+        return {
+            formNumber: app.formNumber,
+            formHash: app.formHash,
+            status: app.status,
+            paymentStatus: app.paymentStatus,
+            submittedAt: app.appliedAt,
+            applicantPhoto: app.applicantPhoto,
+            templateName: template?.name || "Admission Application",
+            templateLevel: template?.level || "tertiary",
+            applicantName: `${formData.firstName || ""} ${formData.lastName || ""}`.trim() || "N/A",
+            applicantEmail: formData.email || "N/A",
+            applicantPhone: formData.phone || "N/A",
+            programmeChoice: formData.programmeChoice || formData.programme || "N/A",
+            dateOfBirth: formData.dob || formData.dateOfBirth || "N/A",
+            gender: formData.gender || "N/A",
+            stateOfOrigin: formData.stateOfOrigin || formData.state || "N/A",
+        };
+    } catch (error) {
+        console.error("Verification lookup error:", error);
+        return null;
+    }
+}
+
+/**
+ * Admin V2 Application List & Detail Actions
+ */
+
+export async function getAdminV2Applications(filters?: {
+    search?: string;
+    status?: string;
+    paymentStatus?: string;
+    templateId?: number;
+    page?: number;
+    pageSize?: number;
+}) {
+    await requireAdmin();
+    try {
+        const page = filters?.page || 1;
+        const pageSize = filters?.pageSize || 20;
+        const offset = (page - 1) * pageSize;
+
+        const conditions = [];
+
+        if (filters?.status && filters.status !== 'all') {
+            conditions.push(eq(admissionApplicationsV2.status, filters.status as any));
+        }
+        if (filters?.paymentStatus && filters.paymentStatus !== 'all') {
+            conditions.push(eq(admissionApplicationsV2.paymentStatus, filters.paymentStatus as any));
+        }
+        if (filters?.templateId) {
+            conditions.push(eq(admissionApplicationsV2.templateId, filters.templateId));
+        }
+
+        const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+        const [countResult] = await db.select({ count: sql<number>`count(*)` })
+            .from(admissionApplicationsV2)
+            .where(whereClause);
+
+        const total = countResult?.count || 0;
+
+        let applications = await db.query.admissionApplicationsV2.findMany({
+            where: whereClause,
+            orderBy: [desc(admissionApplicationsV2.appliedAt)],
+            limit: pageSize,
+            offset: offset,
+            with: {
+                template: true
+            }
+        });
+
+        // Apply search filter in-memory if needed
+        if (filters?.search) {
+            const q = filters.search.toLowerCase();
+            applications = applications.filter((app: any) => {
+                let formData: any = {};
+                try { formData = typeof app.data === 'string' ? JSON.parse(app.data) : app.data || {}; } catch {}
+                const fullName = `${formData.firstName || ''} ${formData.lastName || ''}`.toLowerCase();
+                const surname = `${formData.surname || ''} ${formData.firstName || ''}`.toLowerCase();
+                const formNum = (app.formNumber || '').toLowerCase();
+                return fullName.includes(q) || surname.includes(q) || formNum.includes(q);
+            });
+        }
+
+        return {
+            applications: applications.map((app: any) => {
+                let formData: any = {};
+                try { formData = typeof app.data === 'string' ? JSON.parse(app.data) : app.data || {}; } catch {}
+                return {
+                    ...app,
+                    parsedData: formData,
+                    applicantName: `${formData.firstName || ''} ${formData.lastName || ''}`.trim() || 'N/A',
+                    templateName: app.template?.name || 'N/A',
+                };
+            }),
+            total: filters?.search ? applications.length : total,
+            page,
+            pageSize,
+            totalPages: Math.ceil(total / pageSize),
+        };
+    } catch (error) {
+        console.error("[getAdminV2Applications] Failed:", error);
+        return { applications: [], total: 0, page: 1, pageSize: 20, totalPages: 0 };
+    }
+}
+
+export async function getAdminV2ApplicationDetail(applicationId: number) {
+    await requireAdmin();
+    try {
+        const app = await db.query.admissionApplicationsV2.findFirst({
+            where: eq(admissionApplicationsV2.id, applicationId),
+            with: {
+                template: true,
+                student: true
+            }
+        });
+
+        if (!app) return null;
+
+        let formData: any = {};
+        try { formData = typeof app.data === 'string' ? JSON.parse(app.data) : app.data || {}; } catch {}
+
+        // Get O-Level data
+        const sittings = await db.query.applicantOLevelSittings.findMany({
+            where: eq(applicantOLevelSittings.applicationId, applicationId),
+        });
+
+        const sittingIds = sittings.map(s => s.id);
+        const subjects = sittingIds.length > 0
+            ? await db.query.applicantOLevelSubjects.findMany({
+                where: inArray(applicantOLevelSubjects.sittingId, sittingIds),
+            })
+            : [];
+
+        const bodies = await db.select().from(examinationBodies);
+        const bodyMap = new Map(bodies.map((b: any) => [b.id, b.name]));
+
+        const olevelData = sittings.sort((a, b) => a.sittingNumber - b.sittingNumber).map(s => ({
+            ...s,
+            examBodyName: bodyMap.get(s.examBodyId) || 'N/A',
+            subjects: subjects.filter(sub => sub.sittingId === s.id).sort((a, b) => a.id - b.id),
+        }));
+
+        // Get template sections + fields for rendering
+        const sections = await db.query.admissionFormSections.findMany({
+            where: eq(admissionFormSections.templateId, app.templateId),
+            orderBy: [asc(admissionFormSections.order)]
+        });
+
+        const sectionIds = sections.map(s => s.id);
+        const fields = sectionIds.length > 0
+            ? await db.query.admissionFormFields.findMany({
+                where: (f, { inArray }) => inArray(f.sectionId, sectionIds),
+                orderBy: [asc(admissionFormFields.order)]
+            })
+            : [];
+
+        const formStructure = sections.map(s => ({
+            ...s,
+            fields: fields.filter(f => f.sectionId === s.id),
+        }));
+
+        return {
+            ...app,
+            parsedData: formData,
+            applicantName: formData.surname
+                ? `${formData.surname} ${formData.firstName} ${formData.middleName || ''}`.trim()
+                : `${formData.firstName || ''} ${formData.lastName || ''}`.trim() || 'N/A',
+            applicantEmail: formData.email || 'N/A',
+            applicantPhone: formData.phone || 'N/A',
+            templateName: app.template?.name || 'N/A',
+            templateLevel: app.template?.level || '',
+            olevelData,
+            formStructure,
+        };
+    } catch (error) {
+        console.error("[getAdminV2ApplicationDetail] Failed:", error);
+        return null;
+    }
+}
+
+export async function bulkUpdateAdmissionStatus(ids: number[], status: string, notes?: string) {
+    await requireAdmin();
+    try {
+        if (!ids.length) return { success: false, error: "No applications selected" };
+
+        await db.transaction(async (tx) => {
+            for (const id of ids) {
+                await tx.update(admissionApplicationsV2)
+                    .set({
+                        status: status as any,
+                        admissionNotes: notes || null,
+                        updatedAt: new Date(),
+                    })
+                    .where(eq(admissionApplicationsV2.id, id));
+            }
+        });
+
+        revalidatePath("/admin/admission/v2");
+        revalidatePath("/admin/admission/reports");
+        return { success: true, count: ids.length };
+    } catch (error: any) {
+        console.error("[bulkUpdateAdmissionStatus] Failed:", error);
+        return { success: false, error: error?.message || "Failed to update applications" };
+    }
+}
+
+export async function getApplicantOLevelData(applicationId: number, applicantId: number) {
+    try {
+        const sittings = await db.query.applicantOLevelSittings.findMany({
+            where: and(
+                eq(applicantOLevelSittings.applicationId, applicationId),
+                eq(applicantOLevelSittings.applicantId, applicantId)
+            ),
+        });
+        if (sittings.length === 0) return [];
+
+        const sittingIds = sittings.map((s) => s.id);
+        const subjects = await db.query.applicantOLevelSubjects.findMany({
+            where: inArray(applicantOLevelSubjects.sittingId, sittingIds),
+        });
+
+        const bodies = await db.select().from(examinationBodies);
+        const bodyMap = new Map(bodies.map((b) => [b.id, b.name]));
+
+        return sittings
+            .sort((a, b) => a.sittingNumber - b.sittingNumber)
+            .map((s) => ({
+                ...s,
+                examBodyName: bodyMap.get(s.examBodyId) || "N/A",
+                subjects: subjects
+                    .filter((sub) => sub.sittingId === s.id)
+                    .sort((a, b) => a.id - b.id),
+            }));
+    } catch {
+        return [];
     }
 }

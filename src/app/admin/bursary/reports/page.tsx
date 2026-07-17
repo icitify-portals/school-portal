@@ -25,7 +25,8 @@ import {
     getFeeItems, 
     getExpenditureRequests, 
     getAccountsReceivableAging,
-    getInstallmentReport
+    getInstallmentReport,
+    getFeeItemCollectionReport
 } from "@/actions/bursary";
 import { getDepartments } from "@/actions/departments";
 import { getProgrammes } from "@/actions/programmes";
@@ -147,7 +148,7 @@ export default function BursaryReportsPage() {
     const [arrearsTotal, setArrearsTotal] = useState(0);
 
     // Tab state
-    const [activeTab, setActiveTab] = useState<'intelligence' | 'installments'>('intelligence');
+    const [activeTab, setActiveTab] = useState<'intelligence' | 'installments' | 'feeItems'>('intelligence');
     const [sessions, setSessions] = useState<any[]>([]);
 
     // Filters for Financial Intelligence
@@ -167,6 +168,10 @@ export default function BursaryReportsPage() {
     const [instLevel, setInstLevel] = useState("");
     const [instSortKey, setInstSortKey] = useState<"student" | "balance" | "date">("date");
     const [instSortDir, setInstSortDir] = useState<"asc" | "desc">("desc");
+
+    // Fee Item Collection Report
+    const [feeItemReportData, setFeeItemReportData] = useState<any[]>([]);
+    const [feeItemReportLoading, setFeeItemReportLoading] = useState(false);
 
     const fetchMetadata = useCallback(async () => {
         try {
@@ -250,8 +255,10 @@ export default function BursaryReportsPage() {
     useEffect(() => {
         if (activeTab === 'installments') {
             fetchInstallments();
+        } else if (activeTab === 'feeItems') {
+            fetchFeeItemReport();
         }
-    }, [activeTab, fetchInstallments]);
+    }, [activeTab, fetchInstallments, fetchFeeItemReport]);
 
     const handleResetFilters = () => {
         if (activeTab === 'intelligence') {
@@ -499,6 +506,18 @@ export default function BursaryReportsPage() {
                 >
                     <Coins className="w-4 h-4" />
                     Installment Payments
+                </button>
+                <button
+                    onClick={() => setActiveTab('feeItems')}
+                    className={cn(
+                        "px-6 py-2.5 text-sm font-black rounded-xl transition-all duration-300 flex items-center gap-2",
+                        activeTab === 'feeItems' 
+                            ? "bg-white text-indigo-600 shadow-md shadow-indigo-100/50" 
+                            : "text-slate-500 hover:text-slate-800"
+                    )}
+                >
+                    <Layers className="w-4 h-4" />
+                    Fee Item Collections
                 </button>
             </div>
 
@@ -1043,6 +1062,102 @@ export default function BursaryReportsPage() {
                             </Card>
                         </>
                     )}
+                </>
+            )}
+
+            {activeTab === 'feeItems' && (
+                <>
+                    <Card className="border-none shadow-xl shadow-slate-100/50 rounded-[2.5rem] overflow-hidden border border-slate-100">
+                        <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-8">
+                            <CardTitle className="text-lg font-bold text-slate-800 flex items-center gap-3">
+                                <Layers className="w-5 h-5 text-indigo-600" />
+                                Per-Fee-Item Collection Report
+                            </CardTitle>
+                            <p className="text-xs text-slate-500 mt-1">Collection breakdown by fee item — total billable, paid, scholarship, discount, and collection rate</p>
+                        </CardHeader>
+                        <div className="bg-white">
+                            {feeItemReportLoading ? (
+                                <div className="py-20 flex flex-col items-center justify-center text-slate-400 gap-3">
+                                    <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
+                                    <p className="text-xs font-bold uppercase tracking-widest text-slate-500">Loading collection data...</p>
+                                </div>
+                            ) : feeItemReportData.length === 0 ? (
+                                <div className="py-20 text-center text-slate-400 italic">
+                                    <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-4 opacity-50">
+                                        <FileText className="w-8 h-8" />
+                                    </div>
+                                    <p className="font-medium text-slate-600">No collection data found</p>
+                                    <p className="text-xs mt-1">Generate bills and wait for payments to see collection breakdown.</p>
+                                </div>
+                            ) : (
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-left border-collapse">
+                                        <thead>
+                                            <tr className="bg-slate-50/50 text-slate-500 text-[10px] font-black uppercase tracking-widest border-b border-slate-100">
+                                                <th className="px-8 py-5">Fee Item</th>
+                                                <th className="px-8 py-5">Category</th>
+                                                <th className="px-8 py-5 text-right">Total Billable</th>
+                                                <th className="px-8 py-5 text-right">Total Paid</th>
+                                                <th className="px-8 py-5 text-right">Scholarship</th>
+                                                <th className="px-8 py-5 text-right">Discount</th>
+                                                <th className="px-8 py-5 text-right">Outstanding</th>
+                                                <th className="px-8 py-5 text-center">Collection Rate</th>
+                                                <th className="px-8 py-5 text-right">Students Billed</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-100">
+                                            {feeItemReportData.map((item: any, idx: number) => (
+                                                <tr key={idx} className="hover:bg-slate-50/30 transition-colors">
+                                                    <td className="px-8 py-5 text-sm font-bold text-slate-800">{item.name}</td>
+                                                    <td className="px-8 py-5">
+                                                        <span className={cn(
+                                                            "px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider",
+                                                            item.category === 'tuition' ? 'bg-indigo-50 text-indigo-600' :
+                                                            item.category === 'hostel' ? 'bg-amber-50 text-amber-600' :
+                                                            'bg-slate-50 text-slate-600'
+                                                        )}>
+                                                            {item.category}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-8 py-5 text-right text-sm font-bold text-slate-900">₦{item.totalBillable.toLocaleString()}</td>
+                                                    <td className="px-8 py-5 text-right text-sm font-bold text-emerald-600">₦{item.totalPaid.toLocaleString()}</td>
+                                                    <td className="px-8 py-5 text-right text-sm font-medium text-indigo-500">
+                                                        {item.totalScholarship > 0 ? `₦${item.totalScholarship.toLocaleString()}` : '-'}
+                                                    </td>
+                                                    <td className="px-8 py-5 text-right text-sm font-medium text-blue-500">
+                                                        {item.totalDiscount > 0 ? `₦${item.totalDiscount.toLocaleString()}` : '-'}
+                                                    </td>
+                                                    <td className="px-8 py-5 text-right text-sm font-bold text-rose-600">₦{item.outstanding.toLocaleString()}</td>
+                                                    <td className="px-8 py-5 text-center">
+                                                        <div className="flex items-center gap-2 justify-center">
+                                                            <div className="w-16 h-2 bg-slate-100 rounded-full overflow-hidden">
+                                                                <div
+                                                                    className={cn(
+                                                                        "h-full rounded-full transition-all",
+                                                                        item.collectionRate >= 90 ? 'bg-emerald-500' :
+                                                                        item.collectionRate >= 50 ? 'bg-amber-500' : 'bg-rose-500'
+                                                                    )}
+                                                                    style={{ width: `${Math.min(100, item.collectionRate)}%` }}
+                                                                />
+                                                            </div>
+                                                            <span className={cn(
+                                                                "text-[10px] font-black",
+                                                                item.collectionRate >= 90 ? 'text-emerald-600' :
+                                                                item.collectionRate >= 50 ? 'text-amber-600' : 'text-rose-600'
+                                                            )}>
+                                                                {item.collectionRate}%
+                                                            </span>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-8 py-5 text-right text-sm font-bold text-slate-600">{item.studentCount}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+                        </div>
+                    </Card>
                 </>
             )}
         </div>
