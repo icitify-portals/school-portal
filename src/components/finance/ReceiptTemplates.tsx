@@ -382,7 +382,7 @@ export const HeritageReceipt = ({ transaction, student, branding, bursar, arrear
                     </div>
                 </div>
                 <div className="text-right text-xs mt-4 md:mt-0 font-sans text-slate-600 max-w-xs leading-normal">
-                    <p>{branding.INST_ADDRESS || "Along Ajibode Shasha Road, Behind NISER Shasha Ojoo, Ibadan, Oyo State Nigeria"}</p>
+                    <p>{branding.INST_ADDRESS || "Federal School of Statistics, Along Ajibode Shasha road, Behind NISER, Shasha-Ojoo, Ibadan."}</p>
                     <p>Tel: {branding.INST_PHONE || "+234 000 000 0000"}</p>
                 </div>
             </div>

@@ -94,7 +94,7 @@ export default function ApplicationPrintPage() {
                         )}
                         <div className="flex-1 text-center">
                             <h1 className="text-2xl font-black text-slate-900 uppercase tracking-tight">
-                                {branding?.portalName || "Federal School of Science Ibadan"}
+                                {branding?.portalName || "Federal School of Statistics, Ibadan"}
                             </h1>
                             {branding?.schoolMotto && (
                                 <p className="text-xs font-bold text-slate-500 italic mt-1">{branding.schoolMotto}</p>

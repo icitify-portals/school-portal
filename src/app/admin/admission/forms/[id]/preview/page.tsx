@@ -415,8 +415,8 @@ export default function FormPreviewPage() {
                             <img src="/fss_logo.png" alt="School Logo" className="w-20 h-20 rounded-full border-2 border-white/30 object-contain bg-white p-1" />
                             <div className="text-white">
                                 <h1 className="text-2xl font-black tracking-tight">FEDERAL SCHOOL OF STATISTICS</h1>
-                                <p className="text-indigo-200 text-sm font-medium mt-1">Federal Ministry of Education | Enugu, Enugu State</p>
-                                <p className="text-indigo-300 text-xs mt-0.5">Enugu | fssofficial.edu.ng</p>
+                                <p className="text-indigo-200 text-sm font-medium mt-1">Along Ajibode Shasha road, Behind NISER, Shasha-Ojoo</p>
+                                <p className="text-indigo-300 text-xs mt-0.5">Ibadan, Oyo State</p>
                             </div>
                             {(() => {
                                 const photoField = sections.flatMap((s: any) => s.fields).find((f: any) => f.type === 'file');
