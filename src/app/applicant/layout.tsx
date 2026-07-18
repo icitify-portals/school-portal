@@ -52,10 +52,8 @@ export default async function ApplicantLayout({
                             <User className="w-5 h-5 text-slate-400" />
                         </div>
                         <div>
-                            // @ts-expect-error - TS18048: Auto-suppressed for build
-                            <p className="text-xs font-bold text-white">{session.user.name}</p>
-                            // @ts-expect-error - TS18048: Auto-suppressed for build
-                            <p className="text-[10px] text-slate-500">{session.user.email}</p>
+                            <p className="text-xs font-bold text-white">{session?.user?.name}</p>
+                            <p className="text-[10px] text-slate-500">{session?.user?.email}</p>
                         </div>
                     </div>
                     <Link href="/api/auth/signout" className="flex items-center gap-3 px-4 py-3 rounded-xl text-red-400 font-bold text-sm hover:bg-red-500/10 transition-colors">

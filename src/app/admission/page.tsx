@@ -16,8 +16,7 @@ import {
     CreditCard,
     UserCheck,
     Mail,
-    Info,
-    Zap
+    Info
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -70,39 +69,26 @@ export default function AdmissionLandingPage() {
     return (
         <div className="min-h-screen bg-slate-950 text-white overflow-x-hidden font-sans">
             {/* Hero */}
-            <div className="relative pt-32 pb-56 px-8 border-b border-slate-900 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-slate-950 to-slate-950">
+            <div className="relative pt-20 pb-36 px-8 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-slate-950 to-slate-950">
                 <div className="absolute inset-0 overflow-hidden pointer-events-none">
                     <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-emerald-600/10 rounded-full blur-[120px] -translate-y-1/2" />
                     <div className="absolute bottom-0 right-1/4 w-[600px] h-[600px] bg-indigo-600/10 rounded-full blur-[120px] translate-y-1/2" />
-                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-emerald-500/5 rounded-full blur-[200px]" />
                 </div>
 
-                <div className="max-w-6xl mx-auto relative z-10 text-center space-y-12">
-                    <div className="inline-flex items-center gap-2 px-5 py-2.5 bg-slate-900/80 border border-slate-800 rounded-full backdrop-blur-md shadow-xl">
-                        <Sparkles className="w-4 h-4 text-emerald-400" />
-                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-300">FSS Ibadan — 2026/2027 Intake Portal</span>
+                <div className="max-w-6xl mx-auto relative z-10 text-center space-y-6">
+                    <div className="inline-flex items-center gap-2 px-4 py-2 bg-slate-900/80 border border-slate-800 rounded-full backdrop-blur-md shadow-xl">
+                        <Sparkles className="w-3 h-3 text-emerald-400" />
+                        <span className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-300">FSS Ibadan — 2026/2027 Intake Portal</span>
                     </div>
                     
-                    <div className="space-y-6">
-                        <h1 className="text-6xl md:text-8xl font-black text-white italic uppercase tracking-tighter leading-none">
+                    <div className="space-y-4">
+                        <h1 className="text-4xl md:text-6xl font-black text-white italic uppercase tracking-tighter leading-none">
                             ADMISSION <br />
                             <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-emerald-300 to-indigo-400">EXERCISE</span>
                         </h1>
-                        <p className="text-slate-400 font-bold uppercase tracking-widest text-xs max-w-2xl mx-auto leading-relaxed">
+                        <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px] max-w-2xl mx-auto leading-relaxed">
                             Federal School of Statistics, Ibadan — Admission for the 2026/2027 Academic Session
                         </p>
-                    </div>
-
-                    <div className="flex items-center justify-center gap-4">
-                        <button onClick={startApplication}
-                            className="bg-emerald-600 hover:bg-emerald-500 text-white font-black py-5 px-10 rounded-2xl uppercase text-xs tracking-widest transition-all shadow-xl shadow-emerald-500/20 hover:shadow-emerald-500/40 flex items-center gap-3 group">
-                            Start Application <Zap className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                        </button>
-                        <Link href="/admission/status">
-                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-slate-300 transition-colors cursor-pointer border border-slate-800 py-4 px-8 rounded-2xl hover:border-slate-700">
-                                Track Existing Application →
-                            </span>
-                        </Link>
                     </div>
                 </div>
             </div>

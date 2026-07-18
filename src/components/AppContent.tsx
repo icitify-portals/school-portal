@@ -110,6 +110,11 @@ export function AppContent({ children, enabledModules }: { children: React.React
         );
     }
 
+    // Applicant pages have their own layout with embedded sidebar
+    if (pathname.startsWith("/applicant")) {
+        return <>{children}</>;
+    }
+
     const isAdminArea = pathname.startsWith("/admin");
     const isStaffArea = pathname.startsWith("/staff");
 

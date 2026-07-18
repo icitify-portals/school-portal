@@ -664,7 +664,7 @@ export default function StatefulApplicationPage() {
     }
 
     // Programme Selection Step (after both fees paid)
-    if (templateProgrammes.length > 0 && !selectedProgrammeId) {
+    if (!selectedProgrammeId) {
         const handleSelectProgramme = async (progId: number) => {
             setSavingProgramme(true);
             try {
@@ -698,23 +698,30 @@ export default function StatefulApplicationPage() {
                         Choose the programme you wish to apply for.
                     </p>
                 </div>
-                <div className="space-y-3 max-h-64 overflow-y-auto">
-                    {templateProgrammes.map((prog: any) => (
-                        <div
-                            key={prog.id}
-                            onClick={() => !savingProgramme && handleSelectProgramme(prog.id)}
-                            className="p-4 rounded-2xl border-2 border-slate-100 hover:border-indigo-500 hover:bg-indigo-50 cursor-pointer transition-all text-left flex items-center gap-4"
-                        >
-                            <div className="w-10 h-10 bg-indigo-100 rounded-xl flex items-center justify-center shrink-0">
-                                <GraduationCap className="w-5 h-5 text-indigo-600" />
+                {templateProgrammes.length > 0 ? (
+                    <div className="space-y-3 max-h-64 overflow-y-auto">
+                        {templateProgrammes.map((prog: any) => (
+                            <div
+                                key={prog.id}
+                                onClick={() => !savingProgramme && handleSelectProgramme(prog.id)}
+                                className="p-4 rounded-2xl border-2 border-slate-100 hover:border-indigo-500 hover:bg-indigo-50 cursor-pointer transition-all text-left flex items-center gap-4"
+                            >
+                                <div className="w-10 h-10 bg-indigo-100 rounded-xl flex items-center justify-center shrink-0">
+                                    <GraduationCap className="w-5 h-5 text-indigo-600" />
+                                </div>
+                                <div>
+                                    <p className="font-bold text-gray-900">{prog.name}</p>
+                                    <p className="text-xs text-gray-500">{prog.code || ''} {prog.durationYears ? `(${prog.durationYears} yrs)` : ''}</p>
+                                </div>
                             </div>
-                            <div>
-                                <p className="font-bold text-gray-900">{prog.name}</p>
-                                <p className="text-xs text-gray-500">{prog.code || ''} {prog.durationYears ? `(${prog.durationYears} yrs)` : ''}</p>
-                            </div>
-                        </div>
-                    ))}
-                </div>
+                        ))}
+                    </div>
+                ) : (
+                    <div className="p-6 bg-amber-50 rounded-2xl border border-amber-200">
+                        <p className="text-amber-800 font-bold text-sm">No programmes have been configured for this admission exercise yet.</p>
+                        <p className="text-amber-600 text-xs font-medium mt-1">Please contact the admissions office.</p>
+                    </div>
+                )}
                 {savingProgramme && <Loader2 className="w-6 h-6 animate-spin mx-auto text-indigo-600" />}
             </Card>
         );

@@ -1,11 +1,9 @@
 import { auth } from "@/auth";
-import { db } from "@/db/db";
-import { admissionFormTemplates } from "@/db/schema";
-import { eq } from "drizzle-orm";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { ArrowRight, Sparkles, AlertCircle } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { getAdmissionTemplates } from "@/actions/admission_v2";
 
 export default async function NewApplicationPage() {
     const session = await auth();
@@ -13,10 +11,12 @@ export default async function NewApplicationPage() {
         redirect("/login");
     }
 
-    // Fetch active admission form templates
-    const templates = await db.query.admissionFormTemplates.findMany({
-        where: eq(admissionFormTemplates.isActive, true)
-    });
+    let templates: any[] = [];
+    try {
+        templates = await getAdmissionTemplates();
+    } catch (e) {
+        console.error("Failed to load templates:", e);
+    }
 
     return (
         <div className="p-6 md:p-10 max-w-7xl mx-auto space-y-6">
