@@ -152,6 +152,7 @@ export default function ApplicationSlip() {
                                 {branding?.schoolAddress && (
                                     <p className="text-[10px] font-bold text-slate-400 mt-2 print:text-gray-500">{branding.schoolAddress}</p>
                                 )}
+                                <p className="text-xs font-bold text-indigo-600 mt-2 print:text-indigo-800">2026/2027 APPLICATION FORM</p>
                             </div>
                         </div>
 
