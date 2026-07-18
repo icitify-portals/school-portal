@@ -80,7 +80,7 @@ export function AppContent({ children, enabledModules }: { children: React.React
         setMounted(true);
     }, []);
 
-    const isAuthPage = pathname === "/login" || pathname === "/register";
+    const isAuthPage = pathname === "/login" || pathname === "/register" || pathname === "/forgot-password" || pathname === "/reset-password" || pathname.startsWith("/verify-email");
 
     if (!pathname) return null;
 
@@ -89,6 +89,9 @@ export function AppContent({ children, enabledModules }: { children: React.React
                      pathname === "/contact" || 
                      pathname === "/login" || 
                      pathname === "/register" || 
+                     pathname === "/forgot-password" ||
+                     pathname === "/reset-password" ||
+                     pathname.startsWith("/verify-email") ||
                      (pathname.startsWith("/p/") && !pathname.startsWith("/profile")) ||
                      pathname.startsWith("/blog") ||
                      pathname.startsWith("/jobs") ||

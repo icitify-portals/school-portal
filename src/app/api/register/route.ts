@@ -95,7 +95,7 @@ export async function POST(req: Request) {
             expiresAt,
         });
 
-        // Send email
+        // Send email (best-effort — don't block registration if email fails)
         const verificationLink = `${process.env.NEXT_PUBLIC_APP_URL || 'https://portal.fssibadan.edu.ng'}/verify-email?token=${token}`;
         const emailHtml = `
             <h2>Welcome to Federal School of Statistics, Ibadan</h2>
@@ -105,10 +105,14 @@ export async function POST(req: Request) {
             <p>This link will expire in 24 hours.</p>
         `;
         
-        await sendEmail(normalizedEmail, 'Verify your Email - FSS Ibadan', emailHtml);
+        try {
+            await sendEmail(normalizedEmail, 'Verify your Email - FSS Ibadan', emailHtml);
+        } catch (emailErr) {
+            console.error("Registration email send failed (non-blocking):", emailErr);
+        }
 
         return NextResponse.json(
-            { message: "User registered successfully. Please check your email to verify your account." },
+            { message: "Registration successful. Please check your email to verify your account." },
             { status: 201 }
         );
     } catch (error: any) {
