@@ -15,7 +15,9 @@ import {
     systemSettings,
     feeStructures,
     feeStructureItems,
-    emailVerificationTokens
+    emailVerificationTokens,
+    admissionTemplateProgrammes,
+    programmes
 } from "@/db/schema";
 import { eq, and, desc, asc, sql, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
@@ -113,20 +115,53 @@ async function getTemplateWithSections(templateId: number) {
     }
 }
 
+export async function getTemplateProgrammes(templateId: number) {
+    try {
+        const links = await db.select({
+            programmeId: admissionTemplateProgrammes.programmeId,
+        }).from(admissionTemplateProgrammes)
+        .where(eq(admissionTemplateProgrammes.templateId, templateId));
+        const ids = links.map(l => l.programmeId);
+        if (ids.length === 0) return [];
+        const progList = await db.select().from(programmes).where(inArray(programmes.id, ids));
+        return progList;
+    } catch (error) {
+        console.error("Failed to fetch template programmes:", error);
+        return [];
+    }
+}
+
+export async function linkProgrammesToTemplate(templateId: number, programmeIds: number[]) {
+    try {
+        await requireAdmin();
+        await db.delete(admissionTemplateProgrammes).where(eq(admissionTemplateProgrammes.templateId, templateId));
+        if (programmeIds.length > 0) {
+            await db.insert(admissionTemplateProgrammes).values(
+                programmeIds.map(pid => ({ templateId, programmeId: pid }))
+            );
+        }
+        revalidatePath(`/admin/admission/forms/${templateId}`);
+        return { success: true };
+    } catch (error: any) {
+        console.error("Failed to link programmes:", error);
+        return { success: false, error: error?.message || "Failed to link programmes" };
+    }
+}
+
 export async function saveFormTemplate(data: any) {
     try {
         await requireAdmin();
-        const { id, name, level, slug, description, flowType, feeStructureId, applicationFee, lateFee, startDate, endDate, lateEndDate, minAge, isActive, ninVerificationConfig } = data;
+        const { id, name, level, slug, description, flowType, feeStructureId, applicationFee, processingFee, lateFee, startDate, endDate, lateEndDate, minAge, isActive, ninVerificationConfig } = data;
         
         if (id) {
             await db.update(admissionFormTemplates)
-                .set({ name, level, slug, description, flowType, feeStructureId, applicationFee, lateFee, startDate, endDate, lateEndDate, minAge, isActive, ninVerificationConfig })
+                .set({ name, level, slug, description, flowType, feeStructureId, applicationFee, processingFee, lateFee, startDate, endDate, lateEndDate, minAge, isActive, ninVerificationConfig })
                 .where(eq(admissionFormTemplates.id, id));
             revalidatePath(`/admin/admission/forms/${id}`);
             return { success: true, id };
         } else {
             const [result] = await db.insert(admissionFormTemplates).values({
-                name, level, slug, description, flowType, feeStructureId, applicationFee, lateFee, startDate, endDate, lateEndDate, minAge, isActive, ninVerificationConfig
+                name, level, slug, description, flowType, feeStructureId, applicationFee, processingFee, lateFee, startDate, endDate, lateEndDate, minAge, isActive, ninVerificationConfig
             });
             revalidatePath("/admin/admission/forms");
             return { success: true, id: result.insertId };

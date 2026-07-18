@@ -31,6 +31,20 @@ export async function createFaculty(name: string, code: string) {
     }
 }
 
+export async function updateFaculty(id: number, data: { name?: string; code?: string }) {
+    try {
+        const allowed = await hasPermission("academic.faculties.manage") || await hasRole("admin") || await hasRole("superadmin");
+        if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to update faculty" };
+
+        await db.update(faculties).set(data).where(eq(faculties.id, id));
+        revalidatePath("/admin/admission/faculties");
+        return { success: true };
+    } catch (error) {
+        console.error("Failed to update faculty:", error);
+        return { success: false, error: "Failed to update faculty" };
+    }
+}
+
 export async function deleteFaculty(id: number) {
     try {
         const allowed = await hasPermission("academic.faculties.manage") || await hasRole("admin") || await hasRole("superadmin");

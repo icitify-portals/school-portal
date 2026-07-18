@@ -13,12 +13,14 @@ import {
     Loader2,
     Database,
     CheckSquare,
-    Square
+    Square,
+    BookOpen
 } from "lucide-react";
 import Link from "next/link";
-import { getFormTemplates, saveFormTemplate, deleteFormTemplate, bulkDeleteFormTemplates } from "@/actions/admission_v2";
+import { getFormTemplates, saveFormTemplate, deleteFormTemplate, bulkDeleteFormTemplates, getTemplateProgrammes, linkProgrammesToTemplate } from "@/actions/admission_v2";
 import { getFeeStructures } from "@/actions/bursary";
 import { seedAdmissionTemplates } from "@/actions/admission_seeder";
+import { getProgrammes } from "@/actions/programmes";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -33,6 +35,33 @@ export default function AdmissionBuilderPage() {
     const [selectedIds, setSelectedIds] = useState<number[]>([]);
     const [deletingId, setDeletingId] = useState<number | null>(null);
     const [bulkDeleting, setBulkDeleting] = useState(false);
+    const [linkModalTemplateId, setLinkModalTemplateId] = useState<number | null>(null);
+    const [allProgrammes, setAllProgrammes] = useState<any[]>([]);
+    const [templateProgrammeIds, setTemplateProgrammeIds] = useState<number[]>([]);
+    const [savingLinks, setSavingLinks] = useState(false);
+
+    const openLinkModal = async (templateId: number) => {
+        const [progs, linked] = await Promise.all([
+            getProgrammes(),
+            getTemplateProgrammes(templateId),
+        ]);
+        setAllProgrammes(progs);
+        setTemplateProgrammeIds(linked.map((p: any) => p.id));
+        setLinkModalTemplateId(templateId);
+    };
+
+    const handleSaveLinks = async () => {
+        if (!linkModalTemplateId) return;
+        setSavingLinks(true);
+        const res = await linkProgrammesToTemplate(linkModalTemplateId, templateProgrammeIds);
+        if (res.success) {
+            toast.success("Programmes linked successfully!");
+            setLinkModalTemplateId(null);
+        } else {
+            toast.error(res.error || "Failed to link programmes");
+        }
+        setSavingLinks(false);
+    };
 
     const handleSeed = async () => {
         setSeeding(true);
@@ -54,6 +83,7 @@ export default function AdmissionBuilderPage() {
         endDate: new Date().toISOString().split('T')[0],
         feeStructureId: "",
         applicationFee: "0",
+        processingFee: "0",
         flowType: "form_first"
     });
 
@@ -138,6 +168,7 @@ export default function AdmissionBuilderPage() {
             startDate: new Date(newData.startDate),
             endDate: new Date(newData.endDate),
             applicationFee: parseFloat(newData.applicationFee),
+            processingFee: parseFloat(newData.processingFee),
             isActive: true
         });
         if (res.success) {
@@ -151,6 +182,7 @@ export default function AdmissionBuilderPage() {
                 endDate: new Date().toISOString().split('T')[0],
                 feeStructureId: "",
                 applicationFee: "0",
+                processingFee: "0",
                 flowType: "form_first"
             });
             fetchTemplates();
@@ -316,14 +348,26 @@ export default function AdmissionBuilderPage() {
 
                                 <div className="flex items-center justify-between pt-4 border-t border-slate-50">
                                     <div className="flex flex-col">
-                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Fee</p>
+                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">App. Fee</p>
                                         <p className="text-lg font-black text-slate-900">₦{parseFloat(template.applicationFee || "0").toLocaleString()}</p>
+                                        {parseFloat(template.processingFee || "0") > 0 && (
+                                            <p className="text-[10px] font-bold text-indigo-600">+ ₦{parseFloat(template.processingFee).toLocaleString()} processing</p>
+                                        )}
                                     </div>
-                                    <Link href={`/admin/admission/forms/${template.id}`}>
-                                        <Button className="rounded-2xl bg-slate-900 hover:bg-indigo-600 text-white font-black px-6 py-4 flex gap-2 transition-all">
-                                            Design <ChevronRight className="w-4 h-4" />
+                                    <div className="flex gap-2">
+                                        <Button
+                                            onClick={() => openLinkModal(template.id)}
+                                            variant="outline"
+                                            className="rounded-2xl border-slate-200 text-slate-600 font-black px-4 py-4 flex gap-2 text-[10px] uppercase tracking-widest"
+                                        >
+                                            <BookOpen className="w-4 h-4" /> Programmes
                                         </Button>
-                                    </Link>
+                                        <Link href={`/admin/admission/forms/${template.id}`}>
+                                            <Button className="rounded-2xl bg-slate-900 hover:bg-indigo-600 text-white font-black px-6 py-4 flex gap-2 transition-all">
+                                                Design <ChevronRight className="w-4 h-4" />
+                                            </Button>
+                                        </Link>
+                                    </div>
                                 </div>
                             </CardContent>
                         </Card>
@@ -442,6 +486,17 @@ export default function AdmissionBuilderPage() {
                                         onChange={(e) => setNewData({...newData, applicationFee: e.target.value})}
                                     />
                                 </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">Processing Fee (₦) <span className="text-indigo-500">— Paystack</span></label>
+                                    <input
+                                        type="number"
+                                        className="w-full bg-slate-50 border-none rounded-2xl px-6 py-4 font-bold outline-none focus:ring-2 focus:ring-indigo-500"
+                                        placeholder="0.00"
+                                        value={newData.processingFee}
+                                        onChange={(e) => setNewData({...newData, processingFee: e.target.value})}
+                                    />
+                                    <p className="text-[9px] font-bold text-slate-500 px-1">Payable via Paystack after application fee is confirmed</p>
+                                </div>
                                 <div className="flex gap-4 pt-4">
                                     <Button
                                         type="button"
@@ -459,6 +514,64 @@ export default function AdmissionBuilderPage() {
                                     </Button>
                                 </div>
                             </form>
+                        </CardContent>
+                    </Card>
+                </div>
+            )}
+
+            {linkModalTemplateId && (
+                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-50 flex items-center justify-center p-4">
+                    <Card className="w-full max-w-lg border-none shadow-2xl rounded-[3rem] overflow-hidden animate-in fade-in zoom-in duration-300">
+                        <CardHeader className="bg-slate-900 text-white p-8">
+                            <CardTitle className="text-2xl font-black italic uppercase">Link Programmes</CardTitle>
+                            <p className="text-slate-300 text-sm font-medium mt-1">Select which programmes are available for this form</p>
+                        </CardHeader>
+                        <CardContent className="p-8 space-y-4 bg-white max-h-[60vh] overflow-y-auto">
+                            {allProgrammes.length === 0 ? (
+                                <p className="text-slate-400 text-center py-8">No programmes found. <Link href="/admin/programmes" className="text-indigo-600 underline">Create programmes first.</Link></p>
+                            ) : (
+                                allProgrammes.map((prog: any) => {
+                                    const isSelected = templateProgrammeIds.includes(prog.id);
+                                    return (
+                                        <div
+                                            key={prog.id}
+                                            onClick={() => setTemplateProgrammeIds(prev =>
+                                                isSelected ? prev.filter(id => id !== prog.id) : [...prev, prog.id]
+                                            )}
+                                            className={`flex items-center gap-4 p-4 rounded-2xl cursor-pointer transition-all border-2 ${
+                                                isSelected ? 'border-indigo-500 bg-indigo-50' : 'border-slate-100 hover:border-slate-200 bg-slate-50'
+                                            }`}
+                                        >
+                                            <div className={`w-5 h-5 rounded-md flex items-center justify-center border-2 transition-all ${
+                                                isSelected ? 'bg-indigo-600 border-indigo-600' : 'border-slate-300'
+                                            }`}>
+                                                {isSelected && <CheckSquare className="w-4 h-4 text-white" />}
+                                            </div>
+                                            <div className="flex-1">
+                                                <p className="font-bold text-slate-900">{prog.name}</p>
+                                                <p className="text-xs text-slate-500">{prog.code} — {prog.department?.name || 'No department'} ({prog.durationYears || 4} yrs)</p>
+                                            </div>
+                                        </div>
+                                    );
+                                })
+                            )}
+                            <div className="flex gap-4 pt-4">
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    onClick={() => setLinkModalTemplateId(null)}
+                                    className="flex-1 font-black py-6 rounded-2xl uppercase text-[10px] tracking-widest"
+                                >
+                                    Cancel
+                                </Button>
+                                <Button
+                                    onClick={handleSaveLinks}
+                                    disabled={savingLinks}
+                                    className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-black py-6 rounded-2xl uppercase text-[10px] tracking-widest"
+                                >
+                                    {savingLinks ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save'}
+                                </Button>
+                            </div>
                         </CardContent>
                     </Card>
                 </div>

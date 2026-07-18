@@ -22,17 +22,31 @@ export async function getProgrammes() {
     }
 }
 
-export async function createProgramme(name: string, deptId: number, durationMonths: number) {
+export async function createProgramme(name: string, deptId: number, durationMonths: number, code?: string, durationYears?: number) {
     try {
         const allowed = await hasPermission("academic.programmes.manage") || await hasRole("admin") || await hasRole("superadmin");
         if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to create programme" };
 
-        await db.insert(programmes).values({ name, deptId, durationMonths });
+        await db.insert(programmes).values({ name, deptId, durationMonths, code, durationYears });
         revalidatePath("/admin/programmes");
         return { success: true };
     } catch (error) {
         console.error("Failed to create programme:", error);
         return { success: false, error: "Failed to create programme" };
+    }
+}
+
+export async function updateProgramme(id: number, data: { name?: string; deptId?: number; durationMonths?: number; code?: string; durationYears?: number }) {
+    try {
+        const allowed = await hasPermission("academic.programmes.manage") || await hasRole("admin") || await hasRole("superadmin");
+        if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to update programme" };
+
+        await db.update(programmes).set(data).where(eq(programmes.id, id));
+        revalidatePath("/admin/programmes");
+        return { success: true };
+    } catch (error) {
+        console.error("Failed to update programme:", error);
+        return { success: false, error: "Failed to update programme" };
     }
 }
 
