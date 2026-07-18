@@ -14,7 +14,7 @@ import OLevelSubmission from "@/components/forms/OLevelSubmission";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
-function RenderField({ field, value, onChange, errors }: { field: any; value: any; onChange: (key: string, val: any) => void; errors: Record<string, string> }) {
+function RenderField({ field, value, onChange, errors, allValues, currentSection }: { field: any; value: any; onChange: (key: string, val: any) => void; errors: Record<string, string>; allValues: Record<string, any>; currentSection?: any }) {
     const options = field.options ? field.options.split(/[,\n]/).map((o: string) => o.trim()).filter(Boolean) : [];
     const isHalf = field.width === 'half' && field.type !== 'file' && field.type !== 'olevel_result';
     const error = errors[field.label];
@@ -167,10 +167,14 @@ function RenderField({ field, value, onChange, errors }: { field: any; value: an
                     <option value="">Select L.G.A</option>
                     {(() => {
                         try {
-                            const firstState = naija.states()[0];
-                            return naija.lgas(firstState).lgas.map((l: string) => (
-                                <option key={l} value={l}>{l}</option>
-                            ));
+                            const stateField = currentSection?.fields?.find((f: any) => f.type === 'state');
+                            const selectedState = stateField ? allValues[stateField.label] : null;
+                            if (selectedState) {
+                                return naija.lgas(selectedState).lgas.map((l: string) => (
+                                    <option key={l} value={l}>{l}</option>
+                                ));
+                            }
+                            return null;
                         } catch { return null; }
                     })()}
                 </select>
@@ -288,10 +292,19 @@ export default function FormPreviewPage() {
         const errors: Record<string, string> = {};
         if (!currentSection) return true;
         currentSection.fields.forEach((field: any) => {
+            const val = formData[field.label];
             if (field.isRequired) {
-                const val = formData[field.label];
                 if (!val || (typeof val === 'string' && !val.trim()) || (Array.isArray(val) && val.length === 0)) {
                     errors[field.label] = `${field.label} is required`;
+                    return;
+                }
+            }
+            if (val && typeof val === 'string' && val.trim()) {
+                if (field.type === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val.trim())) {
+                    errors[field.label] = `${field.label} must be a valid email address`;
+                }
+                if (field.type === 'url' && !/^https?:\/\/.+/.test(val.trim())) {
+                    errors[field.label] = `${field.label} must be a valid URL`;
                 }
             }
         });
@@ -455,6 +468,8 @@ export default function FormPreviewPage() {
                                                 });
                                             }}
                                             errors={validationErrors}
+                                            allValues={formData}
+                                            currentSection={currentSection}
                                         />
                                     );
                                 })}

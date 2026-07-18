@@ -16,6 +16,7 @@ interface PhotoCaptureProps {
 export default function PhotoCapture({ value, onChange, label }: PhotoCaptureProps) {
     const [mode, setMode] = useState<'upload' | 'camera'>('upload');
     const [preview, setPreview] = useState<string | null>(value || null);
+    const [uploadError, setUploadError] = useState<string | null>(null);
     const webcamRef = useRef<Webcam>(null);
 
     const capture = useCallback(() => {
@@ -28,9 +29,17 @@ export default function PhotoCapture({ value, onChange, label }: PhotoCapturePro
         }
     }, [webcamRef, onChange]);
 
+    const MAX_FILE_SIZE = 200 * 1024; // 200KB
+
     const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
+            if (file.size > MAX_FILE_SIZE) {
+                setUploadError("File size must be less than 200KB");
+                e.target.value = '';
+                return;
+            }
+            setUploadError(null);
             const reader = new FileReader();
             reader.onloadend = () => {
                 const result = reader.result as string;
@@ -90,8 +99,9 @@ export default function PhotoCapture({ value, onChange, label }: PhotoCapturePro
                     </div>
                     <div>
                         <p className="text-sm font-bold text-slate-700 uppercase">Select an image to upload</p>
-                        <p className="text-xs text-slate-500">JPG, PNG up to 2MB</p>
+                        <p className="text-xs text-slate-500">JPG, PNG up to 200KB</p>
                     </div>
+                    {uploadError && <p className="text-xs text-rose-600 font-semibold">{uploadError}</p>}
                     <input 
                         type="file" 
                         accept="image/*" 
@@ -103,11 +113,17 @@ export default function PhotoCapture({ value, onChange, label }: PhotoCapturePro
                 <div className="space-y-4">
                     <div className="relative rounded-2xl overflow-hidden aspect-[3/4] max-w-sm mx-auto bg-black">
                         <Webcam
+                            key="webcam"
                             audio={false}
                             ref={webcamRef}
                             screenshotFormat="image/jpeg"
-                            videoConstraints={{ facingMode: "user" }}
+                            videoConstraints={{ facingMode: "user", width: 640, height: 480 }}
                             className="w-full h-full object-cover"
+                            mirrored={true}
+                            onUserMediaError={() => {
+                                setUploadError("Could not access camera. Please check permissions or use upload instead.");
+                                setMode('upload');
+                            }}
                         />
                     </div>
                     <Button type="button" onClick={capture} className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl px-8 py-6 uppercase font-bold text-xs tracking-widest shadow-xl">

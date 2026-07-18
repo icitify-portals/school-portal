@@ -88,13 +88,16 @@ export default function StatefulApplicationPage() {
                 // Pre-fill name fields from user account, then apply template defaults
                 const defaults: any = {};
                 const userNameParts = data._userNameParts;
+                const labelLower = (s: string) => s?.toLowerCase().replace(/[-_\s]/g, '');
                 data.template?.sections?.forEach((sec: any) => {
                     sec.fields?.forEach((field: any) => {
-                        if (field.systemKey === 'firstName' && userNameParts?.firstName) {
+                        const sk = (field.systemKey || '').toLowerCase();
+                        const ll = labelLower(field.label);
+                        if ((sk === 'firstname' || ll === 'firstname' || ll === 'firstname') && userNameParts?.firstName) {
                             defaults[field.label] = userNameParts.firstName;
-                        } else if (field.systemKey === 'lastName' || field.systemKey === 'surname') {
-                            if (userNameParts?.surname) defaults[field.label] = userNameParts.surname;
-                        } else if (field.systemKey === 'middleName' && userNameParts?.middleName) {
+                        } else if ((sk === 'lastname' || sk === 'surname' || ll === 'lastname' || ll === 'surname' || ll === 'lastname') && userNameParts?.surname) {
+                            defaults[field.label] = userNameParts.surname;
+                        } else if ((sk === 'middlename' || ll === 'middlename' || ll === 'middlename') && userNameParts?.middleName) {
                             defaults[field.label] = userNameParts.middleName;
                         } else if (field.defaultValue) {
                             defaults[field.label] = field.defaultValue;

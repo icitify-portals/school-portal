@@ -102,7 +102,6 @@ function SittingForm({
         return OLEVEL_SUBJECTS.filter((s) => {
             if (s === currentSubjectName) return true;
             if (subjectsInThisSitting.includes(s)) return false;
-            if (selectedSubjectsInOtherSittings.includes(s)) return false;
             return true;
         });
     };
