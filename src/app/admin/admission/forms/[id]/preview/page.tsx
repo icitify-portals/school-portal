@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { ArrowLeft, ChevronLeft, ChevronRight, Loader2, ShieldCheck } from "lucide-react";
 import { getFormTemplate } from "@/actions/admission_v2";
 import { COUNTRY_NAMES } from "@/lib/countries";
 // @ts-expect-error - TS7016: Auto-suppressed for build
@@ -13,6 +13,7 @@ import PhotoCapture from "@/components/forms/PhotoCapture";
 import OLevelSubmission from "@/components/forms/OLevelSubmission";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import QRCode from 'qrcode';
 
 function RenderField({ field, value, onChange, errors, allValues, currentSection }: { field: any; value: any; onChange: (key: string, val: any) => void; errors: Record<string, string>; allValues: Record<string, any>; currentSection?: any }) {
     const options = field.options ? field.options.split(/[,\n]/).map((o: string) => o.trim()).filter(Boolean) : [];
@@ -271,6 +272,8 @@ export default function FormPreviewPage() {
     const [formData, setFormData] = useState<any>({});
     const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
     const [submitted, setSubmitted] = useState(false);
+    const [formNumber] = useState(() => "FSS/" + new Date().getFullYear() + "/" + String(Math.floor(Math.random() * 90000) + 10000));
+    const [qrDataUrl, setQrDataUrl] = useState<string>("");
 
     useEffect(() => {
         const fetchTemplate = async () => {
@@ -281,6 +284,12 @@ export default function FormPreviewPage() {
         };
         fetchTemplate();
     }, [templateId]);
+
+    useEffect(() => {
+        QRCode.toDataURL(JSON.stringify({ fn: formNumber, preview: true }), { width: 160, margin: 2, color: { dark: "#1e1b4b", light: "#ffffff" } })
+            .then((url: string) => setQrDataUrl(url))
+            .catch(() => {});
+    }, [formNumber]);
 
     const evaluateCondition = (field: any) => {
         if (!field.conditionalVisibility?.enabled) return true;
@@ -413,16 +422,26 @@ export default function FormPreviewPage() {
                     <div className="bg-white border border-gray-300 shadow-sm rounded-2xl overflow-hidden">
                         <div className="border-b-2 border-indigo-900 bg-gradient-to-r from-indigo-950 via-indigo-900 to-indigo-800 px-8 py-6 flex items-center gap-6">
                             <img src="/fss_logo.png" alt="School Logo" className="w-20 h-20 rounded-full border-2 border-white/30 object-contain bg-white p-1" />
-                            <div className="text-white">
+                            <div className="text-white flex-1">
                                 <h1 className="text-2xl font-black tracking-tight">FEDERAL SCHOOL OF STATISTICS</h1>
                                 <p className="text-indigo-200 text-sm font-medium mt-1">Along Ajibode Shasha road, Behind NISER, Shasha-Ojoo</p>
                                 <p className="text-indigo-300 text-xs mt-0.5">Ibadan, Oyo State</p>
+                                <div className="mt-3 pt-3 border-t border-indigo-700/50">
+                                    <p className="text-white font-bold text-sm tracking-wide">2026/2027 APPLICATION FORM</p>
+                                    <p className="text-indigo-300 text-[10px] font-mono mt-0.5">Form No: {formNumber}</p>
+                                </div>
+                            </div>
+                            <div className="flex flex-col items-center gap-3">
+                                {qrDataUrl && <img src={qrDataUrl} alt="QR Code" className="w-20 h-20 rounded-lg bg-white p-1" />}
+                                <div className="flex items-center gap-1 text-indigo-200 text-[10px] font-bold">
+                                    <ShieldCheck className="w-3 h-3" /> Secured
+                                </div>
                             </div>
                             {(() => {
                                 const photoField = sections.flatMap((s: any) => s.fields).find((f: any) => f.type === 'file');
                                 const photoVal = photoField ? formData[photoField.label] : null;
                                 if (photoVal && typeof photoVal === 'string' && photoVal.startsWith('data:image')) {
-                                    return <img src={photoVal} alt="Passport" className="w-24 h-28 rounded-lg border-2 border-white/40 object-cover ml-auto shrink-0 bg-white" />;
+                                    return <img src={photoVal} alt="Passport" className="w-24 h-28 rounded-lg border-2 border-white/40 object-cover shrink-0 bg-white" />;
                                 }
                                 return null;
                             })()}
@@ -474,6 +493,10 @@ export default function FormPreviewPage() {
                                     <p className="text-green-600 text-sm mt-1">This simulates the post-submission confirmation.</p>
                                 </div>
                             )}
+                            <div className="border-t border-gray-200 pt-4 flex items-center justify-between text-[10px] text-gray-400">
+                                <span className="font-mono">Form No: {formNumber}</span>
+                                <span className="flex items-center gap-1"><ShieldCheck className="w-3 h-3" /> Tamper-proof document — Verify at portal.fssibadan.edu.ng/verify/{formNumber}</span>
+                            </div>
                         </div>
                     </div>
                 ) : currentSection ? (
