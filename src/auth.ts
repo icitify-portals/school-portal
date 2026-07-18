@@ -274,7 +274,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         },
     },
     callbacks: {
-        ...authConfig.callbacks,
         async jwt({ token, user, trigger, account }) {
             // Call the base jwt from authConfig
             if (authConfig.callbacks?.jwt) {
