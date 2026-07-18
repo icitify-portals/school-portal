@@ -2005,6 +2005,8 @@ export const programmesRelations = relations(programmes, ({ one, many }) => ({
   }),
   students: many(students),
   feeAllocations: many(feeAllocations),
+  admissionTemplates: many(admissionTemplateProgrammes),
+  admissionApplications: many(admissionApplicationsV2),
 }));
 
 // --- LMS / E-LEARNING MODULE ---
@@ -5708,6 +5710,8 @@ export const admissionFormTemplates = mysqlTable('admission_form_templates', {
   flowType: mysqlEnum('flow_type', ['payment_first', 'form_first', 'free_form']).default('form_first'),
   feeStructureId: int('fee_structure_id').references(() => feeStructures.id),
   applicationFee: decimal('application_fee', { precision: 12, scale: 2 }).default('0.00'),
+  processingFee: decimal('processing_fee', { precision: 12, scale: 2 }).default('0.00'),
+  processingFeeLabel: varchar('processing_fee_label', { length: 255 }).default('Processing Fee'),
   lateFee: decimal('late_fee', { precision: 12, scale: 2 }).default('0.00'),
   requireAcceptanceFee: boolean('require_acceptance_fee').default(false),
   acceptanceFee: decimal('acceptance_fee', { precision: 12, scale: 2 }).default('0.00'),
@@ -5719,6 +5723,12 @@ export const admissionFormTemplates = mysqlTable('admission_form_templates', {
   isActive: boolean('is_active').default(true),
   ninVerificationConfig: text('nin_verification_config'), // JSON: { enabled, provider, required, autoFill }
   createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const admissionTemplateProgrammes = mysqlTable('admission_template_programmes', {
+  id: int('id').autoincrement().primaryKey(),
+  templateId: int('template_id').notNull().references(() => admissionFormTemplates.id),
+  programmeId: int('programme_id').notNull().references(() => programmes.id),
 });
 
 export const admissionFormSections = mysqlTable('admission_form_sections', {
@@ -5754,11 +5764,14 @@ export const admissionFormFields = mysqlTable('admission_form_fields', {
 export const admissionApplicationsV2 = mysqlTable('admission_applications_v2', {
   id: int('id').autoincrement().primaryKey(),
   templateId: int('template_id').notNull(),
+  programmeId: int('programme_id').references(() => programmes.id),
   applicantId: int('applicant_id').references(() => users.id),
   studentId: int('student_id').references(() => students.id),
   status: mysqlEnum('status', ['draft', 'submitted', 'paid', 'screened', 'admitted', 'rejected']).default('draft'),
   paymentStatus: mysqlEnum('payment_status', ['pending', 'paid', 'failed']).default('pending'),
   paymentReference: varchar('payment_reference', { length: 100 }),
+  processingFeeStatus: mysqlEnum('processing_fee_status', ['pending', 'paid', 'failed']).default('pending'),
+  processingFeeReference: varchar('processing_fee_reference', { length: 100 }),
   data: text('data'), // Dynamic JSON answers
   applicationNumber: varchar('application_number', { length: 50 }).unique(),
   formNumber: varchar('form_number', { length: 50 }).unique(),
@@ -5805,6 +5818,7 @@ export const admissionFormTemplatesRelations = relations(admissionFormTemplates,
     sections: many(admissionFormSections),
     applications: many(admissionApplicationsV2),
     exams: many(admissionEntranceExams),
+    programmes: many(admissionTemplateProgrammes),
 }));
 
 export const admissionFormSectionsRelations = relations(admissionFormSections, ({ one, many }) => ({
@@ -5830,6 +5844,21 @@ export const admissionApplicationsV2Relations = relations(admissionApplicationsV
     student: one(students, {
         fields: [admissionApplicationsV2.studentId],
         references: [students.id],
+    }),
+    programme: one(programmes, {
+        fields: [admissionApplicationsV2.programmeId],
+        references: [programmes.id],
+    }),
+}));
+
+export const admissionTemplateProgrammesRelations = relations(admissionTemplateProgrammes, ({ one }) => ({
+    template: one(admissionFormTemplates, {
+        fields: [admissionTemplateProgrammes.templateId],
+        references: [admissionFormTemplates.id],
+    }),
+    programme: one(programmes, {
+        fields: [admissionTemplateProgrammes.programmeId],
+        references: [programmes.id],
     }),
 }));
 
