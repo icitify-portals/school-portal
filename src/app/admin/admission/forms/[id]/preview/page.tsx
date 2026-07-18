@@ -9,12 +9,14 @@ import { getFormTemplate } from "@/actions/admission_v2";
 import { COUNTRY_NAMES } from "@/lib/countries";
 // @ts-expect-error - TS7016: Auto-suppressed for build
 import naija from 'naija-state-local-government';
+import PhotoCapture from "@/components/forms/PhotoCapture";
+import OLevelSubmission from "@/components/forms/OLevelSubmission";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
 function RenderField({ field, value, onChange, errors }: { field: any; value: any; onChange: (key: string, val: any) => void; errors: Record<string, string> }) {
     const options = field.options ? field.options.split(/[,\n]/).map((o: string) => o.trim()).filter(Boolean) : [];
-    const isHalf = field.width === 'half';
+    const isHalf = field.width === 'half' && field.type !== 'file' && field.type !== 'olevel_result';
     const error = errors[field.label];
 
     const handleChange = (val: any) => {
@@ -226,9 +228,11 @@ function RenderField({ field, value, onChange, errors }: { field: any; value: an
             )}
 
             {field.type === 'file' && (
-                <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center text-sm text-gray-400 hover:border-indigo-400 transition-colors cursor-pointer">
-                    Click or drag to upload {field.label}
-                </div>
+                <PhotoCapture
+                    value={value || ""}
+                    onChange={(val) => handleChange(val)}
+                    label={field.label}
+                />
             )}
 
             {field.type === 'image' && field.options && (
@@ -238,9 +242,16 @@ function RenderField({ field, value, onChange, errors }: { field: any; value: an
             )}
 
             {field.type === 'olevel_result' && (
-                <div className="border border-gray-300 rounded-xl p-4 text-sm text-gray-500">
-                    O-Level Result Grid (8 subjects: subject name, grade) — shown in live form
-                </div>
+                <OLevelSubmission
+                    value={value || []}
+                    onChange={(val) => handleChange(val)}
+                    examBodies={[
+                        { id: 1, name: "WAEC" },
+                        { id: 2, name: "NECO" },
+                        { id: 3, name: "NABTEB" },
+                        { id: 4, name: "GCE" },
+                    ]}
+                />
             )}
         </div>
     );
