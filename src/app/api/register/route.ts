@@ -25,7 +25,7 @@ export async function POST(req: Request) {
         const body = await req.json();
         // SECURITY FIX H-1b: Destructure only the fields we trust from the request body.
         // 'role' is intentionally excluded — public registrations are always 'student'.
-        const { email, password, name } = body;
+        const { email, password, name, surname, firstName, middleName } = body;
 
         if (!email || !password || !name) {
             return NextResponse.json(
@@ -74,6 +74,9 @@ export async function POST(req: Request) {
         const [insertResult] = await db.insert(users).values({
             email: normalizedEmail,
             name: name.trim(),
+            surname: surname?.trim() || null,
+            firstName: firstName?.trim() || null,
+            middleName: middleName?.trim() || null,
             password: hashedPassword,
             role: "applicant", // SECURITY: never accept role from request body
             requiresPasswordChange: false,

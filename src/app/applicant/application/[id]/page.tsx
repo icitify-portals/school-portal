@@ -85,11 +85,18 @@ export default function StatefulApplicationPage() {
                     setFormData(data.data);
                 }
             } else {
-                // Apply default values from template fields
+                // Pre-fill name fields from user account, then apply template defaults
                 const defaults: any = {};
+                const userNameParts = data._userNameParts;
                 data.template?.sections?.forEach((sec: any) => {
                     sec.fields?.forEach((field: any) => {
-                        if (field.defaultValue) {
+                        if (field.systemKey === 'firstName' && userNameParts?.firstName) {
+                            defaults[field.label] = userNameParts.firstName;
+                        } else if (field.systemKey === 'lastName' || field.systemKey === 'surname') {
+                            if (userNameParts?.surname) defaults[field.label] = userNameParts.surname;
+                        } else if (field.systemKey === 'middleName' && userNameParts?.middleName) {
+                            defaults[field.label] = userNameParts.middleName;
+                        } else if (field.defaultValue) {
                             defaults[field.label] = field.defaultValue;
                         }
                     });

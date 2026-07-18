@@ -895,6 +895,9 @@ export async function registerApplicant(data: any) {
             
             const [userRes] = await db.insert(users).values({
                 name: fullName,
+                surname: surname.trim(),
+                firstName: firstName.trim(),
+                middleName: middleName?.trim() || null,
                 email: email.toLowerCase(),
                 phone: phone,
                 password: hashedPassword,
@@ -1059,6 +1062,17 @@ export async function getApplicantApplication(applicationId: number, applicantId
                 // @ts-expect-error
                 app.template.calculatedFee = parseFloat(app.template.applicationFee || "0");
             }
+        }
+
+        // Attach user name parts for auto-population into form fields
+        if (app) {
+            const [user] = await db
+                .select({ surname: users.surname, firstName: users.firstName, middleName: users.middleName })
+                .from(users)
+                .where(eq(users.id, applicantId))
+                .limit(1);
+            // @ts-expect-error
+            app._userNameParts = user || null;
         }
 
         return app || null;
