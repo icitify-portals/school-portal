@@ -120,9 +120,9 @@ export default function PhotoCapture({ value, onChange, label }: PhotoCapturePro
                             videoConstraints={{ facingMode: "user", width: 640, height: 480 }}
                             className="w-full h-full object-cover"
                             mirrored={true}
-                            onUserMediaError={() => {
+                            onUserMediaError={(err) => {
+                                console.error("Camera error:", err);
                                 setUploadError("Could not access camera. Please check permissions or use upload instead.");
-                                setMode('upload');
                             }}
                         />
                     </div>

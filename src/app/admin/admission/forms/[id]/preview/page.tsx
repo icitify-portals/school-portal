@@ -423,6 +423,32 @@ export default function FormPreviewPage() {
                                         {(sec.fields || []).map((field: any) => {
                                             if (!evaluateCondition(field)) return null;
                                             const val = formData[field.label];
+                                            if (field.type === 'olevel_result') {
+                                                return (
+                                                    <div key={field.id} className="col-span-2 space-y-1">
+                                                        <p className="text-xs text-gray-400 uppercase">{field.label}</p>
+                                                        {Array.isArray(val) && val.map((sitting: any, si: number) => (
+                                                            <div key={si} className="text-sm text-gray-700 bg-gray-50 rounded-lg p-3 mb-2">
+                                                                <p className="font-bold">Sitting {si + 1}: {sitting.examBodyId ? `Exam #{sitting.examNumber}` : '—'}</p>
+                                                                {Array.isArray(sitting.subjects) && sitting.subjects.filter((s: any) => s.subjectName).map((sub: any, subIdx: number) => (
+                                                                    <span key={subIdx} className="inline-block bg-white rounded px-2 py-0.5 mr-1 mb-1 border text-xs">
+                                                                        {sub.subjectName}: {sub.grade || '—'}
+                                                                    </span>
+                                                                ))}
+                                                            </div>
+                                                        ))}
+                                                        {(!val || (Array.isArray(val) && val.length === 0)) && <p className="text-sm text-gray-400">—</p>}
+                                                    </div>
+                                                );
+                                            }
+                                            if (field.type === 'file' && val && typeof val === 'string' && val.startsWith('data:image')) {
+                                                return (
+                                                    <div key={field.id} className="space-y-1">
+                                                        <p className="text-xs text-gray-400 uppercase">{field.label}</p>
+                                                        <img src={val} alt={field.label} className="max-w-full h-auto max-h-32 rounded-lg object-contain" />
+                                                    </div>
+                                                );
+                                            }
                                             const displayVal = Array.isArray(val) ? val.join(', ') : val || '—';
                                             return (
                                                 <div key={field.id} className="space-y-1">
