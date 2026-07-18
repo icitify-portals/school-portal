@@ -163,10 +163,10 @@ export default function PublicAdmissionPage() {
         }
     };
 
-    // Redirect logged-in users to their application dashboard
+    // Redirect logged-in users to start a new application
     useEffect(() => {
         if (!loading && session?.user) {
-            router.push("/admission/status");
+            router.push("/applicant/new-application");
         }
     }, [loading, session, router]);
 

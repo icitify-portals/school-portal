@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -29,22 +30,25 @@ import { format } from "date-fns";
 export default function AdmissionLandingPage() {
     const router = useRouter();
     const [templates, setTemplates] = useState<any[]>([]);
+    const { data: session } = useSession();
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState("");
-
+ 
     useEffect(() => {
         fetchTemplates();
     }, []);
-
+ 
     const fetchTemplates = async () => {
         setLoading(true);
         const tplList = await getAdmissionTemplates();
         setTemplates(tplList || []);
         setLoading(false);
     };
-
+ 
     const startApplication = () => {
-        if (templates.length > 0) {
+        if (session?.user) {
+            router.push("/applicant/new-application");
+        } else if (templates.length > 0) {
             router.push(`/admission/${templates[0].slug}`);
         }
     };
@@ -163,17 +167,21 @@ export default function AdmissionLandingPage() {
                                 <div className="md:ml-auto">
                                     <button onClick={startApplication}
                                         className="bg-emerald-600 hover:bg-emerald-500 text-white font-black py-4 px-8 rounded-xl uppercase text-[10px] tracking-widest transition-all shadow-lg shadow-emerald-500/10 hover:shadow-emerald-500/30 flex items-center gap-2">
-                                        Start Application <ArrowRight className="w-4 h-4" />
+                                        {session?.user ? 'Go to My Applications' : 'Start Application'} <ArrowRight className="w-4 h-4" />
                                     </button>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    {/* Programmes Section */}
+                    {/* Programmes — directly below the guide */}
                     <div className="space-y-8 scroll-mt-20">
-                        <div className="flex flex-col md:flex-row gap-6 items-center justify-between bg-slate-900/60 p-6 rounded-2xl border border-slate-800/60 backdrop-blur-md">
-                            <div className="relative w-full md:w-96">
+                        <div className="flex flex-col md:flex-row gap-6 items-center justify-between">
+                            <div>
+                                <h2 className="text-3xl font-black italic uppercase tracking-tighter text-white">Open Intake Channels</h2>
+                                <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest mt-1">Select a programme below to begin your application</p>
+                            </div>
+                            <div className="relative w-full md:w-72">
                                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                                 <input
                                     className="w-full pl-12 pr-4 py-4 rounded-xl border border-slate-800 outline-none bg-slate-950 font-bold text-sm text-white placeholder-slate-500 focus:border-emerald-500/50 transition-colors"
@@ -182,15 +190,12 @@ export default function AdmissionLandingPage() {
                                     onChange={(e) => setSearch(e.target.value)}
                                 />
                             </div>
-                            <div className="flex items-center gap-3">
-                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">{filteredTemplates.length} Programme{filteredTemplates.length !== 1 ? 's' : ''}</span>
-                            </div>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                             {filteredTemplates.length > 0 ? (
                                 filteredTemplates.map((template) => (
-                                    <AdmissionCard key={template.id} template={template} />
+                                    <AdmissionCard key={template.id} template={template} isLoggedIn={!!session?.user} />
                                 ))
                             ) : (
                                 <div className="col-span-3 py-20 text-center bg-slate-900/40 rounded-[3rem] border border-slate-800/60">
@@ -232,8 +237,9 @@ function StepItem({ number, title, desc, icon, gradient }: { number: string; tit
     );
 }
 
-function AdmissionCard({ template }: { template: any }) {
+function AdmissionCard({ template, isLoggedIn }: { template: any; isLoggedIn: boolean }) {
     const levelColor = template.level === 'tertiary' ? 'from-emerald-600 to-emerald-700' : template.level === 'secondary' ? 'from-indigo-600 to-indigo-700' : 'from-amber-600 to-amber-700';
+    const href = isLoggedIn ? "/applicant/new-application" : `/admission/${template.slug}`;
     return (
         <Card className="group relative bg-slate-900/60 rounded-[3rem] shadow-xl hover:shadow-2xl border border-slate-800/60 transition-all duration-500 hover:-translate-y-4 overflow-hidden hover:border-emerald-500/20">
             <div className={`h-40 relative flex items-center justify-center bg-gradient-to-br ${levelColor} overflow-hidden`}>
@@ -268,7 +274,7 @@ function AdmissionCard({ template }: { template: any }) {
                     </div>
                 </div>
 
-                <Link href={`/admission/${template.slug}`}>
+                <Link href={href}>
                     <Button className="w-full bg-gradient-to-r from-emerald-600 to-emerald-500 text-white border-0 font-black py-7 rounded-2xl flex justify-between items-center px-8 hover:from-emerald-500 hover:to-emerald-400 transition-all uppercase text-[10px] tracking-widest shadow-xl shadow-emerald-500/10 hover:shadow-emerald-500/30 group/btn">
                         Apply Now
                         <ArrowRight className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform" />

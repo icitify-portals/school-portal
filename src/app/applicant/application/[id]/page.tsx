@@ -7,7 +7,7 @@ import { useDeveloperSubscription } from "@/components/finance/DeveloperSubscrip
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { 
-    Loader2, Save, ArrowRight, ArrowLeft, CheckCircle2, Lock, CreditCard, CheckSquare, GraduationCap, Users, Printer
+    Loader2, Save, ArrowRight, ArrowLeft, CheckCircle2, Lock, CreditCard, CheckSquare, GraduationCap, Users, Printer, AlertCircle, Check
 } from "lucide-react";
 import { 
     getApplicantApplication, 
@@ -402,6 +402,11 @@ export default function StatefulApplicationPage() {
             return;
         }
 
+        if (eligibilityError) {
+            toast.error("Please resolve eligibility issues before submitting.");
+            return;
+        }
+
         // Validate all sections
         const allErrors: Record<string, string> = {};
         for (const section of application.template.sections) {
@@ -524,6 +529,10 @@ export default function StatefulApplicationPage() {
 
     // Instructions Step (Always First)
     if (!hasAcknowledgedInstructions) {
+        const minAge = application.template.minAge || 15;
+        const isUnderage = formData.date_of_birth && calculateAge(formData.date_of_birth) < minAge;
+        const applicantAge = formData.date_of_birth ? calculateAge(formData.date_of_birth) : null;
+
         return (
             <Card className="bg-white max-w-3xl mx-auto mt-8 p-10 space-y-8 rounded-[2rem] shadow-xl border-none">
                 <div className="space-y-4 text-center">
@@ -532,6 +541,13 @@ export default function StatefulApplicationPage() {
                         {application.template.name}
                     </div>
                 </div>
+
+                {eligibilityError && (
+                    <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm font-medium flex items-start gap-3">
+                        <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
+                        <span>{eligibilityError}</span>
+                    </div>
+                )}
                 
                 <div className="bg-slate-50 p-8 rounded-2xl border border-slate-100 text-slate-700 text-sm leading-relaxed space-y-4">
                     {application.template.description ? (
@@ -541,17 +557,56 @@ export default function StatefulApplicationPage() {
                             <li>Please ensure all information provided is accurate and verifiable.</li>
                             <li>Upload required documents in the specified format and size limits.</li>
                             <li>Payment of the application fee is required to unlock the full form.</li>
+                            <li>You must be at least <strong>{minAge} years old</strong> to apply for this programme.</li>
                             <li>You can save your progress at any time and return later.</li>
                         </ul>
                     )}
                 </div>
 
+                <div className="space-y-4 p-6 bg-slate-50 rounded-2xl border border-slate-100">
+                    <label className="block text-sm font-bold text-slate-700 uppercase tracking-widest">
+                        Date of Birth <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                        type="date"
+                        value={formData.date_of_birth || ''}
+                        onChange={(e) => {
+                            const dob = e.target.value;
+                            const age = calculateAge(dob);
+                            setFormData((prev: any) => ({ ...prev, date_of_birth: dob }));
+                            if (age < minAge) {
+                                setEligibilityError(`Our system indicates you are ${age} years old. Minimum age required is ${minAge}. You are not eligible for this programme.`);
+                            } else {
+                                setEligibilityError(null);
+                            }
+                        }}
+                        className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:border-[#1a5b3a] transition-colors text-sm font-medium"
+                        required
+                    />
+                    {applicantAge && applicantAge >= minAge && (
+                        <p className="text-emerald-600 text-xs font-bold flex items-center gap-1">
+                            <Check className="w-3.5 h-3.5" /> You are {applicantAge} years old — eligible to apply
+                        </p>
+                    )}
+                </div>
+
                 <div className="pt-4 border-t border-slate-100">
                     <Button 
-                        onClick={() => setHasAcknowledgedInstructions(true)}
-                        className="w-full bg-[#1a5b3a] hover:bg-[#134229] text-white font-bold py-6 rounded-xl uppercase text-sm tracking-widest transition-all shadow-md"
+                        onClick={() => {
+                            if (!formData.date_of_birth) {
+                                toast.error("Please enter your date of birth to continue.");
+                                return;
+                            }
+                            if (calculateAge(formData.date_of_birth) < minAge) {
+                                toast.error("You are not eligible for this programme due to age requirement.");
+                                return;
+                            }
+                            setHasAcknowledgedInstructions(true);
+                        }}
+                        disabled={!!eligibilityError || !formData.date_of_birth}
+                        className="w-full bg-[#1a5b3a] hover:bg-[#134229] text-white font-bold py-6 rounded-xl uppercase text-sm tracking-widest transition-all shadow-md disabled:opacity-50"
                     >
-                        I understand, proceed to payment
+                        I understand, proceed to {application.template.flowType === 'payment_first' ? 'payment' : 'form'}
                     </Button>
                 </div>
             </Card>
@@ -1153,7 +1208,7 @@ export default function StatefulApplicationPage() {
                             </Button>
                         ) : (
                             <Button 
-                                onClick={handleSubmitFinal} disabled={submitting || !confirmed || paymentProcessing || isGateLoading}
+                                onClick={handleSubmitFinal} disabled={submitting || !confirmed || paymentProcessing || isGateLoading || !!eligibilityError}
                                 className="flex-[2] py-6 bg-[#1a5b3a] hover:bg-[#134229] text-white uppercase font-bold text-xs tracking-widest rounded-xl transition-all shadow-md disabled:opacity-50"
                             >
                                 {submitting || paymentProcessing || isGateLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
