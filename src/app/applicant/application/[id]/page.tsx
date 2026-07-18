@@ -61,6 +61,7 @@ export default function StatefulApplicationPage() {
     // Payment
     const [paymentProcessing, setPaymentProcessing] = useState(false);
     const [examBodies, setExamBodies] = useState<any[]>([]);
+    const [lockedFields, setLockedFields] = useState<Set<string>>(new Set());
 
     useEffect(() => {
         if (status === "authenticated" && session?.user?.id) {
@@ -76,6 +77,24 @@ export default function StatefulApplicationPage() {
         const data = await getApplicantApplication(applicationId, parseInt(session!.user!.id));
         if (data) {
             setApplication(data);
+            // Always compute locked name fields from user account data
+            const locked = new Set<string>();
+            const userNameParts = data._userNameParts;
+            const labelLower = (s: string) => s?.toLowerCase().replace(/[-_\s]/g, '');
+            data.template?.sections?.forEach((sec: any) => {
+                sec.fields?.forEach((field: any) => {
+                    const sk = (field.systemKey || '').toLowerCase();
+                    const ll = labelLower(field.label);
+                    if ((sk === 'firstname' || ll === 'firstname' || ll === 'firstname') && userNameParts?.firstName) {
+                        locked.add(field.label);
+                    } else if ((sk === 'lastname' || sk === 'surname' || ll === 'lastname' || ll === 'surname' || ll === 'lastname') && userNameParts?.surname) {
+                        locked.add(field.label);
+                    } else if ((sk === 'middlename' || ll === 'middlename' || ll === 'middlename') && userNameParts?.middleName) {
+                        locked.add(field.label);
+                    }
+                });
+            });
+            setLockedFields(locked);
             if (data.data) {
                 try {
                     const parsed = typeof data.data === 'string' ? JSON.parse(data.data) : data.data;
@@ -87,18 +106,19 @@ export default function StatefulApplicationPage() {
             } else {
                 // Pre-fill name fields from user account, then apply template defaults
                 const defaults: any = {};
-                const userNameParts = data._userNameParts;
-                const labelLower = (s: string) => s?.toLowerCase().replace(/[-_\s]/g, '');
                 data.template?.sections?.forEach((sec: any) => {
                     sec.fields?.forEach((field: any) => {
-                        const sk = (field.systemKey || '').toLowerCase();
-                        const ll = labelLower(field.label);
-                        if ((sk === 'firstname' || ll === 'firstname' || ll === 'firstname') && userNameParts?.firstName) {
-                            defaults[field.label] = userNameParts.firstName;
-                        } else if ((sk === 'lastname' || sk === 'surname' || ll === 'lastname' || ll === 'surname' || ll === 'lastname') && userNameParts?.surname) {
-                            defaults[field.label] = userNameParts.surname;
-                        } else if ((sk === 'middlename' || ll === 'middlename' || ll === 'middlename') && userNameParts?.middleName) {
-                            defaults[field.label] = userNameParts.middleName;
+                        if (locked.has(field.label)) {
+                            const userNameParts = data._userNameParts;
+                            const sk = (field.systemKey || '').toLowerCase();
+                            const ll = labelLower(field.label);
+                            if (sk === 'firstname' || ll === 'firstname') {
+                                defaults[field.label] = userNameParts.firstName;
+                            } else if (sk === 'lastname' || sk === 'surname' || ll === 'lastname' || ll === 'surname') {
+                                defaults[field.label] = userNameParts.surname;
+                            } else if (sk === 'middlename' || ll === 'middlename') {
+                                defaults[field.label] = userNameParts.middleName;
+                            }
                         } else if (field.defaultValue) {
                             defaults[field.label] = field.defaultValue;
                         }
@@ -649,10 +669,11 @@ export default function StatefulApplicationPage() {
                                     // Check conditional logic
                                     if (!evaluateCondition(field)) return null;
 
-                                    const isSystemLocked = application?.ninVerificationMode !== 'disabled' && application?.ninAutoFill !== false && verifiedNinData && (
+                                    const isNameLocked = lockedFields.has(field.label);
+                                    const isSystemLocked = isNameLocked || (application?.ninVerificationMode !== 'disabled' && application?.ninAutoFill !== false && verifiedNinData && (
                                         field.systemKey === 'firstName' || field.systemKey === 'lastName' ||
                                         field.systemKey === 'dob' || field.systemKey === 'gender'
-                                    );
+                                    ));
 
                                     const displayValue = isSystemLocked
                                         ? (field.systemKey === 'firstName' ? verifiedNinData.firstName :
@@ -693,8 +714,9 @@ export default function StatefulApplicationPage() {
 
                                     return (
                                         <div key={field.id} className={cn("space-y-2", field.width === 'half' ? "col-span-1" : "col-span-1 md:col-span-2")}>
-                                            <label className="text-xs font-bold text-gray-700 px-1">
+                                            <label className="text-xs font-bold text-gray-700 px-1 flex items-center gap-1.5">
                                                 {field.label} {field.isRequired && <span className="text-rose-500">*</span>}
+                                                {isNameLocked && <Lock className="w-3 h-3 text-gray-400" />}
                                             </label>
                                             {field.helpText && (
                                                 <p className="text-[11px] text-gray-500 px-1">{field.helpText}</p>

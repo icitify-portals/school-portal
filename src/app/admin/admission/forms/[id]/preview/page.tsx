@@ -414,9 +414,9 @@ export default function FormPreviewPage() {
                         <div className="border-b-2 border-indigo-900 bg-gradient-to-r from-indigo-950 via-indigo-900 to-indigo-800 px-8 py-6 flex items-center gap-6">
                             <img src="/fss_logo.png" alt="School Logo" className="w-20 h-20 rounded-full border-2 border-white/30 object-contain bg-white p-1" />
                             <div className="text-white">
-                                <h1 className="text-2xl font-black tracking-tight">FEDERAL SCIENCE SCHOOL IBADAN</h1>
-                                <p className="text-indigo-200 text-sm font-medium mt-1">Federal Ministry of Education | FSS Ibadan, Oyo State</p>
-                                <p className="text-indigo-300 text-xs mt-0.5">P.M.B. 1, Apata, Ibadan | fssibadan.edu.ng</p>
+                                <h1 className="text-2xl font-black tracking-tight">FEDERAL SCHOOL OF STATISTICS</h1>
+                                <p className="text-indigo-200 text-sm font-medium mt-1">Federal Ministry of Education | Enugu, Enugu State</p>
+                                <p className="text-indigo-300 text-xs mt-0.5">Enugu | fssofficial.edu.ng</p>
                             </div>
                             {(() => {
                                 const photoField = sections.flatMap((s: any) => s.fields).find((f: any) => f.type === 'file');
