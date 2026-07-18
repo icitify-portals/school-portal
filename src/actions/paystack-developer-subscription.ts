@@ -58,7 +58,8 @@ export async function initiateDeveloperFee(
     identifier: string,
     email: string,
     type: 'admission_form' | 'school_fees',
-    sessionId?: number
+    sessionId?: number,
+    customAmount?: number
 ) {
     // 1. Check if already paid
     const isPaid = await checkDeveloperFeeStatus(identifier, type, sessionId);
@@ -66,8 +67,8 @@ export async function initiateDeveloperFee(
         return { success: true, alreadyPaid: true };
     }
 
-    // 2. Calculate amount
-    const amount = await getDeveloperFeeAmount(type);
+    // 2. Calculate amount (use custom amount if provided, otherwise read from settings)
+    const amount = customAmount || await getDeveloperFeeAmount(type);
 
     // 3. Generate Reference
     const reference = `DEV-${type === 'admission_form' ? 'ADM' : 'SCH'}-${Date.now()}-${Math.floor(Math.random() * 1000)}`;

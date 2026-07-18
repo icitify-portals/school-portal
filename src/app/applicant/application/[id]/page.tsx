@@ -16,7 +16,8 @@ import {
     processAdmissionPayment,
     verifyNinAction,
     getExaminationBodies,
-    saveOLevelResultsAction
+    saveOLevelResultsAction,
+    getTemplateProgrammes
 } from "@/actions/admission_v2";
 import OLevelSubmission from "@/components/forms/OLevelSubmission";
 import PhotoCapture from "@/components/forms/PhotoCapture";
@@ -62,6 +63,11 @@ export default function StatefulApplicationPage() {
     const [paymentProcessing, setPaymentProcessing] = useState(false);
     const [examBodies, setExamBodies] = useState<any[]>([]);
     const [lockedFields, setLockedFields] = useState<Set<string>>(new Set());
+
+    // Programme Selection
+    const [templateProgrammes, setTemplateProgrammes] = useState<any[]>([]);
+    const [selectedProgrammeId, setSelectedProgrammeId] = useState<number | null>(null);
+    const [savingProgramme, setSavingProgramme] = useState(false);
 
     useEffect(() => {
         if (status === "authenticated" && session?.user?.id) {
@@ -130,6 +136,15 @@ export default function StatefulApplicationPage() {
             }
             const bodies = await getExaminationBodies();
             setExamBodies(bodies);
+
+            // Load linked programmes and pre-select if already assigned
+            if (data.template?.id) {
+                const progs = await getTemplateProgrammes(data.template.id);
+                setTemplateProgrammes(progs);
+            }
+            if (data.programmeId) {
+                setSelectedProgrammeId(data.programmeId);
+            }
         }
         setLoading(false);
     };
@@ -491,10 +506,12 @@ export default function StatefulApplicationPage() {
     };
 
     const handleProcessingFee = () => {
+        const processingFee = parseFloat(application?.template?.processingFee || "0");
         triggerSubscriptionGate({
             identifier: applicationId.toString(),
             email: session!.user!.email!,
             type: 'admission_form',
+            customAmount: processingFee > 0 ? processingFee : undefined,
             onSuccess: async () => {
                 toast.success("Processing fee paid successfully!");
                 window.location.reload();
@@ -587,6 +604,63 @@ export default function StatefulApplicationPage() {
                 >
                     {isGateLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : <><CreditCard className="w-5 h-5" /> Pay Processing Fee</>}
                 </Button>
+            </Card>
+        );
+    }
+
+    // Programme Selection Step (after both fees paid)
+    if (templateProgrammes.length > 0 && !selectedProgrammeId) {
+        const handleSelectProgramme = async (progId: number) => {
+            setSavingProgramme(true);
+            try {
+                const res = await fetch(`/api/applicant/application/${applicationId}/programme`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ programmeId: progId })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    setSelectedProgrammeId(progId);
+                    toast.success("Programme selected!");
+                    window.location.reload();
+                } else {
+                    toast.error(data.error || "Failed to save programme selection");
+                }
+            } catch {
+                toast.error("Failed to save programme selection");
+            }
+            setSavingProgramme(false);
+        };
+
+        return (
+            <Card className="bg-white max-w-2xl mx-auto mt-12 p-12 text-center space-y-8 rounded-[2rem] shadow-xl border border-indigo-100">
+                <div className="w-24 h-24 bg-indigo-50 rounded-full flex items-center justify-center mx-auto">
+                    <GraduationCap className="w-10 h-10 text-indigo-600" />
+                </div>
+                <div className="space-y-4">
+                    <h2 className="text-3xl font-black text-gray-900 uppercase">Select Programme</h2>
+                    <p className="text-gray-500 font-medium text-sm leading-relaxed">
+                        Choose the programme you wish to apply for.
+                    </p>
+                </div>
+                <div className="space-y-3 max-h-64 overflow-y-auto">
+                    {templateProgrammes.map((prog: any) => (
+                        <div
+                            key={prog.id}
+                            onClick={() => !savingProgramme && handleSelectProgramme(prog.id)}
+                            className="p-4 rounded-2xl border-2 border-slate-100 hover:border-indigo-500 hover:bg-indigo-50 cursor-pointer transition-all text-left flex items-center gap-4"
+                        >
+                            <div className="w-10 h-10 bg-indigo-100 rounded-xl flex items-center justify-center shrink-0">
+                                <GraduationCap className="w-5 h-5 text-indigo-600" />
+                            </div>
+                            <div>
+                                <p className="font-bold text-gray-900">{prog.name}</p>
+                                <p className="text-xs text-gray-500">{prog.code || ''} {prog.durationYears ? `(${prog.durationYears} yrs)` : ''}</p>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+                {savingProgramme && <Loader2 className="w-6 h-6 animate-spin mx-auto text-indigo-600" />}
             </Card>
         );
     }

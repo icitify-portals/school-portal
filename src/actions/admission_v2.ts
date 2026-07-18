@@ -108,7 +108,17 @@ async function getTemplateWithSections(templateId: number) {
                 .orderBy(asc(admissionFormFields.order))
             : [];
 
-        return { ...template, sections: sections.map(s => ({ ...s, fields: fields.filter(f => f.sectionId === s.id) })) };
+        const programmeLinks = await db.select({
+            programmeId: admissionTemplateProgrammes.programmeId,
+        }).from(admissionTemplateProgrammes)
+        .where(eq(admissionTemplateProgrammes.templateId, templateId));
+        const programmeIds = programmeLinks.map((p: any) => p.programmeId);
+        let programmesData: any[] = [];
+        if (programmeIds.length > 0) {
+            programmesData = await db.select().from(programmes).where(inArray(programmes.id, programmeIds));
+        }
+
+        return { ...template, sections: sections.map(s => ({ ...s, fields: fields.filter(f => f.sectionId === s.id) })), programmes: programmesData };
     } catch (error) {
         console.error("Failed to fetch template with sections:", error);
         return null;
@@ -1059,7 +1069,7 @@ export async function getApplicantApplication(applicationId: number, applicantId
             const template = await getTemplateWithSections(app.templateId);
             // @ts-expect-error
             app.template = template;
-            const isProcessingFeePaid = await checkDeveloperFeeStatus(applicationId.toString(), 'admission_form');
+            const isProcessingFeePaid = app.processingFeeStatus === 'paid' || await checkDeveloperFeeStatus(applicationId.toString(), 'admission_form');
             // @ts-expect-error
             app.isProcessingFeePaid = isProcessingFeePaid;
             

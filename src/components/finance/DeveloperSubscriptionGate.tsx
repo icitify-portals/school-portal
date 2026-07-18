@@ -51,6 +51,7 @@ export function useDeveloperSubscription() {
         email,
         type,
         sessionId,
+        customAmount,
         onSuccess,
         onError
     }: {
@@ -58,6 +59,7 @@ export function useDeveloperSubscription() {
         email: string;
         type: 'admission_form' | 'school_fees';
         sessionId?: number;
+        customAmount?: number;
         onSuccess: () => void;
         onError?: () => void;
     }) => {
@@ -70,7 +72,7 @@ export function useDeveloperSubscription() {
         setIsLoading(true);
 
         try {
-            const initRes = await initiateDeveloperFee(identifier, email, type, sessionId);
+            const initRes = await initiateDeveloperFee(identifier, email, type, sessionId, customAmount);
             
             if ((initRes as any).error || !initRes.success) {
                 toast.error((initRes as any).error || "Failed to initiate developer subscription");
