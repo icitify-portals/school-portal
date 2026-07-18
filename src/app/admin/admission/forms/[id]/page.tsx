@@ -44,7 +44,8 @@ import {
     ChevronUp,
     Users,
     Droplet,
-    Dna
+    Dna,
+    Pencil
 } from "lucide-react";
 import Link from "next/link";
 import { 
@@ -178,6 +179,7 @@ export default function AdmissionFormBuilder() {
     const [savingAgeRule, setSavingAgeRule] = useState(false);
     
     const [sectionData, setSectionData] = useState({ title: "" });
+    const [editingSectionId, setEditingSectionId] = useState<number | null>(null);
     const [editingFieldId, setEditingFieldId] = useState<number | null>(null);
     const [fieldData, setFieldData] = useState({
         label: "",
@@ -294,16 +296,24 @@ export default function AdmissionFormBuilder() {
     const handleSaveSection = async (e: React.FormEvent) => {
         e.preventDefault();
         const res = await saveFormSection({ 
+            id: editingSectionId,
             templateId, 
             ...sectionData, 
-            order: template.sections.length 
+            order: editingSectionId ? undefined : template.sections.length 
         });
         if (res.success) {
             setShowSectionModal(false);
+            setEditingSectionId(null);
             setSectionData({ title: "" });
             fetchTemplate();
-            toast.success("Section added successfully");
+            toast.success(editingSectionId ? "Section updated" : "Section added successfully");
         }
+    };
+
+    const handleEditSection = (section: any) => {
+        setEditingSectionId(section.id);
+        setSectionData({ title: section.title });
+        setShowSectionModal(true);
     };
 
     const handleSaveField = async (e: React.FormEvent) => {
@@ -653,6 +663,9 @@ export default function AdmissionFormBuilder() {
                                     <Button onClick={() => setShowFieldModal(true)} className="rounded-2xl bg-slate-900 hover:bg-indigo-600 text-white font-black px-8 py-6 flex gap-3 uppercase text-xs tracking-widest shadow-xl">
                                         <Plus className="w-5 h-5" /> Add Field
                                     </Button>
+                                    <Button onClick={() => handleEditSection(currentSection)} variant="ghost" className="rounded-2xl text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 p-4">
+                                        <Pencil className="w-5 h-5" />
+                                    </Button>
                                     <Button onClick={async () => {
                                         if (confirm("Are you sure? This will delete all fields in this section.")) {
                                             await deleteFormSection(currentSection.id, templateId);
@@ -808,7 +821,7 @@ export default function AdmissionFormBuilder() {
                 <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-50 flex items-center justify-center p-4">
                     <Card className="w-full max-w-lg border-none shadow-2xl rounded-[3rem] overflow-hidden">
                         <CardHeader className="bg-slate-900 text-white p-8">
-                            <CardTitle className="text-2xl font-black italic uppercase italic">Add Page Section</CardTitle>
+                            <CardTitle className="text-2xl font-black italic uppercase">{editingSectionId ? 'Edit Page Section' : 'Add Page Section'}</CardTitle>
                         </CardHeader>
                         <CardContent className="p-8 space-y-6 bg-white">
                             <form onSubmit={handleSaveSection} className="space-y-4">
@@ -823,8 +836,8 @@ export default function AdmissionFormBuilder() {
                                     />
                                 </div>
                                 <div className="flex gap-4 pt-4">
-                                    <Button type="button" variant="ghost" onClick={() => setShowSectionModal(false)} className="flex-1 font-black py-6 rounded-2xl uppercase text-[10px] tracking-widest">Cancel</Button>
-                                    <Button type="submit" className="flex-1 bg-indigo-600 text-white font-black py-6 rounded-2xl uppercase text-[10px] tracking-widest">Create Section</Button>
+                                    <Button type="button" variant="ghost" onClick={() => { setShowSectionModal(false); setEditingSectionId(null); setSectionData({ title: "" }); }} className="flex-1 font-black py-6 rounded-2xl uppercase text-[10px] tracking-widest">Cancel</Button>
+                                    <Button type="submit" className="flex-1 bg-indigo-600 text-white font-black py-6 rounded-2xl uppercase text-[10px] tracking-widest">{editingSectionId ? 'Update Section' : 'Create Section'}</Button>
                                 </div>
                             </form>
                         </CardContent>
