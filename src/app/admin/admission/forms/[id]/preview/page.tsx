@@ -410,64 +410,72 @@ export default function FormPreviewPage() {
                         </CardContent>
                     </Card>
                 ) : isReviewStep ? (
-                    <Card className="border-none shadow-sm rounded-2xl">
-                        <CardHeader>
-                            <CardTitle className="text-xl font-bold">Review Your Application</CardTitle>
-                            <p className="text-sm text-gray-500">This is what applicants will see before submitting.</p>
-                        </CardHeader>
-                        <CardContent className="space-y-6">
-                            {sections.map((sec: any) => (
-                                <div key={sec.id} className="border border-gray-200 rounded-xl p-4">
-                                    <h3 className="font-bold text-gray-900 mb-3">{sec.title}</h3>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        {(sec.fields || []).map((field: any) => {
-                                            if (!evaluateCondition(field)) return null;
-                                            const val = formData[field.label];
-                                            if (field.type === 'olevel_result') {
+                    <div className="bg-white border border-gray-300 shadow-sm rounded-2xl overflow-hidden">
+                        <div className="border-b-2 border-indigo-900 bg-gradient-to-r from-indigo-950 via-indigo-900 to-indigo-800 px-8 py-6 flex items-center gap-6">
+                            <img src="/fss_logo.png" alt="School Logo" className="w-20 h-20 rounded-full border-2 border-white/30 object-contain bg-white p-1" />
+                            <div className="text-white">
+                                <h1 className="text-2xl font-black tracking-tight">FEDERAL SCIENCE SCHOOL IBADAN</h1>
+                                <p className="text-indigo-200 text-sm font-medium mt-1">Federal Ministry of Education | FSS Ibadan, Oyo State</p>
+                                <p className="text-indigo-300 text-xs mt-0.5">P.M.B. 1, Apata, Ibadan | fssibadan.edu.ng</p>
+                            </div>
+                            {(() => {
+                                const photoField = sections.flatMap((s: any) => s.fields).find((f: any) => f.type === 'file');
+                                const photoVal = photoField ? formData[photoField.label] : null;
+                                if (photoVal && typeof photoVal === 'string' && photoVal.startsWith('data:image')) {
+                                    return <img src={photoVal} alt="Passport" className="w-24 h-28 rounded-lg border-2 border-white/40 object-cover ml-auto shrink-0 bg-white" />;
+                                }
+                                return null;
+                            })()}
+                        </div>
+                        <div className="p-8 space-y-6">
+                            {sections.map((sec: any) => {
+                                const visibleFields = (sec.fields || []).filter((f: any) => evaluateCondition(f) && f.type !== 'file');
+                                if (visibleFields.length === 0) return null;
+                                return (
+                                    <div key={sec.id}>
+                                        <h3 className="text-sm font-black text-indigo-900 uppercase tracking-widest border-b border-indigo-200 pb-2 mb-4">{sec.title}</h3>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3">
+                                            {visibleFields.map((field: any) => {
+                                                const val = formData[field.label];
+                                                if (field.type === 'olevel_result') {
+                                                    const EXAM_BODIES: Record<string, string> = { '1': 'WAEC', '2': 'NECO', '3': 'NABTEB', '4': 'GCE' };
+                                                    return (
+                                                        <div key={field.id} className="col-span-2">
+                                                            <p className="text-xs text-gray-400 uppercase tracking-wider mb-1">{field.label}</p>
+                                                            {Array.isArray(val) && val.map((sitting: any, si: number) => (
+                                                                <div key={si} className="border border-gray-200 rounded-lg p-3 mb-2 bg-gray-50/50">
+                                                                    <p className="text-sm font-bold text-gray-800 mb-1">Sitting {si + 1}: {EXAM_BODIES[sitting.examBodyId] || `Body #${sitting.examBodyId}`} — {sitting.examYear || '—'} — Exam No: {sitting.examNumber || '—'}</p>
+                                                                    {Array.isArray(sitting.subjects) && sitting.subjects.filter((s: any) => s.subjectName).map((sub: any, subIdx: number) => (
+                                                                        <span key={subIdx} className="inline-block bg-white rounded px-2 py-0.5 mr-1 mb-1 border text-xs text-gray-700">
+                                                                            {sub.subjectName}: <span className="font-semibold">{sub.grade || '—'}</span>
+                                                                        </span>
+                                                                    ))}
+                                                                </div>
+                                                            ))}
+                                                            {(!val || (Array.isArray(val) && val.length === 0)) && <p className="text-sm text-gray-400">—</p>}
+                                                        </div>
+                                                    );
+                                                }
+                                                const displayVal = Array.isArray(val) ? val.join(', ') : val || '—';
                                                 return (
-                                                    <div key={field.id} className="col-span-2 space-y-1">
-                                                        <p className="text-xs text-gray-400 uppercase">{field.label}</p>
-                                                        {Array.isArray(val) && val.map((sitting: any, si: number) => (
-                                                            <div key={si} className="text-sm text-gray-700 bg-gray-50 rounded-lg p-3 mb-2">
-                                                                <p className="font-bold">Sitting {si + 1}: {sitting.examBodyId ? `Exam #{sitting.examNumber}` : '—'}</p>
-                                                                {Array.isArray(sitting.subjects) && sitting.subjects.filter((s: any) => s.subjectName).map((sub: any, subIdx: number) => (
-                                                                    <span key={subIdx} className="inline-block bg-white rounded px-2 py-0.5 mr-1 mb-1 border text-xs">
-                                                                        {sub.subjectName}: {sub.grade || '—'}
-                                                                    </span>
-                                                                ))}
-                                                            </div>
-                                                        ))}
-                                                        {(!val || (Array.isArray(val) && val.length === 0)) && <p className="text-sm text-gray-400">—</p>}
+                                                    <div key={field.id} className="space-y-0.5">
+                                                        <p className="text-xs text-gray-400 uppercase tracking-wider">{field.label}</p>
+                                                        <p className="text-sm text-gray-800 font-medium">{displayVal}</p>
                                                     </div>
                                                 );
-                                            }
-                                            if (field.type === 'file' && val && typeof val === 'string' && val.startsWith('data:image')) {
-                                                return (
-                                                    <div key={field.id} className="space-y-1">
-                                                        <p className="text-xs text-gray-400 uppercase">{field.label}</p>
-                                                        <img src={val} alt={field.label} className="max-w-full h-auto max-h-32 rounded-lg object-contain" />
-                                                    </div>
-                                                );
-                                            }
-                                            const displayVal = Array.isArray(val) ? val.join(', ') : val || '—';
-                                            return (
-                                                <div key={field.id} className="space-y-1">
-                                                    <p className="text-xs text-gray-400 uppercase">{field.label}</p>
-                                                    <p className="text-sm text-gray-700 font-medium">{displayVal}</p>
-                                                </div>
-                                            );
-                                        })}
+                                            })}
+                                        </div>
                                     </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                             {submitted && (
                                 <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-center">
                                     <p className="text-green-700 font-bold text-lg">Form submitted successfully!</p>
                                     <p className="text-green-600 text-sm mt-1">This simulates the post-submission confirmation.</p>
                                 </div>
                             )}
-                        </CardContent>
-                    </Card>
+                        </div>
+                    </div>
                 ) : currentSection ? (
                     <Card className="border-none shadow-sm rounded-2xl">
                         <CardHeader>
