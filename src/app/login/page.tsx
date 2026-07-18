@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { getBrandingSettings } from "@/actions/settings";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { GraduationCap, AlertCircle, Loader2 } from "lucide-react";
+import { GraduationCap, AlertCircle, Loader2, Mail } from "lucide-react";
 import Link from "next/link";
 
 export default function LoginPage() {
@@ -15,6 +15,8 @@ export default function LoginPage() {
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
     const [branding, setBranding] = useState<any>(null);
+    const [resending, setResending] = useState(false);
+    const [resendSent, setResendSent] = useState(false);
     const router = useRouter();
 
     useEffect(() => {
@@ -55,6 +57,32 @@ export default function LoginPage() {
         }
     };
 
+    const handleResendVerification = async () => {
+        if (!email) return;
+        setResending(true);
+        setResendSent(false);
+        try {
+            const res = await fetch("/api/resend-verification", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email }),
+            });
+            const data = await res.json();
+            if (res.ok) {
+                setResendSent(true);
+                setError("");
+            } else {
+                setError(data.message || "Failed to resend verification link");
+            }
+        } catch {
+            setError("An error occurred. Please try again.");
+        } finally {
+            setResending(false);
+        }
+    };
+
+    const isEmailVerificationError = error.includes("verify your email");
+
     return (
         <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
             <Card className="w-full max-w-md border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
@@ -73,9 +101,29 @@ export default function LoginPage() {
                 <CardContent className=" p-6">
                     <form onSubmit={handleSubmit} className="space-y-4" suppressHydrationWarning>
                         {error && (
-                            <div className="p-3 bg-red-50 text-red-600 rounded-lg text-sm flex gap-2 items-center">
-                                <AlertCircle className="w-4 h-4" />
-                                {error}
+                            <div className="p-3 bg-red-50 text-red-600 rounded-lg text-sm space-y-2">
+                                <div className="flex gap-2 items-center">
+                                    <AlertCircle className="w-4 h-4 shrink-0" />
+                                    <span>{error}</span>
+                                </div>
+                                {isEmailVerificationError && !resendSent && (
+                                    <button
+                                        type="button"
+                                        onClick={handleResendVerification}
+                                        disabled={resending}
+                                        className="flex items-center gap-1.5 text-indigo-600 hover:text-indigo-800 font-medium text-xs ml-6"
+                                    >
+                                        {resending ? (
+                                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                        ) : (
+                                            <Mail className="w-3.5 h-3.5" />
+                                        )}
+                                        {resending ? "Sending..." : "Resend verification link"}
+                                    </button>
+                                )}
+                                {isEmailVerificationError && resendSent && (
+                                    <p className="text-green-600 text-xs ml-6">Verification link sent. Check your inbox.</p>
+                                )}
                             </div>
                         )}
                         <div className="space-y-2">
