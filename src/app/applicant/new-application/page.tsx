@@ -1,39 +1,27 @@
-import { auth } from "@/auth";
-import { redirect } from "next/navigation";
-import { getAdmissionTemplates } from "@/actions/admission_v2";
-import { db } from "@/db/db";
-import { admissionApplicationsV2 } from "@/db/schema";
-import { eq, and } from "drizzle-orm";
+"use client";
 
-export default async function NewApplicationPage() {
-    const session = await auth();
-    if (!session || !session.user) {
-        redirect("/login");
-    }
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 
-    const applicantId = parseInt(session.user.id);
+export default function NewApplicationRedirect() {
+    const router = useRouter();
 
-    // Check for existing draft application
-    const existingApp = await db.query.admissionApplicationsV2.findFirst({
-        where: eq(admissionApplicationsV2.applicantId, applicantId)
-    });
+    useEffect(() => {
+        // Create a form and submit it programmatically to trigger the API route
+        const form = document.createElement("form");
+        form.method = "POST";
+        form.action = "/api/applicant/start-application";
+        form.style.display = "none";
+        document.body.appendChild(form);
+        form.submit();
+    }, []);
 
-    if (existingApp) {
-        redirect(`/applicant/application/${existingApp.id}`);
-    }
-
-    // No existing app — pick first active template and create one
-    const templates = await getAdmissionTemplates();
-    if (templates.length === 0) {
-        redirect("/admission?no_templates=1");
-    }
-
-    const [result] = await db.insert(admissionApplicationsV2).values({
-        templateId: templates[0].id,
-        applicantId: applicantId,
-        status: 'draft',
-        paymentStatus: 'pending'
-    });
-
-    redirect(`/applicant/application/${result.insertId}`);
+    return (
+        <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+            <div className="text-center space-y-4">
+                <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto" />
+                <p className="text-sm font-bold text-slate-500">Preparing your application...</p>
+            </div>
+        </div>
+    );
 }

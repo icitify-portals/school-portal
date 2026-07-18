@@ -16,6 +16,8 @@ export default async function ApplicantDashboard() {
         id: admissionApplicationsV2.id,
         status: admissionApplicationsV2.status,
         paymentStatus: admissionApplicationsV2.paymentStatus,
+        processingFeeStatus: admissionApplicationsV2.processingFeeStatus,
+        programmeId: admissionApplicationsV2.programmeId,
         appliedAt: admissionApplicationsV2.appliedAt,
         template: {
             name: admissionFormTemplates.name,
@@ -90,13 +92,25 @@ export default async function ApplicantDashboard() {
                                     </div>
                                     <div className="space-y-1.5">
                                         <div className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-slate-400">
-                                            <CreditCard className="w-3 h-3" /> Fee
+                                            <CreditCard className="w-3 h-3" /> App Fee
                                         </div>
                                         <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg w-fit bg-slate-50">
                                             {app.paymentStatus === 'paid' ? (
-                                                <><CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /><span className="text-sm font-bold text-slate-700">Paid</span></>
+                                                <><CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /><span className="text-sm font-bold text-emerald-700">Paid</span></>
                                             ) : (
-                                                <><Clock className="w-3.5 h-3.5 text-amber-500" /><span className="text-sm font-bold text-slate-700">Pending</span></>
+                                                <><Clock className="w-3.5 h-3.5 text-amber-500" /><span className="text-sm font-bold text-amber-700">Pending</span></>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <div className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-slate-400">
+                                            <CreditCard className="w-3 h-3" /> Processing Fee
+                                        </div>
+                                        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg w-fit bg-slate-50">
+                                            {app.processingFeeStatus === 'paid' ? (
+                                                <><CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /><span className="text-sm font-bold text-emerald-700">Paid</span></>
+                                            ) : (
+                                                <><Clock className="w-3.5 h-3.5 text-amber-500" /><span className="text-sm font-bold text-amber-700">Pending</span></>
                                             )}
                                         </div>
                                     </div>
