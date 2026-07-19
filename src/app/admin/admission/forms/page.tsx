@@ -15,7 +15,8 @@ import {
     CheckSquare,
     Square,
     BookOpen,
-    Layers
+    Layers,
+    Edit2
 } from "lucide-react";
 import Link from "next/link";
 import { getFormTemplates, saveFormTemplate, deleteFormTemplate, bulkDeleteFormTemplates, getTemplateProgrammes, linkProgrammesToTemplate, cloneFormTemplate } from "@/actions/admission_v2";
@@ -76,7 +77,18 @@ export default function AdmissionBuilderPage() {
         setSeeding(false);
     };
 
-    const [newData, setNewData] = useState({
+    const [newData, setNewData] = useState<{
+        id?: number;
+        name: string;
+        level: string;
+        slug: string;
+        startDate: string;
+        endDate: string;
+        feeStructureId: string;
+        applicationFee: string;
+        processingFee: string;
+        flowType: string;
+    }>({
         name: "",
         level: "primary",
         slug: "",
@@ -119,6 +131,22 @@ export default function AdmissionBuilderPage() {
             toast.error(res.error || "Failed to update template status");
         }
         setTogglingId(null);
+    };
+
+    const handleEditClick = (template: any) => {
+        setNewData({
+            id: template.id,
+            name: template.name || "",
+            level: template.level || "primary",
+            slug: template.slug || "",
+            startDate: template.startDate ? new Date(template.startDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+            endDate: template.endDate ? new Date(template.endDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+            feeStructureId: template.feeStructureId ? template.feeStructureId.toString() : "",
+            applicationFee: template.applicationFee ? template.applicationFee.toString() : "0",
+            processingFee: template.processingFee ? template.processingFee.toString() : "0",
+            flowType: template.flowType || "form_first"
+        });
+        setShowCreateModal(true);
     };
 
     const [duplicatingId, setDuplicatingId] = useState<number | null>(null);
@@ -188,7 +216,7 @@ export default function AdmissionBuilderPage() {
             isActive: true
         });
         if (res.success) {
-            toast.success(`"${newData.name}" template created successfully!`);
+            toast.success(`"${newData.name}" template ${newData.id ? 'updated' : 'created'} successfully!`);
             setShowCreateModal(false);
             setNewData({
                 name: "",
@@ -232,7 +260,20 @@ export default function AdmissionBuilderPage() {
                         {seeding ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Database className="w-4 h-4" /> Seed Sample Templates</>}
                     </Button>
                     <Button
-                        onClick={() => setShowCreateModal(true)}
+                        onClick={() => {
+                            setNewData({
+                                name: "",
+                                level: "primary",
+                                slug: "",
+                                startDate: new Date().toISOString().split('T')[0],
+                                endDate: new Date().toISOString().split('T')[0],
+                                feeStructureId: "",
+                                applicationFee: "0",
+                                processingFee: "0",
+                                flowType: "form_first"
+                            });
+                            setShowCreateModal(true);
+                        }}
                         className="bg-slate-900 text-white font-black px-6 py-6 rounded-2xl shadow-lg shadow-slate-100 transition-all hover:scale-105 flex gap-3 uppercase text-[10px] tracking-widest"
                     >
                         <Plus className="w-4 h-4" /> New Form Template
@@ -311,7 +352,15 @@ export default function AdmissionBuilderPage() {
                                     <div className="flex items-center gap-2">
                                         <button
                                             type="button"
-                                            onClick={() => handleDuplicate(template)}
+                                            onClick={(e) => { e.stopPropagation(); handleEditClick(template); }}
+                                            className="text-white/60 hover:text-white transition-colors disabled:opacity-50"
+                                            title="Edit template details"
+                                        >
+                                            <Edit2 className="w-4 h-4" />
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={(e) => { e.stopPropagation(); handleDuplicate(template); }}
                                             disabled={duplicatingId === template.id}
                                             className="text-white/60 hover:text-white transition-colors disabled:opacity-50"
                                             title="Duplicate template"
@@ -408,7 +457,7 @@ export default function AdmissionBuilderPage() {
                 <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-50 flex items-center justify-center p-4">
                     <Card className="w-full max-w-lg border-none shadow-2xl rounded-[3rem] overflow-hidden animate-in fade-in zoom-in duration-300">
                         <CardHeader className="bg-slate-900 text-white p-8">
-                            <CardTitle className="text-2xl font-black italic uppercase">Initialize Form Template</CardTitle>
+                            <CardTitle className="text-2xl font-black italic uppercase">{newData.id ? 'Edit Form Template' : 'Initialize Form Template'}</CardTitle>
                         </CardHeader>
                         <CardContent className="p-8 space-y-6 bg-white">
                             <form onSubmit={handleCreate} className="space-y-4">

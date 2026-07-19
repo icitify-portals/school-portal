@@ -5,7 +5,7 @@ import { eq } from "drizzle-orm";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { ArrowRight, FileText, CheckCircle2, Clock, Map, CreditCard, CheckSquare, Sparkles } from "lucide-react";
+import { ArrowRight, FileText, CheckCircle2, Clock, Map, CreditCard, CheckSquare, Sparkles, Printer } from "lucide-react";
 
 export default async function ApplicantDashboard() {
     const session = await auth();
@@ -116,12 +116,21 @@ export default async function ApplicantDashboard() {
                                     </div>
                                 </div>
                                 
-                                <Link href={`/applicant/application/${app.id}`} className="block mt-auto">
-                                    <Button className="w-full bg-slate-900 hover:bg-indigo-600 text-white font-black py-6 rounded-xl flex items-center justify-between px-6 group-hover:shadow-lg transition-all text-xs uppercase tracking-widest">
-                                        <span>{app.status === 'draft' ? "Continue App" : "View Details"}</span>
-                                        <ArrowRight className="w-4 h-4 group-hover:translate-x-2 transition-transform" />
-                                    </Button>
-                                </Link>
+                                <div className="flex gap-3 mt-auto">
+                                    <Link href={`/applicant/application/${app.id}`} className="flex-1">
+                                        <Button className="w-full bg-slate-900 hover:bg-indigo-600 text-white font-black py-6 rounded-xl flex items-center justify-between px-6 group-hover:shadow-lg transition-all text-xs uppercase tracking-widest">
+                                            <span>{app.status === 'draft' ? "Continue App" : "View Details"}</span>
+                                            <ArrowRight className="w-4 h-4 group-hover:translate-x-2 transition-transform" />
+                                        </Button>
+                                    </Link>
+                                    {app.status === 'submitted' && (
+                                        <Link href={`/applicant/application/${app.id}/print`} className="flex-shrink-0">
+                                            <Button variant="outline" className="h-full bg-white border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-indigo-600 font-black px-4 rounded-xl transition-all shadow-sm">
+                                                <Printer className="w-5 h-5" />
+                                            </Button>
+                                        </Link>
+                                    )}
+                                </div>
                             </CardContent>
                         </Card>
                     ))}

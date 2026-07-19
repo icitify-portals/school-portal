@@ -1205,6 +1205,15 @@ export default function StatefulApplicationPage() {
                             </Button>
                         )}
                         
+                        {!isReviewStep && (
+                            <Button 
+                                onClick={handleSaveDraft} disabled={saving} variant="outline"
+                                className="flex-1 py-6 bg-indigo-50 border-indigo-200 text-indigo-700 hover:bg-indigo-100 uppercase font-bold text-xs tracking-widest rounded-xl transition-all"
+                            >
+                                {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />} Save Draft
+                            </Button>
+                        )}
+                        
                         {!isReviewStep ? (
                             <Button 
                                 onClick={nextStep} disabled={submitting}
