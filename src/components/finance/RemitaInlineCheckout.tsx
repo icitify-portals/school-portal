@@ -51,6 +51,8 @@ export function RemitaInlineCheckout({
                 ? "RlNTSUJBREFOfDE5MjAxNTk3MzM5fGY4NzhmZmU1MmYwOTE4NTVmMTM5MWY0Yjc3NjAyNTJmNWNmMmU1YWRiYWIyNDNhY2Q5ZWVlNmRkYjJmYmU2ZTY3NzFkMTVhZWQ1ZDAyMWViMmI1NTlkNzM4YTFjMTJiOGRiMDIwZDU4NGY2NmVjM2FiOWJmYWZiNDZmM2YzY2M4" 
                 : (process.env.NEXT_PUBLIC_REMITA_PUBLIC_KEY || "RlNTSUJBREFOfDE5MjAxNTk3MzM5fGY4NzhmZmU1MmYwOTE4NTVmMTM5MWY0Yjc3NjAyNTJmNWNmMmU1YWRiYWIyNDNhY2Q5ZWVlNmRkYjJmYmU2ZTY3NzFkMTVhZWQ1ZDAyMWViMmI1NTlkNzM4YTFjMTJiOGRiMDIwZDU4NGY2NmVjM2FiOWJmYWZiNDZmM2YzY2M4");
 
+            let paymentSuccessful = false;
+
             const paymentEngine = RmPaymentEngine.init({
                 key: publicKey,
                 customerId: email,
@@ -65,6 +67,7 @@ export function RemitaInlineCheckout({
                     customFields: [{ name: "rrr", value: rrr }]
                 },
                 onSuccess: (response: any) => {
+                    paymentSuccessful = true;
                     setIsPaying(false);
                     onSuccess(response);
                 },
@@ -74,7 +77,9 @@ export function RemitaInlineCheckout({
                 },
                 onClose: () => {
                     setIsPaying(false);
-                    onClose();
+                    if (!paymentSuccessful) {
+                        onClose();
+                    }
                 }
             });
 

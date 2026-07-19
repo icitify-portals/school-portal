@@ -157,9 +157,9 @@ function CheckoutSimulatorContent() {
 
                         <Button 
                             className="bg-indigo-600 hover:bg-indigo-500 text-white w-full py-6 font-semibold"
-                            onClick={() => router.push("/student/finance")}
+                            onClick={() => router.push(reference?.startsWith('PAY-ADM-') ? "/applicant" : "/student/finance")}
                         >
-                            Return to Student Dashboard
+                            {reference?.startsWith('PAY-ADM-') ? "Return to Applicant Dashboard" : "Return to Student Dashboard"}
                         </Button>
                     </CardContent>
                 </Card>
@@ -253,7 +253,7 @@ function CheckoutSimulatorContent() {
                             <Button
                                 className="bg-slate-800 hover:bg-slate-700 text-white w-full py-6 font-semibold flex items-center justify-center gap-2 border border-slate-700"
                                 disabled={loading}
-                                onClick={() => router.push("/student/finance")}
+                                onClick={() => router.push(reference?.startsWith('PAY-ADM-') ? "/applicant" : "/student/finance")}
                             >
                                 <Building2 className="w-5 h-5" />
                                 Return to Dashboard
