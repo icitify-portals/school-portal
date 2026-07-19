@@ -585,7 +585,7 @@ export class SplitPaymentEngine {
         });
 
         // 7. Invoke active gateway adapter
-        const adapter = this.getAdapter(activeGateway);
+        const adapter = SplitPaymentEngine.getAdapter(activeGateway);
         const result = await adapter.initializeSplitPayment(
             student.user.email,
             checkoutTotal,
@@ -728,7 +728,7 @@ export class SplitPaymentEngine {
         const applicantUser = await db.query.users.findFirst({ where: eq(users.email, applicantEmail) });
 
         // @ts-expect-error - TS2576: Auto-suppressed for build
-        const adapter = this.getAdapter(activeGateway);
+        const adapter = SplitPaymentEngine.getAdapter(activeGateway);
         const result = await adapter.initializeSplitPayment(
             applicantEmail,
             checkoutTotal,
