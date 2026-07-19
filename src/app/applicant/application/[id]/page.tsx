@@ -79,10 +79,11 @@ export default function StatefulApplicationPage() {
 
     const fetchApplication = async () => {
         setLoading(true);
-        // @ts-expect-error - TS2345: Auto-suppressed for build
-        const data = await getApplicantApplication(applicationId, parseInt(session!.user!.id));
-        if (data) {
-            setApplication(data);
+        try {
+            // @ts-expect-error - TS2345: Auto-suppressed for build
+            const data = await getApplicantApplication(applicationId, parseInt(session!.user!.id));
+            if (data) {
+                setApplication(data);
             // Always compute locked name fields from user account data
             const locked = new Set<string>();
             const userNameParts = data._userNameParts;
@@ -145,6 +146,12 @@ export default function StatefulApplicationPage() {
             if (data.programmeId) {
                 setSelectedProgrammeId(data.programmeId);
             }
+        }
+        } catch (error) {
+            // Unhandled Server Action errors due to Next.js deployment mismatch
+            // Force a reload to get the new bundles
+            window.location.reload();
+            return;
         }
         setLoading(false);
     };
@@ -747,6 +754,16 @@ export default function StatefulApplicationPage() {
                         Return to Dashboard
                     </Button>
                 </div>
+            </Card>
+        );
+    }
+
+    if (!application.template || !application.template.sections) {
+        return (
+            <Card className="bg-white border border-gray-200 max-w-2xl mx-auto mt-12 p-12 text-center space-y-8 rounded-[2rem] shadow-xl">
+                <AlertCircle className="w-12 h-12 text-rose-500 mx-auto" />
+                <h2 className="text-xl font-bold text-gray-900">Application Error</h2>
+                <p className="text-gray-500">The application template could not be loaded or is incomplete. Please refresh the page or contact support.</p>
             </Card>
         );
     }
