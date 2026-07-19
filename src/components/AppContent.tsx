@@ -15,6 +15,7 @@ const Sidebar = dynamic(() => import("@/components/Sidebar").then((mod) => mod.S
         </aside>
     )
 });
+import { ApplicantSidebar } from "@/components/ApplicantSidebar";
 import BursaryBot from "@/components/BursaryBot";
 import { Toaster } from "sonner";
 import { useSession } from "next-auth/react";
@@ -113,6 +114,17 @@ export function AppContent({ children, enabledModules }: { children: React.React
     // Applicant pages have their own layout with embedded sidebar
     if (pathname.startsWith("/applicant")) {
         return <>{children}</>;
+    }
+
+    if (pathname.startsWith("/guide/applicants")) {
+        return (
+            <div className="min-h-screen bg-slate-950 flex flex-col md:flex-row">
+                <ApplicantSidebar />
+                <main className="flex-1 bg-slate-50 text-slate-900 min-w-0">
+                    {children}
+                </main>
+            </div>
+        );
     }
 
     const isAdminArea = pathname.startsWith("/admin");
