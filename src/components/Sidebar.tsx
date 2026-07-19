@@ -325,7 +325,7 @@ const adminMenuItems: MenuItem[] = [
             { name: "Faculties", href: "/admin/faculties" },
             { name: "Departments", href: "/admin/departments" },
             { name: "Programmes", href: "/admin/programmes" },
-            { name: "Admission Sessions", href: "/admin/admission/sessions" },
+
             { name: "Intake Analytics", href: "/admin/admission/reports" },
             { name: "Admission Settings", href: "/admin/admission/settings" },
         ]
