@@ -502,7 +502,7 @@ export default function StatefulApplicationPage() {
                 // Mock payment
                 await new Promise(resolve => setTimeout(resolve, 2000));
                 toast.success("Payment successful!");
-                window.location.reload();
+                fetchApplication();
             }
         } catch (error) {
             toast.error("Payment error.");
@@ -519,7 +519,7 @@ export default function StatefulApplicationPage() {
             customAmount: processingFee > 0 ? processingFee : undefined,
             onSuccess: async () => {
                 toast.success("Processing fee paid successfully!");
-                window.location.reload();
+                fetchApplication();
             }
         });
     };
@@ -677,7 +677,7 @@ export default function StatefulApplicationPage() {
                 if (data.success) {
                     setSelectedProgrammeId(progId);
                     toast.success("Programme selected!");
-                    window.location.reload();
+                    fetchApplication();
                 } else {
                     toast.error(data.error || "Failed to save programme selection");
                 }
