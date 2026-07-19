@@ -32,10 +32,12 @@ import {
   deleteOLevelRequirement,
   getAllProgrammesWithRequirements,
   applyUtmeTemplate,
-  applyOLevelTemplate,
+  applyOLevelTemplate
+} from "@/actions/programme-requirements";
+import {
   UTME_SUBJECT_TEMPLATES,
   OLEVEL_SUBJECT_TEMPLATES
-} from "@/actions/programme-requirements";
+} from "@/lib/constants/admission-templates";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
