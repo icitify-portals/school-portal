@@ -23,7 +23,7 @@ export async function POST(req: Request) {
             orderBy: desc(admissionApplicationsV2.id)
         });
         if (existingApp) {
-            return redirect(`/applicant/application/${existingApp.id}`);
+            return NextResponse.redirect(new URL(`/applicant/application/${existingApp.id}`, req.url));
         }
 
         let tId: number;
@@ -59,8 +59,11 @@ export async function POST(req: Request) {
             paymentStatus: 'pending'
         });
 
-        return redirect(`/applicant/application/${result.insertId}`);
-    } catch (error) {
+        return NextResponse.redirect(new URL(`/applicant/application/${result.insertId}`, req.url));
+    } catch (error: any) {
+        if (error.message === 'NEXT_REDIRECT') {
+            throw error;
+        }
         console.error("Failed to start application:", error);
         return new NextResponse("Failed to start application", { status: 500 });
     }
