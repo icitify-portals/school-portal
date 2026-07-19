@@ -23,16 +23,16 @@ export async function POST(req: Request) {
             orderBy: desc(admissionApplicationsV2.id)
         });
         if (existingApp) {
-            return NextResponse.redirect(new URL(`/applicant/application/${existingApp.id}`, req.url));
+            return NextResponse.redirect(new URL(`/applicant/application/${existingApp.id}`, req.url), 303);
         }
 
-        let tId: number;
+        let tId: number = 0;
         const contentType = req.headers.get("content-type") || "";
 
         if (contentType.includes("application/json")) {
             const body = await req.json();
-            tId = body.templateId;
-        } else {
+            tId = body.templateId || 0;
+        } else if (contentType.includes("multipart/form-data") || contentType.includes("application/x-www-form-urlencoded")) {
             const formData = await req.formData();
             const templateId = formData.get("templateId");
             tId = templateId ? parseInt(templateId as string) : 0;
@@ -59,7 +59,7 @@ export async function POST(req: Request) {
             paymentStatus: 'pending'
         });
 
-        return NextResponse.redirect(new URL(`/applicant/application/${result.insertId}`, req.url));
+        return NextResponse.redirect(new URL(`/applicant/application/${result.insertId}`, req.url), 303);
     } catch (error: any) {
         if (error.message === 'NEXT_REDIRECT') {
             throw error;
