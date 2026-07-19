@@ -55,6 +55,14 @@ export default function ApplicationPrintPage() {
         );
 
     const formData = JSON.parse(data.data || "{}");
+    
+    const applicantPhoto =
+        data.applicantPhoto ||
+        formData["Passport Photograph"] ||
+        formData["Passport Photo"] ||
+        formData["Passport"] ||
+        formData["Photo"] ||
+        null;
 
     const SKIP_TYPES = ["image", "olevel_result"];
     const SKIP_LABELS = ["Passport Photograph", "Photo", "Passport Photo"];
@@ -69,6 +77,15 @@ export default function ApplicationPrintPage() {
     }
 
     return (
+        <>
+        <style dangerouslySetInnerHTML={{__html: `
+            @media print {
+                * {
+                    -webkit-print-color-adjust: exact !important;
+                    print-color-adjust: exact !important;
+                }
+            }
+        `}} />
         <div className="min-h-screen bg-slate-100 py-10 px-4 print:p-0 print:bg-white">
             <div className="max-w-[210mm] mx-auto space-y-6">
                 {/* Print Controls */}
@@ -120,8 +137,8 @@ export default function ApplicationPrintPage() {
                             {/* Passport Photo */}
                             <div className="w-36 shrink-0">
                                 <div className="w-36 h-44 bg-slate-50 border-2 border-slate-200 rounded-xl overflow-hidden">
-                                    {data.applicantPhoto ? (
-                                        <img src={data.applicantPhoto} alt="Passport" className="w-full h-full object-cover" />
+                                    {applicantPhoto ? (
+                                        <img src={applicantPhoto} alt="Passport" className="w-full h-full object-cover" />
                                     ) : (
                                         <div className="w-full h-full flex items-center justify-center text-slate-200">
                                             <User className="w-12 h-12" />
@@ -257,5 +274,6 @@ export default function ApplicationPrintPage() {
                 </div>
             </div>
         </div>
+        </>
     );
 }

@@ -620,8 +620,9 @@ export default function StatefulApplicationPage() {
         );
     }
 
-    // Payment Wall for Payment-First Flow
-    if (application.template.flowType === 'payment_first' && application.paymentStatus !== 'paid') {
+    // Payment Wall (Enforced for all flows with fee > 0)
+    const applicationFeeToPay = application.template.calculatedFee || parseFloat(application.template.applicationFee || "0");
+    if (applicationFeeToPay > 0 && application.paymentStatus !== 'paid') {
         return (
             <Card className="bg-white border border-rose-200 max-w-2xl mx-auto mt-12 p-12 text-center space-y-8 rounded-[2rem] shadow-xl">
                 <div className="w-24 h-24 bg-rose-50 rounded-full flex items-center justify-center mx-auto">
@@ -648,7 +649,8 @@ export default function StatefulApplicationPage() {
     }
 
     // Secondary Payment Wall: Processing Fee
-    if (application.paymentStatus === 'paid' && !application.isProcessingFeePaid) {
+    const processingFeeToPay = parseFloat(application.template.processingFee || "0");
+    if (application.paymentStatus === 'paid' && processingFeeToPay > 0 && !application.isProcessingFeePaid) {
         return (
             <Card className="bg-white border border-rose-200 max-w-2xl mx-auto mt-12 p-12 text-center space-y-8 rounded-[2rem] shadow-xl">
                 <div className="w-24 h-24 bg-rose-50 rounded-full flex items-center justify-center mx-auto">
@@ -804,8 +806,9 @@ export default function StatefulApplicationPage() {
             <Card className="border border-gray-200 bg-white overflow-hidden rounded-[2rem] shadow-sm">
                 <div className="bg-gray-50 p-6 flex items-center gap-6 border-b border-gray-200">
                     <div className="flex-1 space-y-3">
-                        <div className="flex justify-between items-center">
+                        <div className="flex items-center gap-2">
                             <span className="text-xs font-bold uppercase text-gray-500">Step {currentStep + 1} of {totalSteps}</span>
+                            <span className="text-xs font-bold text-gray-300">-</span>
                             <span className="text-xs font-bold uppercase text-[#1a5b3a]">{isReviewStep ? "Review & Complete" : currentSection?.title}</span>
                         </div>
                         <div className="w-full bg-gray-200 h-2 rounded-full overflow-hidden">

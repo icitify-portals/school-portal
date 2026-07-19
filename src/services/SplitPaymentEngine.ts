@@ -688,7 +688,7 @@ export class SplitPaymentEngine {
         }
 
         // @ts-expect-error - TS2576: Auto-suppressed for build
-        const baseGatewayFee = this.calculateGatewayFee(billTotal, activeGateway);
+        const baseGatewayFee = SplitPaymentEngine.calculateGatewayFee(billTotal, activeGateway);
         let checkoutTotal = billTotal;
 
         if (feeBearerRule === 'student') checkoutTotal += baseGatewayFee;

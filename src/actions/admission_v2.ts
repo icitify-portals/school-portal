@@ -1233,6 +1233,24 @@ export async function submitApplicationFinal(applicationId: number, applicantId:
 
         const template = await getTemplateWithSections(application.templateId);
 
+        // Server-side payment verification
+        const appFee = template?.feeStructureId ? await (async () => {
+            const items = await db.select().from(feeStructureItems).where(eq(feeStructureItems.feeStructureId, template.feeStructureId));
+            return items.reduce((acc, curr) => acc + parseFloat(curr.amount as string), 0);
+        })() : parseFloat(template?.applicationFee || "0");
+        
+        if (appFee > 0 && application.paymentStatus !== 'paid') {
+            return { success: false, error: "Application fee must be paid before submission." };
+        }
+
+        const procFee = parseFloat(template?.processingFee || "0");
+        if (procFee > 0 && application.processingFeeStatus !== 'paid') {
+            const isDevFeePaid = await checkDeveloperFeeStatus(applicationId.toString(), 'admission_form');
+            if (!isDevFeePaid) {
+                return { success: false, error: "Processing fee must be paid before submission." };
+            }
+        }
+
         // Enforce Full-Time applicants have a verified JAMB Registration Number
         if (application.applicationMode === 'full_time' && !application.jambRegNumber) {
             return { success: false, error: "A JAMB Registration Number is required for Full-Time applications. Please go back and complete this step." };
