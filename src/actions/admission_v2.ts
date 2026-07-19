@@ -17,7 +17,8 @@ import {
     feeStructureItems,
     emailVerificationTokens,
     admissionTemplateProgrammes,
-    programmes
+    programmes,
+    transactions
 } from "@/db/schema";
 import { eq, and, desc, asc, sql, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
