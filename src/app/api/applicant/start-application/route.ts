@@ -65,6 +65,6 @@ export async function POST(req: Request) {
             throw error;
         }
         console.error("Failed to start application:", error);
-        return new NextResponse("Failed to start application", { status: 500 });
+        return new NextResponse(`Failed to start application: ${error?.message || String(error)}`, { status: 500 });
     }
 }
