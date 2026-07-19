@@ -93,6 +93,13 @@ export function useDeveloperSubscription() {
                 if (onError) onError();
                 return;
             }
+            
+            if (!(initRes as any).publicKey) {
+                toast.error("Payment Gateway (Paystack) is not configured. Missing public key.");
+                setIsLoading(false);
+                if (onError) onError();
+                return;
+            }
 
             const handler = (window as any).PaystackPop.setup({
                 key: (initRes as any).publicKey,
