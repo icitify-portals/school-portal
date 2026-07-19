@@ -2409,7 +2409,7 @@ export async function resolveOnlinePaymentAction(reference: string, status: 'com
 
             // 3. Update transaction to completed
             const { verifyPayment } = await import('@/actions/payment-gateways');
-            const verification = await verifyPayment(txRecord.gateway || 'remita', reference);
+            const verification = await verifyPayment(txRecord.gateway || 'remita', reference, txRecord.rrr || undefined);
             
             if (!verification.success || !verification.verified) {
                 // If it's a mock RRR from local env, bypass for testing. Otherwise enforce.
