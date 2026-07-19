@@ -40,7 +40,7 @@ export default async function DashboardRedirectPage() {
         case 'fresher':
             redirect("/fresher"); // Task-bounded Admitted Fresher Portal
         case 'applicant':
-            redirect("/admission"); // Intake Portal for Applicants
+            redirect("/applicant"); // Dashboard for Applicants
         case 'hod':
             redirect("/admin/hod"); // Dedicated Standalone HOD Workspace
         case 'dean':
