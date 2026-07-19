@@ -849,7 +849,7 @@ export const feeItems = mysqlTable('fee_items', {
   category: mysqlEnum('category', ['tuition', 'hostel', 'library', 'lab', 'other']).default('other'),
   recurrence: mysqlEnum('recurrence', ['once', 'per_semester', 'per_session']).default('per_session'),
   isRequired: boolean('is_required').default(true),
-  settlementAccountId: int('settle_acct_id').references(() => settlementAccounts.id),
+  settlementAccountId: int('settlement_account_id').references(() => settlementAccounts.id),
 });
 
 export const feeAllocationRules = mysqlTable('fee_allocation_rules', {
