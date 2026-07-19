@@ -823,12 +823,13 @@ export default function StatefulApplicationPage() {
                                     if (!evaluateCondition(field)) return null;
 
                                     const isNameLocked = lockedFields.has(field.label);
-                                    const isSystemLocked = isNameLocked || (application?.ninVerificationMode !== 'disabled' && application?.ninAutoFill !== false && verifiedNinData && (
+                                    const isNinLocked = application?.ninVerificationMode !== 'disabled' && application?.ninAutoFill !== false && verifiedNinData && (
                                         field.systemKey === 'firstName' || field.systemKey === 'lastName' ||
                                         field.systemKey === 'dob' || field.systemKey === 'gender'
-                                    ));
+                                    );
+                                    const isSystemLocked = isNameLocked || isNinLocked;
 
-                                    const displayValue = isSystemLocked
+                                    const displayValue = isNinLocked
                                         ? (field.systemKey === 'firstName' ? verifiedNinData.firstName :
                                            field.systemKey === 'lastName' ? verifiedNinData.lastName :
                                            field.systemKey === 'dob' ? verifiedNinData.dob :
@@ -902,7 +903,7 @@ export default function StatefulApplicationPage() {
                                                         onChange={(e) => handleInputChange(field.label, e.target.value)}
                                                     >
                                                         <option value="">Select...</option>
-                                                        {field.options?.split(',').map((opt: string) => (
+                                                        {(field.options || "").split(',').filter(Boolean).map((opt: string) => (
                                                             <option key={opt} value={opt.trim()}>{opt.trim()}</option>
                                                         ))}
                                                     </select>
@@ -1035,7 +1036,7 @@ export default function StatefulApplicationPage() {
                                                 </>
                                             ) : field.type === 'radio' ? (
                                                 <div className="space-y-2 mt-2">
-                                                    {field.options?.split(',').map((opt: string) => (
+                                                    {(field.options || "").split(',').filter(Boolean).map((opt: string) => (
                                                         <label key={opt} className="flex items-center space-x-3 cursor-pointer">
                                                             <input 
                                                                 type="radio" 
@@ -1065,7 +1066,7 @@ export default function StatefulApplicationPage() {
                                                 </label>
                                             ) : field.type === 'checkbox_group' ? (
                                                 <div className="space-y-2 mt-2">
-                                                    {field.options?.split(',').map((opt: string) => {
+                                                    {(field.options || "").split(',').filter(Boolean).map((opt: string) => {
                                                         const currentValues = Array.isArray(formData[field.label]) ? formData[field.label] : [];
                                                         const isChecked = currentValues.includes(opt.trim());
                                                         return (

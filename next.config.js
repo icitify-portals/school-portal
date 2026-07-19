@@ -24,7 +24,7 @@ const securityHeaders = [
     value: [
       "default-src 'self'",
       // Allow inline scripts (required for Next.js hydration and DevTools)
-      "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://remitademo.net https://demo.remita.net https://login.remita.net https://www.googletagmanager.com",
+      "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://js.paystack.co https://remitademo.net https://demo.remita.net https://login.remita.net https://www.googletagmanager.com",
       // Styles: inline allowed (required for Tailwind / template CSS injection)
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       // Fonts

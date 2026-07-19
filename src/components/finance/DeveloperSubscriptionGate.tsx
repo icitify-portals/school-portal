@@ -40,7 +40,7 @@ export function useDeveloperSubscription() {
         };
         
         script.onerror = () => {
-            console.error("Failed to load Paystack script");
+            console.warn("Failed to load Paystack script");
         };
         
         document.body.appendChild(script);

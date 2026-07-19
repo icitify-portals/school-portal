@@ -1538,13 +1538,13 @@ export default function AdmissionFormBuilder() {
                                         <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">Link Fee Structure</label>
                                         <select 
                                             className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 font-bold outline-none focus:ring-2 focus:ring-indigo-500"
-                                            value={settingsData.feeStructureId}
+                                            value={settingsData.feeStructureId || ""}
                                             onChange={(e) => setSettingsData({...settingsData, feeStructureId: e.target.value})}
                                             required={settingsData.flowType === 'payment_first'}
                                         >
                                             <option value="">No Fee Structure</option>
-                                            {feeStructures.map(fs => (
-                                                <option key={fs.id} value={fs.id}>{fs.name} (₦{parseFloat(fs.totalAmount).toLocaleString()})</option>
+                                            {feeStructures?.map(fs => (
+                                                <option key={fs.id} value={fs.id.toString()}>{fs.name} (₦{Number(fs.totalAmount || 0).toLocaleString()})</option>
                                             ))}
                                         </select>
                                     </div>
