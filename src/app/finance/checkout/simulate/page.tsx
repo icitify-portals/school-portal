@@ -273,25 +273,8 @@ function CheckoutSimulatorContent() {
                                     />
                                 </div>
                             )}
-
-                            <Button
-                                className={`w-full py-6 font-semibold flex items-center justify-center gap-2 text-white bg-emerald-600 hover:bg-emerald-500 border border-emerald-500/35`}
-                                disabled={loading}
-                                onClick={() => handleSimulate('completed')}
-                            >
-                                {loading ? (
-                                    <>
-                                        <Loader2 className="w-5 h-5 animate-spin" />
-                                        Processing Splits...
-                                    </>
-                                ) : (
-                                    <>
-                                        <CheckCircle2 className="w-5 h-5" />
-                                        Simulate Success
-                                    </>
-                                )}
-                            </Button>
                         </div>
+
                     </CardContent>
                 </Card>
             </div>
