@@ -100,20 +100,22 @@ export function useDeveloperSubscription() {
                 amount: ((initRes as any).amount || 0) * 100, // in kobo
                 currency: "NGN",
                 ref: (initRes as any).reference,
-                callback: async function (response: any) {
-                    setIsLoading(true); 
-                    toast.loading("Verifying payment...", { id: "verify-paystack" });
-                    
-                    const verifyRes = await verifyDeveloperFee(response.reference);
-                    
-                    if (verifyRes.success) {
-                        toast.success("Developer fee paid successfully!", { id: "verify-paystack" });
-                        onSuccess();
-                    } else {
-                        toast.error(verifyRes.error || "Verification failed. Please contact support.", { id: "verify-paystack" });
-                        if (onError) onError();
-                    }
-                    setIsLoading(false);
+                callback: function (response: any) {
+                    (async () => {
+                        setIsLoading(true); 
+                        toast.loading("Verifying payment...", { id: "verify-paystack" });
+                        
+                        const verifyRes = await verifyDeveloperFee(response.reference);
+                        
+                        if (verifyRes.success) {
+                            toast.success("Developer fee paid successfully!", { id: "verify-paystack" });
+                            onSuccess();
+                        } else {
+                            toast.error(verifyRes.error || "Verification failed. Please contact support.", { id: "verify-paystack" });
+                            if (onError) onError();
+                        }
+                        setIsLoading(false);
+                    })();
                 },
                 onClose: function () {
                     toast.info("Payment cancelled.");
