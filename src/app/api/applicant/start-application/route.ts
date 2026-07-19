@@ -23,7 +23,7 @@ export async function POST(req: Request) {
             orderBy: desc(admissionApplicationsV2.id)
         });
         if (existingApp) {
-            return NextResponse.redirect(new URL(`/applicant/application/${existingApp.id}`, req.url), 303);
+            return NextResponse.json({ redirectUrl: `/applicant/application/${existingApp.id}` });
         }
 
         let tId: number = 0;
@@ -59,7 +59,7 @@ export async function POST(req: Request) {
             paymentStatus: 'pending'
         });
 
-        return NextResponse.redirect(new URL(`/applicant/application/${result.insertId}`, req.url), 303);
+        return NextResponse.json({ redirectUrl: `/applicant/application/${result.insertId}` });
     } catch (error: any) {
         if (error.message === 'NEXT_REDIRECT') {
             throw error;
