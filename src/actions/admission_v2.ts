@@ -962,6 +962,42 @@ export async function processAdmissionPayment(applicationId: number, feeStructur
     }
 }
 
+import { resolveOnlinePaymentAction } from "./bursary";
+
+export async function requeryAdmissionPayment(applicationId: number) {
+    await requireApplicant();
+    try {
+        const purpose = `Admission Form Application ID: ${applicationId}`;
+        const latestTx = await db.query.transactions.findFirst({
+            where: eq(transactions.purpose, purpose),
+            orderBy: (transactions, { desc }) => [desc(transactions.id)]
+        });
+
+        if (!latestTx) {
+            return { success: false, error: "No payment transaction found to requery." };
+        }
+
+        if (latestTx.status === 'completed') {
+            return { success: true, message: "Payment already marked as completed." };
+        }
+
+        // Reset to pending so the resolver can try it
+        await db.update(transactions).set({ status: 'pending' }).where(eq(transactions.id, latestTx.id));
+
+        const res = await resolveOnlinePaymentAction(latestTx.gatewayReference!, 'completed');
+        
+        if (res.success && res.status === 'completed') {
+            return { success: true, message: "Payment successfully verified and completed." };
+        } else {
+            return { success: false, error: res.error || "Payment verification failed or is still pending." };
+        }
+
+    } catch (error: any) {
+        console.error("Requery Payment Error:", error);
+        return { success: false, error: error.message };
+    }
+}
+
 import { hash, compare } from "bcryptjs";
 
 export async function registerApplicant(data: any) {

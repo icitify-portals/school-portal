@@ -7,7 +7,7 @@ import { useDeveloperSubscription } from "@/components/finance/DeveloperSubscrip
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { 
-    Loader2, Save, ArrowRight, ArrowLeft, CheckCircle2, Lock, CreditCard, CheckSquare, GraduationCap, Users, Printer, AlertCircle, Check
+    Loader2, Save, ArrowRight, ArrowLeft, CheckCircle2, Lock, CreditCard, CheckSquare, GraduationCap, Users, Printer, AlertCircle, Check, RotateCw
 } from "lucide-react";
 import { 
     getApplicantApplication, 
@@ -638,12 +638,38 @@ export default function StatefulApplicationPage() {
                     <span className="text-xs font-bold uppercase tracking-widest text-gray-600">Application Fee</span>
                     <span className="text-xl font-black text-[#1a5b3a]">₦{(application.template.calculatedFee || parseFloat(application.template.applicationFee)).toLocaleString()}</span>
                 </div>
-                <Button 
-                    onClick={handlePayment} disabled={paymentProcessing}
-                    className="w-full bg-[#1a5b3a] hover:bg-[#134229] text-white font-bold py-8 rounded-2xl uppercase text-sm tracking-widest transition-all flex items-center justify-center gap-3"
-                >
-                    {paymentProcessing ? <Loader2 className="w-6 h-6 animate-spin" /> : <><CreditCard className="w-5 h-5" /> Pay to Unlock Form</>}
-                </Button>
+                <div className="flex gap-4">
+                    <Button 
+                        onClick={handlePayment} disabled={paymentProcessing}
+                        className="w-full bg-[#1a5b3a] hover:bg-[#134229] text-white font-bold py-8 rounded-2xl uppercase text-sm tracking-widest transition-all flex items-center justify-center gap-3"
+                    >
+                        {paymentProcessing ? <Loader2 className="w-6 h-6 animate-spin" /> : <><CreditCard className="w-5 h-5" /> Pay to Unlock Form</>}
+                    </Button>
+                    <Button
+                        onClick={async () => {
+                            setPaymentProcessing(true);
+                            try {
+                                const { requeryAdmissionPayment } = await import('@/actions/admission_v2');
+                                const res = await requeryAdmissionPayment(application.id);
+                                if (res.success) {
+                                    toast.success("Payment verified successfully!");
+                                    window.location.reload();
+                                } else {
+                                    toast.error(res.error || "Payment verification failed.");
+                                }
+                            } catch (e: any) {
+                                toast.error(e.message || "An error occurred.");
+                            } finally {
+                                setPaymentProcessing(false);
+                            }
+                        }}
+                        disabled={paymentProcessing}
+                        variant="outline"
+                        className="w-1/3 py-8 rounded-2xl uppercase text-xs font-bold text-gray-600 border-gray-300 hover:bg-gray-100 flex flex-col items-center justify-center gap-1"
+                    >
+                        <RotateCw className={`w-5 h-5 ${paymentProcessing ? 'animate-spin' : ''}`} /> Re-Query Payment
+                    </Button>
+                </div>
             </Card>
         );
     }
