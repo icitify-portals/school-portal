@@ -61,6 +61,7 @@ import {
 import { cn } from "@/lib/utils";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { toast } from "sonner";
+import { getFeeStructures } from "@/actions/bursary";
 
 const NIN_PROVIDERS = [
     { value: 'simulator', label: 'Simulator (Testing)' },
@@ -172,7 +173,12 @@ export default function AdmissionFormBuilder() {
     const [showSectionModal, setShowSectionModal] = useState(false);
     const [showFieldModal, setShowFieldModal] = useState(false);
     const [showSettingsModal, setShowSettingsModal] = useState(false);
-    const [settingsData, setSettingsData] = useState({ name: "", slug: "" });
+    const [feeStructures, setFeeStructures] = useState<any[]>([]);
+    const [settingsData, setSettingsData] = useState({
+        name: "", slug: "", flowType: "form_first",
+        feeStructureId: "", applicationFee: "0", processingFee: "0",
+        startDate: "", endDate: ""
+    });
     const [togglingActive, setTogglingActive] = useState(false);
     const [showAgeModal, setShowAgeModal] = useState(false);
     const [minAgeInput, setMinAgeInput] = useState("");
@@ -210,9 +216,22 @@ export default function AdmissionFormBuilder() {
 
     const fetchTemplate = async () => {
         setLoading(true);
-        const data = await getFormTemplate(templateId);
+        const [data, structures] = await Promise.all([
+            getFormTemplate(templateId),
+            getFeeStructures()
+        ]);
+        setFeeStructures(structures);
         setTemplate(data);
-        setSettingsData({ name: data?.name || "", slug: data?.slug || "" });
+        setSettingsData({ 
+            name: data?.name || "", 
+            slug: data?.slug || "",
+            flowType: data?.flowType || "form_first",
+            feeStructureId: data?.feeStructureId?.toString() || "",
+            applicationFee: data?.applicationFee?.toString() || "0",
+            processingFee: data?.processingFee?.toString() || "0",
+            startDate: data?.startDate ? new Date(data.startDate).toISOString().split('T')[0] : "",
+            endDate: data?.endDate ? new Date(data.endDate).toISOString().split('T')[0] : ""
+        });
         
         // Load NIN verification config
         if (data?.ninVerificationConfig) {
@@ -236,7 +255,18 @@ export default function AdmissionFormBuilder() {
 
     const handleSaveSettings = async (e: React.FormEvent) => {
         e.preventDefault();
-        const res = await saveFormTemplate({ id: templateId, ...template, name: settingsData.name, slug: settingsData.slug });
+        const res = await saveFormTemplate({ 
+            id: templateId, 
+            ...template, 
+            name: settingsData.name, 
+            slug: settingsData.slug,
+            flowType: settingsData.flowType,
+            feeStructureId: settingsData.feeStructureId ? parseInt(settingsData.feeStructureId) : null,
+            applicationFee: parseFloat(settingsData.applicationFee),
+            processingFee: parseFloat(settingsData.processingFee),
+            startDate: new Date(settingsData.startDate),
+            endDate: new Date(settingsData.endDate)
+        });
         if (res.success) {
             setShowSettingsModal(false);
             fetchTemplate();
@@ -1465,32 +1495,97 @@ export default function AdmissionFormBuilder() {
             `}</style>
             {showSettingsModal && (
                 <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-50 flex items-center justify-center p-4">
-                    <Card className="w-full max-w-md border-none shadow-2xl rounded-[3rem] overflow-hidden animate-in fade-in zoom-in duration-300">
-                        <CardHeader className="bg-slate-900 text-white p-8">
+                    <Card className="w-full max-w-2xl max-h-[90vh] flex flex-col border-none shadow-2xl rounded-[3rem] overflow-hidden animate-in fade-in zoom-in duration-300">
+                        <CardHeader className="bg-slate-900 text-white p-8 shrink-0">
                             <CardTitle className="text-2xl font-black italic uppercase">Form Template Settings</CardTitle>
                         </CardHeader>
-                        <CardContent className="p-8 space-y-6 bg-white">
-                            <form onSubmit={handleSaveSettings} className="space-y-4">
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">Form Title</label>
-                                    <input 
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 font-bold outline-none focus:ring-2 focus:ring-indigo-500"
-                                        placeholder="e.g. 2026/2027 Admission"
-                                        value={settingsData.name}
-                                        onChange={(e) => setSettingsData({...settingsData, name: e.target.value})}
-                                        required
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">Custom Public URL (Slug)</label>
-                                    <input 
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 font-bold outline-none focus:ring-2 focus:ring-indigo-500"
-                                        placeholder="e.g. primary-intake-2026"
-                                        value={settingsData.slug}
-                                        onChange={(e) => setSettingsData({...settingsData, slug: e.target.value.toLowerCase().replace(/ /g, '-')})}
-                                        required
-                                    />
-                                    <p className="text-[10px] font-bold text-slate-500 px-1">Changes the URL users visit. Current URL: /admission/{template.slug}</p>
+                        <CardContent className="p-8 bg-white overflow-y-auto custom-scrollbar flex-1">
+                            <form onSubmit={handleSaveSettings} className="space-y-6">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">Form Title</label>
+                                        <input 
+                                            className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 font-bold outline-none focus:ring-2 focus:ring-indigo-500"
+                                            placeholder="e.g. 2026/2027 Admission"
+                                            value={settingsData.name}
+                                            onChange={(e) => setSettingsData({...settingsData, name: e.target.value})}
+                                            required
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">Custom Public URL (Slug)</label>
+                                        <input 
+                                            className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 font-bold outline-none focus:ring-2 focus:ring-indigo-500"
+                                            placeholder="e.g. primary-intake-2026"
+                                            value={settingsData.slug}
+                                            onChange={(e) => setSettingsData({...settingsData, slug: e.target.value.toLowerCase().replace(/ /g, '-')})}
+                                            required
+                                        />
+                                        <p className="text-[9px] font-bold text-slate-500 px-1">Current URL: /admission/{template.slug}</p>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">Flow Type</label>
+                                        <select 
+                                            className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 font-bold outline-none focus:ring-2 focus:ring-indigo-500"
+                                            value={settingsData.flowType}
+                                            onChange={(e) => setSettingsData({...settingsData, flowType: e.target.value})}
+                                        >
+                                            <option value="form_first">Form First (Free/Pay Later)</option>
+                                            <option value="payment_first">Payment First (Pay to Access)</option>
+                                        </select>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">Link Fee Structure</label>
+                                        <select 
+                                            className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 font-bold outline-none focus:ring-2 focus:ring-indigo-500"
+                                            value={settingsData.feeStructureId}
+                                            onChange={(e) => setSettingsData({...settingsData, feeStructureId: e.target.value})}
+                                            required={settingsData.flowType === 'payment_first'}
+                                        >
+                                            <option value="">No Fee Structure</option>
+                                            {feeStructures.map(fs => (
+                                                <option key={fs.id} value={fs.id}>{fs.name} (₦{parseFloat(fs.totalAmount).toLocaleString()})</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">Application Fee (₦)</label>
+                                        <input 
+                                            type="number"
+                                            className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 font-bold outline-none focus:ring-2 focus:ring-indigo-500"
+                                            value={settingsData.applicationFee}
+                                            onChange={(e) => setSettingsData({...settingsData, applicationFee: e.target.value})}
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">Platform Processing Fee (₦)</label>
+                                        <input 
+                                            type="number"
+                                            className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 font-bold outline-none focus:ring-2 focus:ring-indigo-500"
+                                            value={settingsData.processingFee}
+                                            onChange={(e) => setSettingsData({...settingsData, processingFee: e.target.value})}
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">Start Date</label>
+                                        <input 
+                                            type="date"
+                                            className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 font-bold outline-none focus:ring-2 focus:ring-indigo-500"
+                                            value={settingsData.startDate}
+                                            onChange={(e) => setSettingsData({...settingsData, startDate: e.target.value})}
+                                            required
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">End Date</label>
+                                        <input 
+                                            type="date"
+                                            className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 font-bold outline-none focus:ring-2 focus:ring-indigo-500"
+                                            value={settingsData.endDate}
+                                            onChange={(e) => setSettingsData({...settingsData, endDate: e.target.value})}
+                                            required
+                                        />
+                                    </div>
                                 </div>
                                 <div className="flex gap-4 pt-4">
                                     <Button 

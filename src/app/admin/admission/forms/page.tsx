@@ -120,6 +120,21 @@ export default function AdmissionBuilderPage() {
         setTogglingId(null);
     };
 
+    const [duplicatingId, setDuplicatingId] = useState<number | null>(null);
+
+    const handleDuplicate = async (template: any) => {
+        if (!confirm(`Duplicate "${template.name}"? This will copy all sections and fields.`)) return;
+        setDuplicatingId(template.id);
+        const res = await cloneFormTemplate(template.id);
+        if (res.success) {
+            toast.success(`"${template.name}" duplicated successfully!`);
+            fetchTemplates();
+        } else {
+            toast.error(res.error || "Failed to duplicate template");
+        }
+        setDuplicatingId(null);
+    };
+
     const handleDelete = async (template: any) => {
         if (!confirm(`Delete "${template.name}"? This will also remove all its sections and fields.`)) return;
         setDeletingId(template.id);
@@ -293,6 +308,19 @@ export default function AdmissionBuilderPage() {
                                         </span>
                                     </div>
                                     <div className="flex items-center gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => handleDuplicate(template)}
+                                            disabled={duplicatingId === template.id}
+                                            className="text-white/60 hover:text-white transition-colors disabled:opacity-50"
+                                            title="Duplicate template"
+                                        >
+                                            {duplicatingId === template.id ? (
+                                                <Loader2 className="w-4 h-4 animate-spin" />
+                                            ) : (
+                                                <Layers className="w-4 h-4" />
+                                            )}
+                                        </button>
                                         <button
                                             type="button"
                                             onClick={() => handleDelete(template)}

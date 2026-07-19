@@ -4,13 +4,16 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
+    "dev": "cross-env NODE_OPTIONS=--max-old-space-size=8192 next dev",
+    "build": "cross-env NODE_OPTIONS=--max-old-space-size=8192 next build",
     "start": "next start",
     "lint": "next lint",
+    "typecheck": "cross-env NODE_OPTIONS=--max-old-space-size=8192 tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "worker": "npx tsx src/scripts/cron-worker.ts"
+    "worker": "npx tsx src/scripts/cron-worker.ts",
+    "tunnel": "ssh -N -L 3307:127.0.0.1:3308 deploy@147.93.84.90",
+    "db:push": "cross-env NODE_OPTIONS=--max-old-space-size=8192 drizzle-kit push"
   },
   "dependencies": {
     "@auth/drizzle-adapter": "^1.11.1",
@@ -116,6 +119,7 @@
     "@types/web-push": "^3.6.4",
     "@vitejs/plugin-react": "^6.0.1",
     "autoprefixer": "^10.4.24",
+    "cross-env": "^10.1.0",
     "drizzle-kit": "^0.31.8",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",

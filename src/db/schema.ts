@@ -655,7 +655,7 @@ export const transcriptRequests = mysqlTable('transcript_requests', {
   paymentStatus: mysqlEnum('payment_status', ['unpaid', 'paid']).default('unpaid'),
   approvalStatus: mysqlEnum('approval_status', ['pending', 'processing', 'dispatched', 'cancelled']).default('pending'),
   feePaid: decimal('fee_paid', { precision: 12, scale: 2 }).default('0.00'),
-  transactionId: int('transaction_id').references(() => transactions.id),
+  transactionId: int('tx_id').references(() => transactions.id),
   requestedAt: timestamp('requested_at').defaultNow(),
   dispatchedAt: datetime('dispatched_at'),
   dispatchedBy: int('dispatched_by').references(() => users.id),
@@ -835,7 +835,7 @@ export const settlementAccounts = mysqlTable('settlement_accounts', {
 
 export const gatewaySubaccounts = mysqlTable('gateway_subaccounts', {
   id: int('id').autoincrement().primaryKey(),
-  settlementAccountId: int('settlement_account_id').references(() => settlementAccounts.id),
+  settlementAccountId: int('settle_acct_id').references(() => settlementAccounts.id),
   gatewayName: mysqlEnum('gateway_name', ['paystack', 'flutterwave', 'remita']).notNull(),
   gatewaySubaccountCode: varchar('gateway_subaccount_code', { length: 100 }).notNull(),
 });
@@ -849,7 +849,7 @@ export const feeItems = mysqlTable('fee_items', {
   category: mysqlEnum('category', ['tuition', 'hostel', 'library', 'lab', 'other']).default('other'),
   recurrence: mysqlEnum('recurrence', ['once', 'per_semester', 'per_session']).default('per_session'),
   isRequired: boolean('is_required').default(true),
-  settlementAccountId: int('settlement_account_id').references(() => settlementAccounts.id),
+  settlementAccountId: int('settle_acct_id').references(() => settlementAccounts.id),
 });
 
 export const feeAllocationRules = mysqlTable('fee_allocation_rules', {
@@ -929,7 +929,7 @@ export const bursarySettings = mysqlTable('bursary_settings', {
 export const studentLedger = mysqlTable('student_ledger', {
   id: int('id').autoincrement().primaryKey(),
   studentId: int('student_id').references(() => students.id).notNull(),
-  transactionId: int('transaction_id').references(() => transactions.id),
+  transactionId: int('tx_id').references(() => transactions.id),
   description: varchar('description', { length: 255 }).notNull(),
   debit: decimal('debit', { precision: 12, scale: 2 }).default('0.00'), // Money owed/charged
   credit: decimal('credit', { precision: 12, scale: 2 }).default('0.00'), // Money paid/refunded
@@ -960,7 +960,7 @@ export const expenditureRequests = mysqlTable('expenditure_requests', {
 export const refundRequests = mysqlTable('refund_requests', {
   id: int('id').autoincrement().primaryKey(),
   studentId: int('student_id').references(() => students.id).notNull(),
-  transactionId: int('transaction_id').references(() => transactions.id),
+  transactionId: int('tx_id').references(() => transactions.id),
   amount: decimal('amount', { precision: 12, scale: 2 }).notNull(),
   reason: text('reason').notNull(),
   bankName: varchar('bank_name', { length: 255 }).notNull(),
@@ -4341,7 +4341,7 @@ export const studentCourseTransfers = mysqlTable('student_course_transfers', {
   studentId: int('student_id').references(() => students.id).notNull(),
   matricNumber: varchar('matric_number', { length: 50 }),
   feeStatus: mysqlEnum('fee_status', ['pending', 'paid', 'waived']).default('pending'),
-  transactionId: int('transaction_id').references(() => transactions.id),
+  transactionId: int('tx_id').references(() => transactions.id),
   
   // Present
   currentFacultyId: int('current_faculty_id').references(() => faculties.id).notNull(),
@@ -5727,9 +5727,15 @@ export const admissionFormTemplates = mysqlTable('admission_form_templates', {
 
 export const admissionTemplateProgrammes = mysqlTable('admission_template_programmes', {
   id: int('id').autoincrement().primaryKey(),
-  templateId: int('template_id').notNull().references(() => admissionFormTemplates.id),
+  templateId: int('template_id').notNull(),
   programmeId: int('programme_id').notNull().references(() => programmes.id),
-});
+}, (table) => ({
+  tmplFk: foreignKey({
+    columns: [table.templateId],
+    foreignColumns: [admissionFormTemplates.id],
+    name: 'adm_tmpl_prog_tmpl_fk'
+  })
+}));
 
 export const admissionFormSections = mysqlTable('admission_form_sections', {
   id: int('id').autoincrement().primaryKey(),
@@ -6349,7 +6355,7 @@ export const examinationBodies = mysqlTable('examination_bodies', {
 export const applicantOLevelSittings = mysqlTable('applicant_olevel_sittings', {
   id: int('id').autoincrement().primaryKey(),
   applicantId: int('applicant_id').references(() => users.id).notNull(),
-  applicationId: int('application_id').references(() => admissionApplicationsV2.id).notNull(),
+  applicationId: int('app_id').references(() => admissionApplicationsV2.id).notNull(),
   examBodyId: int('exam_body_id').references(() => examinationBodies.id).notNull(),
   examYear: varchar('exam_year', { length: 4 }).notNull(),
   examNumber: varchar('exam_number', { length: 50 }).notNull(),
@@ -6360,7 +6366,7 @@ export const applicantOLevelSittings = mysqlTable('applicant_olevel_sittings', {
 
 export const applicantOLevelSubjects = mysqlTable('applicant_olevel_subjects', {
   id: int('id').autoincrement().primaryKey(),
-  sittingId: int('sitting_id').references(() => applicantOLevelSittings.id).notNull(),
+  sittingId: int('s_id').references(() => applicantOLevelSittings.id).notNull(),
   subjectName: varchar('subject_name', { length: 100 }).notNull(),
   grade: varchar('grade', { length: 10 }).notNull(),
   createdAt: timestamp('created_at').defaultNow()
@@ -6580,7 +6586,7 @@ export const admissionLeads = mysqlTable('admission_leads', {
 
 export const admissionWaitlists = mysqlTable('admission_waitlists', {
   id: int('id').autoincrement().primaryKey(),
-  applicationId: int('application_id').references(() => admissionApplicationsV2.id).notNull(),
+  applicationId: int('app_id').references(() => admissionApplicationsV2.id).notNull(),
   rankPosition: int('rank_position'),
   status: mysqlEnum('status', ['waiting', 'offered', 'rejected']).default('waiting'),
   createdAt: timestamp('created_at').defaultNow(),
@@ -6588,7 +6594,7 @@ export const admissionWaitlists = mysqlTable('admission_waitlists', {
 
 export const admissionInterviews = mysqlTable('admission_interviews', {
   id: int('id').autoincrement().primaryKey(),
-  applicationId: int('application_id').references(() => admissionApplicationsV2.id).notNull(),
+  applicationId: int('app_id').references(() => admissionApplicationsV2.id).notNull(),
   interviewDate: timestamp('interview_date'),
   interviewerId: int('interviewer_id').references(() => users.id),
   mode: mysqlEnum('mode', ['physical', 'virtual']).default('physical'),
@@ -6797,7 +6803,7 @@ export const generalMaintenanceRequestsRelations = relations(generalMaintenanceR
 
 export const maintenanceRepairQuotes = mysqlTable('maintenance_repair_quotes', {
   id: int('id').autoincrement().primaryKey(),
-  requestId: int('request_id').references(() => generalMaintenanceRequests.id).notNull(),
+  requestId: int('r_id').notNull(),
   technicianId: int('technician_id').references(() => users.id).notNull(),
   itemDescription: varchar('item_description', { length: 255 }).notNull(),
   estimatedCost: decimal('estimated_cost', { precision: 12, scale: 2 }).notNull(),
@@ -6806,10 +6812,16 @@ export const maintenanceRepairQuotes = mysqlTable('maintenance_repair_quotes', {
   reviewedBy: int('reviewed_by').references(() => users.id),
   reviewedAt: datetime('reviewed_at'),
   rejectionNotes: text('rejection_notes'),
-  expenditureRequestId: int('expenditure_request_id').references(() => expenditureRequests.id),
+  expenditureRequestId: int('exp_req_id').references(() => expenditureRequests.id),
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
-});
+}, (table) => ({
+  reqFk: foreignKey({
+    columns: [table.requestId],
+    foreignColumns: [generalMaintenanceRequests.id],
+    name: 'maint_rep_quotes_req_id_fk'
+  })
+}));
 
 export const maintenanceRepairQuotesRelations = relations(maintenanceRepairQuotes, ({ one }) => ({
   request: one(generalMaintenanceRequests, {
@@ -6870,7 +6882,7 @@ export const securityStrategicPositions = mysqlTable('security_strategic_positio
 
 export const securityPatrolLogs = mysqlTable('security_patrol_logs', {
   id: int('id').autoincrement().primaryKey(),
-  checkpointId: int('checkpoint_id').references(() => securityStrategicPositions.id).notNull(),
+  checkpointId: int('chkpt_id').references(() => securityStrategicPositions.id).notNull(),
   patrolOfficerId: int('patrol_officer_id').references(() => users.id).notNull(),
   notes: text('notes'),
   gpsCoordinates: varchar('gps_coordinates', { length: 100 }),
@@ -6956,15 +6968,21 @@ export const studentAffairsEvents = mysqlTable('student_affairs_events', {
 
 export const studentAffairsEventRegistrations = mysqlTable('student_affairs_event_registrations', {
   id: int('id').autoincrement().primaryKey(),
-  eventId: int('event_id').references(() => studentAffairsEvents.id).notNull(),
+  eventId: int('e_id').notNull(),
   userId: int('user_id').references(() => users.id).notNull(),
   registeredAt: timestamp('registered_at').defaultNow(),
   status: mysqlEnum('status', ['registered', 'cancelled']).default('registered').notNull(),
   paymentStatus: mysqlEnum('payment_status', ['pending', 'paid', 'no_payment_required']).default('no_payment_required').notNull(),
-  transactionId: int('transaction_id').references(() => transactions.id),
+  transactionId: int('tx_id').references(() => transactions.id),
   checkedIn: boolean('checked_in').default(false).notNull(),
   checkedInAt: timestamp('checked_in_at'),
-});
+}, (table) => ({
+  eventFk: foreignKey({
+    columns: [table.eventId],
+    foreignColumns: [studentAffairsEvents.id],
+    name: 'std_affairs_evt_reg_evt_fk'
+  })
+}));
 
 export const studentAffairsClubs = mysqlTable('student_affairs_clubs', {
   id: int('id').autoincrement().primaryKey(),
@@ -7110,7 +7128,7 @@ export const developerSubscriptionSettings = mysqlTable('developer_subscription_
 export const developerSubscriptions = mysqlTable('developer_subscriptions', {
   id: int('id').autoincrement().primaryKey(),
   studentId: int('student_id').references(() => students.id).notNull(),
-  academicSessionId: int('academic_session_id').references(() => academicSessions.id).notNull(),
+  academicSessionId: int('session_id').references(() => academicSessions.id).notNull(),
   termOrSemester: int('term_or_semester'), // 1, 2, 3 depending on cycle
   amountDue: decimal('amount_due', { precision: 12, scale: 2 }).notNull(),
   amountPaid: decimal('amount_paid', { precision: 12, scale: 2 }).default('0.00'),
@@ -7194,7 +7212,7 @@ export const gradingScales = mysqlTable('grading_scales', {
 export const resultBatches = mysqlTable('result_batches', {
   id: int('id').autoincrement().primaryKey(),
   adminId: int('admin_id').references(() => users.id).notNull(),
-  academicSessionId: int('academic_session_id').references(() => academicSessions.id).notNull(),
+  academicSessionId: int('session_id').references(() => academicSessions.id).notNull(),
   semester: mysqlEnum('semester', ['1', '2', '3']).notNull(), // 3 for summer/extra
   gradingScaleId: int('grading_scale_id').references(() => gradingScales.id).notNull(),
   status: mysqlEnum('status', ['pending', 'published']).default('pending'),
@@ -7217,7 +7235,7 @@ export const studentResults = mysqlTable('student_results', {
 export const studentTranscripts = mysqlTable('student_transcripts', {
   id: int('id').autoincrement().primaryKey(),
   studentId: int('student_id').references(() => students.id).notNull(),
-  academicSessionId: int('academic_session_id').references(() => academicSessions.id).notNull(),
+  academicSessionId: int('session_id').references(() => academicSessions.id).notNull(),
   semester: mysqlEnum('semester', ['1', '2', '3']).notNull(),
   cgpa: decimal('cgpa', { precision: 4, scale: 2 }).notNull(),
   gpa: decimal('gpa', { precision: 4, scale: 2 }).notNull(),

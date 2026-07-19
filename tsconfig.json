@@ -41,6 +41,8 @@
     "scripts",
     "cypress",
     "scratch",
-    "existingportal"
+    "existingportal",
+    "drizzle",
+    ".next"
   ]
 }

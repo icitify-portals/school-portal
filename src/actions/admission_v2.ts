@@ -189,6 +189,75 @@ export async function saveFormTemplate(data: any) {
     }
 }
 
+export async function cloneFormTemplate(templateId: number) {
+    try {
+        await requireAdmin();
+        const [originalTemplate] = await db.select().from(admissionFormTemplates).where(eq(admissionFormTemplates.id, templateId));
+        if (!originalTemplate) throw new Error("Template not found");
+
+        const newName = `${originalTemplate.name} (Copy)`;
+        let newSlug = `${originalTemplate.slug}-copy`;
+        
+        let duplicateCounter = 1;
+        while (true) {
+            const [existing] = await db.select().from(admissionFormTemplates).where(eq(admissionFormTemplates.slug, newSlug));
+            if (!existing) break;
+            newSlug = `${originalTemplate.slug}-copy-${duplicateCounter}`;
+            duplicateCounter++;
+        }
+
+        const [insertRes] = await db.insert(admissionFormTemplates).values({
+            ...originalTemplate,
+            id: undefined,
+            name: newName,
+            slug: newSlug,
+            isActive: false, // Default copied template to inactive
+            createdAt: new Date(),
+            updatedAt: new Date()
+        });
+        const newTemplateId = insertRes.insertId;
+
+        const sections = await db.select().from(admissionFormSections).where(eq(admissionFormSections.templateId, templateId)).orderBy(asc(admissionFormSections.order));
+        const sectionIdMap = new Map<number, number>();
+
+        for (const section of sections) {
+            const [secInsert] = await db.insert(admissionFormSections).values({
+                ...section,
+                id: undefined,
+                templateId: newTemplateId,
+                createdAt: new Date(),
+                updatedAt: new Date()
+            });
+            sectionIdMap.set(section.id, secInsert.insertId);
+        }
+
+        if (sections.length > 0) {
+            const sectionIds = sections.map(s => s.id);
+            const fields = await db.select().from(admissionFormFields).where(inArray(admissionFormFields.sectionId, sectionIds));
+            
+            for (const field of fields) {
+                const newSectionId = sectionIdMap.get(field.sectionId);
+                if (newSectionId) {
+                    await db.insert(admissionFormFields).values({
+                        ...field,
+                        id: undefined,
+                        sectionId: newSectionId,
+                        createdAt: new Date(),
+                        updatedAt: new Date()
+                    });
+                }
+            }
+        }
+
+        revalidatePath("/admin/admission/forms");
+        return { success: true, id: newTemplateId };
+
+    } catch (error: any) {
+        console.error("Failed to clone form template:", error);
+        return { success: false, error: error.message || "Failed to clone template" };
+    }
+}
+
 export async function deleteFormTemplate(id: number) {
     try {
         await requireAdmin();
