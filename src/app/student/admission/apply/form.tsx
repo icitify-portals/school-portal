@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
@@ -16,9 +16,10 @@ import { cn } from "@/lib/utils";
 interface Props {
     programmes: any[];
     session: any;
+    candidate?: any;
 }
 
-export default function ApplyForm({ programmes, session }: Props) {
+export default function ApplyForm({ programmes, session, candidate }: Props) {
     const [selectedProgramme, setSelectedProgramme] = useState<string>("");
     const [extraData, setExtraData] = useState<Record<string, any>>({});
     const [loading, setLoading] = useState(false);
@@ -26,6 +27,28 @@ export default function ApplyForm({ programmes, session }: Props) {
     const router = useRouter();
 
     const dynamicFields = session.dynamicFields ? JSON.parse(session.dynamicFields) : [];
+
+    useEffect(() => {
+        if (!candidate || dynamicFields.length === 0) return;
+        const autoFill: Record<string, any> = {};
+        for (const field of dynamicFields) {
+            const label = field.label.toLowerCase();
+            if (label.includes("first name") || label.includes("firstname")) {
+                autoFill[field.id] = candidate.firstname || "";
+            } else if (label.includes("last name") || label.includes("surname")) {
+                autoFill[field.id] = candidate.surname || "";
+            } else if (label.includes("email")) {
+                autoFill[field.id] = candidate.email || "";
+            } else if (label.includes("phone")) {
+                autoFill[field.id] = candidate.phone || "";
+            } else if (label.includes("jamb") || label.includes("registration number")) {
+                autoFill[field.id] = candidate.jambRegNo || "";
+            }
+        }
+        if (Object.keys(autoFill).length > 0) {
+            setExtraData((prev) => ({ ...prev, ...autoFill }));
+        }
+    }, [candidate]);
 
     const handleApply = async () => {
         if (!selectedProgramme) return;

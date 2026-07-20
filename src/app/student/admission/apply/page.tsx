@@ -77,7 +77,7 @@ export default async function ApplyForScreeningPage() {
                         <p><span className="font-semibold">Application Fee:</span> <span className="text-indigo-600 font-bold">₦{Number(activeSession.applicationFee).toLocaleString()}</span></p>
                     </div>
 
-                    <ApplyForm programmes={availableProgrammes} session={activeSession} />
+                    <ApplyForm programmes={availableProgrammes} session={activeSession} candidate={candidate} />
                 </CardContent>
             </Card>
         </div>

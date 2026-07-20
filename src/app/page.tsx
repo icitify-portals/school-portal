@@ -42,6 +42,9 @@ export default async function HomePage() {
                         </p>
                         
                         <div className="flex flex-wrap gap-4">
+                            <a href="https://fssibadan.edu.ng" target="_blank" rel="noopener noreferrer" className="inline-flex h-14 items-center justify-center rounded-2xl bg-white/10 border border-white/20 px-8 text-sm font-bold uppercase tracking-wider text-white hover:bg-white/20 transition-colors">
+                                Main Website <ArrowRight className="ml-2 w-4 h-4" />
+                            </a>
                             <Link href="/register" className="inline-flex h-14 items-center justify-center rounded-2xl bg-emerald-600 px-8 text-sm font-bold uppercase tracking-wider text-white hover:bg-emerald-700 transition-colors shadow-xl shadow-emerald-500/25">
                                 2026/2027 Application Form <ArrowRight className="ml-2 w-4 h-4" />
                             </Link>
