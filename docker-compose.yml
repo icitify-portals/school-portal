@@ -12,6 +12,8 @@ services:
       MYSQL_PASSWORD: StrongPassword123!
     volumes:
       - portal_mysql_data:/var/lib/mysql
+    ports:
+      - "127.0.0.1:3308:3306"
     networks:
       - portal_network
 
