@@ -497,7 +497,7 @@ export default function StatefulApplicationPage() {
                         const firstName = encodeURIComponent(nameParts[0] || "Applicant");
                         const lastName = encodeURIComponent(nameParts.slice(1).join(" ") || nameParts[0] || "Applicant");
                         const email = encodeURIComponent(session!.user!.email || "");
-                        window.location.href = `/finance/checkout/simulate?gateway=remita&reference=${res.reference}&amount=${amount}&rrr=${res.rrr}&email=${email}&firstName=${firstName}&lastName=${lastName}`;
+                        window.location.href = `/finance/checkout/simulate?gateway=remita&reference=${res.reference}&amount=${amount}&rrr=${res.rrr}&email=${email}&firstName=${firstName}&lastName=${lastName}&applicationId=${application.id}`;
                     } else {
                         toast.error(res.error || "Failed to initialize payment gateway");
                         setPaymentProcessing(false);
@@ -522,7 +522,7 @@ export default function StatefulApplicationPage() {
         const processingFee = parseFloat(application?.template?.processingFee || "0");
         triggerSubscriptionGate({
             identifier: applicationId.toString(),
-            email: session!.user!.email!,
+            email: session!.user!.email! || 'applicant@fssibadan.edu.ng',
             type: 'admission_form',
             customAmount: processingFee > 0 ? processingFee : undefined,
             onSuccess: async () => {

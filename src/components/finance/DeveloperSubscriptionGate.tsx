@@ -101,10 +101,29 @@ export function useDeveloperSubscription() {
                 return;
             }
 
-            const handler = (window as any).PaystackPop.setup({
+            const parsedAmount = Math.round(parseFloat((initRes as any).amount || '0') * 100);
+            
+            if (isNaN(parsedAmount) || parsedAmount <= 0) {
+                toast.error("Invalid payment amount.");
+                setIsLoading(false);
+                if (onError) onError();
+                return;
+            }
+            
+            // Ensure email is valid for Paystack, else fallback
+            const safeEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email : 'student@fssibadan.edu.ng';
+
+            console.log("Initializing Paystack with:", {
                 key: (initRes as any).publicKey,
                 email: email,
-                amount: ((initRes as any).amount || 0) * 100, // in kobo
+                amount: parsedAmount,
+                ref: (initRes as any).reference
+            });
+
+            const handler = (window as any).PaystackPop.setup({
+                key: (initRes as any).publicKey,
+                email: safeEmail,
+                amount: parsedAmount,
                 currency: "NGN",
                 ref: (initRes as any).reference,
                 callback: function (response: any) {
@@ -132,6 +151,13 @@ export function useDeveloperSubscription() {
             });
 
             handler.openIframe();
+            
+            // Fallback: If the Paystack modal fails to open visibly but didn't trigger an error,
+            // unlock the button after 5 seconds so the user isn't stuck.
+            setTimeout(() => {
+                setIsLoading(false);
+            }, 5000);
+            
         } catch (err: any) {
             console.error(err);
             toast.error(err.message || "An unexpected error occurred");
