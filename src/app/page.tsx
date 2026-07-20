@@ -83,7 +83,7 @@ export default async function HomePage() {
                                 </li>
                                 <li className="flex items-center gap-3 text-slate-700 font-medium">
                                     <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600">2</div>
-                                    Pay application fees via Wallet
+                                    Pay application and processing fees
                                 </li>
                                 <li className="flex items-center gap-3 text-slate-700 font-medium">
                                     <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600">3</div>

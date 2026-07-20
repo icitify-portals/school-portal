@@ -61,7 +61,7 @@ export default function ApplicantsGuidePage() {
                                 <div className="w-0.5 h-full bg-slate-100 my-2"></div>
                             </div>
                             <div className="pb-8">
-                                <h2 className="text-2xl font-black text-slate-900 tracking-tight mb-3">Pay Application Fee</h2>
+                                <h2 className="text-2xl font-black text-slate-900 tracking-tight mb-3">Pay Application and Processing Fees</h2>
                                 <p className="text-slate-500 font-medium leading-relaxed mb-6">
                                     Once your application profile is created, you must pay the non-refundable application fee. Payments are processed securely via the integrated payment gateway.
                                 </p>
