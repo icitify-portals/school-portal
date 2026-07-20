@@ -23,7 +23,6 @@ export default function QuizEditor({ existingQuizzes }: { existingQuizzes: any[]
     const [optionC, setOptionC] = useState("");
     const [optionD, setOptionD] = useState("");
     const [correctAnswer, setCorrectAnswer] = useState("A");
-    const [correctAnswer, setCorrectAnswer] = useState("A");
 
     // Assignment State
     const [requireAssignment, setRequireAssignment] = useState(false);
