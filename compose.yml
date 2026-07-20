@@ -1,0 +1,39 @@
+version: '3.8'
+services:
+  school-portal-db:
+    image: mysql:8.0
+    container_name: school-portal-db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: RootPassword123!
+      MYSQL_DATABASE: school_portal
+      MYSQL_USER: portal_user
+      MYSQL_PASSWORD: StrongPassword123!
+    volumes:
+      - portal_mysql_data:/var/lib/mysql
+    ports:
+      - "127.0.0.1:3308:3306"
+    networks:
+      - portal_network
+
+  school-portal-app:
+    build: .
+    container_name: school-portal-app
+    restart: always
+    depends_on:
+      - school-portal-db
+    env_file: .env
+    environment:
+      - DATABASE_URL=mysql://portal_user:StrongPassword123!@school-portal-db:3306/school_portal
+      - NEXT_PUBLIC_APP_URL=https://portal.fssibadan.edu.ng
+    ports:
+      - "3005:3000"
+    networks:
+      - portal_network
+
+volumes:
+  portal_mysql_data:
+
+networks:
+  portal_network:
+    driver: bridge

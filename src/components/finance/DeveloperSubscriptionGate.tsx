@@ -113,50 +113,21 @@ export function useDeveloperSubscription() {
             // Ensure email is valid for Paystack, else fallback
             const safeEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email : 'student@fssibadan.edu.ng';
 
-            console.log("Initializing Paystack with:", {
-                key: (initRes as any).publicKey,
-                email: email,
-                amount: parsedAmount,
-                ref: (initRes as any).reference
-            });
-
-            const handler = (window as any).PaystackPop.setup({
-                key: (initRes as any).publicKey,
-                email: safeEmail,
-                amount: parsedAmount,
-                currency: "NGN",
-                ref: (initRes as any).reference,
-                callback: function (response: any) {
-                    (async () => {
-                        setIsLoading(true); 
-                        toast.loading("Verifying payment...", { id: "verify-paystack" });
-                        
-                        const verifyRes = await verifyDeveloperFee(response.reference);
-                        
-                        if (verifyRes.success) {
-                            toast.success("Developer fee paid successfully!", { id: "verify-paystack" });
-                            onSuccess();
-                        } else {
-                            toast.error(verifyRes.error || "Verification failed. Please contact support.", { id: "verify-paystack" });
-                            if (onError) onError();
-                        }
-                        setIsLoading(false);
-                    })();
-                },
-                onClose: function () {
-                    toast.info("Payment cancelled.");
-                    setIsLoading(false);
-                    if (onError) onError();
-                },
-            });
-
-            handler.openIframe();
-            
-            // Fallback: If the Paystack modal fails to open visibly but didn't trigger an error,
-            // unlock the button after 5 seconds so the user isn't stuck.
-            setTimeout(() => {
+            if ((initRes as any).authorizationUrl) {
+                // Redirect to Paystack standard checkout
+                window.location.href = (initRes as any).authorizationUrl;
+                return;
+            } else if ((initRes as any).error) {
+                toast.error((initRes as any).error);
                 setIsLoading(false);
-            }, 5000);
+                if (onError) onError();
+                return;
+            } else {
+                toast.error("Invalid payment initialization response.");
+                setIsLoading(false);
+                if (onError) onError();
+                return;
+            }
             
         } catch (err: any) {
             console.error(err);

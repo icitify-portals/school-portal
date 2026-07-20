@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Paystack Debug Simulator</title>
+    <script src="https://js.paystack.co/v1/inline.js"></script>
+    <style>
+        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background: #f8fafc; }
+        .card { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); text-align: center; max-width: 400px; width: 100%; }
+        button { background: #0f172a; color: white; border: none; padding: 12px 24px; font-size: 16px; border-radius: 6px; cursor: pointer; width: 100%; margin-top: 20px; font-weight: bold; }
+        button:hover { background: #1e293b; }
+        #log { margin-top: 20px; text-align: left; background: #1e293b; color: #10b981; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 12px; height: 200px; overflow-y: auto; display: none; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2>Paystack Diagnostics</h2>
+        <p>This is a completely isolated test environment to figure out why the popup won't open.</p>
+        
+        <button id="pay-btn">Test Paystack Overlay</button>
+        
+        <div id="log"></div>
+    </div>
+
+    <script>
+        const logEl = document.getElementById('log');
+        function log(msg) {
+            logEl.style.display = 'block';
+            logEl.innerHTML += `<div>> ${msg}</div>`;
+            console.log(msg);
+        }
+
+        document.getElementById('pay-btn').addEventListener('click', function() {
+            log("Button clicked!");
+            log("Public Key: pk_live_5e2d734d5c388c520e74521a925d9d291ccff58a");
+            
+            if (typeof PaystackPop === 'undefined') {
+                log("ERROR: PaystackPop is undefined! Script blocked?");
+                alert("Paystack script was blocked by your browser.");
+                return;
+            }
+            
+            try {
+                log("Initializing PaystackPop.setup...");
+                var handler = PaystackPop.setup({
+                    key: 'pk_live_5e2d734d5c388c520e74521a925d9d291ccff58a',
+                    email: 'admin@icitifysolution.com',
+                    amount: 30000,
+                    currency: 'NGN',
+                    ref: 'DEBUG-' + Math.floor((Math.random() * 1000000000) + 1),
+                    callback: function(response) {
+                        log("SUCCESS: " + JSON.stringify(response));
+                        alert('Payment complete! Reference: ' + response.reference);
+                    },
+                    onClose: function() {
+                        log("CLOSED: User closed the window.");
+                    }
+                });
+
+                log("Calling handler.openIframe()...");
+                handler.openIframe();
+                log("openIframe() executed! Overlay should be visible now.");
+            } catch (err) {
+                log("EXCEPTION CAUGHT: " + err.message);
+                alert("Error: " + err.message);
+            }
+        });
+    </script>
+</body>
+</html>

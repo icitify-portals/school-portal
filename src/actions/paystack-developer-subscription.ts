@@ -84,13 +84,46 @@ export async function initiateDeveloperFee(
         status: 'pending'
     });
 
-    return { 
-        success: true, 
-        alreadyPaid: false,
-        reference,
-        amount,
-        publicKey: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY || ""
-    };
+    // 5. Hit Paystack API to initialize standard checkout
+    try {
+        const paystackRes = await fetch(`https://api.paystack.co/transaction/initialize`, {
+            method: 'POST',
+            headers: {
+                Authorization: `Bearer ${PAYSTACK_SECRET}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                email,
+                amount: Math.round(amount * 100),
+                reference,
+                // Redirect back to our verify page
+                callback_url: `${process.env.NEXT_PUBLIC_APP_URL || 'https://portal.fssibadan.edu.ng'}/finance/checkout/developer-verify?reference=${reference}`
+            })
+        });
+        
+        const paystackData = await paystackRes.json();
+        
+        if (paystackData.status && paystackData.data?.authorization_url) {
+            return { 
+                success: true, 
+                alreadyPaid: false,
+                reference,
+                amount,
+                authorizationUrl: paystackData.data.authorization_url,
+                publicKey: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY || ""
+            };
+        } else {
+            return {
+                success: false,
+                error: paystackData.message || "Failed to initialize Paystack checkout"
+            };
+        }
+    } catch (err: any) {
+        return {
+            success: false,
+            error: err.message || "Failed to connect to Paystack"
+        };
+    }
 }
 
 /**

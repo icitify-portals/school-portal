@@ -52,7 +52,7 @@ export default function AdmissionPaymentsPage() {
 
     const filteredApps = applications.filter(app => {
         const matchesSearch = app.template.name.toLowerCase().includes(search.toLowerCase()) ||
-                             (app.data && app.data.toLowerCase().includes(search.toLowerCase()));
+                             (app.data && typeof app.data === 'string' && app.data.toLowerCase().includes(search.toLowerCase()));
         const matchesFilter = filter === "all" ? true : app.paymentStatus === filter;
         return matchesSearch && matchesFilter;
     });
@@ -137,8 +137,16 @@ export default function AdmissionPaymentsPage() {
                                 </tr>
                             ) : (
                                 filteredApps.map((app) => {
-                                    const data = JSON.parse(app.data || "{}");
-                                    const candidateName = data.firstName ? `${data.firstName} ${data.lastName}` : "Unnamed Candidate";
+                                    let data: any = {};
+                                    try {
+                                        data = typeof app.data === 'string' ? JSON.parse(app.data || "{}") : (app.data || {});
+                                    } catch (e) {
+                                        console.error("Failed to parse app data", app.id);
+                                    }
+                                    const candidateName = data.firstName || data.lastName 
+                                        ? `${data.firstName || ''} ${data.lastName || ''}`.trim() 
+                                        : (app.student?.firstName ? `${app.student.firstName} ${app.student.surname}`.trim() 
+                                            : (app.applicant?.firstName ? `${app.applicant.firstName} ${app.applicant.surname}`.trim() : (app.applicant?.name || "Unnamed Candidate")));
                                     
                                     return (
                                         <tr key={app.id} className="hover:bg-slate-50 transition-colors group">
