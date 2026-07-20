@@ -1,4 +1,4 @@
-﻿version: '3.8'
+version: '3.8'
 
 services:
   school-portal-db:
@@ -25,6 +25,8 @@ services:
     environment:
       - DATABASE_URL=mysql://portal_user:StrongPassword123!@school-portal-db:3306/school_portal
       - NEXT_PUBLIC_APP_URL=https://portal.fssibadan.edu.ng
+    volumes:
+      - ./public/uploads:/app/public/uploads
     ports:
       - "3005:3000"
     networks:
