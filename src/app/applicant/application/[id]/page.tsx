@@ -87,7 +87,7 @@ export default function StatefulApplicationPage() {
             // Always compute locked name fields from user account data
             const locked = new Set<string>();
             const userNameParts = data._userNameParts;
-            const labelLower = (s: string) => s?.toLowerCase().replace(/[-_\s]/g, '');
+            const labelLower = (s: string) => s?.toLowerCase().replace(/[^a-z0-9]/gi, '');
             data.template?.sections?.forEach((sec: any) => {
                 sec.fields?.forEach((field: any) => {
                     const sk = (field.systemKey || '').toLowerCase();
@@ -102,39 +102,40 @@ export default function StatefulApplicationPage() {
                 });
             });
             setLockedFields(locked);
+            let initialData: any = {};
             if (data.data) {
                 try {
-                    const parsed = typeof data.data === 'string' ? JSON.parse(data.data) : data.data;
-                    setFormData(parsed);
-                    if (parsed.__ninData) setVerifiedNinData(parsed.__ninData);
+                    initialData = typeof data.data === 'string' ? JSON.parse(data.data) : data.data;
+                    if (initialData.__ninData) setVerifiedNinData(initialData.__ninData);
                 } catch (e) {
-                    setFormData(data.data);
+                    initialData = {};
                 }
-            } else {
-                // Pre-fill name fields from user account, then apply template defaults
-                const defaults: any = {};
-                data.template?.sections?.forEach((sec: any) => {
-                    sec.fields?.forEach((field: any) => {
-                        if (locked.has(field.label)) {
-                            const userNameParts = data._userNameParts;
-                            const sk = (field.systemKey || '').toLowerCase();
-                            const ll = labelLower(field.label);
-                            if (sk === 'firstname' || ll === 'firstname') {
-                                defaults[field.label] = userNameParts.firstName;
-                            } else if (sk === 'lastname' || sk === 'surname' || ll === 'lastname' || ll === 'surname') {
-                                defaults[field.label] = userNameParts.surname;
-                            } else if (sk === 'middlename' || ll === 'middlename') {
-                                defaults[field.label] = userNameParts.middleName;
-                            }
-                        } else if (field.defaultValue) {
-                            defaults[field.label] = field.defaultValue;
-                        }
-                    });
-                });
-                if (Object.keys(defaults).length > 0) {
-                    setFormData(defaults);
+                if (typeof initialData !== 'object' || initialData === null) {
+                    initialData = {};
                 }
             }
+            
+            // Always enforce locked name fields and apply defaults for missing fields
+            data.template?.sections?.forEach((sec: any) => {
+                sec.fields?.forEach((field: any) => {
+                    if (locked.has(field.label)) {
+                        const userNameParts = data._userNameParts || {};
+                        const sk = (field.systemKey || '').toLowerCase();
+                        const ll = labelLower(field.label);
+                        if (sk === 'firstname' || ll === 'firstname') {
+                            initialData[field.label] = userNameParts.firstName || '';
+                        } else if (sk === 'lastname' || sk === 'surname' || ll === 'lastname' || ll === 'surname') {
+                            initialData[field.label] = userNameParts.surname || '';
+                        } else if (sk === 'middlename' || ll === 'middlename') {
+                            initialData[field.label] = userNameParts.middleName || '';
+                        }
+                    } else if (field.defaultValue && !initialData[field.label]) {
+                        initialData[field.label] = field.defaultValue;
+                    }
+                });
+            });
+            
+            setFormData({...initialData});
             const bodies = await getExaminationBodies();
             setExamBodies(bodies);
 
@@ -1036,7 +1037,61 @@ export default function StatefulApplicationPage() {
                                                     )}
                                                 </div>
                                             ) : field.type === 'olevel_result' ? (
-                                                <div className="md:col-span-2">
+                                                <div className="md:col-span-2 space-y-6">
+                                                    <div className="bg-white border-2 border-slate-100 rounded-3xl p-6 shadow-sm space-y-4">
+                                                        <h3 className="text-sm font-black text-slate-900 uppercase tracking-wide">
+                                                            Mode of Study & UTME
+                                                        </h3>
+                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                            <div className="space-y-2">
+                                                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">
+                                                                    Mode of Study *
+                                                                </label>
+                                                                <select 
+                                                                    className="w-full bg-slate-50 border-none rounded-xl px-4 py-3 font-bold text-sm text-gray-900 appearance-none focus:ring-2 focus:ring-[#1a5b3a] outline-none transition-all"
+                                                                    value={formData["Mode of Study"] || ""}
+                                                                    onChange={(e) => handleInputChange("Mode of Study", e.target.value)}
+                                                                    required={!isSystemLocked}
+                                                                    disabled={isSystemLocked}
+                                                                >
+                                                                    <option value="">Select Mode of Study...</option>
+                                                                    <option value="Full-time">Full-time</option>
+                                                                    <option value="Part-time">Part-time</option>
+                                                                </select>
+                                                            </div>
+                                                            {formData["Mode of Study"] === "Full-time" && (
+                                                                <>
+                                                                    <div className="space-y-2">
+                                                                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">
+                                                                            JAMB Registration Number (Optional)
+                                                                        </label>
+                                                                        <input 
+                                                                            type="text"
+                                                                            className="w-full bg-slate-50 border-none rounded-xl px-4 py-3 font-bold text-sm text-gray-900 focus:ring-2 focus:ring-[#1a5b3a] outline-none transition-all"
+                                                                            placeholder="e.g. 12345678AB"
+                                                                            value={formData["JAMB Registration Number"] || ""}
+                                                                            onChange={(e) => handleInputChange("JAMB Registration Number", e.target.value)}
+                                                                            disabled={isSystemLocked}
+                                                                        />
+                                                                    </div>
+                                                                    <div className="space-y-2">
+                                                                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">
+                                                                            JAMB Score (Optional)
+                                                                        </label>
+                                                                        <input 
+                                                                            type="number"
+                                                                            className="w-full bg-slate-50 border-none rounded-xl px-4 py-3 font-bold text-sm text-gray-900 focus:ring-2 focus:ring-[#1a5b3a] outline-none transition-all"
+                                                                            placeholder="e.g. 250"
+                                                                            value={formData["JAMB Score"] || ""}
+                                                                            onChange={(e) => handleInputChange("JAMB Score", e.target.value)}
+                                                                            disabled={isSystemLocked}
+                                                                        />
+                                                                    </div>
+                                                                </>
+                                                            )}
+                                                        </div>
+                                                    </div>
+
                                                     <OLevelSubmission 
                                                         value={formData[field.label] || []}
                                                         onChange={(val) => handleInputChange(field.label, val)}

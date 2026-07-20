@@ -493,7 +493,8 @@ export async function getAdmissionApplications(templateId?: number) {
             where: templateId ? eq(admissionApplicationsV2.templateId, templateId) : undefined,
             with: {
                 template: true,
-                student: true
+                student: true,
+                applicant: true
             },
             orderBy: [desc(admissionApplicationsV2.appliedAt)]
         });
@@ -1218,10 +1219,18 @@ export async function getApplicantApplication(applicationId: number, applicantId
         // Attach user name parts for auto-population into form fields
         if (app) {
             const [user] = await db
-                .select({ surname: users.surname, firstName: users.firstName, middleName: users.middleName })
+                .select({ name: users.name, surname: users.surname, firstName: users.firstName, middleName: users.middleName })
                 .from(users)
                 .where(eq(users.id, applicantId))
                 .limit(1);
+            
+            if (user && !user.firstName && !user.surname && user.name) {
+                const parts = user.name.split(' ').filter(Boolean);
+                user.firstName = parts[0] || '';
+                user.surname = parts.length > 1 ? parts[parts.length - 1] : '';
+                user.middleName = parts.length > 2 ? parts.slice(1, -1).join(' ') : '';
+            }
+
             // @ts-expect-error
             app._userNameParts = user || null;
         }
@@ -1239,7 +1248,7 @@ export async function saveApplicationDraft(applicationId: number, applicantId: n
         const ninValue = formData?.['NIN'] || formData?.__ninData?.nin || null;
         await db.update(admissionApplicationsV2)
             .set({ 
-                data: formData,
+                data: typeof formData === 'string' ? formData : JSON.stringify(formData),
                 nin: ninValue
             })
             .where(
