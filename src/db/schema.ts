@@ -5851,6 +5851,10 @@ export const admissionApplicationsV2Relations = relations(admissionApplicationsV
         fields: [admissionApplicationsV2.studentId],
         references: [students.id],
     }),
+    applicant: one(users, {
+        fields: [admissionApplicationsV2.applicantId],
+        references: [users.id],
+    }),
     programme: one(programmes, {
         fields: [admissionApplicationsV2.programmeId],
         references: [programmes.id],
@@ -6633,6 +6637,7 @@ export const cbtQuizzes = mysqlTable('cbt_quizzes', {
   randomizeQuestions: boolean('randomize_questions').default(true),
   totalMarks: decimal('total_marks', { precision: 5, scale: 2 }).default('100.00'),
   isActive: boolean('is_active').default(true),
+  requireAssignment: boolean('require_assignment').default(false),
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
 });
@@ -6672,9 +6677,17 @@ export const cbtResponses = mysqlTable('cbt_responses', {
   createdAt: timestamp('created_at').defaultNow(),
 });
 
+export const cbtAssignments = mysqlTable('cbt_assignments', {
+  id: int('id').autoincrement().primaryKey(),
+  quizId: int('quiz_id').references(() => cbtQuizzes.id).notNull(),
+  userId: int('user_id').references(() => users.id).notNull(),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
 export const cbtQuizzesRelations = relations(cbtQuizzes, ({ many }) => ({
   questions: many(cbtQuestions),
   attempts: many(cbtAttempts),
+  assignments: many(cbtAssignments),
 }));
 
 export const cbtQuestionsRelations = relations(cbtQuestions, ({ one, many }) => ({
@@ -6705,6 +6718,17 @@ export const cbtResponsesRelations = relations(cbtResponses, ({ one }) => ({
   question: one(cbtQuestions, {
     fields: [cbtResponses.questionId],
     references: [cbtQuestions.id],
+  }),
+}));
+
+export const cbtAssignmentsRelations = relations(cbtAssignments, ({ one }) => ({
+  quiz: one(cbtQuizzes, {
+    fields: [cbtAssignments.quizId],
+    references: [cbtQuizzes.id],
+  }),
+  user: one(users, {
+    fields: [cbtAssignments.userId],
+    references: [users.id],
   }),
 }));
 

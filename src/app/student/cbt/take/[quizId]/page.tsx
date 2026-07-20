@@ -24,6 +24,7 @@ import { ActivityMonitor } from "@/components/cbt/ActivityMonitor";
 import { CertificateGenerator } from "@/components/cbt/CertificateGenerator";
 import { getQuizWithQuestions, submitResponse, finalizeAttempt, startAttempt, getAttemptWithTime } from "@/actions/cbt";
 import { toast } from "sonner";
+import { useSession } from "next-auth/react";
 
 interface Props {
     params: Promise<{ quizId: string }>;
@@ -40,16 +41,27 @@ export default function StudentExamPage({ params }: Props) {
     const [isSubmitted, setIsSubmitted] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [hasEnteredFullscreen, setHasEnteredFullscreen] = useState(false);
+    const [accessDenied, setAccessDenied] = useState(false);
 
     const [mode, setMode] = useState<'exam' | 'practice' | null>(null);
+    const { data: session } = useSession();
 
     useEffect(() => {
-        if (!mode) return;
+        if (!mode || !session?.user?.id) return;
 
         async function initExam() {
             try {
                 // 1. Start Attempt
-                const attempt = await startAttempt(parseInt(quizId), 1);
+                const userId = parseInt(session!.user!.id as string);
+                const attempt = await startAttempt(parseInt(quizId), userId);
+                
+                if (!attempt.success) {
+                    toast.error(attempt.error);
+                    setAccessDenied(true);
+                    setIsLoading(false);
+                    return;
+                }
+
                 if (attempt.success) {
                     setAttemptId((attempt as any).attemptId);
                     const attMode = mode;
@@ -74,7 +86,7 @@ export default function StudentExamPage({ params }: Props) {
                             const baseTimeSeconds = (attemptSpecificData.timeLimitMinutes || 60) * 60;
 
       // @ts-expect-error - Auto-suppressed by script
-                            const attemptData = await getAttemptWithTime(parseInt(quizId), 1);
+                            const attemptData = await getAttemptWithTime(parseInt(quizId), parseInt(session!.user!.id as string));
       // @ts-expect-error - Auto-suppressed by script
                             const extraSeconds = (attemptData?.extraTimeMinutes || 0) * 60;
 
@@ -102,7 +114,7 @@ export default function StudentExamPage({ params }: Props) {
             }
         }
         initExam();
-    }, [quizId, mode]);
+    }, [quizId, mode, session]);
 
     // Timer logic
     useEffect(() => {
@@ -156,6 +168,30 @@ export default function StudentExamPage({ params }: Props) {
     };
 
     if (isLoading) return <div className="min-h-screen flex items-center justify-center font-black uppercase text-slate-400 animate-pulse">Initializing Secure Environment...</div>;
+
+    if (accessDenied) {
+        return (
+            <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6 text-center">
+                <Card className="max-w-md w-full rounded-[2.5rem] border-none shadow-xl p-8 space-y-6">
+                    <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto">
+                        <AlertCircle className="w-10 h-10 text-red-600" />
+                    </div>
+                    <div>
+                        <h1 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Access Denied</h1>
+                        <p className="text-slate-500 font-medium mt-2">
+                            You are not assigned to this exam. Please contact the administrator.
+                        </p>
+                    </div>
+                    <Button
+                        onClick={() => window.location.href = '/student/dashboard'}
+                        className="w-full h-12 rounded-xl font-black uppercase tracking-widest text-xs bg-slate-900 text-white"
+                    >
+                        Return to Dashboard
+                    </Button>
+                </Card>
+            </div>
+        );
+    }
 
     if (quiz?.proctoringEnabled && !hasEnteredFullscreen && !isSubmitted) {
         return (

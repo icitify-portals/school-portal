@@ -1,7 +1,7 @@
 "use server";
 
 import { db } from "@/db/db";
-import { cbtQuizzes, cbtQuestions, cbtAttempts, cbtResponses } from "@/db/schema";
+import { cbtQuizzes, cbtQuestions, cbtAttempts, cbtResponses, cbtAssignments, users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { hasPermission, hasRole } from "@/lib/rbac";
@@ -61,6 +61,20 @@ export async function addQuestion(quizId: number, data: any) {
 
 export async function startAttempt(quizId: number, userId: number) {
     try {
+        const quizList = await db.select().from(cbtQuizzes).where(eq(cbtQuizzes.id, quizId)).limit(1);
+        if (quizList.length === 0) return { success: false, error: "Quiz not found" };
+        const quiz = quizList[0];
+
+        if (quiz.requireAssignment) {
+            const assignment = await db.select().from(cbtAssignments)
+                .where(eq(cbtAssignments.quizId, quizId));
+            const isAssigned = assignment.some(a => a.userId === userId);
+            
+            if (!isAssigned) {
+                return { success: false, error: "Access Denied: You are not assigned to this exam." };
+            }
+        }
+
         const [result] = await db.insert(cbtAttempts).values({
             quizId,
             userId,
@@ -170,3 +184,102 @@ export async function getAttemptWithTime(attemptId: number) { return null; }
 export async function getQuizResults(quizId: number) { return []; }
 export async function grantExtraTime(attemptId: number, mins: number) { return { success: true }; }
 export async function getQuizAnalyticsData(quizId: number) { return null; }
+
+// --- Assignment Management ---
+export async function assignStudentToQuiz(quizId: number, userId: number) {
+    try {
+        const allowed = await hasPermission("cbt.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("academic_registrar");
+        if (!allowed) return { success: false, error: "Unauthorized" };
+
+        const existing = await db.select().from(cbtAssignments)
+            .where(eq(cbtAssignments.quizId, quizId));
+        if (existing.some(e => e.userId === userId)) {
+            return { success: true }; // already assigned
+        }
+
+        await db.insert(cbtAssignments).values({ quizId, userId });
+        revalidatePath(`/admin/cbt/editor`);
+        return { success: true };
+    } catch (error: any) {
+        return { success: false, error: error.message };
+    }
+}
+
+export async function removeStudentFromQuiz(quizId: number, userId: number) {
+    try {
+        const allowed = await hasPermission("cbt.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("academic_registrar");
+        if (!allowed) return { success: false, error: "Unauthorized" };
+
+        // We have to delete by both quizId and userId.
+        // Drizzle-orm 'and' is imported via eq, and. Let's just fetch and delete by id.
+        const existing = await db.select().from(cbtAssignments)
+            .where(eq(cbtAssignments.quizId, quizId));
+        const target = existing.find(e => e.userId === userId);
+        
+        if (target) {
+            await db.delete(cbtAssignments).where(eq(cbtAssignments.id, target.id));
+            revalidatePath(`/admin/cbt/editor`);
+        }
+        return { success: true };
+    } catch (error: any) {
+        return { success: false, error: error.message };
+    }
+}
+
+export async function getAssignedStudents(quizId: number) {
+    try {
+        const assignments = await db.select({
+            id: cbtAssignments.id,
+            userId: cbtAssignments.userId,
+            email: users.email,
+            name: users.name,
+            matricNumber: users.matricNumber,
+        }).from(cbtAssignments)
+          .innerJoin(users, eq(cbtAssignments.userId, users.id))
+          .where(eq(cbtAssignments.quizId, quizId));
+        
+        return { success: true, data: assignments };
+    } catch (error: any) {
+        return { success: false, error: error.message };
+    }
+}
+
+export async function searchUsersForAssignment(query: string) {
+    // simplified search for external/internal students
+    try {
+        const allowed = await hasPermission("cbt.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("academic_registrar");
+        if (!allowed) return { success: false, error: "Unauthorized" };
+
+        const allUsers = await db.select({
+            id: users.id,
+            email: users.email,
+            name: users.name,
+            matricNumber: users.matricNumber,
+        }).from(users);
+
+        const lowerQuery = query.toLowerCase();
+        const filtered = allUsers.filter(u => 
+            (u.email && u.email.toLowerCase().includes(lowerQuery)) ||
+            (u.name && u.name.toLowerCase().includes(lowerQuery)) ||
+            (u.matricNumber && u.matricNumber.toLowerCase().includes(lowerQuery))
+        ).slice(0, 10);
+
+        return { success: true, data: filtered };
+    } catch (error: any) {
+        return { success: false, error: error.message };
+    }
+}
+
+export async function toggleRequireAssignment(quizId: number, requireAssignment: boolean) {
+    try {
+        const allowed = await hasPermission("cbt.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("academic_registrar");
+        if (!allowed) return { success: false, error: "Unauthorized" };
+
+        await db.update(cbtQuizzes)
+            .set({ requireAssignment })
+            .where(eq(cbtQuizzes.id, quizId));
+        return { success: true };
+    } catch (error: any) {
+        return { success: false, error: error.message };
+    }
+}
