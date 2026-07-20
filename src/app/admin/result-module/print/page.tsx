@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { searchStudents, getMyTranscript, getBulkTranscripts } from "@/actions/result-module";
+import { searchStudents, getMyTranscript, getBulkTranscripts, sendStudentTranscriptEmail } from "@/actions/result-module";
 import { getProgrammes } from "@/actions/programmes";
 import { ArrowLeft, Search, Loader2, Printer, Image as ImageIcon, FileText, Mail, CheckCircle2, Users } from "lucide-react";
 import Link from "next/link";
@@ -118,11 +118,33 @@ export default function PrintTranscriptPage() {
     
     setEmailing(true);
     try {
-      // Future implementation for server-side PDF generation and emailing
-      await new Promise(r => setTimeout(r, 1500));
-      setEmailSuccess(true);
-      setTimeout(() => setEmailSuccess(false), 3000);
+      if (!containerRef.current) throw new Error("Transcript container not found");
+      const html2pdf = (await import("html2pdf.js")).default;
+      const name = selectedStudent ? selectedStudent.matricNumber || selectedStudent.admissionNumber : "Bulk_Transcripts";
+      
+      const opt = {
+        margin: [10, 10, 10, 10], // Slightly larger margins
+        filename: `Transcript_${name}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 1.5, useCORS: true, logging: false },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
+
+      // Output as base64 string
+      const pdfBase64 = await html2pdf().set(opt).from(containerRef.current).outputPdf('datauristring');
+      
+      const studentName = transcriptData.student.user?.name || name;
+      
+      const res = await sendStudentTranscriptEmail(transcriptData.student.user.email, pdfBase64, studentName);
+      
+      if (res.success) {
+        setEmailSuccess(true);
+        setTimeout(() => setEmailSuccess(false), 3000);
+      } else {
+        alert("Failed to send email: " + (res.error?.message || res.error || "Unknown error"));
+      }
     } catch (e) {
+      console.error(e);
       alert("Failed to send email");
     }
     setEmailing(false);

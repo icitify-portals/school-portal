@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { sendEmail } from "@/lib/mail";
 import { db } from "@/db";
 import {
   gradingScales,
@@ -383,6 +384,47 @@ export async function createCourseOnTheFly(data: {
     const courseId = (result as any)[0]?.insertId ?? (result as any).insertId;
     return { success: true, courseId };
   } catch (e: any) {
+    return { success: false, error: e.message };
+  }
+}
+
+// ──────────────────────────────────────────────
+// EMAIL TRANSCRIPT
+// ──────────────────────────────────────────────
+
+export async function sendStudentTranscriptEmail(email: string, pdfBase64: string, studentName: string) {
+  try {
+    const html = `
+      <div style="font-family: sans-serif; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
+        <h2 style="color: #0f172a; margin-top: 0;">Official Academic Transcript</h2>
+        <p>Dear ${studentName},</p>
+        <p>Please find attached your official academic transcript from FSS Ibadan.</p>
+        <p>If you have any questions or require further assistance, please contact the registrar's office.</p>
+        <br />
+        <p>Best regards,</p>
+        <p><strong>FSS Ibadan Registry</strong></p>
+      </div>
+    `;
+
+    const base64Data = pdfBase64.replace(/^data:application\/pdf;base64,/, "");
+
+    const res = await sendEmail(
+      email,
+      "Your Official Academic Transcript - FSS Ibadan",
+      html,
+      undefined,
+      undefined,
+      [
+        {
+          filename: `Transcript_${studentName.replace(/\s+/g, "_")}.pdf`,
+          content: Buffer.from(base64Data, "base64"),
+        }
+      ]
+    );
+
+    return res;
+  } catch (e: any) {
+    console.error("Transcript email error:", e);
     return { success: false, error: e.message };
   }
 }
