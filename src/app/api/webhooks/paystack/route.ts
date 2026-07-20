@@ -43,6 +43,30 @@ export async function POST(request: Request) {
                         await db.update(admissionApplicationsV2)
                             .set({ processingFeeStatus: 'paid', processingFeeReference: reference })
                             .where(eq(admissionApplicationsV2.id, applicationId));
+
+                        // Fetch applicant name
+                        const { users } = await import('@/db/schema');
+                        const [app] = await db.select().from(admissionApplicationsV2).where(eq(admissionApplicationsV2.id, applicationId)).limit(1);
+                        let payerName = "Applicant";
+                        if (app && app.applicantId) {
+                            const [user] = await db.select().from(users).where(eq(users.id, app.applicantId)).limit(1);
+                            if (user) payerName = `${user.firstName} ${user.surname}`;
+                        }
+
+                        // Send Receipt
+                        const { NotificationService } = await import('@/services/NotificationService');
+                        await NotificationService.sendPaymentReceiptEmail(feeRecord.email, {
+                            reference: reference,
+                            date: new Date().toLocaleDateString(),
+                            amount: Number(feeRecord.amount),
+                            purpose: "Admission Application Form Fee",
+                            payerName: payerName,
+                            payerEmail: feeRecord.email,
+                            type: 'admission',
+                            additionalInfo: {
+                                "Application ID": feeRecord.identifier
+                            }
+                        });
                     }
                 }
 

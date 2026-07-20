@@ -2,7 +2,14 @@ import { Resend } from 'resend';
 
 const DEFAULT_FROM = 'FSS Ibadan Portal <info@notifications.fssibadan.edu.ng>';
 
-export async function sendEmail(to: string, subject: string, html: string, from?: string, apiKey?: string) {
+export async function sendEmail(
+    to: string, 
+    subject: string, 
+    html: string, 
+    from?: string, 
+    apiKey?: string,
+    attachments?: { filename: string, content: Buffer | string }[]
+) {
     const finalKey = apiKey || process.env.RESEND_API_KEY;
 
     if (!finalKey) {
@@ -13,12 +20,18 @@ export async function sendEmail(to: string, subject: string, html: string, from?
     const resend = new Resend(finalKey);
 
     try {
-        const { data, error } = await resend.emails.send({
+        const payload: any = {
             from: from || DEFAULT_FROM,
             to: [to],
             subject: subject,
             html: html,
-        });
+        };
+
+        if (attachments && attachments.length > 0) {
+            payload.attachments = attachments;
+        }
+
+        const { data, error } = await resend.emails.send(payload);
 
         if (error) {
             console.error("Resend error:", error);

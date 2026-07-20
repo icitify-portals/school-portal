@@ -639,6 +639,22 @@ export async function processPayment(data: {
                     type: 'credit',
                     status: 'completed'
                 });
+
+                if (student.user.email) {
+                    NotificationService.sendPaymentReceiptEmail(student.user.email, {
+                        reference: data.gatewayReference || `REF-${result.transactionId}`,
+                        date: new Date().toLocaleDateString(),
+                        amount: Number(data.amount),
+                        purpose: data.purpose,
+                        payerName: `${student.user.firstName} ${student.user.surname}`,
+                        payerEmail: student.user.email,
+                        type: 'student',
+                        additionalInfo: {
+                            "Student Matric/ID": student.matriculationNumber || student.studentNumber || String(student.id),
+                            "Gateway": data.gateway || 'manual'
+                        }
+                    }).catch(err => console.error("Failed to send student receipt:", err));
+                }
             }
 
             // Keep WhatsApp as fallback/legacy integration
@@ -2429,11 +2445,32 @@ export async function resolveOnlinePaymentAction(reference: string, status: 'com
                 const applicationId = parseInt(applicationIdStr);
 
                 if (!isNaN(applicationId)) {
-                    const { admissionApplicationsV2 } = await import('@/db/schema');
+                    const { admissionApplicationsV2, users } = await import('@/db/schema');
                     await tx.update(admissionApplicationsV2)
                         .set({ paymentStatus: 'paid' })
                         .where(eq(admissionApplicationsV2.id, applicationId));
                     
+                    const [app] = await tx.select().from(admissionApplicationsV2).where(eq(admissionApplicationsV2.id, applicationId)).limit(1);
+                    if (app && app.applicantId) {
+                        const [user] = await tx.select().from(users).where(eq(users.id, app.applicantId)).limit(1);
+                        if (user && user.email) {
+                            const { NotificationService } = await import('@/services/NotificationService');
+                            NotificationService.sendPaymentReceiptEmail(user.email, {
+                                reference: reference,
+                                date: new Date().toLocaleDateString(),
+                                amount: paymentAmount,
+                                purpose: txRecord.purpose,
+                                payerName: `${user.firstName} ${user.surname}`,
+                                payerEmail: user.email,
+                                type: 'admission',
+                                additionalInfo: {
+                                    "Application ID": applicationIdStr,
+                                    "Gateway": txRecord.gateway || 'manual'
+                                }
+                            }).catch(err => console.error("Failed to send admission receipt:", err));
+                        }
+                    }
+
                     return { success: true, status: 'completed', transactionId: txRecord.id };
                 }
             }
@@ -2507,6 +2544,24 @@ export async function resolveOnlinePaymentAction(reference: string, status: 'com
                     recordedBy: 0,
                     paymentMethod: 'gateway'
                 });
+
+                if (user && user.email) {
+                    const { NotificationService } = await import('@/services/NotificationService');
+                    NotificationService.sendPaymentReceiptEmail(user.email, {
+                        reference: reference,
+                        date: new Date().toLocaleDateString(),
+                        amount: paymentAmount,
+                        purpose: txRecord.purpose || "Payment",
+                        payerName: `${user.firstName} ${user.surname}`,
+                        payerEmail: user.email,
+                        type: 'student',
+                        additionalInfo: {
+                            "Student Matric/ID": student.matriculationNumber || student.studentNumber || String(student.id),
+                            "Gateway": txRecord.gateway || 'manual'
+                        }
+                    }).catch(err => console.error("Failed to send student receipt:", err));
+                }
+
             } catch (glError) {
                 console.error("Automated GL Posting failed inside resolveOnlinePaymentAction:", glError);
             }

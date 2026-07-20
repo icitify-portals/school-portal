@@ -141,6 +141,33 @@ export class NotificationService {
     }
 
     /**
+     * Sends a payment receipt with a PDF attachment
+     */
+    static async sendPaymentReceiptEmail(email: string, details: import('./ReceiptService').ReceiptDetails) {
+        const { ReceiptService } = await import('./ReceiptService');
+        const pdfBuffer = await ReceiptService.generateReceiptPDF(details);
+
+        const subject = `Payment Receipt - ${details.reference}`;
+        const htmlMessage = `
+            <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 30px; background: #f8fafc; border-radius: 10px;">
+                <div style="background: linear-gradient(135deg, #1a5b3a 0%, #0d7a4a 100%); padding: 30px; border-radius: 10px; text-align: center; margin-bottom: 20px;">
+                    <h1 style="color: white; margin: 0; font-size: 24px; text-transform: uppercase; letter-spacing: 2px;">Payment Successful</h1>
+                </div>
+                <div style="background: white; padding: 30px; border-radius: 10px; border: 1px solid #e2e8f0;">
+                    <p style="font-size: 16px; color: #374151; margin-bottom: 15px;">Dear <strong>${details.payerName}</strong>,</p>
+                    <p style="font-size: 14px; color: #4b5563; margin-bottom: 15px;">Your payment of <strong>₦${details.amount.toLocaleString()}</strong> for <strong>${details.purpose}</strong> has been successfully processed.</p>
+                    <p style="font-size: 14px; color: #4b5563; margin-bottom: 20px;">Please find your official payment receipt attached to this email as a PDF document.</p>
+                    <p style="font-size: 14px; color: #64748b;">If you have any questions, please contact the bursary department.</p>
+                </div>
+            </div>
+        `;
+
+        return await sendEmail(email, subject, htmlMessage, config.mail.from, undefined, [
+            { filename: `Receipt_${details.reference}.pdf`, content: pdfBuffer }
+        ]);
+    }
+
+    /**
      * Specifically for Financial Alerts
      */
     static async notifyTransaction(userId: number, data: {
