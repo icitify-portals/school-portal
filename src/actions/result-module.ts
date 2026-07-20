@@ -199,6 +199,69 @@ export async function addBulkResults(
   }
 }
 
+export async function addBulkResultsViaIdentifier(
+  batchId: number,
+  courseId: number,
+  rows: { identifier: string; score: number }[],
+  gradingScaleRules: string
+) {
+  try {
+    // Get course credit load
+    const course = await db.query.courses.findFirst({
+      where: eq(courses.id, courseId)
+    });
+    if (!course) throw new Error("Course not found");
+    const creditLoad = course.creditUnits || 0;
+
+    // Get all students to map identifiers
+    const allStudents = await db.query.students.findMany();
+    
+    const toInsert: any[] = [];
+    const errors: string[] = [];
+
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      const identifier = String(row.identifier).trim().toLowerCase();
+      
+      const student = allStudents.find(
+        (s) => 
+          s.matricNumber?.toLowerCase() === identifier || 
+          s.admissionNumber?.toLowerCase() === identifier
+      );
+
+      if (!student) {
+        errors.push(`Row ${i + 2}: Student not found for ID '${row.identifier}'`);
+        continue;
+      }
+
+      const { grade, gradePoint } = resolveGrade(row.score, gradingScaleRules);
+      
+      toInsert.push({
+        studentId: student.id,
+        courseId,
+        batchId,
+        score: row.score.toString(),
+        grade,
+        gradePoint: gradePoint.toString(),
+        creditLoad,
+      });
+    }
+
+    if (toInsert.length > 0) {
+      await db.insert(studentResults).values(toInsert);
+    }
+
+    revalidatePath(`/admin/result-module/${batchId}`);
+    return { 
+      success: true, 
+      count: toInsert.length,
+      errors 
+    };
+  } catch (e: any) {
+    return { success: false, error: e.message };
+  }
+}
+
 // ──────────────────────────────────────────────
 // PUBLISH BATCH
 // ──────────────────────────────────────────────
@@ -267,6 +330,36 @@ export async function getMyTranscript(studentId: number) {
   try {
     const data = await getStudentTranscriptData(studentId);
     return { success: true, data };
+  } catch (e: any) {
+    return { success: false, error: e.message };
+  }
+}
+
+export async function getBulkTranscripts(programmeId?: number) {
+  try {
+    const query = programmeId 
+      ? eq(students.programmeId, programmeId)
+      : undefined;
+      
+    const matchingStudents = await db.query.students.findMany({
+      where: query,
+      with: { user: true }
+    });
+    
+    // Process in batches so we don't overload the DB
+    const results = [];
+    for (const student of matchingStudents) {
+      try {
+        const tData = await getStudentTranscriptData(student.id);
+        if (tData.transcripts && tData.transcripts.length > 0) {
+          results.push(tData);
+        }
+      } catch (e) {
+        console.error("Failed to fetch transcript for student", student.id, e);
+      }
+    }
+    
+    return { success: true, data: results };
   } catch (e: any) {
     return { success: false, error: e.message };
   }

@@ -10,7 +10,7 @@ import {
 } from "@/actions/result-module";
 import {
   BookOpen, Plus, FileUp, CheckCircle2, Clock, ChevronRight,
-  BarChart3, Layers, AlertCircle, Loader2, Settings2,
+  BarChart3, Layers, AlertCircle, Loader2, Settings2, Printer
 } from "lucide-react";
 import Link from "next/link";
 
@@ -73,6 +73,9 @@ export default function ResultModuleDashboard() {
             </div>
           </div>
           <div className="flex items-center gap-3">
+            <Link href="/admin/result-module/print" className="flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 transition-colors text-sm font-medium text-emerald-400">
+              <Printer className="w-4 h-4" /> Print Transcripts
+            </Link>
             <Link href="/admin/result-module/scales" className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/10 hover:bg-white/15 transition-colors text-sm font-medium text-slate-300">
               <Settings2 className="w-4 h-4" /> Grading Scales
             </Link>

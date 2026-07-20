@@ -6,7 +6,7 @@ import Papa from "papaparse";
 import {
   getBatchDetails,
   addSingleStudentResult,
-  addBulkResults,
+  addBulkResultsViaIdentifier,
   approveAndPublishBatch,
   searchStudents,
   getCoursesList,
@@ -48,10 +48,12 @@ export default function BatchDetailPage() {
   const [savingCourse, setSavingCourse] = useState(false);
 
   // Bulk upload state
+  const [bulkCourseId, setBulkCourseId] = useState("");
   const [csvData, setCsvData] = useState<any[]>([]);
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [uploadingBulk, setUploadingBulk] = useState(false);
   const [bulkErrors, setBulkErrors] = useState<string[]>([]);
+  const [skippedRows, setSkippedRows] = useState<string[]>([]);
 
   useEffect(() => { fetchBatch(); }, [batchId]);
 
@@ -101,6 +103,7 @@ export default function BatchDetailPage() {
   function handleCsvUpload(file: File) {
     setCsvFile(file);
     setBulkErrors([]);
+    setSkippedRows([]);
     Papa.parse(file, {
       header: true,
       skipEmptyLines: true,
@@ -108,10 +111,8 @@ export default function BatchDetailPage() {
         const errors: string[] = [];
         const rows = res.data as any[];
         rows.forEach((r, i) => {
-          if (!r.student_id) errors.push(`Row ${i + 2}: missing student_id`);
-          if (!r.course_id) errors.push(`Row ${i + 2}: missing course_id`);
+          if (!r.student_identifier) errors.push(`Row ${i + 2}: missing student_identifier`);
           if (!r.score) errors.push(`Row ${i + 2}: missing score`);
-          if (!r.credit_load) errors.push(`Row ${i + 2}: missing credit_load`);
         });
         setBulkErrors(errors);
         setCsvData(rows);
@@ -120,22 +121,36 @@ export default function BatchDetailPage() {
   }
 
   async function handleBulkUpload() {
-    if (bulkErrors.length > 0) return alert("Fix CSV errors before uploading");
-    if (!csvData.length) return alert("No data to upload");
+    if (!bulkCourseId) return alert("Please select a course for this upload.");
+    if (bulkErrors.length > 0) return alert("Fix CSV format errors before uploading.");
+    if (!csvData.length) return alert("No data to upload.");
+    
     setUploadingBulk(true);
+    setSkippedRows([]);
     const rows = csvData.map(r => ({
-      studentId: Number(r.student_id),
-      courseId: Number(r.course_id),
+      identifier: r.student_identifier,
       score: Number(r.score),
-      creditLoad: Number(r.credit_load),
     }));
-    const res = await addBulkResults(batchId, rows, batch?.gradingScale?.rules || "[]");
+    
+    const res = await addBulkResultsViaIdentifier(
+      batchId, 
+      Number(bulkCourseId), 
+      rows, 
+      batch?.gradingScale?.rules || "[]"
+    );
+    
     setUploadingBulk(false);
+    
     if (res.success) {
       setCsvData([]);
       setCsvFile(null);
       fetchBatch();
-      alert(`✓ Uploaded ${res.count} results successfully`);
+      if (res.errors && res.errors.length > 0) {
+        setSkippedRows(res.errors);
+        alert(`Uploaded ${res.count} results successfully, but some identifiers were skipped.`);
+      } else {
+        alert(`✓ Uploaded ${res.count} results successfully`);
+      }
     } else {
       alert("Error: " + res.error);
     }
@@ -321,12 +336,22 @@ export default function BatchDetailPage() {
 
               {tab === "bulk" && (
                 <div className="p-5 space-y-4">
+                  {/* Course Selection */}
+                  <div>
+                    <label className="block text-xs text-slate-400 mb-1 uppercase tracking-wide">Target Course</label>
+                    <select value={bulkCourseId} onChange={e => setBulkCourseId(e.target.value)} 
+                      className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-violet-400">
+                      <option value="">Select course for this upload...</option>
+                      {courses.map(c => <option key={c.id} value={c.id}>{c.code} — {c.name}</option>)}
+                    </select>
+                  </div>
+
                   {/* CSV Template Download */}
                   <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-3">
                     <p className="text-xs text-blue-300 font-semibold mb-1">CSV Template Format</p>
-                    <p className="text-xs text-slate-400 font-mono">student_id, course_id, score, credit_load</p>
+                    <p className="text-xs text-slate-400 font-mono">student_identifier, score</p>
                     <a
-                      href="data:text/csv;charset=utf-8,student_id,course_id,score,credit_load%0A1,5,75,3"
+                      href="data:text/csv;charset=utf-8,student_identifier,score%0A180404022,75%0A180404023,60"
                       download="results_template.csv"
                       className="inline-block mt-2 text-xs text-blue-400 hover:text-blue-300 underline">
                       Download Template
@@ -350,13 +375,22 @@ export default function BatchDetailPage() {
                     </div>
                   )}
 
+                  {skippedRows.length > 0 && (
+                    <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-3 space-y-1">
+                      <p className="text-xs font-semibold text-yellow-400 flex items-center gap-1"><AlertTriangle className="w-3 h-3" /> Skipped Rows (Identifier Not Found)</p>
+                      <div className="max-h-24 overflow-y-auto">
+                        {skippedRows.map((e, i) => <p key={i} className="text-xs text-yellow-300">{e}</p>)}
+                      </div>
+                    </div>
+                  )}
+
                   {csvData.length > 0 && bulkErrors.length === 0 && (
                     <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3">
                       <p className="text-xs text-emerald-300">{csvData.length} rows ready for upload</p>
                     </div>
                   )}
 
-                  <button onClick={handleBulkUpload} disabled={uploadingBulk || !csvData.length || bulkErrors.length > 0}
+                  <button onClick={handleBulkUpload} disabled={uploadingBulk || !csvData.length || bulkErrors.length > 0 || !bulkCourseId}
                     className="w-full py-2.5 rounded-xl bg-gradient-to-r from-violet-500 to-indigo-600 text-white text-sm font-semibold disabled:opacity-60 flex items-center justify-center gap-2 hover:opacity-90 transition-opacity">
                     {uploadingBulk ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
                     Upload CSV Results
