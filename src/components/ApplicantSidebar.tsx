@@ -51,7 +51,7 @@ export function ApplicantSidebar() {
                             <p className="text-[10px] text-slate-500">{session.user.email}</p>
                         </div>
                     </div>
-                    <button onClick={() => signOut({ callbackUrl: '/login' })} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-400 font-bold text-sm hover:bg-red-500/10 transition-colors text-left">
+                    <button onClick={async () => { await signOut({ redirect: false }); window.location.href = '/login'; }} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-400 font-bold text-sm hover:bg-red-500/10 transition-colors text-left">
                         <LogOut className="w-4 h-4" />
                         Sign Out
                     </button>

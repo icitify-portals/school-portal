@@ -895,7 +895,7 @@ export function Sidebar({ enabledModules = {}, mobileOpen = false, onClose }: {
                     <span>Settings</span>
                 </Link>
                 <button
-                    onClick={() => signOut({ callbackUrl: "/login" })}
+                    onClick={async () => { await signOut({ redirect: false }); window.location.href = '/login'; }}
                     className={cn(
                         "flex items-center gap-3 w-full px-3 py-2 rounded-lg transition-all font-bold text-sm",
                         isStudent ? "text-white bg-rose-600 hover:bg-rose-700 shadow-md shadow-rose-900/20 mt-3" : "text-red-400 hover:bg-red-500/10"

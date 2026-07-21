@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import Webcam from 'react-webcam';
 import { Camera, Upload, X, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -8,16 +8,18 @@ import { cn } from '@/lib/utils';
 import Image from 'next/image';
 
 interface PhotoCaptureProps {
-    value?: string; // base64 string
+    value?: string; // S3 URL or base64 (fallback)
     onChange: (value: string) => void;
     label: string;
+    applicationId?: number;
 }
 
-export default function PhotoCapture({ value, onChange, label }: PhotoCaptureProps) {
+export default function PhotoCapture({ value, onChange, label, applicationId }: PhotoCaptureProps) {
     const [mode, setMode] = useState<'upload' | 'camera'>('upload');
     const [preview, setPreview] = useState<string | null>(value || null);
     const [uploadError, setUploadError] = useState<string | null>(null);
     const [isSecureContext, setIsSecureContext] = useState(true);
+    const [isUploading, setIsUploading] = useState(false);
 
     useEffect(() => {
         if (typeof window !== 'undefined') {
@@ -27,10 +29,47 @@ export default function PhotoCapture({ value, onChange, label }: PhotoCapturePro
             }
         }
     }, []);
-    const [processing, setProcessing] = useState(false);
     const webcamRef = useRef<Webcam>(null);
 
-    const processImage = (dataUrl: string, targetSize = 600): Promise<string> => {
+    const uploadToWasabi = async (fileBlob: Blob, type: string) => {
+        if (!applicationId) {
+            setUploadError("Application ID missing. Save draft first or contact admin.");
+            return;
+        }
+        setIsUploading(true);
+        setUploadError(null);
+        try {
+            const formData = new FormData();
+            formData.append("applicationId", applicationId.toString());
+            formData.append("type", type);
+            const file = new File([fileBlob], `${type}_upload.jpg`, { type: 'image/jpeg' });
+            formData.append("file", file);
+
+            const res = await fetch('/api/applicant/upload-form-asset', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!res.ok) {
+                const text = await res.text();
+                throw new Error(text || "Upload failed");
+            }
+
+            const data = await res.json();
+            if (data.success && data.url) {
+                setPreview(data.url);
+                onChange(data.url);
+            }
+        } catch (err: any) {
+            console.error("Upload error:", err);
+            setUploadError(err.message || "Failed to upload image. Make sure payments are complete.");
+            setPreview(null);
+        } finally {
+            setIsUploading(false);
+        }
+    };
+
+    const processAndUploadImage = (dataUrl: string, targetSize = 600): Promise<void> => {
         return new Promise((resolve) => {
             const img = new window.Image();
             img.onload = () => {
@@ -38,13 +77,11 @@ export default function PhotoCapture({ value, onChange, label }: PhotoCapturePro
                 canvas.width = targetSize;
                 canvas.height = targetSize;
                 const ctx = canvas.getContext('2d');
-                if (!ctx) return resolve(dataUrl);
+                if (!ctx) return resolve();
 
-                // Use high quality interpolation if available
                 ctx.imageSmoothingEnabled = true;
                 ctx.imageSmoothingQuality = 'high';
 
-                // Calculate cropping to square (center crop)
                 const size = Math.min(img.width, img.height);
                 const startX = (img.width - size) / 2;
                 const startY = (img.height - size) / 2;
@@ -52,19 +89,14 @@ export default function PhotoCapture({ value, onChange, label }: PhotoCapturePro
                 ctx.fillStyle = "#ffffff";
                 ctx.fillRect(0, 0, targetSize, targetSize);
                 
-                // Draw image cropped and scaled
                 ctx.drawImage(img, startX, startY, size, size, 0, 0, targetSize, targetSize);
                 
-                // Iterative compression to ensure < 200KB (approx 270,000 base64 chars)
-                let quality = 0.95;
-                let result = canvas.toDataURL('image/jpeg', quality);
-                
-                while (result.length > 270000 && quality > 0.4) {
-                    quality -= 0.1;
-                    result = canvas.toDataURL('image/jpeg', quality);
-                }
-                
-                resolve(result);
+                canvas.toBlob(async (blob) => {
+                    if (blob) {
+                        await uploadToWasabi(blob, 'photo');
+                    }
+                    resolve();
+                }, 'image/jpeg', 0.9);
             };
             img.src = dataUrl;
         });
@@ -72,36 +104,29 @@ export default function PhotoCapture({ value, onChange, label }: PhotoCapturePro
 
     const capture = useCallback(async () => {
         if (webcamRef.current) {
-            setProcessing(true);
+            setIsUploading(true);
             const imageSrc = webcamRef.current.getScreenshot();
             if (imageSrc) {
-                const processed = await processImage(imageSrc);
-                setPreview(processed);
-                onChange(processed);
+                await processAndUploadImage(imageSrc);
             }
-            setProcessing(false);
+            setIsUploading(false);
         }
-    }, [webcamRef, onChange]);
-
-    const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+    }, [webcamRef, applicationId]);
 
     const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
-            if (file.size > MAX_FILE_SIZE) {
+            if (file.size > 5 * 1024 * 1024) {
                 setUploadError("File size must be less than 5MB");
                 e.target.value = '';
                 return;
             }
             setUploadError(null);
-            setProcessing(true);
+            setIsUploading(true);
             const reader = new FileReader();
             reader.onloadend = async () => {
                 const result = reader.result as string;
-                const processed = await processImage(result);
-                setPreview(processed);
-                onChange(processed);
-                setProcessing(false);
+                await processAndUploadImage(result);
             };
             reader.readAsDataURL(file);
         }
@@ -114,15 +139,15 @@ export default function PhotoCapture({ value, onChange, label }: PhotoCapturePro
 
     if (preview) {
         return (
-            <div className="relative border-2 border-indigo-100 rounded-2xl overflow-hidden bg-slate-50 w-full max-w-sm mx-auto aspect-square flex items-center justify-center">
-                <Image src={preview} alt="Captured preview" layout="fill" objectFit="cover" />
-                <div className="absolute inset-0 bg-slate-900/40 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center gap-4">
+            <div className="relative border-2 border-indigo-100 rounded-3xl overflow-hidden bg-white w-full max-w-sm mx-auto aspect-square flex items-center justify-center">
+                <Image src={preview} alt="Captured photo" layout="fill" objectFit="cover" />
+                <div className="absolute inset-0 bg-slate-900/10 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center gap-4">
                     <Button type="button" onClick={clearPreview} variant="destructive" className="rounded-full w-12 h-12 p-0 shadow-lg">
                         <X className="w-5 h-5" />
                     </Button>
                 </div>
                 <div className="absolute top-4 right-4 bg-green-500 text-white p-1 rounded-full shadow-md">
-                    <Check className="w-4 h-4" />
+                    <Check className="w-5 h-5" />
                 </div>
             </div>
         );
@@ -169,10 +194,10 @@ export default function PhotoCapture({ value, onChange, label }: PhotoCapturePro
                         type="file" 
                         accept="image/*" 
                         onChange={handleFileUpload}
-                        disabled={processing}
+                        disabled={isUploading}
                         className="block w-full max-w-xs mx-auto text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:uppercase file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 transition-all cursor-pointer"
                     />
-                    {processing && <p className="text-xs text-indigo-600 animate-pulse font-bold">Processing Image...</p>}
+                    {isUploading && <p className="text-xs text-indigo-600 animate-pulse font-bold">Uploading Image...</p>}
                 </div>
             ) : (
                 <div className="space-y-4">
@@ -192,8 +217,8 @@ export default function PhotoCapture({ value, onChange, label }: PhotoCapturePro
                             }}
                         />
                     </div>
-                    <Button type="button" onClick={capture} disabled={processing} className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl px-8 py-6 uppercase font-bold text-xs tracking-widest shadow-xl">
-                        <Camera className="w-5 h-5 mr-2" /> {processing ? "Processing..." : "Capture Photo"}
+                    <Button type="button" onClick={capture} disabled={isUploading} className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl px-8 py-6 uppercase font-bold text-xs tracking-widest shadow-xl">
+                        <Camera className="w-5 h-5 mr-2" /> {isUploading ? "Uploading..." : "Capture Photo"}
                     </Button>
                     {uploadError && <p className="text-xs text-rose-600 font-semibold">{uploadError}</p>}
                 </div>

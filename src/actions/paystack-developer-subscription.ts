@@ -156,6 +156,8 @@ export async function verifyDeveloperFee(reference: string) {
                     await db.update(admissionApplicationsV2)
                         .set({ processingFeeStatus: 'paid', processingFeeReference: reference })
                         .where(eq(admissionApplicationsV2.id, applicationId));
+                    const { checkAndGenerateFormNumber } = await import('@/lib/form-number');
+                    await checkAndGenerateFormNumber(applicationId, db);
                 }
             }
             
@@ -176,9 +178,10 @@ export async function verifyDeveloperFee(reference: string) {
                          await db.update(admissionApplicationsV2)
                              .set({ processingFeeStatus: 'paid', processingFeeReference: reference })
                              .where(eq(admissionApplicationsV2.id, applicationId));
+                         const { checkAndGenerateFormNumber } = await import('@/lib/form-number');
+                         await checkAndGenerateFormNumber(applicationId, db);
                      }
                  }
-
                  return { success: true };
             }
 

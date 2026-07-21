@@ -178,11 +178,20 @@ export default function StatefulApplicationPage() {
         }
         } catch (error) {
             // Unhandled Server Action errors due to Next.js deployment mismatch
-            // Force a reload to get the new bundles
-            window.location.reload();
+            console.error("Server Action failed:", error);
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                    for(let registration of registrations) {
+                        registration.unregister();
+                    }
+                });
+            }
+            // Add a parameter to break cache if needed, but pathname is safer
+            window.location.href = window.location.pathname + '?no-cache=' + new Date().getTime();
             return;
+        } finally {
+            setLoading(false);
         }
-        setLoading(false);
     };
 
     const handleSaveDraft = async () => {
@@ -1075,6 +1084,7 @@ export default function StatefulApplicationPage() {
                                                         value={formData[field.label] || ""}
                                                         onChange={(val) => handleInputChange(field.label, val)}
                                                         label={field.label}
+                                                        applicationId={applicationId}
                                                     />
                                                 </div>
                                             ) : field.type === 'signature' ? (
@@ -1083,6 +1093,7 @@ export default function StatefulApplicationPage() {
                                                         value={formData[field.label] || ""}
                                                         onChange={(val) => handleInputChange(field.label, val)}
                                                         label={field.label}
+                                                        applicationId={applicationId}
                                                     />
                                                 </div>
                                             ) : field.type === 'textarea' ? (

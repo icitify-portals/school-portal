@@ -7,16 +7,18 @@ import { cn } from '@/lib/utils';
 import Image from 'next/image';
 
 interface SignatureCaptureProps {
-    value?: string; // base64 string
+    value?: string; // S3 URL or base64 (fallback)
     onChange: (value: string) => void;
     label: string;
+    applicationId?: number;
 }
 
-export default function SignatureCapture({ value, onChange, label }: SignatureCaptureProps) {
+export default function SignatureCapture({ value, onChange, label, applicationId }: SignatureCaptureProps) {
     const [mode, setMode] = useState<'draw' | 'upload'>('draw');
     const [preview, setPreview] = useState<string | null>(value || null);
     const [uploadError, setUploadError] = useState<string | null>(null);
     const [isDrawing, setIsDrawing] = useState(false);
+    const [isUploading, setIsUploading] = useState(false);
     const canvasRef = useRef<HTMLCanvasElement>(null);
 
     // Initialize canvas context for drawing
@@ -107,36 +109,66 @@ export default function SignatureCapture({ value, onChange, label }: SignatureCa
         }
     };
 
-    const saveDrawing = () => {
-        if (canvasRef.current) {
-            let quality = 0.95;
-            let dataUrl = canvasRef.current.toDataURL('image/jpeg', quality);
-            
-            // Iterative compression to ensure < 200KB
-            while (dataUrl.length > 270000 && quality > 0.4) {
-                quality -= 0.1;
-                dataUrl = canvasRef.current.toDataURL('image/jpeg', quality);
+    const uploadToWasabi = async (fileBlob: Blob, type: string) => {
+        if (!applicationId) {
+            setUploadError("Application ID missing. Save draft first or contact admin.");
+            return;
+        }
+        setIsUploading(true);
+        setUploadError(null);
+        try {
+            const formData = new FormData();
+            formData.append("applicationId", applicationId.toString());
+            formData.append("type", type);
+            const file = new File([fileBlob], `${type}_upload.jpg`, { type: 'image/jpeg' });
+            formData.append("file", file);
+
+            const res = await fetch('/api/applicant/upload-form-asset', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!res.ok) {
+                const text = await res.text();
+                throw new Error(text || "Upload failed");
             }
-            
-            setPreview(dataUrl);
-            onChange(dataUrl);
+
+            const data = await res.json();
+            if (data.success && data.url) {
+                setPreview(data.url);
+                onChange(data.url);
+            }
+        } catch (err: any) {
+            console.error("Upload error:", err);
+            setUploadError(err.message || "Failed to upload signature. Make sure payments are complete.");
+            setPreview(null);
+        } finally {
+            setIsUploading(false);
         }
     };
 
-    // Helper for uploading and processing image
-    const processImage = (dataUrl: string): Promise<string> => {
+    const saveDrawing = () => {
+        if (canvasRef.current) {
+            canvasRef.current.toBlob(async (blob) => {
+                if (blob) {
+                    await uploadToWasabi(blob, 'signature');
+                }
+            }, 'image/jpeg', 0.95);
+        }
+    };
+
+    const processAndUploadImage = (dataUrl: string): Promise<void> => {
         return new Promise((resolve) => {
             const img = new window.Image();
             img.onload = () => {
                 const canvas = document.createElement('canvas');
-                // Standardize width for signature, proportional height
                 const targetWidth = 600;
                 const targetHeight = (img.height / img.width) * targetWidth;
                 
                 canvas.width = targetWidth;
                 canvas.height = targetHeight;
                 const ctx = canvas.getContext('2d');
-                if (!ctx) return resolve(dataUrl);
+                if (!ctx) return resolve();
 
                 ctx.imageSmoothingEnabled = true;
                 ctx.imageSmoothingQuality = 'high';
@@ -145,15 +177,12 @@ export default function SignatureCapture({ value, onChange, label }: SignatureCa
                 ctx.fillRect(0, 0, targetWidth, targetHeight);
                 ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
                 
-                let quality = 0.95;
-                let result = canvas.toDataURL('image/jpeg', quality);
-                
-                while (result.length > 270000 && quality > 0.4) {
-                    quality -= 0.1;
-                    result = canvas.toDataURL('image/jpeg', quality);
-                }
-                
-                resolve(result);
+                canvas.toBlob(async (blob) => {
+                    if (blob) {
+                        await uploadToWasabi(blob, 'signature');
+                    }
+                    resolve();
+                }, 'image/jpeg', 0.95);
             };
             img.src = dataUrl;
         });
@@ -168,12 +197,11 @@ export default function SignatureCapture({ value, onChange, label }: SignatureCa
                 return;
             }
             setUploadError(null);
+            setIsUploading(true);
             const reader = new FileReader();
             reader.onloadend = async () => {
                 const result = reader.result as string;
-                const processed = await processImage(result);
-                setPreview(processed);
-                onChange(processed);
+                await processAndUploadImage(result);
             };
             reader.readAsDataURL(file);
         }
@@ -235,8 +263,10 @@ export default function SignatureCapture({ value, onChange, label }: SignatureCa
                         type="file" 
                         accept="image/*" 
                         onChange={handleFileUpload}
+                        disabled={isUploading}
                         className="block w-full max-w-xs mx-auto text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:uppercase file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 transition-all cursor-pointer"
                     />
+                    {isUploading && <p className="text-xs text-indigo-600 animate-pulse font-bold">Uploading...</p>}
                 </div>
             ) : (
                 <div className="space-y-4">
@@ -248,24 +278,36 @@ export default function SignatureCapture({ value, onChange, label }: SignatureCa
                             ref={canvasRef}
                             width={600}
                             height={250}
-                            className="w-full h-48 cursor-crosshair"
+                            className="w-full h-auto cursor-crosshair touch-none"
                             onMouseDown={startDrawing}
                             onMouseMove={draw}
                             onMouseUp={stopDrawing}
-                            onMouseLeave={stopDrawing}
+                            onMouseOut={stopDrawing}
                             onTouchStart={startDrawing}
                             onTouchMove={draw}
                             onTouchEnd={stopDrawing}
                         />
                     </div>
-                    <div className="flex justify-center gap-4">
-                        <Button type="button" onClick={clearCanvas} variant="outline" className="rounded-xl border-slate-300 text-slate-600">
+                    <div className="flex justify-center gap-4 pt-2">
+                        <Button 
+                            type="button" 
+                            variant="outline" 
+                            onClick={clearCanvas}
+                            disabled={isUploading}
+                            className="rounded-xl border-slate-200 hover:bg-rose-50 hover:text-rose-600 text-xs font-bold uppercase tracking-widest px-6"
+                        >
                             <Trash2 className="w-4 h-4 mr-2" /> Clear
                         </Button>
-                        <Button type="button" onClick={saveDrawing} className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl uppercase font-bold text-xs tracking-widest shadow-lg">
-                            <Check className="w-4 h-4 mr-2" /> Save Signature
+                        <Button 
+                            type="button" 
+                            onClick={saveDrawing}
+                            disabled={isUploading}
+                            className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold uppercase tracking-widest px-8 shadow-lg"
+                        >
+                            <Check className="w-4 h-4 mr-2" /> {isUploading ? "Uploading..." : "Save Signature"}
                         </Button>
                     </div>
+                    {uploadError && <p className="text-xs text-rose-600 font-semibold">{uploadError}</p>}
                 </div>
             )}
         </div>

@@ -38,4 +38,33 @@ export function generateFormHash(
     return crypto.createHash("sha256").update(payload).digest("hex").substring(0, 16).toUpperCase();
 }
 
+export async function checkAndGenerateFormNumber(applicationId: number, transactionDb: any = db): Promise<void> {
+    const { admissionFormTemplates } = await import('@/db/schema');
+    const [app] = await transactionDb.select({
+        id: admissionApplicationsV2.id,
+        formNumber: admissionApplicationsV2.formNumber,
+        paymentStatus: admissionApplicationsV2.paymentStatus,
+        processingFeeStatus: admissionApplicationsV2.processingFeeStatus,
+        template: {
+            level: admissionFormTemplates.level,
+            applicationFee: admissionFormTemplates.applicationFee,
+            processingFee: admissionFormTemplates.processingFee
+        }
+    }).from(admissionApplicationsV2)
+      .innerJoin(admissionFormTemplates, eq(admissionApplicationsV2.templateId, admissionFormTemplates.id))
+      .where(eq(admissionApplicationsV2.id, applicationId))
+      .limit(1);
 
+    if (!app) return;
+
+    // Determine if fully paid
+    const isAppFeePaid = app.template.applicationFee === '0.00' || app.paymentStatus === 'paid';
+    const isProcFeePaid = app.template.processingFee === '0.00' || app.processingFeeStatus === 'paid';
+
+    if (isAppFeePaid && isProcFeePaid && !app.formNumber) {
+        const newFormNumber = await generateFormNumber(app.template.level || 'tertiary');
+        await transactionDb.update(admissionApplicationsV2)
+            .set({ formNumber: newFormNumber })
+            .where(eq(admissionApplicationsV2.id, applicationId));
+    }
+}

@@ -2496,6 +2496,9 @@ export async function resolveOnlinePaymentAction(reference: string, status: 'com
                         .set({ paymentStatus: 'paid' })
                         .where(eq(admissionApplicationsV2.id, applicationId));
                     
+                    const { checkAndGenerateFormNumber } = await import('@/lib/form-number');
+                    await checkAndGenerateFormNumber(applicationId, tx);
+
                     const [app] = await tx.select().from(admissionApplicationsV2).where(eq(admissionApplicationsV2.id, applicationId)).limit(1);
                     if (app && app.applicantId) {
                         const [user] = await tx.select().from(users).where(eq(users.id, app.applicantId)).limit(1);

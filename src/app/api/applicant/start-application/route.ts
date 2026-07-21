@@ -52,22 +52,12 @@ export async function POST(req: Request) {
             return NextResponse.json({ redirectUrl: `/applicant/application/${existingApp.id}` });
         }
 
-        // Look up template to get level for form number generation
-        const [template] = await db.select({ level: admissionFormTemplates.level })
-            .from(admissionFormTemplates)
-            .where(eq(admissionFormTemplates.id, tId))
-            .limit(1);
-
-        // Generate form number at creation time
-        const formNumber = await generateFormNumber(template?.level || 'tertiary');
-
-        // Create new application with form number
+        // Create new application without form number (generated after full payment)
         const [result] = await db.insert(admissionApplicationsV2).values({
             templateId: tId,
             applicantId: applicantId,
             status: 'draft',
             paymentStatus: 'pending',
-            formNumber: formNumber
         });
 
         return NextResponse.json({ redirectUrl: `/applicant/application/${result.insertId}` });
