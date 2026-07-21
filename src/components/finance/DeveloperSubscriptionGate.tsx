@@ -8,42 +8,8 @@ import { initiateDeveloperFee, verifyDeveloperFee } from "@/actions/paystack-dev
 
 export function useDeveloperSubscription() {
     const [isLoading, setIsLoading] = useState(false);
-    const [isScriptLoaded, setIsScriptLoaded] = useState(false);
-
     useEffect(() => {
-        if (typeof window === "undefined") return;
-
-        if ((window as any).PaystackPop) {
-            setIsScriptLoaded(true);
-            return;
-        }
-
-        const scriptId = "paystack-inline-script";
-        const existingScript = document.getElementById(scriptId);
-        
-        if (existingScript) {
-            if ((window as any).PaystackPop) {
-                setIsScriptLoaded(true);
-            } else {
-                existingScript.addEventListener('load', () => setIsScriptLoaded(true));
-            }
-            return;
-        }
-
-        const script = document.createElement("script");
-        script.id = scriptId;
-        script.src = "https://js.paystack.co/v1/inline.js";
-        script.async = true;
-        
-        script.onload = () => {
-            setTimeout(() => setIsScriptLoaded(true), 200);
-        };
-        
-        script.onerror = () => {
-            console.warn("Failed to load Paystack script");
-        };
-        
-        document.body.appendChild(script);
+        // No client-side script loading needed since we use standard redirect API.
     }, []);
 
     const triggerSubscriptionGate = async ({
@@ -87,29 +53,6 @@ export function useDeveloperSubscription() {
                 return;
             }
 
-            if (!(window as any).PaystackPop) {
-                toast.error("Payment engine is still loading. Please try again in a few seconds.");
-                setIsLoading(false);
-                if (onError) onError();
-                return;
-            }
-            
-            if (!(initRes as any).publicKey) {
-                toast.error("Payment Gateway (Paystack) is not configured. Missing public key.");
-                setIsLoading(false);
-                if (onError) onError();
-                return;
-            }
-
-            const parsedAmount = Math.round(parseFloat((initRes as any).amount || '0') * 100);
-            
-            if (isNaN(parsedAmount) || parsedAmount <= 0) {
-                toast.error("Invalid payment amount.");
-                setIsLoading(false);
-                if (onError) onError();
-                return;
-            }
-            
             // Ensure email is valid for Paystack, else fallback
             const safeEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email : 'student@fssibadan.edu.ng';
 
