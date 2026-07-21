@@ -109,7 +109,10 @@ export default function StatefulApplicationPage() {
         setLoading(true);
         try {
             // @ts-expect-error - TS2345: Auto-suppressed for build
-            const data = await getApplicantApplication(applicationId, parseInt(session!.user!.id));
+            const [data, bodies] = await Promise.all([
+                getApplicantApplication(applicationId, parseInt(session!.user!.id)),
+                getExaminationBodies()
+            ]);
             if (data) {
                 setApplication(data);
             // Always compute locked name fields from user account data
@@ -198,13 +201,11 @@ export default function StatefulApplicationPage() {
             setCurrentStep(startStep);
             
             setFormData({...initialData});
-            const bodies = await getExaminationBodies();
             setExamBodies(bodies);
 
             // Load linked programmes and pre-select if already assigned
-            if (data.template?.id) {
-                const progs = await getTemplateProgrammes(data.template.id);
-                setTemplateProgrammes(progs);
+            if (data.template?.programmes) {
+                setTemplateProgrammes(data.template.programmes);
             }
             if (data.programmeId) {
                 setSelectedProgrammeId(data.programmeId);

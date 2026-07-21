@@ -94,36 +94,33 @@ export async function getFormTemplate(id: number) {
 
 async function getTemplateWithSections(templateId: number) {
     try {
-        const [template] = await db.select()
-            .from(admissionFormTemplates)
-            .where(eq(admissionFormTemplates.id, templateId))
-            .limit(1);
+        const template = await db.query.admissionFormTemplates.findFirst({
+            where: eq(admissionFormTemplates.id, templateId),
+            with: {
+                sections: {
+                    orderBy: [asc(admissionFormSections.orderIndex)],
+                    with: {
+                        fields: {
+                            orderBy: [asc(admissionFormFields.orderIndex)]
+                        }
+                    }
+                },
+                programmes: {
+                    with: {
+                        programme: true
+                    }
+                }
+            }
+        });
+        
         if (!template) return null;
-
-        const sections = await db.select()
-            .from(admissionFormSections)
-            .where(eq(admissionFormSections.templateId, templateId))
-            .orderBy(asc(admissionFormSections.order));
-
-        const sectionIds = sections.map(s => s.id);
-        const fields = sectionIds.length > 0
-            ? await db.select()
-                .from(admissionFormFields)
-                .where(inArray(admissionFormFields.sectionId, sectionIds))
-                .orderBy(asc(admissionFormFields.order))
-            : [];
-
-        const programmeLinks = await db.select({
-            programmeId: admissionTemplateProgrammes.programmeId,
-        }).from(admissionTemplateProgrammes)
-        .where(eq(admissionTemplateProgrammes.templateId, templateId));
-        const programmeIds = programmeLinks.map((p: any) => p.programmeId);
-        let programmesData: any[] = [];
-        if (programmeIds.length > 0) {
-            programmesData = await db.select().from(programmes).where(inArray(programmes.id, programmeIds));
-        }
-
-        return { ...template, sections: sections.map(s => ({ ...s, fields: fields.filter(f => f.sectionId === s.id) })), programmes: programmesData };
+        
+        const programmesData = template.programmes?.map(p => p.programme).filter(Boolean) || [];
+        
+        return {
+            ...template,
+            programmes: programmesData
+        };
     } catch (error) {
         console.error("Failed to fetch template with sections:", error);
         return null;
@@ -1204,10 +1201,13 @@ export async function getApplicantApplication(applicationId: number, applicantId
         });
         
         if (app) {
-            const template = await getTemplateWithSections(app.templateId);
+            const [template, hasDeveloperFee] = await Promise.all([
+                getTemplateWithSections(app.templateId),
+                checkDeveloperFeeStatus(applicationId.toString(), 'admission_form')
+            ]);
             // @ts-expect-error
             app.template = template;
-            const isProcessingFeePaid = app.processingFeeStatus === 'paid' || await checkDeveloperFeeStatus(applicationId.toString(), 'admission_form');
+            const isProcessingFeePaid = app.processingFeeStatus === 'paid' || hasDeveloperFee;
             // @ts-expect-error
             app.isProcessingFeePaid = isProcessingFeePaid;
             
