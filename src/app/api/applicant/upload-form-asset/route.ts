@@ -52,14 +52,20 @@ export async function POST(req: Request) {
         }
 
         // Generate a unique filename
-        const ext = file.name.split('.').pop() || 'jpg';
+        let ext = 'png';
+        if (file.name) {
+             ext = file.name.split('.').pop() || 'png';
+        } else if (file.type === 'image/jpeg') {
+             ext = 'jpg';
+        }
         const uniqueFilename = `${type}_${crypto.randomBytes(4).toString('hex')}.${ext}`;
         
         // Upload to storage using the formNumber as the subdirectory
         const bytes = await file.arrayBuffer();
         const buffer = Buffer.from(bytes);
         
-        const folder = `admission-forms/${formNumber.replace(/\//g, '_')}`;
+        const safeFormNumber = String(formNumber);
+        const folder = `admission-forms/${safeFormNumber.replace(/\//g, '_')}`;
         
         const uploadResult = await storage.upload(buffer, uniqueFilename, folder, file.type);
 

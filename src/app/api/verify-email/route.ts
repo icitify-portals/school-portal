@@ -1,6 +1,6 @@
 import { db } from "@/db/db";
 import { users, emailVerificationTokens } from "@/db/schema";
-import { eq, and, gt } from "drizzle-orm";
+import { eq, and, gt, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
 export async function POST(req: Request) {
@@ -19,7 +19,7 @@ export async function POST(req: Request) {
             .where(
                 and(
                     eq(emailVerificationTokens.token, token),
-                    gt(emailVerificationTokens.expiresAt, new Date())
+                    gt(emailVerificationTokens.expiresAt, sql`NOW()`)
                 )
             )
             .limit(1);

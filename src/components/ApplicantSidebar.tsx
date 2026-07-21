@@ -1,14 +1,16 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { User, LogOut, FileText, Home, HelpCircle, Receipt } from "lucide-react";
+import { User, LogOut, FileText, Home, HelpCircle, Receipt, Menu, X } from "lucide-react";
 import { NotificationBell } from "@/app/applicant/NotificationBell";
 import { useSession, signOut } from "next-auth/react";
 
 export function ApplicantSidebar() {
     const { data: session } = useSession();
     const pathname = usePathname();
+    const [isOpen, setIsOpen] = useState(false);
 
     const isActive = (path: string) => {
         if (path === "/applicant" && pathname !== "/applicant") return false;
@@ -16,10 +18,28 @@ export function ApplicantSidebar() {
     };
 
     return (
-        <aside className="w-full md:w-64 bg-slate-900 border-b md:border-b-0 md:border-r border-slate-800 p-6 flex flex-col shrink-0">
-            <div className="mb-8">
-                <h1 className="text-xl font-black text-white italic uppercase tracking-wider">Applicant<br/><span className="text-emerald-500">Portal</span></h1>
+        <>
+            {/* Mobile Top Bar */}
+            <div className="md:hidden flex items-center justify-between bg-slate-900 border-b border-slate-800 p-4 z-50">
+                <h1 className="text-xl font-black text-white italic uppercase tracking-wider">Applicant<br/><span className="text-emerald-500 text-sm">Portal</span></h1>
+                <button onClick={() => setIsOpen(!isOpen)} className="text-white p-2">
+                    {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+                </button>
             </div>
+
+            {/* Sidebar Overlay (Mobile) */}
+            {isOpen && (
+                <div 
+                    className="fixed inset-0 bg-black/50 z-40 md:hidden" 
+                    onClick={() => setIsOpen(false)}
+                />
+            )}
+
+            {/* Sidebar */}
+            <aside className={`fixed md:static inset-y-0 left-0 z-50 bg-slate-900 w-64 md:w-64 border-r border-slate-800 p-6 flex flex-col shrink-0 transform transition-transform duration-300 ease-in-out md:transform-none ${isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}`}>
+                <div className="hidden md:block mb-8">
+                    <h1 className="text-xl font-black text-white italic uppercase tracking-wider">Applicant<br/><span className="text-emerald-500">Portal</span></h1>
+                </div>
 
             <nav className="flex-1 space-y-2">
                 <Link href="/applicant" className={`flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm transition-colors ${isActive("/applicant") && pathname === "/applicant" ? "bg-slate-800/50 text-white" : "text-slate-400 hover:bg-slate-800 hover:text-white"}`}>
@@ -58,5 +78,6 @@ export function ApplicantSidebar() {
                 </div>
             )}
         </aside>
+        </>
     );
 }

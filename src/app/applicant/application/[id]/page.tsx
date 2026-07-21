@@ -146,10 +146,11 @@ export default function StatefulApplicationPage() {
             // Always enforce locked name fields and apply defaults for missing fields
             data.template?.sections?.forEach((sec: any) => {
                 sec.fields?.forEach((field: any) => {
+                    const sk = (field.systemKey || '').toLowerCase();
+                    const ll = labelLower(field.label);
+                    
                     if (locked.has(field.label)) {
                         const userNameParts = data._userNameParts || {};
-                        const sk = (field.systemKey || '').toLowerCase();
-                        const ll = labelLower(field.label);
                         if (sk === 'firstname' || ll === 'firstname') {
                             initialData[field.label] = userNameParts.firstName || '';
                         } else if (sk === 'lastname' || sk === 'surname' || ll === 'lastname' || ll === 'surname') {
@@ -157,11 +158,44 @@ export default function StatefulApplicationPage() {
                         } else if (sk === 'middlename' || ll === 'middlename') {
                             initialData[field.label] = userNameParts.middleName || '';
                         }
-                    } else if (field.defaultValue && !initialData[field.label]) {
-                        initialData[field.label] = field.defaultValue;
+                    } else {
+                        // Pre-fill email
+                        if (sk === 'email' || ll === 'email' || ll === 'emailaddress' || ll === 'email address') {
+                            if (!initialData[field.label]) initialData[field.label] = session!.user!.email || '';
+                        } else if (field.defaultValue && !initialData[field.label]) {
+                            initialData[field.label] = field.defaultValue;
+                        }
                     }
                 });
             });
+            
+            // Determine furthest incomplete step
+            let startStep = 0;
+            for (let i = 0; i < (data.template?.sections?.length || 0); i++) {
+                const sec = data.template.sections[i];
+                let sectionComplete = true;
+                
+                sec.fields?.forEach((f: any) => {
+                    // Skip if conditional field is hidden (we do a rough check by looking for condition rules)
+                    if (f.conditionalOn) return; 
+                    if (f.systemKey === 'nin' && data?.ninVerificationMode === 'disabled') return;
+                    
+                    if (f.isRequired) {
+                        const val = initialData[f.label];
+                        if (!val || (typeof val === 'string' && val.trim() === '') || (Array.isArray(val) && val.length === 0)) {
+                            sectionComplete = false;
+                        }
+                    }
+                });
+
+                if (!sectionComplete) {
+                    startStep = i;
+                    break;
+                } else if (i === data.template.sections.length - 1) {
+                    startStep = i + 1; // Review step
+                }
+            }
+            setCurrentStep(startStep);
             
             setFormData({...initialData});
             const bodies = await getExaminationBodies();
@@ -572,96 +606,10 @@ export default function StatefulApplicationPage() {
     if (loading) return <div className="flex justify-center items-center h-64"><Loader2 className="w-8 h-8 animate-spin text-[#1a5b3a]" /></div>;
     if (!application) return <div>Application not found</div>;
 
-    // Instructions Step (Always First)
-    if (!hasAcknowledgedInstructions) {
-        const minAge = application.template.minAge || 15;
-        const isUnderage = formData.date_of_birth && calculateAge(formData.date_of_birth) < minAge;
-        const applicantAge = formData.date_of_birth ? calculateAge(formData.date_of_birth) : null;
-
-        return (
-            <Card className="bg-white max-w-3xl mx-auto mt-8 p-10 space-y-8 rounded-[2rem] shadow-xl border-none">
-                <div className="space-y-4 text-center">
-                    <h1 className="text-3xl font-black text-slate-900 uppercase tracking-tighter">Application Instructions</h1>
-                    <div className="inline-flex items-center px-4 py-1.5 rounded-full bg-indigo-50 text-indigo-700 text-xs font-bold uppercase tracking-widest">
-                        {application.template.name}
-                    </div>
-                </div>
-
-                {eligibilityError && (
-                    <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm font-medium flex items-start gap-3">
-                        <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
-                        <span>{eligibilityError}</span>
-                    </div>
-                )}
-                
-                <div className="bg-slate-50 p-8 rounded-2xl border border-slate-100 text-slate-700 text-sm leading-relaxed space-y-4">
-                    {application.template.description ? (
-                        <div dangerouslySetInnerHTML={{ __html: application.template.description.replace(/\n/g, '<br/>') }} />
-                    ) : (
-                        <ul className="list-disc pl-5 space-y-2">
-                            <li>Please ensure all information provided is accurate and verifiable.</li>
-                            <li>Upload required documents in the specified format and size limits.</li>
-                            <li>Payment of the application fee is required to unlock the full form.</li>
-                            <li>You must be at least <strong>{minAge} years old</strong> to apply for this programme.</li>
-                            <li>You can save your progress at any time and return later.</li>
-                        </ul>
-                    )}
-                </div>
-
-                <div className="space-y-4 p-6 bg-slate-50 rounded-2xl border border-slate-100">
-                    <label className="block text-sm font-bold text-slate-700 uppercase tracking-widest">
-                        Date of Birth <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                        type="date"
-                        value={formData.date_of_birth || ''}
-                        onChange={(e) => {
-                            const dob = e.target.value;
-                            const age = calculateAge(dob);
-                            setFormData((prev: any) => ({ ...prev, date_of_birth: dob }));
-                            if (age < minAge) {
-                                setEligibilityError(`Our system indicates you are ${age} years old. Minimum age required is ${minAge}. You are not eligible for this programme.`);
-                            } else {
-                                setEligibilityError(null);
-                            }
-                        }}
-                        className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:border-[#1a5b3a] transition-colors text-sm font-medium"
-                        required
-                    />
-                    {applicantAge && applicantAge >= minAge && (
-                        <p className="text-emerald-600 text-xs font-bold flex items-center gap-1">
-                            <Check className="w-3.5 h-3.5" /> You are {applicantAge} years old — eligible to apply
-                        </p>
-                    )}
-                </div>
-
-                <div className="pt-4 border-t border-slate-100">
-                    <Button 
-                        onClick={() => {
-                            if (!formData.date_of_birth) {
-                                toast.error("Please enter your date of birth to continue.");
-                                return;
-                            }
-                            if (calculateAge(formData.date_of_birth) < minAge) {
-                                toast.error("You are not eligible for this programme due to age requirement.");
-                                return;
-                            }
-                            setHasAcknowledgedInstructions(true);
-                        }}
-                        disabled={!!eligibilityError || !formData.date_of_birth}
-                        className="w-full bg-[#1a5b3a] hover:bg-[#134229] text-white font-bold py-6 rounded-xl uppercase text-sm tracking-widest transition-all shadow-md disabled:opacity-50"
-                    >
-                        I understand, proceed to {application.template.flowType === 'payment_first' ? 'payment' : 'form'}
-                    </Button>
-                </div>
-            </Card>
-        );
-    }
-
-    let currentProcessStage = 0;
     const applicationFeeToPay = application.template.calculatedFee || parseFloat(application.template.applicationFee || "0");
     const processingFeeToPay = parseFloat(application.template.processingFee || "0");
 
+    let currentProcessStage = 0;
     if (applicationFeeToPay > 0 && application.paymentStatus !== 'paid') {
         currentProcessStage = 0;
     } else if (processingFeeToPay > 0 && !application.isProcessingFeePaid) {
@@ -673,6 +621,58 @@ export default function StatefulApplicationPage() {
     } else {
         currentProcessStage = 3;
     }
+
+    if (applicationFeeToPay > 0 && application.paymentStatus !== 'paid') {
+        return (
+            <div className="space-y-4">
+                <ProcessTracker currentStage={currentProcessStage} />
+                <Card className="bg-white max-w-2xl mx-auto mt-4 p-12 text-center space-y-8 rounded-[2rem] shadow-xl border border-rose-100">
+                    <div className="w-24 h-24 bg-rose-50 rounded-full flex items-center justify-center mx-auto">
+                        <CreditCard className="w-10 h-10 text-rose-600" />
+                    </div>
+                    <div className="space-y-4">
+                        <h2 className="text-3xl font-black text-gray-900 uppercase">Application Fee</h2>
+                        <p className="text-gray-500 font-medium text-sm leading-relaxed">
+                            You are required to pay an application fee of ₦{applicationFeeToPay.toLocaleString()} to continue with your application.
+                        </p>
+                    </div>
+                    <Button 
+                        onClick={handlePayment} disabled={paymentProcessing}
+                        className="w-full bg-rose-600 hover:bg-rose-700 text-white font-bold py-6 rounded-xl uppercase text-sm tracking-widest transition-all shadow-md flex items-center justify-center gap-3"
+                    >
+                        {paymentProcessing ? <Loader2 className="w-5 h-5 animate-spin" /> : <><CreditCard className="w-5 h-5" /> Pay ₦{applicationFeeToPay.toLocaleString()}</>}
+                    </Button>
+                </Card>
+            </div>
+        );
+    }
+
+    if (processingFeeToPay > 0 && !application.isProcessingFeePaid) {
+        return (
+            <div className="space-y-4">
+                <ProcessTracker currentStage={currentProcessStage} />
+                <Card className="bg-white max-w-2xl mx-auto mt-4 p-12 text-center space-y-8 rounded-[2rem] shadow-xl border border-rose-100">
+                    <div className="w-24 h-24 bg-rose-50 rounded-full flex items-center justify-center mx-auto">
+                        <CreditCard className="w-10 h-10 text-rose-600" />
+                    </div>
+                    <div className="space-y-4">
+                        <h2 className="text-3xl font-black text-gray-900 uppercase">Processing Fee</h2>
+                        <p className="text-gray-500 font-medium text-sm leading-relaxed">
+                            You are required to pay a processing fee of ₦{processingFeeToPay.toLocaleString()} to proceed.
+                        </p>
+                    </div>
+                    <Button 
+                        onClick={handleProcessingFee} disabled={isGateLoading}
+                        className="w-full bg-rose-600 hover:bg-rose-700 text-white font-bold py-6 rounded-xl uppercase text-sm tracking-widest transition-all shadow-md flex items-center justify-center gap-3"
+                    >
+                        {isGateLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <><CreditCard className="w-5 h-5" /> Pay ₦{processingFeeToPay.toLocaleString()}</>}
+                    </Button>
+                </Card>
+            </div>
+        );
+    }
+
+
 
 
     // Programme Selection Step (after both fees paid)
@@ -811,16 +811,39 @@ export default function StatefulApplicationPage() {
             </div>
 
             <Card className="border border-gray-200 bg-white overflow-hidden rounded-[2rem] shadow-sm">
-                <div className="bg-gray-50 p-6 flex items-center gap-6 border-b border-gray-200">
-                    <div className="flex-1 space-y-3">
-                        <div className="flex items-center gap-2">
-                            <span className="text-xs font-bold uppercase text-gray-500">Step {currentStep + 1} of {totalSteps}</span>
-                            <span className="text-xs font-bold text-gray-300">-</span>
-                            <span className="text-xs font-bold uppercase text-[#1a5b3a]">{isReviewStep ? "Review & Complete" : currentSection?.title}</span>
-                        </div>
-                        <div className="w-full bg-gray-200 h-2 rounded-full overflow-hidden">
-                            <div className="bg-[#1a5b3a] h-full transition-all duration-500" style={{ width: `${progress}%` }} />
-                        </div>
+                <div className="bg-gray-50 p-4 border-b border-gray-200 overflow-x-auto no-scrollbar">
+                    <div className="flex items-center gap-2 min-w-max">
+                        {application.template.sections.map((sec: any, idx: number) => (
+                            <button
+                                key={idx}
+                                onClick={() => {
+                                    setCurrentStep(idx);
+                                    setValidationErrors({});
+                                }}
+                                className={cn(
+                                    "px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all cursor-pointer",
+                                    currentStep === idx 
+                                        ? "bg-[#1a5b3a] text-white shadow-md" 
+                                        : "bg-white text-gray-500 border border-gray-200 hover:bg-gray-100"
+                                )}
+                            >
+                                {sec.title}
+                            </button>
+                        ))}
+                        <button
+                            onClick={() => {
+                                setCurrentStep(application.template.sections.length);
+                                setValidationErrors({});
+                            }}
+                            className={cn(
+                                "px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all cursor-pointer",
+                                isReviewStep 
+                                    ? "bg-[#1a5b3a] text-white shadow-md" 
+                                    : "bg-white text-gray-500 border border-gray-200 hover:bg-gray-100"
+                            )}
+                        >
+                            Review
+                        </button>
                     </div>
                 </div>
 
@@ -1315,35 +1338,13 @@ export default function StatefulApplicationPage() {
                                 {!submitting && <ArrowRight className="w-4 h-4 ml-2" />}
                             </Button>
                         ) : (
-                            <>
-                                {applicationFeeToPay > 0 && application.paymentStatus !== 'paid' ? (
-                                    <div className="flex-[2] flex gap-4">
-                                        <Button 
-                                            onClick={handlePayment} disabled={paymentProcessing}
-                                            className="w-full bg-rose-600 hover:bg-rose-700 text-white font-bold py-6 rounded-xl uppercase text-xs tracking-widest transition-all flex items-center justify-center gap-3"
-                                        >
-                                            {paymentProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <><CreditCard className="w-4 h-4" /> Pay Application Fee (₦{(application.template.calculatedFee || parseFloat(application.template.applicationFee)).toLocaleString()})</>}
-                                        </Button>
-                                    </div>
-                                ) : processingFeeToPay > 0 && !application.isProcessingFeePaid ? (
-                                    <div className="flex-[2] flex gap-4">
-                                        <Button 
-                                            onClick={handleProcessingFee} disabled={isGateLoading}
-                                            className="w-full bg-rose-600 hover:bg-rose-700 text-white font-bold py-6 rounded-xl uppercase text-xs tracking-widest transition-all flex items-center justify-center gap-3"
-                                        >
-                                            {isGateLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <><CreditCard className="w-4 h-4" /> Pay Processing Fee (₦{processingFeeToPay.toLocaleString()})</>}
-                                        </Button>
-                                    </div>
-                                ) : (
-                                    <Button 
-                                        onClick={handleSubmitFinal} disabled={submitting || !confirmed || paymentProcessing || isGateLoading || !!eligibilityError}
-                                        className="flex-[2] py-6 bg-[#1a5b3a] hover:bg-[#134229] text-white uppercase font-bold text-xs tracking-widest rounded-xl transition-all shadow-md disabled:opacity-50"
-                                    >
-                                        {submitting || paymentProcessing || isGateLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
-                                        COMPLETE REGISTRATION
-                                    </Button>
-                                )}
-                            </>
+                            <Button 
+                                onClick={handleSubmitFinal} disabled={submitting || !confirmed || paymentProcessing || isGateLoading || !!eligibilityError}
+                                className="flex-[2] py-6 bg-[#1a5b3a] hover:bg-[#134229] text-white uppercase font-bold text-xs tracking-widest rounded-xl transition-all shadow-md disabled:opacity-50"
+                            >
+                                {submitting || paymentProcessing || isGateLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
+                                COMPLETE REGISTRATION
+                            </Button>
                         )}
                     </div>
                 </CardContent>
