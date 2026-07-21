@@ -79,13 +79,13 @@ export default function ApplicantsGuidePage() {
                                 <div className="w-0.5 h-full bg-slate-100 my-2"></div>
                             </div>
                             <div className="pb-8">
-                                <h2 className="text-2xl font-black text-slate-900 tracking-tight mb-3">Complete & Upload Documents</h2>
+                                <h2 className="text-2xl font-black text-slate-900 tracking-tight mb-3">Complete Form & Add O-Levels</h2>
                                 <p className="text-slate-500 font-medium leading-relaxed mb-6">
-                                    Fill out your academic history, personal details, and upload requested documents (e.g., O-Level results, Birth Certificate, Passport Photograph).
+                                    Fill out your academic history, personal details, and UTME records. You must also supply your <strong>O-Level results (WAEC/NECO/NABTEB)</strong> using the subject selection grid. 
                                 </p>
                                 <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 flex items-start gap-3">
-                                    <Upload className="w-5 h-5 text-indigo-500 shrink-0 mt-0.5" />
-                                    <p className="text-sm font-medium text-slate-600">Check document size limits. Files must typically be in PDF or JPG format and below 2MB.</p>
+                                    <FileText className="w-5 h-5 text-indigo-500 shrink-0 mt-0.5" />
+                                    <p className="text-sm font-medium text-slate-600">You can add multiple sittings by clicking 'Add Sitting'. You may also delete subjects you accidentally selected using the trash icon.</p>
                                 </div>
                             </div>
                         </div>
@@ -94,11 +94,35 @@ export default function ApplicantsGuidePage() {
                         <div className="flex gap-6">
                             <div className="flex flex-col items-center">
                                 <div className="w-12 h-12 rounded-2xl bg-indigo-100 flex items-center justify-center text-indigo-600 font-black text-xl shrink-0">4</div>
+                                <div className="w-0.5 h-full bg-slate-100 my-2"></div>
+                            </div>
+                            <div className="pb-8">
+                                <h2 className="text-2xl font-black text-slate-900 tracking-tight mb-3">Photo Capture & Digital Signature</h2>
+                                <p className="text-slate-500 font-medium leading-relaxed mb-6">
+                                    A passport photograph and signature are strictly required. You can choose to upload existing digital copies from your phone/computer, or use the integrated camera tools!
+                                </p>
+                                <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 flex flex-col gap-3">
+                                    <div className="flex items-start gap-3">
+                                        <Upload className="w-5 h-5 text-indigo-500 shrink-0 mt-0.5" />
+                                        <p className="text-sm font-medium text-slate-600"><strong>Photo:</strong> Either take a live webcam selfie, or upload a clear passport photo with a white background.</p>
+                                    </div>
+                                    <div className="flex items-start gap-3 mt-2">
+                                        <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
+                                        <p className="text-sm font-medium text-slate-600"><strong>Signature:</strong> Draw directly on the screen using your finger, stylus, or mouse, OR upload a photo of your signature written on a blank piece of paper.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Step 5 */}
+                        <div className="flex gap-6">
+                            <div className="flex flex-col items-center">
+                                <div className="w-12 h-12 rounded-2xl bg-indigo-100 flex items-center justify-center text-indigo-600 font-black text-xl shrink-0">5</div>
                             </div>
                             <div>
                                 <h2 className="text-2xl font-black text-slate-900 tracking-tight mb-3">Submit & Await Admission</h2>
                                 <p className="text-slate-500 font-medium leading-relaxed mb-6">
-                                    Review all your entries carefully before clicking submit. Once submitted, you cannot edit your form. You can log back in at any time to check your admission status.
+                                    Review all your entries carefully before clicking submit. Once submitted, you cannot edit your form. You can log back in at any time to check your admission status and print your receipts.
                                 </p>
                                 <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-100 flex items-start gap-3">
                                     <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />

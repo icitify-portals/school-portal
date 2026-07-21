@@ -57,9 +57,14 @@ export default async function ApplicantDashboard() {
                     <h2 className="text-4xl md:text-5xl font-black tracking-tighter mb-2">Welcome, {session?.user?.name}</h2>
                     <p className="text-slate-400 font-medium">Track your admission applications and requirements here.</p>
                 </div>
-                <div className="relative z-10 flex items-center gap-3">
+                <div className="relative z-10 flex flex-col sm:flex-row items-center gap-3">
+                    <Link href="/guide/applicants">
+                        <Button className="bg-indigo-600 hover:bg-indigo-500 text-white border-none font-bold rounded-xl px-4 py-3 text-xs uppercase tracking-widest flex items-center gap-2 w-full sm:w-auto">
+                            <FileText className="w-4 h-4" /> Application Guide
+                        </Button>
+                    </Link>
                     <Link href="https://fssibadan.edu.ng" target="_blank">
-                        <Button variant="outline" className="border-white/20 text-white hover:bg-white/10 font-bold rounded-xl px-4 py-3 text-xs uppercase tracking-widest flex items-center gap-2">
+                        <Button variant="outline" className="border-white/20 text-white hover:bg-white/10 font-bold rounded-xl px-4 py-3 text-xs uppercase tracking-widest flex items-center gap-2 w-full sm:w-auto">
                             <Globe className="w-4 h-4" /> Main Website
                         </Button>
                     </Link>
