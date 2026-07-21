@@ -92,6 +92,7 @@ const FIELD_TYPES = [
     { label: "Checkbox Group", value: "checkbox_group", icon: CheckSquare, needsOptions: true },
     { label: "Image / Banner", value: "image", icon: Image },
     { label: "File Upload", value: "file", icon: FileUp },
+    { label: "Signature Pad", value: "signature", icon: Pencil },
     { label: "O-Level Result Grid", value: "olevel_result", icon: Layout },
 ];
 

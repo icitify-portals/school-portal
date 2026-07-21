@@ -38,8 +38,17 @@ export async function POST(req: Request) {
             return new NextResponse("Application not found", { status: 404 });
         }
 
-        if (!app.formNumber) {
-            return new NextResponse("Form number not yet generated. Please complete fee payments first.", { status: 403 });
+        let formNumber = app.formNumber;
+
+        if (!formNumber) {
+            // JIT generation for older applications that were paid before the update
+            const { checkAndGenerateFormNumber } = await import("@/lib/form-number");
+            const result = await checkAndGenerateFormNumber(applicationId);
+            if (result.success && result.formNumber) {
+                formNumber = result.formNumber;
+            } else {
+                return new NextResponse("Form number not yet generated. Please complete fee payments first.", { status: 403 });
+            }
         }
 
         // Generate a unique filename
@@ -50,7 +59,7 @@ export async function POST(req: Request) {
         const bytes = await file.arrayBuffer();
         const buffer = Buffer.from(bytes);
         
-        const folder = `admission-forms/${app.formNumber.replace(/\//g, '_')}`;
+        const folder = `admission-forms/${formNumber.replace(/\//g, '_')}`;
         
         const uploadResult = await storage.upload(buffer, uniqueFilename, folder, file.type);
 
