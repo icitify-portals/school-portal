@@ -46,7 +46,7 @@ export async function POST(req: Request) {
                 eq(admissionApplicationsV2.applicantId, applicantId),
                 eq(admissionApplicationsV2.templateId, tId)
             ),
-            orderBy: desc(admissionApplicationsV2.id)
+            orderBy: [desc(admissionApplicationsV2.id)]
         });
         if (existingApp) {
             return NextResponse.json({ redirectUrl: `/applicant/application/${existingApp.id}` });
