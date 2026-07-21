@@ -40,12 +40,11 @@ export async function POST(req: Request) {
             tId = firstTemplate.id;
         }
 
-        // Check for existing draft for THIS specific template
+        // Check for any existing application for THIS specific template
         const existingApp = await db.query.admissionApplicationsV2.findFirst({
             where: and(
                 eq(admissionApplicationsV2.applicantId, applicantId),
-                eq(admissionApplicationsV2.templateId, tId),
-                eq(admissionApplicationsV2.status, 'draft')
+                eq(admissionApplicationsV2.templateId, tId)
             ),
             orderBy: desc(admissionApplicationsV2.id)
         });

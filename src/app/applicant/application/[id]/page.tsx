@@ -1070,7 +1070,7 @@ export default function StatefulApplicationPage() {
                                                     />
                                                 </div>
                                             ) : field.type === 'file' ? (
-                                                <div className="md:col-span-2">
+                                                <div className="col-span-1 md:col-span-1">
                                                     <PhotoCapture 
                                                         value={formData[field.label] || ""}
                                                         onChange={(val) => handleInputChange(field.label, val)}
@@ -1078,7 +1078,7 @@ export default function StatefulApplicationPage() {
                                                     />
                                                 </div>
                                             ) : field.type === 'signature' ? (
-                                                <div className="md:col-span-2">
+                                                <div className="col-span-1 md:col-span-1">
                                                     <SignatureCapture 
                                                         value={formData[field.label] || ""}
                                                         onChange={(val) => handleInputChange(field.label, val)}

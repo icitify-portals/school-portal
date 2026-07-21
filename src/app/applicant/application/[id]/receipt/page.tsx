@@ -5,7 +5,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { School, CheckCircle2, MapPin, Mail, Phone } from "lucide-react";
 import { format } from "date-fns";
 
-export default async function ApplicationReceipt({ params, searchParams }: { params: { id: string }, searchParams: { type?: string } }) {
+export default async function ApplicationReceipt(props: { params: Promise<{ id: string }>, searchParams: Promise<{ type?: string }> }) {
+    const params = await props.params;
+    const searchParams = await props.searchParams;
     const applicationId = parseInt(params.id);
     const receiptType = searchParams.type || 'application'; // 'application' or 'processing'
 

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { User, LogOut, FileText, Home, HelpCircle, Receipt } from "lucide-react";
 import { NotificationBell } from "@/app/applicant/NotificationBell";
-import { useSession } from "next-auth/react";
+import { useSession, signOut } from "next-auth/react";
 
 export function ApplicantSidebar() {
     const { data: session } = useSession();
@@ -25,10 +25,6 @@ export function ApplicantSidebar() {
                 <Link href="/applicant" className={`flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm transition-colors ${isActive("/applicant") && pathname === "/applicant" ? "bg-slate-800/50 text-white" : "text-slate-400 hover:bg-slate-800 hover:text-white"}`}>
                     <Home className={`w-4 h-4 ${isActive("/applicant") && pathname === "/applicant" ? "text-emerald-400" : ""}`} />
                     Dashboard
-                </Link>
-                <Link href="/applicant/applications" className={`flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm transition-colors ${isActive("/applicant/applications") ? "bg-slate-800/50 text-white" : "text-slate-400 hover:bg-slate-800 hover:text-white"}`}>
-                    <FileText className="w-4 h-4" />
-                    My Applications
                 </Link>
                 <Link href="/applicant/receipts" className={`flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm transition-colors ${isActive("/applicant/receipts") ? "bg-slate-800/50 text-white" : "text-slate-400 hover:bg-slate-800 hover:text-white"}`}>
                     <Receipt className="w-4 h-4" />
@@ -55,10 +51,10 @@ export function ApplicantSidebar() {
                             <p className="text-[10px] text-slate-500">{session.user.email}</p>
                         </div>
                     </div>
-                    <Link href="/api/auth/signout" className="flex items-center gap-3 px-4 py-3 rounded-xl text-red-400 font-bold text-sm hover:bg-red-500/10 transition-colors">
+                    <button onClick={() => signOut({ callbackUrl: '/login' })} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-400 font-bold text-sm hover:bg-red-500/10 transition-colors text-left">
                         <LogOut className="w-4 h-4" />
                         Sign Out
-                    </Link>
+                    </button>
                 </div>
             )}
         </aside>

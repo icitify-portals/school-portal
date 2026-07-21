@@ -17,6 +17,16 @@ export default function PhotoCapture({ value, onChange, label }: PhotoCapturePro
     const [mode, setMode] = useState<'upload' | 'camera'>('upload');
     const [preview, setPreview] = useState<string | null>(value || null);
     const [uploadError, setUploadError] = useState<string | null>(null);
+    const [isSecureContext, setIsSecureContext] = useState(true);
+
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            setIsSecureContext(window.isSecureContext);
+            if (!window.isSecureContext) {
+                setMode('upload');
+            }
+        }
+    }, []);
     const [processing, setProcessing] = useState(false);
     const webcamRef = useRef<Webcam>(null);
 
@@ -120,6 +130,11 @@ export default function PhotoCapture({ value, onChange, label }: PhotoCapturePro
 
     return (
         <div className="border-2 border-dashed border-slate-200 rounded-2xl p-6 bg-slate-50 text-center space-y-6">
+            {!isSecureContext && (
+                <div className="bg-amber-50 text-amber-800 p-3 rounded-lg text-xs text-left mb-4 font-medium border border-amber-200">
+                    Camera access requires a secure connection (HTTPS). Since you are accessing the site via HTTP, please use the <strong>Upload File</strong> option instead.
+                </div>
+            )}
             <div className="flex justify-center gap-4 border-b border-slate-200 pb-4">
                 <Button 
                     type="button"
@@ -133,7 +148,8 @@ export default function PhotoCapture({ value, onChange, label }: PhotoCapturePro
                     type="button"
                     variant="ghost" 
                     onClick={() => setMode('camera')}
-                    className={cn("rounded-xl px-6 py-2 text-xs font-bold uppercase tracking-widest", mode === 'camera' ? "bg-indigo-100 text-indigo-700" : "text-slate-500 hover:bg-slate-100")}
+                    disabled={!isSecureContext}
+                    className={cn("rounded-xl px-6 py-2 text-xs font-bold uppercase tracking-widest", mode === 'camera' ? "bg-indigo-100 text-indigo-700" : "text-slate-500 hover:bg-slate-100", !isSecureContext && "opacity-50 cursor-not-allowed")}
                 >
                     <Camera className="w-4 h-4 mr-2" /> Use Camera
                 </Button>
