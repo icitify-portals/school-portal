@@ -1,7 +1,7 @@
 "use server";
 
 import { db } from "@/db/db";
-import { paystackDeveloperFees, bursarySettings } from "@/db/schema";
+import { paystackDeveloperFees, bursarySettings, admissionApplicationsV2 } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 
 const PAYSTACK_SECRET = process.env.PAYSTACK_SECRET_KEY || ""; 
@@ -148,6 +148,17 @@ export async function verifyDeveloperFee(reference: string) {
                 .set({ status: 'paid', paidAt: new Date() })
                 .where(eq(paystackDeveloperFees.reference, reference));
             
+            // Also update admissionApplicationsV2 if this is an admission form fee
+            const [feeRecord] = await db.select().from(paystackDeveloperFees).where(eq(paystackDeveloperFees.reference, reference)).limit(1);
+            if (feeRecord && feeRecord.type === 'admission_form') {
+                const applicationId = parseInt(feeRecord.identifier);
+                if (!isNaN(applicationId)) {
+                    await db.update(admissionApplicationsV2)
+                        .set({ processingFeeStatus: 'paid', processingFeeReference: reference })
+                        .where(eq(admissionApplicationsV2.id, applicationId));
+                }
+            }
+            
             return { success: true };
         } else {
             // Fallback for development if secret key is missing (so it doesn't block local dev testing)
@@ -156,6 +167,18 @@ export async function verifyDeveloperFee(reference: string) {
                  await db.update(paystackDeveloperFees)
                     .set({ status: 'paid', paidAt: new Date() })
                     .where(eq(paystackDeveloperFees.reference, reference));
+
+                 // Also update admissionApplicationsV2 if this is an admission form fee
+                 const [feeRecord] = await db.select().from(paystackDeveloperFees).where(eq(paystackDeveloperFees.reference, reference)).limit(1);
+                 if (feeRecord && feeRecord.type === 'admission_form') {
+                     const applicationId = parseInt(feeRecord.identifier);
+                     if (!isNaN(applicationId)) {
+                         await db.update(admissionApplicationsV2)
+                             .set({ processingFeeStatus: 'paid', processingFeeReference: reference })
+                             .where(eq(admissionApplicationsV2.id, applicationId));
+                     }
+                 }
+
                  return { success: true };
             }
 

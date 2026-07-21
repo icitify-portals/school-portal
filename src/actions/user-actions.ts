@@ -211,3 +211,31 @@ export async function updateUserStatus(userId: number, status: 'active' | 'suspe
         return { success: false, error: "Failed to update user status." };
     }
 }
+
+export async function verifyUserEmailManually(userId: number) {
+    try {
+        const session = await auth();
+        const actorId = session?.user?.id ? parseInt(session.user.id) : null;
+        if (!actorId) return { success: false, error: "Unauthorized" };
+        
+        await db.update(users).set({
+            emailVerified: true
+        }).where(eq(users.id, userId));
+        
+        if (actorId) {
+            await db.insert(systemAuditLogs).values({
+                actorId,
+                action: 'MANUAL_EMAIL_VERIFICATION',
+                targetId: userId.toString(),
+                details: JSON.stringify({ userId, timestamp: new Date() }),
+                status: 'success'
+            });
+        }
+        
+        revalidatePath("/admin/users");
+        return { success: true, message: "Email verified successfully." };
+    } catch (error) {
+        console.error("Manual Email Verification Error:", error);
+        return { success: false, error: "Failed to verify email manually." };
+    }
+}

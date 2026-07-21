@@ -21,6 +21,7 @@ import {
 } from "@/actions/admission_v2";
 import OLevelSubmission from "@/components/forms/OLevelSubmission";
 import PhotoCapture from "@/components/forms/PhotoCapture";
+import SignatureCapture from "@/components/forms/SignatureCapture";
 // @ts-expect-error - TS7016: Auto-suppressed for build
 import naija from 'naija-state-local-government';
 import { COUNTRY_NAMES } from "@/lib/countries";
@@ -31,6 +32,33 @@ function FieldError({ error }: { error?: string }) {
     if (!error) return null;
     return <p className="text-xs text-rose-600 font-medium px-1 mt-1">{error}</p>;
 }
+
+const ProcessTracker = ({ currentStage }: { currentStage: number }) => {
+    const stages = [
+        { label: "Application Fee" },
+        { label: "Processing Fee" },
+        { label: "Programme" },
+        { label: "Bio-Data Form" }
+    ];
+    return (
+        <div className="max-w-4xl mx-auto mt-6 mb-4 px-4">
+            <div className="flex items-center justify-between">
+                {stages.map((stage, idx) => (
+                    <div key={idx} className="flex flex-col items-center relative flex-1">
+                        <div className={cn("w-10 h-10 rounded-full flex items-center justify-center z-10 transition-colors shadow-sm", currentStage > idx ? "bg-green-500 text-white" : currentStage === idx ? "bg-[#1a5b3a] text-white ring-4 ring-green-100" : "bg-gray-100 text-gray-400 border border-gray-200")}>
+                            {currentStage > idx ? <Check className="w-5 h-5" /> : <span className="font-bold text-sm">{idx + 1}</span>}
+                        </div>
+                        <p className={cn("text-[10px] sm:text-xs font-bold mt-3 uppercase tracking-wider text-center", currentStage === idx ? "text-[#1a5b3a]" : currentStage > idx ? "text-green-600" : "text-gray-400")}>{stage.label}</p>
+                        {idx < stages.length - 1 && (
+                            <div className={cn("absolute top-5 left-1/2 w-full h-1 -z-10 transition-colors", currentStage > idx ? "bg-green-500" : "bg-gray-100")} />
+                        )}
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+};
+
 
 export default function StatefulApplicationPage() {
     const params = useParams();
@@ -621,83 +649,22 @@ export default function StatefulApplicationPage() {
         );
     }
 
-    // Payment Wall (Enforced for all flows with fee > 0)
+    let currentProcessStage = 0;
     const applicationFeeToPay = application.template.calculatedFee || parseFloat(application.template.applicationFee || "0");
+    const processingFeeToPay = parseFloat(application.template.processingFee || "0");
+
     if (applicationFeeToPay > 0 && application.paymentStatus !== 'paid') {
-        return (
-            <Card className="bg-white border border-rose-200 max-w-2xl mx-auto mt-12 p-12 text-center space-y-8 rounded-[2rem] shadow-xl">
-                <div className="w-24 h-24 bg-rose-50 rounded-full flex items-center justify-center mx-auto">
-                    <Lock className="w-10 h-10 text-rose-600" />
-                </div>
-                <div className="space-y-4">
-                    <h2 className="text-3xl font-black text-gray-900 uppercase">Payment Required</h2>
-                    <p className="text-gray-500 font-medium uppercase text-sm leading-relaxed">
-                        To access and fill out the {application.template.name} application form, you must first pay the obtainment fee.
-                    </p>
-                </div>
-                <div className="p-6 bg-gray-50 rounded-2xl border border-gray-200 flex justify-between items-center">
-                    <span className="text-xs font-bold uppercase tracking-widest text-gray-600">Application Fee</span>
-                    <span className="text-xl font-black text-[#1a5b3a]">₦{(application.template.calculatedFee || parseFloat(application.template.applicationFee)).toLocaleString()}</span>
-                </div>
-                <div className="flex gap-4">
-                    <Button 
-                        onClick={handlePayment} disabled={paymentProcessing}
-                        className="w-full bg-[#1a5b3a] hover:bg-[#134229] text-white font-bold py-8 rounded-2xl uppercase text-sm tracking-widest transition-all flex items-center justify-center gap-3"
-                    >
-                        {paymentProcessing ? <Loader2 className="w-6 h-6 animate-spin" /> : <><CreditCard className="w-5 h-5" /> Pay to Unlock Form</>}
-                    </Button>
-                    <Button
-                        onClick={async () => {
-                            setPaymentProcessing(true);
-                            try {
-                                const { requeryAdmissionPayment } = await import('@/actions/admission_v2');
-                                const res = await requeryAdmissionPayment(application.id);
-                                if (res.success) {
-                                    toast.success("Payment verified successfully!");
-                                    window.location.reload();
-                                } else {
-                                    toast.error(res.error || "Payment verification failed.");
-                                }
-                            } catch (e: any) {
-                                toast.error(e.message || "An error occurred.");
-                            } finally {
-                                setPaymentProcessing(false);
-                            }
-                        }}
-                        disabled={paymentProcessing}
-                        variant="outline"
-                        className="w-1/3 py-8 rounded-2xl uppercase text-xs font-bold text-gray-600 border-gray-300 hover:bg-gray-100 flex flex-col items-center justify-center gap-1"
-                    >
-                        <RotateCw className={`w-5 h-5 ${paymentProcessing ? 'animate-spin' : ''}`} /> Re-Query Payment
-                    </Button>
-                </div>
-            </Card>
-        );
+        currentProcessStage = 0;
+    } else if (processingFeeToPay > 0 && !application.isProcessingFeePaid) {
+        currentProcessStage = 1;
+    } else if (!selectedProgrammeId) {
+        currentProcessStage = 2;
+    } else if (application.status === 'submitted' || application.status === 'admitted' || application.status === 'rejected') {
+        currentProcessStage = 4;
+    } else {
+        currentProcessStage = 3;
     }
 
-    // Secondary Payment Wall: Processing Fee
-    const processingFeeToPay = parseFloat(application.template.processingFee || "0");
-    if (application.paymentStatus === 'paid' && processingFeeToPay > 0 && !application.isProcessingFeePaid) {
-        return (
-            <Card className="bg-white border border-rose-200 max-w-2xl mx-auto mt-12 p-12 text-center space-y-8 rounded-[2rem] shadow-xl">
-                <div className="w-24 h-24 bg-rose-50 rounded-full flex items-center justify-center mx-auto">
-                    <Lock className="w-10 h-10 text-rose-600" />
-                </div>
-                <div className="space-y-4">
-                    <h2 className="text-3xl font-black text-gray-900 uppercase">Processing Fee Required</h2>
-                    <p className="text-gray-500 font-medium uppercase text-sm leading-relaxed">
-                        Your form fee was successful! To finalize your access to the application portal, please pay the mandatory processing fee via Paystack.
-                    </p>
-                </div>
-                <Button 
-                    onClick={handleProcessingFee} disabled={isGateLoading}
-                    className="w-full bg-[#1a5b3a] hover:bg-[#134229] text-white font-bold py-8 rounded-2xl uppercase text-sm tracking-widest transition-all flex items-center justify-center gap-3"
-                >
-                    {isGateLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : <><CreditCard className="w-5 h-5" /> Pay Processing Fee</>}
-                </Button>
-            </Card>
-        );
-    }
 
     // Programme Selection Step (after both fees paid)
     if (!selectedProgrammeId) {
@@ -724,7 +691,9 @@ export default function StatefulApplicationPage() {
         };
 
         return (
-            <Card className="bg-white max-w-2xl mx-auto mt-12 p-12 text-center space-y-8 rounded-[2rem] shadow-xl border border-indigo-100">
+            <div className="space-y-4">
+                <ProcessTracker currentStage={currentProcessStage} />
+                <Card className="bg-white max-w-2xl mx-auto mt-4 p-12 text-center space-y-8 rounded-[2rem] shadow-xl border border-indigo-100">
                 <div className="w-24 h-24 bg-indigo-50 rounded-full flex items-center justify-center mx-auto">
                     <GraduationCap className="w-10 h-10 text-indigo-600" />
                 </div>
@@ -760,6 +729,7 @@ export default function StatefulApplicationPage() {
                 )}
                 {savingProgramme && <Loader2 className="w-6 h-6 animate-spin mx-auto text-indigo-600" />}
             </Card>
+            </div>
         );
     }
 
@@ -803,8 +773,9 @@ export default function StatefulApplicationPage() {
     const progress = ((currentStep + 1) / totalSteps) * 100;
 
     return (
-        <div className="max-w-4xl mx-auto space-y-8 pb-12 mt-8">
-            <div className="flex justify-between items-end px-4">
+        <div className="max-w-4xl mx-auto space-y-8 pb-12 mt-4">
+            <ProcessTracker currentStage={currentProcessStage} />
+            <div className="flex justify-between items-end px-4 mt-8">
                 <div className="space-y-1">
                     <div className="flex items-center gap-2">
                         <span className="text-xs font-bold uppercase tracking-widest text-[#1a5b3a]">{application.template.level}</span>
@@ -1106,6 +1077,14 @@ export default function StatefulApplicationPage() {
                                                         label={field.label}
                                                     />
                                                 </div>
+                                            ) : field.type === 'signature' ? (
+                                                <div className="md:col-span-2">
+                                                    <SignatureCapture 
+                                                        value={formData[field.label] || ""}
+                                                        onChange={(val) => handleInputChange(field.label, val)}
+                                                        label={field.label}
+                                                    />
+                                                </div>
                                             ) : field.type === 'textarea' ? (
                                                 <>
                                                     <textarea 
@@ -1325,13 +1304,35 @@ export default function StatefulApplicationPage() {
                                 {!submitting && <ArrowRight className="w-4 h-4 ml-2" />}
                             </Button>
                         ) : (
-                            <Button 
-                                onClick={handleSubmitFinal} disabled={submitting || !confirmed || paymentProcessing || isGateLoading || !!eligibilityError}
-                                className="flex-[2] py-6 bg-[#1a5b3a] hover:bg-[#134229] text-white uppercase font-bold text-xs tracking-widest rounded-xl transition-all shadow-md disabled:opacity-50"
-                            >
-                                {submitting || paymentProcessing || isGateLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
-                                COMPLETE REGISTRATION
-                            </Button>
+                            <>
+                                {applicationFeeToPay > 0 && application.paymentStatus !== 'paid' ? (
+                                    <div className="flex-[2] flex gap-4">
+                                        <Button 
+                                            onClick={handlePayment} disabled={paymentProcessing}
+                                            className="w-full bg-rose-600 hover:bg-rose-700 text-white font-bold py-6 rounded-xl uppercase text-xs tracking-widest transition-all flex items-center justify-center gap-3"
+                                        >
+                                            {paymentProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <><CreditCard className="w-4 h-4" /> Pay Application Fee (₦{(application.template.calculatedFee || parseFloat(application.template.applicationFee)).toLocaleString()})</>}
+                                        </Button>
+                                    </div>
+                                ) : processingFeeToPay > 0 && !application.isProcessingFeePaid ? (
+                                    <div className="flex-[2] flex gap-4">
+                                        <Button 
+                                            onClick={handleProcessingFee} disabled={isGateLoading}
+                                            className="w-full bg-rose-600 hover:bg-rose-700 text-white font-bold py-6 rounded-xl uppercase text-xs tracking-widest transition-all flex items-center justify-center gap-3"
+                                        >
+                                            {isGateLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <><CreditCard className="w-4 h-4" /> Pay Processing Fee (₦{processingFeeToPay.toLocaleString()})</>}
+                                        </Button>
+                                    </div>
+                                ) : (
+                                    <Button 
+                                        onClick={handleSubmitFinal} disabled={submitting || !confirmed || paymentProcessing || isGateLoading || !!eligibilityError}
+                                        className="flex-[2] py-6 bg-[#1a5b3a] hover:bg-[#134229] text-white uppercase font-bold text-xs tracking-widest rounded-xl transition-all shadow-md disabled:opacity-50"
+                                    >
+                                        {submitting || paymentProcessing || isGateLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
+                                        COMPLETE REGISTRATION
+                                    </Button>
+                                )}
+                            </>
                         )}
                     </div>
                 </CardContent>

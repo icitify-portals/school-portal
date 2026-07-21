@@ -28,7 +28,11 @@ import { sendInAppNotification } from "./notifications";
 import { checkDeveloperFeeStatus } from "./paystack-developer-subscription";
 import { sendEmail } from "@/lib/mail";
 import { generateFormNumber, generateFormHash } from "@/lib/form-number";
-import { NotificationService } from "@/services/NotificationService";
+import { storage } from "@/lib/storage";
+import { hash, compare } from "bcryptjs";
+import { writeFile, mkdir } from "fs/promises";
+import path from "path";
+import { randomUUID } from "crypto";
 
 const ADMIN_ROLES = ['admin', 'superadmin', 'icitify_dev', 'dvc', 'registrar', 'admission_officer'];
 
@@ -857,6 +861,34 @@ export async function finalizeStudentAdmission(applicationId: number) {
         const formattedSeq = sequence.toString().padStart(4, '0');
         const matricNumber = `FSS/IB/${year}/${studyModeCode}/${progName}/${formattedSeq}`;
 
+        // Process Base64 images to physical files
+        let finalImageUrl = application.applicantPhoto;
+        let finalSignatureUrl = null;
+
+        const processBase64Image = async (base64Str: string, folder: string) => {
+            if (!base64Str || !base64Str.startsWith('data:image')) return base64Str;
+            try {
+                const base64Data = base64Str.replace(/^data:image\/\w+;base64,/, "");
+                const buffer = Buffer.from(base64Data, 'base64');
+                const uploadDir = path.join(process.cwd(), 'public', 'uploads', folder);
+                await mkdir(uploadDir, { recursive: true });
+                const fileName = `${randomUUID()}.jpg`;
+                await writeFile(path.join(uploadDir, fileName), buffer);
+                return `/uploads/${folder}/${fileName}`;
+            } catch (err) {
+                console.error(`Failed to process image for ${folder}:`, err);
+                return base64Str;
+            }
+        };
+
+        if (application.applicantPhoto && application.applicantPhoto.startsWith('data:image')) {
+            finalImageUrl = await processBase64Image(application.applicantPhoto, 'profiles');
+        }
+
+        if (formData.signature && formData.signature.startsWith('data:image')) {
+            finalSignatureUrl = await processBase64Image(formData.signature, 'signatures');
+        }
+
         // 1. Create User - Handle new name structure (surname, firstName, middleName)
         const userFullName = formData.surname 
             ? (formData.middleName 
@@ -872,7 +904,7 @@ export async function finalizeStudentAdmission(applicationId: number) {
             requiresPasswordChange: true,
             role: 'student',
             phone: formData.phone || formData.guardianPhone,
-            imageUrl: application.applicantPhoto,
+            imageUrl: finalImageUrl,
             status: 'active'
         });
 
@@ -891,7 +923,8 @@ export async function finalizeStudentAdmission(applicationId: number) {
             admissionYear: year,
             gender: (formData.gender?.toLowerCase() || 'other') as any,
             dob: formData.dob,
-            imageUrl: application.applicantPhoto,
+            imageUrl: finalImageUrl,
+            signatureUrl: finalSignatureUrl,
             nationality: formData.nationality || 'Nigerian',
             
             // Guardian Details mapping
@@ -999,8 +1032,6 @@ export async function requeryAdmissionPayment(applicationId: number) {
         return { success: false, error: error.message };
     }
 }
-
-import { hash, compare } from "bcryptjs";
 
 export async function registerApplicant(data: any) {
     try {
@@ -1401,8 +1432,44 @@ export async function submitApplicationFinal(applicationId: number, applicantId:
             }
         }
 
+        // Upload any Base64 images in formData to Wasabi
+        let updatedPhoto = application.applicantPhoto;
+        const uploadBase64ToWasabi = async (base64Str: string, namePrefix: string) => {
+            if (!base64Str || typeof base64Str !== 'string' || !base64Str.startsWith('data:image')) return base64Str;
+            try {
+                const match = base64Str.match(/^data:image\/(\w+);base64,/);
+                const ext = match ? match[1] : 'jpg';
+                const base64Data = base64Str.replace(/^data:image\/\w+;base64,/, "");
+                const buffer = Buffer.from(base64Data, 'base64');
+                const filename = `${namePrefix}_${Date.now()}.${ext}`;
+                const folder = `applicant-documents/${application.formNumber || application.id}`;
+                const uploadResult = await storage.upload(buffer, filename, folder, `image/${ext}`);
+                return uploadResult.success && uploadResult.url ? uploadResult.url : base64Str;
+            } catch (e) {
+                console.error("Wasabi upload error:", e);
+                return base64Str;
+            }
+        };
+
+        if (updatedPhoto && updatedPhoto.startsWith('data:image')) {
+            updatedPhoto = await uploadBase64ToWasabi(updatedPhoto, 'photo');
+        }
+
+        let formDataUpdated = false;
+        for (const key of Object.keys(formData)) {
+            if (typeof formData[key] === 'string' && formData[key].startsWith('data:image')) {
+                const cleanKey = key.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
+                formData[key] = await uploadBase64ToWasabi(formData[key], cleanKey);
+                formDataUpdated = true;
+            }
+        }
+
         await db.update(admissionApplicationsV2)
-            .set({ status: 'submitted' })
+            .set({ 
+                status: 'submitted',
+                applicantPhoto: updatedPhoto,
+                data: formDataUpdated ? JSON.stringify(formData) : application.data
+            })
             .where(
                 and(
                     eq(admissionApplicationsV2.id, applicationId),
@@ -1695,7 +1762,8 @@ export async function getAdminV2Applications(filters?: {
             limit: pageSize,
             offset: offset,
             with: {
-                template: true
+                template: true,
+                applicant: true
             }
         });
 
@@ -1705,10 +1773,11 @@ export async function getAdminV2Applications(filters?: {
             applications = applications.filter((app: any) => {
                 let formData: any = {};
                 try { formData = typeof app.data === 'string' ? JSON.parse(app.data) : app.data || {}; } catch {}
-                const fullName = `${formData.firstName || ''} ${formData.lastName || ''}`.toLowerCase();
-                const surname = `${formData.surname || ''} ${formData.firstName || ''}`.toLowerCase();
+                const fullName = `${formData.firstName || formData.first_name || ''} ${formData.surname || formData.lastName || formData.last_name || ''}`.toLowerCase();
+                const surname = `${formData.surname || formData.lastName || formData.last_name || ''} ${formData.firstName || formData.first_name || ''}`.toLowerCase();
+                const userFullName = app.applicant ? `${app.applicant.firstName || ''} ${app.applicant.surname || ''} ${app.applicant.name || ''}`.toLowerCase() : '';
                 const formNum = (app.formNumber || '').toLowerCase();
-                return fullName.includes(q) || surname.includes(q) || formNum.includes(q);
+                return fullName.includes(q) || surname.includes(q) || userFullName.includes(q) || formNum.includes(q);
             });
         }
 
@@ -1716,10 +1785,12 @@ export async function getAdminV2Applications(filters?: {
             applications: applications.map((app: any) => {
                 let formData: any = {};
                 try { formData = typeof app.data === 'string' ? JSON.parse(app.data) : app.data || {}; } catch {}
+                const nameFromForm = `${formData.firstName || formData.first_name || ''} ${formData.surname || formData.lastName || formData.last_name || ''}`.trim();
+                const nameFromUser = app.applicant ? (app.applicant.name || `${app.applicant.firstName || ''} ${app.applicant.surname || ''}`.trim()) : '';
                 return {
                     ...app,
                     parsedData: formData,
-                    applicantName: `${formData.firstName || ''} ${formData.lastName || ''}`.trim() || 'N/A',
+                    applicantName: nameFromForm || nameFromUser || 'N/A',
                     templateName: app.template?.name || 'N/A',
                 };
             }),

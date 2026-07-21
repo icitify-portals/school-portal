@@ -4,6 +4,7 @@ import { admissionApplicationsV2, admissionFormTemplates } from "@/db/schema";
 import { eq, and, desc } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { redirect } from "next/navigation";
+import { generateFormNumber } from "@/lib/form-number";
 
 export async function POST(req: Request) {
     try {
@@ -13,18 +14,6 @@ export async function POST(req: Request) {
         }
 
         const applicantId = parseInt(session.user.id);
-
-        // Check for any existing draft
-        const existingApp = await db.query.admissionApplicationsV2.findFirst({
-            where: and(
-                eq(admissionApplicationsV2.applicantId, applicantId),
-                eq(admissionApplicationsV2.status, 'draft')
-            ),
-            orderBy: desc(admissionApplicationsV2.id)
-        });
-        if (existingApp) {
-            return NextResponse.json({ redirectUrl: `/applicant/application/${existingApp.id}` });
-        }
 
         let tId: number = 0;
         const contentType = req.headers.get("content-type") || "";
@@ -51,12 +40,35 @@ export async function POST(req: Request) {
             tId = firstTemplate.id;
         }
 
-        // Create new application
+        // Check for existing draft for THIS specific template
+        const existingApp = await db.query.admissionApplicationsV2.findFirst({
+            where: and(
+                eq(admissionApplicationsV2.applicantId, applicantId),
+                eq(admissionApplicationsV2.templateId, tId),
+                eq(admissionApplicationsV2.status, 'draft')
+            ),
+            orderBy: desc(admissionApplicationsV2.id)
+        });
+        if (existingApp) {
+            return NextResponse.json({ redirectUrl: `/applicant/application/${existingApp.id}` });
+        }
+
+        // Look up template to get level for form number generation
+        const [template] = await db.select({ level: admissionFormTemplates.level })
+            .from(admissionFormTemplates)
+            .where(eq(admissionFormTemplates.id, tId))
+            .limit(1);
+
+        // Generate form number at creation time
+        const formNumber = await generateFormNumber(template?.level || 'tertiary');
+
+        // Create new application with form number
         const [result] = await db.insert(admissionApplicationsV2).values({
             templateId: tId,
             applicantId: applicantId,
             status: 'draft',
-            paymentStatus: 'pending'
+            paymentStatus: 'pending',
+            formNumber: formNumber
         });
 
         return NextResponse.json({ redirectUrl: `/applicant/application/${result.insertId}` });

@@ -406,14 +406,19 @@ export async function getAllProgrammesWithScoring() {
     const allProgrammes = await db.select().from(programmes);
 
     const programmesWithScoring = allProgrammes.map(programme => {
-      const strategy = programme.scoringStrategy as keyof typeof SCORING_STRATEGIES;
-      const config = programme.scoringConfig ? JSON.parse(programme.scoringConfig) : SCORING_STRATEGIES[strategy].config;
+      const strategy = (programme.scoringStrategy || 'JAMB_ONLY') as keyof typeof SCORING_STRATEGIES;
+      const strategyInfo = SCORING_STRATEGIES[strategy] || SCORING_STRATEGIES['JAMB_ONLY'];
+      
+      let config = strategyInfo.config;
+      if (programme.scoringConfig) {
+        try { config = JSON.parse(programme.scoringConfig as string); } catch (e) {}
+      }
 
       return {
         ...programme,
-        scoringStrategy: strategy,
+        scoringStrategy: strategyInfo ? strategy : 'JAMB_ONLY',
         scoringConfig: config,
-        strategyInfo: SCORING_STRATEGIES[strategy]
+        strategyInfo: strategyInfo
       };
     });
 

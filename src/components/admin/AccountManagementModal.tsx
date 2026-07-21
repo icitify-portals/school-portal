@@ -20,9 +20,10 @@ import {
     Loader2,
     ShieldAlert,
     Trash2,
-    History
+    History,
+    ShieldCheck
 } from "lucide-react";
-import { resetUserPassword, updateUserStatus } from "@/actions/user-actions";
+import { resetUserPassword, updateUserStatus, verifyUserEmailManually } from "@/actions/user-actions";
 import { getAllRoles, assignRoleToUser, removeRoleFromUser } from "@/actions/rbac";
 import { cn } from "@/lib/utils";
 
@@ -87,6 +88,18 @@ export function AccountManagementModal({ user, onClose, onUpdate }: AccountManag
         setActionLoading(null);
     };
 
+    const handleVerifyEmail = async () => {
+        setActionLoading("verifyEmail");
+        const res = await verifyUserEmailManually(user.id);
+        if (res.success) {
+            alert(res.message);
+            onUpdate?.();
+        } else {
+            alert(res.error);
+        }
+        setActionLoading(null);
+    };
+
     const handleToggleRole = async (roleId: number, isAssigned: boolean) => {
         setActionLoading(`role-${roleId}`);
         if (isAssigned) {
@@ -139,6 +152,30 @@ export function AccountManagementModal({ user, onClose, onUpdate }: AccountManag
                             onCheckedChange={handleStatusToggle}
                             disabled={actionLoading === "status"}
                         />
+                    </div>
+
+                    {/* Manual Email Verification */}
+                    <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center">
+                                <ShieldCheck className="w-5 h-5" />
+                            </div>
+                            <div>
+                                <p className="text-sm font-black text-slate-900 leading-none mb-1 uppercase tracking-tighter">Email Verification</p>
+                                <p className="text-[10px] font-bold text-slate-500 uppercase">
+                                    Manually verify email
+                                </p>
+                            </div>
+                        </div>
+                        <Button 
+                            variant="outline"
+                            size="sm"
+                            disabled={actionLoading === "verifyEmail"}
+                            onClick={handleVerifyEmail}
+                            className="text-[10px] font-black uppercase text-indigo-600 border-indigo-200 hover:bg-indigo-50"
+                        >
+                            {actionLoading === "verifyEmail" ? <Loader2 className="w-4 h-4 animate-spin" /> : "Verify Now"}
+                        </Button>
                     </div>
 
                     {/* Password Reset Section */}

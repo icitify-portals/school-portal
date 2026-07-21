@@ -11,9 +11,7 @@ import {
 import { eq, and, desc } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
-import { writeFile, mkdir } from "fs/promises";
-import { join } from "path";
-import { v4 as uuidv4 } from "uuid";
+import { storage } from "@/lib/storage";
 
 // Upload applicant document (passport photo or signature)
 export async function uploadApplicantDocument(
@@ -47,22 +45,16 @@ export async function uploadApplicantDocument(
     const fileExtension = file.name.split('.').pop();
     const uniqueFilename = `${session.user.id}_${documentType}_${Date.now()}.${fileExtension}`;
 
-    // Create upload directory if it doesn't exist
-    const uploadDir = join(process.cwd(), 'public', 'uploads', 'applicant-documents');
-    try {
-      await mkdir(uploadDir, { recursive: true });
-    } catch (error) {
-      // Directory might already exist
-    }
-
-    // Save file
-    const filePath = join(uploadDir, uniqueFilename);
+    // Upload file via storage provider (local or S3/Wasabi)
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
-    await writeFile(filePath, buffer);
+    const uploadResult = await storage.upload(buffer, uniqueFilename, 'applicant-documents', file.type);
 
-    // Save file URL (relative to public directory)
-    const fileUrl = `/uploads/applicant-documents/${uniqueFilename}`;
+    if (!uploadResult.success || !uploadResult.url) {
+      return { success: false, error: uploadResult.error || "Failed to upload file" };
+    }
+
+    const fileUrl = uploadResult.url;
 
     // Check if document already exists for this user and type
     const existingDoc = await db

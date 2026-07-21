@@ -7,8 +7,7 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { getStaffProfileByUserId } from "@/actions/hr_leave";
 import { getStudentProfile as fetchStudentProfile } from "@/actions/students";
-import { writeFile, mkdir } from "fs/promises";
-import { join } from "path";
+import { storage } from "@/lib/storage";
 
 export async function updateStudentProfile(userId: number, data: {
     guardianName?: string;
@@ -215,22 +214,16 @@ export async function uploadProfileImage(formData: FormData) {
         const fileExtension = file.name.split('.').pop() || 'jpg';
         const uniqueFilename = `profile_${userId}_${Date.now()}.${fileExtension}`;
 
-        // Create upload directory if it doesn't exist
-        const uploadDir = join(process.cwd(), "public", "uploads", "profiles");
-        try {
-            await mkdir(uploadDir, { recursive: true });
-        } catch (error) {
-            // Already exists or created
-        }
-
-        // Save file
-        const filePath = join(uploadDir, uniqueFilename);
+        // Upload file via storage provider (local or S3/Wasabi)
         const bytes = await file.arrayBuffer();
         const buffer = Buffer.from(bytes);
-        await writeFile(filePath, buffer);
+        const uploadResult = await storage.upload(buffer, uniqueFilename, 'profiles', file.type);
 
-        // Relative URL path
-        const imageUrl = `/uploads/profiles/${uniqueFilename}`;
+        if (!uploadResult.success || !uploadResult.url) {
+            return { success: false, error: uploadResult.error || "Failed to upload image" };
+        }
+
+        const imageUrl = uploadResult.url;
 
         // Update database
         if (isStaff) {

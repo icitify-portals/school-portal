@@ -65,10 +65,15 @@ export const ModernReceipt = ({ transaction, student, branding, bursar, arrears 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
                     <div>
                         <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-3">Paid By</h4>
-                        <div className="space-y-1">
-                            <p className="text-lg font-black text-slate-900">{student.firstName} {student.lastName}</p>
-                            <p className="text-sm font-bold text-slate-500 uppercase">{student.matricNumber || "NOT REGISTERED"}</p>
-                            <p className="text-xs text-slate-400">{student.programme?.name || "General Course"}</p>
+                        <div className="flex items-start gap-4">
+                            {student.imageUrl && (
+                                <img src={student.imageUrl} alt="Student Photo" className="w-16 h-16 rounded-xl object-cover border-2 border-slate-100 shadow-sm print:shadow-none" />
+                            )}
+                            <div className="space-y-1">
+                                <p className="text-lg font-black text-slate-900 leading-none">{student.firstName} {student.lastName}</p>
+                                <p className="text-sm font-bold text-slate-500 uppercase">{student.matricNumber || "NOT REGISTERED"}</p>
+                                <p className="text-xs text-slate-400">{student.programme?.name || "General Course"}</p>
+                            </div>
                         </div>
                     </div>
                     <div className="md:text-right">
@@ -175,6 +180,11 @@ export const ClassicReceipt = ({ transaction, student, branding, bursar, arrears
                     <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Receipt Number</p>
                     <p className="text-lg font-mono font-bold text-red-600">RC-{transaction.id?.toString().padStart(8, '0')}</p>
                 </div>
+                {student.imageUrl && (
+                    <div className="mx-auto w-20 h-20 border-2 border-slate-300 p-0.5 bg-white">
+                        <img src={student.imageUrl} alt="Student" className="w-full h-full object-cover" />
+                    </div>
+                )}
                 <div className="text-right">
                     <p className="text-2xl font-black text-slate-900 uppercase italic">Official Receipt</p>
                     <p className="text-xs font-bold text-slate-500">{new Date(transaction.createdAt).toLocaleDateString('en-US')}</p>
@@ -233,7 +243,12 @@ export const ClassicReceipt = ({ transaction, student, branding, bursar, arrears
             </div>
 
             <div className="flex justify-between items-end pt-12">
-                <div className="text-center w-48 border-t-2 border-slate-900 pt-2">
+                <div className="text-center w-48 border-t-2 border-slate-900 pt-2 relative">
+                    {student.signatureUrl && (
+                        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-32 h-12 pointer-events-none">
+                            <img src={student.signatureUrl} className="w-full h-full object-contain mix-blend-multiply" alt="Student Signature" />
+                        </div>
+                    )}
                     <p className="text-[10px] font-bold uppercase tracking-tight">Student Signature</p>
                 </div>
                 <div className="text-center w-60 border-t-2 border-slate-900 pt-2 relative">
@@ -278,10 +293,15 @@ export const MinimalistReceipt = ({ transaction, student, branding, bursar, arre
             <div className="mb-12">
                 <p className="text-[10px] text-slate-400 uppercase tracking-[0.2em] mb-4">Financial Record Summary</p>
                 <div className="flex justify-between items-end pb-4 border-b border-slate-100 mb-4">
-                    <div>
-                        <p className="text-lg font-medium text-slate-900">{student.firstName} {student.lastName}</p>
-                        <p className="text-xs text-slate-400">{student.matricNumber || "NOT REGISTERED"}</p>
-                        <p className="text-[10px] text-slate-500 mt-1 uppercase font-semibold">{termLabel}</p>
+                    <div className="flex items-center gap-4">
+                        {student.imageUrl && (
+                            <img src={student.imageUrl} className="w-12 h-12 rounded-full object-cover grayscale opacity-80" alt="Student" />
+                        )}
+                        <div>
+                            <p className="text-lg font-medium text-slate-900 leading-none">{student.firstName} {student.lastName}</p>
+                            <p className="text-xs text-slate-400 mt-1">{student.matricNumber || "NOT REGISTERED"}</p>
+                            <p className="text-[10px] text-slate-500 mt-1 uppercase font-semibold">{termLabel}</p>
+                        </div>
                     </div>
                     <p className="text-xs text-slate-500">{new Date(transaction.createdAt).toLocaleDateString('en-US', { dateStyle: 'medium' })}</p>
                 </div>
@@ -412,8 +432,13 @@ export const HeritageReceipt = ({ transaction, student, branding, bursar, arrear
             </div>
 
             {/* Handwritten Fields */}
-            <div className="space-y-6 mb-8 text-sm">
-                <div className="flex items-end gap-2">
+            <div className="space-y-6 mb-8 text-sm relative">
+                {student.imageUrl && (
+                    <div className="absolute top-0 right-0 w-16 h-16 border-2 border-slate-800 p-0.5 bg-white z-10 rotate-3">
+                        <img src={student.imageUrl} className="w-full h-full object-cover filter sepia opacity-90" alt="Student" />
+                    </div>
+                )}
+                <div className="flex items-end gap-2 pr-20">
                     <span className="whitespace-nowrap font-bold text-slate-700">Received from:</span>
                     <div className="flex-1 border-b border-dashed border-slate-600 pb-0.5 px-4 text-left italic font-bold text-blue-950 font-sans tracking-wide">
                         {student.firstName} {student.lastName} ({student.matricNumber || student.id})

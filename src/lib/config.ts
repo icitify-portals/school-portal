@@ -32,11 +32,11 @@ export const config = {
         },
 
         s3: {
-            bucket: process.env.S3_BUCKET,
-            region: process.env.S3_REGION,
-            accessKey: process.env.S3_ACCESS_KEY,
-            secretKey: process.env.S3_SECRET_KEY,
-            endpoint: process.env.S3_ENDPOINT, // Optional for S3-compatible services
+            bucket: process.env.S3_BUCKET || process.env.WASABI_BUCKET_NAME,
+            region: process.env.S3_REGION || process.env.WASABI_REGION,
+            accessKey: process.env.S3_ACCESS_KEY || process.env.WASABI_ACCESS_KEY_ID,
+            secretKey: process.env.S3_SECRET_KEY || process.env.WASABI_SECRET_ACCESS_KEY,
+            endpoint: process.env.S3_ENDPOINT || process.env.WASABI_ENDPOINT,
         }
     },
 

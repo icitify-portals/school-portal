@@ -65,6 +65,8 @@ export default function AdmissionScoringPage() {
         if (result.programmes.length > 0) {
           selectProgramme(result.programmes[0]);
         }
+      } else {
+        toast.error(result.error || "Failed to fetch programmes");
       }
     } catch (error) {
       toast.error("Failed to fetch programmes");

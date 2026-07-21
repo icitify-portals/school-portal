@@ -30,7 +30,8 @@ import {
     gatewaySubaccounts,
     budgets,
     payment_transactions,
-    walletTransactions
+    walletTransactions,
+    admissionApplicationsV2
 } from "@/db/schema";
 import { eq, and, desc, sql, inArray, gte, lte, ne, sum } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
@@ -1149,9 +1150,34 @@ export async function getAllUnifiedTransactions(filters?: { status?: string, cat
               .orderBy(desc(transactions.createdAt));
               
             const fees = await feeQuery;
+
+            // Pre-fetch applicant details for admission-related transactions
+            const appIdsToFetch = new Set<number>();
+            for (const f of fees) {
+                if (!f.student && f.purpose.includes("Application ID:")) {
+                    const match = f.purpose.match(/Application ID:\s*(\d+)/);
+                    if (match && match[1]) appIdsToFetch.add(parseInt(match[1]));
+                }
+            }
+
+            const applicantMap = new Map<number, any>();
+            if (appIdsToFetch.size > 0) {
+                const apps = await db.select({
+                    id: admissionApplicationsV2.id,
+                    name: users.name,
+                    email: users.email
+                })
+                .from(admissionApplicationsV2)
+                .leftJoin(users, eq(admissionApplicationsV2.applicantId, users.id))
+                .where(inArray(admissionApplicationsV2.id, Array.from(appIdsToFetch)));
+
+                apps.forEach(app => applicantMap.set(app.id, app));
+            }
+
             for (const f of fees) {
                 if (fStatus && f.status !== fStatus) continue;
-                results.push({
+                
+                const txEntry: UnifiedTransaction = {
                     id: f.id,
                     sourceTable: 'transactions',
                     amount: f.amount,
@@ -1163,7 +1189,27 @@ export async function getAllUnifiedTransactions(filters?: { status?: string, cat
                     rrr: f.rrr,
                     createdAt: f.createdAt,
                     student: f.student
-                });
+                };
+
+                if (!txEntry.student && txEntry.purpose.includes("Application ID:")) {
+                    const match = txEntry.purpose.match(/Application ID:\s*(\d+)/);
+                    if (match && match[1]) {
+                        const appId = parseInt(match[1]);
+                        const applicant = applicantMap.get(appId);
+                        if (applicant) {
+                            const names = (applicant.name || "Applicant").split(" ");
+                            txEntry.student = {
+                                id: 0,
+                                firstName: names[0],
+                                lastName: names.slice(1).join(" ") || "",
+                                matricNumber: `APP-${appId}`,
+                                contactEmail: applicant.email
+                            };
+                        }
+                    }
+                }
+
+                results.push(txEntry);
             }
         }
 

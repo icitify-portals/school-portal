@@ -18,6 +18,7 @@ import {
 import { getAdmissionSummary } from "@/actions/admission_v2";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
+import { Button } from "@/components/ui/button";
 import { 
     BarChart, 
     Bar, 

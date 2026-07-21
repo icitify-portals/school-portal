@@ -1,4 +1,4 @@
-import { mysqlTable, int, varchar, text, timestamp, boolean, mysqlEnum, char, decimal, date, mediumtext, unique, datetime, foreignKey, time, uniqueIndex } from 'drizzle-orm/mysql-core';
+import { mysqlTable, int, varchar, text, timestamp, boolean, mysqlEnum, char, decimal, date, mediumtext, longtext, unique, datetime, foreignKey, time, uniqueIndex } from 'drizzle-orm/mysql-core';
 import { relations, sql } from 'drizzle-orm';
 
 // --- CORE / USER MODULE ---
@@ -234,6 +234,7 @@ export const students = mysqlTable('students', {
   gender: mysqlEnum('gender', ['male', 'female', 'other']),
   dob: varchar('dob', { length: 50 }),
   imageUrl: varchar('image_url', { length: 255 }),
+  signatureUrl: varchar('signature_url', { length: 255 }),
   isProfileLocked: boolean('is_profile_locked').default(false),
   isFinanciallyLocked: boolean('is_financially_locked').default(false),
   nin: varchar('nin', { length: 11 }),
@@ -5778,7 +5779,7 @@ export const admissionApplicationsV2 = mysqlTable('admission_applications_v2', {
   paymentReference: varchar('payment_reference', { length: 100 }),
   processingFeeStatus: mysqlEnum('processing_fee_status', ['pending', 'paid', 'failed']).default('pending'),
   processingFeeReference: varchar('processing_fee_reference', { length: 100 }),
-  data: text('data'), // Dynamic JSON answers
+  data: longtext('data'), // Dynamic JSON answers
   applicationNumber: varchar('application_number', { length: 50 }).unique(),
   formNumber: varchar('form_number', { length: 50 }).unique(),
   formHash: varchar('form_hash', { length: 64 }),
