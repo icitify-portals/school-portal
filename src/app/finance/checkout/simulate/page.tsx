@@ -103,7 +103,15 @@ function CheckoutSimulatorContent() {
             if (res.success) {
                 if (outcome === 'completed') {
                     setStatus('success');
-                    setStatusMessage("Transaction settled successfully! Funding split among destination accounts.");
+                    setStatusMessage("Transaction settled successfully! Redirecting...");
+                    const appId = searchParams.get('applicationId');
+                    if (appId) {
+                        setTimeout(() => router.push(`/applicant/application/${appId}`), 3000);
+                    } else if (reference?.startsWith('PAY-ADM-')) {
+                        setTimeout(() => router.push('/applicant'), 3000);
+                    } else {
+                        setTimeout(() => router.push('/student/finance'), 3000);
+                    }
                 } else {
                     setStatus('failed');
                     setStatusMessage("Transaction was cancelled or declined by user.");
@@ -155,12 +163,19 @@ function CheckoutSimulatorContent() {
                             </>
                         )}
 
-                        <Button 
-                            className="bg-indigo-600 hover:bg-indigo-500 text-white w-full py-6 font-semibold"
-                            onClick={() => router.push(reference?.startsWith('PAY-ADM-') ? "/applicant" : "/student/finance")}
-                        >
-                            {reference?.startsWith('PAY-ADM-') ? "Return to Applicant Dashboard" : "Return to Student Dashboard"}
-                        </Button>
+                            <Button 
+                                className="bg-indigo-600 hover:bg-indigo-500 text-white w-full py-6 font-semibold"
+                                onClick={() => {
+                                    const appId = searchParams.get('applicationId');
+                                    if (appId) {
+                                        router.push(`/applicant/application/${appId}`);
+                                    } else {
+                                        router.push(reference?.startsWith('PAY-ADM-') ? "/applicant" : "/student/finance");
+                                    }
+                                }}
+                            >
+                                {reference?.startsWith('PAY-ADM-') ? "Return to Application" : "Return to Dashboard"}
+                            </Button>
                     </CardContent>
                 </Card>
             </div>

@@ -21,6 +21,13 @@ export default function PhotoCapture({ value, onChange, label, applicationId }: 
     const [isSecureContext, setIsSecureContext] = useState(true);
     const [isUploading, setIsUploading] = useState(false);
 
+    // Sync external value changes to preview state
+    useEffect(() => {
+        if (value && value !== preview) {
+            setPreview(value);
+        }
+    }, [value]);
+
     useEffect(() => {
         if (typeof window !== 'undefined') {
             setIsSecureContext(window.isSecureContext);

@@ -150,6 +150,7 @@ export async function verifyDeveloperFee(reference: string) {
             
             // Also update admissionApplicationsV2 if this is an admission form fee
             const [feeRecord] = await db.select().from(paystackDeveloperFees).where(eq(paystackDeveloperFees.reference, reference)).limit(1);
+            let returnedAppId = null;
             if (feeRecord && feeRecord.type === 'admission_form') {
                 const applicationId = parseInt(feeRecord.identifier);
                 if (!isNaN(applicationId)) {
@@ -158,10 +159,11 @@ export async function verifyDeveloperFee(reference: string) {
                         .where(eq(admissionApplicationsV2.id, applicationId));
                     const { checkAndGenerateFormNumber } = await import('@/lib/form-number');
                     await checkAndGenerateFormNumber(applicationId, db);
+                    returnedAppId = applicationId;
                 }
             }
             
-            return { success: true };
+            return { success: true, applicationId: returnedAppId };
         } else {
             // Fallback for development if secret key is missing (so it doesn't block local dev testing)
             if (!PAYSTACK_SECRET && process.env.NODE_ENV !== 'production') {
@@ -172,6 +174,7 @@ export async function verifyDeveloperFee(reference: string) {
 
                  // Also update admissionApplicationsV2 if this is an admission form fee
                  const [feeRecord] = await db.select().from(paystackDeveloperFees).where(eq(paystackDeveloperFees.reference, reference)).limit(1);
+                 let returnedAppId = null;
                  if (feeRecord && feeRecord.type === 'admission_form') {
                      const applicationId = parseInt(feeRecord.identifier);
                      if (!isNaN(applicationId)) {
@@ -180,9 +183,10 @@ export async function verifyDeveloperFee(reference: string) {
                              .where(eq(admissionApplicationsV2.id, applicationId));
                          const { checkAndGenerateFormNumber } = await import('@/lib/form-number');
                          await checkAndGenerateFormNumber(applicationId, db);
+                         returnedAppId = applicationId;
                      }
                  }
-                 return { success: true };
+                 return { success: true, applicationId: returnedAppId };
             }
 
             await db.update(paystackDeveloperFees)

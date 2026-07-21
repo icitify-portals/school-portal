@@ -15,6 +15,7 @@ export default function DeveloperVerifyPage() {
     const reference = searchParams.get("reference") || searchParams.get("trxref") || "";
     const [status, setStatus] = useState<'verifying' | 'success' | 'failed'>('verifying');
     const [message, setMessage] = useState("Verifying your payment with Paystack...");
+    const [appId, setAppId] = useState<number | null>(null);
 
     useEffect(() => {
         if (!reference) {
@@ -28,8 +29,16 @@ export default function DeveloperVerifyPage() {
                 const res = await verifyDeveloperFee(reference);
                 if (res.success) {
                     setStatus('success');
-                    setMessage("Payment verified successfully!");
+                    setMessage("Payment verified successfully! Redirecting...");
                     toast.success("Payment verified successfully!");
+                    if (res.applicationId) {
+                        setAppId(res.applicationId);
+                        setTimeout(() => router.push(`/applicant/application/${res.applicationId}`), 3000);
+                    } else if (reference.startsWith('DEV-ADM-')) {
+                        setTimeout(() => router.push('/applicant'), 3000);
+                    } else {
+                        setTimeout(() => router.push('/student/finance'), 3000);
+                    }
                 } else {
                     setStatus('failed');
                     setMessage(res.error || "Verification failed. Please try again or contact support.");
@@ -41,10 +50,12 @@ export default function DeveloperVerifyPage() {
         }
 
         verify();
-    }, [reference]);
+    }, [reference, router]);
 
     const handleReturn = () => {
-        if (reference.startsWith('DEV-ADM-')) {
+        if (appId) {
+            router.push(`/applicant/application/${appId}`);
+        } else if (reference.startsWith('DEV-ADM-')) {
             router.push('/applicant');
         } else {
             router.push('/student/finance');

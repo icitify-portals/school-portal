@@ -4,6 +4,7 @@ import { developerSubscriptionSettings } from "@/db/schema";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Building2, IndianRupee, Globe2, Activity } from "lucide-react";
 import DeveloperFeeSettingsForm from "./DeveloperFeeSettingsForm";
+import Link from "next/link";
 
 export default async function DeveloperFeesPage() {
     const revenue = await getCrossTenantDeveloperRevenue();
@@ -13,11 +14,19 @@ export default async function DeveloperFeesPage() {
 
     return (
         <div className="p-6 max-w-7xl mx-auto space-y-8">
-            <div>
-                <h1 className="text-3xl font-bold tracking-tight">Master Overwatch: Developer Subscriptions</h1>
-                <p className="text-muted-foreground mt-2">
-                    Track platform subscription revenue across all tenant databases and configure billing rules.
-                </p>
+            <div className="flex items-center justify-between">
+                <div>
+                    <h1 className="text-3xl font-bold tracking-tight">Master Overwatch: Developer Subscriptions</h1>
+                    <p className="text-muted-foreground mt-2">
+                        Track platform subscription revenue across all tenant databases and configure billing rules.
+                    </p>
+                </div>
+                <Link 
+                    href="/admin/system/developer-fees/transactions"
+                    className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-slate-900 text-white hover:bg-slate-900/90 h-10 px-4 py-2"
+                >
+                    View Transactions
+                </Link>
             </div>
 
             {/* Metrics */}

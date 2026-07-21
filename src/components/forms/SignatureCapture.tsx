@@ -21,6 +21,13 @@ export default function SignatureCapture({ value, onChange, label, applicationId
     const [isUploading, setIsUploading] = useState(false);
     const canvasRef = useRef<HTMLCanvasElement>(null);
 
+    // Sync external value changes to preview state
+    useEffect(() => {
+        if (value && value !== preview) {
+            setPreview(value);
+        }
+    }, [value]);
+
     // Initialize canvas context for drawing
     useEffect(() => {
         if (mode === 'draw' && !preview && canvasRef.current) {

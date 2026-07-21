@@ -64,8 +64,14 @@ export default function ApplicationPrintPage() {
         formData["Photo"] ||
         null;
 
+    const applicantSignature =
+        formData["Signature"] ||
+        formData["Applicant Signature"] ||
+        formData["Student Signature"] ||
+        null;
+
     const SKIP_TYPES = ["image", "olevel_result"];
-    const SKIP_LABELS = ["Passport Photograph", "Photo", "Passport Photo"];
+    const SKIP_LABELS = ["Passport Photograph", "Photo", "Passport Photo", "Signature", "Applicant Signature", "Student Signature"];
 
     const allFields: any[] = [];
     if (data.template?.sections) {
@@ -86,70 +92,81 @@ export default function ApplicationPrintPage() {
                 }
             }
         `}} />
-        <div className="min-h-screen bg-slate-100 py-10 px-4 print:p-0 print:bg-white">
-            <div className="max-w-[210mm] mx-auto space-y-6">
+        <div className="min-h-screen bg-slate-100 py-10 px-4 print:p-0 print:bg-white print:m-0 print:text-[10px]">
+            <div className="max-w-[210mm] mx-auto space-y-4 print:space-y-0">
                 {/* Print Controls */}
-                <div className="flex justify-between items-center print:hidden">
+                <div className="flex justify-between items-center print:hidden mb-4">
                     <Button variant="ghost" onClick={() => window.history.back()} className="rounded-xl font-bold">
                         <ArrowLeft className="w-4 h-4 mr-2" /> Back
                     </Button>
-                    <Button onClick={handlePrint} className="bg-indigo-600 text-white font-black px-8 py-6 rounded-2xl shadow-xl flex gap-3 uppercase text-xs tracking-widest">
-                        <Printer className="w-5 h-5" /> Print Application Summary
+                    <Button onClick={handlePrint} className="bg-indigo-600 hover:bg-indigo-700 text-white font-black px-8 py-6 rounded-2xl shadow-xl flex gap-3 uppercase text-xs tracking-widest transition-colors">
+                        <Printer className="w-5 h-5" /> Print Application
                     </Button>
                 </div>
 
                 {/* The Print Document */}
-                <div className="bg-white shadow-2xl print:shadow-none print:border-none print:rounded-none overflow-hidden">
+                <div className="bg-white shadow-2xl print:shadow-none print:border-none print:rounded-none overflow-hidden print:w-[210mm] print:h-[297mm] print:overflow-hidden box-border">
                     {/* School Header */}
-                    <div className="border-b-4 border-indigo-600 px-10 py-8 flex items-center gap-8">
+                    <div className="border-b-[3px] border-indigo-600 px-6 py-4 flex items-center justify-between gap-4">
                         {branding?.portalLogo ? (
-                            <img src={branding.portalLogo} alt="School Logo" className="w-24 h-24 object-contain" />
+                            <img src={branding.portalLogo} alt="School Logo" className="w-16 h-16 print:w-14 print:h-14 object-contain shrink-0" />
                         ) : (
-                            <div className="w-24 h-24 bg-indigo-50 rounded-2xl flex items-center justify-center">
-                                <span className="text-3xl font-black text-indigo-300">LOGO</span>
+                            <div className="w-16 h-16 print:w-14 print:h-14 bg-indigo-50 rounded-xl flex items-center justify-center shrink-0">
+                                <span className="text-xl font-black text-indigo-300">LOGO</span>
                             </div>
                         )}
                         <div className="flex-1 text-center">
-                            <h1 className="text-2xl font-black text-slate-900 uppercase tracking-tight">
+                            <h1 className="text-xl print:text-lg font-black text-slate-900 uppercase tracking-tight leading-tight">
                                 {branding?.portalName || "Federal School of Statistics, Ibadan"}
                             </h1>
                             {branding?.schoolMotto && (
-                                <p className="text-xs font-bold text-slate-500 italic mt-1">{branding.schoolMotto}</p>
+                                <p className="text-[10px] print:text-[9px] font-bold text-slate-500 italic mt-0.5">{branding.schoolMotto}</p>
                             )}
                             {branding?.schoolAddress && (
-                                <p className="text-[10px] font-bold text-slate-400 mt-2">{branding.schoolAddress}</p>
+                                <p className="text-[9px] print:text-[8px] font-bold text-slate-400 mt-0.5">{branding.schoolAddress}</p>
                             )}
-                            <p className="text-xs font-bold text-indigo-600 mt-2">2026/2027 APPLICATION FORM</p>
+                            <p className="text-[11px] print:text-[10px] font-black text-indigo-600 mt-1 uppercase tracking-widest">2026/2027 APPLICATION FORM</p>
                         </div>
+                        <div className="w-16 h-16 print:w-14 print:h-14 shrink-0"></div> {/* Spacer for centering */}
                     </div>
 
                     {/* Title */}
-                    <div className="bg-slate-50 px-10 py-5 text-center border-b border-slate-200">
-                        <h2 className="text-lg font-black text-slate-900 uppercase tracking-widest">Application Summary</h2>
-                        <p className="text-[10px] font-bold text-slate-400 mt-1">
+                    <div className="bg-slate-50 px-6 py-2 text-center border-b border-slate-200">
+                        <h2 className="text-sm print:text-[11px] font-black text-slate-900 uppercase tracking-widest">Application Summary</h2>
+                        <p className="text-[9px] print:text-[8px] font-bold text-slate-400">
                             {data.template?.name || "Admission Application"} &mdash; Ref: #{data.id.toString().padStart(6, "0")}
                         </p>
                     </div>
 
-                    <div className="px-10 py-8">
-                        {/* Passport + Core Info */}
-                        <div className="flex gap-8 items-start mb-8">
-                            {/* Passport Photo */}
-                            <div className="w-36 shrink-0">
-                                <div className="w-36 h-44 bg-slate-50 border-2 border-slate-200 rounded-xl overflow-hidden">
-                                    {applicantPhoto ? (
-                                        <img src={applicantPhoto} alt="Passport" className="w-full h-full object-cover" />
-                                    ) : (
-                                        <div className="w-full h-full flex items-center justify-center text-slate-200">
-                                            <User className="w-12 h-12" />
-                                        </div>
-                                    )}
+                    <div className="px-6 py-4 print:py-2">
+                        {/* Passport + Signature + Core Info */}
+                        <div className="flex gap-6 items-start mb-4 print:mb-2">
+                            {/* Passport & Signature */}
+                            <div className="w-28 print:w-24 shrink-0 space-y-2">
+                                <div>
+                                    <div className="w-28 h-32 print:w-24 print:h-28 bg-slate-50 border-2 border-slate-200 rounded-lg overflow-hidden relative">
+                                        {applicantPhoto ? (
+                                            <img src={applicantPhoto} alt="Passport" className="w-full h-full object-cover" />
+                                        ) : (
+                                            <div className="w-full h-full flex items-center justify-center text-slate-200">
+                                                <User className="w-8 h-8" />
+                                            </div>
+                                        )}
+                                    </div>
+                                    <p className="text-[7px] font-bold text-center text-slate-400 mt-0.5 uppercase tracking-widest">Passport Photo</p>
                                 </div>
-                                <p className="text-[8px] font-bold text-center text-slate-400 mt-1 uppercase tracking-widest">Passport Photo</p>
+                                {applicantSignature && (
+                                    <div>
+                                        <div className="w-28 h-12 print:w-24 print:h-10 bg-white border border-slate-200 rounded flex items-center justify-center overflow-hidden">
+                                            <img src={applicantSignature} alt="Signature" className="w-full h-full object-contain p-1" />
+                                        </div>
+                                        <p className="text-[7px] font-bold text-center text-slate-400 mt-0.5 uppercase tracking-widest">Signature</p>
+                                    </div>
+                                )}
                             </div>
 
                             {/* Key Details */}
-                            <div className="flex-1 grid grid-cols-2 gap-x-8 gap-y-4">
+                            <div className="flex-1 grid grid-cols-2 gap-x-6 gap-y-2">
                                 {allFields
                                     .filter((f) => !SKIP_TYPES.includes(f.type) && !SKIP_LABELS.includes(f.label))
                                     .slice(0, 20)
@@ -158,18 +175,14 @@ export default function ApplicationPrintPage() {
                                         if (val === undefined || val === null || val === "") return null;
 
                                         let display: string;
-                                        if (field.type === "checkbox") {
-                                            display = val ? "Yes" : "No";
-                                        } else if (Array.isArray(val)) {
-                                            display = val.join(", ");
-                                        } else {
-                                            display = String(val);
-                                        }
+                                        if (field.type === "checkbox") display = val ? "Yes" : "No";
+                                        else if (Array.isArray(val)) display = val.join(", ");
+                                        else display = String(val);
 
                                         return (
-                                            <div key={field.id} className="space-y-0.5">
-                                                <p className="text-[8px] font-black uppercase tracking-widest text-slate-400">{field.label}</p>
-                                                <p className="text-xs font-bold text-slate-800">{display}</p>
+                                            <div key={field.id} className="space-y-0 text-left border-b border-slate-50 pb-0.5">
+                                                <p className="text-[7px] print:text-[6.5px] font-black uppercase tracking-widest text-slate-400">{field.label}</p>
+                                                <p className="text-[10px] print:text-[9px] font-bold text-slate-800 break-words">{display}</p>
                                             </div>
                                         );
                                     })}
@@ -177,28 +190,28 @@ export default function ApplicationPrintPage() {
                         </div>
 
                         {/* Application Status */}
-                        <div className="bg-indigo-50 rounded-xl p-4 mb-8 flex items-center gap-6 text-xs font-bold">
+                        <div className="bg-indigo-50/50 rounded-lg p-2 mb-4 print:mb-2 flex items-center justify-around text-center border border-indigo-100">
                             <div>
-                                <span className="text-[8px] font-black uppercase tracking-widest text-indigo-400 block">Status</span>
-                                <span className="text-indigo-900 uppercase">{data.status}</span>
+                                <span className="text-[7px] font-black uppercase tracking-widest text-indigo-400 block">Status</span>
+                                <span className="text-[9px] font-bold text-indigo-900 uppercase">{data.status}</span>
                             </div>
-                            <div className="w-px h-8 bg-indigo-200" />
+                            <div className="w-px h-6 bg-indigo-200" />
                             <div>
-                                <span className="text-[8px] font-black uppercase tracking-widest text-indigo-400 block">Payment</span>
-                                <span className="text-indigo-900 uppercase">{data.paymentStatus || "Pending"}</span>
+                                <span className="text-[7px] font-black uppercase tracking-widest text-indigo-400 block">Payment</span>
+                                <span className="text-[9px] font-bold text-indigo-900 uppercase">{data.paymentStatus || "Pending"}</span>
                             </div>
-                            <div className="w-px h-8 bg-indigo-200" />
+                            <div className="w-px h-6 bg-indigo-200" />
                             <div>
-                                <span className="text-[8px] font-black uppercase tracking-widest text-indigo-400 block">Submitted</span>
-                                <span className="text-indigo-900">{data.createdAt ? new Date(data.createdAt).toLocaleDateString("en-NG", { year: "numeric", month: "long", day: "numeric" }) : "N/A"}</span>
+                                <span className="text-[7px] font-black uppercase tracking-widest text-indigo-400 block">Submitted</span>
+                                <span className="text-[9px] font-bold text-indigo-900">{data.createdAt ? new Date(data.createdAt).toLocaleDateString("en-NG", { year: "numeric", month: "short", day: "numeric" }) : "N/A"}</span>
                             </div>
                         </div>
 
                         {/* Remaining Fields (if any) */}
                         {allFields.filter((f) => !SKIP_TYPES.includes(f.type) && !SKIP_LABELS.includes(f.label)).length > 20 && (
-                            <div className="mb-8">
-                                <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3">Additional Information</h3>
-                                <div className="grid grid-cols-2 gap-x-8 gap-y-3">
+                            <div className="mb-4 print:mb-2">
+                                <h3 className="text-[8px] font-black uppercase tracking-widest text-slate-400 mb-1 border-b border-slate-200 pb-0.5">Additional Information</h3>
+                                <div className="grid grid-cols-3 gap-x-4 gap-y-1">
                                     {allFields
                                         .filter((f) => !SKIP_TYPES.includes(f.type) && !SKIP_LABELS.includes(f.label))
                                         .slice(20)
@@ -210,9 +223,9 @@ export default function ApplicationPrintPage() {
                                             else if (Array.isArray(val)) display = val.join(", ");
                                             else display = String(val);
                                             return (
-                                                <div key={field.id} className="space-y-0.5">
-                                                    <p className="text-[8px] font-black uppercase tracking-widest text-slate-400">{field.label}</p>
-                                                    <p className="text-xs font-bold text-slate-800">{display}</p>
+                                                <div key={field.id} className="space-y-0 text-left">
+                                                    <p className="text-[6.5px] font-black uppercase tracking-widest text-slate-400">{field.label}</p>
+                                                    <p className="text-[8px] font-bold text-slate-800 break-words line-clamp-2">{display}</p>
                                                 </div>
                                             );
                                         })}
@@ -222,52 +235,51 @@ export default function ApplicationPrintPage() {
 
                         {/* O-Level Results */}
                         {olevels.length > 0 && (
-                            <div className="mb-8">
-                                <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-4">O-Level Results</h3>
-                                {olevels.map((sitting, sIdx) => (
-                                    <div key={sIdx} className="mb-4 border border-slate-200 rounded-xl overflow-hidden">
-                                        <div className="bg-slate-50 px-4 py-2 flex items-center gap-4 text-[10px] font-bold text-slate-600 border-b border-slate-200">
-                                            <span className="bg-indigo-600 text-white w-5 h-5 rounded-md flex items-center justify-center text-[9px] font-black">{sIdx + 1}</span>
-                                            <span>{sitting.examBodyName}</span>
-                                            <span className="text-slate-300">|</span>
-                                            <span>{sitting.examYear}</span>
-                                            <span className="text-slate-300">|</span>
-                                            <span>Reg: {sitting.examNumber}</span>
-                                        </div>
-                                        <div className="p-4">
-                                            <table className="w-full text-[11px]">
-                                                <thead>
-                                                    <tr className="text-[8px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-100">
-                                                        <th className="text-left py-1.5">S/N</th>
-                                                        <th className="text-left py-1.5">Subject</th>
-                                                        <th className="text-center py-1.5">Grade</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {sitting.subjects.map((sub: any, subIdx: number) => (
-                                                        <tr key={subIdx} className="border-b border-slate-50">
-                                                            <td className="py-1.5 font-bold text-slate-400">{subIdx + 1}</td>
-                                                            <td className="py-1.5 font-semibold text-slate-700">{sub.subjectName}</td>
-                                                            <td className="py-1.5 text-center font-black text-indigo-600">{sub.grade}</td>
+                            <div className="mb-2 print:mb-1">
+                                <h3 className="text-[8px] font-black uppercase tracking-widest text-slate-400 mb-1 border-b border-slate-200 pb-0.5">O-Level Results</h3>
+                                <div className="grid grid-cols-2 gap-4">
+                                    {olevels.map((sitting, sIdx) => (
+                                        <div key={sIdx} className="border border-slate-200 rounded-lg overflow-hidden break-inside-avoid">
+                                            <div className="bg-slate-50 px-2 py-1 flex justify-between items-center text-[8px] font-bold text-slate-600 border-b border-slate-200">
+                                                <span className="flex items-center gap-1">
+                                                    <span className="bg-indigo-600 text-white w-3 h-3 rounded flex items-center justify-center text-[7px] font-black">{sIdx + 1}</span>
+                                                    {sitting.examBodyName}
+                                                </span>
+                                                <span>{sitting.examYear} | Reg: {sitting.examNumber}</span>
+                                            </div>
+                                            <div className="p-1">
+                                                <table className="w-full text-[8px]">
+                                                    <thead>
+                                                        <tr className="text-[7px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-100">
+                                                            <th className="text-left py-0.5 pl-1">Subject</th>
+                                                            <th className="text-center py-0.5">Grade</th>
                                                         </tr>
-                                                    ))}
-                                                </tbody>
-                                            </table>
+                                                    </thead>
+                                                    <tbody>
+                                                        {sitting.subjects.map((sub: any, subIdx: number) => (
+                                                            <tr key={subIdx} className="border-b border-slate-50/50 last:border-0">
+                                                                <td className="py-0.5 font-semibold text-slate-700 pl-1">{sub.subjectName}</td>
+                                                                <td className="py-0.5 text-center font-black text-indigo-600">{sub.grade}</td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
+                                            </div>
                                         </div>
-                                    </div>
-                                ))}
+                                    ))}
+                                </div>
                             </div>
                         )}
 
                         {/* Footer */}
-                        <div className="pt-6 border-t border-slate-200 flex justify-between items-end">
+                        <div className="pt-2 mt-4 border-t border-slate-200 flex justify-between items-end pb-2">
                             <div>
-                                <p className="text-[8px] font-black uppercase tracking-widest text-slate-300">Generated On</p>
-                                <p className="text-[10px] font-bold text-slate-500">{new Date().toLocaleDateString("en-NG", { year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" })}</p>
+                                <p className="text-[7px] font-black uppercase tracking-widest text-slate-300">Generated On</p>
+                                <p className="text-[8px] font-bold text-slate-500">{new Date().toLocaleDateString("en-NG", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</p>
                             </div>
                             <div className="text-right">
-                                <p className="text-[8px] font-black uppercase tracking-widest text-slate-300">Application ID</p>
-                                <p className="text-sm font-black text-slate-900">#{data.id.toString().padStart(6, "0")}</p>
+                                <p className="text-[7px] font-black uppercase tracking-widest text-slate-300">Application ID</p>
+                                <p className="text-[10px] font-black text-slate-900">#{data.id.toString().padStart(6, "0")}</p>
                             </div>
                         </div>
                     </div>

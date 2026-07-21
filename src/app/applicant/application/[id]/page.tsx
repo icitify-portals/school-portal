@@ -742,7 +742,10 @@ export default function StatefulApplicationPage() {
         );
     }
 
-    if (application.status === 'submitted' || application.status === 'admitted' || application.status === 'rejected') {
+    const isPastClosingDate = application.template?.endDate ? new Date() > new Date(application.template.endDate) : false;
+    const isPermanentlyLocked = application.status === 'admitted' || application.status === 'rejected' || (application.status === 'submitted' && isPastClosingDate);
+
+    if (isPermanentlyLocked) {
         return (
             <Card className="bg-white border border-gray-200 max-w-2xl mx-auto mt-12 p-12 text-center space-y-8 rounded-[2rem] shadow-xl">
                 <div className="w-24 h-24 bg-green-50 rounded-full flex items-center justify-center mx-auto">
