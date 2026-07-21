@@ -192,16 +192,29 @@ function SittingForm({
                 </div>
 
                 {sittingData.subjects.map((sub: any, subIdx: number) => (
-                    <div key={subIdx} className="flex gap-3 items-center group">
-                        <div className="w-8 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-[10px] font-black text-slate-400 shrink-0">
-                            {subIdx + 1}
+                    <div key={subIdx} className="flex flex-col sm:flex-row gap-2 sm:gap-3 items-start sm:items-center group border border-slate-100 sm:border-transparent p-3 sm:p-0 rounded-2xl bg-white sm:bg-transparent">
+                        <div className="flex items-center justify-between w-full sm:w-auto">
+                            <div className="w-8 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-[10px] font-black text-slate-400 shrink-0">
+                                {subIdx + 1}
+                            </div>
+                            {/* Mobile only trash */}
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => onRemoveSubject(subIdx)}
+                                disabled={sittingData.subjects.length <= 1}
+                                className="sm:hidden h-10 w-10 rounded-xl"
+                            >
+                                <Trash2 className="h-4 w-4 text-red-400" />
+                            </Button>
                         </div>
-                        <div className="flex-1">
+                        <div className="w-full sm:flex-1">
                             <Select
                                 value={sub.subjectName || ""}
                                 onValueChange={(val) => onSubjectChange(subIdx, "subjectName", val)}
                             >
-                                <SelectTrigger className="rounded-xl h-10 bg-slate-50 border-none font-bold text-sm">
+                                <SelectTrigger className="w-full rounded-xl h-10 bg-slate-50 border-none font-bold text-sm">
                                     <SelectValue placeholder="Select subject..." />
                                 </SelectTrigger>
                                 <SelectContent className="rounded-xl max-h-64">
@@ -213,12 +226,12 @@ function SittingForm({
                                 </SelectContent>
                             </Select>
                         </div>
-                        <div className="w-40">
+                        <div className="w-full sm:w-40">
                             <Select
                                 value={sub.grade || ""}
                                 onValueChange={(val) => onSubjectChange(subIdx, "grade", val)}
                             >
-                                <SelectTrigger className="rounded-xl h-10 bg-slate-50 border-none font-bold text-sm">
+                                <SelectTrigger className="w-full rounded-xl h-10 bg-slate-50 border-none font-bold text-sm">
                                     <SelectValue placeholder="Grade" />
                                 </SelectTrigger>
                                 <SelectContent className="rounded-xl">
@@ -226,20 +239,21 @@ function SittingForm({
                                         <SelectItem key={g} value={g} className="font-bold text-sm">
                                             <span className="flex items-center gap-2">
                                                 <span className="font-black">{g}</span>
-                                                <span className="text-slate-400 text-[10px]">{GRADE_LABELS[g]}</span>
+                                                <span className="text-slate-400 text-[10px] hidden sm:inline">{GRADE_LABELS[g]}</span>
                                             </span>
                                         </SelectItem>
                                     ))}
                                 </SelectContent>
                             </Select>
                         </div>
+                        {/* Desktop only trash */}
                         <Button
                             type="button"
                             variant="ghost"
                             size="icon"
                             onClick={() => onRemoveSubject(subIdx)}
                             disabled={sittingData.subjects.length <= 1}
-                            className="shrink-0 h-10 w-10 rounded-xl opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
+                            className="hidden sm:inline-flex shrink-0 h-10 w-10 rounded-xl opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
                         >
                             <Trash2 className="h-4 w-4 text-red-400" />
                         </Button>
