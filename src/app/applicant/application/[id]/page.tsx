@@ -1239,6 +1239,7 @@ export default function StatefulApplicationPage() {
                                                 : field.type === 'checkbox' ? (value ? 'Yes' : 'No')
                                                 : field.type === 'olevel_result' ? null
                                                 : field.type === 'file' ? (value ? 'Uploaded' : 'Not uploaded')
+                                                : field.type === 'signature' ? null
                                                 : value || 'N/A';
 
                                             if (field.type === 'olevel_result') {
@@ -1279,6 +1280,15 @@ export default function StatefulApplicationPage() {
 
                                             if (field.type === 'image') {
                                                 return null;
+                                            }
+
+                                            if (field.type === 'signature') {
+                                                return (
+                                                    <div key={field.id} className="flex flex-col">
+                                                        <span className="text-xs font-bold text-gray-500 uppercase">{field.label}</span>
+                                                        {value ? <img src={value} alt="Signature" className="h-12 object-contain mt-2 border rounded-xl bg-white p-1" /> : <span className="text-gray-400 italic text-sm">Not uploaded</span>}
+                                                    </div>
+                                                );
                                             }
                                             
                                             return (
