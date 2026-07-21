@@ -98,10 +98,10 @@ async function getTemplateWithSections(templateId: number) {
             where: eq(admissionFormTemplates.id, templateId),
             with: {
                 sections: {
-                    orderBy: [asc(admissionFormSections.orderIndex)],
+                    orderBy: [asc(admissionFormSections.order)],
                     with: {
                         fields: {
-                            orderBy: [asc(admissionFormFields.orderIndex)]
+                            orderBy: [asc(admissionFormFields.order)]
                         }
                     }
                 },
