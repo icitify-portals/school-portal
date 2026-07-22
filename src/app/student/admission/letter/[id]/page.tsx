@@ -53,13 +53,18 @@ export default async function AdmissionLetterPage({ params }: { params: Promise<
                         {session?.logoUrl ? (
                             <img src={session.logoUrl} alt="Logo" className="h-24 w-auto mx-auto" />
                         ) : (
-                            <div className="h-24 w-24 bg-indigo-600 rounded-full mx-auto flex items-center justify-center">
-                                <ShieldCheck className="h-12 w-12 text-white" />
-                            </div>
+                            <img src="/logo.png" alt="FSS Logo" className="h-24 w-auto mx-auto" onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                                e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                            }} />
                         )}
+                        <div className="hidden h-24 w-24 bg-indigo-600 rounded-full mx-auto items-center justify-center">
+                            <ShieldCheck className="h-12 w-12 text-white" />
+                        </div>
                         <div>
-                            <h1 className="text-3xl font-black uppercase tracking-tight text-slate-900">University Admission Office</h1>
-                            <p className="text-slate-500 font-medium uppercase tracking-widest text-xs">OFFICIAL PROVISIONAL ADMISSION LETTER</p>
+                            <h1 className="text-3xl font-black uppercase tracking-tight text-slate-900">Federal School of Statistics, Ibadan</h1>
+                            <p className="text-sm font-semibold text-slate-600">Sango-Eleyele Road, P.M.B. 5073, Ibadan, Oyo State, Nigeria</p>
+                            <p className="text-slate-500 font-medium uppercase tracking-widest text-xs mt-4">OFFICIAL PROVISIONAL ADMISSION LETTER</p>
                         </div>
                     </div>
 
@@ -89,7 +94,7 @@ export default async function AdmissionLetterPage({ params }: { params: Promise<
 
                         <p>
                             We are pleased to inform you that you have been offered <span className="font-black text-slate-900">PROVISIONAL ADMISSION</span> into this institution for the
-                            <span className="font-bold"> {session?.name} </span> Academic Session to pursue a course of study leading to the award of the degree of:
+                            <span className="font-bold"> {session?.name} </span> Academic Session to pursue a course of study leading to the award of:
                         </p>
 
                         <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 my-8">
@@ -99,7 +104,7 @@ export default async function AdmissionLetterPage({ params }: { params: Promise<
                                     <p className="text-lg font-black text-indigo-700 leading-tight">{programme?.name}</p>
                                 </div>
                                 <div>
-                                    <p className="text-[10px] uppercase font-black text-slate-400">Faculty/School</p>
+                                    <p className="text-[10px] uppercase font-black text-slate-400">School/Department</p>
                                     <p className="text-lg font-bold text-slate-900">{faculty?.name || "N/A"}</p>
                                 </div>
                             </div>
@@ -109,10 +114,10 @@ export default async function AdmissionLetterPage({ params }: { params: Promise<
                             This offer is subject to the following conditions:
                         </p>
                         <ul className="list-disc pl-5 space-y-2">
-                            <li>Presentation of original JAMB Admission Letter and Result Slip.</li>
-                            <li>Verification of your O'level results (WAEC/NECO/NABTEB) as presented during screening.</li>
+                            <li>Presentation of original credentials (O'level results, ND results where applicable) and printed admission letter during screening.</li>
+                            <li>Verification of your O'level results (WAEC/NECO/NABTEB) as presented during application.</li>
                             <li>Payment of the prescribed acceptance and tuition fees within the stipulated timeframe.</li>
-                            <li>Satisfactory medical clearance from the University Health Center.</li>
+                            <li>Satisfactory medical clearance from the School Clinic.</li>
                         </ul>
 
                         <p>
@@ -129,7 +134,7 @@ export default async function AdmissionLetterPage({ params }: { params: Promise<
                     <div className="mt-20 pt-12">
                         <div className="w-48 h-px bg-slate-300 mb-4" />
                         <p className="font-black uppercase text-slate-900">Registrar</p>
-                        <p className="text-xs text-slate-500 italic">This is a system-generated document and requires no physical signature for initial processing.</p>
+                        <p className="text-xs text-slate-500 italic mt-1">This is a system-generated document and requires no physical signature for initial processing.</p>
                     </div>
 
                     {/* Footer / QR */}
