@@ -427,7 +427,7 @@ export const transactions = mysqlTable('transactions', {
   type: mysqlEnum('type', ['credit', 'debit']).notNull(),
   purpose: varchar('purpose', { length: 255 }).notNull(), // e.g., "Registration fee", "Hostel fee"
   status: mysqlEnum('status', ['pending', 'completed', 'failed', 'reversed']).default('pending'),
-  gateway: mysqlEnum('gateway', ['paystack', 'flutterwave', 'remita', 'opay', 'manual']).default('remita'),
+  gateway: mysqlEnum('gateway', ['paystack', 'flutterwave', 'remita', 'opay', 'manual', 'alatpay']).default('remita'),
   gatewayReference: varchar('gateway_reference', { length: 255 }),
   rrr: varchar('rrr', { length: 50 }),
   createdAt: timestamp('created_at').defaultNow(),
@@ -837,7 +837,7 @@ export const settlementAccounts = mysqlTable('settlement_accounts', {
 export const gatewaySubaccounts = mysqlTable('gateway_subaccounts', {
   id: int('id').autoincrement().primaryKey(),
   settlementAccountId: int('settle_acct_id').references(() => settlementAccounts.id),
-  gatewayName: mysqlEnum('gateway_name', ['paystack', 'flutterwave', 'remita']).notNull(),
+  gatewayName: mysqlEnum('gateway_name', ['paystack', 'flutterwave', 'remita', 'alatpay']).notNull(),
   gatewaySubaccountCode: varchar('gateway_subaccount_code', { length: 100 }).notNull(),
 });
 
@@ -4154,7 +4154,7 @@ export const journalPayments = mysqlTable('journal_payments', {
   userId: int('user_id').references(() => users.id).notNull(),
   amount: decimal('amount', { precision: 10, scale: 2 }).notNull(),
   currency: varchar('currency', { length: 10 }).notNull(),
-  gateway: mysqlEnum('gateway', ['paystack', 'flutterwave', 'remita', 'manual']).notNull(),
+  gateway: mysqlEnum('gateway', ['paystack', 'flutterwave', 'remita', 'manual', 'alatpay']).notNull(),
   reference: varchar('reference', { length: 100 }).unique().notNull(),
   status: mysqlEnum('status', ['pending', 'completed', 'failed']).default('pending'),
   paidAt: datetime('paid_at'),

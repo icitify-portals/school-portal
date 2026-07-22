@@ -18,6 +18,7 @@ import {
     Loader2
 } from "lucide-react";
 import { RemitaInlineCheckout } from "@/components/finance/RemitaInlineCheckout";
+import { AlatpayInlineCheckout } from "@/components/finance/AlatpayInlineCheckout";
 
 function CheckoutSimulatorContent() {
     const searchParams = useSearchParams();
@@ -81,6 +82,15 @@ function CheckoutSimulatorContent() {
                     accent: "border-[#da3832]",
                     glow: "shadow-[#da3832]/20",
                     logo: "https://www.remita.net/assets/images/remita-logo.png"
+                };
+            case "alatpay":
+                return {
+                    name: "ALATPay",
+                    primary: "bg-[#8A2132]",
+                    text: "text-[#8A2132]",
+                    accent: "border-[#8A2132]",
+                    glow: "shadow-[#8A2132]/20",
+                    logo: "https://alat.ng/wp-content/uploads/2021/04/alat-logo-red.svg"
                 };
             default:
                 return {
@@ -275,16 +285,34 @@ function CheckoutSimulatorContent() {
                             </Button>
 
                             {gateway === 'remita' && rrr && !rrr.startsWith('RRR-MOCK') && (
-                                <div className="w-full mb-3">
+                                <div className="mt-8 relative z-10">
                                     <RemitaInlineCheckout 
                                         rrr={rrr} 
-                                        amount={amount} 
-                                        email={payerEmail} 
-                                        firstName={payerFirstName} 
-                                        lastName={payerLastName} 
-                                        onSuccess={(response) => handleSimulate('completed')} 
-                                        onError={(response) => handleSimulate('failed')} 
-                                        onClose={() => handleSimulate('failed')} 
+                                        amount={amount}
+                                        email={payerEmail}
+                                        firstName={payerFirstName}
+                                        lastName={payerLastName}
+                                        onSuccess={() => handleSimulate('completed')} 
+                                        onError={() => setStatus('failed')}
+                                        onClose={() => setStatus('idle')} 
+                                    />
+                                </div>
+                            )}
+
+                            {gateway === 'alatpay' && (
+                                <div className="mt-8 relative z-10">
+                                    <AlatpayInlineCheckout 
+                                        reference={reference}
+                                        amount={amount}
+                                        email={payerEmail}
+                                        firstName={payerFirstName}
+                                        lastName={payerLastName}
+                                        onSuccess={() => handleSimulate('completed')} 
+                                        onClose={() => setStatus('idle')}
+                                        onError={(e) => {
+                                            setStatus('failed');
+                                            setStatusMessage(e?.message || "ALATPay checkout failed");
+                                        }}
                                     />
                                 </div>
                             )}

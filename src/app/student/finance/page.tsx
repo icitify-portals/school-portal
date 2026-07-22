@@ -803,7 +803,7 @@ export default function StudentFinancePage() {
                                             >
                                                 <CreditCard className={cn("w-5 h-5 mb-2", paymentMode === 'gateway' ? "text-indigo-600" : "text-slate-400")} />
                                                 <p className="font-extrabold text-slate-800 text-xs">Online Gateway</p>
-                                                <p className="text-[9px] text-slate-400 leading-tight mt-1">Paystack, Remita secure checkout</p>
+                                                <p className="text-[9px] text-slate-400 leading-tight mt-1">Paystack, Remita, ALATPay secure checkout</p>
                                             </button>
 
                                             <button

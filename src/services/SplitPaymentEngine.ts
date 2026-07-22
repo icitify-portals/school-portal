@@ -308,6 +308,33 @@ export class RemitaAdapter implements PaymentGatewayAdapter {
 }
 
 // ----------------------------------------------------
+// 4. ALATPAY STRATEGY ADAPTER
+// ----------------------------------------------------
+export class AlatpayAdapter implements PaymentGatewayAdapter {
+    async initializeSplitPayment(
+        payerEmail: string,
+        totalAmount: number,
+        txReference: string,
+        splits: SplitItem[],
+        feeAllocationRule: 'developer' | 'default' | 'subaccounts' | 'student' | 'prorated',
+        meta?: Record<string, any>
+    ): Promise<GatewayCheckoutResponse> {
+        console.log("=== ALATPAY SPLIT PAYMENT INITIALIZATION ===");
+        console.log(`Payer: ${payerEmail}, Reference: ${txReference}, Total: ₦${totalAmount}`);
+        
+        // For AlatPay, we will handle the 3DS inline checkout on the frontend
+        // so we just return the simulation checkout URL with gateway=alatpay
+        const checkoutUrl = `/finance/checkout/simulate?gateway=alatpay&reference=${txReference}&amount=${totalAmount}`;
+
+        return {
+            success: true,
+            checkoutUrl,
+            reference: txReference
+        };
+    }
+}
+
+// ----------------------------------------------------
 // 4. UNIFIED SPLIT PAYMENT ENGINE
 // ----------------------------------------------------
 export class SplitPaymentEngine {
@@ -339,6 +366,8 @@ export class SplitPaymentEngine {
                 return new FlutterwaveAdapter();
             case 'remita':
                 return new RemitaAdapter();
+            case 'alatpay':
+                return new AlatpayAdapter();
             default:
                 return new PaystackAdapter(); // Fallback
         }
@@ -580,7 +609,7 @@ export class SplitPaymentEngine {
             type: 'credit',
             purpose: bill.note || "School Fees Online Payment",
             status: 'pending',
-            gateway: activeGateway as 'paystack' | 'flutterwave' | 'remita' | 'opay' | 'manual',
+            gateway: activeGateway as 'paystack' | 'flutterwave' | 'remita' | 'opay' | 'manual' | 'alatpay',
             gatewayReference: txRef
         });
 
@@ -610,7 +639,7 @@ export class SplitPaymentEngine {
         // @ts-expect-error - TS2339: Auto-suppressed for build
         for (const s of settingsRecords) settings[s.settingKey] = s.settingValue;
 
-        const activeGateway = 'remita'; // Forced by system policy for admission forms
+        const activeGateway = 'alatpay'; // Replaced Remita for admission forms
         const feeBearerRule = settings[`${activeGateway}_fee_bearer`] || 'default';
 
         const structureRows = await db.select().from(feeStructures).where(eq(feeStructures.id, feeStructureId)).limit(1);
@@ -720,7 +749,7 @@ export class SplitPaymentEngine {
             type: 'credit',
             purpose: `Admission Form Application ID: ${applicationId}`,
             status: 'pending',
-            gateway: activeGateway as 'paystack' | 'flutterwave' | 'remita' | 'opay' | 'manual',
+            gateway: activeGateway as 'paystack' | 'flutterwave' | 'remita' | 'opay' | 'manual' | 'alatpay',
             gatewayReference: txRef
         });
 

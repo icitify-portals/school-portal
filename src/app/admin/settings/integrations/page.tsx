@@ -171,6 +171,7 @@ export default function IntegrationsPage() {
                 { name: "Flutterwave", envVars: ["FLW_PUBLIC_KEY", "FLW_SECRET_KEY"], configured: false, desc: "Multi-currency payment processing" },
                 { name: "Remita", envVars: ["REMITA_PUBLIC_KEY", "REMITA_SECRET_KEY"], configured: false, desc: "Government-approved payment gateway" },
                 { name: "OPay", envVars: ["OPAY_PUBLIC_KEY", "OPAY_SECRET_KEY"], configured: false, desc: "Mobile money and digital payments" },
+                { name: "ALATPay", envVars: ["ALATPAY_API_KEY", "ALATPAY_BUSINESS_ID", "ALATPAY_SECRET_KEY"], configured: false, desc: "Wema Bank online payment gateway" },
             ],
         },
         {
