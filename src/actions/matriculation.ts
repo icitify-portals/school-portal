@@ -185,3 +185,38 @@ export async function generateMatricNumber(options: {
         return { success: false, error: "Failed to generate matriculation number" };
     }
 }
+export async function getMatriculatedStudents(filters?: { sessionId?: number, programmeId?: number, level?: number }) {
+    try {
+        const { students, programmes, academicSessions } = await import('@/db/schema');
+        const { desc, and, eq, sql, isNotNull } = await import('drizzle-orm');
+
+        const conditions = [isNotNull(students.matriculationNumber)];
+
+        if (filters?.programmeId) {
+            conditions.push(eq(students.programmeId, filters.programmeId));
+        }
+        if (filters?.level) {
+            conditions.push(eq(students.currentLevel, filters.level));
+        }
+
+        const data = await db.select({
+            id: students.id,
+            firstName: students.firstName,
+            lastName: students.lastName,
+            otherNames: students.otherNames,
+            matriculationNumber: students.matriculationNumber,
+            currentLevel: students.currentLevel,
+            programmeName: programmes.name,
+            studyMode: students.studyMode,
+        })
+        .from(students)
+        .leftJoin(programmes, eq(students.programmeId, programmes.id))
+        .where(and(...conditions))
+        .orderBy(desc(students.matriculationNumber));
+
+        return data;
+    } catch (error) {
+        console.error("Failed to fetch matriculated students:", error);
+        return [];
+    }
+}

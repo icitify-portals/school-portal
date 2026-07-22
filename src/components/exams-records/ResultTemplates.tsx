@@ -1,7 +1,7 @@
 "use client";
 
-import React from "react";
 import { GraduationCap, School, MapPin, Award, Star, ShieldCheck, HeartPulse } from "lucide-react";
+import { formatLevel } from "@/lib/utils";
 
 interface ResultData {
     student: any;
@@ -1212,7 +1212,7 @@ export const TertiarySemesterResultCard = ({ data, term }: { data: any, term: st
                 </div>
                 <div>
                     <span className="text-slate-400 block font-bold uppercase tracking-wider text-[9px] mb-0.5">LEVEL</span>
-                    <span className="font-bold text-slate-700 text-sm">{student.currentLevel || student.level || 100} LEVEL</span>
+                    <span className="font-bold text-slate-700 text-sm uppercase">{formatLevel(student.currentLevel || student.level || 100)}</span>
                 </div>
             </div>
 

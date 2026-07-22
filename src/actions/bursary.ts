@@ -2557,6 +2557,11 @@ export async function resolveOnlinePaymentAction(reference: string, status: 'com
                             status: billStatus
                         })
                         .where(eq(studentBills.id, billId));
+
+                    if (billStatus === 'paid') {
+                        const { checkAndGenerateMatricNumber } = await import('@/lib/matric-number');
+                        await checkAndGenerateMatricNumber(studentId, tx);
+                    }
                 }
             }
 

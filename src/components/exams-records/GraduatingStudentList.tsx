@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Search, Loader2, FileText, Printer, GraduationCap, ArrowRight } from "lucide-react";
+import { formatLevel } from "@/lib/utils";
 import { getGraduatingStudents } from "@/actions/exams-records";
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
@@ -104,7 +105,7 @@ export default function GraduatingStudentList() {
                                                     <Badge variant={s.status === 'graduated' ? 'success' : 'default'} className="rounded-md">
                                                         {s.status === 'graduated' ? 'Graduated' : 'Final Year'}
                                                     </Badge>
-                                                    <span className="text-xs text-slate-400">Level {s.currentLevel}</span>
+                                                    <span className="text-xs text-slate-400">{formatLevel(s.currentLevel)}</span>
                                                 </div>
                                             </div>
                                         </td>

@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { applyForHostel, processHostelPayment } from "@/actions/hostels";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { formatLevel } from "@/lib/utils";
 import MaintenanceReporting from "./MaintenanceReporting";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Wrench } from "lucide-react";
@@ -222,7 +223,7 @@ export default function StudentHostelPortal({
                     </div>
                     <div className="bg-white/10 backdrop-blur-md p-6 rounded-[2rem] border border-white/10 text-center min-w-[200px]">
                         <p className="text-[10px] font-black uppercase tracking-[0.2em] mb-1 text-indigo-200">Your Eligibility</p>
-                        <p className="text-3xl font-black">{studentLevel} LEVEL</p>
+                        <p className="text-3xl font-black">{formatLevel(studentLevel).toUpperCase()}</p>
                         <Badge className="mt-2 text-[9px] font-black uppercase tracking-widest px-3 py-1 bg-indigo-50 border border-indigo-200 text-indigo-600 shadow-sm">
                             {isPriority ? "Priority Eligible" : "Standard Entry"}
                         </Badge>

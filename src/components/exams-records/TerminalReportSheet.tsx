@@ -2,6 +2,7 @@
 
 import React, { useRef } from "react";
 import { Printer, BookOpen, Star, User, GraduationCap } from "lucide-react";
+import { formatLevel } from "@/lib/utils";
 
 interface SubjectResult {
     code: string;
@@ -133,7 +134,7 @@ export default function TerminalReportSheet({
                     </div>
                     <div>
                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Class Level</span>
-                        <span className="text-sm font-bold text-slate-700">Basic {data.student.level}</span>
+                        <span className="text-sm font-bold text-slate-700">{formatLevel(data.student.level)}</span>
                     </div>
                     <div>
                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Branch Annex</span>
