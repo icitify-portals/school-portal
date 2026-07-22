@@ -109,7 +109,7 @@ export default function ApplicationPrintPage() {
                     {/* School Header */}
                     <div className="border-b-[3px] border-indigo-600 px-6 py-4 flex items-center justify-between gap-4">
                         {branding?.portalLogo ? (
-                            <img src={branding.portalLogo} alt="School Logo" className="w-16 h-16 print:w-14 print:h-14 object-contain shrink-0" crossOrigin="anonymous" />
+                            <img src={branding.portalLogo} alt="School Logo" className="w-16 h-16 print:w-14 print:h-14 object-contain shrink-0" />
                         ) : (
                             <div className="w-16 h-16 print:w-14 print:h-14 bg-indigo-50 rounded-xl flex items-center justify-center shrink-0">
                                 <span className="text-xl font-black text-indigo-300">LOGO</span>
@@ -146,7 +146,7 @@ export default function ApplicationPrintPage() {
                                 <div>
                                     <div className="w-28 h-32 print:w-24 print:h-28 bg-slate-50 border-2 border-slate-200 rounded-lg overflow-hidden print:overflow-visible relative">
                                         {applicantPhoto ? (
-                                            <img src={applicantPhoto} alt="Passport" className="w-full h-full object-cover print:object-contain" crossOrigin="anonymous" />
+                                            <img src={applicantPhoto} alt="Passport" className="w-full h-full object-cover print:object-contain" />
                                         ) : (
                                             <div className="w-full h-full flex items-center justify-center text-slate-200">
                                                 <User className="w-8 h-8" />
@@ -158,7 +158,7 @@ export default function ApplicationPrintPage() {
                                 {applicantSignature && (
                                     <div>
                                         <div className="w-28 h-12 print:w-24 print:h-10 bg-white border border-slate-200 rounded flex items-center justify-center overflow-hidden print:overflow-visible">
-                                            <img src={applicantSignature} alt="Signature" className="w-full h-full object-contain p-1" crossOrigin="anonymous" />
+                                            <img src={applicantSignature} alt="Signature" className="w-full h-full object-contain p-1" />
                                         </div>
                                         <p className="text-[7px] font-bold text-center text-slate-400 mt-0.5 uppercase tracking-widest">Signature</p>
                                     </div>

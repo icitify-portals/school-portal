@@ -106,8 +106,7 @@ class S3StorageProvider implements StorageProvider {
                 Key: key,
                 Body: file,
                 ContentType: mimeType,
-                // Optional: set public read if the bucket isn't already configured for it
-                // ACL: "public-read", 
+                ACL: "public-read", 
             });
 
             await this.client.send(command);
