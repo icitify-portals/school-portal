@@ -238,6 +238,18 @@ export async function createFeeStructure(data: {
             return newStructure.insertId;
         });
 
+        try {
+            await NotificationService.sendNotification({
+                title: "New Fee Structure Created",
+                message: `A new fee structure '${data.name}' has been drafted and is pending approval.`,
+                type: 'bursary',
+                roles: ['bursar', 'admin'],
+                link: '/admin/bursary/fees'
+            });
+        } catch (e) {
+            console.error("Failed to send notification", e);
+        }
+
         revalidatePath("/admin/bursary/fees");
         return { success: true, id: result };
     } catch (error) {
@@ -1597,9 +1609,59 @@ export async function recordExternalInflow(data: {
 // --- Overriding set actions for approval checking ---
 export async function approveFeeStructureWithAuth(id: number, userId: number) {
     try {
-        await ensureBursar();
-        return await approveFeeStructure(id, userId);
+        const isAuthorized = await hasPermission("finance.ledger.manage") || await hasRole("bursar") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("icitify_dev");
+        if (!isAuthorized) throw new Error("Unauthorized: You do not have permission to approve fee structures");
+        const res = await approveFeeStructure(id, userId);
+        
+        if (res.success) {
+            try {
+                await NotificationService.sendNotification({
+                    title: "Fee Structure Approved",
+                    message: `A fee structure has been approved and is now active.`,
+                    type: 'bursary',
+                    roles: ['bursar', 'admin'],
+                    link: '/admin/bursary/fees'
+                });
+            } catch (e) {
+                console.error("Failed to send approval notification", e);
+            }
+        }
+        return res;
     } catch (error) {
+        return { success: false, error: (error as Error).message };
+    }
+}
+
+export async function bulkApproveFeeStructuresWithAuth(ids: number[], userId: number) {
+    try {
+        const isAuthorized = await hasPermission("finance.ledger.manage") || await hasRole("bursar") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("icitify_dev");
+        if (!isAuthorized) throw new Error("Unauthorized: You do not have permission to approve fee structures");
+        
+        await db.update(feeStructures)
+            .set({
+                status: 'approved',
+                approvedBy: userId,
+                approvedAt: new Date()
+            })
+            .where(inArray(feeStructures.id, ids));
+
+        revalidatePath("/admin/bursary/fees");
+        
+        try {
+            await NotificationService.sendNotification({
+                title: "Fee Structures Approved",
+                message: `${ids.length} fee structure(s) have been approved and are now active.`,
+                type: 'bursary',
+                roles: ['bursar', 'admin'],
+                link: '/admin/bursary/fees'
+            });
+        } catch (e) {
+            console.error("Failed to send bulk approve notification", e);
+        }
+
+        return { success: true };
+    } catch (error) {
+        console.error("Failed to bulk approve fee structures:", error);
         return { success: false, error: (error as Error).message };
     }
 }

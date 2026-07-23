@@ -25,6 +25,7 @@ import {
     updateFeeStructure,
     deleteFeeStructure,
     approveFeeStructureWithAuth as approveFeeStructure,
+    bulkApproveFeeStructuresWithAuth as bulkApproveFeeStructures,
     allocateFeeStructure,
     generateBatchBills
 } from "@/actions/bursary";
@@ -36,7 +37,8 @@ import { useSession } from "next-auth/react";
 export default function FeesPage() {
     const { data: session } = useSession();
     const userRoles = (session?.user as any)?.roles || [];
-    const isBursar = userRoles.includes("bursar") || (session?.user as any)?.role === "admin";
+    const userRole = (session?.user as any)?.role;
+    const isBursar = userRoles.includes("bursar") || ["admin", "superadmin", "icitify_dev", "bursar"].includes(userRole);
 
     const [activeTab, setActiveTab] = useState<'items' | 'structures'>('items');
     const [feeItemsList, setFeeItemsList] = useState<any[]>([]);
@@ -173,6 +175,23 @@ export default function FeesPage() {
         const res = activeTab === 'items'
             ? await bulkDeleteFeeItems(ids)
             : await bulkDeleteFeeStructures(ids);
+        if (res.success) {
+            setSelectedIds(new Set());
+            fetchData();
+        } else {
+            alert(res.error);
+        }
+    };
+
+    const handleBulkApprove = async () => {
+        if (selectedIds.size === 0) return;
+        if (!confirm(`Approve ${selectedIds.size} selected fee structures?`)) return;
+        const userId = (session?.user as any)?.id;
+        if (!userId) return alert("User session not found");
+        
+        const ids = Array.from(selectedIds);
+        const res = await bulkApproveFeeStructures(ids, parseInt(userId));
+        
         if (res.success) {
             setSelectedIds(new Set());
             fetchData();
@@ -621,6 +640,12 @@ export default function FeesPage() {
                             className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold transition-colors">
                             Delete Selected
                         </button>
+                        {activeTab === 'structures' && isBursar && (
+                            <button onClick={handleBulkApprove}
+                                className="px-5 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-bold transition-colors">
+                                Approve Selected
+                            </button>
+                        )}
                         <button onClick={() => setSelectedIds(new Set())}
                             className="px-5 py-2 text-slate-500 hover:text-slate-700 text-xs font-bold transition-colors">
                             Clear Selection
