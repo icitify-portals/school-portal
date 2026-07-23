@@ -1153,6 +1153,7 @@ export async function getAllUnifiedTransactions(filters?: { status?: string, cat
                     id: students.id,
                     firstName: students.firstName,
                     lastName: students.lastName,
+                    name: users.name,
                     matricNumber: students.matricNumber,
                     contactEmail: users.email
                 }
@@ -1240,6 +1241,7 @@ export async function getAllUnifiedTransactions(filters?: { status?: string, cat
                     id: students.id,
                     firstName: students.firstName,
                     lastName: students.lastName,
+                    name: users.name,
                     matricNumber: students.matricNumber,
                     contactEmail: users.email
                 }
@@ -1284,6 +1286,7 @@ export async function getAllUnifiedTransactions(filters?: { status?: string, cat
                     id: students.id,
                     firstName: students.firstName,
                     lastName: students.lastName,
+                    name: users.name,
                     matricNumber: students.matricNumber,
                     contactEmail: users.email
                 }
@@ -2737,7 +2740,7 @@ export async function getGatewaySubaccountsAction(accountId: number) {
 
 export async function createGatewaySubaccountAction(data: {
     settlementAccountId: number;
-    gatewayName: 'paystack' | 'flutterwave' | 'remita';
+    gatewayName: 'paystack' | 'flutterwave' | 'remita' | 'alatpay';
     gatewaySubaccountCode: string;
 }) {
     try {
