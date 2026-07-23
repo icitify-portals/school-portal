@@ -79,7 +79,7 @@ export default function BursarySettingsPage() {
 
     // New Subaccount mapping state
     const [mappingAcctId, setMappingAcctId] = useState<number | null>(null);
-    const [mappingGateway, setMappingGateway] = useState<'paystack' | 'flutterwave' | 'remita'>('paystack');
+    const [mappingGateway, setMappingGateway] = useState<'paystack' | 'flutterwave' | 'remita' | 'alatpay'>('paystack');
     const [mappingCode, setMappingCode] = useState("");
     const [mappingLoading, setMappingLoading] = useState(false);
 
@@ -436,6 +436,7 @@ export default function BursarySettingsPage() {
                                     {(settings['gateway_remita_active'] !== "false") && <option value="remita">Remita API (Dynamic Line Items)</option>}
                                     {(settings['gateway_paystack_active'] === "true") && <option value="paystack">Paystack API (Subaccounts)</option>}
                                     {(settings['gateway_flutterwave_active'] === "true") && <option value="flutterwave">Flutterwave API (Subaccounts)</option>}
+                                    {(settings['gateway_alatpay_active'] === "true") && <option value="alatpay">ALATPay API (Dynamic Business Accounts)</option>}
                                 </select>
                             </div>
 
@@ -477,6 +478,13 @@ export default function BursarySettingsPage() {
                                     onCheckedChange={(c) => handleSave('gateway_flutterwave_active', c ? "true" : "false")}
                                 />
                                 <span className="text-sm font-bold text-slate-700">Flutterwave</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <Switch 
+                                    checked={settings['gateway_alatpay_active'] === "true"}
+                                    onCheckedChange={(c) => handleSave('gateway_alatpay_active', c ? "true" : "false")}
+                                />
+                                <span className="text-sm font-bold text-slate-700">ALATPay</span>
                             </div>
                         </div>
 
@@ -627,10 +635,12 @@ export default function BursarySettingsPage() {
                                         <select
                                             className="w-full px-3 py-2 text-xs rounded-lg border border-slate-200 bg-white"
                                             value={mappingGateway}
-                                            onChange={(e) => setMappingGateway(e.target.value as 'paystack' | 'flutterwave' | 'remita')}
+                                            onChange={(e) => setMappingGateway(e.target.value as 'paystack' | 'flutterwave' | 'remita' | 'alatpay')}
                                         >
                                             <option value="paystack">Paystack</option>
                                             <option value="flutterwave">Flutterwave</option>
+                                            <option value="remita">Remita</option>
+                                            <option value="alatpay">ALATPay</option>
                                         </select>
                                     </div>
                                     <div className="space-y-1 sm:col-span-2">

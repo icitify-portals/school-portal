@@ -387,10 +387,10 @@ export default function FeesPage() {
                                         value={structLevel}
                                         onChange={(e) => setStructLevel(e.target.value)}
                                     >
-                                        <option value="100">100 Level</option>
-                                        <option value="200">200 Level</option>
-                                        <option value="300">300 Level</option>
-                                        <option value="400">400 Level</option>
+                                        <option value="100">ND 1 (100)</option>
+                                        <option value="200">ND 2 (200)</option>
+                                        <option value="300">HND 1 (300)</option>
+                                        <option value="400">HND 2 (400)</option>
                                         <option value="500">500 Level</option>
                                     </select>
                                 </div>
@@ -479,10 +479,10 @@ export default function FeesPage() {
                                         value={structLevel}
                                         onChange={(e) => setStructLevel(e.target.value)}
                                     >
-                                        <option value="100">100 Level</option>
-                                        <option value="200">200 Level</option>
-                                        <option value="300">300 Level</option>
-                                        <option value="400">400 Level</option>
+                                        <option value="100">ND 1 (100)</option>
+                                        <option value="200">ND 2 (200)</option>
+                                        <option value="300">HND 1 (300)</option>
+                                        <option value="400">HND 2 (400)</option>
                                         <option value="500">500 Level</option>
                                     </select>
                                 </div>
@@ -579,10 +579,10 @@ export default function FeesPage() {
                                             onChange={(e) => setApplyFilterId(e.target.value)}
                                         >
                                             <option value="">Select Level...</option>
-                                            <option value="100">100 Level</option>
-                                            <option value="200">200 Level</option>
-                                            <option value="300">300 Level</option>
-                                            <option value="400">400 Level</option>
+                                            <option value="100">ND 1 (100)</option>
+                                            <option value="200">ND 2 (200)</option>
+                                            <option value="300">HND 1 (300)</option>
+                                            <option value="400">HND 2 (400)</option>
                                             <option value="500">500 Level</option>
                                         </select>
                                     </div>

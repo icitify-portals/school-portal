@@ -83,7 +83,6 @@ export function AlatpayInlineCheckout({
         <>
             <Script 
                 src="https://web.alatpay.ng/js/alatpay.js" 
-                strategy="lazyOnload" 
                 onLoad={() => {
                     console.log("ALATPay Script Loaded");
                 }}

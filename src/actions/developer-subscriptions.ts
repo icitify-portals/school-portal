@@ -63,11 +63,11 @@ export async function getUnpaidSubscriptions() {
     return subs.map(s => ({
         id: s.id,
         // @ts-expect-error - TS18047: Auto-suppressed for build
-        studentName: s.student.user.name,
+        studentName: s.student?.user?.name || "Unknown Student",
         // @ts-expect-error - TS2339: Auto-suppressed for build
-        matricNo: s.student.matriculationNo,
+        matricNo: s.student?.matriculationNo || "N/A",
         amountDue: s.amountDue,
-        session: s.session.name
+        session: s.session?.name || "Unknown Session"
     }));
 }
 

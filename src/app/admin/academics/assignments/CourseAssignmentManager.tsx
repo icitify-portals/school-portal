@@ -187,10 +187,10 @@ export default function CourseAssignmentManager({
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="all">All Levels</SelectItem>
-                                    <SelectItem value="100">100 Level</SelectItem>
-                                    <SelectItem value="200">200 Level</SelectItem>
-                                    <SelectItem value="300">300 Level</SelectItem>
-                                    <SelectItem value="400">400 Level</SelectItem>
+                                    <SelectItem value="100">ND 1 (100)</SelectItem>
+                                    <SelectItem value="200">ND 2 (200)</SelectItem>
+                                    <SelectItem value="300">HND 1 (300)</SelectItem>
+                                    <SelectItem value="400">HND 2 (400)</SelectItem>
                                     <SelectItem value="500">500 Level</SelectItem>
                                 </SelectContent>
                             </Select>
