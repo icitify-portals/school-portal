@@ -28,6 +28,7 @@ function CheckoutSimulatorContent() {
     const reference = searchParams.get("reference") || "";
     const amountStr = searchParams.get("amount") || "0";
     const rrr = searchParams.get("rrr") || "";
+    const targetBusinessId = searchParams.get("businessId") || undefined;
     const payerEmail = searchParams.get("email") || "student@school.edu";
     const payerFirstName = searchParams.get("firstName") || "Student";
     const payerLastName = searchParams.get("lastName") || "Payer";
@@ -307,6 +308,7 @@ function CheckoutSimulatorContent() {
                                         email={payerEmail}
                                         firstName={payerFirstName}
                                         lastName={payerLastName}
+                                        targetBusinessId={targetBusinessId}
                                         onSuccess={() => handleSimulate('completed')} 
                                         onClose={() => setStatus('idle')}
                                         onError={(e) => {

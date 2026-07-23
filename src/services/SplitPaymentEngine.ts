@@ -323,8 +323,16 @@ export class AlatpayAdapter implements PaymentGatewayAdapter {
         console.log(`Payer: ${payerEmail}, Reference: ${txReference}, Total: ₦${totalAmount}`);
         
         // For AlatPay, we will handle the 3DS inline checkout on the frontend
-        // so we just return the simulation checkout URL with gateway=alatpay
-        const checkoutUrl = `/finance/checkout/simulate?gateway=alatpay&reference=${txReference}&amount=${totalAmount}`;
+        // Determine target Business ID from splits if configured
+        let targetBusinessId: string | undefined = undefined;
+        
+        // Find the first split that has a gateway subaccount code (assuming it contains the Alatpay Business ID)
+        const mainSplit = splits.find(s => s.subaccountCode && !s.isDeveloperAccount);
+        if (mainSplit?.subaccountCode) {
+            targetBusinessId = mainSplit.subaccountCode;
+        }
+
+        const checkoutUrl = `/finance/checkout/simulate?gateway=alatpay&reference=${txReference}&amount=${totalAmount}${targetBusinessId ? `&businessId=${targetBusinessId}` : ''}`;
 
         return {
             success: true,

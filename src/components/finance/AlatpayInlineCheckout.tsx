@@ -12,6 +12,7 @@ interface AlatpayInlineCheckoutProps {
     onSuccess: () => void;
     onClose: () => void;
     onError: (error: any) => void;
+    targetBusinessId?: string;
 }
 
 export function AlatpayInlineCheckout({
@@ -22,10 +23,25 @@ export function AlatpayInlineCheckout({
     lastName,
     onSuccess,
     onClose,
-    onError
+    onError,
+    targetBusinessId
 }: AlatpayInlineCheckoutProps) {
-    const businessId = process.env.NEXT_PUBLIC_ALATPAY_BUSINESS_ID || "DEMO_BUSINESS_ID";
-    const apiKey = process.env.NEXT_PUBLIC_ALATPAY_API_KEY || "DEMO_API_KEY";
+    const getBusinessCredentials = (reqBusinessId?: string) => {
+        const config: Record<string, string | undefined> = {
+            [process.env.NEXT_PUBLIC_ALATPAY_BUSINESS_ID_MAIN || '']: process.env.NEXT_PUBLIC_ALATPAY_API_KEY_MAIN,
+            [process.env.NEXT_PUBLIC_ALATPAY_BUSINESS_ID_ELEARNING || '']: process.env.NEXT_PUBLIC_ALATPAY_API_KEY_ELEARNING,
+            [process.env.NEXT_PUBLIC_ALATPAY_BUSINESS_ID_1 || '']: process.env.NEXT_PUBLIC_ALATPAY_API_KEY_1,
+            [process.env.NEXT_PUBLIC_ALATPAY_BUSINESS_ID_CERT || '']: process.env.NEXT_PUBLIC_ALATPAY_API_KEY_CERT,
+            [process.env.NEXT_PUBLIC_ALATPAY_BUSINESS_ID_ICT || '']: process.env.NEXT_PUBLIC_ALATPAY_API_KEY_ICT,
+        };
+
+        const resolvedId = reqBusinessId || process.env.NEXT_PUBLIC_ALATPAY_BUSINESS_ID_MAIN || "DEMO_BUSINESS_ID";
+        const resolvedKey = config[resolvedId] || process.env.NEXT_PUBLIC_ALATPAY_API_KEY_MAIN || "DEMO_API_KEY";
+
+        return { businessId: resolvedId, apiKey: resolvedKey };
+    };
+
+    const { businessId, apiKey } = getBusinessCredentials(targetBusinessId);
 
     const makePayment = () => {
         // @ts-ignore
