@@ -2,6 +2,7 @@
 
 import React, { useEffect } from "react";
 import Script from "next/script";
+import { toast } from "sonner";
 
 interface AlatpayInlineCheckoutProps {
     reference: string;
@@ -57,7 +58,7 @@ export function AlatpayInlineCheckout({
                     firstName,
                     lastName,
                     onTransaction: function (response: any) {
-                        if (response.status === true || response.message === "Approved") {
+                        if (response.status === true || response.message === "Approved" || response.status === "Approved") {
                             onSuccess();
                         } else {
                             onError(response);
@@ -75,6 +76,7 @@ export function AlatpayInlineCheckout({
             }
         } else {
             console.error("ALATPay script not loaded");
+            toast.error("Payment Gateway is still loading. Please try again in a few seconds.");
             onError("Payment Gateway Error");
         }
     };
@@ -83,6 +85,7 @@ export function AlatpayInlineCheckout({
         <>
             <Script 
                 src="https://web.alatpay.ng/js/alatpay.js" 
+                strategy="beforeInteractive"
                 onLoad={() => {
                     console.log("ALATPay Script Loaded");
                 }}

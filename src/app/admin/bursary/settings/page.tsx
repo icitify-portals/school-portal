@@ -915,6 +915,8 @@ export default function BursarySettingsPage() {
                             { name: "Flutterwave Secret Key", key: "gateway_flutterwave_key", help: "Secret Key (FLWSECK-X)" },
                             { name: "Remita API Key", key: "gateway_remita_key", help: "API Key / Public Key" },
                             { name: "OPay Secret Key", key: "gateway_opay_key", help: "Merchant ID / Secret Key" },
+                            { name: "ALATPay Secret Key", key: "gateway_alatpay_key", help: "Ocp-Apim-Subscription-Key from ALATPay Dashboard" },
+                            { name: "ALATPay Business ID", key: "gateway_alatpay_business_id", help: "Your unique ALATPay Business ID" },
                         ].map((gateway) => (
                             <div key={gateway.key} className="space-y-2">
                                 <label className="text-sm font-bold text-slate-700">{gateway.name}</label>

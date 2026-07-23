@@ -48,7 +48,7 @@ export async function updateDeveloperFeeSettings(data: {
  * Fetch all unpaid subscriptions for the active session (Bursary)
  */
 export async function getUnpaidSubscriptions() {
-    if (!(await hasRole(["admin", "superadmin", "bursar"]))) throw new Error("Unauthorized");
+    if (!(await hasRole(["admin", "superadmin", "bursar", "icitify_dev"]))) throw new Error("Unauthorized");
 
     const subs = await db.query.developerSubscriptions.findMany({
         where: eq(developerSubscriptions.status, 'unpaid'),
@@ -75,7 +75,7 @@ export async function getUnpaidSubscriptions() {
  * Process a bulk payment for selected subscriptions (School pays on behalf of students)
  */
 export async function processBulkSubscriptionPayment(subscriptionIds: number[], paymentReference: string) {
-    if (!(await hasRole(["admin", "superadmin", "bursar"]))) throw new Error("Unauthorized");
+    if (!(await hasRole(["admin", "superadmin", "bursar", "icitify_dev"]))) throw new Error("Unauthorized");
     
     if (subscriptionIds.length === 0) return { success: true };
 

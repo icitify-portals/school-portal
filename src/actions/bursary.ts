@@ -1166,7 +1166,7 @@ export async function getAllUnifiedTransactions(filters?: { status?: string, cat
             // Pre-fetch applicant details for admission-related transactions
             const appIdsToFetch = new Set<number>();
             for (const f of fees) {
-                if (!f.student && f.purpose.includes("Application ID:")) {
+                if (!f.student?.id && f.purpose && f.purpose.includes("Application ID:")) {
                     const match = f.purpose.match(/Application ID:\s*(\d+)/);
                     if (match && match[1]) appIdsToFetch.add(parseInt(match[1]));
                 }
@@ -1203,13 +1203,13 @@ export async function getAllUnifiedTransactions(filters?: { status?: string, cat
                     student: f.student
                 };
 
-                if (!txEntry.student && txEntry.purpose.includes("Application ID:")) {
+                if (!txEntry.student?.id && txEntry.purpose && txEntry.purpose.includes("Application ID:")) {
                     const match = txEntry.purpose.match(/Application ID:\s*(\d+)/);
                     if (match && match[1]) {
                         const appId = parseInt(match[1]);
                         const applicant = applicantMap.get(appId);
                         if (applicant) {
-                            const names = (applicant.name || "Applicant").split(" ");
+                            const names = (applicant.name || "Unknown Applicant").split(" ");
                             txEntry.student = {
                                 id: 0,
                                 firstName: names[0],
