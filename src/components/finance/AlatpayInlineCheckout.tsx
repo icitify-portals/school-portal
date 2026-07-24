@@ -90,9 +90,6 @@ export function AlatpayInlineCheckout({
         // @ts-ignore
         if (typeof window !== "undefined" && window.Alatpay) {
             try {
-                // Debug alert to see EXACTLY what is being passed
-                alert(`ALATPay Debug:\nBusinessID: ${businessId}\nAPIKey: ${apiKey}`);
-                
                 // @ts-ignore
                 let popup = window.Alatpay.setup({
                     apiKey,
