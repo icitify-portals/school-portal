@@ -836,7 +836,7 @@ export const settlementAccounts = mysqlTable('settlement_accounts', {
 
 export const gatewaySubaccounts = mysqlTable('gateway_subaccounts', {
   id: int('id').autoincrement().primaryKey(),
-  settlementAccountId: int('settle_acct_id').references(() => settlementAccounts.id),
+  settlementAccountId: int('settlement_account_id').references(() => settlementAccounts.id),
   gatewayName: mysqlEnum('gateway_name', ['paystack', 'flutterwave', 'remita', 'alatpay']).notNull(),
   gatewaySubaccountCode: varchar('gateway_subaccount_code', { length: 100 }).notNull(),
 });
