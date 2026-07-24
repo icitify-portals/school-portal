@@ -97,14 +97,17 @@ export function AlatpayInlineCheckout({
     };
 
     const { businessId, apiKey } = getBusinessCredentials(targetBusinessId);
+    
+    // Log immediately when the component renders so it's easy to see
+    if (typeof window !== "undefined") {
+        console.log("ALATPAY DEBUG -> Business ID:", businessId);
+        console.log("ALATPAY DEBUG -> Public/API Key:", apiKey);
+    }
 
     const makePayment = () => {
         // @ts-ignore
         if (typeof window !== "undefined" && window.Alatpay) {
             try {
-                console.log("ALATPAY DEBUG -> Business ID:", businessId);
-                console.log("ALATPAY DEBUG -> Public/API Key:", apiKey);
-                
                 // @ts-ignore
                 let popup = window.Alatpay.setup({
                     apiKey,
