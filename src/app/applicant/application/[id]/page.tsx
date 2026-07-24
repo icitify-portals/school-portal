@@ -639,12 +639,17 @@ export default function StatefulApplicationPage() {
                         </p>
                     </div>
                     {application.paymentStatus === 'paid' ? (
-                        <Button 
-                            disabled
-                            className="w-full bg-emerald-600 text-white font-bold py-6 rounded-xl uppercase text-sm tracking-widest flex items-center justify-center gap-3"
-                        >
-                            <CheckCircle2 className="w-5 h-5" /> Fee Paid
-                        </Button>
+                        <>
+                            <Button 
+                                disabled
+                                className="w-full bg-emerald-600 text-white font-bold py-6 rounded-xl uppercase text-sm tracking-widest flex items-center justify-center gap-3 mb-4"
+                            >
+                                <CheckCircle2 className="w-5 h-5" /> Fee Paid
+                            </Button>
+                            <Button onClick={() => setActiveTabStage(1)} className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-6 rounded-xl uppercase text-sm tracking-widest transition-all">
+                                Proceed to Next Step <ArrowRight className="w-4 h-4 ml-2" />
+                            </Button>
+                        </>
                     ) : (
                         <Button 
                             onClick={handlePayment} disabled={paymentProcessing}
@@ -673,19 +678,34 @@ export default function StatefulApplicationPage() {
                         </p>
                     </div>
                     {application.isProcessingFeePaid ? (
-                        <Button 
-                            disabled
-                            className="w-full bg-emerald-600 text-white font-bold py-6 rounded-xl uppercase text-sm tracking-widest flex items-center justify-center gap-3"
-                        >
-                            <CheckCircle2 className="w-5 h-5" /> Fee Paid
-                        </Button>
+                        <>
+                            <Button 
+                                disabled
+                                className="w-full bg-emerald-600 text-white font-bold py-6 rounded-xl uppercase text-sm tracking-widest flex items-center justify-center gap-3 mb-4"
+                            >
+                                <CheckCircle2 className="w-5 h-5" /> Fee Paid
+                            </Button>
+                            <div className="flex gap-4">
+                                <Button onClick={() => setActiveTabStage(0)} variant="outline" className="flex-1 border-slate-200 text-slate-600 font-bold py-6 rounded-xl uppercase text-xs tracking-widest transition-all">
+                                    <ArrowLeft className="w-4 h-4 mr-2" /> Previous
+                                </Button>
+                                <Button onClick={() => setActiveTabStage(2)} className="flex-1 bg-slate-900 hover:bg-slate-800 text-white font-bold py-6 rounded-xl uppercase text-xs tracking-widest transition-all">
+                                    Next <ArrowRight className="w-4 h-4 ml-2" />
+                                </Button>
+                            </div>
+                        </>
                     ) : (
-                        <Button 
-                            onClick={handleProcessingFee} disabled={isGateLoading}
-                            className="w-full bg-rose-600 hover:bg-rose-700 text-white font-bold py-6 rounded-xl uppercase text-sm tracking-widest transition-all shadow-md flex items-center justify-center gap-3"
-                        >
-                            {isGateLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <><CreditCard className="w-5 h-5" /> Pay ₦{processingFeeToPay.toLocaleString()}</>}
-                        </Button>
+                        <>
+                            <Button 
+                                onClick={handleProcessingFee} disabled={isGateLoading}
+                                className="w-full bg-rose-600 hover:bg-rose-700 text-white font-bold py-6 rounded-xl uppercase text-sm tracking-widest transition-all shadow-md flex items-center justify-center gap-3 mb-4"
+                            >
+                                {isGateLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <><CreditCard className="w-5 h-5" /> Pay ₦{processingFeeToPay.toLocaleString()}</>}
+                            </Button>
+                            <Button onClick={() => setActiveTabStage(0)} variant="outline" className="w-full border-slate-200 text-slate-600 font-bold py-6 rounded-xl uppercase text-xs tracking-widest transition-all">
+                                <ArrowLeft className="w-4 h-4 mr-2" /> Previous Step
+                            </Button>
+                        </>
                     )}
                 </Card>
             </div>
@@ -708,7 +728,8 @@ export default function StatefulApplicationPage() {
                 const data = await res.json();
                 if (data.success) {
                     setSelectedProgrammeId(progId);
-                    toast.success("Programme selected!");
+                    toast.success("Programme selected! Proceeding to application form...");
+                    setActiveTabStage(3);
                     fetchApplication();
                 } else {
                     toast.error(data.error || "Failed to save programme selection");
@@ -757,6 +778,17 @@ export default function StatefulApplicationPage() {
                     </div>
                 )}
                 {savingProgramme && <Loader2 className="w-6 h-6 animate-spin mx-auto text-indigo-600" />}
+                
+                <div className="flex gap-4 mt-6">
+                    <Button onClick={() => setActiveTabStage(1)} variant="outline" className="flex-1 border-slate-200 text-slate-600 font-bold py-6 rounded-xl uppercase text-xs tracking-widest transition-all">
+                        <ArrowLeft className="w-4 h-4 mr-2" /> Previous
+                    </Button>
+                    {selectedProgrammeId && (
+                        <Button onClick={() => setActiveTabStage(3)} className="flex-1 bg-slate-900 hover:bg-slate-800 text-white font-bold py-6 rounded-xl uppercase text-xs tracking-widest transition-all">
+                            Next <ArrowRight className="w-4 h-4 ml-2" />
+                        </Button>
+                    )}
+                </div>
             </Card>
             </div>
         );
