@@ -87,12 +87,23 @@ export default function V2ApplicationDetailPage() {
     const renderFieldValue = (value: any, fieldType?: string) => {
         if (value === null || value === undefined || value === "") return <span className="text-slate-300 italic">—</span>;
         // Handle image fields
-        if (fieldType === 'image' || fieldType === 'photo' || (typeof value === 'string' && (value.startsWith('http') || value.startsWith('data:image')) && (fieldType === 'image' || fieldType === 'photo'))) {
+        if (fieldType === 'image' || fieldType === 'photo' || fieldType === 'signature' || (typeof value === 'string' && value.startsWith('data:image'))) {
             return (
                 <div className="relative group">
-                    <img src={value} alt="Upload" className="w-20 h-20 object-cover rounded-xl border border-slate-200 shadow-sm cursor-pointer hover:scale-150 transition-transform duration-200 hover:z-10 hover:shadow-xl" />
+                    <img src={value} alt="Upload" className="w-20 h-20 object-contain rounded-xl border border-slate-200 shadow-sm cursor-pointer hover:scale-[3] transition-transform duration-200 hover:z-10 hover:shadow-xl bg-white" />
                 </div>
             );
+        }
+        // Handle file links
+        if (typeof value === 'string' && value.startsWith('http')) {
+            if (value.match(/\.(jpeg|jpg|gif|png)$/i)) {
+                return (
+                    <div className="relative group">
+                        <img src={value} alt="Upload" className="w-20 h-20 object-contain rounded-xl border border-slate-200 shadow-sm cursor-pointer hover:scale-[3] transition-transform duration-200 hover:z-10 hover:shadow-xl bg-white" />
+                    </div>
+                );
+            }
+            return <a href={value} target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:underline break-all">{value}</a>;
         }
         // Handle boolean
         if (typeof value === 'boolean') {
