@@ -347,6 +347,10 @@ export class AlatpayAdapter implements PaymentGatewayAdapter {
                 console.error("Failed to query ALATPay public key from database", err);
             }
         }
+        
+        // TEMPORARY OVERRIDE FOR WHITELIST TESTING
+        targetBusinessId = "0cb45b96-9b38-46e5-5d2f-08dd240a980b";
+        publicKey = "368ac2c83a574b25a0313e403fab0657";
 
         let checkoutUrl = `/finance/checkout/simulate?gateway=alatpay&reference=${txReference}&amount=${totalAmount}`;
         if (targetBusinessId) checkoutUrl += `&businessId=${targetBusinessId}`;
