@@ -252,17 +252,9 @@ function CheckoutSimulatorContent() {
 
                         {/* Summary of Fees */}
                         <div className="bg-slate-950/40 rounded-xl border border-slate-800/80 p-4 space-y-3">
-                            <div className="flex justify-between items-center text-sm">
-                                <span className="text-slate-400">Amount Due</span>
-                                <span className="font-mono font-bold text-slate-200">₦{amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                            </div>
-                            <div className="flex justify-between items-center text-sm">
-                                <span className="text-slate-400">Processing Charges</span>
-                                <span className="font-mono font-bold text-slate-200">₦{(amount * 0.015).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                            </div>
-                            <div className="flex justify-between items-center text-sm border-t border-slate-800 pt-3">
+                            <div className="flex justify-between items-center text-sm border-slate-800 pt-1">
                                 <span className="font-bold text-white">Total Payable</span>
-                                <span className="font-mono font-extrabold text-white text-lg">₦{(amount + amount * 0.015).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                <span className="font-mono font-extrabold text-white text-lg">₦{amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                             </div>
                         </div>
 
