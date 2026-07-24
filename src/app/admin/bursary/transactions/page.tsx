@@ -197,7 +197,7 @@ export default function UnifiedTransactionsPage() {
                                         <td className="px-6 py-4">
                                             {tx.student ? (
                                                 <div className="flex flex-col">
-                                                    <span className="text-sm font-bold text-slate-900">{tx.student.firstName} {tx.student.lastName}</span>
+                                                    <span className="text-sm font-bold text-slate-900">{tx.student.firstName || tx.student.lastName ? `${tx.student.firstName || ''} ${tx.student.lastName || ''}`.trim() : (tx.student as any).name || 'Unknown'}</span>
                                                     <span className="text-[10px] text-slate-400">{tx.student.matricNumber || tx.student.contactEmail || `ID: ${tx.student.id}`}</span>
                                                 </div>
                                             ) : (

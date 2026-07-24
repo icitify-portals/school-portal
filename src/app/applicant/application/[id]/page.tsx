@@ -33,7 +33,7 @@ function FieldError({ error }: { error?: string }) {
     return <p className="text-xs text-rose-600 font-medium px-1 mt-1">{error}</p>;
 }
 
-const ProcessTracker = ({ currentStage }: { currentStage: number }) => {
+const ProcessTracker = ({ currentStage, onStageClick }: { currentStage: number, onStageClick?: (stage: number) => void }) => {
     const stages = [
         { label: "Application Fee" },
         { label: "Processing Fee" },
@@ -44,11 +44,11 @@ const ProcessTracker = ({ currentStage }: { currentStage: number }) => {
         <div className="max-w-4xl mx-auto mt-6 mb-4 px-4">
             <div className="flex items-center justify-between">
                 {stages.map((stage, idx) => (
-                    <div key={idx} className="flex flex-col items-center relative flex-1">
-                        <div className={cn("w-10 h-10 rounded-full flex items-center justify-center z-10 transition-colors shadow-sm", currentStage > idx ? "bg-green-500 text-white" : currentStage === idx ? "bg-[#1a5b3a] text-white ring-4 ring-green-100" : "bg-gray-100 text-gray-400 border border-gray-200")}>
+                    <div key={idx} onClick={() => onStageClick && onStageClick(idx)} className={cn("flex flex-col items-center relative flex-1 group", onStageClick ? "cursor-pointer" : "")}>
+                        <div className={cn("w-10 h-10 rounded-full flex items-center justify-center z-10 transition-all duration-300 shadow-sm", currentStage > idx ? "bg-green-500 text-white" : currentStage === idx ? "bg-[#1a5b3a] text-white ring-4 ring-green-100" : "bg-gray-100 text-gray-400 border border-gray-200", onStageClick && currentStage !== idx ? "group-hover:scale-110 group-hover:bg-gray-200 group-hover:text-gray-700" : "")}>
                             {currentStage > idx ? <Check className="w-5 h-5" /> : <span className="font-bold text-sm">{idx + 1}</span>}
                         </div>
-                        <p className={cn("text-[10px] sm:text-xs font-bold mt-3 uppercase tracking-wider text-center", currentStage === idx ? "text-[#1a5b3a]" : currentStage > idx ? "text-green-600" : "text-gray-400")}>{stage.label}</p>
+                        <p className={cn("text-[10px] sm:text-xs font-bold mt-3 uppercase tracking-wider text-center transition-all duration-300", currentStage === idx ? "text-[#1a5b3a]" : currentStage > idx ? "text-green-600" : "text-gray-400", onStageClick && currentStage !== idx ? "group-hover:text-[#1a5b3a] group-hover:font-black" : "")}>{stage.label}</p>
                         {idx < stages.length - 1 && (
                             <div className={cn("absolute top-5 left-1/2 w-full h-1 -z-10 transition-colors", currentStage > idx ? "bg-green-500" : "bg-gray-100")} />
                         )}
@@ -96,6 +96,7 @@ export default function StatefulApplicationPage() {
     const [templateProgrammes, setTemplateProgrammes] = useState<any[]>([]);
     const [selectedProgrammeId, setSelectedProgrammeId] = useState<number | null>(null);
     const [savingProgramme, setSavingProgramme] = useState(false);
+    const [activeTabStage, setActiveTabStage] = useState<number | null>(null);
 
     useEffect(() => {
         if (status === "authenticated" && session?.user?.id) {
@@ -609,24 +610,20 @@ export default function StatefulApplicationPage() {
 
     const applicationFeeToPay = application.template.calculatedFee || parseFloat(application.template.applicationFee || "0");
     const processingFeeToPay = parseFloat(application.template.processingFee || "0");
+    const maxStage = (() => {
+        if (applicationFeeToPay > 0 && application.paymentStatus !== 'paid') return 0;
+        if (processingFeeToPay > 0 && !application.isProcessingFeePaid) return 1;
+        if (!selectedProgrammeId) return 2;
+        if (application.status === 'submitted' || application.status === 'admitted' || application.status === 'rejected') return 4;
+        return 3;
+    })();
 
-    let currentProcessStage = 0;
-    if (applicationFeeToPay > 0 && application.paymentStatus !== 'paid') {
-        currentProcessStage = 0;
-    } else if (processingFeeToPay > 0 && !application.isProcessingFeePaid) {
-        currentProcessStage = 1;
-    } else if (!selectedProgrammeId) {
-        currentProcessStage = 2;
-    } else if (application.status === 'submitted' || application.status === 'admitted' || application.status === 'rejected') {
-        currentProcessStage = 4;
-    } else {
-        currentProcessStage = 3;
-    }
+    const currentProcessStage = activeTabStage !== null ? activeTabStage : maxStage;
 
-    if (applicationFeeToPay > 0 && application.paymentStatus !== 'paid') {
+    if (currentProcessStage === 0) {
         return (
             <div className="space-y-4">
-                <ProcessTracker currentStage={currentProcessStage} />
+                <ProcessTracker currentStage={currentProcessStage} onStageClick={setActiveTabStage} />
                 <Card className="bg-white max-w-2xl mx-auto mt-4 p-12 text-center space-y-8 rounded-[2rem] shadow-xl border border-rose-100">
                     <div className="w-24 h-24 bg-rose-50 rounded-full flex items-center justify-center mx-auto">
                         <CreditCard className="w-10 h-10 text-rose-600" />
@@ -648,10 +645,10 @@ export default function StatefulApplicationPage() {
         );
     }
 
-    if (processingFeeToPay > 0 && !application.isProcessingFeePaid) {
+    if (currentProcessStage === 1) {
         return (
             <div className="space-y-4">
-                <ProcessTracker currentStage={currentProcessStage} />
+                <ProcessTracker currentStage={currentProcessStage} onStageClick={setActiveTabStage} />
                 <Card className="bg-white max-w-2xl mx-auto mt-4 p-12 text-center space-y-8 rounded-[2rem] shadow-xl border border-rose-100">
                     <div className="w-24 h-24 bg-rose-50 rounded-full flex items-center justify-center mx-auto">
                         <CreditCard className="w-10 h-10 text-rose-600" />
@@ -677,7 +674,7 @@ export default function StatefulApplicationPage() {
 
 
     // Programme Selection Step (after both fees paid)
-    if (!selectedProgrammeId) {
+    if (currentProcessStage === 2) {
         const handleSelectProgramme = async (progId: number) => {
             setSavingProgramme(true);
             try {
@@ -702,7 +699,7 @@ export default function StatefulApplicationPage() {
 
         return (
             <div className="space-y-4">
-                <ProcessTracker currentStage={currentProcessStage} />
+                <ProcessTracker currentStage={currentProcessStage} onStageClick={setActiveTabStage} />
                 <Card className="bg-white max-w-2xl mx-auto mt-4 p-12 text-center space-y-8 rounded-[2rem] shadow-xl border border-indigo-100">
                 <div className="w-24 h-24 bg-indigo-50 rounded-full flex items-center justify-center mx-auto">
                     <GraduationCap className="w-10 h-10 text-indigo-600" />
@@ -787,7 +784,7 @@ export default function StatefulApplicationPage() {
 
     return (
         <div className="max-w-4xl mx-auto space-y-8 pb-12 mt-4">
-            <ProcessTracker currentStage={currentProcessStage} />
+            <ProcessTracker currentStage={currentProcessStage} onStageClick={setActiveTabStage} />
             <div className="flex justify-between items-end px-4 mt-8">
                 <div className="space-y-1">
                     <div className="flex items-center gap-2">
