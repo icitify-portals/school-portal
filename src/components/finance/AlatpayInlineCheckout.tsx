@@ -102,6 +102,9 @@ export function AlatpayInlineCheckout({
         // @ts-ignore
         if (typeof window !== "undefined" && window.Alatpay) {
             try {
+                console.log("ALATPAY DEBUG -> Business ID:", businessId);
+                console.log("ALATPAY DEBUG -> Public/API Key:", apiKey);
+                
                 // @ts-ignore
                 let popup = window.Alatpay.setup({
                     apiKey,
