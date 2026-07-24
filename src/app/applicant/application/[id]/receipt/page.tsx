@@ -53,8 +53,8 @@ export default async function ApplicationReceipt(props: { params: Promise<{ id: 
             <Card className="w-full max-w-2xl border-none shadow-2xl rounded-3xl overflow-hidden print:shadow-none print:rounded-none">
                 <CardContent className="p-0">
                     <div className="bg-slate-900 text-white p-8 md:p-12 text-center print:bg-slate-900 print:text-white print:-webkit-print-color-adjust-exact">
-                        <div className="w-20 h-20 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-6">
-                            <School className="w-10 h-10 text-white" />
+                        <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center mx-auto mb-6 p-2">
+                            <img src="/fss_logo.png" alt="School Logo" className="w-full h-full object-contain" />
                         </div>
                         <h1 className="text-3xl md:text-4xl font-black italic uppercase tracking-tighter">FEDERAL SCHOOL OF STATISTICS, IBADAN</h1>
                         <div className="flex justify-center items-center gap-4 mt-4 text-slate-300 text-xs font-bold uppercase tracking-widest">

@@ -638,12 +638,21 @@ export default function StatefulApplicationPage() {
                             You are required to pay an application fee of ₦{applicationFeeToPay.toLocaleString()} to continue with your application.
                         </p>
                     </div>
-                    <Button 
-                        onClick={handlePayment} disabled={paymentProcessing}
-                        className="w-full bg-rose-600 hover:bg-rose-700 text-white font-bold py-6 rounded-xl uppercase text-sm tracking-widest transition-all shadow-md flex items-center justify-center gap-3"
-                    >
-                        {paymentProcessing ? <Loader2 className="w-5 h-5 animate-spin" /> : <><CreditCard className="w-5 h-5" /> Pay ₦{applicationFeeToPay.toLocaleString()}</>}
-                    </Button>
+                    {application.paymentStatus === 'paid' ? (
+                        <Button 
+                            disabled
+                            className="w-full bg-emerald-600 text-white font-bold py-6 rounded-xl uppercase text-sm tracking-widest flex items-center justify-center gap-3"
+                        >
+                            <CheckCircle2 className="w-5 h-5" /> Fee Paid
+                        </Button>
+                    ) : (
+                        <Button 
+                            onClick={handlePayment} disabled={paymentProcessing}
+                            className="w-full bg-rose-600 hover:bg-rose-700 text-white font-bold py-6 rounded-xl uppercase text-sm tracking-widest transition-all shadow-md flex items-center justify-center gap-3"
+                        >
+                            {paymentProcessing ? <Loader2 className="w-5 h-5 animate-spin" /> : <><CreditCard className="w-5 h-5" /> Pay ₦{applicationFeeToPay.toLocaleString()}</>}
+                        </Button>
+                    )}
                 </Card>
             </div>
         );
@@ -663,12 +672,21 @@ export default function StatefulApplicationPage() {
                             You are required to pay a processing fee of ₦{processingFeeToPay.toLocaleString()} to proceed.
                         </p>
                     </div>
-                    <Button 
-                        onClick={handleProcessingFee} disabled={isGateLoading}
-                        className="w-full bg-rose-600 hover:bg-rose-700 text-white font-bold py-6 rounded-xl uppercase text-sm tracking-widest transition-all shadow-md flex items-center justify-center gap-3"
-                    >
-                        {isGateLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <><CreditCard className="w-5 h-5" /> Pay ₦{processingFeeToPay.toLocaleString()}</>}
-                    </Button>
+                    {application.isProcessingFeePaid ? (
+                        <Button 
+                            disabled
+                            className="w-full bg-emerald-600 text-white font-bold py-6 rounded-xl uppercase text-sm tracking-widest flex items-center justify-center gap-3"
+                        >
+                            <CheckCircle2 className="w-5 h-5" /> Fee Paid
+                        </Button>
+                    ) : (
+                        <Button 
+                            onClick={handleProcessingFee} disabled={isGateLoading}
+                            className="w-full bg-rose-600 hover:bg-rose-700 text-white font-bold py-6 rounded-xl uppercase text-sm tracking-widest transition-all shadow-md flex items-center justify-center gap-3"
+                        >
+                            {isGateLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <><CreditCard className="w-5 h-5" /> Pay ₦{processingFeeToPay.toLocaleString()}</>}
+                        </Button>
+                    )}
                 </Card>
             </div>
         );
