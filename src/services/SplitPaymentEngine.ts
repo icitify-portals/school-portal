@@ -325,14 +325,32 @@ export class AlatpayAdapter implements PaymentGatewayAdapter {
         // For AlatPay, we will handle the 3DS inline checkout on the frontend
         // Determine target Business ID from splits if configured
         let targetBusinessId: string | undefined = undefined;
+        let publicKey: string | undefined = undefined;
         
         // Find the first split that has a gateway subaccount code (assuming it contains the Alatpay Business ID)
         const mainSplit = splits.find(s => s.subaccountCode && !s.isDeveloperAccount);
         if (mainSplit?.subaccountCode) {
             targetBusinessId = mainSplit.subaccountCode;
+
+            // Fetch the mapped public key from the database for this ALATPay business ID
+            try {
+                const mapping = await db.query.gatewaySubaccounts.findFirst({
+                    where: and(
+                        eq(gatewaySubaccounts.gatewayName, 'alatpay'),
+                        eq(gatewaySubaccounts.gatewaySubaccountCode, targetBusinessId)
+                    )
+                });
+                if (mapping && mapping.publicKey) {
+                    publicKey = mapping.publicKey;
+                }
+            } catch (err) {
+                console.error("Failed to query ALATPay public key from database", err);
+            }
         }
 
-        const checkoutUrl = `/finance/checkout/simulate?gateway=alatpay&reference=${txReference}&amount=${totalAmount}${targetBusinessId ? `&businessId=${targetBusinessId}` : ''}`;
+        let checkoutUrl = `/finance/checkout/simulate?gateway=alatpay&reference=${txReference}&amount=${totalAmount}`;
+        if (targetBusinessId) checkoutUrl += `&businessId=${targetBusinessId}`;
+        if (publicKey) checkoutUrl += `&publicKey=${publicKey}`;
 
         return {
             success: true,

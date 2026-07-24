@@ -14,6 +14,7 @@ interface AlatpayInlineCheckoutProps {
     onClose: () => void;
     onError: (error: any) => void;
     targetBusinessId?: string;
+    publicKey?: string;
 }
 
 export function AlatpayInlineCheckout({
@@ -25,7 +26,8 @@ export function AlatpayInlineCheckout({
     onSuccess,
     onClose,
     onError,
-    targetBusinessId
+    targetBusinessId,
+    publicKey
 }: AlatpayInlineCheckoutProps) {
     const [isScriptLoaded, setIsScriptLoaded] = useState(false);
 
@@ -70,6 +72,15 @@ export function AlatpayInlineCheckout({
     }, []);
 
     const getBusinessCredentials = (reqBusinessId?: string) => {
+        // If the backend securely resolved a public key for us from the database, use it immediately! (Global Best Practice)
+        if (publicKey) {
+            return {
+                businessId: reqBusinessId || process.env.NEXT_PUBLIC_ALATPAY_BUSINESS_ID_MAIN || '',
+                apiKey: publicKey
+            };
+        }
+
+        // Fallback to legacy .env strategy for backwards compatibility
         const config: Record<string, string | undefined> = {
             [process.env.NEXT_PUBLIC_ALATPAY_BUSINESS_ID_MAIN || '']: process.env.NEXT_PUBLIC_ALATPAY_API_KEY_MAIN,
             [process.env.NEXT_PUBLIC_ALATPAY_BUSINESS_ID_ELEARNING || '']: process.env.NEXT_PUBLIC_ALATPAY_API_KEY_ELEARNING,
@@ -78,10 +89,11 @@ export function AlatpayInlineCheckout({
             [process.env.NEXT_PUBLIC_ALATPAY_BUSINESS_ID_ICT || '']: process.env.NEXT_PUBLIC_ALATPAY_API_KEY_ICT,
         };
 
-        const resolvedId = reqBusinessId || process.env.NEXT_PUBLIC_ALATPAY_BUSINESS_ID_MAIN || "DEMO_BUSINESS_ID";
-        const resolvedKey = config[resolvedId] || process.env.NEXT_PUBLIC_ALATPAY_API_KEY_MAIN || "DEMO_API_KEY";
-
-        return { businessId: resolvedId, apiKey: resolvedKey };
+        const resolvedBusinessId = reqBusinessId || process.env.NEXT_PUBLIC_ALATPAY_BUSINESS_ID_MAIN || '';
+        return {
+            businessId: resolvedBusinessId,
+            apiKey: config[resolvedBusinessId] || process.env.NEXT_PUBLIC_ALATPAY_API_KEY_MAIN || "DEMO_API_KEY"
+        };
     };
 
     const { businessId, apiKey } = getBusinessCredentials(targetBusinessId);

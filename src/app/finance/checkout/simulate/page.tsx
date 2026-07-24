@@ -29,6 +29,7 @@ function CheckoutSimulatorContent() {
     const amountStr = searchParams.get("amount") || "0";
     const rrr = searchParams.get("rrr") || "";
     const targetBusinessId = searchParams.get("businessId") || undefined;
+    const publicKey = searchParams.get("publicKey") || undefined;
     const payerEmail = searchParams.get("email") || "student@school.edu";
     const payerFirstName = searchParams.get("firstName") || "Student";
     const payerLastName = searchParams.get("lastName") || "Payer";
@@ -309,6 +310,7 @@ function CheckoutSimulatorContent() {
                                         firstName={payerFirstName}
                                         lastName={payerLastName}
                                         targetBusinessId={targetBusinessId}
+                                        publicKey={publicKey}
                                         onSuccess={() => handleSimulate('completed')} 
                                         onClose={() => setStatus('idle')}
                                         onError={(e) => {
