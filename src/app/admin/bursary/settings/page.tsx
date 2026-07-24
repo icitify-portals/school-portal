@@ -527,6 +527,25 @@ export default function BursarySettingsPage() {
                             </div>
                         </div>
 
+                        {/* Gateway-Specific Configurations */}
+                        {settings['gateway_paystack_active'] === "true" && (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-indigo-50/50 rounded-xl border border-indigo-100">
+                                <div className="space-y-2">
+                                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider text-indigo-700">Paystack Admin Fee (₦)</label>
+                                    <div className="flex items-center gap-2 mt-2">
+                                        <input
+                                            type="number"
+                                            className="w-full px-4 py-2 rounded-lg border border-indigo-200 h-11 text-sm focus:ring-2 focus:ring-indigo-500 bg-white"
+                                            defaultValue={settings['paystack_flat_fee'] || "100"}
+                                            onBlur={(e) => handleSave('paystack_flat_fee', e.target.value)}
+                                            placeholder="e.g. 100"
+                                        />
+                                    </div>
+                                    <p className="text-xs text-slate-500 mt-1">Flat administrative fee applied on top of the 1.5% percentage.</p>
+                                </div>
+                            </div>
+                        )}
+
                         {/* Installment Payment Rules */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-white rounded-xl border border-slate-200">
                             <div className="space-y-2">

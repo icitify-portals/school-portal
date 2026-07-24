@@ -381,6 +381,10 @@ export default function StatefulApplicationPage() {
                     return String(sourceValue).toLowerCase().includes(String(targetValue).toLowerCase());
                 case 'notEmpty':
                     return sourceValue !== undefined && sourceValue !== null && String(sourceValue).trim() !== '';
+                case 'lessThan':
+                    return Number(sourceValue) < Number(targetValue);
+                case 'greaterThan':
+                    return Number(sourceValue) > Number(targetValue);
                 default:
                     return true;
             }

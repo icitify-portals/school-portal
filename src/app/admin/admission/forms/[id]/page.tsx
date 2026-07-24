@@ -1409,6 +1409,8 @@ export default function AdmissionFormBuilder() {
                                                                     <option value="equals">Equals</option>
                                                                     <option value="notEquals">Not Equals</option>
                                                                     <option value="contains">Contains</option>
+                                                                    <option value="lessThan">Less Than (&lt;)</option>
+                                                                    <option value="greaterThan">Greater Than (&gt;)</option>
                                                                     <option value="notEmpty">Is Not Empty</option>
                                                                 </select>
                                                             </div>

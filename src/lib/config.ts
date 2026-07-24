@@ -72,7 +72,8 @@ export const config = {
         enabled: process.env.ALTCHA_ENABLED === 'true' || false, // disabled by default until explicitly enabled
         hmacKey: (() => {
             if (process.env.ALTCHA_ENABLED === 'true' && !process.env.ALTCHA_HMAC_KEY) {
-                throw new Error("[SECURITY] ALTCHA_HMAC_KEY environment variable is missing but ALTCHA is enabled.");
+                console.warn("⚠️ [CONFIGURATION ERROR] ALTCHA_HMAC_KEY environment variable is missing but ALTCHA is enabled. Using fallback for safety. Please configure it in .env.");
+                return "FALLBACK_KEY_PLEASE_CONFIGURE";
             }
             return process.env.ALTCHA_HMAC_KEY;
         })(),

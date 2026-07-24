@@ -291,10 +291,35 @@ export default function FormPreviewPage() {
             .catch(() => {});
     }, [formNumber]);
 
-    const evaluateCondition = (field: any) => {
-        if (!field.conditionalVisibility?.enabled) return true;
-        const depValue = formData[field.conditionalVisibility.dependsOn];
-        return field.conditionalVisibility.values?.includes(depValue);
+    const evaluateCondition = (field: any): boolean => {
+        if (!field.conditionalLogic) return true;
+        
+        try {
+            const logic = typeof field.conditionalLogic === 'string' ? JSON.parse(field.conditionalLogic) : field.conditionalLogic;
+            if (!logic.enabled || !logic.sourceField) return true;
+
+            const sourceValue = formData[logic.sourceField];
+            const targetValue = logic.value;
+
+            switch (logic.operator) {
+                case 'equals':
+                    return String(sourceValue).toLowerCase() === String(targetValue).toLowerCase();
+                case 'notEquals':
+                    return String(sourceValue).toLowerCase() !== String(targetValue).toLowerCase();
+                case 'contains':
+                    return String(sourceValue).toLowerCase().includes(String(targetValue).toLowerCase());
+                case 'notEmpty':
+                    return sourceValue !== undefined && sourceValue !== null && String(sourceValue).trim() !== '';
+                case 'lessThan':
+                    return Number(sourceValue) < Number(targetValue);
+                case 'greaterThan':
+                    return Number(sourceValue) > Number(targetValue);
+                default:
+                    return true;
+            }
+        } catch {
+            return true;
+        }
     };
 
     const validateSection = () => {

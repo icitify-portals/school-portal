@@ -17,6 +17,7 @@ import {
 import {
     getFeeItems,
     createFeeItem,
+    updateFeeItem,
     deleteFeeItem,
     bulkDeleteFeeItems,
     bulkDeleteFeeStructures,
@@ -72,6 +73,13 @@ export default function FeesPage() {
     const [itemRequired, setItemRequired] = useState(true);
     const [itemCurrency, setItemCurrency] = useState("NGN");
 
+    // Fee Item Edit State
+    const [editingFeeItemId, setEditingFeeItemId] = useState<number | null>(null);
+    const [editItemName, setEditItemName] = useState("");
+    const [editItemDesc, setEditItemDesc] = useState("");
+    const [editItemRequired, setEditItemRequired] = useState(true);
+    const [editItemCurrency, setEditItemCurrency] = useState("NGN");
+
     // Fee Structure Form State
     const [structName, setStructName] = useState("");
     const [structYear, setStructYear] = useState("2024/2025");
@@ -108,6 +116,31 @@ export default function FeesPage() {
             setItemDesc("");
             setIsAdding(false);
             fetchData();
+        }
+    };
+
+    const handleEditItemClick = (item: any) => {
+        setEditingFeeItemId(item.id);
+        setEditItemName(item.name);
+        setEditItemDesc(item.description || "");
+        setEditItemRequired(item.isRequired);
+        setEditItemCurrency(item.currency || "NGN");
+    };
+
+    const handleUpdateItem = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!editingFeeItemId) return;
+        const res = await updateFeeItem(editingFeeItemId, {
+            name: editItemName,
+            description: editItemDesc,
+            isRequired: editItemRequired,
+            currency: editItemCurrency
+        });
+        if (res.success) {
+            setEditingFeeItemId(null);
+            fetchData();
+        } else {
+            alert(res.error || "Failed to update item");
         }
     };
 
@@ -406,11 +439,12 @@ export default function FeesPage() {
                                         value={structLevel}
                                         onChange={(e) => setStructLevel(e.target.value)}
                                     >
-                                        <option value="100">ND 1 (100)</option>
-                                        <option value="200">ND 2 (200)</option>
-                                        <option value="300">HND 1 (300)</option>
-                                        <option value="400">HND 2 (400)</option>
-                                        <option value="500">500 Level</option>
+                                        <option value="0">Applicant</option>
+                                        <option value="100">ND 1</option>
+                                        <option value="200">ND 2</option>
+                                        <option value="300">HND 1</option>
+                                        <option value="400">HND 2</option>
+                                        <option value="500">Graduated</option>
                                     </select>
                                 </div>
                             </div>
@@ -498,11 +532,12 @@ export default function FeesPage() {
                                         value={structLevel}
                                         onChange={(e) => setStructLevel(e.target.value)}
                                     >
-                                        <option value="100">ND 1 (100)</option>
-                                        <option value="200">ND 2 (200)</option>
-                                        <option value="300">HND 1 (300)</option>
-                                        <option value="400">HND 2 (400)</option>
-                                        <option value="500">500 Level</option>
+                                        <option value="0">Applicant</option>
+                                        <option value="100">ND 1</option>
+                                        <option value="200">ND 2</option>
+                                        <option value="300">HND 1</option>
+                                        <option value="400">HND 2</option>
+                                        <option value="500">Graduated</option>
                                     </select>
                                 </div>
                             </div>
@@ -679,25 +714,60 @@ export default function FeesPage() {
                             feeItemsList.length === 0 ? (
                                 <tr><td colSpan={6} className="px-6 py-10 text-center text-slate-500">No items found.</td></tr>
                             ) : feeItemsList.map(item => (
-                                <tr key={item.id} className={cn("hover:bg-slate-50/50 transition-colors", selectedIds.has(item.id) && "bg-indigo-50/50")}>
-                                    <td className="px-6 py-4">
-                                        <input type="checkbox"
-                                            className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
-                                            checked={selectedIds.has(item.id)}
-                                            onChange={() => toggleSelect(item.id)} />
-                                    </td>
-                                    <td className="px-6 py-4 text-sm font-mono text-slate-400">#{item.id}</td>
-                                    <td className="px-6 py-4 text-sm font-bold text-slate-700">{item.name}</td>
-                                    <td className="px-6 py-4 text-sm text-slate-500">{item.currency || 'NGN'}</td>
-                                    <td className="px-6 py-4">
-                                        <span className={cn("px-2 py-1 rounded-full text-[10px] font-bold uppercase", item.isRequired ? "bg-green-50 text-green-600" : "bg-slate-100 text-slate-500")}>
-                                            {item.isRequired ? "Yes" : "No"}
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-4 text-right">
-                                        <button onClick={() => handleDeleteItem(item.id)} className="p-2 text-slate-400 hover:text-red-500"><Trash2 className="w-4 h-4" /></button>
-                                    </td>
-                                </tr>
+                                <React.Fragment key={item.id}>
+                                    {editingFeeItemId === item.id ? (
+                                        <tr className="bg-indigo-50/50">
+                                            <td colSpan={6} className="px-6 py-4">
+                                                <form onSubmit={handleUpdateItem} className="grid grid-cols-1 md:grid-cols-5 gap-4 bg-white p-4 rounded-xl border border-indigo-100 shadow-sm">
+                                                    <div className="space-y-1 col-span-2">
+                                                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Fee Name</label>
+                                                        <input required type="text" className="w-full px-3 py-2 text-sm rounded-lg border border-slate-200" value={editItemName} onChange={(e) => setEditItemName(e.target.value)} />
+                                                    </div>
+                                                    <div className="space-y-1 col-span-2">
+                                                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Description (Optional)</label>
+                                                        <input type="text" className="w-full px-3 py-2 text-sm rounded-lg border border-slate-200" value={editItemDesc} onChange={(e) => setEditItemDesc(e.target.value)} />
+                                                    </div>
+                                                    <div className="space-y-1">
+                                                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Currency</label>
+                                                        <select className="w-full px-3 py-2 text-sm rounded-lg border border-slate-200" value={editItemCurrency} onChange={(e) => setEditItemCurrency(e.target.value)}>
+                                                            <option value="NGN">NGN (₦)</option>
+                                                            <option value="USD">USD ($)</option>
+                                                        </select>
+                                                    </div>
+                                                    <div className="flex items-center gap-2 col-span-5">
+                                                        <input type="checkbox" className="w-4 h-4 rounded border-slate-300 text-indigo-600" checked={editItemRequired} onChange={(e) => setEditItemRequired(e.target.checked)} />
+                                                        <span className="text-sm font-bold text-slate-700">Mandatory Item (Required for all students)</span>
+                                                    </div>
+                                                    <div className="col-span-5 flex gap-2 justify-end mt-2">
+                                                        <Button type="button" variant="ghost" onClick={() => setEditingFeeItemId(null)}>Cancel</Button>
+                                                        <Button type="submit" className="bg-indigo-600">Save Changes</Button>
+                                                    </div>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                    ) : (
+                                        <tr className={cn("hover:bg-slate-50/50 transition-colors", selectedIds.has(item.id) && "bg-indigo-50/50")}>
+                                            <td className="px-6 py-4">
+                                                <input type="checkbox"
+                                                    className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                                                    checked={selectedIds.has(item.id)}
+                                                    onChange={() => toggleSelect(item.id)} />
+                                            </td>
+                                            <td className="px-6 py-4 text-sm font-mono text-slate-400">#{item.id}</td>
+                                            <td className="px-6 py-4 text-sm font-bold text-slate-700">{item.name}</td>
+                                            <td className="px-6 py-4 text-sm text-slate-500">{item.currency || 'NGN'}</td>
+                                            <td className="px-6 py-4">
+                                                <span className={cn("px-2 py-1 rounded-full text-[10px] font-bold uppercase", item.isRequired ? "bg-green-50 text-green-600" : "bg-slate-100 text-slate-500")}>
+                                                    {item.isRequired ? "Yes" : "No"}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4 text-right">
+                                                <Button variant="ghost" onClick={() => handleEditItemClick(item)} className="p-2 text-slate-400 hover:text-indigo-600 mr-2 h-8">Edit</Button>
+                                                <button onClick={() => handleDeleteItem(item.id)} className="p-2 text-slate-400 hover:text-red-500"><Trash2 className="w-4 h-4" /></button>
+                                            </td>
+                                        </tr>
+                                    )}
+                                </React.Fragment>
                             ))
                         ) : (
                             feeStructuresList.length === 0 ? (
@@ -720,7 +790,9 @@ export default function FeesPage() {
                                         </div>
                                     </td>
                                     <td className="px-6 py-4 text-sm text-slate-500">{s.academicYear}</td>
-                                    <td className="px-6 py-4 text-sm text-slate-500">{s.level} Level</td>
+                                    <td className="px-6 py-4 text-sm text-slate-500">
+                                        {s.level === 0 ? "Applicant" : s.level === 100 ? "ND 1" : s.level === 200 ? "ND 2" : s.level === 300 ? "HND 1" : s.level === 400 ? "HND 2" : s.level === 500 ? "Graduated" : `${s.level} Level`}
+                                    </td>
                                     <td className="px-6 py-4 text-sm text-slate-500 font-medium">
                                         {s.items?.length || 0} Fees
                                         <br/>

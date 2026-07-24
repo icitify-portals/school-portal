@@ -106,6 +106,24 @@ export async function createFeeItem(data: any) {
     }
 }
 
+export async function updateFeeItem(id: number, data: any) {
+    try {
+        await db.update(feeItems)
+            .set({
+                name: data.name,
+                description: data.description,
+                isRequired: data.isRequired,
+                currency: data.currency
+            })
+            .where(eq(feeItems.id, id));
+        revalidatePath("/admin/bursary/fees");
+        return { success: true };
+    } catch (error) {
+        console.error("Failed to update fee item:", error);
+        return { success: false, error: "Failed to update fee item" };
+    }
+}
+
 export async function deleteFeeItem(id: number) {
     try {
         await db.delete(feeStructureItems).where(eq(feeStructureItems.feeItemId, id));

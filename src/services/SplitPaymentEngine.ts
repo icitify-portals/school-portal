@@ -366,10 +366,12 @@ export class AlatpayAdapter implements PaymentGatewayAdapter {
 export class SplitPaymentEngine {
     
     // Calculates dynamic gateway processing fee based on rule & amount
-    static calculateGatewayFee(amount: number, gateway: string): number {
+    static calculateGatewayFee(amount: number, gateway: string, settings?: Record<string, string>): number {
         if (gateway === 'paystack') {
-            // Paystack Local: 1.5% + ₦100 (capped at ₦2000), ₦100 fee is waived for transactions under ₦2500
-            const fee = (amount * 0.015) + (amount >= 2500 ? 100 : 0);
+            const flatFeeStr = settings ? settings['paystack_flat_fee'] : undefined;
+            const flatFee = flatFeeStr !== undefined && flatFeeStr !== '' ? parseFloat(flatFeeStr) : 100;
+            // Paystack Local: 1.5% + Configurable Flat Fee (capped at ₦2000), Flat fee is waived for transactions under ₦2500
+            const fee = (amount * 0.015) + (amount >= 2500 ? flatFee : 0);
             return Math.min(2000, fee);
         }
         if (gateway === 'flutterwave') {
@@ -565,7 +567,7 @@ export class SplitPaymentEngine {
         }
 
         // 5. Calculate and Apply Gateway Bearer rules
-        const baseGatewayFee = this.calculateGatewayFee(selectedAmount, activeGateway);
+        const baseGatewayFee = this.calculateGatewayFee(selectedAmount, activeGateway, settings);
         let checkoutTotal = selectedAmount;
 
         console.log(`Fee Bearer Setting: ${feeBearerRule}. Calculated Base Gateway Fee: ₦${baseGatewayFee}`);
@@ -743,7 +745,7 @@ export class SplitPaymentEngine {
         }
 
         // @ts-expect-error - TS2576: Auto-suppressed for build
-        const baseGatewayFee = SplitPaymentEngine.calculateGatewayFee(billTotal, activeGateway);
+        const baseGatewayFee = SplitPaymentEngine.calculateGatewayFee(billTotal, activeGateway, settings);
         let checkoutTotal = billTotal;
 
         if (feeBearerRule === 'student') checkoutTotal += baseGatewayFee;
@@ -790,7 +792,7 @@ export class SplitPaymentEngine {
             txRef,
             splits,
             feeBearerRule,
-            { studentLevel: "ND 1", payerName: applicantName, payerPhone: applicantUser?.phone }
+            { studentLevel: "Applicant", payerName: applicantName, payerPhone: applicantUser?.phone }
         );
         
         if (result.rrr) {
