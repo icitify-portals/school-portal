@@ -38,7 +38,7 @@ export function generateFormHash(
     return crypto.createHash("sha256").update(payload).digest("hex").substring(0, 16).toUpperCase();
 }
 
-export async function checkAndGenerateFormNumber(applicationId: number, transactionDb: any = db): Promise<void> {
+export async function checkAndGenerateFormNumber(applicationId: number, transactionDb: any = db): Promise<{ success: boolean; formNumber?: string }> {
     const { admissionFormTemplates } = await import('@/db/schema');
     const [app] = await transactionDb.select({
         id: admissionApplicationsV2.id,
@@ -55,7 +55,7 @@ export async function checkAndGenerateFormNumber(applicationId: number, transact
       .where(eq(admissionApplicationsV2.id, applicationId))
       .limit(1);
 
-    if (!app) return;
+    if (!app) return { success: false };
 
     // Determine if fully paid
     const isAppFeePaid = app.template.applicationFee === '0.00' || app.paymentStatus === 'paid';
@@ -66,5 +66,8 @@ export async function checkAndGenerateFormNumber(applicationId: number, transact
         await transactionDb.update(admissionApplicationsV2)
             .set({ formNumber: newFormNumber })
             .where(eq(admissionApplicationsV2.id, applicationId));
+        return { success: true, formNumber: newFormNumber };
     }
+    
+    return { success: !!app.formNumber, formNumber: app.formNumber || undefined };
 }
