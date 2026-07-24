@@ -24,19 +24,19 @@ const securityHeaders = [
     value: [
       "default-src 'self'",
       // Allow inline scripts (required for Next.js hydration and DevTools)
-      "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://js.paystack.co https://remitademo.net https://demo.remita.net https://login.remita.net https://www.googletagmanager.com https://web.alatpay.ng",
+      "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://js.paystack.co https://remitademo.net https://demo.remita.net https://login.remita.net https://www.googletagmanager.com https://web.alatpay.ng https://apibox.alatpay.ng https://*.alatpay.ng",
       // Styles: inline allowed (required for Tailwind / template CSS injection)
-      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://paystack.com https://js.paystack.co https://web.alatpay.ng",
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://paystack.com https://js.paystack.co https://web.alatpay.ng https://apibox.alatpay.ng https://*.alatpay.ng",
       // Fonts
       "font-src 'self' https://fonts.gstatic.com data:",
       // Images: allow self, data URIs, and common external image hosts
-      "img-src 'self' data: blob: https://images.unsplash.com https://*.unsplash.com https://cloudflare-ipfs.com https://*.wasabisys.com https://s3.eu-west-1.wasabisys.com https://*.s3.eu-west-1.wasabisys.com https://fssibadan.edu.ng https://*.fssibadan.edu.ng https://portal.fssibadan.edu.ng https://web.alatpay.ng",
+      "img-src 'self' data: blob: https://images.unsplash.com https://*.unsplash.com https://cloudflare-ipfs.com https://*.wasabisys.com https://s3.eu-west-1.wasabisys.com https://*.s3.eu-west-1.wasabisys.com https://fssibadan.edu.ng https://*.fssibadan.edu.ng https://portal.fssibadan.edu.ng https://web.alatpay.ng https://apibox.alatpay.ng https://*.alatpay.ng",
       // Media (video/audio)
       "media-src 'self' blob:",
       // API + WebSocket connections
-      "connect-src 'self' wss: ws: https://api.paystack.co https://api.flutterwave.com https://*.livekit.cloud https://remitademo.net https://demo.remita.net https://login.remita.net https://www.google-analytics.com https://web.alatpay.ng https://openapi.wemaonline.com",
+      "connect-src 'self' wss: ws: https://api.paystack.co https://api.flutterwave.com https://*.livekit.cloud https://remitademo.net https://demo.remita.net https://login.remita.net https://www.google-analytics.com https://web.alatpay.ng https://apibox.alatpay.ng https://openapi.wemaonline.com https://*.alatpay.ng",
       // Frames: disallow all (iframes used only for PDFs via object src) except Remita/Paystack/AlatPay checkout iframes
-      "frame-src 'self' https://remitademo.net https://demo.remita.net https://login.remita.net https://checkout.paystack.com https://web.alatpay.ng",
+      "frame-src 'self' https://remitademo.net https://demo.remita.net https://login.remita.net https://checkout.paystack.com https://web.alatpay.ng https://apibox.alatpay.ng https://*.alatpay.ng",
       // Objects (PDF iframe fallback)
       "object-src 'none'",
       // Form submissions only to self
