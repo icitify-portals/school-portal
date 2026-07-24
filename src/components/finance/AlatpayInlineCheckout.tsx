@@ -37,23 +37,35 @@ export function AlatpayInlineCheckout({
             return;
         }
 
-        const script = document.createElement("script");
-        script.src = "https://web.alatpay.ng/js/alatpay.js";
-        script.async = true;
-        script.onload = () => {
-            setIsScriptLoaded(true);
-            console.log("ALATPay Script Loaded Successfully");
-        };
-        script.onerror = () => {
-            console.error("Failed to load ALATPay script");
-        };
-        document.body.appendChild(script);
+        // Poll for Alatpay object in case onload fails or script was injected by another component
+        const interval = setInterval(() => {
+            // @ts-ignore
+            if (typeof window !== "undefined" && window.Alatpay) {
+                setIsScriptLoaded(true);
+                clearInterval(interval);
+            }
+        }, 500);
+
+        // Check if script tag already exists to prevent duplicate injections
+        const existingScript = document.querySelector('script[src="https://web.alatpay.ng/js/alatpay.js"]');
+        if (!existingScript) {
+            const script = document.createElement("script");
+            script.src = "https://web.alatpay.ng/js/alatpay.js";
+            script.async = true;
+            script.onload = () => {
+                setIsScriptLoaded(true);
+                clearInterval(interval);
+                console.log("ALATPay Script Loaded Successfully");
+            };
+            script.onerror = () => {
+                console.error("Failed to load ALATPay script");
+                clearInterval(interval);
+            };
+            document.head.appendChild(script);
+        }
 
         return () => {
-            if (document.body.contains(script)) {
-                // We typically don't remove payment scripts on unmount to avoid reloading,
-                // but if needed we could do document.body.removeChild(script);
-            }
+            clearInterval(interval);
         };
     }, []);
 
