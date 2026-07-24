@@ -2576,7 +2576,11 @@ export async function resolveOnlinePaymentAction(reference: string, status: 'com
                 if (!isNaN(applicationId)) {
                     const { admissionApplicationsV2, users } = await import('@/db/schema');
                     await tx.update(admissionApplicationsV2)
-                        .set({ paymentStatus: 'paid' })
+                        .set({ 
+                            paymentStatus: 'paid',
+                            processingFeeStatus: 'paid',
+                            processingFeeReference: reference
+                        })
                         .where(eq(admissionApplicationsV2.id, applicationId));
                     
                     const { checkAndGenerateFormNumber } = await import('@/lib/form-number');

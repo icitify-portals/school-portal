@@ -20,7 +20,7 @@ function validateFile(buffer: Buffer): boolean {
     const hex = buffer.toString('hex', 0, 4).toUpperCase();
     const allowed = [
         '89504E47', // PNG
-        'FFD8FFDB', 'FFD8FFE0', 'FFD8FFEE', 'FFD8FFE1', // JPEG
+        'FFD8FF', // JPEG (Any variant: FFE0, FFE1, FFE2, FFDB, etc.)
         '25504446', // PDF
         '504B0304', // ZIP / DOCX / XLSX
         'D0CF11E0', // Legacy DOC / XLS

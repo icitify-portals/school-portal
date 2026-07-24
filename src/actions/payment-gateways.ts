@@ -160,8 +160,12 @@ export async function verifyPayment(gateway: string, reference: string, rrr?: st
         const settings = await getBursarySettings();
 
         const dbSecretKey = settings[`gateway_${gateway}_key`];
-        const secretKey = dbSecretKey || process.env[`${def.envPrefix}_SECRET_KEY`] || process.env[`${def.envPrefix}_API_KEY`];
+        let secretKey = dbSecretKey || process.env[`${def.envPrefix}_SECRET_KEY`] || process.env[`${def.envPrefix}_API_KEY`];
         
+        if (!secretKey && gateway === 'alatpay') {
+            secretKey = process.env.ALATPAY_SECRET_KEY_MAIN;
+        }
+
         if (!secretKey) return { error: `${def.name} not configured` };
 
         let verified = false;
