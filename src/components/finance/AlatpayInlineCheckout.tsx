@@ -100,8 +100,8 @@ export function AlatpayInlineCheckout({
     
     // Log immediately when the component renders so it's easy to see
     if (typeof window !== "undefined") {
-        console.log("ALATPAY DEBUG -> Business ID:", businessId);
-        console.log("ALATPAY DEBUG -> Public/API Key:", apiKey);
+        console.log("ALATPAY DEBUG -> Business ID:" + businessId);
+        console.log("ALATPAY DEBUG -> public key:" + apiKey);
     }
 
     const makePayment = () => {
