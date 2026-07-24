@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useEffect } from "react";
-import Script from "next/script";
+import React, { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { Loader2 } from "lucide-react";
 
 interface AlatpayInlineCheckoutProps {
     reference: string;
@@ -27,6 +27,36 @@ export function AlatpayInlineCheckout({
     onError,
     targetBusinessId
 }: AlatpayInlineCheckoutProps) {
+    const [isScriptLoaded, setIsScriptLoaded] = useState(false);
+
+    useEffect(() => {
+        // Check if already loaded
+        // @ts-ignore
+        if (typeof window !== "undefined" && window.Alatpay) {
+            setIsScriptLoaded(true);
+            return;
+        }
+
+        const script = document.createElement("script");
+        script.src = "https://web.alatpay.ng/js/alatpay.js";
+        script.async = true;
+        script.onload = () => {
+            setIsScriptLoaded(true);
+            console.log("ALATPay Script Loaded Successfully");
+        };
+        script.onerror = () => {
+            console.error("Failed to load ALATPay script");
+        };
+        document.body.appendChild(script);
+
+        return () => {
+            if (document.body.contains(script)) {
+                // We typically don't remove payment scripts on unmount to avoid reloading,
+                // but if needed we could do document.body.removeChild(script);
+            }
+        };
+    }, []);
+
     const getBusinessCredentials = (reqBusinessId?: string) => {
         const config: Record<string, string | undefined> = {
             [process.env.NEXT_PUBLIC_ALATPAY_BUSINESS_ID_MAIN || '']: process.env.NEXT_PUBLIC_ALATPAY_API_KEY_MAIN,
@@ -82,21 +112,26 @@ export function AlatpayInlineCheckout({
     };
 
     return (
-        <>
-            <Script 
-                src="https://web.alatpay.ng/js/alatpay.js" 
-                strategy="beforeInteractive"
-                onLoad={() => {
-                    console.log("ALATPay Script Loaded");
-                }}
-            />
-            <button
-                onClick={makePayment}
-                className="w-full py-4 rounded-xl bg-[#8A2132] hover:bg-[#6c1a27] text-white font-black text-lg transition-all shadow-xl shadow-[#8A2132]/30 flex items-center justify-center gap-2"
-            >
-                <img src="https://alat.ng/wp-content/uploads/2021/04/alat-logo-white.svg" className="h-6" alt="ALATPay Logo" />
-                Pay ₦{amount.toLocaleString()} with ALATPay
-            </button>
-        </>
+        <button
+            onClick={makePayment}
+            disabled={!isScriptLoaded}
+            className={`w-full py-4 rounded-xl font-black text-lg transition-all shadow-xl flex items-center justify-center gap-2 ${
+                isScriptLoaded 
+                ? "bg-[#8A2132] hover:bg-[#6c1a27] text-white shadow-[#8A2132]/30" 
+                : "bg-slate-200 text-slate-400 cursor-not-allowed shadow-none"
+            }`}
+        >
+            {isScriptLoaded ? (
+                <>
+                    <span className="font-extrabold tracking-widest text-white mr-1">ALATPay</span>
+                    Pay ₦{amount.toLocaleString()}
+                </>
+            ) : (
+                <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Connecting...
+                </>
+            )}
+        </button>
     );
 }
