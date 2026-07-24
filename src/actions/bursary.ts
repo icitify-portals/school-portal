@@ -2758,6 +2758,28 @@ export async function createGatewaySubaccountAction(data: {
     }
 }
 
+export async function getAllGatewaySubaccountsAction() {
+    try {
+        await ensureBursaryStaff();
+        return await db.select().from(gatewaySubaccounts);
+    } catch (error) {
+        console.error("Failed to fetch all gateway subaccounts:", error);
+        return [];
+    }
+}
+
+export async function deleteGatewaySubaccountAction(mappingId: number) {
+    try {
+        await ensureBursaryStaff();
+        await db.delete(gatewaySubaccounts).where(eq(gatewaySubaccounts.id, mappingId));
+        revalidatePath("/admin/bursary/settings");
+        return { success: true };
+    } catch (error) {
+        console.error("Failed to delete gateway mapping:", error);
+        return { success: false, error: (error as Error).message };
+    }
+}
+
 export async function linkFeeItemToSettlementAccount(feeItemId: number, settlementAccountId: number | null) {
     try {
         await ensureBursaryStaff();

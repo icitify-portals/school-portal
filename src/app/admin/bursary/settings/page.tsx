@@ -28,7 +28,9 @@ import {
     getFeeItemsWithSettlement, 
     linkFeeItemToSettlementAccount,
     createGatewaySubaccountAction,
-    deleteSettlementAccount
+    deleteSettlementAccount,
+    getAllGatewaySubaccountsAction,
+    deleteGatewaySubaccountAction
 } from "@/actions/bursary";
 import { getCOA } from "@/actions/accounting";
 import { cn } from "@/lib/utils";
@@ -50,6 +52,13 @@ interface SettlementAccount {
     isActive: boolean | null;
 }
 
+interface GatewayMapping {
+    id: number;
+    settlementAccountId: number | null;
+    gatewayName: 'paystack' | 'flutterwave' | 'remita' | 'alatpay';
+    gatewaySubaccountCode: string;
+}
+
 interface FeeItem {
     id: number;
     name: string;
@@ -66,6 +75,7 @@ export default function BursarySettingsPage() {
     const [settings, setSettings] = useState<Record<string, string>>({});
     const [accounts, setAccounts] = useState<GLAccount[]>([]);
     const [settlements, setSettlements] = useState<SettlementAccount[]>([]);
+    const [mappings, setMappings] = useState<GatewayMapping[]>([]);
     const [feeItemsList, setFeeItemsList] = useState<FeeItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [showApiKey, setShowApiKey] = useState<Record<string, boolean>>({});
@@ -89,15 +99,17 @@ export default function BursarySettingsPage() {
 
     const fetchData = async () => {
         try {
-            const [settingsData, coaData, settlementsData, feeItemsData] = await Promise.all([
+            const [settingsData, coaData, settlementsData, feeItemsData, mappingsData] = await Promise.all([
                 getBursarySettings(),
                 getCOA(),
                 getSettlementAccounts(),
-                getFeeItemsWithSettlement()
+                getFeeItemsWithSettlement(),
+                getAllGatewaySubaccountsAction()
             ]);
             setSettings(settingsData);
             setAccounts(coaData);
             setSettlements(settlementsData);
+            setMappings(mappingsData as GatewayMapping[]);
             // @ts-expect-error - TS2345: Auto-suppressed for build
             setFeeItemsList(feeItemsData);
         } catch (error) {
@@ -187,16 +199,31 @@ export default function BursarySettingsPage() {
                 toast.success("Gateway subaccount mapping registered.");
                 setMappingCode("");
                 setMappingAcctId(null);
-                // Refresh
-                fetchData();
+                const freshMappings = await getAllGatewaySubaccountsAction();
+                setMappings(freshMappings as GatewayMapping[]);
             } else {
-                toast.error(res.error || "Failed to map subaccount.");
+                toast.error(res.error || "Failed to create mapping.");
             }
         } catch (error) {
-            const err = error as Error;
-            toast.error(err.message || "Failed to map subaccount.");
+            toast.error("An error occurred.");
         } finally {
             setMappingLoading(false);
+        }
+    };
+
+    const handleDeleteMapping = async (id: number) => {
+        if (!confirm("Are you sure you want to delete this gateway mapping?")) return;
+        try {
+            const res = await deleteGatewaySubaccountAction(id);
+            if (res.success) {
+                toast.success("Gateway mapping deleted.");
+                const freshMappings = await getAllGatewaySubaccountsAction();
+                setMappings(freshMappings as GatewayMapping[]);
+            } else {
+                toast.error(res.error || "Failed to delete mapping.");
+            }
+        } catch (error) {
+            toast.error("An error occurred.");
         }
     };
 
@@ -594,6 +621,27 @@ export default function BursarySettingsPage() {
                                             Active
                                         </Badge>
                                     </div>
+                                    {/* Mappings List */}
+                                    {mappings.filter(m => m.settlementAccountId === acct.id).length > 0 && (
+                                        <div className="mt-4 pt-4 border-t border-slate-100 space-y-2">
+                                            {mappings.filter(m => m.settlementAccountId === acct.id).map(m => (
+                                                <div key={m.id} className="flex justify-between items-center p-2 rounded-lg bg-slate-50 border border-slate-100 text-xs">
+                                                    <div>
+                                                        <span className="font-bold text-slate-700 uppercase">{m.gatewayName}</span>
+                                                        <p className="text-slate-500 font-mono text-[10px] mt-0.5 truncate max-w-[200px]">{m.gatewaySubaccountCode}</p>
+                                                    </div>
+                                                    <Button 
+                                                        size="sm" 
+                                                        variant="ghost" 
+                                                        className="h-7 px-2 text-red-500 hover:text-red-700 hover:bg-red-50"
+                                                        onClick={() => handleDeleteMapping(m.id)}
+                                                    >
+                                                        Delete
+                                                    </Button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
                                     
                                     {/* Action to map subaccount code */}
                                     <div className="mt-4 pt-3 border-t border-slate-100 flex justify-between items-center">
