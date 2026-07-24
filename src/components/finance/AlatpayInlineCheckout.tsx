@@ -112,8 +112,9 @@ export function AlatpayInlineCheckout({
                 });
 
                 popup.show();
-            } catch (err) {
+            } catch (err: any) {
                 console.error("ALATPay Error:", err);
+                toast.error(err?.message || "Failed to initialize payment gateway. Please check configuration.");
                 onError(err);
             }
         } else {

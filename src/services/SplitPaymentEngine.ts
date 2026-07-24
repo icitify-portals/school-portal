@@ -98,7 +98,7 @@ export class PaystackAdapter implements PaymentGatewayAdapter {
                 return {
                     success: false,
                     reference: txReference,
-                    error: "Gateway configuration error."
+                    error: "The payment gateway is improperly configured. Please contact the Bursary."
                 };
             }
             const res = await fetch("https://api.paystack.co/transaction/initialize", {

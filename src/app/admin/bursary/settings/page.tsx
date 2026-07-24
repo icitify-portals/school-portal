@@ -91,6 +91,10 @@ export default function BursarySettingsPage() {
     const [mappingAcctId, setMappingAcctId] = useState<number | null>(null);
     const [mappingGateway, setMappingGateway] = useState<'paystack' | 'flutterwave' | 'remita' | 'alatpay'>('paystack');
     const [mappingCode, setMappingCode] = useState("");
+    const [mappingBusinessId, setMappingBusinessId] = useState("");
+    const [mappingPublicKey, setMappingPublicKey] = useState("");
+    const [mappingSecretKey, setMappingSecretKey] = useState("");
+    const [mappingWebhookSecret, setMappingWebhookSecret] = useState("");
     const [mappingLoading, setMappingLoading] = useState(false);
 
     useEffect(() => {
@@ -193,11 +197,19 @@ export default function BursarySettingsPage() {
             const res = await createGatewaySubaccountAction({
                 settlementAccountId: mappingAcctId,
                 gatewayName: mappingGateway,
-                gatewaySubaccountCode: mappingCode
+                gatewaySubaccountCode: mappingCode,
+                businessId: mappingGateway === 'alatpay' ? mappingBusinessId : undefined,
+                publicKey: mappingGateway === 'alatpay' ? mappingPublicKey : undefined,
+                secretKey: mappingGateway === 'alatpay' ? mappingSecretKey : undefined,
+                webhookSecret: mappingGateway === 'alatpay' ? mappingWebhookSecret : undefined
             });
             if (res.success) {
                 toast.success("Gateway subaccount mapping registered.");
                 setMappingCode("");
+                setMappingBusinessId("");
+                setMappingPublicKey("");
+                setMappingSecretKey("");
+                setMappingWebhookSecret("");
                 setMappingAcctId(null);
                 const freshMappings = await getAllGatewaySubaccountsAction();
                 setMappings(freshMappings as GatewayMapping[]);
@@ -713,6 +725,50 @@ export default function BursarySettingsPage() {
                                         </div>
                                     </div>
                                 </div>
+                                {mappingGateway === 'alatpay' && (
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4 pt-4 border-t border-indigo-100">
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Business ID</label>
+                                            <input
+                                                type="text"
+                                                className="w-full px-3 py-2 text-xs rounded-lg border border-slate-200 bg-white"
+                                                placeholder="e.g. ba517b45-..."
+                                                value={mappingBusinessId}
+                                                onChange={(e) => setMappingBusinessId(e.target.value)}
+                                            />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Public Key</label>
+                                            <input
+                                                type="text"
+                                                className="w-full px-3 py-2 text-xs rounded-lg border border-slate-200 bg-white"
+                                                placeholder="e.g. 75b14c1b..."
+                                                value={mappingPublicKey}
+                                                onChange={(e) => setMappingPublicKey(e.target.value)}
+                                            />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Secret Key</label>
+                                            <input
+                                                type="password"
+                                                className="w-full px-3 py-2 text-xs rounded-lg border border-slate-200 bg-white"
+                                                placeholder="e.g. e953e11d..."
+                                                value={mappingSecretKey}
+                                                onChange={(e) => setMappingSecretKey(e.target.value)}
+                                            />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Webhook Secret</label>
+                                            <input
+                                                type="password"
+                                                className="w-full px-3 py-2 text-xs rounded-lg border border-slate-200 bg-white"
+                                                placeholder="e.g. 436d2730..."
+                                                value={mappingWebhookSecret}
+                                                onChange={(e) => setMappingWebhookSecret(e.target.value)}
+                                            />
+                                        </div>
+                                    </div>
+                                )}
                             </form>
                         )}
 

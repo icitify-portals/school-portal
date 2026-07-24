@@ -2742,13 +2742,21 @@ export async function createGatewaySubaccountAction(data: {
     settlementAccountId: number;
     gatewayName: 'paystack' | 'flutterwave' | 'remita' | 'alatpay';
     gatewaySubaccountCode: string;
+    businessId?: string;
+    publicKey?: string;
+    secretKey?: string;
+    webhookSecret?: string;
 }) {
     try {
         await ensureBursaryStaff();
         await db.insert(gatewaySubaccounts).values({
             settlementAccountId: data.settlementAccountId,
             gatewayName: data.gatewayName,
-            gatewaySubaccountCode: data.gatewaySubaccountCode
+            gatewaySubaccountCode: data.gatewaySubaccountCode,
+            businessId: data.businessId,
+            publicKey: data.publicKey,
+            secretKey: data.secretKey,
+            webhookSecret: data.webhookSecret
         });
         revalidatePath("/admin/bursary/settings");
         return { success: true };
