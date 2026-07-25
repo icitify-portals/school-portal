@@ -570,7 +570,7 @@ export async function processPayment(data: {
 
             // 3. Handle Wallet Updates (Only top-ups or overpayments increase wallet balance)
             const [student] = await tx.select().from(students).where(eq(students.id, data.studentId));
-            const currentBalance = parseFloat(student.walletBalance || '0');
+            const currentBalance = parseFloat(student.digitalWalletBalance || '0');
             
             let walletAddition = 0;
             if (data.purpose === 'wallet_topup') {
@@ -593,7 +593,7 @@ export async function processPayment(data: {
             if (walletAddition > 0) {
                 const newBalance = currentBalance + walletAddition;
                 await tx.update(students)
-                    .set({ walletBalance: newBalance.toFixed(2) })
+                    .set({ digitalWalletBalance: newBalance.toFixed(2) })
                     .where(eq(students.id, data.studentId));
 
                 // Record the wallet transaction
@@ -857,11 +857,11 @@ export async function reverseTransaction(transactionId: number) {
             });
 
             // 3. Update Wallet Balance
-            const currentWallet = parseFloat(student.walletBalance || "0");
+            const currentWallet = parseFloat(student.digitalWalletBalance || "0");
             const newWallet = transaction.type === 'credit' ? currentWallet - amount : currentWallet + amount;
 
             await tx.update(students)
-                .set({ walletBalance: newWallet.toFixed(2) })
+                .set({ digitalWalletBalance: newWallet.toFixed(2) })
                 .where(eq(students.id, student.id));
 
             return { success: true };
@@ -1824,11 +1824,11 @@ export async function disburseRefund(requestId: number) {
             });
 
             // 3. Update Wallet Balance
-            const currentWallet = parseFloat(student.walletBalance || "0");
+            const currentWallet = parseFloat(student.digitalWalletBalance || "0");
             const newWallet = currentWallet - amount;
 
             await tx.update(students)
-                .set({ walletBalance: newWallet.toFixed(2) })
+                .set({ digitalWalletBalance: newWallet.toFixed(2) })
                 .where(eq(students.id, student.id));
 
             // 4. Automated GL Posting
@@ -2051,7 +2051,8 @@ export async function getStudentFinancialSummary(studentId: number) {
 
         return {
             success: true,
-            walletBalance: parseFloat(student.walletBalance || "0"),
+            walletBalance: parseFloat(student.digitalWalletBalance || "0"),
+            legacyBalance: parseFloat(student.walletBalance || "0"),
             outstandingBalance: outstanding,
             totalPaid: parseFloat(totalPaidRes[0]?.total || "0")
         };
@@ -2618,11 +2619,11 @@ export async function resolveOnlinePaymentAction(reference: string, status: 'com
                 throw new Error(`Student #${studentId} not found.`);
             }
 
-            const currentBalance = parseFloat(student.walletBalance || '0');
+            const currentBalance = parseFloat(student.digitalWalletBalance || '0');
             const newBalance = currentBalance + paymentAmount;
 
             await tx.update(students)
-                .set({ walletBalance: newBalance.toFixed(2) })
+                .set({ digitalWalletBalance: newBalance.toFixed(2) })
                 .where(eq(students.id, studentId));
 
             // 5. Update Bill if billId is provided

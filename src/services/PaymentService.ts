@@ -160,7 +160,7 @@ export class PaymentService {
             const [student] = await tx.select().from(students).where(eq(students.id, studentId)).limit(1);
             if (!student) throw new Error("Student not found.");
 
-            const walletBalance = parseFloat(student.walletBalance || "0.00");
+            const walletBalance = parseFloat(student.digitalWalletBalance || "0.00");
             if (walletBalance < amount) {
                 throw new Error("Insufficient wallet balance.");
             }
@@ -231,7 +231,7 @@ export class PaymentService {
             // 3. Update student wallet balance
             const newWalletBalance = walletBalance - amount;
             await tx.update(students)
-                .set({ walletBalance: newWalletBalance.toFixed(2) })
+                .set({ digitalWalletBalance: newWalletBalance.toFixed(2) })
                 .where(eq(students.id, studentId));
 
             // 4. Create wallet transaction entry (debit)
@@ -387,10 +387,10 @@ export class PaymentService {
             });
 
             // 4. Update student wallet balance
-            const currentBalance = parseFloat(student.walletBalance || "0.00");
+            const currentBalance = parseFloat(student.digitalWalletBalance || "0.00");
             const newBalance = currentBalance + amount;
             await tx.update(students)
-                .set({ walletBalance: newBalance.toFixed(2) })
+                .set({ digitalWalletBalance: newBalance.toFixed(2) })
                 .where(eq(students.id, studentId));
 
             return { success: true, balance: newBalance };

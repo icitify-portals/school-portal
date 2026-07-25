@@ -45,6 +45,7 @@ interface WalletHistoryItem {
 interface WalletData {
   success: boolean;
   balance: string;
+  legacyBalance: string;
   history: WalletHistoryItem[];
 }
 
@@ -66,6 +67,7 @@ export default function StudentWalletPortal() {
       setData({
         success: true,
         balance: res.balance,
+        legacyBalance: (res as any).legacyBalance || "0.00",
         history: res.history as WalletHistoryItem[]
       });
     }
@@ -175,6 +177,11 @@ export default function StudentWalletPortal() {
               <div className="pt-6 border-t border-white/10 flex justify-between items-center relative z-10">
                  <div className="text-[9px] font-bold text-indigo-200 uppercase tracking-widest">Verified Student Account</div>
                  <div className="font-mono text-[9px] opacity-60 uppercase">SGU-WLT-ID-{student?.id?.toString().padStart(4, '0') || '0000'}</div>
+              </div>
+
+              <div className="pt-2 flex justify-between items-center relative z-10">
+                 <div className="text-[9px] font-bold text-indigo-300 uppercase tracking-widest">Previous Payments</div>
+                 <div className="font-mono text-[10px] font-bold tracking-widest uppercase">₦{parseFloat(data?.legacyBalance || "0").toLocaleString()}</div>
               </div>
            </div>
 

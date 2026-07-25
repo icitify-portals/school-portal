@@ -26,7 +26,7 @@ export class WalletService {
             // 2. Increment student wallet balance
             await tx.update(students)
                 .set({ 
-                    walletBalance: sql`${students.walletBalance} + ${amount}` 
+                    digitalWalletBalance: sql`${students.digitalWalletBalance} + ${amount}` 
                 })
                 .where(eq(students.id, studentId));
 
@@ -40,7 +40,7 @@ export class WalletService {
     static async payFromWallet(studentId: number, amount: number, purpose: string) {
         return await db.transaction(async (tx) => {
             // 1. Check if balance is sufficient
-            const student = await tx.select({ balance: students.walletBalance })
+            const student = await tx.select({ balance: students.digitalWalletBalance })
                 .from(students)
                 .where(eq(students.id, studentId))
                 .limit(1);
@@ -63,7 +63,7 @@ export class WalletService {
             // 3. Decrement student wallet balance
             await tx.update(students)
                 .set({ 
-                    walletBalance: sql`${students.walletBalance} - ${amount}` 
+                    digitalWalletBalance: sql`${students.digitalWalletBalance} - ${amount}` 
                 })
                 .where(eq(students.id, studentId));
 

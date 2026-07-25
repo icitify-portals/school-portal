@@ -138,7 +138,7 @@ export async function payDeveloperSubscriptionWithWalletAction(subscriptionId: n
         const [student] = await tx.select().from(students).where(eq(students.userId, userId)).limit(1);
         if (!student) throw new Error("Student not found");
 
-        const walletBalance = parseFloat(student.walletBalance || "0.00");
+        const walletBalance = parseFloat(student.digitalWalletBalance || "0.00");
         if (walletBalance < amount) {
             throw new Error(`Insufficient wallet balance. You have ₦${walletBalance.toLocaleString()}`);
         }
@@ -150,7 +150,7 @@ export async function payDeveloperSubscriptionWithWalletAction(subscriptionId: n
         // Deduct from wallet
         const newBalance = walletBalance - amount;
         await tx.update(students)
-            .set({ walletBalance: newBalance.toString() })
+            .set({ digitalWalletBalance: newBalance.toString() })
             .where(eq(students.id, student.id));
             
         const ref = `WLT-DEV-${Date.now()}`;

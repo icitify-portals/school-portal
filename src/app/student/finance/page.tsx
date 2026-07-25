@@ -244,6 +244,7 @@ export default function StudentFinancePage() {
 
 
     const walletBalanceText = summary?.walletBalance?.toLocaleString() || "0.00";
+    const legacyBalanceText = (summary as any)?.legacyBalance?.toLocaleString() || "0.00";
     const totalOwedText = summary?.outstandingBalance?.toLocaleString() || "0.00";
     const totalPaidText = summary?.totalPaid?.toLocaleString() || "0.00";
 
@@ -364,9 +365,15 @@ export default function StudentFinancePage() {
                         <p className="text-xs text-slate-400 leading-relaxed">
                             Your payment mode is locked to secure online gateways and digital wallet checkout to eliminate manual deposit delays.
                         </p>
-                        <div className="p-4 bg-slate-800/80 rounded-2xl border border-slate-700 flex justify-between items-center">
-                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Paid:</span>
-                            <span className="font-extrabold text-sm text-indigo-400">₦{totalPaidText}</span>
+                        <div className="p-4 bg-slate-800/80 rounded-2xl border border-slate-700 space-y-2">
+                            <div className="flex justify-between items-center">
+                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Paid:</span>
+                                <span className="font-extrabold text-sm text-indigo-400">₦{totalPaidText}</span>
+                            </div>
+                            <div className="flex justify-between items-center pt-2 border-t border-slate-700/50">
+                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Previous Payments:</span>
+                                <span className="font-extrabold text-sm text-slate-300">₦{legacyBalanceText}</span>
+                            </div>
                         </div>
                     </div>
                 </div>

@@ -229,7 +229,8 @@ export const students = mysqlTable('students', {
   admissionSessionId: int('admission_session_id').references(() => academicSessions.id),
   currentLevel: int('current_level').default(100),
   jambNumber: varchar('jamb_number', { length: 50 }).unique(),
-  walletBalance: decimal('wallet_balance', { precision: 12, scale: 2 }).default('0.00'),
+  walletBalance: decimal('wallet_balance', { precision: 12, scale: 2 }).default('0.00'), // Used for Legacy/Previous Payments
+  digitalWalletBalance: decimal('digital_wallet_balance', { precision: 12, scale: 2 }).default('0.00'), // Used for Actual Wallet Funds
   barcode: varchar('barcode', { length: 255 }).unique(),
   gender: mysqlEnum('gender', ['male', 'female', 'other']),
   dob: varchar('dob', { length: 50 }),

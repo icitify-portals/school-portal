@@ -149,7 +149,7 @@ export async function disburseScholarship(allocationId: number, recordedBy: numb
             });
 
             // 3. Update Student Ledger
-            const currentWalletBalance = joinedResult.student.walletBalance || "0";
+            const currentWalletBalance = joinedResult.student.digitalWalletBalance || "0";
             const newBalance = parseFloat(currentWalletBalance) + amountToDisburse;
 
             await tx.insert(studentLedger).values({
@@ -160,9 +160,19 @@ export async function disburseScholarship(allocationId: number, recordedBy: numb
                 balance: newBalance.toFixed(2)
             });
 
-            // 4. Update Student Wallet
+            // 4. Create wallet transaction record
+            await tx.insert(walletTransactions).values({
+                studentId: joinedResult.allocation.studentId,
+                amount: amountToDisburse.toString(),
+                type: 'credit',
+                purpose: `Scholarship Disbursement: ${joinedResult.scholarship.name}`,
+                reference: `SCH-DISB-${Date.now()}-${allocationId}`,
+                status: 'success'
+            });
+
+            // 5. Update student balance
             await tx.update(students)
-                .set({ walletBalance: newBalance.toFixed(2) })
+                .set({ digitalWalletBalance: newBalance.toFixed(2) })
                 .where(eq(students.id, joinedResult.allocation.studentId));
 
             // 5. Update Allocation Status

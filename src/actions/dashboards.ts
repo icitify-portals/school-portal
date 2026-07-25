@@ -267,7 +267,8 @@ export async function getStudentDashboardStats(userId: number) {
             courseProgress: detailedProgress,
             status: userStatus,
             activities: activities.slice(0, 5),
-            walletBalance: student.walletBalance || "0.00"
+            walletBalance: student.digitalWalletBalance || "0.00",
+            legacyBalance: student.walletBalance || "0.00"
         };
     } catch (error) {
         console.error("Student Stats Error:", error);

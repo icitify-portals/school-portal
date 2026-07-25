@@ -177,9 +177,17 @@ export default async function StudentDashboard() {
             bg: "bg-amber-50" 
         },
         { 
+            name: "Previous Payments", 
+            value: "₦" + parseFloat(statsData?.legacyBalance || "0.00").toLocaleString(), 
+            desc: "Historical school payments", 
+            icon: Receipt, 
+            color: "text-slate-600", 
+            bg: "bg-slate-100" 
+        },
+        { 
             name: "Wallet Balance", 
             value: "₦" + parseFloat(statsData?.walletBalance || "0.00").toLocaleString(), 
-            desc: "Available school funds", 
+            desc: "Available spendable funds", 
             icon: Wallet, 
             color: "text-purple-600", 
             bg: "bg-purple-50" 

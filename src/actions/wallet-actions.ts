@@ -10,7 +10,8 @@ import { sendInAppNotification } from "./notifications";
 export async function getStudentWalletStatusAction(studentId: number) {
     try {
         const student = await db.select({ 
-            balance: students.walletBalance 
+            balance: students.digitalWalletBalance,
+            legacyBalance: students.walletBalance
         })
         .from(students)
         .where(eq(students.id, studentId))
@@ -21,6 +22,7 @@ export async function getStudentWalletStatusAction(studentId: number) {
         return { 
             success: true, 
             balance: student[0]?.balance || "0.00", 
+            legacyBalance: student[0]?.legacyBalance || "0.00",
             history 
         };
     } catch (error) {
