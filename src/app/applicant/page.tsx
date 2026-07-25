@@ -8,6 +8,8 @@ import Link from "next/link";
 import { ArrowRight, FileText, CheckCircle2, Clock, CreditCard, CheckSquare, Sparkles, Printer, GraduationCap, Globe } from "lucide-react";
 import { StartApplicationButton } from "./StartApplicationButton";
 import { ProgramSelectionModal } from "./ProgramSelectionModal";
+import { AdmissionsAnnouncement } from "@/components/AdmissionsAnnouncement";
+
 export default async function ApplicantDashboard() {
     const session = await auth();
     const userId = Number(session?.user?.id);
@@ -70,6 +72,8 @@ export default async function ApplicantDashboard() {
                     </Link>
                 </div>
             </div>
+            
+            <AdmissionsAnnouncement />
 
             {/* Program Selection Modal for New Applicants */}
             {applications.length === 0 && templates.length > 0 && (

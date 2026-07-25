@@ -2,6 +2,7 @@ import { auth } from "@/auth";
 import { getSettingByKey } from "@/actions/settings";
 import Link from "next/link";
 import { ArrowRight, BookOpen, UserPlus, Users, GraduationCap, ShieldCheck, CreditCard, ChevronRight, HelpCircle } from "lucide-react";
+import { AdmissionsAnnouncement } from "@/components/AdmissionsAnnouncement";
 
 export const dynamic = "force-dynamic";
 
@@ -59,6 +60,13 @@ export default async function HomePage() {
                             )}
                         </div>
                     </div>
+                </div>
+            </section>
+            
+            {/* Admissions Announcement Section */}
+            <section className="py-12 -mt-10 relative z-20">
+                <div className="max-w-5xl mx-auto px-4">
+                    <AdmissionsAnnouncement />
                 </div>
             </section>
 
