@@ -1,13 +1,14 @@
-"use strict";
 "use server";
 
+import { auth } from "@/auth";
+import { IDCardService } from "@/services/IDCardService";
+import { revalidatePath } from "next/cache";
 import { db } from "@/db/db";
 import {
     students, programmes, departments,
     admissionApplicationsV2, admissionFormTemplates,
 } from "@/db/schema";
 import { eq, and, or, like, isNotNull, isNull, desc, asc, sql, count } from "drizzle-orm";
-import { auth } from "@/auth";
 
 const ADMIN_ROLES = ['admin', 'superadmin', 'icitify_dev', 'dvc', 'registrar', 'admission_officer'];
 
@@ -18,6 +19,59 @@ async function requireAdmin() {
         throw new Error("Forbidden: You do not have permission to perform this action");
     }
     return session;
+}
+
+export async function requestIDCardAction(userType: 'student' | 'staff') {
+    const session = await auth();
+    const user = session?.user as any;
+    if (!user?.id) return { success: false, error: "Unauthorized" };
+
+    const userId = parseInt(user.id);
+
+    const existing = await IDCardService.getActiveCard(userId);
+    if (existing) return { success: true, message: "ID Card already issued", card: existing };
+
+    const res = await IDCardService.issueIDCard(userId, userType);
+    if (res.success) {
+        revalidatePath(`/${userType}/id-card`);
+    }
+    return res;
+}
+
+export async function getMyIDCardAction() {
+    const session = await auth();
+    const user = session?.user as any;
+    if (!user?.id) return null;
+
+    return await IDCardService.getActiveCard(parseInt(user.id));
+}
+
+export async function getVerificationDataAction(code: string) {
+    return await IDCardService.verifyIDCard(code);
+}
+
+export async function generateQRAction(code: string) {
+    return await IDCardService.generateVerificationQR(code);
+}
+
+export async function getAllIDCardsAction(limit = 50, offset = 0) {
+    const session = await auth();
+    const user = session?.user as any;
+    if (!user?.id || user.role !== 'admin') return [];
+
+    return await IDCardService.getAllIDCards(limit, offset);
+}
+
+export async function revokeIDCardAction(cardId: number) {
+    const session = await auth();
+    const user = session?.user as any;
+    if (!user?.id || user.role !== 'admin') return { success: false, error: "Unauthorized" };
+
+    const res = await IDCardService.revokeCard(cardId);
+    if (res.success) {
+        revalidatePath("/admin/identity/id-cards");
+    }
+    return res;
 }
 
 export async function getIdCardStudents(options?: {
@@ -78,7 +132,6 @@ export async function getIdCardStudents(options?: {
                 deptName: departments.name,
                 deptCode: departments.code,
                 programmeName: programmes.name,
-                // Application data
                 applicationId: admissionApplicationsV2.id,
                 applicantPhoto: admissionApplicationsV2.applicantPhoto,
                 applicationData: admissionApplicationsV2.data,
@@ -102,14 +155,12 @@ export async function getIdCardStudents(options?: {
                         : s.applicationData || {};
                 } catch {}
 
-                // Extract signature from form data
                 const signature = formData.signature
                     || formData["Signature"]
                     || formData["Applicant Signature"]
                     || formData["Student Signature"]
                     || null;
 
-                // Photo priority: student.imageUrl > application.applicantPhoto > form data photo
                 const photo = s.imageUrl
                     || s.applicantPhoto
                     || formData["Passport Photograph"]
