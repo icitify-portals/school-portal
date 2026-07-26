@@ -22,7 +22,7 @@ export async function generateFormNumber(level: string): Promise<string> {
         .from(admissionApplicationsV2)
         .where(sql`form_number LIKE ${prefix + "%"}`);
 
-    const nextNum = (row?.maxNum || 0) + 1;
+    const nextNum = Number(row?.maxNum || 0) + 1;
     const numStr = nextNum.toString().padStart(5, "0");
 
     return `${prefix}${numStr}`;
