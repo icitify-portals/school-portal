@@ -232,7 +232,8 @@ export async function verifyPayment(gateway: string, reference: string, rrr?: st
             const baseUrl = isLive ? 'https://openapi.wemaonline.com' : 'https://openapi.wemaonline.com';
             const businessId = settings['gateway_alatpay_business_id'] || process.env.ALATPAY_BUSINESS_ID || process.env.NEXT_PUBLIC_ALATPAY_BUSINESS_ID_MAIN;
             
-            // For standard AlatPay Web Plugin transactions, use the verification endpoint
+            let gatewayTransactionId: string | undefined;
+
             try {
                 const res = await fetch(`${baseUrl}/alatpaytransaction/api/v1/transactions?reference=${reference}`, {
                     headers: {
@@ -242,19 +243,24 @@ export async function verifyPayment(gateway: string, reference: string, rrr?: st
                 
                 if (res.ok) {
                     const data = await res.json();
-                    // Assume data contains the transaction details
-                    verified = data?.status === 'successful' || data?.status === 'Approved' || data?.data?.status === 'successful';
-                    amount = data?.amount || data?.data?.amount || 0;
+                    const txData = data?.data || data;
+                    verified = txData?.status === 'successful' || txData?.status === 'Approved' || data?.status === 'successful' || data?.status === 'Approved';
+                    amount = txData?.amount || data?.amount || 0;
+                    gatewayTransactionId = txData?.transactionId || txData?.transaction_id || txData?.id || data?.transactionId || data?.transaction_id || undefined;
                 } else {
+                    const errorBody = await res.text().catch(() => 'Unknown');
+                    console.error(`ALATPay verify HTTP ${res.status} for ref ${reference}: ${errorBody}`);
                     verified = false;
                     return { error: `ALATPay verification failed with status: ${res.status}` };
                 }
-            } catch (e) {
-                // Fallback for demo environments without active API keys
-                console.log("ALATPay Verify Error:", e);
-                verified = true; // Temporary mock fallback if network fails
+            } catch (e: any) {
+                console.error("ALATPay Verify Error:", e?.message || e);
+                verified = false;
                 amount = 0;
+                return { error: `ALATPay verification network error: ${e?.message || 'Unknown'}` };
             }
+
+            return { success: true, verified, amount, gateway, gatewayTransactionId };
         }
 
         return { success: true, verified, amount, gateway };

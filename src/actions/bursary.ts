@@ -2539,8 +2539,11 @@ export async function resolveOnlinePaymentAction(reference: string, status: 'com
                 throw new Error(`Transaction with reference ${reference} not found.`);
             }
 
-            if (txRecord.status !== 'pending') {
-                return { success: true, message: "Transaction already resolved." };
+            if (txRecord.status === 'completed') {
+                return { success: true, message: "Transaction already completed." };
+            }
+            if (txRecord.status === 'failed' && status === 'completed') {
+                return { success: false, error: "Transaction was marked as failed. Please initiate a new payment." };
             }
 
             const paymentAmount = parseFloat(txRecord.amount);
@@ -2553,7 +2556,7 @@ export async function resolveOnlinePaymentAction(reference: string, status: 'com
                 return { success: true, status: 'failed' };
             }
 
-            // 3. Update transaction to completed
+            // 3. Verify with gateway and capture gateway transaction ID
             const { verifyPayment } = await import('@/actions/payment-gateways');
             const verification = await verifyPayment(txRecord.gateway || 'remita', reference, txRecord.rrr || undefined);
             
@@ -2565,8 +2568,17 @@ export async function resolveOnlinePaymentAction(reference: string, status: 'com
                 }
             }
 
+            // Capture ALATPay gateway transaction ID for cross-referencing
+            const gatewayTxId = (verification as any).gatewayTransactionId || null;
+            if (gatewayTxId) {
+                console.log(`[PaymentVerify] Gateway Transaction ID for ref ${reference}: ${gatewayTxId}`);
+            }
+
             await tx.update(transactions)
-                .set({ status: 'completed' })
+                .set({ 
+                    status: 'completed',
+                    ...(gatewayTxId ? { gatewayTransactionId: gatewayTxId } : {})
+                })
                 .where(eq(transactions.gatewayReference, reference));
 
             // Check if it's an Admission Payment

@@ -118,7 +118,9 @@ export function AlatpayInlineCheckout({
                     firstName,
                     lastName,
                     onTransaction: function (response: any) {
+                        console.log("ALATPay onTransaction response:", JSON.stringify(response));
                         if (response.status === true || response.message === "Approved" || response.status === "Approved") {
+                            toast.success("Payment received. Verifying with gateway...");
                             onSuccess();
                         } else {
                             onError(response);

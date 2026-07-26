@@ -432,6 +432,7 @@ export const transactions = mysqlTable('transactions', {
   status: mysqlEnum('status', ['pending', 'completed', 'failed', 'reversed']).default('pending'),
   gateway: mysqlEnum('gateway', ['paystack', 'flutterwave', 'remita', 'opay', 'manual', 'alatpay']).default('remita'),
   gatewayReference: varchar('gateway_reference', { length: 255 }),
+  gatewayTransactionId: varchar('gateway_transaction_id', { length: 255 }),
   rrr: varchar('rrr', { length: 50 }),
   createdAt: timestamp('created_at').defaultNow(),
 });
