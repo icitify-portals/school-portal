@@ -1840,7 +1840,8 @@ export async function getAdminV2ApplicationDetail(applicationId: number) {
             where: eq(admissionApplicationsV2.id, applicationId),
             with: {
                 template: true,
-                student: true
+                student: true,
+                applicant: true
             }
         });
 
@@ -1889,6 +1890,28 @@ export async function getAdminV2ApplicationDetail(applicationId: number) {
             fields: fields.filter(f => f.sectionId === s.id),
         }));
 
+        // Build applicant user account info
+        const applicantUser = (app as any).applicant;
+        let userAccountInfo = null;
+        if (applicantUser) {
+            const now = new Date();
+            const isLocked = applicantUser.lockoutUntil && new Date(applicantUser.lockoutUntil) > now;
+            userAccountInfo = {
+                id: applicantUser.id,
+                name: applicantUser.name,
+                email: applicantUser.email,
+                emailVerified: applicantUser.emailVerified,
+                role: applicantUser.role,
+                status: applicantUser.status,
+                isLocked,
+                lockoutUntil: applicantUser.lockoutUntil,
+                failedLoginAttempts: applicantUser.failedLoginAttempts || 0,
+                requiresPasswordChange: applicantUser.requiresPasswordChange,
+                lastLogin: applicantUser.lastLogin,
+                createdAt: applicantUser.createdAt,
+            };
+        }
+
         return {
             ...app,
             parsedData: formData,
@@ -1901,6 +1924,7 @@ export async function getAdminV2ApplicationDetail(applicationId: number) {
             templateLevel: app.template?.level || '',
             olevelData,
             formStructure,
+            userAccountInfo,
         };
     } catch (error) {
         console.error("[getAdminV2ApplicationDetail] Failed:", error);

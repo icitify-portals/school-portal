@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import {
     FileText, User, Mail, Phone, Calendar, CheckCircle2, XCircle, AlertCircle,
     Loader2, ArrowLeft, Printer, CreditCard, GraduationCap, BookOpen, Hash,
-    Image as ImageIcon, ChevronDown, ChevronUp
+    Image as ImageIcon, ChevronDown, ChevronUp, Shield, ShieldAlert, ShieldCheck
 } from "lucide-react";
 import { getAdminV2ApplicationDetail, updateAdmissionStatus, confirmAdmissionPayment, confirmAcceptancePayment } from "@/actions/admission_v2";
 import { cn } from "@/lib/utils";
@@ -426,6 +426,86 @@ export default function V2ApplicationDetailPage() {
                                 </div>
                             </CardContent>
                         </Card>
+
+                        {app.userAccountInfo && (
+                            <Card className="border border-white/40 shadow-xl bg-white/80 backdrop-blur-3xl rounded-[3rem] overflow-hidden">
+                                <CardHeader className="bg-slate-50 border-b border-slate-100 p-6">
+                                    <CardTitle className="text-lg flex items-center gap-2 text-slate-800">
+                                        <Shield className="w-5 h-5" /> User Account
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent className="p-6 space-y-4">
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Account Status</span>
+                                        <span className={cn(
+                                            "px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border",
+                                            app.userAccountInfo.status === 'active' ? "bg-emerald-100 text-emerald-700 border-emerald-200" :
+                                            "bg-rose-100 text-rose-700 border-rose-200"
+                                        )}>
+                                            {app.userAccountInfo.status}
+                                        </span>
+                                    </div>
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Email Verified</span>
+                                        {app.userAccountInfo.emailVerified ? (
+                                            <span className="flex items-center gap-1 text-emerald-600 font-bold text-sm">
+                                                <ShieldCheck className="w-4 h-4" /> Yes
+                                            </span>
+                                        ) : (
+                                            <span className="flex items-center gap-1 text-rose-600 font-bold text-sm">
+                                                <ShieldAlert className="w-4 h-4" /> No
+                                            </span>
+                                        )}
+                                    </div>
+                                    {app.userAccountInfo.isLocked && (
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Locked Until</span>
+                                            <span className="text-rose-600 font-bold text-xs">
+                                                {format(new Date(app.userAccountInfo.lockoutUntil), 'MMM dd, yyyy HH:mm')}
+                                            </span>
+                                        </div>
+                                    )}
+                                    {app.userAccountInfo.failedLoginAttempts > 0 && (
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Failed Logins</span>
+                                            <span className="text-amber-600 font-bold text-sm">{app.userAccountInfo.failedLoginAttempts}</span>
+                                        </div>
+                                    )}
+                                    {app.userAccountInfo.requiresPasswordChange && (
+                                        <div className="px-3 py-2 bg-amber-50 border border-amber-200 rounded-xl">
+                                            <p className="text-[10px] font-black text-amber-700 uppercase tracking-widest">Requires Password Reset</p>
+                                        </div>
+                                    )}
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Role</span>
+                                        <span className="px-3 py-1 bg-slate-100 rounded-full text-[9px] font-black uppercase tracking-widest border border-slate-200 text-slate-600">
+                                            {app.userAccountInfo.role}
+                                        </span>
+                                    </div>
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Registered</span>
+                                        <span className="text-sm font-bold text-slate-600">
+                                            {app.userAccountInfo.createdAt ? format(new Date(app.userAccountInfo.createdAt), 'MMM dd, yyyy') : '—'}
+                                        </span>
+                                    </div>
+                                    {app.userAccountInfo.lastLogin && (
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Last Login</span>
+                                            <span className="text-sm font-bold text-slate-600">
+                                                {format(new Date(app.userAccountInfo.lastLogin), 'MMM dd, yyyy HH:mm')}
+                                            </span>
+                                        </div>
+                                    )}
+                                    <div className="pt-3 border-t border-slate-200">
+                                        <Link href={`/admin/users?search=${encodeURIComponent(app.userAccountInfo.email)}`}>
+                                            <Button variant="outline" className="w-full rounded-xl border-slate-300 text-slate-600 font-black text-[10px] uppercase tracking-widest py-3">
+                                                View User Account
+                                            </Button>
+                                        </Link>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        )}
 
                         <Card className="border border-white/40 shadow-xl bg-white/80 backdrop-blur-3xl rounded-[3rem] overflow-hidden">
                             <CardHeader className="bg-slate-50 border-b border-slate-100 p-6">
