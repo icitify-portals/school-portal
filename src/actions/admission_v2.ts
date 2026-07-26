@@ -18,7 +18,8 @@ import {
     emailVerificationTokens,
     admissionTemplateProgrammes,
     programmes,
-    transactions
+    transactions,
+    academicSessions
 } from "@/db/schema";
 import { eq, and, desc, asc, sql, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
@@ -841,7 +842,7 @@ export async function finalizeStudentAdmission(applicationId: number) {
         const isJambCandidate = application.applicationMode
             ? application.applicationMode === 'full_time'
             : (!!jambRegNo && !jambRegNo.toLowerCase().includes("temp") && !jambRegNo.toLowerCase().includes("direct"));
-        const studyMode = isJambCandidate ? "Full-Time" : "Part-Time";
+        const studyMode = isJambCandidate ? "full-time" : "part-time";
         const studyModeCode = isJambCandidate ? "FT" : "PT";
         const modeOfEntry = isJambCandidate ? "JAMB" : "Direct";
 
@@ -849,6 +850,27 @@ export async function finalizeStudentAdmission(applicationId: number) {
         const year = new Date().getFullYear();
         const programmeType = (template.level.toLowerCase().includes("nd") || template.level.toLowerCase().includes("diploma")) ? "ND" : "HND";
         
+        // Look up programme from template's linked programmes
+        const templateProgs = await db.select({ programmeId: admissionTemplateProgrammes.programmeId })
+            .from(admissionTemplateProgrammes)
+            .where(eq(admissionTemplateProgrammes.templateId, template.id))
+            .limit(1);
+        const selectedProgrammeId = templateProgs[0]?.programmeId || null;
+
+        let deptId: number | null = null;
+        if (selectedProgrammeId) {
+            const [prog] = await db.select().from(programmes).where(eq(programmes.id, selectedProgrammeId)).limit(1);
+            if (prog) {
+                deptId = prog.departmentId || null;
+            }
+        }
+
+        // Find active academic session for admission
+        const [activeSession] = await db.select().from(academicSessions)
+            .where(eq(academicSessions.isActive, true))
+            .orderBy(desc(academicSessions.startDate))
+            .limit(1);
+
         // Query total student count for the year to generate a unique sequence number
         const countRes = await db.select({ count: sql<number>`count(*)` })
             .from(students)
@@ -909,7 +931,7 @@ export async function finalizeStudentAdmission(applicationId: number) {
 
         // 2. Create Student with extended mapping including Study Mode
         // @ts-expect-error - TS2769: Auto-suppressed for build
-        await db.insert(students).values({
+        const [studentResult] = await db.insert(students).values({
             userId: userId,
             firstName: formData.firstName || formData.fullName?.split(' ')[0],
             lastName: formData.surname || formData.lastName || formData.fullName?.split(' ').slice(1).join(' '),
@@ -918,6 +940,9 @@ export async function finalizeStudentAdmission(applicationId: number) {
             modeOfEntry: modeOfEntry,
             studyMode: studyMode,
             programmeType: programmeType,
+            programmeId: selectedProgrammeId,
+            deptId: deptId,
+            admissionSessionId: activeSession?.id || null,
             currentLevel: 1,
             admissionYear: year,
             gender: (formData.gender?.toLowerCase() || 'other') as any,
@@ -943,6 +968,7 @@ export async function finalizeStudentAdmission(applicationId: number) {
         // 3. Update Application Status
         await db.update(admissionApplicationsV2)
             .set({ 
+                studentId: studentResult.insertId,
                 admissionNotes: `Admission accepted and finalized. Matric Number: ${matricNumber}`,
                 updatedAt: new Date()
             })

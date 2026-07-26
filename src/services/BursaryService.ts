@@ -206,36 +206,48 @@ export class BursaryService {
                 allocation = specificAlloc;
 
                 if (!allocation && student.programmeId) {
-                    const [progAlloc] = await tx.select()
-                        .from(feeAllocations)
-                        .where(and(
-                            eq(feeAllocations.programmeId, student.programmeId),
-                            eq(feeAllocations.sessionId, sessionId)
-                        ))
-                        .limit(1);
-                    allocation = progAlloc;
+                    const [progAlloc] = await tx.select({
+                        feeAllocation: feeAllocations,
+                    })
+                    .from(feeAllocations)
+                    .innerJoin(feeStructures, eq(feeAllocations.feeStructureId, feeStructures.id))
+                    .where(and(
+                        eq(feeAllocations.programmeId, student.programmeId),
+                        eq(feeAllocations.sessionId, sessionId),
+                        eq(feeStructures.level, student.currentLevel || 1)
+                    ))
+                    .limit(1);
+                    allocation = progAlloc?.feeAllocation || null;
                 }
 
                 if (!allocation && student.deptId) {
-                    const [deptAlloc] = await tx.select()
-                        .from(feeAllocations)
-                        .where(and(
-                            eq(feeAllocations.deptId, student.deptId),
-                            eq(feeAllocations.sessionId, sessionId)
-                        ))
-                        .limit(1);
-                    allocation = deptAlloc;
+                    const [deptAlloc] = await tx.select({
+                        feeAllocation: feeAllocations,
+                    })
+                    .from(feeAllocations)
+                    .innerJoin(feeStructures, eq(feeAllocations.feeStructureId, feeStructures.id))
+                    .where(and(
+                        eq(feeAllocations.deptId, student.deptId),
+                        eq(feeAllocations.sessionId, sessionId),
+                        eq(feeStructures.level, student.currentLevel || 1)
+                    ))
+                    .limit(1);
+                    allocation = deptAlloc?.feeAllocation || null;
                 }
 
                 if (!allocation) {
-                    const [levelAlloc] = await tx.select()
-                        .from(feeAllocations)
-                        .where(and(
-                            eq(feeAllocations.sessionId, sessionId),
-                            sql`faculty_id IS NULL AND dept_id IS NULL AND programme_id IS NULL AND student_id IS NULL`
-                        ))
-                        .limit(1);
-                    allocation = levelAlloc;
+                    const [levelAlloc] = await tx.select({
+                        feeAllocation: feeAllocations,
+                    })
+                    .from(feeAllocations)
+                    .innerJoin(feeStructures, eq(feeAllocations.feeStructureId, feeStructures.id))
+                    .where(and(
+                        eq(feeAllocations.sessionId, sessionId),
+                        sql`faculty_id IS NULL AND dept_id IS NULL AND programme_id IS NULL AND student_id IS NULL`,
+                        eq(feeStructures.level, student.currentLevel || 1)
+                    ))
+                    .limit(1);
+                    allocation = levelAlloc?.feeAllocation || null;
                 }
             }
 

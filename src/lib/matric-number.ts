@@ -19,8 +19,8 @@ export async function checkAndGenerateMatricNumber(studentId: number, tx: any) {
             return false;
         }
 
-        if (student.matriculationNumber) {
-            console.log(`[Matric Generation] Student ${studentId} already has matric number: ${student.matriculationNumber}`);
+        if (student.matricNumber) {
+            console.log(`[Matric Generation] Student ${studentId} already has matric number: ${student.matricNumber}`);
             return false; // Already generated
         }
 
@@ -118,16 +118,16 @@ export async function checkAndGenerateMatricNumber(studentId: number, tx: any) {
 
         // 5. Get the next sequence
         // We'll query students for the highest matric number starting with this prefix
-        const [lastStudent] = await tx.select({ matriculationNumber: students.matriculationNumber })
+        const [lastStudent] = await tx.select({ matricNumber: students.matricNumber })
             .from(students)
-            .where(sql`${students.matriculationNumber} LIKE ${prefix + '%'}`)
-            .orderBy(sql`CAST(SUBSTRING_INDEX(${students.matriculationNumber}, '/', -1) AS UNSIGNED) DESC`)
+            .where(sql`${students.matricNumber} LIKE ${prefix + '%'}`)
+            .orderBy(sql`CAST(SUBSTRING_INDEX(${students.matricNumber}, '/', -1) AS UNSIGNED) DESC`)
             .limit(1);
 
         let nextSeq = 119000; // Starting sequence for FSS based on examples like 119613
         
-        if (lastStudent && lastStudent.matriculationNumber) {
-            const parts = lastStudent.matriculationNumber.split('/');
+        if (lastStudent && lastStudent.matricNumber) {
+            const parts = lastStudent.matricNumber.split('/');
             const lastSeqStr = parts[parts.length - 1];
             const lastSeq = parseInt(lastSeqStr);
             if (!isNaN(lastSeq)) {
@@ -139,7 +139,7 @@ export async function checkAndGenerateMatricNumber(studentId: number, tx: any) {
 
         // 6. Save the new matric number
         await tx.update(students)
-            .set({ matriculationNumber: matricNumber })
+            .set({ matricNumber: matricNumber })
             .where(eq(students.id, studentId));
             
         console.log(`[Matric Generation] Successfully generated ${matricNumber} for student ${studentId}`);

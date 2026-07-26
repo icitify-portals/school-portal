@@ -48,8 +48,8 @@ export class PromotionService {
 
     /**
      * Evaluates K-12 Promotion Rules.
-     * Junior Secondary & Primary (Level < 400): Overall Average >= 50%
-     * Senior Secondary (Level >= 400): Overall Average >= 50% AND Pass Math & English
+     * Junior Secondary & Primary (Level < 2): Overall Average >= 50%
+     * Senior Secondary (Level >= 2): Overall Average >= 50% AND Pass Math & English
      */
     private static async evaluateK12(studentId: number, sessionId: number, level: number): Promise<boolean> {
         // Fetch Annual Summary
@@ -68,7 +68,7 @@ export class PromotionService {
         if (average < 50) return false;
 
         // Base Requirement B: If Senior Secondary, must pass Math and English
-        if (level >= 400) {
+        if (level >= 2) {
             const hasPassedCore = await this.hasPassedCoreSubjects(studentId, sessionId);
             if (!hasPassedCore) return false;
         }
