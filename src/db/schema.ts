@@ -6361,7 +6361,7 @@ export const examinationBodies = mysqlTable('examination_bodies', {
 export const applicantOLevelSittings = mysqlTable('applicant_olevel_sittings', {
   id: int('id').autoincrement().primaryKey(),
   applicantId: int('applicant_id').references(() => users.id).notNull(),
-  applicationId: int('app_id').references(() => admissionApplicationsV2.id).notNull(),
+  applicationId: int('application_id').references(() => admissionApplicationsV2.id).notNull(),
   examBodyId: int('exam_body_id').references(() => examinationBodies.id).notNull(),
   examYear: varchar('exam_year', { length: 4 }).notNull(),
   examNumber: varchar('exam_number', { length: 50 }).notNull(),
@@ -6372,7 +6372,7 @@ export const applicantOLevelSittings = mysqlTable('applicant_olevel_sittings', {
 
 export const applicantOLevelSubjects = mysqlTable('applicant_olevel_subjects', {
   id: int('id').autoincrement().primaryKey(),
-  sittingId: int('s_id').references(() => applicantOLevelSittings.id).notNull(),
+  sittingId: int('sitting_id').references(() => applicantOLevelSittings.id).notNull(),
   subjectName: varchar('subject_name', { length: 100 }).notNull(),
   grade: varchar('grade', { length: 10 }).notNull(),
   createdAt: timestamp('created_at').defaultNow()
@@ -6592,7 +6592,7 @@ export const admissionLeads = mysqlTable('admission_leads', {
 
 export const admissionWaitlists = mysqlTable('admission_waitlists', {
   id: int('id').autoincrement().primaryKey(),
-  applicationId: int('app_id').references(() => admissionApplicationsV2.id).notNull(),
+  applicationId: int('application_id').references(() => admissionApplicationsV2.id).notNull(),
   rankPosition: int('rank_position'),
   status: mysqlEnum('status', ['waiting', 'offered', 'rejected']).default('waiting'),
   createdAt: timestamp('created_at').defaultNow(),
@@ -6600,7 +6600,7 @@ export const admissionWaitlists = mysqlTable('admission_waitlists', {
 
 export const admissionInterviews = mysqlTable('admission_interviews', {
   id: int('id').autoincrement().primaryKey(),
-  applicationId: int('app_id').references(() => admissionApplicationsV2.id).notNull(),
+  applicationId: int('application_id').references(() => admissionApplicationsV2.id).notNull(),
   interviewDate: timestamp('interview_date'),
   interviewerId: int('interviewer_id').references(() => users.id),
   mode: mysqlEnum('mode', ['physical', 'virtual']).default('physical'),
