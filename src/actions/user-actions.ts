@@ -53,7 +53,7 @@ export async function bulkImportUsers(data: any[]) {
                     await tx.insert(students).values({
                         userId,
                         barcode,
-                        currentLevel: parseInt(row.level) || 100,
+                        currentLevel: parseInt(row.level) || 1,
                     });
                 } else if (type?.toLowerCase() === 'staff' || roleName?.toLowerCase() === 'teacher' || roleName?.toLowerCase() === 'manager') {
                     await tx.insert(staffProfiles).values({

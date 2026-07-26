@@ -90,7 +90,7 @@ export async function checkAndGenerateMatricNumber(studentId: number, tx: any) {
         if (student.programmeId) {
             const [prog] = await tx.select().from(programmes).where(eq(programmes.id, student.programmeId)).limit(1);
             if (prog) {
-                if (prog.name.toUpperCase().includes('HND') || student.currentLevel >= 300) {
+                if (prog.name.toUpperCase().includes('HND') || student.programmeType === 'HND') {
                     isHND = true;
                 }
                 
@@ -102,7 +102,7 @@ export async function checkAndGenerateMatricNumber(studentId: number, tx: any) {
                 }
             }
         } else {
-             if (student.currentLevel >= 300) {
+             if (student.programmeType === 'HND') {
                  isHND = true;
              }
         }

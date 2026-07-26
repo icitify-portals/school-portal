@@ -219,12 +219,8 @@ function UserManagementPageContent() {
                                 onChange={(e) => handleFilterChange("level", e.target.value)}
                             >
                                 <option value="">All Levels</option>
-                                <option value="100">ND 1 (100)</option>
-                                <option value="200">ND 2 (200)</option>
-                                <option value="300">HND 1 (300)</option>
-                                <option value="400">HND 2 (400)</option>
-                                <option value="500">500 Level</option>
-                                <option value="600">600 Level</option>
+                                <option value="1">Level 1</option>
+                                <option value="2">Level 2</option>
                             </select>
                         </div>
                         <div className="text-[10px] font-black uppercase text-slate-400 tracking-widest whitespace-nowrap">

@@ -186,7 +186,7 @@ export class BursaryService {
                     .where(and(
                         eq(feeStructures.isSpillOver, true),
                         eq(feeStructures.status, 'approved'),
-                        eq(feeStructures.level, student.currentLevel || 100)
+                        eq(feeStructures.level, student.currentLevel || 1)
                     ))
                     .limit(1);
                 

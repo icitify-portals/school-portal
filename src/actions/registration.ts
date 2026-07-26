@@ -57,7 +57,7 @@ export async function validateRegistration(studentId: number, courseIds: number[
         if (!canRegister) {
             const [levelControl] = await db.select().from(registrationLevelControls).where(and(
                 eq(registrationLevelControls.sessionId, session.id),
-                eq(registrationLevelControls.level, student.currentLevel || 100)
+                eq(registrationLevelControls.level, student.currentLevel || 1)
             )).limit(1);
             if (levelControl?.isOpen) canRegister = true;
         }

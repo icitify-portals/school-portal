@@ -26,7 +26,7 @@ import {
 import { cn } from "@/lib/utils";
 import { db } from "@/db/db";
 import { users, departments, programmes, courses, students, jambCandidates, admissionSessions, academicSessions, faculties, institutionalUnits } from "@/db/schema";
-import { count, eq, and, desc, sql } from "drizzle-orm";
+import { count, eq, and, desc, sql, inArray } from "drizzle-orm";
 import { cookies } from "next/headers";
 import ActiveStudentsModal from "./_components/ActiveStudentsModal";
 
@@ -62,7 +62,7 @@ export default async function AdminDashboardPage() {
             db.select().from(academicSessions).where(eq(academicSessions.isCurrent, true)).limit(1),
             db.select({ value: count() }).from(faculties),
             db.select({ value: count() }).from(students).where(eq(students.status, 'active')),
-            db.select({ value: count() }).from(students).where(eq(students.status, 'graduated')),
+            db.select({ value: count() }).from(students).where(inArray(students.status, ['nd_graduated', 'hnd_graduated'])),
         ]);
 
         const breakdownResult = await db.execute(sql`

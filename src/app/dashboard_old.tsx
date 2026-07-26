@@ -5,7 +5,7 @@ import { BookOpen, Users, GraduationCap, Calendar, Clock, Bell, Printer } from "
 
 // Role-specific imports handled in component body
 
-import { cn } from "@/lib/utils";
+import { cn, isGraduatedStatus } from "@/lib/utils";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { db } from "@/db/db";
@@ -122,7 +122,7 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {(studentStats?.isFinalYear || studentStats?.status === 'graduated') && (
+      {(studentStats?.isFinalYear || isGraduatedStatus(studentStats?.status)) && (
         <Card className="mb-10 -to-r from-emerald-600 to-teal-600 text-white overflow-hidden relative group border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
           <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform">
             <GraduationCap className="w-32 h-32" />

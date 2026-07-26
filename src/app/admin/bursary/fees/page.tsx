@@ -440,11 +440,8 @@ export default function FeesPage() {
                                         onChange={(e) => setStructLevel(e.target.value)}
                                     >
                                         <option value="0">Applicant</option>
-                                        <option value="100">ND 1</option>
-                                        <option value="200">ND 2</option>
-                                        <option value="300">HND 1</option>
-                                        <option value="400">HND 2</option>
-                                        <option value="500">Graduated</option>
+                                        <option value="1">Level 1</option>
+                                        <option value="2">Level 2</option>
                                     </select>
                                 </div>
                             </div>
@@ -533,11 +530,8 @@ export default function FeesPage() {
                                         onChange={(e) => setStructLevel(e.target.value)}
                                     >
                                         <option value="0">Applicant</option>
-                                        <option value="100">ND 1</option>
-                                        <option value="200">ND 2</option>
-                                        <option value="300">HND 1</option>
-                                        <option value="400">HND 2</option>
-                                        <option value="500">Graduated</option>
+                                        <option value="1">Level 1</option>
+                                        <option value="2">Level 2</option>
                                     </select>
                                 </div>
                             </div>
@@ -633,11 +627,8 @@ export default function FeesPage() {
                                             onChange={(e) => setApplyFilterId(e.target.value)}
                                         >
                                             <option value="">Select Level...</option>
-                                            <option value="100">ND 1 (100)</option>
-                                            <option value="200">ND 2 (200)</option>
-                                            <option value="300">HND 1 (300)</option>
-                                            <option value="400">HND 2 (400)</option>
-                                            <option value="500">500 Level</option>
+                                            <option value="1">Level 1</option>
+                                            <option value="2">Level 2</option>
                                         </select>
                                     </div>
                                 )}
@@ -791,7 +782,7 @@ export default function FeesPage() {
                                     </td>
                                     <td className="px-6 py-4 text-sm text-slate-500">{s.academicYear}</td>
                                     <td className="px-6 py-4 text-sm text-slate-500">
-                                        {s.level === 0 ? "Applicant" : s.level === 100 ? "ND 1" : s.level === 200 ? "ND 2" : s.level === 300 ? "HND 1" : s.level === 400 ? "HND 2" : s.level === 500 ? "Graduated" : `${s.level} Level`}
+                                        {s.level === 0 ? "Applicant" : s.level === 1 ? "Level 1" : s.level === 2 ? "Level 2" : `${s.level} Level`}
                                     </td>
                                     <td className="px-6 py-4 text-sm text-slate-500 font-medium">
                                         {s.items?.length || 0} Fees

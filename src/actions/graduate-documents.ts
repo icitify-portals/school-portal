@@ -245,10 +245,11 @@ export async function promoteStudentToGraduate(studentId: number, classOfDegree:
       profileId = res.insertId;
     }
 
-    // E. Update student status to 'graduated'
+    // E. Update student status to graduated
+    const gradStatus = student.programmeType === 'HND' ? 'hnd_graduated' : 'nd_graduated';
     await db.update(students)
       .set({ 
-        status: "graduated",
+        status: gradStatus,
         graduatedAt: new Date(),
         classOfDegree
       })

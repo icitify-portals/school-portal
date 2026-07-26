@@ -98,11 +98,12 @@ interface StudentEvaluation {
     deptName: string;
     deptId: number | null;
     programmeName: string;
+    studentProgrammeType: string;
     currentLevel: number;
     maxLevel: number;
     cgpa: number;
     creditsEarned: number;
-    decision: 'promoted' | 'withdrawn' | 'graduated' | 'repeat' | 'concession';
+    decision: 'promoted' | 'withdrawn' | 'nd_graduated' | 'hnd_graduated' | 'repeat' | 'concession';
     reasons: string[];
     newLevel: number;
 }
@@ -117,6 +118,7 @@ async function evaluateStudents(sessionId: number): Promise<StudentEvaluation[]>
         deptName: departments.name,
         programmeId: students.programmeId,
         programmeName: programmes.name,
+        studentProgrammeType: students.programmeType,
         currentLevel: students.currentLevel,
         durationYears: programmes.durationYears,
     })
@@ -144,7 +146,7 @@ async function evaluateStudents(sessionId: number): Promise<StudentEvaluation[]>
     const evaluations: StudentEvaluation[] = [];
 
     for (const student of activeStudents) {
-        const maxLevel = (student.durationYears || 4) * 100;
+        const maxLevel = (student.durationYears || 2);
         const studentSummaries = summaryMap.get(student.studentId) || [];
 
         // Sum credits earned across both semesters for this session
@@ -158,7 +160,7 @@ async function evaluateStudents(sessionId: number): Promise<StudentEvaluation[]>
 
         // Decision Logic
         const reasons: string[] = [];
-        let decision: 'promoted' | 'withdrawn' | 'graduated' | 'repeat' = 'promoted';
+        let decision: 'promoted' | 'withdrawn' | 'nd_graduated' | 'hnd_graduated' | 'repeat' = 'promoted';
 
         if (!student.programmeId) {
             // K-12 Logic
@@ -216,16 +218,16 @@ async function evaluateStudents(sessionId: number): Promise<StudentEvaluation[]>
         }
 
         // Check graduation
-        const currentLevel = student.currentLevel || 100;
+        const currentLevel = student.currentLevel || 1;
         let newLevel = currentLevel;
 
         if (decision === 'promoted') {
             if (currentLevel >= maxLevel) {
-                decision = 'graduated';
+                decision = student.programmeType === 'HND' ? 'hnd_graduated' : 'nd_graduated';
                 reasons.push(`Completed max level (${maxLevel}) — eligible for graduation`);
                 newLevel = currentLevel;
             } else {
-                newLevel = currentLevel + 100;
+                newLevel = currentLevel + 1;
                 reasons.push(`Promoted from ${currentLevel} to ${newLevel}`);
             }
         } else if (decision === 'repeat') {
@@ -265,7 +267,7 @@ export async function getPromotionPreview(sessionId: number) {
         const summary = {
             total: evaluations.length,
             promoted: evaluations.filter(e => e.decision === 'promoted').length,
-            graduated: evaluations.filter(e => e.decision === 'graduated').length,
+            graduated: evaluations.filter(e => e.decision === 'nd_graduated' || e.decision === 'hnd_graduated').length,
             withdrawn: evaluations.filter(e => e.decision === 'withdrawn').length,
             repeat: evaluations.filter(e => e.decision === 'repeat').length,
         };
@@ -304,7 +306,7 @@ export async function runPromotion(sessionId: number, targetSessionId: number, o
                 
                 // Adjust level if decision changed to promoted or concession
                 if (finalDecision === 'promoted' || finalDecision === 'concession') {
-                    finalNewLevel = evaluation.currentLevel + 100;
+                    finalNewLevel = evaluation.currentLevel + 1;
                 } else if (finalDecision === 'repeat') {
                     finalNewLevel = evaluation.currentLevel;
                 }
@@ -334,7 +336,8 @@ export async function runPromotion(sessionId: number, targetSessionId: number, o
                     if (finalDecision === 'promoted') promoted++; else concessional++;
                     break;
 
-                case 'graduated':
+                case 'nd_graduated':
+                case 'hnd_graduated':
                     const [pendingCarryOver] = await db.select().from(academicCarryOvers).where(and(
                         eq(academicCarryOvers.studentId, evaluation.studentId),
                         eq(academicCarryOvers.status, 'pending')
@@ -351,11 +354,10 @@ export async function runPromotion(sessionId: number, targetSessionId: number, o
                             .where(eq(students.id, evaluation.studentId));
                         repeated++; // treat as retained/repeated logically for counts
                     } else {
+                        const gradStatus = evaluation.studentProgrammeType === 'HND' ? 'hnd_graduated' : 'nd_graduated';
                         await db.update(students)
                             .set({
-                                status: 'graduated',
-                                // @ts-expect-error - TS2353: Auto-suppressed for build
-                                academicStatus: 'graduated',
+                                status: gradStatus,
                                 currentLevel: evaluation.currentLevel,
                             })
                             .where(eq(students.id, evaluation.studentId));
@@ -364,7 +366,7 @@ export async function runPromotion(sessionId: number, targetSessionId: number, o
                             .from(students).where(eq(students.id, evaluation.studentId)).limit(1);
                         if (graduatingStudent?.userId) {
                             await db.update(users)
-                                .set({ status: 'graduated' })
+                                .set({ status: gradStatus })
                                 .where(eq(users.id, graduatingStudent.userId));
                         }
                         graduated++;
@@ -499,8 +501,8 @@ export async function generateHodReport(deptId: number, sessionId: number, type:
 
         // Filter by final/non-final year
         const filteredStudents = deptStudents.filter(s => {
-            const maxLevel = (s.durationYears || 4) * 100;
-            const isFinalYear = (s.currentLevel || 100) >= maxLevel;
+            const maxLevel = (s.durationYears || 2);
+            const isFinalYear = (s.currentLevel || 1) >= maxLevel;
             return type === 'final_year' ? isFinalYear : !isFinalYear;
         });
 
@@ -613,7 +615,7 @@ export async function generateHodReport(deptId: number, sessionId: number, type:
                 modeOfEntry: s.modeOfEntry || 'UTME',
                 studentName: formattedName,
                 sortName: (s.lastName || nameParts[nameParts.length - 1] || '').toUpperCase(),
-                currentLevel: s.currentLevel || 100,
+                currentLevel: s.currentLevel || 1,
                 cumulativeUnitsRegistered,
                 cumulativeUnitsPassed,
                 unitsNotIn: Math.max(0, unitsNotIn),

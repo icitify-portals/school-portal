@@ -24,7 +24,7 @@ export default async function AlumniPage() {
     .where(
         or(
             eq(graduationClearances.status, 'cleared'),
-            eq(students.status, 'graduated')
+            inArray(students.status, ['nd_graduated', 'hnd_graduated'])
         )
     )
     .orderBy(desc(students.id));

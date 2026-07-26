@@ -14,7 +14,7 @@ export const users = mysqlTable('users', {
   password: varchar('password', { length: 255 }).notNull(),
   requiresPasswordChange: boolean('requires_password_change').default(false),
   role: mysqlEnum('role', ['admin', 'staff', 'student', 'dvc', 'healthadmin', 'applicant', 'fresher', 'superadmin', 'parent', 'icitify_dev', 'bursar', 'registrar', 'librarian', 'hod', 'dean', 'admission_officer']).default('student'),
-  status: mysqlEnum('status', ['active', 'suspended', 'withdrawn', 'graduated', 'rusticated']).default('active'),
+  status: mysqlEnum('status', ['active', 'suspended', 'withdrawn', 'nd_graduated', 'hnd_graduated', 'rusticated']).default('active'),
   phone: varchar('phone', { length: 20 }),
   imageUrl: varchar('image_url', { length: 255 }),
   failedLoginAttempts: int('failed_login_attempts').default(0),
@@ -144,9 +144,10 @@ export const programmes = mysqlTable('programmes', {
   id: int('id').autoincrement().primaryKey(),
   deptId: int('dept_id').references(() => departments.id),
   name: varchar('name', { length: 255 }).notNull(),
+  programmeType: mysqlEnum('programme_type', ['ND', 'HND']).notNull(),
   code: varchar('code', { length: 20 }), // Required for seeding/lookup
   durationMonths: int('duration_months').notNull(),
-  durationYears: int('duration_years').default(4), // max level = durationYears * 100
+  durationYears: int('duration_years').default(2), // max level = durationYears
   cutOffMark: int('cut_off_mark').default(180),
   catchmentAreas: text('catchment_areas'), // JSON array: ["Lagos", "Ogun"]
   meritQuota: int('merit_quota').default(45), // Percentage for merit
@@ -219,6 +220,7 @@ export const students = mysqlTable('students', {
   otherNames: varchar('other_names', { length: 100 }),
   admissionNumber: varchar('admission_number', { length: 50 }).unique(),
   programmeId: int('programme_id').references(() => programmes.id),
+  programmeType: mysqlEnum('programme_type', ['ND', 'HND']).notNull().default('ND'),
   deptId: int('dept_id').references(() => departments.id),
   unitId: int('unit_id').references(() => institutionalUnits.id),
   groupId: int('group_id').references(() => studentGroups.id), // For Class Arms (A, B, etc.)
@@ -227,7 +229,7 @@ export const students = mysqlTable('students', {
   legacyAccessUnits: text('legacy_access_units'), // JSON: [1, 5, 12] (Unit IDs that can still view)
   admissionYear: int('admission_year'),
   admissionSessionId: int('admission_session_id').references(() => academicSessions.id),
-  currentLevel: int('current_level').default(100),
+  currentLevel: int('current_level').default(1),
   jambNumber: varchar('jamb_number', { length: 50 }).unique(),
   walletBalance: decimal('wallet_balance', { precision: 12, scale: 2 }).default('0.00'), // Used for Legacy/Previous Payments
   digitalWalletBalance: decimal('digital_wallet_balance', { precision: 12, scale: 2 }).default('0.00'), // Used for Actual Wallet Funds
@@ -240,7 +242,7 @@ export const students = mysqlTable('students', {
   isFinanciallyLocked: boolean('is_financially_locked').default(false),
   nin: varchar('nin', { length: 11 }),
   ninVerified: boolean('nin_verified').default(false),
-  status: mysqlEnum('status', ['active', 'graduated', 'withdrawn', 'suspended', 'rusticated']).default('active'),
+  status: mysqlEnum('status', ['active', 'nd_graduated', 'hnd_graduated', 'withdrawn', 'suspended', 'rusticated']).default('active'),
 
   // Guardian Details
   guardianName: varchar('guardian_name', { length: 255 }),
@@ -1515,7 +1517,7 @@ export const promotionLogs = mysqlTable('promotion_logs', {
   toLevel: int('to_level').notNull(),
   fromSessionId: int('from_session_id').references(() => academicSessions.id).notNull(),
   toSessionId: int('to_session_id').references(() => academicSessions.id),
-  decision: mysqlEnum('decision', ['promoted', 'withdrawn', 'graduated', 'repeat', 'rusticated', 'concession']).notNull(),
+  decision: mysqlEnum('decision', ['promoted', 'withdrawn', 'nd_graduated', 'hnd_graduated', 'repeat', 'rusticated', 'concession']).notNull(),
   cgpa: decimal('cgpa', { precision: 4, scale: 2 }),
   creditsEarned: int('credits_earned'),
   reason: text('reason'),

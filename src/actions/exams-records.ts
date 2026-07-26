@@ -32,10 +32,10 @@ export async function getGraduatingStudents(filters?: {
 
         const conditions = [
             or(
-                eq(users.status, 'graduated'),
-                // Simple heuristic for final year: level >= (duration/12 * 100)
-                // e.g. 48 months / 12 = 4 years -> level 400
-                sql`${students.currentLevel} >= (${programmes.durationMonths} / 12) * 100`
+                eq(users.status, 'nd_graduated'),
+                eq(users.status, 'hnd_graduated'),
+                // Simple heuristic for final year: level >= (duration/12)
+                sql`${students.currentLevel} >= (${programmes.durationMonths} / 12)`
             )
         ];
 

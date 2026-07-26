@@ -69,7 +69,7 @@ export default function StudentTransferPage() {
                 matricNumber: studentData.matricNumber,
                 currentFacultyId: currentFaculty?.id || 0,
                 currentDeptId: currentDept?.id || 0,
-                currentLevel: studentData.currentLevel || 100,
+                currentLevel: studentData.currentLevel || 1,
                 currentDegreeInView: currentDept?.name || "Unknown",
                 proposedFacultyId: parseInt(proposedFaculty),
                 proposedDeptId: parseInt(proposedDept),
@@ -203,7 +203,7 @@ export default function StudentTransferPage() {
                                     <div className="grid grid-cols-2 gap-4">
                                         <div>
                                             <Label className="text-[10px] font-black uppercase text-slate-400">Level</Label>
-                                            <p className="text-lg font-bold text-slate-900">{studentData?.currentLevel || 100}</p>
+                                            <p className="text-lg font-bold text-slate-900">{studentData?.currentLevel || 1}</p>
                                         </div>
                                         <div>
                                             <Label className="text-[10px] font-black uppercase text-slate-400">Matric Number</Label>
@@ -263,11 +263,8 @@ export default function StudentTransferPage() {
                                                     <SelectValue placeholder="Level" />
                                                 </SelectTrigger>
                                                 <SelectContent>
-                                                    <SelectItem value="100">100</SelectItem>
-                                                    <SelectItem value="200">200</SelectItem>
-                                                    <SelectItem value="300">300</SelectItem>
-                                                    <SelectItem value="400">400</SelectItem>
-                                                    <SelectItem value="500">500</SelectItem>
+                                                    <SelectItem value="1">1</SelectItem>
+                                                    <SelectItem value="2">2</SelectItem>
                                                 </SelectContent>
                                             </Select>
                                         </div>

@@ -7,7 +7,7 @@ import { Search, Loader2, FileText, Printer, FileSearch, User } from "lucide-rea
 import { searchAllStudents } from "@/actions/exams-records";
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
-import { formatLevel } from "@/lib/utils";
+import { formatLevel, isGraduatedStatus } from "@/lib/utils";
 
 export default function GeneralStudentSearch() {
     const router = useRouter();
@@ -78,7 +78,7 @@ export default function GeneralStudentSearch() {
                                         <td className="px-6 py-4">
                                             <div className="flex flex-col gap-1">
                                                 <div className="flex items-center gap-2">
-                                                    <Badge variant={s.status === 'graduated' ? 'success' : 'outline'} className="rounded-md uppercase text-[9px] font-black">
+                                                    <Badge variant={isGraduatedStatus(s.status) ? 'success' : 'outline'} className="rounded-md uppercase text-[9px] font-black">
                                                         {s.status}
                                                     </Badge>
                                                     <span className="text-xs text-slate-400 font-bold">{formatLevel(s.currentLevel).toUpperCase()}</span>

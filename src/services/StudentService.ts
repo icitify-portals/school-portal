@@ -62,7 +62,7 @@ export class StudentService {
             unitId: data.unitId,
             deptId: data.deptId,
             programmeId: data.programmeId,
-            currentLevel: data.level || 100 // Defaults to 100 for tertiary
+            currentLevel: data.level || 1 // Defaults to 1 for tertiary
         });
 
         return {

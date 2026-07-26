@@ -1212,7 +1212,7 @@ export const TertiarySemesterResultCard = ({ data, term }: { data: any, term: st
                 </div>
                 <div>
                     <span className="text-slate-400 block font-bold uppercase tracking-wider text-[9px] mb-0.5">LEVEL</span>
-                    <span className="font-bold text-slate-700 text-sm uppercase">{formatLevel(student.currentLevel || student.level || 100)}</span>
+                    <span className="font-bold text-slate-700 text-sm uppercase">{formatLevel(student.currentLevel || student.level || 1)}</span>
                 </div>
             </div>
 

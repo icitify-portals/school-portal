@@ -42,7 +42,7 @@ export class PromotionService {
         if (student.programmeId) {
             return await this.evaluateTertiary(student.id, session.id);
         } else {
-            return await this.evaluateK12(student.id, session.id, student.currentLevel || 100);
+            return await this.evaluateK12(student.id, session.id, student.currentLevel || 1);
         }
     }
 

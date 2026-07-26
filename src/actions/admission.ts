@@ -126,7 +126,7 @@ export async function claimAdmissionProfile(regNo: string, dob: string, email?: 
             if (existingStudent.length > 0) {
                 await tx.update(students).set({
                     programmeId: candidate.courseId,
-                    currentLevel: 100,
+                    currentLevel: 1,
                     imageUrl: (candidate as any).imageUrl || existingStudent[0].imageUrl,
                     barcode: `${candidate.firstname} ${candidate.surname} | ${candidate.jambRegNo}`
                 }).where(eq(students.id, existingStudent[0].id));
@@ -134,7 +134,7 @@ export async function claimAdmissionProfile(regNo: string, dob: string, email?: 
                 await tx.insert(students).values({
                     userId,
                     programmeId: candidate.courseId,
-                    currentLevel: 100,
+                    currentLevel: 1,
                     imageUrl: (candidate as any).imageUrl,
                     barcode: `${candidate.firstname} ${candidate.surname} | ${candidate.jambRegNo}`
                 });

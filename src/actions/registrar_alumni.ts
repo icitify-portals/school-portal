@@ -12,9 +12,14 @@ export async function transitionToAlumni(studentId: number) {
             return { success: false, error: "Unauthorized" };
         }
 
+        const [student] = await db.select({ programmeType: students.programmeType })
+            .from(students).where(eq(students.id, studentId)).limit(1);
+        
+        const gradStatus = student?.programmeType === 'HND' ? 'hnd_graduated' : 'nd_graduated';
+
         await db.update(students)
             .set({ 
-                status: 'graduated',
+                status: gradStatus,
                 isProfileLocked: true, 
                 isFinanciallyLocked: true 
             })

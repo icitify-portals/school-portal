@@ -89,11 +89,11 @@ export async function applyForHostel(hostelId: number) {
             .where(eq(programmes.id, student.programmeId!))
             .limit(1);
 
-        const durationYears = (programme?.durationMonths || 48) / 12;
-        const finalYearLevel = durationYears * 100;
+        const durationYears = (programme?.durationMonths || 24) / 12;
+        const finalYearLevel = durationYears;
 
-        // Freshers (100L) and Final Year get priority
-        const isPriority = student.level === 100 || student.level === finalYearLevel;
+        // Freshers (1L) and Final Year get priority
+        const isPriority = student.level === 1 || student.level === finalYearLevel;
 
         const [activeSession] = await db.select()
             .from(academicSessions)

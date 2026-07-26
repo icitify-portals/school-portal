@@ -218,16 +218,17 @@ export class RemitaAdapter implements PaymentGatewayAdapter {
 
         let serviceTypeId = isLive ? "8817651539" : (process.env.REMITA_SERVICE_TYPE_ID || "8817651539"); // Default to ND1
         const level = String(meta?.studentLevel || "").toLowerCase();
+        const programmeType = String(meta?.programmeType || "").toUpperCase();
         
-        // Dynamically assign Service Type ID based on student level
+        // Dynamically assign Service Type ID based on student level and programme type
         if (meta?.studentLevel) {
-            if ((level.includes('nd') && level.includes('2')) || level === '200') {
-                serviceTypeId = "1172909756"; // ND2
-            } else if ((level.includes('hnd') && level.includes('1')) || level === '300') {
-                serviceTypeId = "8817962375"; // HND1
-            } else if ((level.includes('hnd') && level.includes('2')) || level === '400') {
+            if (programmeType === 'HND' && level === '2') {
                 serviceTypeId = "1173000079"; // HND2
-            } else if ((level.includes('nd') && level.includes('1')) || level === '100') {
+            } else if (programmeType === 'HND' && level === '1') {
+                serviceTypeId = "8817962375"; // HND1
+            } else if (programmeType === 'ND' && level === '2') {
+                serviceTypeId = "1172909756"; // ND2
+            } else {
                 serviceTypeId = "8817651539"; // ND1
             }
         }

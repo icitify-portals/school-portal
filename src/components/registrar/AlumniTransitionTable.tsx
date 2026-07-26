@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { isGraduatedStatus } from "@/lib/utils";
 import { transitionToAlumni } from "@/actions/registrar_alumni";
 import { toast } from "sonner";
 import { UserCheck, Lock } from "lucide-react";
@@ -52,13 +53,13 @@ export function AlumniTransitionTable({ students }: { students: any[] }) {
                                 </Badge>
                             </td>
                             <td className="px-4 py-3">
-                                <Badge variant={s.status === 'graduated' ? 'outline' : 'default'} className={s.status === 'graduated' ? "border-emerald-200 text-emerald-700 bg-emerald-50" : ""}>
+                                <Badge variant={isGraduatedStatus(s.status) ? 'outline' : 'default'} className={isGraduatedStatus(s.status) ? "border-emerald-200 text-emerald-700 bg-emerald-50" : ""}>
                                     {s.status}
                                 </Badge>
                                 {s.isProfileLocked && <Lock className="inline w-3 h-3 ml-2 text-slate-400" />}
                             </td>
                             <td className="px-4 py-3 text-right">
-                                {s.status !== 'graduated' && s.clearanceStatus === 'cleared' && (
+                                {!isGraduatedStatus(s.status) && s.clearanceStatus === 'cleared' && (
                                     <Button 
                                         size="sm" 
                                         onClick={() => handleTransition(s.id)}

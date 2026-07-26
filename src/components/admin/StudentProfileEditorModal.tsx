@@ -34,7 +34,7 @@ export function StudentProfileEditorModal({ student, departments, programmes, on
             otherNames: student.otherNames || "",
             matricNumber: student.matricNumber || "",
             jambNumber: student.jambNumber || "",
-            currentLevel: student.currentLevel || 100,
+            currentLevel: student.currentLevel || 1,
             deptId: student.deptId || "",
             programmeId: student.programmeId || "",
             gender: student.gender || "",

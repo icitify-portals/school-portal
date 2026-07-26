@@ -157,7 +157,7 @@ export async function checkRegistrationAccess(studentId: number, sessionId: numb
         if (student) {
             const [levelControl] = await db.select().from(registrationLevelControls).where(and(
                 eq(registrationLevelControls.sessionId, sessionId),
-                eq(registrationLevelControls.level, student.currentLevel || 100)
+                eq(registrationLevelControls.level, student.currentLevel || 1)
             )).limit(1);
             if (levelControl?.isOpen) return { canRegister: true };
         }

@@ -2119,7 +2119,7 @@ export class DocumentService {
         doc.text(nameVal.toUpperCase(), leftCol + 5, profileY + 11);
         const matricVal = data.student?.matricNumber || data.student?.admissionNumber || 'N/A';
         doc.text(matricVal.toUpperCase(), leftCol + 65, profileY + 11);
-        const levelVal = data.student?.currentLevel || data.student?.level || 100;
+        const levelVal = data.student?.currentLevel || data.student?.level || 1;
         doc.text(`${levelVal} LEVEL`, leftCol + 125, profileY + 11);
 
         // Row 2 label

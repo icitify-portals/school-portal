@@ -222,9 +222,9 @@ export async function bulkImportStudents(data: any[]) {
                 // Determine final level based on Mode of Entry
                 const entryMode = row.modeOfEntry?.toString().trim().toUpperCase() === 'DE' ? 'DE' : 'UTME';
                 const parsedLevel = parseInt(level);
-                let finalLevel = isNaN(parsedLevel) ? 100 : parsedLevel;
-                if (entryMode === 'DE' && finalLevel === 100) {
-                    finalLevel = 200;
+                let finalLevel = isNaN(parsedLevel) ? 1 : parsedLevel;
+                if (entryMode === 'DE' && finalLevel === 1) {
+                    finalLevel = 2;
                 }
 
                 // Parse Admission Year

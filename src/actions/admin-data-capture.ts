@@ -131,7 +131,7 @@ export async function commitCapturedData(data: { courses: any[], lecturers: any[
                             deptId: dept.id,
                             semester: (c.semester === '2' ? '2' : '1'),
                             status: c.status || 'compulsory',
-                            level: parseInt(c.level) || 100
+                            level: parseInt(c.level) || 1
                         });
                     }
                 }

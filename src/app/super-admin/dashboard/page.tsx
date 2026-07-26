@@ -26,7 +26,7 @@ import {
 import { cn } from "@/lib/utils";
 import { db } from "@/db/db";
 import { users, departments, programmes, courses, students, admissionSessions, faculties, institutionalUnits, organizations, movementLogs } from "@/db/schema";
-import { count, eq, sql } from "drizzle-orm";
+import { count, eq, sql, inArray } from "drizzle-orm";
 import OnboardSection from "./_components/OnboardSection";
 import ActiveStudentsModal from "./_components/ActiveStudentsModal";
 
@@ -49,7 +49,7 @@ export default async function SuperAdminDashboardPage() {
             db.select({ value: count() }).from(courses),
             db.select({ value: count() }).from(admissionSessions).where(eq(admissionSessions.isActive, true)),
             db.select({ value: count() }).from(students).where(eq(students.status, 'active')),
-            db.select({ value: count() }).from(students).where(eq(students.status, 'graduated')),
+            db.select({ value: count() }).from(students).where(inArray(students.status, ['nd_graduated', 'hnd_graduated'])),
         ]);
 
         const unitBreakdown = await db.execute(sql`

@@ -157,7 +157,7 @@ export default async function ResultsPage() {
                         name: student.user?.name || "",
                         matricNumber: student.matricNumber || "",
                         department: student.department?.name || "",
-                        level: student.currentLevel || 100,
+                        level: student.currentLevel || 1,
                         programme: student.programme?.name || "",
                         unitId: student.unitId
                     }}

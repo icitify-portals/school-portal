@@ -847,7 +847,7 @@ export async function finalizeStudentAdmission(applicationId: number) {
 
         // Generate FSS standard matriculation number
         const year = new Date().getFullYear();
-        const progName = (template.level.toLowerCase().includes("nd") || template.level.toLowerCase().includes("diploma")) ? "ND" : "HND";
+        const programmeType = (template.level.toLowerCase().includes("nd") || template.level.toLowerCase().includes("diploma")) ? "ND" : "HND";
         
         // Query total student count for the year to generate a unique sequence number
         const countRes = await db.select({ count: sql<number>`count(*)` })
@@ -856,7 +856,7 @@ export async function finalizeStudentAdmission(applicationId: number) {
         
         const sequence = (countRes[0]?.count || 0) + 1;
         const formattedSeq = sequence.toString().padStart(4, '0');
-        const matricNumber = `FSS/IB/${year}/${studyModeCode}/${progName}/${formattedSeq}`;
+        const matricNumber = `FSS/IB/${year}/${studyModeCode}/${programmeType}/${formattedSeq}`;
 
         // Process Base64 images to physical files
         let finalImageUrl = application.applicantPhoto;
@@ -917,6 +917,8 @@ export async function finalizeStudentAdmission(applicationId: number) {
             jambNumber: jambRegNo || null,
             modeOfEntry: modeOfEntry,
             studyMode: studyMode,
+            programmeType: programmeType,
+            currentLevel: 1,
             admissionYear: year,
             gender: (formData.gender?.toLowerCase() || 'other') as any,
             dob: formData.dob,

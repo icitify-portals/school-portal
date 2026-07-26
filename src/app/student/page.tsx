@@ -1,6 +1,6 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
-import { cn } from "@/lib/utils";
+import { cn, isGraduatedStatus } from "@/lib/utils";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -58,7 +58,7 @@ export default async function StudentDashboard() {
     const userId = parseInt(session.user.id || "0");
     // Dynamic auto-healing check for student profile
     const studentRecord = await getStudentByUserId(userId);
-    const isGraduated = studentRecord?.status === 'graduated';
+    const isGraduated = isGraduatedStatus(studentRecord?.status);
     const statsData = await getStudentDashboardStats(userId);
     
     // Fetch active medical excuse if any
@@ -220,7 +220,7 @@ export default async function StudentDashboard() {
                         Welcome, {studentInfo.name || `${studentInfo.firstName || ''} ${studentInfo.lastName || ''}`.trim() || 'Student'}
                     </h1>
                     <p className="text-slate-300 text-sm font-semibold tracking-wide uppercase opacity-90">
-                        Matriculation No: <span className="text-white font-mono font-black tracking-wider">{statsData?.matricNo || 'PENDING'}</span> • Level: <span className="text-white font-black">{statsData?.level || 100} Level</span>
+                        Matriculation No: <span className="text-white font-mono font-black tracking-wider">{statsData?.matricNo || 'PENDING'}</span> • Level: <span className="text-white font-black">{statsData?.level || 1} Level</span>
                     </p>
                 </div>
 

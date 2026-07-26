@@ -448,8 +448,8 @@ export default function RoleTransitionsPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="100">ND 1 (100)</SelectItem>
-                      <SelectItem value="200">ND 2 (200)</SelectItem>
+                      <SelectItem value="1">Level 1</SelectItem>
+                      <SelectItem value="2">Level 2</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

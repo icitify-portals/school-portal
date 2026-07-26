@@ -17,7 +17,7 @@ import { getLevelControls, setLevelControl } from "@/actions/concessions";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
-const LEVELS = [100, 200, 300, 400, 500, 600, 700, 800];
+const LEVELS = [1, 2];
 
 export default function RegistrationControlsPage() {
     const [sessions, setSessions] = useState<any[]>([]);

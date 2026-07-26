@@ -105,10 +105,8 @@ export default function MatriculationRegisterPage() {
                             onChange={(e) => setLevel(e.target.value as any)}
                         >
                             <option value="">All Levels</option>
-                            <option value="100">ND 1</option>
-                            <option value="200">ND 2</option>
-                            <option value="300">HND 1</option>
-                            <option value="400">HND 2</option>
+                            <option value="1">Level 1</option>
+                            <option value="2">Level 2</option>
                         </select>
                     </div>
                     <div className="space-y-1 flex-1 min-w-[200px]">

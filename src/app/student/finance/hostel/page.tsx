@@ -100,7 +100,7 @@ export default async function StudentHostelPage() {
             <StudentHostelPortal
                 availableHostels={availableHostels}
                 application={application}
-                studentLevel={student.currentLevel || 100}
+                studentLevel={student.currentLevel || 1}
                 hostelSettings={settings}
             />
           </div>
