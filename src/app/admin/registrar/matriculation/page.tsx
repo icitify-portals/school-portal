@@ -196,13 +196,14 @@ export default function MatricAdminPage() {
     };
 
     const exportCSV = () => {
-        const headers = ["Student Name", "Admission No", "Matric No", "Department", "Programme", "Level", "Status"];
+        const headers = ["Student Name", "Admission No", "Matric No", "Department", "Programme", "Year Entry", "Level", "Status"];
         const rows = students.map((s) => [
             `${s.lastName} ${s.firstName}`,
             s.admissionNumber || "",
             s.matricNumber || "PENDING",
             s.deptName || "",
             s.programmeName || "",
+            s.admissionYear || "",
             s.currentLevel || "",
             s.status || "",
         ]);
@@ -365,6 +366,7 @@ export default function MatricAdminPage() {
                                             <th className="px-4 py-3 text-[10px] font-black text-slate-500 uppercase tracking-widest">Student</th>
                                             <th className="px-4 py-3 text-[10px] font-black text-slate-500 uppercase tracking-widest">Dept</th>
                                             <th className="px-4 py-3 text-[10px] font-black text-slate-500 uppercase tracking-widest">Programme</th>
+                                            <th className="px-4 py-3 text-[10px] font-black text-slate-500 uppercase tracking-widest">Year Entry</th>
                                             <th className="px-4 py-3 text-[10px] font-black text-slate-500 uppercase tracking-widest">Level</th>
                                             <th className="px-4 py-3 text-[10px] font-black text-slate-500 uppercase tracking-widest">Matric Number</th>
                                             <th className="px-4 py-3 text-[10px] font-black text-slate-500 uppercase tracking-widest">Actions</th>
@@ -373,13 +375,13 @@ export default function MatricAdminPage() {
                                     <tbody className="divide-y divide-slate-100">
                                         {listLoading ? (
                                             <tr>
-                                                <td colSpan={7} className="px-4 py-12 text-center">
+                                                <td colSpan={8} className="px-4 py-12 text-center">
                                                     <Loader2 className="w-6 h-6 animate-spin text-indigo-500 mx-auto" />
                                                 </td>
                                             </tr>
                                         ) : students.length === 0 ? (
                                             <tr>
-                                                <td colSpan={7} className="px-4 py-12 text-center text-slate-400">
+                                                <td colSpan={8} className="px-4 py-12 text-center text-slate-400">
                                                     No students found
                                                 </td>
                                             </tr>
@@ -401,6 +403,9 @@ export default function MatricAdminPage() {
                                                             {s.programmeType}
                                                         </span>
                                                         <span className="text-xs text-slate-500 ml-1">{s.programmeName}</span>
+                                                    </td>
+                                                    <td className="px-4 py-3 text-xs font-bold text-slate-600">
+                                                        {s.admissionYear || "—"}
                                                     </td>
                                                     <td className="px-4 py-3 text-xs font-bold text-slate-600">
                                                         {s.currentLevel === 1 ? "Year 1" : s.currentLevel === 2 ? "Year 2" : s.currentLevel}
@@ -556,6 +561,7 @@ export default function MatricAdminPage() {
                                             <div className="font-bold text-slate-800">{selectedStudent.lastName} {selectedStudent.firstName}</div>
                                             <div className="text-xs text-slate-500 mt-1">
                                                 {selectedStudent.deptName} · {selectedStudent.programmeType} · ADM: {selectedStudent.admissionNumber || "N/A"}
+                                                {selectedStudent.admissionYear && ` · Entry: ${selectedStudent.admissionYear}`}
                                             </div>
                                             {selectedStudent.matricNumber && (
                                                 <div className="mt-2">

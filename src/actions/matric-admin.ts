@@ -82,6 +82,7 @@ export async function getMatricStudents(options?: {
                 matricNumber: students.matricNumber,
                 previousMatricNumbers: students.previousMatricNumbers,
                 admissionNumber: students.admissionNumber,
+                admissionYear: students.admissionYear,
                 programmeType: students.programmeType,
                 currentLevel: students.currentLevel,
                 studyMode: students.studyMode,
