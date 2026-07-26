@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Users, AlertTriangle, GraduationCap, FileCheck2, School } from "lucide-react";
+import { Users, AlertTriangle, GraduationCap, FileCheck2, School, Hash } from "lucide-react";
 import { db } from "@/db/db";
 import { students } from "@/db/schema";
 import { count, eq } from "drizzle-orm";
@@ -79,6 +79,20 @@ export default async function RegistrarDashboardPage() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-4">
+                <Link href="/admin/registrar/matriculation" className="group">
+                    <Card className="h-full transition-all duration-200 hover: hover:-300 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
+                        <CardContent className="p-6 flex flex-col items-center text-center space-y-4">
+                            <div className="p-4 rounded-full bg-indigo-100 text-indigo-600 group-hover:scale-110 transition-transform">
+                                <Hash className="h-8 w-8" />
+                            </div>
+                            <div>
+                                <h3 className="font-semibold text-lg text-slate-900">Matriculation Numbers</h3>
+                                <p className="text-sm text-slate-500 mt-2">Assign, change, and manage student matriculation numbers with full audit trail.</p>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </Link>
+
                 <Link href="/admin/registrar/clearance" className="group">
                     <Card className="h-full transition-all duration-200 hover: hover:-300 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                         <CardContent className="p-6 flex flex-col items-center text-center space-y-4">

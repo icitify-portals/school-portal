@@ -6067,6 +6067,29 @@ export const matriculationSequencesRelations = relations(matriculationSequences,
   }),
 }));
 
+// --- MATRICULATION AUDIT LOG ---
+export const matriculationAuditLog = mysqlTable('matriculation_audit_log', {
+  id: int('id').autoincrement().primaryKey(),
+  studentId: int('student_id').references(() => students.id).notNull(),
+  action: mysqlEnum('action', ['assigned', 'changed', 'restored']).notNull(),
+  oldMatric: varchar('old_matric', { length: 50 }),
+  newMatric: varchar('new_matric', { length: 50 }).notNull(),
+  reason: text('reason'),
+  performedById: int('performed_by_id').references(() => users.id).notNull(),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const matriculationAuditLogRelations = relations(matriculationAuditLog, ({ one }) => ({
+  student: one(students, {
+    fields: [matriculationAuditLog.studentId],
+    references: [students.id],
+  }),
+  performedBy: one(users, {
+    fields: [matriculationAuditLog.performedById],
+    references: [users.id],
+  }),
+}));
+
 // --- BURSARY: DIRECT PAYMENTS ---
 export const directPayments = mysqlTable('direct_payments', {
   id: int('id').autoincrement().primaryKey(),

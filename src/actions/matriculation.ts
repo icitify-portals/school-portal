@@ -190,7 +190,7 @@ export async function getMatriculatedStudents(filters?: { sessionId?: number, pr
         const { students, programmes, academicSessions } = await import('@/db/schema');
         const { desc, and, eq, sql, isNotNull } = await import('drizzle-orm');
 
-        const conditions = [isNotNull(students.matriculationNumber)];
+        const conditions = [isNotNull(students.matricNumber)];
 
         if (filters?.programmeId) {
             conditions.push(eq(students.programmeId, filters.programmeId));
@@ -204,7 +204,7 @@ export async function getMatriculatedStudents(filters?: { sessionId?: number, pr
             firstName: students.firstName,
             lastName: students.lastName,
             otherNames: students.otherNames,
-            matriculationNumber: students.matriculationNumber,
+            matriculationNumber: students.matricNumber,
             currentLevel: students.currentLevel,
             programmeName: programmes.name,
             studyMode: students.studyMode,
@@ -212,7 +212,7 @@ export async function getMatriculatedStudents(filters?: { sessionId?: number, pr
         .from(students)
         .leftJoin(programmes, eq(students.programmeId, programmes.id))
         .where(and(...conditions))
-        .orderBy(desc(students.matriculationNumber));
+            .orderBy(desc(students.matricNumber));
 
         return data;
     } catch (error) {
