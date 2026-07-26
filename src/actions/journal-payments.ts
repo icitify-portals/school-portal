@@ -34,7 +34,7 @@ export async function initiateJournalApcPayment(articleId: number, gateway: 'pay
 
         const reference = `APC-${articleId}-${Date.now()}`;
 
-        const res = await initiatePayment(gateway, amount, reference, session.user.email);
+        const res = await initiatePayment(gateway, amount, reference, session.user.email, (session.user as any).firstName, (session.user as any).lastName);
         
         if (res.success && res.paymentUrl) {
             // Record pending payment

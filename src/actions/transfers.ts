@@ -55,7 +55,7 @@ export async function submitTransferRequest(data: {
             });
             transactionId = txRes.insertId;
 
-            const initRes = await initiatePayment('remita', transferFee, reference, session.user.email || 'student@school.edu.ng');
+            const initRes = await initiatePayment('remita', transferFee, reference, session.user.email || 'student@school.edu.ng', (session.user as any).firstName, (session.user as any).lastName);
             if (!initRes.success) {
                 return { success: false, error: initRes.error || "Failed to initialize payment gateway" };
             }

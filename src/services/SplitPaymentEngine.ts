@@ -348,7 +348,11 @@ export class AlatpayAdapter implements PaymentGatewayAdapter {
             }
         }
 
-        let checkoutUrl = `/finance/checkout/simulate?gateway=alatpay&reference=${txReference}&amount=${totalAmount}`;
+        // Extract payer name from meta to include in the ALATPay checkout URL
+        const payerFirstName = meta?.payerName ? (meta.payerName as string).split(' ')[0] : (meta?.payerFirstName as string || 'Student');
+        const payerLastName = meta?.payerName ? (meta.payerName as string).split(' ').slice(1).join(' ') || payerFirstName : (meta?.payerLastName as string || 'Payer');
+
+        let checkoutUrl = `/finance/checkout/simulate?gateway=alatpay&reference=${txReference}&amount=${totalAmount}&firstName=${encodeURIComponent(payerFirstName)}&lastName=${encodeURIComponent(payerLastName)}`;
         if (targetBusinessId) checkoutUrl += `&businessId=${targetBusinessId}`;
         if (publicKey) checkoutUrl += `&publicKey=${publicKey}`;
 
@@ -649,7 +653,7 @@ export class SplitPaymentEngine {
             txRef,
             splits,
             feeBearerRule,
-            { studentLevel: student.level || "" }
+            { studentLevel: student.level || "", payerName: `${student.user.firstName || ''} ${student.user.lastName || ''}`.trim() || student.user.email }
         );
         
         if (result.rrr) {
