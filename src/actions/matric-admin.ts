@@ -8,8 +8,19 @@ import {
 } from "@/db/schema";
 import { eq, and, or, like, isNull, isNotNull, desc, asc, sql, count } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import { requireAdmin } from "@/lib/auth";
+import { auth } from "@/auth";
 import { generateMatricNumber } from "@/actions/matriculation";
+
+const ADMIN_ROLES = ['admin', 'superadmin', 'icitify_dev', 'dvc', 'registrar', 'admission_officer'];
+
+async function requireAdmin() {
+    const session = await auth();
+    if (!session?.user) throw new Error("Unauthorized: Please log in");
+    if (!ADMIN_ROLES.includes(session.user.role as string)) {
+        throw new Error("Forbidden: You do not have permission to perform this action");
+    }
+    return session;
+}
 
 export async function getMatricStudents(options?: {
     search?: string;
@@ -132,9 +143,8 @@ export async function previewNextMatricNumber(options: {
 export async function assignMatricNumber(studentId: number, matricNumber: string, reason?: string) {
     await requireAdmin();
     try {
-        const admin = await requireAdmin();
-        const adminUser = admin as any;
-        const adminId = adminUser?.id;
+        const session = await requireAdmin();
+        const adminId = session.user.id;
 
         const student = await db.query.students.findFirst({
             where: eq(students.id, studentId),
@@ -180,9 +190,8 @@ export async function assignMatricNumber(studentId: number, matricNumber: string
 export async function changeMatricNumber(studentId: number, newMatricNumber: string, reason: string) {
     await requireAdmin();
     try {
-        const admin = await requireAdmin();
-        const adminUser = admin as any;
-        const adminId = adminUser?.id;
+        const session = await requireAdmin();
+        const adminId = session.user.id;
 
         if (!reason?.trim()) {
             return { success: false, error: "Reason is required for changing a matriculation number" };
@@ -244,9 +253,8 @@ export async function changeMatricNumber(studentId: number, newMatricNumber: str
 export async function restoreMatricNumber(studentId: number, restoreToMatric: string, reason: string) {
     await requireAdmin();
     try {
-        const admin = await requireAdmin();
-        const adminUser = admin as any;
-        const adminId = adminUser?.id;
+        const session = await requireAdmin();
+        const adminId = session.user.id;
 
         if (!reason?.trim()) {
             return { success: false, error: "Reason is required for restoring a matriculation number" };
