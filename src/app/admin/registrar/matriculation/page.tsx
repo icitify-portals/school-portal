@@ -14,6 +14,7 @@ import {
     batchAssignMatricNumbers
 } from "@/actions/matric-admin";
 import { getDepartments } from "@/actions/departments";
+import { getAcademicSessions } from "@/actions/portal";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import Link from "next/link";
@@ -43,6 +44,7 @@ export default function MatricAdminPage() {
     const [statusFilter, setStatusFilter] = useState("");
     const [listLoading, setListLoading] = useState(false);
     const [departmentsList, setDepartmentsList] = useState<any[]>([]);
+    const [sessionsList, setSessionsList] = useState<any[]>([]);
 
     // Assign tab state
     const [assignSearch, setAssignSearch] = useState("");
@@ -77,7 +79,7 @@ export default function MatricAdminPage() {
                 deptId: deptFilter ? Number(deptFilter) : undefined,
                 programmeType: typeFilter || undefined,
                 level: levelFilter ? Number(levelFilter) : undefined,
-                admissionYear: yearFilter ? Number(yearFilter) : undefined,
+                sessionId: yearFilter ? Number(yearFilter) : undefined,
                 matricStatus: (statusFilter as any) || undefined,
                 page,
                 pageSize: 50,
@@ -94,6 +96,9 @@ export default function MatricAdminPage() {
     useEffect(() => {
         getDepartments().then(data => {
             if (data) setDepartmentsList(data);
+        }).catch(() => {});
+        getAcademicSessions().then(data => {
+            if (data) setSessionsList(data);
         }).catch(() => {});
     }, []);
 
@@ -373,9 +378,9 @@ export default function MatricAdminPage() {
                                         onChange={(e) => { setYearFilter(e.target.value); setPage(1); }}
                                         className="px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-medium bg-white"
                                     >
-                                        <option value="">All Years</option>
-                                        {[2024, 2025, 2026, 2027].map((y) => (
-                                            <option key={y} value={y}>{y}</option>
+                                        <option value="">All Sessions</option>
+                                        {sessionsList.map((s) => (
+                                            <option key={s.id} value={s.id}>{s.name}</option>
                                         ))}
                                     </select>
                                     <select
@@ -467,7 +472,7 @@ export default function MatricAdminPage() {
                                                         <span className="text-xs text-slate-500 ml-1">{s.programmeName}</span>
                                                     </td>
                                                     <td className="px-4 py-3 text-xs font-bold text-slate-600">
-                                                        {s.admissionYear || "—"}
+                                                        {s.sessionName || s.admissionYear || "—"}
                                                     </td>
                                                     <td className="px-4 py-3 text-xs font-bold text-slate-600">
                                                         {s.currentLevel === 1 ? "Year 1" : s.currentLevel === 2 ? "Year 2" : s.currentLevel}

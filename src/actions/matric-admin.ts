@@ -3,7 +3,7 @@
 
 import { db } from "@/db/db";
 import {
-    students, programmes, departments, users,
+    students, programmes, departments, users, academicSessions,
     matriculationAuditLog, matriculationSettings, matriculationSequences,
 } from "@/db/schema";
 import { eq, and, or, like, isNull, isNotNull, desc, asc, sql, count } from "drizzle-orm";
@@ -27,7 +27,7 @@ export async function getMatricStudents(options?: {
     deptId?: number;
     programmeType?: string;
     level?: number;
-    admissionYear?: number;
+    sessionId?: number;
     matricStatus?: "all" | "assigned" | "pending";
     page?: number;
     pageSize?: number;
@@ -60,8 +60,8 @@ export async function getMatricStudents(options?: {
         if (options?.level) {
             conditions.push(eq(students.currentLevel, options.level));
         }
-        if (options?.admissionYear) {
-            conditions.push(eq(students.admissionYear, options.admissionYear));
+        if (options?.sessionId) {
+            conditions.push(eq(students.admissionSessionId, options.sessionId));
         }
         if (options?.matricStatus === "assigned") {
             conditions.push(isNotNull(students.matricNumber));
@@ -96,10 +96,12 @@ export async function getMatricStudents(options?: {
                 deptName: departments.name,
                 deptCode: departments.code,
                 programmeName: programmes.name,
+                sessionName: academicSessions.name,
             })
             .from(students)
             .leftJoin(programmes, eq(students.programmeId, programmes.id))
             .leftJoin(departments, eq(students.deptId, departments.id))
+            .leftJoin(academicSessions, eq(students.admissionSessionId, academicSessions.id))
             .where(whereClause)
             .orderBy(
                 asc(students.matricNumber),
