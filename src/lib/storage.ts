@@ -1,7 +1,8 @@
 import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
 import { config } from "./config";
-import { S3Client, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 /**
  * Storage Interface to decouple file operations from the filesystem.
@@ -10,6 +11,7 @@ export interface StorageProvider {
     upload(file: Buffer, filename: string, subDir?: string, mimeType?: string): Promise<{ success: boolean; url?: string; error?: string }>;
     uploadFileAt(file: Buffer, path: string, mimeType?: string): Promise<{ success: boolean; url?: string; error?: string }>;
     delete(url: string): Promise<{ success: boolean; error?: string }>;
+    getPresignedUrl(url: string, expiresInSeconds?: number): Promise<string>;
 }
 
 /**
@@ -74,6 +76,11 @@ class LocalStorageProvider implements StorageProvider {
     async delete(url: string) {
         // Implementation for local deletion can be added here
         return { success: true };
+    }
+
+    async getPresignedUrl(url: string, expiresInSeconds: number = 3600) {
+        // Local files are always accessible directly via their static path
+        return url;
     }
 }
 
@@ -177,6 +184,35 @@ class S3StorageProvider implements StorageProvider {
         } catch (error) {
             console.error("S3 delete failed:", error);
             return { success: false, error: "Delete failed" };
+        }
+    }
+
+    async getPresignedUrl(url: string, expiresInSeconds: number = 3600): Promise<string> {
+        if (!url || typeof url !== 'string' || !url.startsWith('http')) return url;
+        
+        // Ensure this URL is actually pointing to our bucket before trying to sign it
+        if (!config.storage.s3.bucket || !url.includes(config.storage.s3.bucket)) {
+            return url;
+        }
+
+        try {
+            const urlParts = url.split("/");
+            const bucketIndex = urlParts.indexOf(config.storage.s3.bucket);
+            if (bucketIndex === -1) return url;
+
+            const key = urlParts.slice(bucketIndex + 1).join("/");
+            if (!key) return url;
+
+            const command = new GetObjectCommand({
+                Bucket: config.storage.s3.bucket,
+                Key: decodeURIComponent(key),
+            });
+
+            const signedUrl = await getSignedUrl(this.client, command, { expiresIn: expiresInSeconds });
+            return signedUrl;
+        } catch (error) {
+            console.error("Failed to generate presigned URL:", error);
+            return url; // fallback to original if generation fails
         }
     }
 }

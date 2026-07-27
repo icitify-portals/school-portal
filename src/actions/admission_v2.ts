@@ -23,6 +23,7 @@ import {
 } from "@/db/schema";
 import { eq, and, desc, asc, sql, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { storage } from "@/lib/storage";
 import { auth } from "@/auth";
 import crypto from "crypto";
 import { sendInAppNotification } from "./notifications";
@@ -1912,6 +1913,18 @@ export async function getAdminV2ApplicationDetail(applicationId: number) {
                 lastLogin: applicantUser.lastLogin,
                 createdAt: applicantUser.createdAt,
             };
+        }
+
+        // Generate Presigned URLs for S3 assets
+        for (const key of Object.keys(formData)) {
+            const val = formData[key];
+            if (typeof val === 'string' && val.startsWith('http') && (val.includes('wasabisys.com') || val.includes('amazonaws.com'))) {
+                try {
+                    formData[key] = await storage.getPresignedUrl(val);
+                } catch (e) {
+                    console.error("Presign error for key", key, e);
+                }
+            }
         }
 
         const surname = formData.surname || formData.last_name || formData.lastName || formData['Last Name'] || formData.LastName || '';
