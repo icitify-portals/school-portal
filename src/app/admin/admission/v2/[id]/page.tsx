@@ -126,7 +126,8 @@ export default function V2ApplicationDetailPage() {
         }
         // Handle file links
         if (typeof value === 'string' && value.startsWith('http')) {
-            if (value.match(/\.(jpeg|jpg|gif|png)$/i)) {
+            // Check if it's an image (accounting for query params like in presigned URLs)
+            if (value.match(/\.(jpeg|jpg|gif|png|webp)(\?.*)?$/i) || field?.type === 'image' || field?.type === 'photo' || field?.type === 'signature') {
                 return (
                     <div className="relative group">
                         <img src={value} alt="Upload" className="w-20 h-20 object-contain rounded-xl border border-slate-200 shadow-sm cursor-pointer hover:scale-[3] transition-transform duration-200 hover:z-10 hover:shadow-xl bg-white" />
