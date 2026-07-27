@@ -1835,6 +1835,71 @@ export async function getAdminV2Applications(filters?: {
     }
 }
 
+export async function exportAdminV2Applications(filters?: {
+    search?: string;
+    status?: string;
+    paymentStatus?: string;
+    templateId?: number;
+}) {
+    await requireAdmin();
+    try {
+        const conditions = [];
+        if (filters?.status && filters.status !== 'all') {
+            conditions.push(eq(admissionApplicationsV2.status, filters.status as any));
+        }
+        if (filters?.paymentStatus && filters.paymentStatus !== 'all') {
+            conditions.push(eq(admissionApplicationsV2.paymentStatus, filters.paymentStatus as any));
+        }
+        if (filters?.templateId) {
+            conditions.push(eq(admissionApplicationsV2.templateId, filters.templateId));
+        }
+
+        const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+        let applications = await db.query.admissionApplicationsV2.findMany({
+            where: whereClause,
+            orderBy: [desc(admissionApplicationsV2.appliedAt)],
+            limit: 5000,
+            with: {
+                template: true,
+                applicant: true
+            }
+        });
+
+        if (filters?.search) {
+            const q = filters.search.toLowerCase();
+            applications = applications.filter((app: any) => {
+                let formData: any = {};
+                try { formData = typeof app.data === 'string' ? JSON.parse(app.data) : app.data || {}; } catch {}
+                const fullName = `${formData.firstName || formData.first_name || ''} ${formData.surname || formData.lastName || formData.last_name || ''}`.toLowerCase();
+                const surname = `${formData.surname || formData.lastName || formData.last_name || ''} ${formData.firstName || formData.first_name || ''}`.toLowerCase();
+                const userFullName = app.applicant ? `${app.applicant.firstName || ''} ${app.applicant.surname || ''} ${app.applicant.name || ''}`.toLowerCase() : '';
+                const formNum = (app.formNumber || '').toLowerCase();
+                return fullName.includes(q) || surname.includes(q) || userFullName.includes(q) || formNum.includes(q);
+            });
+        }
+
+        return {
+            success: true,
+            applications: applications.map((app: any) => {
+                let formData: any = {};
+                try { formData = typeof app.data === 'string' ? JSON.parse(app.data) : app.data || {}; } catch {}
+                const nameFromForm = `${formData.firstName || formData.first_name || ''} ${formData.surname || formData.lastName || formData.last_name || ''}`.trim();
+                const nameFromUser = app.applicant ? (app.applicant.name || `${app.applicant.firstName || ''} ${app.applicant.surname || ''}`.trim()) : '';
+                return {
+                    ...app,
+                    parsedData: formData,
+                    applicantName: nameFromForm || nameFromUser || 'N/A',
+                    templateName: app.template?.name || 'N/A',
+                };
+            })
+        };
+    } catch (error) {
+        console.error("[exportAdminV2Applications] Failed:", error);
+        return { success: false, applications: [], error: "Failed to export data" };
+    }
+}
+
 export async function getAdminV2ApplicationDetail(applicationId: number) {
     await requireAdmin();
     try {

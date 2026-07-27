@@ -6,9 +6,12 @@ import { Button } from "@/components/ui/button";
 import {
     FileText, Search, Loader2, User, Calendar, CheckCircle2,
     XCircle, AlertCircle, Activity, Filter, ExternalLink, ChevronLeft, ChevronRight,
-    CheckSquare, Square, Download
+    CheckSquare, Square, Download, FileSpreadsheet, Printer
 } from "lucide-react";
-import { getAdminV2Applications, bulkUpdateAdmissionStatus, getAdmissionTemplates } from "@/actions/admission_v2";
+import { getAdminV2Applications, bulkUpdateAdmissionStatus, getAdmissionTemplates, exportAdminV2Applications } from "@/actions/admission_v2";
+import * as xlsx from "xlsx";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -76,6 +79,78 @@ export default function AdminV2ApplicationsPage() {
         } else {
             setSelectedIds(new Set(data.applications.map((a: any) => a.id)));
         }
+    };
+
+    const handleExportExcel = async () => {
+        setLoading(true);
+        try {
+            const result = await exportAdminV2Applications({
+                search: search || undefined,
+                status: statusFilter !== 'all' ? statusFilter : undefined,
+                paymentStatus: paymentFilter !== 'all' ? paymentFilter : undefined,
+                templateId: templateFilter,
+            });
+            if (result.success && result.applications.length > 0) {
+                const exportData = result.applications.map((app: any) => ({
+                    'Application Date': app.appliedAt ? format(new Date(app.appliedAt), 'yyyy-MM-dd') : 'N/A',
+                    'Form Number': app.formNumber || 'N/A',
+                    'Applicant Name': app.applicantName,
+                    'Email': app.parsedData?.email || app.parsedData?.email_address || 'N/A',
+                    'Phone': app.parsedData?.phone || 'N/A',
+                    'Status': app.status,
+                    'Payment Status': app.paymentStatus,
+                    'Template': app.templateName
+                }));
+                const worksheet = xlsx.utils.json_to_sheet(exportData);
+                const workbook = xlsx.utils.book_new();
+                xlsx.utils.book_append_sheet(workbook, worksheet, "Applications");
+                xlsx.writeFile(workbook, "admission_applications.xlsx");
+                toast.success("Export downloaded successfully");
+            } else {
+                toast.error("No applications found to export");
+            }
+        } catch (error) {
+            toast.error("Export failed");
+        }
+        setLoading(false);
+    };
+
+    const handleBulkDownloadPDFs = async () => {
+        if (selectedIds.size === 0) { toast.error("No applications selected"); return; }
+        setLoading(true);
+        try {
+            const selectedApps = data.applications.filter((a: any) => selectedIds.has(a.id));
+            const doc = new jsPDF();
+            
+            doc.setFontSize(20);
+            doc.text("Admission Applications Report", 14, 22);
+            doc.setFontSize(11);
+            doc.text(`Generated on: ${format(new Date(), 'MMM dd, yyyy')}`, 14, 30);
+            
+            const tableData = selectedApps.map((app: any) => [
+                app.formNumber || 'N/A',
+                app.applicantName,
+                app.parsedData?.email || 'N/A',
+                app.templateName,
+                app.status.toUpperCase(),
+                app.paymentStatus.toUpperCase()
+            ]);
+
+            autoTable(doc, {
+                startY: 40,
+                head: [['Form No', 'Applicant Name', 'Email', 'Template', 'Status', 'Payment']],
+                body: tableData,
+                theme: 'grid',
+                headStyles: { fillColor: [79, 70, 229] }
+            });
+
+            doc.save("bulk_applications_report.pdf");
+            toast.success("PDFs generated successfully");
+        } catch (error) {
+            toast.error("Failed to generate PDFs");
+            console.error(error);
+        }
+        setLoading(false);
     };
 
     const statusColors: Record<string, string> = {
@@ -158,11 +233,17 @@ export default function AdminV2ApplicationsPage() {
                                 <option key={t.id} value={t.id}>{t.name}</option>
                             ))}
                         </select>
+                        <Button 
+                            onClick={handleExportExcel}
+                            className="px-6 py-4 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-sm flex items-center h-full"
+                        >
+                            <FileSpreadsheet className="w-4 h-4 mr-2" /> Export Excel
+                        </Button>
                     </div>
                 </div>
 
                 {selectedIds.size > 0 && (
-                    <div className="flex items-center gap-4 p-4 bg-indigo-50 border border-indigo-200 rounded-2xl">
+                    <div className="flex flex-wrap items-center gap-4 p-4 bg-indigo-50 border border-indigo-200 rounded-2xl">
                         <span className="text-sm font-bold text-indigo-700">{selectedIds.size} selected</span>
                         <Button
                             onClick={() => handleBulkAction('admitted')}
@@ -175,6 +256,12 @@ export default function AdminV2ApplicationsPage() {
                             className="rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-black text-[10px] uppercase tracking-widest px-5 py-3"
                         >
                             <XCircle className="w-3.5 h-3.5 mr-2" /> Reject Selected
+                        </Button>
+                        <Button
+                            onClick={handleBulkDownloadPDFs}
+                            className="rounded-xl bg-slate-800 hover:bg-slate-900 text-white font-black text-[10px] uppercase tracking-widest px-5 py-3"
+                        >
+                            <Printer className="w-3.5 h-3.5 mr-2" /> Bulk PDF Report
                         </Button>
                         <Button
                             onClick={() => setSelectedIds(new Set())}

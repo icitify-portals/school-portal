@@ -23,6 +23,7 @@ export default function V2ApplicationDetailPage() {
     const [notes, setNotes] = useState("");
     const [showNotes, setShowNotes] = useState(false);
     const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
+    const [isOLevelExpanded, setIsOLevelExpanded] = useState(true);
 
     useEffect(() => {
         const id = parseInt(params.id as string);
@@ -208,8 +209,30 @@ export default function V2ApplicationDetailPage() {
 
     return (
         <div className="p-4 sm:p-6 lg:p-8 min-h-screen">
-            <div className="max-w-[1600px] w-full mx-auto space-y-8">
-                <div className="flex items-center gap-4">
+            <style dangerouslySetInnerHTML={{__html: `
+                @media print {
+                    @page { margin: 10mm; size: A4 portrait; }
+                    body {
+                        -webkit-print-color-adjust: exact !important;
+                        print-color-adjust: exact !important;
+                        background: white !important;
+                    }
+                    .no-print { display: none !important; }
+                    .print-container { 
+                        transform: scale(0.65); 
+                        transform-origin: top left;
+                        width: 153% !important; /* 1 / 0.65 = 1.53 */
+                    }
+                    .shadow-xl, .shadow-2xl, .backdrop-blur-3xl {
+                        box-shadow: none !important;
+                        backdrop-filter: none !important;
+                        border: 1px solid #e2e8f0 !important;
+                    }
+                    * { page-break-inside: avoid; }
+                }
+            `}} />
+            <div className="max-w-[1600px] w-full mx-auto space-y-8 print-container">
+                <div className="flex items-center gap-4 no-print">
                     <Link href="/admin/admission/v2">
                         <Button variant="ghost" className="rounded-xl text-slate-500 font-bold">
                             <ArrowLeft className="w-4 h-4 mr-2" /> Back
@@ -236,7 +259,7 @@ export default function V2ApplicationDetailPage() {
                                 </div>
                             </div>
                         </div>
-                        <div className="flex flex-wrap gap-3">
+                        <div className="flex flex-wrap gap-3 no-print">
                             <Button
                                 onClick={() => window.print()}
                                 className="rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/20 font-black text-[10px] uppercase tracking-widest px-5 py-3 backdrop-blur-md"
@@ -384,11 +407,16 @@ export default function V2ApplicationDetailPage() {
 
                         {app.olevelData && app.olevelData.length > 0 && (
                             <Card className="border border-white/40 shadow-xl bg-white/80 backdrop-blur-3xl rounded-[3rem] overflow-hidden">
-                                <CardHeader className="bg-slate-50 border-b border-slate-100 p-6">
-                                    <CardTitle className="text-lg flex items-center gap-2 text-slate-800">
+                                <button 
+                                    onClick={() => setIsOLevelExpanded(!isOLevelExpanded)}
+                                    className="w-full text-left bg-slate-50 border-b border-slate-100 p-6 hover:bg-slate-100 transition-colors flex items-center justify-between"
+                                >
+                                    <h3 className="text-lg font-bold flex items-center gap-2 text-slate-800">
                                         <BookOpen className="w-5 h-5" /> O-Level Results
-                                    </CardTitle>
-                                </CardHeader>
+                                    </h3>
+                                    {isOLevelExpanded ? <ChevronUp className="w-5 h-5 text-slate-400" /> : <ChevronDown className="w-5 h-5 text-slate-400" />}
+                                </button>
+                                {isOLevelExpanded && (
                                 <CardContent className="p-6 space-y-6">
                                     {app.olevelData.map((sitting: any) => (
                                         <div key={sitting.id} className="space-y-3">
@@ -425,6 +453,7 @@ export default function V2ApplicationDetailPage() {
                                         </div>
                                     ))}
                                 </CardContent>
+                                )}
                             </Card>
                         )}
                     </div>
