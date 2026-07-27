@@ -13,6 +13,7 @@ import {
     changeMatricNumber, restoreMatricNumber, getMatricAuditLog, getStudentMatricHistory,
     batchAssignMatricNumbers
 } from "@/actions/matric-admin";
+import { getDepartments } from "@/actions/departments";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import Link from "next/link";
@@ -38,8 +39,10 @@ export default function MatricAdminPage() {
     const [deptFilter, setDeptFilter] = useState("");
     const [typeFilter, setTypeFilter] = useState("");
     const [levelFilter, setLevelFilter] = useState("");
+    const [yearFilter, setYearFilter] = useState("");
     const [statusFilter, setStatusFilter] = useState("");
     const [listLoading, setListLoading] = useState(false);
+    const [departmentsList, setDepartmentsList] = useState<any[]>([]);
 
     // Assign tab state
     const [assignSearch, setAssignSearch] = useState("");
@@ -74,6 +77,7 @@ export default function MatricAdminPage() {
                 deptId: deptFilter ? Number(deptFilter) : undefined,
                 programmeType: typeFilter || undefined,
                 level: levelFilter ? Number(levelFilter) : undefined,
+                admissionYear: yearFilter ? Number(yearFilter) : undefined,
                 matricStatus: (statusFilter as any) || undefined,
                 page,
                 pageSize: 50,
@@ -85,7 +89,13 @@ export default function MatricAdminPage() {
             toast.error("Failed to load students");
         }
         setListLoading(false);
-    }, [search, deptFilter, typeFilter, levelFilter, statusFilter, page]);
+    }, [search, deptFilter, typeFilter, levelFilter, yearFilter, statusFilter, page]);
+
+    useEffect(() => {
+        getDepartments().then(data => {
+            if (data) setDepartmentsList(data);
+        }).catch(() => {});
+    }, []);
 
     useEffect(() => {
         setLoading(true);
@@ -94,7 +104,7 @@ export default function MatricAdminPage() {
 
     useEffect(() => {
         fetchStudents();
-    }, [page, deptFilter, typeFilter, levelFilter, statusFilter]);
+    }, [page, deptFilter, typeFilter, levelFilter, yearFilter, statusFilter]);
 
     const handleSearch = () => {
         setPage(1);
@@ -345,6 +355,9 @@ export default function MatricAdminPage() {
                                         className="px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-medium bg-white"
                                     >
                                         <option value="">All Departments</option>
+                                        {departmentsList.map((d) => (
+                                            <option key={d.id} value={d.id}>{d.name}</option>
+                                        ))}
                                     </select>
                                     <select
                                         value={typeFilter}
@@ -354,6 +367,16 @@ export default function MatricAdminPage() {
                                         <option value="">All Types</option>
                                         <option value="ND">ND</option>
                                         <option value="HND">HND</option>
+                                    </select>
+                                    <select
+                                        value={yearFilter}
+                                        onChange={(e) => { setYearFilter(e.target.value); setPage(1); }}
+                                        className="px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-medium bg-white"
+                                    >
+                                        <option value="">All Years</option>
+                                        {[2024, 2025, 2026, 2027].map((y) => (
+                                            <option key={y} value={y}>{y}</option>
+                                        ))}
                                     </select>
                                     <select
                                         value={levelFilter}

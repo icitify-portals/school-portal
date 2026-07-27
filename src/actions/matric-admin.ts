@@ -27,6 +27,7 @@ export async function getMatricStudents(options?: {
     deptId?: number;
     programmeType?: string;
     level?: number;
+    admissionYear?: number;
     matricStatus?: "all" | "assigned" | "pending";
     page?: number;
     pageSize?: number;
@@ -58,6 +59,9 @@ export async function getMatricStudents(options?: {
         }
         if (options?.level) {
             conditions.push(eq(students.currentLevel, options.level));
+        }
+        if (options?.admissionYear) {
+            conditions.push(eq(students.admissionYear, options.admissionYear));
         }
         if (options?.matricStatus === "assigned") {
             conditions.push(isNotNull(students.matricNumber));
