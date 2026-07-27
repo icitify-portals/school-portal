@@ -871,14 +871,30 @@ export async function finalizeStudentAdmission(applicationId: number) {
             .orderBy(desc(academicSessions.startDate))
             .limit(1);
 
-        // Query total student count for the year to generate a unique sequence number
+        // Query total student count for the year to generate a unique sequence number (Legacy fallback)
         const countRes = await db.select({ count: sql<number>`count(*)` })
             .from(students)
             .where(eq(students.admissionYear, year));
         
-        const sequence = (countRes[0]?.count || 0) + 1;
-        const formattedSeq = sequence.toString().padStart(4, '0');
-        const matricNumber = `FSS/IB/${year}/${studyModeCode}/${programmeType}/${formattedSeq}`;
+        let matricNumber = "";
+        
+        // Use the centralized Matriculation Engine
+        const { generateMatricNumber } = await import('@/actions/matriculation');
+        const matricRes = await generateMatricNumber({
+            year,
+            deptId: deptId || undefined,
+            studyMode: studyMode,
+            programmeType: programmeType
+        });
+        
+        if (matricRes.success && matricRes.matricNumber) {
+            matricNumber = matricRes.matricNumber;
+        } else {
+            // Fallback to legacy sequence if setting is somehow totally broken
+            const sequence = (countRes[0]?.count || 0) + 1;
+            const formattedSeq = sequence.toString().padStart(4, '0');
+            matricNumber = `FSS/IB/${year}/${studyModeCode}/${programmeType}/${formattedSeq}`;
+        }
 
         // Process Base64 images to physical files
         let finalImageUrl = application.applicantPhoto;

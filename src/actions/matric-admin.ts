@@ -394,7 +394,64 @@ export async function getMatricAuditLog(options?: {
         };
     } catch (error) {
         console.error("[getMatricAuditLog] Failed:", error);
-        return { logs: [], total: 0, page: 1, pageSize: 50, totalPages: 0 };
+        return { auditLogs: [], total: 0, page: 1, pageSize: 50, totalPages: 0 };
+    }
+}
+
+export async function batchAssignMatricNumbers(year: number) {
+    await requireAdmin();
+    try {
+        const session = await requireAdmin();
+        const adminId = session.user.id;
+
+        // Fetch all active students for the given admission year who DO NOT have a matric number
+        const pendingStudents = await db.query.students.findMany({
+            where: and(
+                eq(students.admissionYear, year),
+                eq(students.status, "active"),
+                isNull(students.matricNumber)
+            )
+        });
+
+        if (pendingStudents.length === 0) {
+            return { success: true, message: "No active pending students found for that year.", count: 0 };
+        }
+
+        let assignedCount = 0;
+
+        for (const student of pendingStudents) {
+            // Generate Matric Number
+            const genRes = await generateMatricNumber({
+                year,
+                deptId: student.deptId || undefined,
+                studyMode: student.studyMode || undefined,
+                programmeType: student.programmeType || undefined
+            });
+
+            if (genRes.success && genRes.matricNumber) {
+                await db.transaction(async (tx) => {
+                    await tx.update(students)
+                        .set({ matricNumber: genRes.matricNumber })
+                        .where(eq(students.id, student.id));
+
+                    await tx.insert(matriculationAuditLog).values({
+                        studentId: student.id,
+                        action: "assigned",
+                        oldMatric: null,
+                        newMatric: genRes.matricNumber,
+                        reason: "Batch Assignment",
+                        performedById: adminId,
+                    });
+                });
+                assignedCount++;
+            }
+        }
+
+        revalidatePath("/admin/registrar/matriculation");
+        return { success: true, message: `Successfully assigned ${assignedCount} matriculation numbers.`, count: assignedCount };
+    } catch (error) {
+        console.error("[batchAssignMatricNumbers] Failed:", error);
+        return { success: false, error: "Failed to run batch assignment." };
     }
 }
 

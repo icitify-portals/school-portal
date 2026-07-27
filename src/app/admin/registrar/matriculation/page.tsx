@@ -11,6 +11,7 @@ import {
 import {
     getMatricStudents, previewNextMatricNumber, assignMatricNumber,
     changeMatricNumber, restoreMatricNumber, getMatricAuditLog, getStudentMatricHistory,
+    batchAssignMatricNumbers
 } from "@/actions/matric-admin";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -22,6 +23,11 @@ type Tab = "list" | "assign" | "audit";
 export default function MatricAdminPage() {
     const [tab, setTab] = useState<Tab>("list");
     const [loading, setLoading] = useState(true);
+    
+    // Batch Assign state
+    const [showBatchAssign, setShowBatchAssign] = useState(false);
+    const [batchYear, setBatchYear] = useState<number>(new Date().getFullYear());
+    const [batchLoading, setBatchLoading] = useState(false);
 
     // List tab state
     const [students, setStudents] = useState<any[]>([]);
@@ -127,6 +133,23 @@ export default function MatricAdminPage() {
             toast.error("Search failed");
         }
         setAssignLoading(false);
+    };
+
+    const handleBatchAssign = async () => {
+        setBatchLoading(true);
+        try {
+            const res = await batchAssignMatricNumbers(batchYear);
+            if (res.success) {
+                toast.success(res.message);
+                setShowBatchAssign(false);
+                fetchStudents();
+            } else {
+                toast.error(res.error || "Failed to batch assign");
+            }
+        } catch {
+            toast.error("Failed to run batch assignment");
+        }
+        setBatchLoading(false);
     };
 
     const [lastIssuedSerial, setLastIssuedSerial] = useState<number | null>(null);
@@ -362,6 +385,12 @@ export default function MatricAdminPage() {
                                         className="rounded-xl border-slate-200 text-sm font-bold"
                                     >
                                         <Download className="w-4 h-4 mr-1" /> CSV
+                                    </Button>
+                                    <Button
+                                        onClick={() => setShowBatchAssign(true)}
+                                        className="rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-sm px-5 ml-auto"
+                                    >
+                                        <RefreshCw className="w-4 h-4 mr-1" /> Batch Assign Pending
                                     </Button>
                                 </div>
                             </CardContent>
@@ -796,6 +825,53 @@ export default function MatricAdminPage() {
                                 </div>
                             )}
                         </Card>
+                    </div>
+                )}
+
+                {/* Batch Assign Modal */}
+                {showBatchAssign && (
+                    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={() => !batchLoading && setShowBatchAssign(false)}>
+                        <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full" onClick={(e) => e.stopPropagation()}>
+                            <div className="p-6 border-b border-slate-100">
+                                <h3 className="font-black text-lg text-slate-900 flex items-center gap-2">
+                                    <RefreshCw className="w-5 h-5 text-amber-500" />
+                                    Batch Assign Matriculation Numbers
+                                </h3>
+                                <p className="text-sm text-slate-500 mt-2">
+                                    This will generate and assign matriculation numbers to all <strong>active admitted students</strong> in the specified year who <strong>do not currently have one</strong>.
+                                    Existing numbers will NOT be overwritten.
+                                </p>
+                            </div>
+                            <div className="p-6 space-y-4">
+                                <div>
+                                    <label className="text-xs font-black text-slate-700 uppercase tracking-widest mb-1 block">Admission Year</label>
+                                    <input
+                                        type="number"
+                                        value={batchYear}
+                                        onChange={(e) => setBatchYear(Number(e.target.value))}
+                                        className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-medium focus:ring-2 focus:ring-indigo-500 outline-none"
+                                    />
+                                </div>
+                            </div>
+                            <div className="p-4 bg-slate-50 rounded-b-3xl flex justify-end gap-2 border-t border-slate-100">
+                                <Button
+                                    onClick={() => setShowBatchAssign(false)}
+                                    disabled={batchLoading}
+                                    variant="outline"
+                                    className="rounded-xl font-bold"
+                                >
+                                    Cancel
+                                </Button>
+                                <Button
+                                    onClick={handleBatchAssign}
+                                    disabled={batchLoading}
+                                    className="rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold"
+                                >
+                                    {batchLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <RefreshCw className="w-4 h-4 mr-2" />}
+                                    Run Batch Assign
+                                </Button>
+                            </div>
+                        </div>
                     </div>
                 )}
 
