@@ -381,6 +381,12 @@ export default function V2ApplicationDetailPage() {
                                                         {studyMode.replace('_', ' ')}
                                                     </p>
                                                 </div>
+                                                {app.template?.name && (
+                                                    <div className="md:col-span-2">
+                                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Programme of Study</p>
+                                                        <p className="text-sm font-bold text-slate-800">{app.template.name}</p>
+                                                    </div>
+                                                )}
                                             </>
                                         );
                                     })()}
