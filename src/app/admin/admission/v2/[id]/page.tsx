@@ -84,13 +84,43 @@ export default function V2ApplicationDetailPage() {
         });
     };
 
-    const renderFieldValue = (value: any, fieldType?: string) => {
+    const renderFieldValue = (value: any, field: any) => {
         if (value === null || value === undefined || value === "") return <span className="text-slate-300 italic">—</span>;
-        // Handle image fields
-        if (fieldType === 'image' || fieldType === 'photo' || fieldType === 'signature' || (typeof value === 'string' && value.startsWith('data:image'))) {
+
+        // Try to parse broken JSON strings or extract labels
+        if (typeof value === 'string') {
+            // Check if it's a broken JSON array string like `[{"label":"Yes"`
+            if (value.includes('"label":"')) {
+                const match = value.match(/"label"\s*:\s*"([^"]+)"/);
+                if (match && match[1]) {
+                    value = match[1];
+                }
+            } else if (value.includes('"value":"')) {
+                const match = value.match(/"value"\s*:\s*"([^"]+)"/);
+                if (match && match[1]) {
+                    value = match[1];
+                }
+            } else if (value.startsWith('[') || value.startsWith('{')) {
+                try {
+                    const parsed = JSON.parse(value);
+                    value = parsed;
+                } catch (e) {
+                    // Try to fix broken array closure
+                    try {
+                        if (value.startsWith('[{') && !value.endsWith('}]')) {
+                            const parsed = JSON.parse(value + '}]');
+                            value = parsed;
+                        }
+                    } catch (e2) {}
+                }
+            }
+        }
+
+        // Handle images
+        if (typeof value === 'string' && (value.startsWith('data:image') || field?.type === 'image' || field?.type === 'photo' || field?.type === 'signature')) {
             return (
-                <div className="relative group">
-                    <img src={value} alt="Upload" className="w-20 h-20 object-contain rounded-xl border border-slate-200 shadow-sm cursor-pointer hover:scale-[3] transition-transform duration-200 hover:z-10 hover:shadow-xl bg-white" />
+                <div className="relative w-32 h-32 rounded-xl overflow-hidden border-2 border-slate-200 bg-slate-50">
+                    <img src={value} alt={field?.label || 'Upload'} className="w-full h-full object-cover" />
                 </div>
             );
         }
@@ -312,12 +342,17 @@ export default function V2ApplicationDetailPage() {
                                                     {isExpanded && (
                                                         <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
                                                             {section.fields.map((field: any) => {
+                                                                // Skip rendering olevel fields here since they have their own section
+                                                                if (field.type === 'olevel' || field.label?.toLowerCase().includes('o-level') || field.label?.toLowerCase().includes('o/level') || field.label?.toLowerCase().includes('give your o-level')) {
+                                                                    return null;
+                                                                }
+
                                                                 let value = app.parsedData?.[field.label] ?? app.parsedData?.[field.systemKey || ''];
                                                                 if (!value && (field.type === 'image' || field.type === 'photo')) {
-                                                                    value = app.parsedData?.passport_photo || app.parsedData?.passport || app.parsedData?.photo || app.parsedData?.image || '';
+                                                                    value = app.parsedData?.passport_photo || app.parsedData?.passport || app.parsedData?.photo || app.parsedData?.image || app.parsedData?.['Photograph/camera'] || app.parsedData?.Photograph || '';
                                                                 }
                                                                 if (!value && field.type === 'signature') {
-                                                                    value = app.parsedData?.signature || app.parsedData?.applicant_signature || '';
+                                                                    value = app.parsedData?.signature || app.parsedData?.applicant_signature || app.parsedData?.Signature || '';
                                                                 }
                                                                 return (
                                                                     <div key={field.id} className={field.width === 'full' ? 'md:col-span-2' : ''}>
