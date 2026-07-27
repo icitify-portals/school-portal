@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { admissionApplicationsV2 } from '@/schema';
+import { db } from '@/db/db';
+import { admissionApplicationsV2 } from '@/db/schema';
 import { inArray } from 'drizzle-orm';
 import { NotificationService } from '@/services/NotificationService';
 
