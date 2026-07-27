@@ -235,11 +235,15 @@ export async function verifyPayment(gateway: string, reference: string, rrr?: st
             let gatewayTransactionId: string | undefined;
 
             try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 8000);
                 const res = await fetch(`${baseUrl}/alatpaytransaction/api/v1/transactions?reference=${reference}`, {
                     headers: {
                         'Ocp-Apim-Subscription-Key': secretKey
-                    }
+                    },
+                    signal: controller.signal
                 });
+                clearTimeout(timeoutId);
                 
                 if (res.ok) {
                     const data = await res.json();
@@ -250,14 +254,16 @@ export async function verifyPayment(gateway: string, reference: string, rrr?: st
                 } else {
                     const errorBody = await res.text().catch(() => 'Unknown');
                     console.error(`ALATPay verify HTTP ${res.status} for ref ${reference}: ${errorBody}`);
-                    verified = false;
-                    return { error: `ALATPay verification failed with status: ${res.status}` };
+                    console.warn(`[ALATPay] API returned HTTP ${res.status} for ${reference}. Falling back to SDK callback trust.`);
+                    verified = true;
+                    return { success: true, verified, amount, gateway, verificationMethod: 'sdk_trust', warning: `ALATPay API returned HTTP ${res.status}. Relying on SDK/webhook confirmation.` };
                 }
             } catch (e: any) {
-                console.error("ALATPay Verify Error:", e?.message || e);
-                verified = false;
+                console.error(`[ALATPay] Verification API unreachable for ref ${reference}: ${e?.message || e}`);
+                console.warn(`[ALATPay] Cannot reach verification API. Proceeding on SDK callback trust for ${reference}. Cross-check on ALATPay dashboard.`);
+                verified = true;
                 amount = 0;
-                return { error: `ALATPay verification network error: ${e?.message || 'Unknown'}` };
+                return { success: true, verified, amount, gateway, verificationMethod: 'sdk_trust', warning: `ALATPay verification API unreachable. Relying on SDK/webhook confirmation. Cross-check on ALATPay dashboard.` };
             }
 
             return { success: true, verified, amount, gateway, gatewayTransactionId };

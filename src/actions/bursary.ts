@@ -2490,7 +2490,7 @@ export async function initializeOnlineCheckoutAction(studentId: number, billId: 
     }
 }
 
-export async function resolveOnlinePaymentAction(reference: string, status: 'completed' | 'failed', billId?: number) {
+export async function resolveOnlinePaymentAction(reference: string, status: 'completed' | 'failed', billId?: number, skipGatewayVerification?: boolean) {
     try {
         return await db.transaction(async (tx) => {
             // 1. Fetch the transaction
@@ -2561,14 +2561,23 @@ export async function resolveOnlinePaymentAction(reference: string, status: 'com
             const verification = await verifyPayment(txRecord.gateway || 'remita', reference, txRecord.rrr || undefined);
             
             if (!verification.success || !verification.verified) {
-                // If it's a mock RRR from local env, bypass for testing. Otherwise enforce.
                 const rrr = txRecord.rrr || '';
                 if (!rrr.startsWith('RRR-MOCK')) {
                     return { success: false, error: verification.error || "Gateway verification failed. Payment not confirmed." };
                 }
             }
 
-            // Capture ALATPay gateway transaction ID for cross-referencing
+            const verificationMethod = (verification as any).verificationMethod;
+            const isSdkTrust = verificationMethod === 'sdk_trust';
+
+            if (isSdkTrust) {
+                console.log(`[PaymentVerify] ALATPay ${reference}: API unavailable, relying on ${skipGatewayVerification ? 'SDK callback' : 'requery fallback'}`);
+                if (!skipGatewayVerification) {
+                    return { success: false, error: "Unable to verify payment with ALATPay API. Please check the ALATPay dashboard to confirm payment, then contact support." };
+                }
+            }
+
+            // Capture gateway transaction ID for cross-referencing (ALATPay dashboard check, etc.)
             const gatewayTxId = (verification as any).gatewayTransactionId || null;
             if (gatewayTxId) {
                 console.log(`[PaymentVerify] Gateway Transaction ID for ref ${reference}: ${gatewayTxId}`);

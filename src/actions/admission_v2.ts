@@ -1048,6 +1048,8 @@ export async function requeryAdmissionPayment(applicationId: number) {
         
         if (res.success && res.status === 'completed') {
             return { success: true, message: "Payment successfully verified and completed." };
+        } else if (res.error?.includes('ALATPay') || res.error?.includes('check the ALATPay dashboard')) {
+            return { success: false, error: res.error + " You can check the transaction on the ALATPay dashboard to confirm if payment was received." };
         } else {
             return { success: false, error: res.error || "Payment verification failed or is still pending." };
         }

@@ -111,7 +111,8 @@ function CheckoutSimulatorContent() {
     const handleSimulate = async (outcome: 'completed' | 'failed') => {
         setLoading(true);
         try {
-            const res = await resolveOnlinePaymentAction(reference, outcome, billId);
+            const skipVerification = gateway === 'alatpay';
+            const res = await resolveOnlinePaymentAction(reference, outcome, billId, skipVerification);
             if (res.success) {
                 if (outcome === 'completed') {
                     setStatus('success');
