@@ -1940,7 +1940,8 @@ export async function getAdminV2ApplicationDetail(applicationId: number) {
             with: {
                 template: true,
                 student: true,
-                applicant: true
+                applicant: true,
+                programme: true
             }
         });
 
@@ -2038,6 +2039,9 @@ export async function getAdminV2ApplicationDetail(applicationId: number) {
             applicantPhone: formData.phone || formData.phone_number || formData.mobile || formData.Phone || 'N/A',
             templateName: app.template?.name || 'N/A',
             templateLevel: app.template?.level || '',
+            applicationMode: app.applicationMode || 'full_time',
+            jambRegNumber: app.jambRegNumber || formData.jambRegNumber || formData.jamb || formData.jamb_reg_number || formData['JAMB REG NO'] || 'N/A',
+            programmeName: app.programme?.name || 'N/A',
             olevelData: (() => {
                 if (olevelData.length > 0) return olevelData;
                 let fallback = formData.olevel || formData.olevel_results || formData['O-Level Results'] || formData['O-Level'] || formData.sittings || formData['Give your o-level '] || formData['Give your o-level'] || [];
