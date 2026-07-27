@@ -374,8 +374,10 @@ export default function V2ApplicationDetailPage() {
                                                         <span className="font-black text-sm text-slate-700 uppercase tracking-wider">{section.title}</span>
                                                         {isExpanded ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
                                                     </button>
-                                                    {isExpanded && (
-                                                        <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                    <div className={cn(
+                                                        "p-4 gap-4",
+                                                        isExpanded ? "grid grid-cols-1 md:grid-cols-2" : "hidden print:grid print:grid-cols-2"
+                                                    )}>
                                                             {section.fields.map((field: any) => {
                                                                 // Skip rendering olevel fields here since they have their own section
                                                                 if (field.type === 'olevel' || field.label?.toLowerCase().includes('o-level') || field.label?.toLowerCase().includes('o/level') || field.label?.toLowerCase().includes('give your o-level')) {
@@ -397,8 +399,7 @@ export default function V2ApplicationDetailPage() {
                                                                 );
                                                             })}
                                                         </div>
-                                                    )}
-                                                </div>
+                                                    </div>
                                             );
                                         })}
                                 </CardContent>
@@ -416,8 +417,7 @@ export default function V2ApplicationDetailPage() {
                                     </h3>
                                     {isOLevelExpanded ? <ChevronUp className="w-5 h-5 text-slate-400" /> : <ChevronDown className="w-5 h-5 text-slate-400" />}
                                 </button>
-                                {isOLevelExpanded && (
-                                <CardContent className="p-6 space-y-6">
+                                <CardContent className={cn("p-6 space-y-6", isOLevelExpanded ? "block" : "hidden print:block")}>
                                     {app.olevelData.map((sitting: any) => (
                                         <div key={sitting.id} className="space-y-3">
                                             <div className="flex items-center gap-4 text-sm">
@@ -453,7 +453,6 @@ export default function V2ApplicationDetailPage() {
                                         </div>
                                     ))}
                                 </CardContent>
-                                )}
                             </Card>
                         )}
                     </div>
