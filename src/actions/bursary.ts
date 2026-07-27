@@ -2507,12 +2507,16 @@ export async function resolveOnlinePaymentAction(reference: string, status: 'com
                     const meta = payTx.metadata ? JSON.parse(payTx.metadata as string) : {};
                     const rrr = meta.rrr || '';
                     
-                    const { verifyPayment } = await import('@/actions/payment-gateways');
-                    const verification = await verifyPayment((payTx.paymentGateway as any) || 'remita', reference, rrr);
-                    if (!verification.success || !verification.verified) {
-                        if (!rrr.startsWith('RRR-MOCK')) {
-                            return { success: false, error: verification.error || "Gateway verification failed. Payment not confirmed." };
+                    if (!skipGatewayVerification) {
+                        const { verifyPayment } = await import('@/actions/payment-gateways');
+                        const verification = await verifyPayment((payTx.paymentGateway as any) || 'remita', reference, rrr);
+                        if (!verification.success || !verification.verified) {
+                            if (!rrr.startsWith('RRR-MOCK')) {
+                                return { success: false, error: verification.error || "Gateway verification failed. Payment not confirmed." };
+                            }
                         }
+                    } else {
+                        console.log(`[PaymentVerify] Gateway verification skipped for ${reference} (SDK callback)`);
                     }
 
                     await tx.update(payment_transactions).set({ status: 'paid' }).where(eq(payment_transactions.transactionReference, reference));
@@ -2557,30 +2561,32 @@ export async function resolveOnlinePaymentAction(reference: string, status: 'com
             }
 
             // 3. Verify with gateway and capture gateway transaction ID
-            const { verifyPayment } = await import('@/actions/payment-gateways');
-            const verification = await verifyPayment(txRecord.gateway || 'remita', reference, txRecord.rrr || undefined);
-            
-            if (!verification.success || !verification.verified) {
-                const rrr = txRecord.rrr || '';
-                if (!rrr.startsWith('RRR-MOCK')) {
-                    return { success: false, error: verification.error || "Gateway verification failed. Payment not confirmed." };
+            let gatewayTxId = null;
+            if (!skipGatewayVerification) {
+                const { verifyPayment } = await import('@/actions/payment-gateways');
+                const verification = await verifyPayment(txRecord.gateway || 'remita', reference, txRecord.rrr || undefined);
+                
+                if (!verification.success || !verification.verified) {
+                    const rrr = txRecord.rrr || '';
+                    if (!rrr.startsWith('RRR-MOCK')) {
+                        return { success: false, error: verification.error || "Gateway verification failed. Payment not confirmed." };
+                    }
                 }
-            }
 
-            const verificationMethod = (verification as any).verificationMethod;
-            const isSdkTrust = verificationMethod === 'sdk_trust';
+                const verificationMethod = (verification as any).verificationMethod;
+                const isSdkTrust = verificationMethod === 'sdk_trust';
 
-            if (isSdkTrust) {
-                console.log(`[PaymentVerify] ALATPay ${reference}: API unavailable, relying on ${skipGatewayVerification ? 'SDK callback' : 'requery fallback'}`);
-                if (!skipGatewayVerification) {
+                if (isSdkTrust) {
+                    console.log(`[PaymentVerify] ALATPay ${reference}: API unavailable, relying on requery fallback`);
                     return { success: false, error: "Unable to verify payment with ALATPay API. Please check the ALATPay dashboard to confirm payment, then contact support." };
                 }
-            }
 
-            // Capture gateway transaction ID for cross-referencing (ALATPay dashboard check, etc.)
-            const gatewayTxId = (verification as any).gatewayTransactionId || null;
-            if (gatewayTxId) {
-                console.log(`[PaymentVerify] Gateway Transaction ID for ref ${reference}: ${gatewayTxId}`);
+                gatewayTxId = (verification as any).gatewayTransactionId || null;
+                if (gatewayTxId) {
+                    console.log(`[PaymentVerify] Gateway Transaction ID for ref ${reference}: ${gatewayTxId}`);
+                }
+            } else {
+                console.log(`[PaymentVerify] Gateway verification skipped for ${reference} (SDK callback)`);
             }
 
             await tx.update(transactions)
