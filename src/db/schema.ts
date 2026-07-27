@@ -7180,7 +7180,7 @@ export const developerSubscriptionSettings = mysqlTable('developer_subscription_
 export const developerSubscriptions = mysqlTable('developer_subscriptions', {
   id: int('id').autoincrement().primaryKey(),
   studentId: int('student_id').references(() => students.id).notNull(),
-  academicSessionId: int('session_id').references(() => academicSessions.id).notNull(),
+  academicSessionId: int('academic_session_id').references(() => academicSessions.id).notNull(),
   termOrSemester: int('term_or_semester'), // 1, 2, 3 depending on cycle
   amountDue: decimal('amount_due', { precision: 12, scale: 2 }).notNull(),
   amountPaid: decimal('amount_paid', { precision: 12, scale: 2 }).default('0.00'),
