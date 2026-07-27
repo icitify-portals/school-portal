@@ -50,22 +50,28 @@ export async function updateDeveloperFeeSettings(data: {
 export async function getUnpaidSubscriptions() {
     if (!(await hasRole(["admin", "superadmin", "bursar", "icitify_dev"]))) throw new Error("Unauthorized");
 
-    const subs = await db.query.developerSubscriptions.findMany({
-        where: eq(developerSubscriptions.status, 'unpaid'),
-        with: {
-            student: {
-                with: { user: true }
-            },
-            session: true
-        }
-    });
+    let subs = [];
+    try {
+        subs = await db.query.developerSubscriptions.findMany({
+            where: eq(developerSubscriptions.status, 'unpaid'),
+            with: {
+                student: {
+                    with: { user: true }
+                },
+                session: true
+            }
+        });
+    } catch (error: any) {
+        console.error("Failed to fetch getUnpaidSubscriptions:", error);
+        throw new Error(`Database Error: ${error.message}`);
+    }
 
     return subs.map(s => ({
         id: s.id,
         // @ts-expect-error - TS18047: Auto-suppressed for build
         studentName: s.student?.user?.name || "Unknown Student",
         // @ts-expect-error - TS2339: Auto-suppressed for build
-        matricNo: s.student?.matriculationNo || "N/A",
+        matricNo: s.student?.matricNumber || "N/A",
         amountDue: s.amountDue,
         session: s.session?.name || "Unknown Session"
     }));
