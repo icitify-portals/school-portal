@@ -352,18 +352,38 @@ export default function V2ApplicationDetailPage() {
                                             <p className="text-sm font-bold text-slate-800 font-mono">{app.nin}</p>
                                         </div>
                                     )}
-                                    {app.jambRegNumber && (
-                                        <div>
-                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">JAMB Reg No</p>
-                                            <p className="text-sm font-bold text-slate-800 font-mono">{app.jambRegNumber}</p>
-                                        </div>
-                                    )}
-                                    {app.applicationMode && (
-                                        <div>
-                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Study Mode</p>
-                                            <p className="text-sm font-bold text-slate-800 capitalize">{app.applicationMode.replace('_', ' ')}</p>
-                                        </div>
-                                    )}
+                                    {(() => {
+                                        let jambRegNo = app.jambRegNumber || "";
+                                        if (!jambRegNo && app.parsedData) {
+                                            for (const key of Object.keys(app.parsedData)) {
+                                                if (key.toLowerCase().includes("jamb") && app.parsedData[key]) {
+                                                    jambRegNo = String(app.parsedData[key]).trim();
+                                                    break;
+                                                }
+                                            }
+                                        }
+                                        const isJambCandidate = app.applicationMode
+                                            ? app.applicationMode === 'full_time'
+                                            : (!!jambRegNo && !jambRegNo.toLowerCase().includes("temp") && !jambRegNo.toLowerCase().includes("direct"));
+                                        const studyMode = app.applicationMode ? app.applicationMode : (isJambCandidate ? 'full_time' : 'part_time');
+
+                                        return (
+                                            <>
+                                                {jambRegNo && (
+                                                    <div>
+                                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">JAMB Reg No</p>
+                                                        <p className="text-sm font-bold text-slate-800 font-mono">{jambRegNo}</p>
+                                                    </div>
+                                                )}
+                                                <div>
+                                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Study Mode</p>
+                                                    <p className="text-sm font-bold text-slate-800 capitalize">
+                                                        {studyMode.replace('_', ' ')}
+                                                    </p>
+                                                </div>
+                                            </>
+                                        );
+                                    })()}
                                 </div>
                             </CardContent>
                         </Card>
