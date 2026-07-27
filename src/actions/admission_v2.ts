@@ -1363,6 +1363,22 @@ export async function submitApplicationFinal(applicationId: number, applicantId:
             return { success: false, error: "A JAMB Registration Number is required for Full-Time applications. Please go back and complete this step." };
         }
 
+        // Enforce O-Level details are filled
+        let hasOlevel = false;
+        try {
+            const olevelParsed = typeof application.olevelData === 'string' ? JSON.parse(application.olevelData) : application.olevelData;
+            if (olevelParsed) {
+                if (Array.isArray(olevelParsed) && olevelParsed.length > 0) hasOlevel = true;
+                else if (olevelParsed.sittings && olevelParsed.sittings.length > 0) hasOlevel = true;
+                else if (olevelParsed.firstSitting || olevelParsed.secondSitting) hasOlevel = true;
+                else if (Object.keys(olevelParsed).length > 0) hasOlevel = true;
+            }
+        } catch(e) {}
+
+        if (!hasOlevel) {
+            return { success: false, error: "O-Level details are required. Please go back to the O-Level section and fill your results." };
+        }
+
         // Server-side validation
         const formData = typeof application.data === 'string' ? JSON.parse(application.data || '{}') : (application.data || {});
         const validationErrors: string[] = [];
