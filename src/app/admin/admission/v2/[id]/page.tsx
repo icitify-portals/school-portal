@@ -217,18 +217,34 @@ export default function V2ApplicationDetailPage() {
                         print-color-adjust: exact !important;
                         background: white !important;
                     }
-                    .no-print { display: none !important; }
+                    .no-print, iframe#tawk_to_wrapper { display: none !important; }
                     .print-container { 
-                        transform: scale(0.65); 
-                        transform-origin: top left;
-                        width: 153% !important; /* 1 / 0.65 = 1.53 */
+                        width: 100% !important;
+                        max-width: 100% !important;
+                        margin: 0 !important;
+                        padding: 0 !important;
                     }
                     .shadow-xl, .shadow-2xl, .backdrop-blur-3xl {
                         box-shadow: none !important;
                         backdrop-filter: none !important;
                         border: 1px solid #e2e8f0 !important;
                     }
-                    * { page-break-inside: avoid; }
+                    .print-card {
+                        page-break-inside: avoid;
+                        break-inside: avoid;
+                        margin-bottom: 24px !important;
+                    }
+                    .print-layout {
+                        display: block !important;
+                    }
+                    .print-col {
+                        width: 100% !important;
+                        display: block !important;
+                        margin-bottom: 24px !important;
+                    }
+                    /* Ensure tables fit nicely */
+                    table { page-break-inside: auto; }
+                    tr { page-break-inside: avoid; page-break-after: auto; }
                 }
             `}} />
             <div className="max-w-[1600px] w-full mx-auto space-y-8 print-container">
@@ -270,9 +286,9 @@ export default function V2ApplicationDetailPage() {
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    <div className="lg:col-span-2 space-y-6">
-                        <Card className="border border-white/40 shadow-xl bg-white/80 backdrop-blur-3xl rounded-[3rem] overflow-hidden">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 print-layout">
+                    <div className="lg:col-span-2 space-y-6 print-col">
+                        <Card className="border border-white/40 shadow-xl bg-white/80 backdrop-blur-3xl rounded-[3rem] overflow-hidden print-card">
                             <CardHeader className="bg-slate-50 border-b border-slate-100 p-6">
                                 <CardTitle className="text-lg flex items-center gap-2 text-slate-800">
                                     <User className="w-5 h-5" /> Personal Information
@@ -343,7 +359,7 @@ export default function V2ApplicationDetailPage() {
                         </Card>
 
                         {app.formStructure && app.formStructure.length > 0 && (
-                            <Card className="border border-white/40 shadow-xl bg-white/80 backdrop-blur-3xl rounded-[3rem] overflow-hidden">
+                            <Card className="border border-white/40 shadow-xl bg-white/80 backdrop-blur-3xl rounded-[3rem] overflow-hidden print-card">
                                 <CardHeader className="bg-slate-50 border-b border-slate-100 p-6">
                                     <CardTitle className="text-lg flex items-center gap-2 text-slate-800">
                                         <FileText className="w-5 h-5" /> Application Form Data
@@ -407,7 +423,7 @@ export default function V2ApplicationDetailPage() {
                         )}
 
                         {app.olevelData && app.olevelData.length > 0 && (
-                            <Card className="border border-white/40 shadow-xl bg-white/80 backdrop-blur-3xl rounded-[3rem] overflow-hidden">
+                            <Card className="border border-white/40 shadow-xl bg-white/80 backdrop-blur-3xl rounded-[3rem] overflow-hidden print-card">
                                 <button 
                                     onClick={() => setIsOLevelExpanded(!isOLevelExpanded)}
                                     className="w-full text-left bg-slate-50 border-b border-slate-100 p-6 hover:bg-slate-100 transition-colors flex items-center justify-between"
@@ -457,8 +473,8 @@ export default function V2ApplicationDetailPage() {
                         )}
                     </div>
 
-                    <div className="space-y-6">
-                        <Card className="border border-white/40 shadow-xl bg-white/80 backdrop-blur-3xl rounded-[3rem] overflow-hidden">
+                    <div className="space-y-6 print-col">
+                        <Card className="border border-white/40 shadow-xl bg-white/80 backdrop-blur-3xl rounded-[3rem] overflow-hidden print-card">
                             <CardHeader className="bg-slate-50 border-b border-slate-100 p-6">
                                 <CardTitle className="text-lg flex items-center gap-2 text-slate-800">
                                     <CreditCard className="w-5 h-5" /> Payment Details
@@ -519,7 +535,7 @@ export default function V2ApplicationDetailPage() {
                         </Card>
 
                         {app.userAccountInfo && (
-                            <Card className="border border-white/40 shadow-xl bg-white/80 backdrop-blur-3xl rounded-[3rem] overflow-hidden">
+                            <Card className="border border-white/40 shadow-xl bg-white/80 backdrop-blur-3xl rounded-[3rem] overflow-hidden print-card">
                                 <CardHeader className="bg-slate-50 border-b border-slate-100 p-6">
                                     <CardTitle className="text-lg flex items-center gap-2 text-slate-800">
                                         <Shield className="w-5 h-5" /> User Account
@@ -598,7 +614,7 @@ export default function V2ApplicationDetailPage() {
                             </Card>
                         )}
 
-                        <Card className="border border-white/40 shadow-xl bg-white/80 backdrop-blur-3xl rounded-[3rem] overflow-hidden">
+                        <Card className="border border-white/40 shadow-xl bg-white/80 backdrop-blur-3xl rounded-[3rem] overflow-hidden print-card">
                             <CardHeader className="bg-slate-50 border-b border-slate-100 p-6">
                                 <CardTitle className="text-lg flex items-center gap-2 text-slate-800">
                                     <AlertCircle className="w-5 h-5" /> Actions
@@ -646,7 +662,7 @@ export default function V2ApplicationDetailPage() {
                             </CardContent>
                         </Card>
 
-                        <Card className="border border-white/40 shadow-xl bg-white/80 backdrop-blur-3xl rounded-[3rem] overflow-hidden">
+                        <Card className="border border-white/40 shadow-xl bg-white/80 backdrop-blur-3xl rounded-[3rem] overflow-hidden print-card">
                             <CardHeader className="bg-slate-50 border-b border-slate-100 p-6">
                                 <CardTitle className="text-lg flex items-center gap-2 text-slate-800">
                                     <Hash className="w-5 h-5" /> Details

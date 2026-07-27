@@ -2006,7 +2006,14 @@ export async function getAdminV2ApplicationDetail(applicationId: number) {
             applicantPhone: formData.phone || formData.phone_number || formData.mobile || formData.Phone || 'N/A',
             templateName: app.template?.name || 'N/A',
             templateLevel: app.template?.level || '',
-            olevelData: olevelData.length > 0 ? olevelData : (formData.olevel || formData.olevel_results || formData['O-Level Results'] || formData['O-Level'] || formData.sittings || formData['Give your o-level '] || []),
+            olevelData: (() => {
+                if (olevelData.length > 0) return olevelData;
+                let fallback = formData.olevel || formData.olevel_results || formData['O-Level Results'] || formData['O-Level'] || formData.sittings || formData['Give your o-level '] || formData['Give your o-level'] || [];
+                if (typeof fallback === 'string') {
+                    try { fallback = JSON.parse(fallback); } catch (e) { fallback = []; }
+                }
+                return Array.isArray(fallback) ? fallback : [];
+            })(),
             formStructure,
             userAccountInfo,
         };
