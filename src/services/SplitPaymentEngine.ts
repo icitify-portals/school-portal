@@ -78,7 +78,12 @@ export class PaystackAdapter implements PaymentGatewayAdapter {
             email: payerEmail,
             amount: Math.round(totalAmount * 100), // in kobo
             reference: txReference,
-            callback_url: `https://portal.fssibadan.edu.ng/student/finance`
+            callback_url: `https://portal.fssibadan.edu.ng/student/finance`,
+            metadata: {
+                custom_fields: [
+                    { display_name: "Payer Name", variable_name: "payer_name", value: meta?.payerName || payerEmail.split('@')[0] }
+                ]
+            }
         };
 
         if (subaccountsPayload.length > 0) {
@@ -164,7 +169,8 @@ export class FlutterwaveAdapter implements PaymentGatewayAdapter {
             currency: "NGN",
             payment_options: "card,banktransfer,ussd",
             customer: {
-                email: payerEmail
+                email: payerEmail,
+                name: meta?.payerName || payerEmail.split('@')[0]
             },
             subaccounts: subaccountsPayload,
             // Custom rules mapping fee bearer
@@ -353,7 +359,7 @@ export class AlatpayAdapter implements PaymentGatewayAdapter {
         const payerFirstName = meta?.payerName ? (meta.payerName as string).split(' ')[0] : (meta?.payerFirstName as string || 'Student');
         const payerLastName = meta?.payerName ? (meta.payerName as string).split(' ').slice(1).join(' ') || payerFirstName : (meta?.payerLastName as string || 'Payer');
 
-        let checkoutUrl = `/finance/checkout/simulate?gateway=alatpay&reference=${txReference}&amount=${totalAmount}&firstName=${encodeURIComponent(payerFirstName)}&lastName=${encodeURIComponent(payerLastName)}`;
+        let checkoutUrl = `/finance/checkout/simulate?gateway=alatpay&reference=${txReference}&amount=${totalAmount}&firstName=${encodeURIComponent(payerFirstName)}&lastName=${encodeURIComponent(payerLastName)}&email=${encodeURIComponent(payerEmail)}`;
         if (targetBusinessId) checkoutUrl += `&businessId=${targetBusinessId}`;
         if (publicKey) checkoutUrl += `&publicKey=${publicKey}`;
 

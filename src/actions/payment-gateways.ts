@@ -75,6 +75,12 @@ export async function initiatePayment(gateway: string, amount: number, reference
                     amount: amount * 100, // kobo
                     reference,
                     callback_url: `${process.env.NEXTAUTH_URL}/student/finance?ref=${reference}`,
+                    metadata: {
+                        custom_fields: [
+                            { display_name: "First Name", variable_name: "first_name", value: firstName || 'Student/Applicant' },
+                            { display_name: "Last Name", variable_name: "last_name", value: lastName || '' }
+                        ]
+                    }
                 }),
             });
             const data = await res.json();
@@ -93,7 +99,10 @@ export async function initiatePayment(gateway: string, amount: number, reference
                     amount,
                     currency: 'NGN',
                     redirect_url: `${process.env.NEXTAUTH_URL}/student/finance?ref=${reference}`,
-                    customer: { email },
+                    customer: { 
+                        email,
+                        name: `${firstName || ''} ${lastName || ''}`.trim() || 'Student/Applicant'
+                    },
                     payment_options: 'card,banktransfer,ussd',
                 }),
             });
@@ -122,7 +131,7 @@ export async function initiatePayment(gateway: string, amount: number, reference
                     serviceTypeId,
                     amount: amount.toString(),
                     orderId: reference,
-                    payerName: email.split('@')[0],
+                    payerName: `${firstName || ''} ${lastName || ''}`.trim() || email.split('@')[0],
                     payerEmail: email,
                     payerPhone: "08000000000"
                 })
@@ -136,7 +145,7 @@ export async function initiatePayment(gateway: string, amount: number, reference
             }
         } else if (gateway === 'alatpay') {
             // Return a simulated checkout URL that handles ALATPay inline JS
-            paymentUrl = `/finance/checkout/simulate?gateway=alatpay&reference=${reference}&amount=${amount}&firstName=${encodeURIComponent(firstName || 'Student')}&lastName=${encodeURIComponent(lastName || 'Payer')}`;
+            paymentUrl = `/finance/checkout/simulate?gateway=alatpay&reference=${reference}&amount=${amount}&firstName=${encodeURIComponent(firstName || 'Student')}&lastName=${encodeURIComponent(lastName || 'Payer')}&email=${encodeURIComponent(email)}`;
         } else {
             // OPay: infrastructure placeholder
             return { error: `${def.name} integration coming soon.` };
