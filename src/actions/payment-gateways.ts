@@ -251,19 +251,18 @@ export async function verifyPayment(gateway: string, reference: string, rrr?: st
                     verified = txData?.status === 'successful' || txData?.status === 'Approved' || data?.status === 'successful' || data?.status === 'Approved';
                     amount = txData?.amount || data?.amount || 0;
                     gatewayTransactionId = txData?.transactionId || txData?.transaction_id || txData?.id || data?.transactionId || data?.transaction_id || undefined;
+                    
+                    if (!verified) {
+                        return { error: `ALATPay transaction not successful (Status: ${txData?.status || data?.status || 'Unknown'})` };
+                    }
                 } else {
                     const errorBody = await res.text().catch(() => 'Unknown');
                     console.error(`ALATPay verify HTTP ${res.status} for ref ${reference}: ${errorBody}`);
-                    console.warn(`[ALATPay] API returned HTTP ${res.status} for ${reference}. Falling back to SDK callback trust.`);
-                    verified = true;
-                    return { success: true, verified, amount, gateway, verificationMethod: 'sdk_trust', warning: `ALATPay API returned HTTP ${res.status}. Relying on SDK/webhook confirmation.` };
+                    return { error: `ALATPay API returned HTTP ${res.status}. Could not verify transaction.` };
                 }
             } catch (e: any) {
                 console.error(`[ALATPay] Verification API unreachable for ref ${reference}: ${e?.message || e}`);
-                console.warn(`[ALATPay] Cannot reach verification API. Proceeding on SDK callback trust for ${reference}. Cross-check on ALATPay dashboard.`);
-                verified = true;
-                amount = 0;
-                return { success: true, verified, amount, gateway, verificationMethod: 'sdk_trust', warning: `ALATPay verification API unreachable. Relying on SDK/webhook confirmation. Cross-check on ALATPay dashboard.` };
+                return { error: `ALATPay verification API unreachable: ${e?.message || 'Network error'}` };
             }
 
             return { success: true, verified, amount, gateway, gatewayTransactionId };

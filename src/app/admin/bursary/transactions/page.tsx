@@ -8,9 +8,11 @@ import {
     Search,
     Loader2,
     RotateCcw,
-    CreditCard
+    CreditCard,
+    Trash2,
+    Clock
 } from "lucide-react";
-import { getAllUnifiedTransactions, requeryUnifiedTransaction, UnifiedTransaction } from "@/actions/bursary";
+import { getAllUnifiedTransactions, requeryUnifiedTransaction, UnifiedTransaction, markTransactionPending, deleteTransaction } from "@/actions/bursary";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -71,6 +73,38 @@ export default function UnifiedTransactionsPage() {
         }
         
         setRequeryingId(null);
+    };
+
+    const handleMarkPending = async (e: React.MouseEvent, tx: UnifiedTransaction) => {
+        e.stopPropagation();
+        const toastId = toast.loading(`Marking transaction pending...`);
+        
+        const res = await markTransactionPending(tx.id, tx.sourceTable);
+        if (res.success) {
+            toast.success(`Transaction marked as pending`, { id: toastId });
+            setTransactions(prev => prev.map(t => 
+                (t.id === tx.id && t.sourceTable === tx.sourceTable) 
+                    ? { ...t, status: 'pending' } 
+                    : t
+            ));
+        } else {
+            toast.error(`Failed to mark pending: ${res.error}`, { id: toastId });
+        }
+    };
+
+    const handleDelete = async (e: React.MouseEvent, tx: UnifiedTransaction) => {
+        e.stopPropagation();
+        if (!confirm("Are you sure you want to delete this transaction? This action cannot be undone.")) return;
+
+        const toastId = toast.loading(`Deleting transaction...`);
+        
+        const res = await deleteTransaction(tx.id, tx.sourceTable);
+        if (res.success) {
+            toast.success(`Transaction deleted successfully`, { id: toastId });
+            setTransactions(prev => prev.filter(t => !(t.id === tx.id && t.sourceTable === tx.sourceTable)));
+        } else {
+            toast.error(`Failed to delete: ${res.error}`, { id: toastId });
+        }
     };
 
     const filteredTransactions = transactions.filter(tx => {
@@ -234,20 +268,40 @@ export default function UnifiedTransactionsPage() {
                                             </Badge>
                                         </td>
                                         <td className="px-6 py-4 text-right">
-                                            {tx.status === 'pending' && tx.gateway && tx.gateway !== 'internal' ? (
+                                            <div className="flex items-center justify-end gap-2">
+                                                {tx.status === 'pending' && tx.gateway && tx.gateway !== 'internal' && (
+                                                    <Button
+                                                        size="sm"
+                                                        variant="outline"
+                                                        disabled={requeryingId === tx.id}
+                                                        onClick={(e) => handleRequery(e, tx)}
+                                                        className="h-8 text-xs font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 border-transparent shadow-none"
+                                                    >
+                                                        {requeryingId === tx.id ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : <RotateCcw className="w-3.5 h-3.5 mr-1" />}
+                                                        Re-query
+                                                    </Button>
+                                                )}
+                                                {tx.status !== 'pending' && (
+                                                    <Button
+                                                        size="sm"
+                                                        variant="outline"
+                                                        onClick={(e) => handleMarkPending(e, tx)}
+                                                        className="h-8 text-xs font-bold text-amber-600 bg-amber-50 hover:bg-amber-100 border-transparent shadow-none"
+                                                    >
+                                                        <Clock className="w-3.5 h-3.5 mr-1" />
+                                                        Pending
+                                                    </Button>
+                                                )}
                                                 <Button
                                                     size="sm"
                                                     variant="outline"
-                                                    disabled={requeryingId === tx.id}
-                                                    onClick={(e) => handleRequery(e, tx)}
-                                                    className="h-8 text-xs font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 border-transparent shadow-none"
+                                                    onClick={(e) => handleDelete(e, tx)}
+                                                    className="h-8 text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 border-transparent shadow-none"
                                                 >
-                                                    {requeryingId === tx.id ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : <RotateCcw className="w-3.5 h-3.5 mr-1" />}
-                                                    Re-query
+                                                    <Trash2 className="w-3.5 h-3.5 mr-1" />
+                                                    Delete
                                                 </Button>
-                                            ) : (
-                                                <span className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">No Action</span>
-                                            )}
+                                            </div>
                                         </td>
                                     </tr>
                                 ))
