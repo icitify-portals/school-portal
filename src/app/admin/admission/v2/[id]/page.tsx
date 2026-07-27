@@ -327,7 +327,18 @@ export default function V2ApplicationDetailPage() {
                                 </CardHeader>
                                 <CardContent className="p-6 space-y-4">
                                     {app.formStructure
-                                        .filter((section: any) => section.fields && section.fields.length > 0)
+                                        .filter((section: any) => {
+                                            if (!section.fields || section.fields.length === 0) return false;
+                                            // Check if all fields in this section are olevel fields
+                                            const visibleFields = section.fields.filter((field: any) => {
+                                                const label = field.label?.toLowerCase() || '';
+                                                if (field.type === 'olevel' || label.includes('o-level') || label.includes('o/level') || label.includes('give your o-level')) {
+                                                    return false;
+                                                }
+                                                return true;
+                                            });
+                                            return visibleFields.length > 0;
+                                        })
                                         .map((section: any) => {
                                             const isExpanded = expandedSections.has(section.title);
                                             return (
