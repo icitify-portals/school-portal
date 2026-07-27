@@ -245,7 +245,7 @@ export async function verifyPayment(gateway: string, reference: string, rrr?: st
 
             try {
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 8000);
+                const timeoutId = setTimeout(() => controller.abort(), 30000);
                 const res = await fetch(`${baseUrl}/alatpaytransaction/api/v1/transactions?reference=${reference}`, {
                     headers: {
                         'Ocp-Apim-Subscription-Key': secretKey

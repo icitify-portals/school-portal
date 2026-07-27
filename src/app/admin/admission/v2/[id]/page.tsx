@@ -443,7 +443,7 @@ export default function V2ApplicationDetailPage() {
                                     </h3>
                                     {isOLevelExpanded ? <ChevronUp className="w-5 h-5 text-slate-400" /> : <ChevronDown className="w-5 h-5 text-slate-400" />}
                                 </button>
-                                <CardContent className={cn("p-6 space-y-6", isOLevelExpanded ? "block" : "hidden print-force-block")}>
+                                <CardContent className={cn("p-6 space-y-6", isOLevelExpanded ? "block" : "hidden print:block")}>
                                     {app.olevelData.map((sitting: any, index: number) => {
                                         const validSubjects = sitting.subjects?.filter((sub: any) => sub.subjectName || sub.subject || sub.name) || [];
                                         return <div key={sitting.id || index} className="space-y-3">
