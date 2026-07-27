@@ -1914,11 +1914,11 @@ export async function getAdminV2ApplicationDetail(applicationId: number) {
             };
         }
 
-        const surname = formData.surname || formData.last_name || formData.lastName || '';
-        const firstName = formData.firstName || formData.first_name || '';
-        const middleName = formData.middleName || formData.middle_name || '';
+        const surname = formData.surname || formData.last_name || formData.lastName || formData['Last Name'] || formData.LastName || '';
+        const firstName = formData.firstName || formData.first_name || formData['First Name'] || formData.FirstName || formData['FirstName'] || '';
+        const middleName = formData.middleName || formData.middle_name || formData['Middle Name'] || formData.MiddleName || '';
         const nameFallback = `${surname} ${firstName} ${middleName}`.trim() || `${firstName} ${surname}`.trim() || 'N/A';
-        const photo = formData.passport_photo || formData.passport || formData.photo || formData.applicantPhoto || formData.image || '';
+        const photo = formData.passport_photo || formData.passport || formData.photo || formData.applicantPhoto || formData.image || formData['Photograph/camera'] || formData.Photograph || '';
 
         return {
             ...app,
@@ -1926,10 +1926,10 @@ export async function getAdminV2ApplicationDetail(applicationId: number) {
             applicantName: nameFallback,
             applicantPhoto: photo,
             applicantEmail: formData.email || formData.email_address || 'N/A',
-            applicantPhone: formData.phone || formData.phone_number || formData.mobile || 'N/A',
+            applicantPhone: formData.phone || formData.phone_number || formData.mobile || formData.Phone || 'N/A',
             templateName: app.template?.name || 'N/A',
             templateLevel: app.template?.level || '',
-            olevelData: olevelData.length > 0 ? olevelData : (formData.olevel || formData.olevel_results || formData['O-Level Results'] || formData['O-Level'] || formData.sittings || []),
+            olevelData: olevelData.length > 0 ? olevelData : (formData.olevel || formData.olevel_results || formData['O-Level Results'] || formData['O-Level'] || formData.sittings || formData['Give your o-level '] || []),
             formStructure,
             userAccountInfo,
         };

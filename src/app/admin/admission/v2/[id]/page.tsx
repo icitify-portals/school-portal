@@ -113,7 +113,13 @@ export default function V2ApplicationDetailPage() {
         }
         // Handle arrays (like subjects)
         if (Array.isArray(value)) {
-            return <span className="text-slate-600">{value.join(', ')}</span>;
+            const joined = value.map(item => {
+                if (typeof item === 'object' && item !== null) {
+                    return item.label || item.value || JSON.stringify(item);
+                }
+                return String(item);
+            }).join(', ');
+            return <span className="text-slate-600 font-medium">{joined}</span>;
         }
         // Handle objects
         if (typeof value === 'object') {
@@ -343,7 +349,9 @@ export default function V2ApplicationDetailPage() {
                                                 <span className="px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full font-black text-[10px] uppercase tracking-widest">
                                                     Sitting {sitting.sittingNumber || sitting.sitting || 1}
                                                 </span>
-                                                <span className="font-bold text-slate-600">{sitting.examBodyName || sitting.examType || sitting.exam_type || 'Unknown Exam'}</span>
+                                                <span className="font-bold text-slate-600">
+                                                    {sitting.examBodyName || sitting.examType || sitting.exam_type || (sitting.examBodyId === "1" ? "WAEC" : sitting.examBodyId === "2" ? "NECO" : sitting.examBodyId === "3" ? "NABTEB" : sitting.examBodyId ? `Exam Body ${sitting.examBodyId}` : 'Unknown Exam')}
+                                                </span>
                                                 <span className="text-slate-400">{sitting.examYear || sitting.exam_year}</span>
                                                 <span className="font-mono text-xs text-slate-400">{sitting.examNumber || sitting.exam_number}</span>
                                             </div>
