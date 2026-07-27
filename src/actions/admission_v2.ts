@@ -1914,17 +1914,22 @@ export async function getAdminV2ApplicationDetail(applicationId: number) {
             };
         }
 
+        const surname = formData.surname || formData.last_name || formData.lastName || '';
+        const firstName = formData.firstName || formData.first_name || '';
+        const middleName = formData.middleName || formData.middle_name || '';
+        const nameFallback = `${surname} ${firstName} ${middleName}`.trim() || `${firstName} ${surname}`.trim() || 'N/A';
+        const photo = formData.passport_photo || formData.passport || formData.photo || formData.applicantPhoto || formData.image || '';
+
         return {
             ...app,
             parsedData: formData,
-            applicantName: formData.surname
-                ? `${formData.surname} ${formData.firstName} ${formData.middleName || ''}`.trim()
-                : `${formData.firstName || ''} ${formData.lastName || ''}`.trim() || 'N/A',
-            applicantEmail: formData.email || 'N/A',
-            applicantPhone: formData.phone || 'N/A',
+            applicantName: nameFallback,
+            applicantPhoto: photo,
+            applicantEmail: formData.email || formData.email_address || 'N/A',
+            applicantPhone: formData.phone || formData.phone_number || formData.mobile || 'N/A',
             templateName: app.template?.name || 'N/A',
             templateLevel: app.template?.level || '',
-            olevelData,
+            olevelData: olevelData.length > 0 ? olevelData : (formData.olevel || formData.olevel_results || formData['O-Level Results'] || formData['O-Level'] || formData.sittings || []),
             formStructure,
             userAccountInfo,
         };
