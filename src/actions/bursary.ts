@@ -3004,41 +3004,53 @@ export async function getFeeItemCollectionReport(filters: {
 }
 
 export async function markTransactionPending(id: number, sourceTable: 'transactions' | 'payment_transactions' | 'wallet_transactions') {
+    return bulkMarkTransactionsPending([{ id, sourceTable }]);
+}
+
+export async function bulkMarkTransactionsPending(items: { id: number, sourceTable: 'transactions' | 'payment_transactions' | 'wallet_transactions' }[]) {
     try {
         await ensureBursaryStaff();
         
-        if (sourceTable === 'transactions') {
-            await db.update(transactions).set({ status: 'pending' }).where(eq(transactions.id, id));
-        } else if (sourceTable === 'payment_transactions') {
-            await db.update(payment_transactions).set({ status: 'pending' }).where(eq(payment_transactions.id, id));
-        } else if (sourceTable === 'wallet_transactions') {
-            await db.update(walletTransactions).set({ status: 'pending' }).where(eq(walletTransactions.id, id));
+        for (const item of items) {
+            if (item.sourceTable === 'transactions') {
+                await db.update(transactions).set({ status: 'pending' }).where(eq(transactions.id, item.id));
+            } else if (item.sourceTable === 'payment_transactions') {
+                await db.update(payment_transactions).set({ status: 'pending' }).where(eq(payment_transactions.id, item.id));
+            } else if (item.sourceTable === 'wallet_transactions') {
+                await db.update(walletTransactions).set({ status: 'pending' }).where(eq(walletTransactions.id, item.id));
+            }
         }
 
         revalidatePath("/admin/bursary/transactions");
         return { success: true };
     } catch (error) {
-        console.error("Failed to mark transaction as pending:", error);
+        console.error("Failed to mark transactions as pending:", error);
         return { success: false, error: (error as Error).message };
     }
 }
 
 export async function deleteTransaction(id: number, sourceTable: 'transactions' | 'payment_transactions' | 'wallet_transactions') {
+    return bulkDeleteTransactions([{ id, sourceTable }]);
+}
+
+export async function bulkDeleteTransactions(items: { id: number, sourceTable: 'transactions' | 'payment_transactions' | 'wallet_transactions' }[]) {
     try {
         await ensureBursaryStaff();
         
-        if (sourceTable === 'transactions') {
-            await db.delete(transactions).where(eq(transactions.id, id));
-        } else if (sourceTable === 'payment_transactions') {
-            await db.delete(payment_transactions).where(eq(payment_transactions.id, id));
-        } else if (sourceTable === 'wallet_transactions') {
-            await db.delete(walletTransactions).where(eq(walletTransactions.id, id));
+        for (const item of items) {
+            if (item.sourceTable === 'transactions') {
+                await db.delete(transactions).where(eq(transactions.id, item.id));
+            } else if (item.sourceTable === 'payment_transactions') {
+                await db.delete(payment_transactions).where(eq(payment_transactions.id, item.id));
+            } else if (item.sourceTable === 'wallet_transactions') {
+                await db.delete(walletTransactions).where(eq(walletTransactions.id, item.id));
+            }
         }
 
         revalidatePath("/admin/bursary/transactions");
         return { success: true };
     } catch (error) {
-        console.error("Failed to delete transaction:", error);
+        console.error("Failed to delete transactions:", error);
         return { success: false, error: (error as Error).message };
     }
 }

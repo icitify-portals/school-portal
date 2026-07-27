@@ -12,7 +12,7 @@ import {
     Trash2,
     Clock
 } from "lucide-react";
-import { getAllUnifiedTransactions, requeryUnifiedTransaction, UnifiedTransaction, markTransactionPending, deleteTransaction } from "@/actions/bursary";
+import { getAllUnifiedTransactions, requeryUnifiedTransaction, UnifiedTransaction, markTransactionPending, deleteTransaction, bulkMarkTransactionsPending, bulkDeleteTransactions } from "@/actions/bursary";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -29,6 +29,10 @@ export default function UnifiedTransactionsPage() {
     
     const [selectedTx, setSelectedTx] = useState<UnifiedTransaction | null>(null);
     const [requeryingId, setRequeryingId] = useState<number | null>(null);
+
+    // Bulk selection state
+    const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+    const [isBulkActioning, setIsBulkActioning] = useState(false);
 
     useEffect(() => {
         fetchData();
@@ -104,6 +108,69 @@ export default function UnifiedTransactionsPage() {
             setTransactions(prev => prev.filter(t => !(t.id === tx.id && t.sourceTable === tx.sourceTable)));
         } else {
             toast.error(`Failed to delete: ${res.error}`, { id: toastId });
+        }
+    };
+
+    const handleBulkMarkPending = async () => {
+        if (selectedIds.size === 0) return;
+        setIsBulkActioning(true);
+        const toastId = toast.loading(`Marking ${selectedIds.size} transactions pending...`);
+        
+        const items = Array.from(selectedIds).map(idStr => {
+            const [sourceTable, id] = idStr.split('-');
+            return { id: parseInt(id), sourceTable: sourceTable as any };
+        });
+        
+        const res = await bulkMarkTransactionsPending(items);
+        if (res.success) {
+            toast.success(`${selectedIds.size} transactions marked as pending`, { id: toastId });
+            setTransactions(prev => prev.map(t => 
+                selectedIds.has(`${t.sourceTable}-${t.id}`) 
+                    ? { ...t, status: 'pending' } 
+                    : t
+            ));
+            setSelectedIds(new Set());
+        } else {
+            toast.error(`Failed to mark pending: ${res.error}`, { id: toastId });
+        }
+        setIsBulkActioning(false);
+    };
+
+    const handleBulkDelete = async () => {
+        if (selectedIds.size === 0) return;
+        if (!confirm(`Are you sure you want to delete ${selectedIds.size} transactions? This action cannot be undone.`)) return;
+        
+        setIsBulkActioning(true);
+        const toastId = toast.loading(`Deleting ${selectedIds.size} transactions...`);
+        
+        const items = Array.from(selectedIds).map(idStr => {
+            const [sourceTable, id] = idStr.split('-');
+            return { id: parseInt(id), sourceTable: sourceTable as any };
+        });
+        
+        const res = await bulkDeleteTransactions(items);
+        if (res.success) {
+            toast.success(`${selectedIds.size} transactions deleted successfully`, { id: toastId });
+            setTransactions(prev => prev.filter(t => !selectedIds.has(`${t.sourceTable}-${t.id}`)));
+            setSelectedIds(new Set());
+        } else {
+            toast.error(`Failed to delete: ${res.error}`, { id: toastId });
+        }
+        setIsBulkActioning(false);
+    };
+
+    const toggleSelection = (idStr: string) => {
+        const newSet = new Set(selectedIds);
+        if (newSet.has(idStr)) newSet.delete(idStr);
+        else newSet.add(idStr);
+        setSelectedIds(newSet);
+    };
+
+    const toggleAll = () => {
+        if (selectedIds.size === filteredTransactions.length && filteredTransactions.length > 0) {
+            setSelectedIds(new Set());
+        } else {
+            setSelectedIds(new Set(filteredTransactions.map(t => `${t.sourceTable}-${t.id}`)));
         }
     };
 
@@ -190,11 +257,50 @@ export default function UnifiedTransactionsPage() {
                 </div>
             </div>
 
+            {selectedIds.size > 0 && (
+                <div className="mb-6 p-4 bg-indigo-50 border border-indigo-100 rounded-2xl flex items-center justify-between shadow-sm animate-in fade-in slide-in-from-bottom-2">
+                    <div className="flex items-center gap-3 text-indigo-900 font-medium">
+                        <Badge className="bg-indigo-600 text-white hover:bg-indigo-700">{selectedIds.size}</Badge>
+                        Transactions Selected
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="text-indigo-700 border-indigo-200 hover:bg-indigo-100 bg-white"
+                            onClick={handleBulkMarkPending}
+                            disabled={isBulkActioning}
+                        >
+                            <Clock className="w-4 h-4 mr-2" />
+                            Mark Pending
+                        </Button>
+                        <Button 
+                            variant="destructive" 
+                            size="sm" 
+                            onClick={handleBulkDelete}
+                            disabled={isBulkActioning}
+                        >
+                            <Trash2 className="w-4 h-4 mr-2" />
+                            Delete Selected
+                        </Button>
+                    </div>
+                </div>
+            )}
+
             <Card className="overflow-hidden border-none shadow-xl rounded-[2rem] bg-white group hover:shadow-2xl transition-all duration-300">
                 <div className="overflow-x-auto">
                     <table className="w-full text-left">
                         <thead>
                             <tr className="bg-slate-50/50 text-slate-500 text-[10px] font-extrabold uppercase tracking-widest border-b border-slate-100">
+                                <th className="px-6 py-5 w-10">
+                                    <input 
+                                        type="checkbox" 
+                                        className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                                        checked={selectedIds.size > 0 && selectedIds.size === filteredTransactions.length}
+                                        ref={el => { if (el) el.indeterminate = selectedIds.size > 0 && selectedIds.size < filteredTransactions.length }}
+                                        onChange={toggleAll}
+                                    />
+                                </th>
                                 <th className="px-6 py-5">Date</th>
                                 <th className="px-6 py-5">Reference</th>
                                 <th className="px-6 py-5">Student</th>
@@ -208,17 +314,25 @@ export default function UnifiedTransactionsPage() {
                         <tbody className="divide-y divide-slate-50">
                             {loading ? (
                                 <tr>
-                                    <td colSpan={8} className="py-20 text-center">
+                                    <td colSpan={9} className="py-20 text-center">
                                         <Loader2 className="w-6 h-6 animate-spin mx-auto text-slate-300" />
                                     </td>
                                 </tr>
                             ) : filteredTransactions.length === 0 ? (
                                 <tr>
-                                    <td colSpan={8} className="py-20 text-center text-slate-400 italic">No transactions found matching criteria.</td>
+                                    <td colSpan={9} className="py-20 text-center text-slate-400 italic">No transactions found matching criteria.</td>
                                 </tr>
                             ) : (
                                 filteredTransactions.map((tx, idx) => (
                                     <tr key={`${tx.sourceTable}-${tx.id}-${idx}`} onClick={() => setSelectedTx(tx)} className="hover:bg-slate-50/50 transition-colors group cursor-pointer">
+                                        <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
+                                            <input 
+                                                type="checkbox" 
+                                                className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                                                checked={selectedIds.has(`${tx.sourceTable}-${tx.id}`)}
+                                                onChange={() => toggleSelection(`${tx.sourceTable}-${tx.id}`)}
+                                            />
+                                        </td>
                                         <td className="px-6 py-4 text-xs text-slate-500 whitespace-nowrap">
                                             {tx.createdAt ? new Date(tx.createdAt).toLocaleString() : 'N/A'}
                                         </td>
