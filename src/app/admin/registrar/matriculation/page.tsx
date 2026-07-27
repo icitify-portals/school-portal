@@ -129,19 +129,29 @@ export default function MatricAdminPage() {
         setAssignLoading(false);
     };
 
+    const [lastIssuedSerial, setLastIssuedSerial] = useState<number | null>(null);
+
     const selectStudentForAssign = async (student: any) => {
         setSelectedStudent(student);
         setAssignMode(student.matricNumber ? "change" : "assign");
         setCustomMatric("");
         setAssignReason("");
         setNextMatric("");
+        setLastIssuedSerial(null);
         // Preview next number
         setPreviewLoading(true);
         try {
-            const res = await previewNextMatricNumber({ deptId: student.deptId });
+            const res = await previewNextMatricNumber({ 
+                deptId: student.deptId,
+                programmeType: student.programmeType,
+                studyMode: student.studyMode
+            });
             if (res.success && res.matricNumber) {
                 setNextMatric(res.matricNumber);
                 setCustomMatric(res.matricNumber);
+                if (res.lastSerialNumber !== undefined) {
+                    setLastIssuedSerial(res.lastSerialNumber);
+                }
             }
         } catch {}
         setPreviewLoading(false);
@@ -603,10 +613,15 @@ export default function MatricAdminPage() {
                                             {nextMatric && customMatric !== nextMatric && (
                                                 <button
                                                     onClick={() => setCustomMatric(nextMatric)}
-                                                    className="mt-1 text-[10px] text-indigo-600 font-bold hover:underline"
+                                                    className="mt-1 text-[10px] text-indigo-600 font-bold hover:underline block"
                                                 >
                                                     Use suggested: {nextMatric}
                                                 </button>
+                                            )}
+                                            {lastIssuedSerial !== null && (
+                                                <div className="mt-2 text-[10px] text-slate-500 bg-slate-100 px-2 py-1 rounded inline-block font-medium">
+                                                    Last Serial Number Issued: <span className="font-bold text-slate-700">{lastIssuedSerial}</span>
+                                                </div>
                                             )}
                                         </div>
 

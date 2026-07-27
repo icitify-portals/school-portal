@@ -146,7 +146,9 @@ export async function approveStudent(userId: number, inputMatricNumber?: string)
             const genRes = await generateMatricNumber({
                 year: studentRecord.admissionYear || new Date().getFullYear(),
                 deptId: deptId,
-                facultyId: facultyId
+                facultyId: facultyId,
+                studyMode: studentRecord.studyMode || undefined,
+                programmeType: studentRecord.programmeType || undefined
             });
             if (genRes.success && genRes.matricNumber) {
                 finalMatricNumber = genRes.matricNumber;

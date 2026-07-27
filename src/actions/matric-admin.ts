@@ -126,6 +126,7 @@ export async function getMatricStudents(options?: {
 export async function previewNextMatricNumber(options: {
     deptId?: number;
     programmeType?: string;
+    studyMode?: string;
 }) {
     await requireAdmin();
     try {
@@ -133,6 +134,9 @@ export async function previewNextMatricNumber(options: {
         const result = await generateMatricNumber({
             year,
             deptId: options.deptId,
+            programmeType: options.programmeType,
+            studyMode: options.studyMode,
+            previewOnly: true
         });
         return result;
     } catch (error) {

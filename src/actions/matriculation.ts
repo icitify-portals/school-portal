@@ -96,9 +96,12 @@ export async function generateMatricNumber(options: {
     deptId?: number;
     facultyId?: number;
     unitId?: number;
-}): Promise<{ success: boolean; matricNumber?: string; error?: string }> {
+    studyMode?: string;
+    programmeType?: string;
+    previewOnly?: boolean;
+}): Promise<{ success: boolean; matricNumber?: string; error?: string; lastSerialNumber?: number }> {
     try {
-        const { year, deptId, facultyId, unitId } = options;
+        const { year, deptId, facultyId, unitId, studyMode, programmeType, previewOnly } = options;
 
         let deptCode = "GEN";
         let facultyCode = "GEN";
@@ -117,6 +120,21 @@ export async function generateMatricNumber(options: {
             unitCode = `U${unitId}`;
         }
 
+        // Determine Prefix based on Study Mode and Programme Type
+        let prefix = "";
+        const isPartTime = studyMode?.toLowerCase().includes("part");
+        const isHnd = programmeType?.toUpperCase() === "HND";
+
+        if (isPartTime) {
+            prefix = isHnd ? "DPP/HND/" : "DPP/";
+        } else {
+            // Full-Time
+            prefix = isHnd ? "HND/" : "";
+        }
+
+        // Apply Prefix to the department code so that it seamlessly integrates with {DEPT_CODE}
+        deptCode = `${prefix}${deptCode}`;
+
         // Find the best setting: Priority -> Dept > Faculty > Unit > Global
         let bestSetting = null;
 
@@ -129,45 +147,70 @@ export async function generateMatricNumber(options: {
 
         // If absolutely no setting exists, create a default global one to prevent failure
         if (!bestSetting) {
-            const [insertRes] = await db.insert(matriculationSettings).values({
-                nomenclature: "Matriculation Number",
-                format: "{DEPT_CODE}/{YEAR}/{SERIAL}",
-                serialStart: 1,
-                serialPadding: 3,
-            });
-            bestSetting = {
-                id: insertRes.insertId,
-                format: "{DEPT_CODE}/{YEAR}/{SERIAL}",
-                serialStart: 1,
-                serialPadding: 3,
-            } as any;
+            if (!previewOnly) {
+                const [insertRes] = await db.insert(matriculationSettings).values({
+                    nomenclature: "Matriculation Number",
+                    format: "{DEPT_CODE}/{YEAR}/{SERIAL}",
+                    serialStart: 1,
+                    serialPadding: 3,
+                });
+                bestSetting = {
+                    id: insertRes.insertId,
+                    format: "{DEPT_CODE}/{YEAR}/{SERIAL}",
+                    serialStart: 1,
+                    serialPadding: 3,
+                } as any;
+            } else {
+                bestSetting = {
+                    id: -1,
+                    format: "{DEPT_CODE}/{YEAR}/{SERIAL}",
+                    serialStart: 1,
+                    serialPadding: 3,
+                } as any;
+            }
         }
 
         let serialNumberToIssue = bestSetting.serialStart;
+        let lastSerialNumber = bestSetting.serialStart - 1;
 
-        // Use transaction to ensure serials are never duplicated
-        await db.transaction(async (tx) => {
-            const sequence = await tx.select().from(matriculationSequences).where(
+        if (previewOnly) {
+            const sequence = await db.select().from(matriculationSequences).where(
                 and(
                     eq(matriculationSequences.settingId, bestSetting.id),
                     eq(matriculationSequences.year, year)
                 )
             ).limit(1);
-
             if (sequence.length > 0) {
-                serialNumberToIssue = (sequence[0].currentSerial || 0) + 1;
-                await tx.update(matriculationSequences)
-                    .set({ currentSerial: serialNumberToIssue })
-                    .where(eq(matriculationSequences.id, sequence[0].id));
-            } else {
-                serialNumberToIssue = bestSetting.serialStart || 1;
-                await tx.insert(matriculationSequences).values({
-                    settingId: bestSetting.id,
-                    year: year,
-                    currentSerial: serialNumberToIssue
-                });
+                lastSerialNumber = sequence[0].currentSerial || 0;
+                serialNumberToIssue = lastSerialNumber + 1;
             }
-        });
+        } else {
+            // Use transaction to ensure serials are never duplicated
+            await db.transaction(async (tx) => {
+                const sequence = await tx.select().from(matriculationSequences).where(
+                    and(
+                        eq(matriculationSequences.settingId, bestSetting.id),
+                        eq(matriculationSequences.year, year)
+                    )
+                ).limit(1);
+
+                if (sequence.length > 0) {
+                    lastSerialNumber = sequence[0].currentSerial || 0;
+                    serialNumberToIssue = lastSerialNumber + 1;
+                    await tx.update(matriculationSequences)
+                        .set({ currentSerial: serialNumberToIssue })
+                        .where(eq(matriculationSequences.id, sequence[0].id));
+                } else {
+                    serialNumberToIssue = bestSetting.serialStart || 1;
+                    lastSerialNumber = serialNumberToIssue - 1;
+                    await tx.insert(matriculationSequences).values({
+                        settingId: bestSetting.id,
+                        year: year,
+                        currentSerial: serialNumberToIssue
+                    });
+                }
+            });
+        }
 
         const paddedSerial = String(serialNumberToIssue).padStart(bestSetting.serialPadding || 3, "0");
 
@@ -178,7 +221,7 @@ export async function generateMatricNumber(options: {
         generatedNumber = generatedNumber.replace(/{UNIT_CODE}/g, unitCode);
         generatedNumber = generatedNumber.replace(/{SERIAL}/g, paddedSerial);
 
-        return { success: true, matricNumber: generatedNumber };
+        return { success: true, matricNumber: generatedNumber, lastSerialNumber: lastSerialNumber };
 
     } catch (error) {
         console.error("Error generating matric number:", error);
