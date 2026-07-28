@@ -286,17 +286,31 @@ export async function approveAndPublishBatch(batchId: number) {
 
 export async function searchStudents(query: string) {
   try {
-    const res = await db.query.students.findMany({
-      with: { user: true, programme: true },
-      limit: 20,
-    });
-    const filtered = res.filter(
-      (s) =>
-        s.user?.name?.toLowerCase().includes(query.toLowerCase()) ||
-        s.admissionNumber?.toLowerCase().includes(query.toLowerCase()) ||
-        s.matricNumber?.toLowerCase().includes(query.toLowerCase())
-    );
-    return { success: true, data: filtered };
+    const term = `%${query}%`;
+    const rows = await db
+      .select()
+      .from(students)
+      .leftJoin(users, eq(students.userId, users.id))
+      .leftJoin(programmes, eq(students.programmeId, programmes.id))
+      .where(
+        or(
+          like(students.matricNumber, term),
+          like(students.admissionNumber, term),
+          like(users.name, term),
+          like(users.firstName, term),
+          like(users.surname, term),
+        )
+      )
+      .limit(20);
+
+    return {
+      success: true,
+      data: rows.map(r => ({
+        ...r.students,
+        user: r.users,
+        programme: r.programmes,
+      })),
+    };
   } catch (e: any) {
     return { success: false, error: e.message };
   }
