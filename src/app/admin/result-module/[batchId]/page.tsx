@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Papa from "papaparse";
 import {
@@ -14,7 +14,7 @@ import {
 } from "@/actions/result-module";
 import {
   ArrowLeft, Upload, UserPlus, CheckCircle2, Loader2, Search,
-  Plus, FileUp, Trash2, AlertTriangle, BookOpen, X, Eye,
+  Plus, FileUp, Trash2, AlertTriangle, BookOpen, X, Eye, ChevronDown,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -339,11 +339,12 @@ export default function BatchDetailPage() {
                   {/* Course Selection */}
                   <div>
                     <label className="block text-xs text-slate-400 mb-1 uppercase tracking-wide">Target Course</label>
-                    <select value={bulkCourseId} onChange={e => setBulkCourseId(e.target.value)} 
-                      className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-violet-400">
-                      <option value="" className="bg-slate-800 text-white">Select course for this upload...</option>
-                      {courses.map(c => <option key={c.id} value={c.id} className="bg-slate-800 text-white">{c.code} — {c.name}</option>)}
-                    </select>
+                    <DarkSelect
+                      value={bulkCourseId}
+                      onChange={v => setBulkCourseId(v)}
+                      placeholder="Select course for this upload..."
+                      options={courses.map(c => ({ value: String(c.id), label: `${c.code} — ${c.name}` }))}
+                    />
                   </div>
 
                   {/* CSV Template Download */}
@@ -504,6 +505,52 @@ export default function BatchDetailPage() {
               </div>
             </form>
           </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DarkSelect({ value, onChange, options, placeholder }: {
+  value: string;
+  onChange: (v: string) => void;
+  options: { value: string; label: string }[];
+  placeholder?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  const selected = options.find(o => o.value === value);
+
+  return (
+    <div ref={ref} className="relative">
+      <button type="button" onClick={() => setOpen(!open)}
+        className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-sm text-left flex items-center justify-between focus:outline-none focus:border-violet-400 transition-colors">
+        <span className={selected ? "text-white" : "text-slate-500"}>{selected ? selected.label : (placeholder || "Select...")}</span>
+        <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+      {open && (
+        <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-slate-800 border border-white/20 rounded-lg max-h-48 overflow-y-auto shadow-xl">
+          {placeholder && (
+            <button type="button" onClick={() => { onChange(""); setOpen(false); }}
+              className="w-full text-left px-3 py-2 text-xs text-slate-400 hover:bg-white/10 transition-colors border-b border-white/5">
+              {placeholder}
+            </button>
+          )}
+          {options.map(o => (
+            <button key={o.value} type="button" onClick={() => { onChange(o.value); setOpen(false); }}
+              className={`w-full text-left px-3 py-2 text-xs transition-colors border-b border-white/5 last:border-0 ${o.value === value ? "bg-violet-600/30 text-violet-300" : "text-white hover:bg-white/10"}`}>
+              {o.label}
+            </button>
+          ))}
         </div>
       )}
     </div>

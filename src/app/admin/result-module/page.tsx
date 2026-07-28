@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
   getResultBatches,
@@ -10,7 +10,7 @@ import {
 } from "@/actions/result-module";
 import {
   BookOpen, Plus, FileUp, CheckCircle2, Clock, ChevronRight,
-  BarChart3, Layers, AlertCircle, Loader2, Settings2, Printer
+  BarChart3, Layers, AlertCircle, Loader2, Settings2, Printer, ChevronDown, X
 } from "lucide-react";
 import Link from "next/link";
 
@@ -159,31 +159,30 @@ export default function ResultModuleDashboard() {
           <div className="bg-[#1e293b] border border-white/10 rounded-2xl p-8 w-full max-w-md shadow-2xl">
             <h2 className="text-xl font-bold text-white mb-6">Create New Result Batch</h2>
             <form onSubmit={handleCreate} className="space-y-4">
-              <div>
-                <label className="block text-sm text-slate-400 mb-1">Academic Session</label>
-                <select required value={form.academicSessionId} onChange={e => setForm(f => ({ ...f, academicSessionId: e.target.value }))}
-                  className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-violet-400">
-                  <option value="" className="bg-slate-800 text-white">Select session...</option>
-                  {sessions.map(s => <option key={s.id} value={s.id} className="bg-slate-800 text-white">{s.name}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm text-slate-400 mb-1">Semester</label>
-                  <select required value={form.semester} onChange={e => setForm(f => ({ ...f, semester: e.target.value }))}
-                    className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-violet-400">
-                    <option value="1" className="bg-slate-800 text-white">First Semester</option>
-                    <option value="2" className="bg-slate-800 text-white">Second Semester</option>
-                    <option value="3" className="bg-slate-800 text-white">Third / Summer</option>
-                  </select>
-              </div>
-              <div>
-                <label className="block text-sm text-slate-400 mb-1">Grading Scale</label>
-                  <select required value={form.gradingScaleId} onChange={e => setForm(f => ({ ...f, gradingScaleId: e.target.value }))}
-                    className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-violet-400">
-                    <option value="" className="bg-slate-800 text-white">Select grading scale...</option>
-                    {scales.map(s => <option key={s.id} value={s.id} className="bg-slate-800 text-white">{s.name} (Max: {s.maxCgpa})</option>)}
-                  </select>
-              </div>
+              <DarkSelect
+                label="Academic Session"
+                value={form.academicSessionId}
+                onChange={v => setForm(f => ({ ...f, academicSessionId: v }))}
+                placeholder="Select session..."
+                options={sessions.map(s => ({ value: String(s.id), label: s.name }))}
+              />
+              <DarkSelect
+                label="Semester"
+                value={form.semester}
+                onChange={v => setForm(f => ({ ...f, semester: v }))}
+                options={[
+                  { value: "1", label: "First Semester" },
+                  { value: "2", label: "Second Semester" },
+                  { value: "3", label: "Third / Summer" },
+                ]}
+              />
+              <DarkSelect
+                label="Grading Scale"
+                value={form.gradingScaleId}
+                onChange={v => setForm(f => ({ ...f, gradingScaleId: v }))}
+                placeholder="Select grading scale..."
+                options={scales.map(s => ({ value: String(s.id), label: `${s.name} (Max: ${s.maxCgpa})` }))}
+              />
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={() => setShowNew(false)}
                   className="flex-1 py-2.5 rounded-lg border border-white/20 text-slate-300 text-sm font-medium hover:bg-white/5 transition-colors">
@@ -199,6 +198,56 @@ export default function ResultModuleDashboard() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function DarkSelect({ label, value, onChange, options, placeholder }: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  options: { value: string; label: string }[];
+  placeholder?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  const selected = options.find(o => o.value === value);
+
+  return (
+    <div>
+      <label className="block text-sm text-slate-400 mb-1">{label}</label>
+      <div ref={ref} className="relative">
+        <button type="button" onClick={() => setOpen(!open)}
+          className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-sm text-left flex items-center justify-between focus:outline-none focus:border-violet-400 transition-colors">
+          <span className={selected ? "text-white" : "text-slate-500"}>{selected ? selected.label : (placeholder || "Select...")}</span>
+          <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${open ? "rotate-180" : ""}`} />
+        </button>
+        {open && (
+          <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-slate-800 border border-white/20 rounded-lg max-h-48 overflow-y-auto shadow-xl">
+            {placeholder && (
+              <button type="button" onClick={() => { onChange(""); setOpen(false); }}
+                className="w-full text-left px-3 py-2 text-xs text-slate-400 hover:bg-white/10 transition-colors border-b border-white/5">
+                {placeholder}
+              </button>
+            )}
+            {options.map(o => (
+              <button key={o.value} type="button" onClick={() => { onChange(o.value); setOpen(false); }}
+                className={`w-full text-left px-3 py-2 text-xs transition-colors border-b border-white/5 last:border-0 ${o.value === value ? "bg-violet-600/30 text-violet-300" : "text-white hover:bg-white/10"}`}>
+                {o.label}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
