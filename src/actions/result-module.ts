@@ -288,7 +288,7 @@ export async function searchStudents(query: string) {
   try {
     const term = `%${query}%`;
 
-    // Step 1: match students by matric / admission number
+    // Match students by matric number, admission number, or name via user join
     const rows = await db.query.students.findMany({
       where: or(
         like(students.matricNumber, term),
@@ -297,6 +297,28 @@ export async function searchStudents(query: string) {
       with: { user: true, programme: true },
       limit: 20,
     });
+
+    // Also search by name via users table
+    const byName = await db.query.users.findMany({
+      where: and(
+        like(users.name, term),
+        eq(users.role, "student")
+      ),
+      limit: 10,
+    });
+
+    // Merge results, de-duplicate by student id
+    const seen = new Set(rows.map(r => r.id));
+    for (const u of byName) {
+      const stu = await db.query.students.findFirst({
+        where: eq(students.userId, u.id),
+        with: { user: true, programme: true },
+      });
+      if (stu && !seen.has(stu.id)) {
+        rows.push(stu);
+        seen.add(stu.id);
+      }
+    }
 
     return { success: true, data: rows };
   } catch (e: any) {

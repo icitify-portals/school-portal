@@ -165,7 +165,7 @@ export async function getStudentTranscriptData(studentId: number) {
         ? await db
             .select({
               courseCode: courses.code,
-              courseTitle: courses.title,
+              courseTitle: courses.name,
               creditLoad: studentResults.creditLoad,
               score: studentResults.score,
               grade: studentResults.grade,
