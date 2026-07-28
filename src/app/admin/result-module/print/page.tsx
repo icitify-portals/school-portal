@@ -1,6 +1,31 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, Component } from "react";
+
+class ErrorBoundary extends Component<{ children: any; fallback?: any }, { hasError: boolean; error: Error | null }> {
+  constructor(props: any) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error: Error) { return { hasError: true, error }; }
+  render() {
+    if (this.state.hasError) {
+      return this.props.fallback || (
+        <div className="min-h-screen flex items-center justify-center bg-slate-100">
+          <div className="bg-white p-8 rounded-xl shadow-lg max-w-md text-center">
+            <h2 className="text-lg font-bold text-red-600 mb-2">Something went wrong</h2>
+            <p className="text-sm text-slate-500 mb-4">{this.state.error?.message || "An unexpected error occurred"}</p>
+            <button onClick={() => window.location.reload()} className="px-4 py-2 bg-violet-600 text-white rounded-lg text-sm font-semibold hover:bg-violet-700">
+              Reload page
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 import { searchStudents, getMyTranscript, getBulkTranscripts, sendStudentTranscriptEmail } from "@/actions/result-module";
 import { getProgrammes } from "@/actions/programmes";
 import { ArrowLeft, Search, Loader2, Printer, Image as ImageIcon, FileText, Mail, CheckCircle2, Users } from "lucide-react";
@@ -198,6 +223,7 @@ export default function PrintTranscriptPage() {
   };
 
   return (
+    <ErrorBoundary>
     <div className="min-h-screen bg-slate-100 text-slate-800 font-sans pb-20">
       {/* Action Bar */}
       <div className="print:hidden bg-white border-b px-6 py-4 sticky top-0 z-50 shadow-sm flex items-center justify-between">
@@ -479,5 +505,6 @@ export default function PrintTranscriptPage() {
         </div>
       )}
     </div>
+    </ErrorBoundary>
   );
 }

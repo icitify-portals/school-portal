@@ -287,30 +287,18 @@ export async function approveAndPublishBatch(batchId: number) {
 export async function searchStudents(query: string) {
   try {
     const term = `%${query}%`;
-    const rows = await db
-      .select()
-      .from(students)
-      .leftJoin(users, eq(students.userId, users.id))
-      .leftJoin(programmes, eq(students.programmeId, programmes.id))
-      .where(
-        or(
-          like(students.matricNumber, term),
-          like(students.admissionNumber, term),
-          like(users.name, term),
-          like(users.firstName, term),
-          like(users.surname, term),
-        )
-      )
-      .limit(20);
 
-    return {
-      success: true,
-      data: rows.map(r => ({
-        ...r.students,
-        user: r.users,
-        programme: r.programmes,
-      })),
-    };
+    // Step 1: match students by matric / admission number
+    const rows = await db.query.students.findMany({
+      where: or(
+        like(students.matricNumber, term),
+        like(students.admissionNumber, term),
+      ),
+      with: { user: true, programme: true },
+      limit: 20,
+    });
+
+    return { success: true, data: rows };
   } catch (e: any) {
     return { success: false, error: e.message };
   }
