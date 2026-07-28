@@ -2,19 +2,29 @@
 
 import { useState, useRef, useEffect, useCallback, Component } from "react";
 
-class ErrorBoundary extends Component<{ children: any; fallback?: any }, { hasError: boolean; error: Error | null }> {
+class ErrorBoundary extends Component<{ children: any; fallback?: any; onError?: (e: Error) => void }, { hasError: boolean; error: Error | null; showDetail: boolean }> {
   constructor(props: any) {
     super(props);
-    this.state = { hasError: false, error: null };
+    this.state = { hasError: false, error: null, showDetail: false };
   }
   static getDerivedStateFromError(error: Error) { return { hasError: true, error }; }
+  componentDidCatch(error: Error, info: any) {
+    console.error("ErrorBoundary caught:", error, info);
+    this.props.onError?.(error);
+  }
   render() {
     if (this.state.hasError) {
       return this.props.fallback || (
-        <div className="min-h-screen flex items-center justify-center bg-slate-100">
+        <div className="min-h-screen flex items-center justify-center bg-slate-100 p-4">
           <div className="bg-white p-8 rounded-xl shadow-lg max-w-md text-center">
-            <h2 className="text-lg font-bold text-red-600 mb-2">Something went wrong</h2>
+            <h2 className="text-lg font-bold text-red-600 mb-2">Rendering Error</h2>
             <p className="text-sm text-slate-500 mb-4">{this.state.error?.message || "An unexpected error occurred"}</p>
+            <details className="text-left text-xs text-slate-400 mb-4" onToggle={(e) => this.setState({ showDetail: (e.target as HTMLDetailsElement).open })}>
+              <summary className="cursor-pointer hover:text-slate-600">Show details</summary>
+              <pre className="mt-2 p-2 bg-slate-100 rounded overflow-auto max-h-40 whitespace-pre-wrap break-all">
+                {this.state.error?.stack || "No stack trace"}
+              </pre>
+            </details>
             <button onClick={() => window.location.reload()} className="px-4 py-2 bg-violet-600 text-white rounded-lg text-sm font-semibold hover:bg-violet-700">
               Reload page
             </button>
@@ -89,17 +99,22 @@ export default function PrintTranscriptPage() {
   }, [transcriptsToRender]);
 
   async function loadTranscript(student: any) {
-    setSelectedStudent(student);
-    setStudentResults([]);
-    setStudentQuery("");
-    setLoading(true);
-    const res = await getMyTranscript(student.id);
-    if (res.success) {
-      setTranscriptsToRender([res.data]);
-    } else {
-      alert(res.error);
+    try {
+      setSelectedStudent(student);
+      setStudentResults([]);
+      setStudentQuery("");
+      setLoading(true);
+      const res = await getMyTranscript(student?.id);
+      if (res?.success) {
+        setTranscriptsToRender([res.data]);
+      } else {
+        alert(res?.error || "Failed to load transcript");
+      }
+    } catch (e: any) {
+      alert("Error: " + (e?.message || e));
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }
 
   async function loadBulkTranscripts() {
