@@ -163,26 +163,26 @@ export default function ResultModuleDashboard() {
                 <label className="block text-sm text-slate-400 mb-1">Academic Session</label>
                 <select required value={form.academicSessionId} onChange={e => setForm(f => ({ ...f, academicSessionId: e.target.value }))}
                   className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-violet-400">
-                  <option value="">Select session...</option>
-                  {sessions.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                  <option value="" className="bg-slate-800 text-white">Select session...</option>
+                  {sessions.map(s => <option key={s.id} value={s.id} className="bg-slate-800 text-white">{s.name}</option>)}
                 </select>
               </div>
               <div>
                 <label className="block text-sm text-slate-400 mb-1">Semester</label>
-                <select required value={form.semester} onChange={e => setForm(f => ({ ...f, semester: e.target.value }))}
-                  className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-violet-400">
-                  <option value="1">First Semester</option>
-                  <option value="2">Second Semester</option>
-                  <option value="3">Third / Summer</option>
-                </select>
+                  <select required value={form.semester} onChange={e => setForm(f => ({ ...f, semester: e.target.value }))}
+                    className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-violet-400">
+                    <option value="1" className="bg-slate-800 text-white">First Semester</option>
+                    <option value="2" className="bg-slate-800 text-white">Second Semester</option>
+                    <option value="3" className="bg-slate-800 text-white">Third / Summer</option>
+                  </select>
               </div>
               <div>
                 <label className="block text-sm text-slate-400 mb-1">Grading Scale</label>
-                <select required value={form.gradingScaleId} onChange={e => setForm(f => ({ ...f, gradingScaleId: e.target.value }))}
-                  className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-violet-400">
-                  <option value="">Select grading scale...</option>
-                  {scales.map(s => <option key={s.id} value={s.id}>{s.name} (Max: {s.maxCgpa})</option>)}
-                </select>
+                  <select required value={form.gradingScaleId} onChange={e => setForm(f => ({ ...f, gradingScaleId: e.target.value }))}
+                    className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-violet-400">
+                    <option value="" className="bg-slate-800 text-white">Select grading scale...</option>
+                    {scales.map(s => <option key={s.id} value={s.id} className="bg-slate-800 text-white">{s.name} (Max: {s.maxCgpa})</option>)}
+                  </select>
               </div>
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={() => setShowNew(false)}

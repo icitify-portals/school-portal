@@ -300,13 +300,13 @@ export default function BatchDetailPage() {
                       </div>
                       {entries.map((entry, idx) => (
                         <div key={idx} className="grid grid-cols-12 gap-2 mb-2">
-                          <select value={entry.courseId} onChange={e => {
-                            const c = courses.find(c => c.id === Number(e.target.value));
-                            setEntries(en => en.map((en2, i) => i === idx ? { ...en2, courseId: e.target.value, creditLoad: c?.creditUnits?.toString() || "" } : en2));
-                          }} className="col-span-6 bg-white/10 border border-white/20 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-violet-400">
-                            <option value="">Select course...</option>
-                            {courses.map(c => <option key={c.id} value={c.id}>{c.code} — {c.name}</option>)}
-                          </select>
+                          <CourseSearchableSelect
+                            courses={courses}
+                            value={entry.courseId}
+                            onChange={(courseId, creditLoad) => {
+                              setEntries(en => en.map((en2, i) => i === idx ? { ...en2, courseId, creditLoad } : en2));
+                            }}
+                          />
                           <input type="number" min={0} max={100} placeholder="Score" value={entry.score}
                             onChange={e => setEntries(en => en.map((en2, i) => i === idx ? { ...en2, score: e.target.value } : en2))}
                             className="col-span-3 bg-white/10 border border-white/20 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-violet-400" />
@@ -341,8 +341,8 @@ export default function BatchDetailPage() {
                     <label className="block text-xs text-slate-400 mb-1 uppercase tracking-wide">Target Course</label>
                     <select value={bulkCourseId} onChange={e => setBulkCourseId(e.target.value)} 
                       className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-violet-400">
-                      <option value="">Select course for this upload...</option>
-                      {courses.map(c => <option key={c.id} value={c.id}>{c.code} — {c.name}</option>)}
+                      <option value="" className="bg-slate-800 text-white">Select course for this upload...</option>
+                      {courses.map(c => <option key={c.id} value={c.id} className="bg-slate-800 text-white">{c.code} — {c.name}</option>)}
                     </select>
                   </div>
 
@@ -505,6 +505,64 @@ export default function BatchDetailPage() {
             </form>
           </div>
         </div>
+      )}
+    </div>
+  );
+}
+
+function CourseSearchableSelect({ courses, value, onChange }: {
+  courses: { id: number; code: string; name: string; creditUnits?: number | null }[];
+  value: string;
+  onChange: (courseId: string, creditLoad: string) => void;
+}) {
+  const [search, setSearch] = useState("");
+  const [open, setOpen] = useState(false);
+
+  const selected = courses.find(c => c.id === Number(value));
+  const filtered = courses.filter(c =>
+    !search.trim() || c.code?.toLowerCase().includes(search.toLowerCase()) ||
+    c.name?.toLowerCase().includes(search.toLowerCase())
+  );
+
+  return (
+    <div className="col-span-6 relative">
+      <div className="flex items-center bg-white/10 border border-white/20 rounded-lg px-2 py-1.5 text-xs focus-within:border-violet-400 transition-colors">
+        <Search className="w-3 h-3 text-slate-400 shrink-0 mr-1" />
+        <input
+          type="text"
+          value={search}
+          onChange={e => { setSearch(e.target.value); setOpen(true); }}
+          onFocus={() => setOpen(true)}
+          placeholder={selected ? `${selected.code} — ${selected.name}` : "Search course..."}
+          className="bg-transparent border-none outline-none text-white w-full text-xs placeholder:text-slate-500"
+        />
+        {value && (
+          <button type="button" onClick={() => { onChange("", ""); setSearch(""); }} className="text-slate-400 hover:text-white ml-1">
+            <X className="w-3 h-3" />
+          </button>
+        )}
+      </div>
+      {open && search.trim() && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-slate-800 border border-white/20 rounded-lg max-h-40 overflow-y-auto shadow-xl">
+            {filtered.length === 0 ? (
+              <div className="p-3 text-xs text-slate-400 text-center">No courses found</div>
+            ) : (
+              filtered.map(c => (
+                <button key={c.id} type="button" onClick={() => {
+                  onChange(String(c.id), c.creditUnits?.toString() || "");
+                  setSearch(c.code);
+                  setOpen(false);
+                }}
+                  className="w-full text-left px-3 py-2 text-xs text-white hover:bg-white/10 transition-colors border-b border-white/5 last:border-0">
+                  <span className="font-mono text-violet-300 mr-2">{c.code}</span>
+                  {c.name}
+                </button>
+              ))
+            )}
+          </div>
+        </>
       )}
     </div>
   );
