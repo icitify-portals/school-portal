@@ -8,6 +8,7 @@ import {
   getGradingScales,
   getAcademicSessions,
 } from "@/actions/result-module";
+import { seedResultDemo } from "@/actions/seed-result-demo";
 import {
   BookOpen, Plus, FileUp, CheckCircle2, Clock, ChevronRight,
   BarChart3, Layers, AlertCircle, Loader2, Settings2, Printer, ChevronDown, X
@@ -22,6 +23,7 @@ export default function ResultModuleDashboard() {
   const [loading, setLoading] = useState(true);
   const [showNew, setShowNew] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [seeding, setSeeding] = useState(false);
   const [form, setForm] = useState({ academicSessionId: "", semester: "1", gradingScaleId: "" });
 
   useEffect(() => { fetchAll(); }, []);
@@ -33,6 +35,19 @@ export default function ResultModuleDashboard() {
     setScales(g.data || []);
     setSessions(s.data || []);
     setLoading(false);
+  }
+
+  async function handleSeedDemo() {
+    if (!confirm("This will create demo students, courses, batches and published results. Continue?")) return;
+    setSeeding(true);
+    const res = await seedResultDemo();
+    setSeeding(false);
+    if (res.success) {
+      alert(`✓ Demo data created!\n\nStudents: ${res.students}\nSemester 1 Batch: #${res.batch1Id} (published)\nSemester 2 Batch: #${res.batch2Id} (published)\n\nGo to Print Transcripts to view.`);
+      fetchAll();
+    } else {
+      alert("Error: " + res.error);
+    }
   }
 
   async function handleCreate(e: React.FormEvent) {
@@ -79,6 +94,11 @@ export default function ResultModuleDashboard() {
             <Link href="/admin/result-module/scales" className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/10 hover:bg-white/15 transition-colors text-sm font-medium text-slate-300">
               <Settings2 className="w-4 h-4" /> Grading Scales
             </Link>
+            <button onClick={handleSeedDemo} disabled={seeding}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 transition-colors text-sm font-medium text-amber-400 disabled:opacity-50">
+              {seeding ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileUp className="w-4 h-4" />}
+              {seeding ? "Seeding..." : "Seed Demo"}
+            </button>
             <button onClick={() => setShowNew(true)} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-violet-500 to-indigo-600 hover:from-violet-600 hover:to-indigo-700 transition-all text-sm font-semibold shadow-lg">
               <Plus className="w-4 h-4" /> New Result Batch
             </button>
