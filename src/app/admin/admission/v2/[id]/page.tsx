@@ -22,7 +22,7 @@ export default function V2ApplicationDetailPage() {
     const [loading, setLoading] = useState(true);
     const [notes, setNotes] = useState("");
     const [showNotes, setShowNotes] = useState(false);
-    const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
+    const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(["__all__"]));
     const [isOLevelExpanded, setIsOLevelExpanded] = useState(true);
 
     useEffect(() => {
@@ -31,6 +31,10 @@ export default function V2ApplicationDetailPage() {
         getAdminV2ApplicationDetail(id).then(data => {
             setApp(data);
             setNotes(data?.admissionNotes || "");
+            // Auto-expand all form sections
+            if (data?.formStructure) {
+                setExpandedSections(new Set(data.formStructure.map((s: any) => s.title)));
+            }
             setLoading(false);
         });
     }, [params.id]);
@@ -83,6 +87,32 @@ export default function V2ApplicationDetailPage() {
             if (next.has(title)) next.delete(title); else next.add(title);
             return next;
         });
+    };
+
+    // Fuzzy lookup: try exact label, then systemKey, then case-insensitive, then trimmed label
+    const getFieldValue = (parsedData: any, field: any): any => {
+        if (!parsedData) return undefined;
+        // 1. Exact label match
+        if (parsedData[field.label] !== undefined && parsedData[field.label] !== null && parsedData[field.label] !== '') return parsedData[field.label];
+        // 2. System key match
+        if (field.systemKey && parsedData[field.systemKey] !== undefined && parsedData[field.systemKey] !== null && parsedData[field.systemKey] !== '') return parsedData[field.systemKey];
+        // 3. Case-insensitive / trimmed label scan
+        const labelLower = (field.label || '').toLowerCase().trim();
+        for (const key of Object.keys(parsedData)) {
+            if (key.toLowerCase().trim() === labelLower) {
+                const val = parsedData[key];
+                if (val !== null && val !== undefined && val !== '') return val;
+            }
+        }
+        // 4. Partial match (label contains key or key contains label)
+        for (const key of Object.keys(parsedData)) {
+            const keyLower = key.toLowerCase().trim();
+            if (keyLower.includes(labelLower) || labelLower.includes(keyLower)) {
+                const val = parsedData[key];
+                if (val !== null && val !== undefined && val !== '') return val;
+            }
+        }
+        return undefined;
     };
 
     const renderFieldValue = (value: any, field: any) => {
@@ -421,7 +451,7 @@ export default function V2ApplicationDetailPage() {
                                             return visibleFields.length > 0;
                                         })
                                         .map((section: any) => {
-                                            const isExpanded = expandedSections.has(section.title);
+                                            const isExpanded = expandedSections.has(section.title) || expandedSections.has("__all__");
                                             return (
                                                 <div key={section.id} className="border border-slate-200 rounded-2xl overflow-hidden">
                                                     <button
@@ -441,7 +471,7 @@ export default function V2ApplicationDetailPage() {
                                                                     return null;
                                                                 }
 
-                                                                let value = app.parsedData?.[field.label] ?? app.parsedData?.[field.systemKey || ''];
+                                                                let value = getFieldValue(app.parsedData, field);
                                                                 if (!value && (field.type === 'image' || field.type === 'photo')) {
                                                                     value = app.parsedData?.passport_photo || app.parsedData?.passport || app.parsedData?.photo || app.parsedData?.image || app.parsedData?.['Photograph/camera'] || app.parsedData?.Photograph || '';
                                                                 }
@@ -460,6 +490,33 @@ export default function V2ApplicationDetailPage() {
                                             );
                                         })}
                                 </CardContent>
+                            </Card>
+                        )}
+
+                        {/* Raw submitted data — shows ALL fields including those not in formStructure */}
+                        {app.parsedData && Object.keys(app.parsedData).filter(k => !k.startsWith('__')).length > 0 && (
+                            <Card className="border border-amber-200 shadow-xl bg-amber-50/60 backdrop-blur-3xl rounded-[3rem] overflow-hidden print-card no-print">
+                                <button
+                                    onClick={() => toggleSection('__raw__')}
+                                    className="w-full flex items-center justify-between p-4 bg-amber-100 hover:bg-amber-200 transition-colors text-left"
+                                >
+                                    <span className="font-black text-sm text-amber-800 uppercase tracking-wider flex items-center gap-2">
+                                        <FileText className="w-4 h-4" /> Raw Submitted Data (All Fields)
+                                    </span>
+                                    {expandedSections.has('__raw__') ? <ChevronUp className="w-4 h-4 text-amber-500" /> : <ChevronDown className="w-4 h-4 text-amber-500" />}
+                                </button>
+                                {expandedSections.has('__raw__') && (
+                                    <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+                                        {Object.entries(app.parsedData)
+                                            .filter(([k]) => !k.startsWith('__'))
+                                            .map(([key, val]: [string, any]) => (
+                                                <div key={key} className={typeof val === 'string' && val.length > 80 ? 'md:col-span-2' : ''}>
+                                                    <p className="text-[10px] font-black text-amber-700 uppercase tracking-widest mb-1">{key}</p>
+                                                    <div className="text-sm">{renderFieldValue(val, { label: key })}</div>
+                                                </div>
+                                            ))}
+                                    </div>
+                                )}
                             </Card>
                         )}
 
