@@ -7,22 +7,24 @@ import { ArrowLeft, Search, Loader2, Printer, Image as ImageIcon, FileText, Mail
 import Link from "next/link";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
+import QRCode from "qrcode";
 
 export default function PrintTranscriptPage() {
   const [studentQuery, setStudentQuery] = useState("");
   const [studentResults, setStudentResults] = useState<any[]>([]);
   const [selectedStudent, setSelectedStudent] = useState<any>(null);
-  
+
   const [programmes, setProgrammes] = useState<any[]>([]);
   const [selectedProgramme, setSelectedProgramme] = useState("");
-  
-  // Array of transcripts to render (supports single and bulk)
+
   const [transcriptsToRender, setTranscriptsToRender] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [exporting, setExporting] = useState(false);
-  
+
   const [emailing, setEmailing] = useState(false);
   const [emailSuccess, setEmailSuccess] = useState(false);
+
+  const [qrCodes, setQrCodes] = useState<Record<string, string>>({});
 
   const printRef = useRef<HTMLDivElement>(null);
 
@@ -42,6 +44,24 @@ export default function PrintTranscriptPage() {
     const t = setTimeout(() => searchStudentsFn(studentQuery), 400);
     return () => clearTimeout(t);
   }, [studentQuery, searchStudentsFn]);
+
+  // Generate QR codes for each transcript student
+  useEffect(() => {
+    async function generateQrCodes() {
+      const codes: Record<string, string> = {};
+      for (const td of transcriptsToRender) {
+        const student = td?.student;
+        if (student?.id) {
+          const verUrl = `https://portal.fssibadan.edu.ng/verify-transcript?m=${student.matricNumber || student.admissionNumber || student.id}`;
+          try {
+            codes[student.id] = await QRCode.toDataURL(verUrl, { width: 80, margin: 1 });
+          } catch { /* ignore */ }
+        }
+      }
+      setQrCodes(codes);
+    }
+    if (transcriptsToRender.length > 0) generateQrCodes();
+  }, [transcriptsToRender]);
 
   async function loadTranscript(student: any) {
     setSelectedStudent(student);
@@ -78,7 +98,7 @@ export default function PrintTranscriptPage() {
     if (!printRef.current) return;
     setExporting(true);
     try {
-      const canvas = await html2canvas(printRef.current, { scale: 2 });
+      const canvas = await html2canvas(printRef.current, { scale: 2, useCORS: true });
       const link = document.createElement("a");
       const name = selectedStudent ? selectedStudent.matricNumber || selectedStudent.admissionNumber : "Bulk_Transcripts";
       link.download = `Transcript_${name}.png`;
@@ -94,7 +114,7 @@ export default function PrintTranscriptPage() {
     if (!printRef.current) return;
     setExporting(true);
     try {
-      const canvas = await html2canvas(printRef.current, { scale: 2 });
+      const canvas = await html2canvas(printRef.current, { scale: 2, useCORS: true });
       const imgData = canvas.toDataURL("image/png");
       const pdf = new jsPDF({
         orientation: "portrait",
@@ -115,28 +135,27 @@ export default function PrintTranscriptPage() {
     const transcriptData = transcriptsToRender[0];
     if (!transcriptData?.student?.user?.email) return alert("Student email not found");
     if (!confirm(`Send transcript to ${transcriptData.student.user.email}?`)) return;
-    
+
     setEmailing(true);
     try {
       if (!printRef.current) throw new Error("Transcript container not found");
       const html2pdf = (await import("html2pdf.js")).default;
       const name = selectedStudent ? selectedStudent.matricNumber || selectedStudent.admissionNumber : "Bulk_Transcripts";
-      
+
       const opt = {
-        margin: [10, 10, 10, 10], // Slightly larger margins
+        margin: [10, 10, 10, 10],
         filename: `Transcript_${name}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
         html2canvas: { scale: 1.5, useCORS: true, logging: false },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
       };
 
-      // Output as base64 string
       const pdfBase64 = await html2pdf().set(opt).from(printRef.current).outputPdf('datauristring');
-      
+
       const studentName = transcriptData.student.user?.name || name;
-      
+
       const res = await sendStudentTranscriptEmail(transcriptData.student.user.email, pdfBase64, studentName);
-      
+
       if (res.success) {
         setEmailSuccess(true);
         setTimeout(() => setEmailSuccess(false), 3000);
@@ -150,7 +169,6 @@ export default function PrintTranscriptPage() {
     setEmailing(false);
   }
 
-  // Formatting helpers
   const getDegreeClass = (cgpa: number) => {
     if (cgpa >= 3.50) return "DISTINCTION";
     if (cgpa >= 3.00) return "UPPER CREDIT";
@@ -159,24 +177,43 @@ export default function PrintTranscriptPage() {
     return "FAIL";
   };
 
+  const calcSemTotals = (results: any[]) => {
+    let totalCU = 0, totalQP = 0;
+    for (const r of results) {
+      totalCU += r.creditLoad || 0;
+      totalQP += (r.creditLoad || 0) * Number(r.gradePoint || 0);
+    }
+    return { totalCU, totalQP, gpa: totalCU > 0 ? totalQP / totalCU : 0 };
+  };
+
+  const formatDate = () => {
+    const d = new Date();
+    const months = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+    return `${d.getDate()}${getOrdinalSuffix(d.getDate())} ${months[d.getMonth()]}, ${d.getFullYear()}`;
+  };
+
+  const getOrdinalSuffix = (n: number) => {
+    if (n >= 11 && n <= 13) return "th";
+    switch (n % 10) { case 1: return "st"; case 2: return "nd"; case 3: return "rd"; default: return "th"; }
+  };
+
   return (
     <div className="min-h-screen bg-slate-100 text-slate-800 font-sans pb-20">
-      {/* Action Bar (Hidden when printing) */}
+      {/* Action Bar */}
       <div className="print:hidden bg-white border-b px-6 py-4 sticky top-0 z-50 shadow-sm flex items-center justify-between">
         <div className="flex items-center gap-6">
           <Link href="/admin/result-module" className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
             <ArrowLeft className="w-5 h-5 text-slate-600" />
           </Link>
-          
+
           <div className="flex items-center gap-4 border-l border-slate-200 pl-6">
-            {/* Single Student Search */}
             <div className="relative w-72">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <input 
-                value={studentQuery} 
-                onChange={e => setStudentQuery(e.target.value)} 
+              <input
+                value={studentQuery}
+                onChange={e => setStudentQuery(e.target.value)}
                 placeholder="Search specific student matric..."
-                className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-violet-500" 
+                className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-violet-500"
               />
               {studentResults.length > 0 && (
                 <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 shadow-xl rounded-lg overflow-hidden max-h-60 overflow-y-auto">
@@ -193,10 +230,9 @@ export default function PrintTranscriptPage() {
 
             <span className="text-slate-300 font-medium">OR</span>
 
-            {/* Bulk Programme Selection */}
             <div className="flex items-center gap-2">
-              <select 
-                value={selectedProgramme} 
+              <select
+                value={selectedProgramme}
                 onChange={e => setSelectedProgramme(e.target.value)}
                 className="w-64 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-violet-500">
                 <option value="">Select Programme for Bulk Print</option>
@@ -237,11 +273,11 @@ export default function PrintTranscriptPage() {
         </div>
       )}
 
-      {/* Transcripts Container */}
+      {/* Transcripts */}
       {transcriptsToRender.length > 0 && (
         <div className="py-8 print:py-0 print:bg-white flex flex-col items-center gap-8 print:gap-0" ref={printRef}>
           {transcriptsToRender.map((transcriptData, index) => {
-            
+
             const currentStudent = transcriptData?.student;
             if (!currentStudent) {
               return (
@@ -251,7 +287,6 @@ export default function PrintTranscriptPage() {
               );
             }
 
-            // Group transcripts by session for this specific student
             const groupedBySession = new Map<string, any[]>();
             const txList = transcriptData.transcripts || [];
             if (txList.length > 0) {
@@ -262,142 +297,182 @@ export default function PrintTranscriptPage() {
               });
             }
 
-            // Get graduation stats for this specific student
             let graduatingCgpa = "0.00";
+            let graduatingCgpaNum = 0;
             if (txList.length > 0) {
               const last = txList[txList.length - 1];
-              graduatingCgpa = Number(last.cgpa).toFixed(2);
+              graduatingCgpaNum = Number(last.cgpa);
+              graduatingCgpa = graduatingCgpaNum.toFixed(2);
             }
+
+            const qrDataUrl = qrCodes[currentStudent.id];
 
             return (
               <div key={currentStudent.id} className="w-[210mm] min-h-[297mm] bg-white print:shadow-none shadow-2xl p-10 font-serif text-[11px] leading-tight text-black relative print:break-after-page">
-                
-                {/* Header */}
+
+                {/* ─── HEADER ─── */}
                 <div className="text-center mb-6">
-                  <div className="flex justify-between items-start mb-2">
-                    <div className="text-left text-[9px]">
+                  <div className="flex justify-between items-start mb-3">
+                    <div className="text-left text-[9px] leading-relaxed">
                       <p>P.O. Box 29751, U.I. IBADAN</p>
                       <p>Telegram: STATIBADAN</p>
                       <p>Telephone: 08023108427</p>
                       <p>Email: info@fssibadan.edu.ng</p>
                     </div>
-                    {/* Simulated Logo Space */}
-                    <div className="w-16 h-16 bg-slate-100 border border-slate-300 mx-4 flex items-center justify-center flex-shrink-0">
-                      <span className="text-[8px] text-slate-400">LOGO</span>
+                    <div className="flex flex-col items-center mx-4 flex-shrink-0">
+                      <img
+                        src="/fss_logo.png"
+                        alt="FSS Logo"
+                        className="w-16 h-16 object-contain"
+                        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                      />
                     </div>
-                    <div className="text-right text-[9px]">
-                      <p>Ref. No: {currentStudent.matricNumber || currentStudent.admissionNumber || "N/A"}</p>
-                      <p>Date: {new Date().toLocaleDateString()}</p>
+                    <div className="text-right text-[9px] leading-relaxed">
+                      <p>Ref. No: <strong>{currentStudent.matricNumber || currentStudent.admissionNumber || "N/A"}</strong></p>
+                      <p>Date: {formatDate()}</p>
                     </div>
                   </div>
-                  
-                  <h1 className="text-lg font-bold uppercase underline mb-1">FEDERAL SCHOOL OF STATISTICS</h1>
+
+                  <h1 className="text-lg font-bold uppercase underline mb-1 tracking-wide">FEDERAL SCHOOL OF STATISTICS</h1>
                   <h2 className="text-xs font-bold uppercase">(National Bureau of Statistics)</h2>
                   <div className="my-3">
-                    <h3 className="font-bold underline uppercase text-sm">EXAMINATION TRANSCRIPT</h3>
+                    <h3 className="font-bold underline uppercase text-sm tracking-wider">EXAMINATION TRANSCRIPT</h3>
                     <h4 className="font-bold uppercase text-xs mt-1">{currentStudent.programme?.name || "Programme"}</h4>
                   </div>
-                  
-                  <p className="mt-2 px-10 text-justify text-[10px]">
-                    Below is the result of <strong className="uppercase">{currentStudent.user?.name || "Student"}</strong> in the {currentStudent.programme?.name || "Programme"}.
+
+                  <p className="mt-3 px-10 text-justify text-[10px] leading-relaxed">
+                    Below is the result of <strong className="uppercase">{currentStudent.user?.name || "Student"}</strong> in the <strong>{currentStudent.programme?.name || "Programme"}</strong>.
                   </p>
                 </div>
 
-                {/* Results Grouped by Session */}
+                {/* ─── RESULTS ─── */}
                 {Array.from(groupedBySession.entries()).map(([sessionName, semesters]) => (
                   <div key={sessionName} className="mb-6">
-                    <h5 className="font-bold uppercase underline text-center mb-2">
-                      {currentStudent.programme?.name} - {sessionName} SESSION
+                    <h5 className="font-bold uppercase underline text-center mb-3 text-[11px] tracking-wide">
+                      {currentStudent.programme?.name} &mdash; {sessionName} SESSION
                     </h5>
-                    
-                    {/* Flex container for Semester 1 & 2 side-by-side */}
+
                     <div className="flex gap-4">
-                      {semesters.map((sem: any) => (
-                        <div key={sem.id} className="flex-1">
-                          <h6 className="font-bold uppercase text-[10px] underline mb-1">
-                            {sem.semester === "1" ? "FIRST SEMESTER" : sem.semester === "2" ? "SECOND SEMESTER" : `SEMESTER ${sem.semester}`}
-                          </h6>
-                          <table className="w-full text-left border-collapse mb-1">
-                            <thead>
-                              <tr className="border-b border-t border-black text-[9px]">
-                                <th className="py-1">CODE</th>
-                                <th className="py-1">SUBJECT TITLE</th>
-                                <th className="py-1 text-center">CREDIT<br/>UNITS</th>
-                                <th className="py-1 text-center">SCORE/100</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {sem.results?.map((r: any, idx: number) => (
-                                <tr key={idx}>
-                                  <td className="py-0.5 whitespace-nowrap">{r.courseCode || r.courseTitle?.substring(0,6).toUpperCase()}</td>
-                                  <td className="py-0.5 truncate max-w-[120px]">{r.courseTitle}</td>
-                                  <td className="py-0.5 text-center">{r.creditLoad}</td>
-                                  <td className="py-0.5 text-center">{r.score}</td>
+                      {semesters.map((sem: any) => {
+                        const semTotals = calcSemTotals(sem.results || []);
+                        return (
+                          <div key={sem.id} className="flex-1 min-w-0">
+                            <h6 className="font-bold uppercase text-[10px] underline mb-1">
+                              {sem.semester === "1" ? "FIRST SEMESTER" : sem.semester === "2" ? "SECOND SEMESTER" : `SEMESTER ${sem.semester}`}
+                            </h6>
+                            <table className="w-full text-left border-collapse text-[9px]">
+                              <thead>
+                                <tr className="border-b border-t border-black">
+                                  <th className="py-1 pr-1">CODE</th>
+                                  <th className="py-1 pr-1">SUBJECT TITLE</th>
+                                  <th className="py-1 text-center pr-1">CU</th>
+                                  <th className="py-1 text-center pr-1">SCORE</th>
+                                  <th className="py-1 text-center pr-1">GRADE</th>
+                                  <th className="py-1 text-center pr-1">GP</th>
+                                  <th className="py-1 text-center">QP</th>
                                 </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                          <div className="text-right font-bold text-[10px] mt-1 pr-4">
-                            GRADE POINT AVERAGE (GPA): {Number(sem.gpa).toFixed(3)}
+                              </thead>
+                              <tbody>
+                                {sem.results?.map((r: any, idx: number) => {
+                                  const qp = (r.creditLoad || 0) * Number(r.gradePoint || 0);
+                                  return (
+                                    <tr key={idx} className="border-b border-gray-300">
+                                      <td className="py-0.5 pr-1 whitespace-nowrap font-medium">{r.courseCode}</td>
+                                      <td className="py-0.5 pr-1 truncate max-w-[100px]" title={r.courseTitle}>{r.courseTitle}</td>
+                                      <td className="py-0.5 text-center pr-1">{r.creditLoad}</td>
+                                      <td className="py-0.5 text-center pr-1">{r.score}</td>
+                                      <td className="py-0.5 text-center pr-1 font-medium">{r.grade}</td>
+                                      <td className="py-0.5 text-center pr-1">{Number(r.gradePoint).toFixed(2)}</td>
+                                      <td className="py-0.5 text-center">{qp.toFixed(2)}</td>
+                                    </tr>
+                                  );
+                                })}
+                              </tbody>
+                            </table>
+
+                            {/* Semester Summary */}
+                            <div className="text-right font-bold text-[9px] mt-1 pr-1 border-t border-black pt-1">
+                              TCR: {semTotals.totalCU} &nbsp;|&nbsp; TQP: {semTotals.totalQP.toFixed(2)} &nbsp;|&nbsp; GPA: {semTotals.gpa.toFixed(3)}
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 ))}
 
-                {/* Final Graduation Info */}
-                <div className="mt-8 pt-4 border-t-2 border-black flex flex-col items-center">
-                  <h3 className="font-bold text-sm uppercase">
-                    GRADUATING GRADE POINT AVERAGE: {graduatingCgpa} - {getDegreeClass(Number(graduatingCgpa))}
-                  </h3>
-                </div>
-
-                {/* Signature Area */}
-                <div className="mt-12 flex justify-between px-10">
-                  <div className="text-center w-40">
-                    <div className="border-b border-black mb-1 h-8"></div>
-                    <p className="font-bold text-[10px]">Head of Department</p>
-                    <p className="text-[9px]">{transcriptData.signatures?.hodName}</p>
-                  </div>
-                  <div className="text-center w-40">
-                    <div className="border-b border-black mb-1 h-8"></div>
-                    <p className="font-bold text-[10px]">Registrar</p>
-                    <p className="text-[9px]">{transcriptData.signatures?.registrarName}</p>
+                {/* ─── CGPA ─── */}
+                <div className="mt-6 pt-3 border-t-2 border-black text-center">
+                  <div className="inline-block border-2 border-black px-6 py-2">
+                    <p className="font-bold text-sm uppercase">
+                      GRADUATING GPA: {graduatingCgpa} &mdash; {getDegreeClass(graduatingCgpaNum)}
+                    </p>
                   </div>
                 </div>
 
-                {/* Grading Scale Legend */}
-                <div className="mt-16 text-[8px] break-inside-avoid">
-                  <h4 className="font-bold underline mb-2 text-center uppercase">GRADE POINT FOR EACH SUBJECT</h4>
+                {/* ─── SIGNATURES + QR + STAMP ─── */}
+                <div className="mt-8 flex items-end justify-between px-6">
+                  {/* HOD */}
+                  <div className="text-center w-44">
+                    <div className="border-b border-black mb-1 h-10"></div>
+                    <p className="font-bold text-[10px] uppercase">Head of Department</p>
+                    <p className="text-[9px]">{transcriptData.signatures?.hodName || "________________"}</p>
+                  </div>
+
+                  {/* Stamp + QR */}
+                  <div className="flex flex-col items-center gap-1">
+                    {/* Stamp */}
+                    <div className="w-16 h-16 rounded-full border-2 border-red-600 flex items-center justify-center opacity-60">
+                      <span className="text-[7px] text-red-600 font-bold text-center leading-tight px-1">
+                        REGISTRAR<br/>STAMP
+                      </span>
+                    </div>
+                    {/* QR */}
+                    {qrDataUrl && (
+                      <img src={qrDataUrl} alt="Verify" className="w-14 h-14" />
+                    )}
+                    <p className="text-[7px] text-slate-500">Scan to Verify</p>
+                  </div>
+
+                  {/* Registrar */}
+                  <div className="text-center w-44">
+                    <div className="border-b border-black mb-1 h-10"></div>
+                    <p className="font-bold text-[10px] uppercase">Registrar</p>
+                    <p className="text-[9px]">{transcriptData.signatures?.registrarName || "________________"}</p>
+                  </div>
+                </div>
+
+                {/* ─── GRADING SCALE ─── */}
+                <div className="mt-12 text-[8px] break-inside-avoid">
+                  <h4 className="font-bold underline mb-2 text-center uppercase text-[9px]">GRADE POINT FOR EACH SUBJECT</h4>
                   <div className="flex justify-center gap-10">
                     <table className="border-collapse">
                       <tbody>
-                        <tr><td className="pr-4">75 and above</td><td className="pr-4">AA</td><td>4.00</td></tr>
-                        <tr><td>70 - 74</td><td>A</td><td>3.50</td></tr>
-                        <tr><td>65 - 69</td><td>AB</td><td>3.25</td></tr>
-                        <tr><td>60 - 64</td><td>B</td><td>3.00</td></tr>
-                        <tr><td>55 - 59</td><td>BC</td><td>2.75</td></tr>
-                        <tr><td>50 - 54</td><td>C</td><td>2.50</td></tr>
-                        <tr><td>45 - 49</td><td>CD</td><td>2.25</td></tr>
-                        <tr><td>40 - 44</td><td>D</td><td>2.00</td></tr>
-                        <tr><td>Below 40</td><td>F</td><td>0.00</td></tr>
+                        <tr><td className="pr-4">75 and above</td><td className="pr-4 font-bold">AA</td><td>4.00</td></tr>
+                        <tr><td>70 &ndash; 74</td><td className="pr-4 font-bold">A</td><td>3.50</td></tr>
+                        <tr><td>65 &ndash; 69</td><td className="pr-4 font-bold">AB</td><td>3.25</td></tr>
+                        <tr><td>60 &ndash; 64</td><td className="pr-4 font-bold">B</td><td>3.00</td></tr>
+                        <tr><td>55 &ndash; 59</td><td className="pr-4 font-bold">BC</td><td>2.75</td></tr>
+                        <tr><td>50 &ndash; 54</td><td className="pr-4 font-bold">C</td><td>2.50</td></tr>
+                        <tr><td>45 &ndash; 49</td><td className="pr-4 font-bold">CD</td><td>2.25</td></tr>
+                        <tr><td>40 &ndash; 44</td><td className="pr-4 font-bold">D</td><td>2.00</td></tr>
+                        <tr><td>Below 40</td><td className="pr-4 font-bold">F</td><td>0.00</td></tr>
                       </tbody>
                     </table>
                     <div>
                       <h5 className="font-bold underline mb-1">CLASS</h5>
                       <table className="border-collapse">
                         <tbody>
-                          <tr><td className="pr-4">Distinction</td><td>- 3.50 Points and above</td></tr>
-                          <tr><td className="pr-4">Upper Credit</td><td>- 3.00 to 3.49 Points</td></tr>
-                          <tr><td className="pr-4">Lower Credit</td><td>- 2.50 to 2.99 Points</td></tr>
-                          <tr><td className="pr-4">Pass</td><td>- 2.00 to 2.49 Points</td></tr>
+                          <tr><td className="pr-4">Distinction</td><td>&mdash; 3.50 and above</td></tr>
+                          <tr><td className="pr-4">Upper Credit</td><td>&mdash; 3.00 to 3.49</td></tr>
+                          <tr><td className="pr-4">Lower Credit</td><td>&mdash; 2.50 to 2.99</td></tr>
+                          <tr><td className="pr-4">Pass</td><td>&mdash; 2.00 to 2.49</td></tr>
                         </tbody>
                       </table>
                     </div>
                   </div>
                 </div>
-                
+
               </div>
             );
           })}
