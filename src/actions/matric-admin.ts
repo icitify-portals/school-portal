@@ -398,9 +398,8 @@ export async function getMatricAuditLog(options?: {
             pageSize,
             totalPages: Math.ceil(total / pageSize),
         };
-    } catch (error) {
         console.error("[getMatricAuditLog] Failed:", error);
-        return { auditLogs: [], total: 0, page: 1, pageSize: 50, totalPages: 0 };
+        return { logs: [], total: 0, page: 1, pageSize: 50, totalPages: 0 };
     }
 }
 

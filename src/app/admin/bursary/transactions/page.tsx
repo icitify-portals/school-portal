@@ -22,6 +22,8 @@ export default function UnifiedTransactionsPage() {
     const [transactions, setTransactions] = useState<UnifiedTransaction[]>([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState("");
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 50;
     
     // Filters
     const [statusFilter, setStatusFilter] = useState<'all' | 'completed' | 'pending' | 'failed'>('all');
@@ -37,6 +39,11 @@ export default function UnifiedTransactionsPage() {
     useEffect(() => {
         fetchData();
     }, []);
+
+    // Reset page on filter changes
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [search, statusFilter, categoryFilter]);
 
     const fetchData = async () => {
         setLoading(true);
@@ -192,6 +199,12 @@ export default function UnifiedTransactionsPage() {
         return matchesSearch && matchesStatus && matchesCategory;
     });
 
+    const totalPages = Math.ceil(filteredTransactions.length / itemsPerPage);
+    const paginatedTransactions = filteredTransactions.slice(
+        (currentPage - 1) * itemsPerPage,
+        currentPage * itemsPerPage
+    );
+
     return (
         <div className="p-8 max-w-[1600px] w-full mx-auto">
             <div className="flex justify-between items-center mb-10">
@@ -217,6 +230,9 @@ export default function UnifiedTransactionsPage() {
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                     />
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-md">
+                        {filteredTransactions.length} found
+                    </div>
                 </div>
                 
                 {/* Category Filters */}
@@ -323,7 +339,7 @@ export default function UnifiedTransactionsPage() {
                                     <td colSpan={9} className="py-20 text-center text-slate-400 italic">No transactions found matching criteria.</td>
                                 </tr>
                             ) : (
-                                filteredTransactions.map((tx, idx) => (
+                                paginatedTransactions.map((tx, idx) => (
                                     <tr key={`${tx.sourceTable}-${tx.id}-${idx}`} onClick={() => setSelectedTx(tx)} className="hover:bg-slate-50/50 transition-colors group cursor-pointer">
                                         <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
                                             <input 
@@ -423,6 +439,35 @@ export default function UnifiedTransactionsPage() {
                         </tbody>
                     </table>
                 </div>
+
+                {totalPages > 1 && (
+                    <div className="p-4 border-t border-slate-100 flex items-center justify-between text-sm">
+                        <div className="text-slate-500">
+                            Showing {(currentPage - 1) * itemsPerPage + 1}–{Math.min(currentPage * itemsPerPage, filteredTransactions.length)} of {filteredTransactions.length}
+                        </div>
+                        <div className="flex gap-2">
+                            <Button 
+                                variant="outline" 
+                                size="sm" 
+                                disabled={currentPage === 1}
+                                onClick={() => setCurrentPage(p => p - 1)}
+                            >
+                                Previous
+                            </Button>
+                            <div className="flex items-center gap-1 px-2 font-medium text-slate-600">
+                                Page {currentPage} of {totalPages}
+                            </div>
+                            <Button 
+                                variant="outline" 
+                                size="sm" 
+                                disabled={currentPage === totalPages}
+                                onClick={() => setCurrentPage(p => p + 1)}
+                            >
+                                Next
+                            </Button>
+                        </div>
+                    </div>
+                )}
             </Card>
 
             {/* Transaction Details Modal */}

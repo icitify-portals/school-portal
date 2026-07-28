@@ -12,6 +12,9 @@ import { useRouter } from "next/navigation";
 export function AlumniTransitionTable({ students }: { students: any[] }) {
     const router = useRouter();
     const [processing, setProcessing] = useState<number | null>(null);
+    const [search, setSearch] = useState("");
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 50;
 
     const handleTransition = async (id: number) => {
         if (!confirm("Are you sure? This will lock the student's profile and mark them as graduated.")) return;
@@ -27,8 +30,38 @@ export function AlumniTransitionTable({ students }: { students: any[] }) {
         setProcessing(null);
     };
 
+    const filteredStudents = students.filter(s => 
+        (s.studentName?.toLowerCase().includes(search.toLowerCase()) || '') ||
+        (s.studentMatricNo?.toLowerCase().includes(search.toLowerCase()) || '') ||
+        (s.departmentName?.toLowerCase().includes(search.toLowerCase()) || '')
+    );
+
+    const totalPages = Math.ceil(filteredStudents.length / itemsPerPage);
+    const paginatedStudents = filteredStudents.slice(
+        (currentPage - 1) * itemsPerPage,
+        currentPage * itemsPerPage
+    );
+
     return (
-        <div className="overflow-x-auto">
+        <div className="space-y-4">
+            <div className="flex justify-between items-center bg-slate-50 p-2 rounded-xl border border-slate-100">
+                <div className="relative w-full max-w-sm">
+                    <input
+                        type="text"
+                        placeholder="Search by name, matric no, or department..."
+                        value={search}
+                        onChange={(e) => {
+                            setSearch(e.target.value);
+                            setCurrentPage(1);
+                        }}
+                        className="w-full pl-4 pr-10 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                </div>
+                <div className="text-sm font-semibold text-slate-500 bg-white px-3 py-1.5 rounded-lg border border-slate-200 shadow-sm">
+                    {filteredStudents.length} Students
+                </div>
+            </div>
+            <div className="overflow-x-auto border border-slate-200 rounded-xl">
             <table className="w-full text-sm text-left">
                 <thead className="bg-slate-50 text-slate-600 uppercase font-medium">
                     <tr>
@@ -39,8 +72,8 @@ export function AlumniTransitionTable({ students }: { students: any[] }) {
                         <th className="px-4 py-3 text-right">Actions</th>
                     </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-200">
-                    {students.map((s) => (
+                <tbody className="divide-y divide-slate-200 bg-white">
+                    {paginatedStudents.map((s) => (
                         <tr key={s.id} className="hover:bg-slate-50">
                             <td className="px-4 py-3">
                                 <div className="font-medium text-slate-900">{s.studentName}</div>
@@ -73,15 +106,45 @@ export function AlumniTransitionTable({ students }: { students: any[] }) {
                             </td>
                         </tr>
                     ))}
-                    {students.length === 0 && (
+                    {filteredStudents.length === 0 && (
                         <tr>
                             <td colSpan={5} className="text-center py-8 text-slate-500">
-                                No cleared students awaiting transition.
+                                No cleared students found.
                             </td>
                         </tr>
                     )}
                 </tbody>
             </table>
+            </div>
+
+            {totalPages > 1 && (
+                <div className="p-4 flex items-center justify-between text-sm bg-slate-50 border border-slate-200 rounded-xl">
+                    <div className="text-slate-500">
+                        Showing {(currentPage - 1) * itemsPerPage + 1}–{Math.min(currentPage * itemsPerPage, filteredStudents.length)} of {filteredStudents.length}
+                    </div>
+                    <div className="flex gap-2">
+                        <Button 
+                            variant="outline" 
+                            size="sm" 
+                            disabled={currentPage === 1}
+                            onClick={() => setCurrentPage(p => p - 1)}
+                        >
+                            Previous
+                        </Button>
+                        <div className="flex items-center gap-1 px-2 font-medium text-slate-600">
+                            Page {currentPage} of {totalPages}
+                        </div>
+                        <Button 
+                            variant="outline" 
+                            size="sm" 
+                            disabled={currentPage === totalPages}
+                            onClick={() => setCurrentPage(p => p + 1)}
+                        >
+                            Next
+                        </Button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
