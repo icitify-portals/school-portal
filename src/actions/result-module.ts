@@ -11,8 +11,10 @@ import {
   students,
   academicSessions,
   users,
+  programmes,
+  departments,
 } from "@/db/schema";
-import { eq, and, like, or } from "drizzle-orm";
+import { eq, and, like, or, sql } from "drizzle-orm";
 import {
   resolveGrade,
   publishResultBatch,
@@ -425,6 +427,223 @@ export async function sendStudentTranscriptEmail(email: string, pdfBase64: strin
     return res;
   } catch (e: any) {
     console.error("Transcript email error:", e);
+    return { success: false, error: e.message };
+  }
+}
+
+// ──────────────────────────────────────────────
+// ADDING RESULTS (Multi-Course Bulk CSV)
+// ──────────────────────────────────────────────
+
+export async function addMultiCourseBulkResults(
+  batchId: number,
+  rows: { identifier: string; courseCode: string; score: number }[],
+  gradingScaleRules: string,
+  autoCreateCourses: boolean = false
+) {
+  try {
+    const allStudents = await db.query.students.findMany();
+    const allCourses = await db.query.courses.findMany();
+
+    const errors: string[] = [];
+    const toInsert: any[] = [];
+    const createdCourses: { code: string; id: number }[] = [];
+
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      const identifier = String(row.identifier).trim().toLowerCase();
+      const courseCode = String(row.courseCode).trim().toUpperCase();
+
+      if (!identifier) { errors.push(`Row ${i + 2}: missing matric_number`); continue; }
+      if (!courseCode) { errors.push(`Row ${i + 2}: missing course_code`); continue; }
+      if (isNaN(row.score)) { errors.push(`Row ${i + 2}: invalid score '${row.score}'`); continue; }
+
+      const student = allStudents.find(
+        (s) =>
+          s.matricNumber?.toLowerCase() === identifier ||
+          s.admissionNumber?.toLowerCase() === identifier
+      );
+      if (!student) {
+        errors.push(`Row ${i + 2}: Student not found for '${row.identifier}'`);
+        continue;
+      }
+
+      let course = allCourses.find((c) => c.code.toUpperCase() === courseCode);
+      if (!course) {
+        if (autoCreateCourses) {
+          const result = await db.insert(courses).values({
+            name: courseCode,
+            code: courseCode,
+            creditUnits: 3,
+          });
+          const courseId = (result as any)[0]?.insertId ?? (result as any).insertId;
+          allCourses.push({ id: courseId, code: courseCode, name: courseCode, creditUnits: 3 } as any);
+          createdCourses.push({ code: courseCode, id: courseId });
+          course = allCourses[allCourses.length - 1];
+        } else {
+          errors.push(`Row ${i + 2}: Course '${row.courseCode}' not found`);
+          continue;
+        }
+      }
+
+      const creditLoad = course.creditUnits || 3;
+      const { grade, gradePoint } = resolveGrade(row.score, gradingScaleRules);
+
+      toInsert.push({
+        studentId: student.id,
+        courseId: course.id,
+        batchId,
+        score: row.score.toString(),
+        grade,
+        gradePoint: gradePoint.toString(),
+        creditLoad,
+      });
+    }
+
+    if (toInsert.length > 0) {
+      await db.insert(studentResults).values(toInsert);
+    }
+
+    revalidatePath(`/admin/result-module/${batchId}`);
+    return {
+      success: true,
+      count: toInsert.length,
+      errors: errors.length > 0 ? errors : undefined,
+      createdCourses,
+    };
+  } catch (e: any) {
+    return { success: false, error: e.message };
+  }
+}
+
+// ──────────────────────────────────────────────
+// CREATE STUDENT (standalone)
+// ──────────────────────────────────────────────
+
+export async function createStudent(data: {
+  firstName: string;
+  lastName: string;
+  email: string;
+  matricNumber: string;
+  programmeId: number;
+  deptId: number;
+}) {
+  try {
+    const email = data.email || `${data.matricNumber.toLowerCase()}@student.edu`;
+
+    const [existing] = await db
+      .select({ id: students.id })
+      .from(students)
+      .where(eq(students.matricNumber, data.matricNumber))
+      .limit(1);
+
+    if (existing) {
+      return { success: false, error: "A student with this matric number or email already exists" };
+    }
+
+    const [insertedUser] = await db.insert(users).values({
+      name: `${data.firstName} ${data.lastName}`,
+      firstName: data.firstName,
+      surname: data.lastName,
+      email,
+      password: sql`SHA2(${data.matricNumber}, 256)`,
+      role: "student",
+    });
+
+    const userId = (insertedUser as any)[0]?.insertId ?? (insertedUser as any).insertId;
+
+    const [insertedStudent] = await db.insert(students).values({
+      userId,
+      firstName: data.firstName,
+      lastName: data.lastName,
+      matricNumber: data.matricNumber,
+      programmeId: data.programmeId,
+      deptId: data.deptId,
+    });
+
+    const studentId = (insertedStudent as any)[0]?.insertId ?? (insertedStudent as any).insertId;
+
+    revalidatePath("/admin/result-module");
+    return { success: true, studentId, userId };
+  } catch (e: any) {
+    return { success: false, error: e.message };
+  }
+}
+
+export async function getProgrammesList() {
+  try {
+    const p = await db.query.programmes.findMany({
+      with: { department: true },
+    });
+    return { success: true, data: p };
+  } catch (e: any) {
+    return { success: false, error: e.message };
+  }
+}
+
+export async function getDepartmentsList() {
+  try {
+    const d = await db.query.departments.findMany();
+    return { success: true, data: d };
+  } catch (e: any) {
+    return { success: false, error: e.message };
+  }
+}
+
+// ──────────────────────────────────────────────
+// BULK STUDENT CSV IMPORT
+// ──────────────────────────────────────────────
+
+export async function bulkImportStudents(
+  rows: { firstName: string; lastName: string; email: string; matricNumber: string; programmeId: number; deptId: number }[]
+) {
+  try {
+    const created: number[] = [];
+    const errors: { row: number; error: string }[] = [];
+
+    for (let i = 0; i < rows.length; i++) {
+      const r = rows[i];
+      try {
+        if (!r.matricNumber) { errors.push({ row: i + 2, error: "missing matricNumber" }); continue; }
+
+        const [existing] = await db
+          .select({ id: students.id })
+          .from(students)
+          .where(eq(students.matricNumber, r.matricNumber))
+          .limit(1);
+
+        if (existing) { errors.push({ row: i + 2, error: `matric '${r.matricNumber}' already exists` }); continue; }
+
+        const email = r.email || `${r.matricNumber.toLowerCase()}@student.edu`;
+
+        const [insertedUser] = await db.insert(users).values({
+          name: `${r.firstName} ${r.lastName}`,
+          firstName: r.firstName,
+          surname: r.lastName,
+          email,
+          password: sql`SHA2(${r.matricNumber}, 256)`,
+          role: "student",
+        });
+        const userId = (insertedUser as any)[0]?.insertId ?? (insertedUser as any).insertId;
+
+        const [insertedStudent] = await db.insert(students).values({
+          userId,
+          firstName: r.firstName,
+          lastName: r.lastName,
+          matricNumber: r.matricNumber,
+          programmeId: r.programmeId || null,
+          deptId: r.deptId || null,
+        });
+        const studentId = (insertedStudent as any)[0]?.insertId ?? (insertedStudent as any).insertId;
+        created.push(studentId);
+      } catch (e: any) {
+        errors.push({ row: i + 2, error: e.message });
+      }
+    }
+
+    revalidatePath("/admin/result-module");
+    return { success: true, created: created.length, errors };
+  } catch (e: any) {
     return { success: false, error: e.message };
   }
 }

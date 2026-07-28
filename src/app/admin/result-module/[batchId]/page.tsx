@@ -7,10 +7,15 @@ import {
   getBatchDetails,
   addSingleStudentResult,
   addBulkResultsViaIdentifier,
+  addMultiCourseBulkResults,
   approveAndPublishBatch,
   searchStudents,
   getCoursesList,
   createCourseOnTheFly,
+  createStudent,
+  getProgrammesList,
+  getDepartmentsList,
+  bulkImportStudents,
 } from "@/actions/result-module";
 import {
   ArrowLeft, Upload, UserPlus, CheckCircle2, Loader2, Search,
@@ -48,12 +53,26 @@ export default function BatchDetailPage() {
   const [savingCourse, setSavingCourse] = useState(false);
 
   // Bulk upload state
-  const [bulkCourseId, setBulkCourseId] = useState("");
   const [csvData, setCsvData] = useState<any[]>([]);
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [uploadingBulk, setUploadingBulk] = useState(false);
   const [bulkErrors, setBulkErrors] = useState<string[]>([]);
   const [skippedRows, setSkippedRows] = useState<string[]>([]);
+  const [autoCreateCourses, setAutoCreateCourses] = useState(true);
+
+  // Add student modal
+  const [showAddStudent, setShowAddStudent] = useState(false);
+  const [newStudent, setNewStudent] = useState({ firstName: "", lastName: "", email: "", matricNumber: "", programmeId: "", deptId: "" });
+  const [savingStudent, setSavingStudent] = useState(false);
+  const [programmes, setProgrammes] = useState<any[]>([]);
+  const [departments, setDepartments] = useState<any[]>([]);
+
+  // Student CSV import
+  const [showStudentImport, setShowStudentImport] = useState(false);
+  const [studentCsvData, setStudentCsvData] = useState<any[]>([]);
+  const [studentCsvFile, setStudentCsvFile] = useState<File | null>(null);
+  const [importingStudents, setImportingStudents] = useState(false);
+  const [studentImportResult, setStudentImportResult] = useState<any>(null);
 
   useEffect(() => { fetchBatch(); }, [batchId]);
 
@@ -100,6 +119,9 @@ export default function BatchDetailPage() {
     fetchBatch();
   }
 
+  // Track the column headers that are course codes
+  const [csvCourseColumns, setCsvCourseColumns] = useState<string[]>([]);
+
   function handleCsvUpload(file: File) {
     setCsvFile(file);
     setBulkErrors([]);
@@ -108,51 +130,153 @@ export default function BatchDetailPage() {
       header: true,
       skipEmptyLines: true,
       complete: (res) => {
+        const meta = res.meta as any;
+        const headers = (meta.fields || []) as string[];
         const errors: string[] = [];
         const rows = res.data as any[];
+
+        // First header must be matric_number
+        if (!headers.length || headers[0] !== "matric_number") {
+          errors.push("First column must be 'matric_number'");
+          setCsvCourseColumns([]);
+          setCsvData([]);
+          setBulkErrors(errors);
+          return;
+        }
+
+        const courseColumns = headers.slice(1).filter(Boolean);
+        if (courseColumns.length === 0) {
+          errors.push("No course code columns found (add columns after 'matric_number')");
+        }
+
+        // Validate each row
         rows.forEach((r, i) => {
-          if (!r.student_identifier) errors.push(`Row ${i + 2}: missing student_identifier`);
-          if (!r.score) errors.push(`Row ${i + 2}: missing score`);
+          if (!r.matric_number) {
+            errors.push(`Row ${i + 2}: missing matric_number`);
+          } else {
+            for (const cc of courseColumns) {
+              const val = r[cc];
+              if (val !== undefined && val !== null && val !== "" && isNaN(Number(val))) {
+                errors.push(`Row ${i + 2}: '${cc}' has non-numeric value '${val}'`);
+              }
+            }
+          }
         });
-        setBulkErrors(errors);
+
+        setCsvCourseColumns(courseColumns);
         setCsvData(rows);
+        setBulkErrors(errors);
       },
     });
   }
 
   async function handleBulkUpload() {
-    if (!bulkCourseId) return alert("Please select a course for this upload.");
     if (bulkErrors.length > 0) return alert("Fix CSV format errors before uploading.");
     if (!csvData.length) return alert("No data to upload.");
-    
+
     setUploadingBulk(true);
     setSkippedRows([]);
-    const rows = csvData.map(r => ({
-      identifier: r.student_identifier,
-      score: Number(r.score),
-    }));
-    
-    const res = await addBulkResultsViaIdentifier(
-      batchId, 
-      Number(bulkCourseId), 
-      rows, 
-      batch?.gradingScale?.rules || "[]"
+
+    // Transform pivot format into row-per-result
+    const rows: { identifier: string; courseCode: string; score: number }[] = [];
+    csvData.forEach(r => {
+      for (const cc of csvCourseColumns) {
+        const val = r[cc];
+        if (val !== undefined && val !== null && val !== "") {
+          rows.push({
+            identifier: r.matric_number,
+            courseCode: cc,
+            score: Number(val),
+          });
+        }
+      }
+    });
+
+    if (!rows.length) {
+      setUploadingBulk(false);
+      return alert("No valid score data found in the CSV.");
+    }
+
+    const res = await addMultiCourseBulkResults(
+      batchId,
+      rows,
+      batch?.gradingScale?.rules || "[]",
+      autoCreateCourses
     );
-    
+
     setUploadingBulk(false);
-    
+
     if (res.success) {
       setCsvData([]);
+      setCsvCourseColumns([]);
       setCsvFile(null);
       fetchBatch();
+      let msg = `✓ Uploaded ${res.count} results successfully (${csvData.length} students, ${csvCourseColumns.length} courses)`;
+      if (res.createdCourses?.length) {
+        msg += `\nCreated ${res.createdCourses.length} new course(s): ${res.createdCourses.map((c: any) => c.code).join(", ")}`;
+      }
       if (res.errors && res.errors.length > 0) {
         setSkippedRows(res.errors);
-        alert(`Uploaded ${res.count} results successfully, but some identifiers were skipped.`);
+        alert(msg + `\n\n${res.errors.length} row(s) were skipped.`);
       } else {
-        alert(`✓ Uploaded ${res.count} results successfully`);
+        alert(msg);
       }
     } else {
       alert("Error: " + res.error);
+    }
+  }
+
+  async function handleAddStudent(e: React.FormEvent) {
+    e.preventDefault();
+    setSavingStudent(true);
+    const res = await createStudent({
+      firstName: newStudent.firstName,
+      lastName: newStudent.lastName,
+      email: newStudent.email,
+      matricNumber: newStudent.matricNumber,
+      programmeId: Number(newStudent.programmeId),
+      deptId: Number(newStudent.deptId),
+    });
+    setSavingStudent(false);
+    if (res.success) {
+      setShowAddStudent(false);
+      setNewStudent({ firstName: "", lastName: "", email: "", matricNumber: "", programmeId: "", deptId: "" });
+      alert(`✓ Student created successfully`);
+      fetchBatch();
+    } else {
+      alert(res.error);
+    }
+  }
+
+  function handleStudentCsvUpload(file: File) {
+    setStudentCsvFile(file);
+    setStudentImportResult(null);
+    Papa.parse(file, {
+      header: true,
+      skipEmptyLines: true,
+      complete: (res) => {
+        setStudentCsvData(res.data as any[]);
+      },
+    });
+  }
+
+  async function handleImportStudents() {
+    if (!studentCsvData.length) return;
+    setImportingStudents(true);
+    const rows = studentCsvData.map(r => ({
+      firstName: r.first_name || "",
+      lastName: r.last_name || r.surname || "",
+      email: r.email || "",
+      matricNumber: r.matric_number || "",
+      programmeId: Number(r.programme_id) || 0,
+      deptId: Number(r.dept_id) || 0,
+    }));
+    const res = await bulkImportStudents(rows);
+    setImportingStudents(false);
+    setStudentImportResult(res);
+    if (res.success) {
+      setStudentCsvData([]);
+      setStudentCsvFile(null);
     }
   }
 
@@ -167,6 +291,12 @@ export default function BatchDetailPage() {
     } else {
       alert("Error: " + res.error);
     }
+  }
+
+  async function loadProgrammesAndDepts() {
+    const [pRes, dRes] = await Promise.all([getProgrammesList(), getDepartmentsList()]);
+    if (pRes.success) setProgrammes(pRes.data || []);
+    if (dRes.success) setDepartments(dRes.data || []);
   }
 
   async function handleCreateCourse(e: React.FormEvent) {
@@ -336,23 +466,29 @@ export default function BatchDetailPage() {
 
               {tab === "bulk" && (
                 <div className="p-5 space-y-4">
-                  {/* Course Selection */}
-                  <div>
-                    <label className="block text-xs text-slate-400 mb-1 uppercase tracking-wide">Target Course</label>
-                    <DarkSelect
-                      value={bulkCourseId}
-                      onChange={v => setBulkCourseId(v)}
-                      placeholder="Select course for this upload..."
-                      options={courses.map(c => ({ value: String(c.id), label: `${c.code} — ${c.name}` }))}
-                    />
+                  {/* Action Buttons */}
+                  <div className="flex gap-2">
+                    <button type="button" onClick={() => setShowNewCourse(true)}
+                      className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg bg-violet-600/20 border border-violet-500/30 text-violet-300 text-xs font-semibold hover:bg-violet-600/30 transition-colors">
+                      <Plus className="w-3 h-3" /> New Course
+                    </button>
+                    <button type="button" onClick={() => { setShowAddStudent(true); loadProgrammesAndDepts(); }}
+                      className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg bg-emerald-600/20 border border-emerald-500/30 text-emerald-300 text-xs font-semibold hover:bg-emerald-600/30 transition-colors">
+                      <UserPlus className="w-3 h-3" /> Add Student
+                    </button>
+                    <button type="button" onClick={() => { setShowStudentImport(true); loadProgrammesAndDepts(); }}
+                      className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg bg-blue-600/20 border border-blue-500/30 text-blue-300 text-xs font-semibold hover:bg-blue-600/30 transition-colors">
+                      <FileUp className="w-3 h-3" /> Import Students
+                    </button>
                   </div>
 
                   {/* CSV Template Download */}
                   <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-3">
-                    <p className="text-xs text-blue-300 font-semibold mb-1">CSV Template Format</p>
-                    <p className="text-xs text-slate-400 font-mono">student_identifier, score</p>
+                    <p className="text-xs text-blue-300 font-semibold mb-1">CSV Format (Pivot)</p>
+                    <p className="text-xs text-slate-400 font-mono">matric_number, COURSE_CODE_1, COURSE_CODE_2, ...</p>
+                    <p className="text-xs text-slate-500 mt-1">First column = matric number, subsequent columns = course codes with scores as cell values</p>
                     <a
-                      href="data:text/csv;charset=utf-8,student_identifier,score%0A180404022,75%0A180404023,60"
+                      href="data:text/csv;charset=utf-8,matric_number,CSC101,MTH101,GST101%0A180404022,75,82,68%0A180404023,60,71,74%0A180404024,88,,70"
                       download="results_template.csv"
                       className="inline-block mt-2 text-xs text-blue-400 hover:text-blue-300 underline">
                       Download Template
@@ -369,6 +505,57 @@ export default function BatchDetailPage() {
                     <input type="file" accept=".csv" className="hidden" onChange={e => e.target.files?.[0] && handleCsvUpload(e.target.files[0])} />
                   </label>
 
+                  {/* Preview Table */}
+                  {csvData.length > 0 && bulkErrors.length === 0 && (
+                    <div className="bg-white/5 border border-white/10 rounded-xl overflow-hidden">
+                      <div className="px-3 py-2 border-b border-white/10 flex items-center justify-between">
+                        <span className="text-xs text-slate-400 font-semibold uppercase tracking-wide">
+                          Preview ({csvData.length} students, {csvCourseColumns.length} courses)
+                        </span>
+                      </div>
+                      <div className="max-h-52 overflow-auto">
+                        <table className="w-full text-xs">
+                          <thead>
+                            <tr className="text-slate-500 border-b border-white/5">
+                              <th className="px-3 py-1.5 text-left sticky top-0 bg-[#0f172a] z-10">Matric</th>
+                              {csvCourseColumns.map(cc => (
+                                <th key={cc} className="px-3 py-1.5 text-center font-mono sticky top-0 bg-[#0f172a] z-10">{cc}</th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {csvData.slice(0, 15).map((r, i) => (
+                              <tr key={i} className="border-b border-white/5 last:border-0">
+                                <td className="px-3 py-1.5 text-white font-medium whitespace-nowrap">{r.matric_number}</td>
+                                {csvCourseColumns.map(cc => {
+                                  const val = r[cc];
+                                  const hasVal = val !== undefined && val !== null && val !== "";
+                                  return (
+                                    <td key={cc} className={`px-3 py-1.5 text-center ${hasVal ? "text-white" : "text-slate-600"}`}>
+                                      {hasVal ? val : "—"}
+                                    </td>
+                                  );
+                                })}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                        {csvData.length > 15 && (
+                          <div className="px-3 py-1.5 text-center text-xs text-slate-500 border-t border-white/5">
+                            ... and {csvData.length - 15} more student(s)
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Auto-create toggle */}
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" checked={autoCreateCourses} onChange={e => setAutoCreateCourses(e.target.checked)}
+                      className="rounded bg-white/10 border-white/20 accent-violet-500" />
+                    <span className="text-xs text-slate-300">Auto-create missing courses (default: 3 credit units)</span>
+                  </label>
+
                   {bulkErrors.length > 0 && (
                     <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-3 space-y-1">
                       <p className="text-xs font-semibold text-red-400 flex items-center gap-1"><AlertTriangle className="w-3 h-3" /> CSV Errors</p>
@@ -378,20 +565,14 @@ export default function BatchDetailPage() {
 
                   {skippedRows.length > 0 && (
                     <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-3 space-y-1">
-                      <p className="text-xs font-semibold text-yellow-400 flex items-center gap-1"><AlertTriangle className="w-3 h-3" /> Skipped Rows (Identifier Not Found)</p>
+                      <p className="text-xs font-semibold text-yellow-400 flex items-center gap-1"><AlertTriangle className="w-3 h-3" /> Skipped Rows</p>
                       <div className="max-h-24 overflow-y-auto">
                         {skippedRows.map((e, i) => <p key={i} className="text-xs text-yellow-300">{e}</p>)}
                       </div>
                     </div>
                   )}
 
-                  {csvData.length > 0 && bulkErrors.length === 0 && (
-                    <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3">
-                      <p className="text-xs text-emerald-300">{csvData.length} rows ready for upload</p>
-                    </div>
-                  )}
-
-                  <button onClick={handleBulkUpload} disabled={uploadingBulk || !csvData.length || bulkErrors.length > 0 || !bulkCourseId}
+                  <button onClick={handleBulkUpload} disabled={uploadingBulk || !csvData.length || bulkErrors.length > 0}
                     className="w-full py-2.5 rounded-xl bg-gradient-to-r from-violet-500 to-indigo-600 text-white text-sm font-semibold disabled:opacity-60 flex items-center justify-center gap-2 hover:opacity-90 transition-opacity">
                     {uploadingBulk ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
                     Upload CSV Results
@@ -471,6 +652,112 @@ export default function BatchDetailPage() {
           )}
         </div>
       </div>
+
+      {/* Add Student Modal */}
+      {showAddStudent && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-[#1e293b] border border-white/10 rounded-2xl p-8 w-full max-w-lg shadow-2xl">
+            <h2 className="text-lg font-bold text-white mb-5">Add New Student</h2>
+            <form onSubmit={handleAddStudent} className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm text-slate-400 mb-1">First Name</label>
+                  <input required value={newStudent.firstName} onChange={e => setNewStudent(s => ({ ...s, firstName: e.target.value }))}
+                    className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-violet-400" />
+                </div>
+                <div>
+                  <label className="block text-sm text-slate-400 mb-1">Last Name</label>
+                  <input required value={newStudent.lastName} onChange={e => setNewStudent(s => ({ ...s, lastName: e.target.value }))}
+                    className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-violet-400" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm text-slate-400 mb-1">Email (optional)</label>
+                <input type="email" value={newStudent.email} onChange={e => setNewStudent(s => ({ ...s, email: e.target.value }))}
+                  placeholder="auto-generated if empty"
+                  className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-violet-400" />
+              </div>
+              <div>
+                <label className="block text-sm text-slate-400 mb-1">Matric Number</label>
+                <input required value={newStudent.matricNumber} onChange={e => setNewStudent(s => ({ ...s, matricNumber: e.target.value.toUpperCase() }))}
+                  placeholder="e.g., 180404022"
+                  className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-violet-400" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm text-slate-400 mb-1">Programme</label>
+                  <select required value={newStudent.programmeId} onChange={e => setNewStudent(s => ({ ...s, programmeId: e.target.value }))}
+                    className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-violet-400">
+                    <option value="" className="bg-slate-800">Select...</option>
+                    {programmes.map(p => (
+                      <option key={p.id} value={p.id} className="bg-slate-800">{p.name} ({p.code})</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm text-slate-400 mb-1">Department</label>
+                  <select required value={newStudent.deptId} onChange={e => setNewStudent(s => ({ ...s, deptId: e.target.value }))}
+                    className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-violet-400">
+                    <option value="" className="bg-slate-800">Select...</option>
+                    {departments.map(d => (
+                      <option key={d.id} value={d.id} className="bg-slate-800">{d.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button type="button" onClick={() => setShowAddStudent(false)}
+                  className="flex-1 py-2.5 rounded-lg border border-white/20 text-slate-300 text-sm hover:bg-white/5 transition-colors">Cancel</button>
+                <button type="submit" disabled={savingStudent}
+                  className="flex-1 py-2.5 rounded-lg bg-emerald-600 text-white text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-60 flex items-center justify-center gap-2">
+                  {savingStudent ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />} Add Student
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Import Students Modal */}
+      {showStudentImport && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-[#1e293b] border border-white/10 rounded-2xl p-8 w-full max-w-lg shadow-2xl">
+            <h2 className="text-lg font-bold text-white mb-1">Import Students (CSV)</h2>
+            <p className="text-sm text-slate-400 mb-4">CSV format: <span className="font-mono text-xs">first_name, last_name, matric_number, email, programme_id, dept_id</span></p>
+
+            <label className="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-white/20 rounded-xl p-4 cursor-pointer hover:border-violet-400/50 transition-colors mb-4">
+              <FileUp className="w-6 h-6 text-slate-500" />
+              <p className="text-sm text-slate-300">{studentCsvFile ? studentCsvFile.name : "Upload Student CSV"}</p>
+              <input type="file" accept=".csv" className="hidden" onChange={e => e.target.files?.[0] && handleStudentCsvUpload(e.target.files[0])} />
+            </label>
+
+            {studentImportResult && (
+              <div className={`rounded-xl p-3 text-xs space-y-1 mb-3 ${studentImportResult.success ? "bg-emerald-500/10 border border-emerald-500/20" : "bg-red-500/10 border border-red-500/20"}`}>
+                <p className={`font-semibold ${studentImportResult.success ? "text-emerald-300" : "text-red-300"}`}>
+                  Created {studentImportResult.created} student(s)
+                </p>
+                {studentImportResult.errors?.length > 0 && (
+                  <div className="max-h-24 overflow-y-auto">
+                    {studentImportResult.errors.slice(0, 5).map((err: any, i: number) => (
+                      <p key={i} className="text-yellow-300">Row {err.row}: {err.error}</p>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="flex gap-3">
+              <button type="button" onClick={() => { setShowStudentImport(false); setStudentImportResult(null); setStudentCsvData([]); setStudentCsvFile(null); }}
+                className="flex-1 py-2.5 rounded-lg border border-white/20 text-slate-300 text-sm hover:bg-white/5 transition-colors">Close</button>
+              <button onClick={handleImportStudents} disabled={importingStudents || !studentCsvData.length}
+                className="flex-1 py-2.5 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:opacity-90 disabled:opacity-60 flex items-center justify-center gap-2">
+                {importingStudents ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                Import
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* New Course Modal */}
       {showNewCourse && (
