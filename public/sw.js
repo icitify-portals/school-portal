@@ -1,4 +1,4 @@
-const CACHE_NAME = 'portal-v2';
+const CACHE_NAME = 'portal-v3';
 const OFFLINE_URL = '/offline';
 
 const ASSETS_TO_CACHE = [
