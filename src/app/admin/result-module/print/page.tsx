@@ -97,7 +97,7 @@ const PRINT_CSS = `
 `;
 
 /* ─── Single Transcript Card ──────────────────────────────────── */
-function TranscriptCard({ transcriptData, qrDataUrl }: { transcriptData: any; qrDataUrl?: string }) {
+function TranscriptCardDetailed({ transcriptData, qrDataUrl }: { transcriptData: any; qrDataUrl?: string }) {
   try {
     const student = transcriptData?.student;
     if (!student) {
@@ -156,14 +156,14 @@ function TranscriptCard({ transcriptData, qrDataUrl }: { transcriptData: any; qr
             (National Bureau of Statistics)
           </div>
           <div style={{ marginTop: 8 }}>
-            <div style={{ fontWeight: 900, fontSize: 11, textTransform: "uppercase", textDecoration: "underline", letterSpacing: 0.5 }}>
+            <div style={{ fontWeight: 900, fontSize: 12, textTransform: "uppercase", textDecoration: "underline", letterSpacing: 0.5 }}>
               EXAMINATION TRANSCRIPT
             </div>
             <div style={{ fontWeight: 700, fontSize: 9, textTransform: "uppercase", marginTop: 2 }}>
               {programmeName}
             </div>
           </div>
-          <p style={{ marginTop: 8, paddingLeft: 40, paddingRight: 40, textAlign: "justify", fontSize: 9.5, lineHeight: 1.5 }}>
+          <p style={{ marginTop: 8, paddingLeft: 40, paddingRight: 40, textAlign: "justify", fontSize: 10.5, lineHeight: 1.5 }}>
             Below is the result of <strong style={{ textTransform: "uppercase" }}>{studentName}</strong> in the{" "}
             <strong>{programmeName}</strong>.
           </p>
@@ -176,7 +176,7 @@ function TranscriptCard({ transcriptData, qrDataUrl }: { transcriptData: any; qr
           return (
             <div key={sessionName} style={{ marginBottom: 14 }}>
               {/* Session heading */}
-              <div style={{ fontWeight: 900, textTransform: "uppercase", textDecoration: "underline", textAlign: "center", fontSize: 9.5, letterSpacing: 0.4, marginBottom: 6 }}>
+              <div style={{ fontWeight: 900, textTransform: "uppercase", textDecoration: "underline", textAlign: "center", fontSize: 10.5, letterSpacing: 0.4, marginBottom: 6 }}>
                 {programmeName} &mdash; {sessionName} SESSION
               </div>
 
@@ -191,7 +191,7 @@ function TranscriptCard({ transcriptData, qrDataUrl }: { transcriptData: any; qr
                       <div style={{ fontWeight: 700, textTransform: "uppercase", textDecoration: "underline", fontSize: 8.5, marginBottom: 3 }}>
                         {semLabel}
                       </div>
-                      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 7.5 }}>
+                      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 9 }}>
                         <thead>
                           <tr style={{ borderTop: "1.5px solid #000", borderBottom: "1px solid #000" }}>
                             <th style={th}>COURSE<br/>CODE</th>
@@ -221,7 +221,7 @@ function TranscriptCard({ transcriptData, qrDataUrl }: { transcriptData: any; qr
                         </tbody>
                       </table>
                       {/* Semester totals */}
-                      <div style={{ borderTop: "1.5px solid #000", marginTop: 1, paddingTop: 2, fontSize: 7.5, fontWeight: 700, textAlign: "right" }}>
+                      <div style={{ borderTop: "1.5px solid #000", marginTop: 1, paddingTop: 2, fontSize: 9, fontWeight: 700, textAlign: "right" }}>
                         TOTAL CREDIT REGISTERED (TCR): {totals.totalCU} &nbsp;|&nbsp;
                         TOTAL QUALITY POINT (TQP): {totals.totalQP.toFixed(2)} &nbsp;|&nbsp;
                         GPA: {totals.gpa.toFixed(3)}
@@ -237,7 +237,7 @@ function TranscriptCard({ transcriptData, qrDataUrl }: { transcriptData: any; qr
         {/* ── CUMULATIVE GPA ── */}
         <div style={{ borderTop: "2px solid #000", marginTop: 10, paddingTop: 8, textAlign: "center" }}>
           <div style={{ display: "inline-block", border: "2px solid #000", padding: "6px 24px" }}>
-            <span style={{ fontWeight: 900, fontSize: 11, textTransform: "uppercase" }}>
+            <span style={{ fontWeight: 900, fontSize: 12, textTransform: "uppercase" }}>
               GRADUATING GPA: {cumulCgpa} &mdash; {getDegreeClass(cumulCgpaNum)}
             </span>
           </div>
@@ -247,9 +247,13 @@ function TranscriptCard({ transcriptData, qrDataUrl }: { transcriptData: any; qr
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginTop: 32, paddingLeft: 24, paddingRight: 24 }}>
           {/* HoD */}
           <div style={{ textAlign: "center", width: 160 }}>
-            <div style={{ borderBottom: "1px solid #000", height: 36, marginBottom: 4 }} />
+            {transcriptData.signatures?.hod ? (
+              <img src={transcriptData.signatures.hod} style={{ height: 40, objectFit: 'contain', marginBottom: 4 }} alt="HOD Signature" />
+            ) : (
+              <div style={{ borderBottom: "1px dotted #000", height: 40, marginBottom: 4 }} />
+            )}
             <div style={{ fontWeight: 700, fontSize: 9, textTransform: "uppercase" }}>Head of Department</div>
-            <div style={{ fontSize: 8 }}>{transcriptData.signatures?.hodName || "________________"}</div>
+            <div style={{ fontSize: 8 }}>{transcriptData.signatures?.hodName || ""}</div>
           </div>
 
           {/* Stamp + QR */}
@@ -263,9 +267,13 @@ function TranscriptCard({ transcriptData, qrDataUrl }: { transcriptData: any; qr
 
           {/* Registrar */}
           <div style={{ textAlign: "center", width: 160 }}>
-            <div style={{ borderBottom: "1px solid #000", height: 36, marginBottom: 4 }} />
+            {transcriptData.signatures?.registrar ? (
+              <img src={transcriptData.signatures.registrar} style={{ height: 40, objectFit: 'contain', marginBottom: 4 }} alt="Registrar Signature" />
+            ) : (
+              <div style={{ borderBottom: "1px dotted #000", height: 40, marginBottom: 4 }} />
+            )}
             <div style={{ fontWeight: 700, fontSize: 9, textTransform: "uppercase" }}>Registrar</div>
-            <div style={{ fontSize: 8 }}>{transcriptData.signatures?.registrarName || "________________"}</div>
+            <div style={{ fontSize: 8 }}>{transcriptData.signatures?.registrarName || ""}</div>
           </div>
         </div>
       </div>
@@ -283,17 +291,176 @@ function TranscriptCard({ transcriptData, qrDataUrl }: { transcriptData: any; qr
   }
 }
 
+
+const thNoBorder: React.CSSProperties = { padding: "2px 2px", fontWeight: 900, fontSize: 9, lineHeight: 1.1, verticalAlign: "bottom" };
+const tdNoBorder: React.CSSProperties = { padding: "2px 2px", fontSize: 10.5, verticalAlign: "top" };
+
+function TranscriptCardOriginal({ transcriptData, qrDataUrl }: { transcriptData: any; qrDataUrl?: string }) {
+  try {
+    const student = transcriptData?.student;
+    if (!student) return <div className="transcript-sheet" style={sheetStyle}><p style={{ color: "#94a3b8", textAlign: "center", marginTop: 80 }}>Student data not available</p></div>;
+
+    const bySession = new Map<string, Map<string, any>>();
+    const txList: any[] = transcriptData.transcripts || [];
+    for (const t of txList) {
+      const sName = t.academicSession?.name || "Unknown Session";
+      const sem = t.semester || "1";
+      if (!bySession.has(sName)) bySession.set(sName, new Map());
+      bySession.get(sName)!.set(sem, t);
+    }
+
+    const lastTx = txList[txList.length - 1];
+    const cumulCgpaNum = lastTx ? Number(lastTx.cgpa) : 0;
+    const cumulCgpa = cumulCgpaNum.toFixed(2);
+
+    const matric = student.matricNumber || student.admissionNumber || "N/A";
+    const studentName = student.user?.name || "Student";
+    const programmeName = student.programme?.name || "Programme";
+    
+    const sessionNames = Array.from(bySession.keys());
+    const firstSession = sessionNames[0] || "";
+    const lastSession = sessionNames[sessionNames.length - 1] || "";
+    const sessionRange = firstSession === lastSession ? firstSession : `${firstSession} to ${lastSession}`;
+
+    return (
+      <div className="transcript-sheet" style={sheetStyle}>
+        {/* ── HEADER ── */}
+        <div style={{ textAlign: "center", marginBottom: 12 }}>
+          <div style={{ fontWeight: 900, fontSize: 13, textTransform: "uppercase", letterSpacing: 1 }}>FEDERAL SCHOOL OF STATISTICS</div>
+          <div style={{ fontWeight: 700, fontSize: 10, marginBottom: 4 }}>(National Bureau of Statistics)</div>
+          
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+            <div style={{ textAlign: "left", fontSize: 9, lineHeight: 1.4 }}>
+              <div>P. O. Box 29751, U. I. IBADAN</div>
+              <div>Telegram: STATIBADAN</div>
+              <div>Telephone: 08023108427</div>
+              <div>Email: <span style={{textDecoration: 'underline'}}>info@fssibadan.edu.ng</span></div>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+              <img src="/fss_logo.png" alt="FSS Logo" style={{ width: 60, height: 60, objectFit: "contain" }} onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+            </div>
+            <div style={{ textAlign: "left", fontSize: 9, lineHeight: 1.4 }}>
+              <div>Ref. No: <strong>{matric}</strong></div>
+              <div>Date: <span style={{textDecoration: 'underline'}}>{formatDate()}</span></div>
+            </div>
+          </div>
+
+          <div style={{ marginTop: 8 }}>
+            <div style={{ fontWeight: 900, fontSize: 12, textTransform: "uppercase", textDecoration: "underline", letterSpacing: 0.5 }}>EXAMINATION TRANSCRIPT</div>
+            <div style={{ fontWeight: 900, fontSize: 12, textTransform: "uppercase", textDecoration: "underline", marginTop: 4 }}>{programmeName}</div>
+          </div>
+          <p style={{ marginTop: 6, textAlign: "center", fontSize: 10, lineHeight: 1.5 }}>
+            Below is the result of <strong>{studentName.toUpperCase()}</strong> in the {programmeName} Programme <strong>{sessionRange}</strong> session.
+          </p>
+        </div>
+
+        {/* ── PER-SESSION RESULTS ── */}
+        {Array.from(bySession.entries()).map(([sessionName, semMap], sIdx) => {
+          const semKeys = Array.from(semMap.keys()).sort();
+          const levelStr = sIdx === 0 ? "(ND I)" : sIdx === 1 ? "(ND II)" : sIdx === 2 ? "(HND I)" : sIdx === 3 ? "(HND II)" : "";
+          
+          return (
+            <div key={sessionName} style={{ marginBottom: 12 }}>
+              <div style={{ fontWeight: 900, textTransform: "uppercase", textDecoration: "underline", textAlign: "center", fontSize: 10, letterSpacing: 0.4, marginBottom: 4 }}>
+                {programmeName} {levelStr} {sessionName} SESSION
+              </div>
+
+              <div style={{ display: "flex", gap: 16 }}>
+                {semKeys.map((semKey) => {
+                  const sem = semMap.get(semKey)!;
+                  const semLabel = semKey === "1" ? "FIRST SEMESTER" : semKey === "2" ? "SECOND SEMESTER" : `SEMESTER ${semKey}`;
+                  const totals = calcSemTotals(sem.results || []);
+                  return (
+                    <div key={semKey} style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 900, textTransform: "uppercase", textDecoration: "underline", fontSize: 9, marginBottom: 2 }}>{semLabel}</div>
+                      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 8.5 }}>
+                        <thead>
+                          <tr style={{ borderBottom: "1px solid #000" }}>
+                            <th style={{...thNoBorder, textAlign: 'left', width: '15%'}}>CODE</th>
+                            <th style={{...thNoBorder, textAlign: 'left', width: '55%'}}>SUBJECT TITLE</th>
+                            <th style={{...thNoBorder, textAlign: 'center', width: '15%'}}>CREDIT<br/>UNITS</th>
+                            <th style={{...thNoBorder, textAlign: 'center', width: '15%'}}>SCORE/100</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {(sem.results || []).map((r: any, i: number) => (
+                            <tr key={i}>
+                              <td style={{ ...tdNoBorder, textAlign: 'left', fontWeight: 600 }}>{r.courseCode}</td>
+                              <td style={{ ...tdNoBorder, textAlign: 'left', maxWidth: 110, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={r.courseTitle}>{r.courseTitle}</td>
+                              <td style={{ ...tdNoBorder, textAlign: 'center' }}>{r.creditLoad}</td>
+                              <td style={{ ...tdNoBorder, textAlign: 'center' }}>{r.score}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      <div style={{ marginTop: 6, fontSize: 9, fontWeight: 900, textAlign: "center" }}>
+                        GRADE POINT AVERAGE (GPA): <span style={{textDecoration: "underline"}}>{totals.gpa.toFixed(3)}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+
+        {/* ── CUMULATIVE GPA ── */}
+        <div style={{ marginTop: 16, textAlign: "center" }}>
+          <span style={{ fontWeight: 900, fontSize: 10, textTransform: "uppercase" }}>
+            GRADUATING GRADE POINT AVERAGE (CGPA): {cumulCgpa} ({getDegreeClass(cumulCgpaNum)})
+          </span>
+        </div>
+
+        {/* ── SIGNATURES ── */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginTop: 40, paddingLeft: 24, paddingRight: 24 }}>
+          {/* HoD */}
+          <div style={{ textAlign: "center", width: 160 }}>
+            {transcriptData.signatures?.hod ? (
+              <img src={transcriptData.signatures.hod} style={{ height: 40, objectFit: 'contain', marginBottom: 4 }} alt="HOD Signature" />
+            ) : (
+              <div style={{ borderBottom: "1px dotted #000", height: 40, marginBottom: 4 }} />
+            )}
+            <div style={{ fontWeight: 700, fontSize: 9, textTransform: "uppercase" }}>Head of Department</div>
+            <div style={{ fontSize: 8 }}>{transcriptData.signatures?.hodName || ""}</div>
+          </div>
+
+          {/* Stamp + QR */}
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+            <div style={{ width: 60, height: 60, borderRadius: "50%", border: "2px solid #b91c1c", display: "flex", alignItems: "center", justifyContent: "center", opacity: 0.5 }}>
+              <span style={{ fontSize: 7, color: "#b91c1c", fontWeight: 900, textAlign: "center", lineHeight: 1.2 }}>REGISTRAR<br/>STAMP</span>
+            </div>
+            {qrDataUrl && <img src={qrDataUrl} alt="Verify QR" style={{ width: 52, height: 52 }} />}
+          </div>
+
+          {/* Registrar */}
+          <div style={{ textAlign: "center", width: 160 }}>
+            {transcriptData.signatures?.registrar ? (
+              <img src={transcriptData.signatures.registrar} style={{ height: 40, objectFit: 'contain', marginBottom: 4 }} alt="Registrar Signature" />
+            ) : (
+              <div style={{ borderBottom: "1px dotted #000", height: 40, marginBottom: 4 }} />
+            )}
+            <div style={{ fontWeight: 700, fontSize: 9, textTransform: "uppercase" }}>Registrar</div>
+            <div style={{ fontSize: 8 }}>{transcriptData.signatures?.registrarName || "Yours Faithfully"}</div>
+          </div>
+        </div>
+      </div>
+    );
+  } catch (e: any) {
+    return <div className="transcript-sheet" style={sheetStyle}><div style={{ textAlign: "center", marginTop: 80, color: "#dc2626" }}>Rendering Error</div></div>;
+  }
+}
+
 /* ─── Grading Key Sheet (2nd page) ────────────────────────────── */
 function GradingKeySheet() {
   return (
     <div className="transcript-sheet" style={{ ...sheetStyle, display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center" }}>
       <div style={{ width: "80%", maxWidth: 420 }}>
-        <div style={{ fontWeight: 900, textTransform: "uppercase", textDecoration: "underline", textAlign: "center", fontSize: 11, marginBottom: 16, letterSpacing: 0.5 }}>
+        <div style={{ fontWeight: 900, textTransform: "uppercase", textDecoration: "underline", textAlign: "center", fontSize: 12, marginBottom: 16, letterSpacing: 0.5 }}>
           GRADE POINT FOR EACH SUBJECT
         </div>
         <div style={{ display: "flex", gap: 40, justifyContent: "center" }}>
           {/* Grade table */}
-          <table style={{ borderCollapse: "collapse", fontSize: 9.5 }}>
+          <table style={{ borderCollapse: "collapse", fontSize: 10.5 }}>
             <tbody>
               {FSS_GRADE_TABLE.map((row) => (
                 <tr key={row.grade}>
@@ -306,8 +473,8 @@ function GradingKeySheet() {
           </table>
           {/* Class table */}
           <div>
-            <div style={{ fontWeight: 700, textDecoration: "underline", marginBottom: 6, fontSize: 9.5 }}>CLASS</div>
-            <table style={{ borderCollapse: "collapse", fontSize: 9.5 }}>
+            <div style={{ fontWeight: 700, textDecoration: "underline", marginBottom: 6, fontSize: 10.5 }}>CLASS</div>
+            <table style={{ borderCollapse: "collapse", fontSize: 10.5 }}>
               <tbody>
                 {FSS_CLASS_TABLE.map((row) => (
                   <tr key={row.cls}>
@@ -344,18 +511,19 @@ const th: React.CSSProperties = {
   fontWeight: 700,
   borderBottom: "1px solid #000",
   whiteSpace: "nowrap",
-  fontSize: 7,
+  fontSize: 8,
   lineHeight: 1.1,
 };
 const td: React.CSSProperties = {
   padding: "1.5px 3px",
   textAlign: "center",
-  fontSize: 7.5,
+  fontSize: 9,
 };
 
 /* ─── Main Page ───────────────────────────────────────────────── */
 export default function PrintTranscriptPage() {
   const [studentQuery, setStudentQuery] = useState("");
+  const [templateStyle, setTemplateStyle] = useState<"detailed" | "original">("original");
   const [studentResults, setStudentResults] = useState<any[]>([]);
   const [selectedStudent, setSelectedStudent] = useState<any>(null);
   const [programmes, setProgrammes] = useState<any[]>([]);
@@ -543,7 +711,7 @@ export default function PrintTranscriptPage() {
                     {studentResults.map(s => (
                       <button key={s.id} onClick={() => loadTranscript(s)} style={{ width: "100%", textAlign: "left", padding: "10px 14px", background: "none", border: "none", borderBottom: "1px solid #f1f5f9", cursor: "pointer" }}>
                         <div style={{ fontWeight: 600, fontSize: 13 }}>{s.user?.name}</div>
-                        <div style={{ fontSize: 11, color: "#64748b" }}>{s.matricNumber || s.admissionNumber} &bull; {s.programme?.name}</div>
+                        <div style={{ fontSize: 12, color: "#64748b" }}>{s.matricNumber || s.admissionNumber} &bull; {s.programme?.name}</div>
                       </button>
                     ))}
                   </div>
@@ -554,6 +722,15 @@ export default function PrintTranscriptPage() {
 
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <select
+                  value={templateStyle}
+                  onChange={e => setTemplateStyle(e.target.value as any)}
+                  style={{ width: 140, background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 8, padding: "8px 12px", fontSize: 13, outline: "none", marginRight: 16 }}
+                >
+                  <option value="original">FSS Template</option>
+                  <option value="detailed">Detailed Template</option>
+                </select>
+
+              <select
                   value={selectedProgramme}
                   onChange={e => setSelectedProgramme(e.target.value)}
                   style={{ width: 240, background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 8, padding: "8px 12px", fontSize: 13, outline: "none" }}
@@ -614,14 +791,22 @@ export default function PrintTranscriptPage() {
         {transcriptsToRender.length > 0 && (
           <div ref={printRef} style={{ padding: "32px 0", display: "flex", flexDirection: "column", alignItems: "center", gap: 32, background: "#f1f5f9" }}>
             {transcriptsToRender.map((transcriptData, idx) => (
-              <TranscriptCard
-                key={idx}
-                transcriptData={transcriptData}
-                qrDataUrl={qrCodes[transcriptData?.student?.id]}
-              />
+              <div key={idx} style={{ display: 'contents' }}>
+                {templateStyle === 'detailed' ? (
+                  <TranscriptCardDetailed
+                    transcriptData={transcriptData}
+                    qrDataUrl={qrCodes[transcriptData?.student?.id]}
+                  />
+                ) : (
+                  <TranscriptCardOriginal
+                    transcriptData={transcriptData}
+                    qrDataUrl={qrCodes[transcriptData?.student?.id]}
+                  />
+                )}
+                {/* Grading Key printed for EVERY student so it can be back page */}
+                <GradingKeySheet />
+              </div>
             ))}
-            {/* Grading Key is always appended as last page */}
-            <GradingKeySheet />
           </div>
         )}
       </div>
