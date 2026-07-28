@@ -118,7 +118,7 @@ export default function PrintTranscriptPage() {
     
     setEmailing(true);
     try {
-      if (!containerRef.current) throw new Error("Transcript container not found");
+      if (!printRef.current) throw new Error("Transcript container not found");
       const html2pdf = (await import("html2pdf.js")).default;
       const name = selectedStudent ? selectedStudent.matricNumber || selectedStudent.admissionNumber : "Bulk_Transcripts";
       
@@ -131,7 +131,7 @@ export default function PrintTranscriptPage() {
       };
 
       // Output as base64 string
-      const pdfBase64 = await html2pdf().set(opt).from(containerRef.current).outputPdf('datauristring');
+      const pdfBase64 = await html2pdf().set(opt).from(printRef.current).outputPdf('datauristring');
       
       const studentName = transcriptData.student.user?.name || name;
       
@@ -242,10 +242,20 @@ export default function PrintTranscriptPage() {
         <div className="py-8 print:py-0 print:bg-white flex flex-col items-center gap-8 print:gap-0" ref={printRef}>
           {transcriptsToRender.map((transcriptData, index) => {
             
+            const currentStudent = transcriptData?.student;
+            if (!currentStudent) {
+              return (
+                <div key={index} className="w-[210mm] min-h-[297mm] bg-white print:shadow-none shadow-2xl p-10 font-serif text-[11px] leading-tight text-black relative print:break-after-page flex items-center justify-center">
+                  <p className="text-slate-400">Student data not available</p>
+                </div>
+              );
+            }
+
             // Group transcripts by session for this specific student
             const groupedBySession = new Map<string, any[]>();
-            if (transcriptData.transcripts) {
-              transcriptData.transcripts.forEach((t: any) => {
+            const txList = transcriptData.transcripts || [];
+            if (txList.length > 0) {
+              txList.forEach((t: any) => {
                 const sName = t.academicSession?.name || "Unknown Session";
                 if (!groupedBySession.has(sName)) groupedBySession.set(sName, []);
                 groupedBySession.get(sName)!.push(t);
@@ -254,12 +264,10 @@ export default function PrintTranscriptPage() {
 
             // Get graduation stats for this specific student
             let graduatingCgpa = "0.00";
-            if (transcriptData.transcripts && transcriptData.transcripts.length > 0) {
-              const last = transcriptData.transcripts[transcriptData.transcripts.length - 1];
+            if (txList.length > 0) {
+              const last = txList[txList.length - 1];
               graduatingCgpa = Number(last.cgpa).toFixed(2);
             }
-
-            const currentStudent = transcriptData.student;
 
             return (
               <div key={currentStudent.id} className="w-[210mm] min-h-[297mm] bg-white print:shadow-none shadow-2xl p-10 font-serif text-[11px] leading-tight text-black relative print:break-after-page">
@@ -278,7 +286,7 @@ export default function PrintTranscriptPage() {
                       <span className="text-[8px] text-slate-400">LOGO</span>
                     </div>
                     <div className="text-right text-[9px]">
-                      <p>Ref. No: {currentStudent.matricNumber || currentStudent.admissionNumber}</p>
+                      <p>Ref. No: {currentStudent.matricNumber || currentStudent.admissionNumber || "N/A"}</p>
                       <p>Date: {new Date().toLocaleDateString()}</p>
                     </div>
                   </div>
@@ -287,11 +295,11 @@ export default function PrintTranscriptPage() {
                   <h2 className="text-xs font-bold uppercase">(National Bureau of Statistics)</h2>
                   <div className="my-3">
                     <h3 className="font-bold underline uppercase text-sm">EXAMINATION TRANSCRIPT</h3>
-                    <h4 className="font-bold uppercase text-xs mt-1">{currentStudent.programme?.name}</h4>
+                    <h4 className="font-bold uppercase text-xs mt-1">{currentStudent.programme?.name || "Programme"}</h4>
                   </div>
                   
                   <p className="mt-2 px-10 text-justify text-[10px]">
-                    Below is the result of <strong className="uppercase">{currentStudent.user?.name}</strong> in the {currentStudent.programme?.name} Programme.
+                    Below is the result of <strong className="uppercase">{currentStudent.user?.name || "Student"}</strong> in the {currentStudent.programme?.name || "Programme"}.
                   </p>
                 </div>
 

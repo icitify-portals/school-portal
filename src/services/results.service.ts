@@ -191,6 +191,14 @@ export async function getStudentTranscriptData(studentId: number) {
     with: { user: true, programme: true },
   });
 
+  if (!student) {
+    return {
+      student: null,
+      transcripts: [],
+      signatures: { registrarName: "Registrar", registrarSignature: null, hodName: "HOD", hodSignature: null },
+    };
+  }
+
   // Fetch Registrar signature
   const registrar = await db.query.users.findFirst({
     where: eq(users.role, "registrar"),
