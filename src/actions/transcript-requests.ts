@@ -3,7 +3,7 @@
 import { db } from "@/db/db";
 import { transcriptRequests, transactions, students, users } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
-import { generatePaymentUrl, verifyGatewayPayment } from "./payment-gateways";
+import { initiatePayment, verifyPayment } from "./payment-gateways";
 import { sendEmail } from "@/lib/mail";
 
 // Constants for Fees (Can be moved to DB settings later)
@@ -44,12 +44,12 @@ export async function submitTranscriptApplication(data: {
         const insertId = result.insertId;
 
         // Initialize ALATPay (Step 1)
-        const initRes = await generatePaymentUrl(alatRef, TRANSCRIPT_FEE, 'alatpay', data.applicantEmail, data.applicantName, '');
+        const initRes = await initiatePayment(alatRef, TRANSCRIPT_FEE, 'alatpay', data.applicantEmail, data.applicantName, '');
         if (initRes.error) {
             return { success: false, error: initRes.error };
         }
 
-        return { success: true, url: initRes.url, requestId: insertId };
+        return { success: true, url: initRes.paymentUrl, requestId: insertId };
     } catch (e: any) {
         console.error("submitTranscriptApplication error:", e);
         return { success: false, error: e.message || "Failed to submit application" };
@@ -65,7 +65,7 @@ export async function verifyTranscriptAlatpay(reference: string) {
             return preparePaystackStep(req);
         }
 
-        const verify = await verifyGatewayPayment(reference, 'alatpay');
+        const verify = await verifyPayment('alatpay', reference);
         if (verify.error) {
             return { success: false, error: verify.error };
         }
@@ -88,12 +88,12 @@ async function preparePaystackStep(req: any) {
         await db.update(transcriptRequests).set({ paystackRef }).where(eq(transcriptRequests.id, req.id));
     }
 
-    const initRes = await generatePaymentUrl(paystackRef, PROCESSING_FEE, 'paystack', req.applicantEmail, req.applicantName, '');
+    const initRes = await initiatePayment(paystackRef, PROCESSING_FEE, 'paystack', req.applicantEmail, req.applicantName, '');
     if (initRes.error) {
         return { success: false, error: initRes.error };
     }
 
-    return { success: true, nextStep: 'paystack', url: initRes.url };
+    return { success: true, nextStep: 'paystack', url: initRes.paymentUrl };
 }
 
 
@@ -106,7 +106,7 @@ export async function verifyTranscriptPaystack(reference: string) {
             return { success: true, data: req };
         }
 
-        const verify = await verifyGatewayPayment(reference, 'paystack');
+        const verify = await verifyPayment('paystack', reference);
         if (verify.error) {
             return { success: false, error: verify.error };
         }
