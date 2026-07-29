@@ -9,7 +9,7 @@ export async function impersonateUser(targetUserId: number) {
         const session = await auth();
         const actorRole = (session?.user as any)?.role?.toLowerCase() || "";
 
-        const allowedRoles = ['superadmin', 'admin', 'dvc', 'bursar', 'registrar'];
+        const allowedRoles = ['superadmin', 'admin', 'dvc', 'bursar', 'registrar', 'icitify_dev'];
         if (!session?.user || !allowedRoles.includes(actorRole) || !session.user.id) {
             return { error: "Unauthorized. Admin access required." };
         }
@@ -29,10 +29,10 @@ export async function impersonateUser(targetUserId: number) {
         if (!targetUser) return { error: "Target user not found." };
 
         // SECURITY FIX: Prevent privilege escalation via impersonation.
-        // Only superadmin can impersonate admin-level users.
+        // Only superadmin and icitify_dev can impersonate admin-level users.
         // Non-superadmins (bursar, registrar) can only impersonate students and staff.
-        const highPrivilegeRoles = ['admin', 'superadmin', 'dvc', 'registrar', 'bursar', 'librarian', 'dean', 'hod'];
-        if (actorRole !== 'superadmin' && highPrivilegeRoles.includes(targetUser.role?.toLowerCase() || '')) {
+        const highPrivilegeRoles = ['admin', 'superadmin', 'dvc', 'registrar', 'bursar', 'librarian', 'dean', 'hod', 'icitify_dev'];
+        if (actorRole !== 'superadmin' && actorRole !== 'icitify_dev' && highPrivilegeRoles.includes(targetUser.role?.toLowerCase() || '')) {
             return { error: "Unauthorized: You cannot impersonate a user with equal or higher privilege level." };
         }
 
