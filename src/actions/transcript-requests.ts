@@ -171,7 +171,7 @@ export async function dispatchTranscript(requestId: number, dispatchedByUserId: 
                 emailHtml, 
                 undefined, 
                 undefined,
-                [{ filename: \`Transcript_\${req.matricNumber}.pdf\`, content: pdfBuffer }]
+                [{ filename: `Transcript_${req.matricNumber}.pdf`, content: pdfBuffer }]
             );
         }
 

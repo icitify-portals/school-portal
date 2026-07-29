@@ -65,6 +65,7 @@
     "drizzle-orm": "^0.45.1",
     "h5p-standalone": "^3.8.2",
     "html2canvas": "^1.4.1",
+    "html2pdf.js": "^0.14.0",
     "html5-qrcode": "^2.3.8",
     "ioredis": "^5.9.2",
     "isomorphic-dompurify": "^3.14.0",
