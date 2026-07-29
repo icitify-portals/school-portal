@@ -36,6 +36,8 @@ class ErrorBoundary extends Component<
 
 import { searchStudents, getMyTranscript, getBulkTranscripts, sendStudentTranscriptEmail } from "@/actions/result-module";
 import { getProgrammes } from "@/actions/programmes";
+import { getFaculties } from "@/actions/faculties";
+import { getDepartments } from "@/actions/departments";
 import { ArrowLeft, Search, Loader2, Printer, Image as ImageIcon, FileText, Mail, CheckCircle2, Users } from "lucide-react";
 import Link from "next/link";
 import QRCode from "qrcode";
@@ -140,7 +142,7 @@ function TranscriptCardDetailed({ transcriptData, qrDataUrl }: { transcriptData:
             </div>
             {/* Logo */}
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-              <img src="/fss_logo.png" alt="FSS Logo" style={{ width: 60, height: 60, objectFit: "contain" }}
+              <img src="/fss_logo.png" alt="FSS Logo" style={{ width: 80, height: 80, objectFit: "contain" }}
                 onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
             </div>
             <div style={{ textAlign: "right", fontSize: 8, lineHeight: 1.6 }}>
@@ -258,7 +260,7 @@ function TranscriptCardDetailed({ transcriptData, qrDataUrl }: { transcriptData:
 
           {/* Stamp + QR */}
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-            <div style={{ width: 60, height: 60, borderRadius: "50%", border: "2px solid #b91c1c", display: "flex", alignItems: "center", justifyContent: "center", opacity: 0.6 }}>
+            <div style={{ width: 80, height: 80, borderRadius: "50%", border: "2px solid #b91c1c", display: "flex", alignItems: "center", justifyContent: "center", opacity: 0.6 }}>
               <span style={{ fontSize: 6, color: "#b91c1c", fontWeight: 700, textAlign: "center", lineHeight: 1.2 }}>REGISTRAR<br/>STAMP</span>
             </div>
             {qrDataUrl && <img src={qrDataUrl} alt="Verify QR" style={{ width: 52, height: 52 }} />}
@@ -326,27 +328,27 @@ function TranscriptCardOriginal({ transcriptData, qrDataUrl }: { transcriptData:
       <div className="transcript-sheet" style={sheetStyle}>
         {/* ── HEADER ── */}
         <div style={{ textAlign: "center", marginBottom: 12 }}>
-          <div style={{ fontWeight: 900, fontSize: 13, textTransform: "uppercase", letterSpacing: 1 }}>FEDERAL SCHOOL OF STATISTICS</div>
-          <div style={{ fontWeight: 700, fontSize: 10, marginBottom: 4 }}>(National Bureau of Statistics)</div>
+          <div style={{ fontWeight: 900, fontSize: 18, textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 4 }}>FEDERAL SCHOOL OF STATISTICS</div>
+          <div style={{ fontWeight: 700, fontSize: 12, marginBottom: 8 }}>(National Bureau of Statistics)</div>
           
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-            <div style={{ textAlign: "left", fontSize: 9, lineHeight: 1.4 }}>
+            <div style={{ textAlign: "left", fontSize: 11, lineHeight: 1.5 }}>
               <div>P. O. Box 29751, U. I. IBADAN</div>
               <div>Telegram: STATIBADAN</div>
               <div>Telephone: 08023108427</div>
               <div>Email: <span style={{textDecoration: 'underline'}}>info@fssibadan.edu.ng</span></div>
             </div>
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-              <img src="/fss_logo.png" alt="FSS Logo" style={{ width: 60, height: 60, objectFit: "contain" }} onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+              <img src="/fss_logo.png" alt="FSS Logo" style={{ width: 80, height: 80, objectFit: "contain" }} onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
             </div>
-            <div style={{ textAlign: "left", fontSize: 9, lineHeight: 1.4 }}>
+            <div style={{ textAlign: "left", fontSize: 11, lineHeight: 1.5 }}>
               <div>Ref. No: <strong>{matric}</strong></div>
               <div>Date: <span style={{textDecoration: 'underline'}}>{formatDate()}</span></div>
             </div>
           </div>
 
           <div style={{ marginTop: 8 }}>
-            <div style={{ fontWeight: 900, fontSize: 12, textTransform: "uppercase", textDecoration: "underline", letterSpacing: 0.5 }}>EXAMINATION TRANSCRIPT</div>
+            <div style={{ fontWeight: 900, fontSize: 14, textTransform: "uppercase", textDecoration: "underline", letterSpacing: 0.5 }}>EXAMINATION TRANSCRIPT</div>
             <div style={{ fontWeight: 900, fontSize: 12, textTransform: "uppercase", textDecoration: "underline", marginTop: 4 }}>{programmeName}</div>
           </div>
           <p style={{ marginTop: 6, textAlign: "center", fontSize: 10, lineHeight: 1.5 }}>
@@ -426,7 +428,7 @@ function TranscriptCardOriginal({ transcriptData, qrDataUrl }: { transcriptData:
 
           {/* Stamp + QR */}
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-            <div style={{ width: 60, height: 60, borderRadius: "50%", border: "2px solid #b91c1c", display: "flex", alignItems: "center", justifyContent: "center", opacity: 0.5 }}>
+            <div style={{ width: 80, height: 80, borderRadius: "50%", border: "2px solid #b91c1c", display: "flex", alignItems: "center", justifyContent: "center", opacity: 0.5 }}>
               <span style={{ fontSize: 7, color: "#b91c1c", fontWeight: 900, textAlign: "center", lineHeight: 1.2 }}>REGISTRAR<br/>STAMP</span>
             </div>
             {qrDataUrl && <img src={qrDataUrl} alt="Verify QR" style={{ width: 52, height: 52 }} />}
@@ -526,8 +528,16 @@ export default function PrintTranscriptPage() {
   const [templateStyle, setTemplateStyle] = useState<"detailed" | "original">("original");
   const [studentResults, setStudentResults] = useState<any[]>([]);
   const [selectedStudent, setSelectedStudent] = useState<any>(null);
+  
+  const [bulkMode, setBulkMode] = useState<"programme" | "department" | "faculty" | "all">("programme");
   const [programmes, setProgrammes] = useState<any[]>([]);
   const [selectedProgramme, setSelectedProgramme] = useState("");
+  
+  const [faculties, setFaculties] = useState<any[]>([]);
+  const [selectedFaculty, setSelectedFaculty] = useState("");
+  
+  const [departments, setDepartments] = useState<any[]>([]);
+  const [selectedDepartment, setSelectedDepartment] = useState("");
   const [transcriptsToRender, setTranscriptsToRender] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -538,6 +548,8 @@ export default function PrintTranscriptPage() {
 
   useEffect(() => {
     getProgrammes().then(res => { if (res.success) setProgrammes(res.data || []); });
+    getFaculties().then(res => { if (res.success) setFaculties(res.data || []); });
+    getDepartments().then(res => { if (res.success) setDepartments(res.data || []); });
   }, []);
 
   const searchStudentsFn = useCallback(async (q: string) => {
@@ -587,10 +599,23 @@ export default function PrintTranscriptPage() {
   }
 
   async function loadBulkTranscripts() {
-    if (!selectedProgramme) return alert("Please select a programme");
+    let filters: any = {};
+    if (bulkMode === "programme") {
+      if (!selectedProgramme) return alert("Please select a programme");
+      filters.programmeId = Number(selectedProgramme);
+    } else if (bulkMode === "department") {
+      if (!selectedDepartment) return alert("Please select a department");
+      filters.departmentId = Number(selectedDepartment);
+    } else if (bulkMode === "faculty") {
+      if (!selectedFaculty) return alert("Please select a faculty");
+      filters.facultyId = Number(selectedFaculty);
+    } else if (bulkMode === "all") {
+      filters.all = true;
+    }
+    
     setLoading(true);
     setSelectedStudent(null);
-    const res = await getBulkTranscripts(Number(selectedProgramme));
+    const res = await getBulkTranscripts(filters);
     if (res.success) {
       setTranscriptsToRender(res.data || []);
     } else {
@@ -731,17 +756,39 @@ export default function PrintTranscriptPage() {
                 </select>
 
               <select
-                  value={selectedProgramme}
-                  onChange={e => setSelectedProgramme(e.target.value)}
-                  style={{ width: 240, background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 8, padding: "8px 12px", fontSize: 13, outline: "none" }}
+                  value={bulkMode}
+                  onChange={e => setBulkMode(e.target.value as any)}
+                  style={{ width: 140, background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 8, padding: "8px 12px", fontSize: 13, outline: "none" }}
                 >
-                  <option value="">Select Programme for Bulk Print</option>
-                  {programmes.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                  <option value="programme">By Programme</option>
+                  <option value="department">By Department</option>
+                  <option value="faculty">By Faculty</option>
+                  <option value="all">Entire School</option>
                 </select>
+
+                {bulkMode === "programme" && (
+                  <select value={selectedProgramme} onChange={e => setSelectedProgramme(e.target.value)} style={{ width: 200, background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 8, padding: "8px 12px", fontSize: 13, outline: "none" }}>
+                    <option value="">Select Programme...</option>
+                    {programmes.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                  </select>
+                )}
+                {bulkMode === "department" && (
+                  <select value={selectedDepartment} onChange={e => setSelectedDepartment(e.target.value)} style={{ width: 200, background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 8, padding: "8px 12px", fontSize: 13, outline: "none" }}>
+                    <option value="">Select Department...</option>
+                    {departments.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                  </select>
+                )}
+                {bulkMode === "faculty" && (
+                  <select value={selectedFaculty} onChange={e => setSelectedFaculty(e.target.value)} style={{ width: 200, background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 8, padding: "8px 12px", fontSize: 13, outline: "none" }}>
+                    <option value="">Select Faculty...</option>
+                    {faculties.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                  </select>
+                )}
+
                 <button
                   onClick={loadBulkTranscripts}
-                  disabled={loading || !selectedProgramme}
-                  style={{ padding: "8px 14px", background: "#1e293b", color: "#fff", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 6, opacity: loading || !selectedProgramme ? 0.5 : 1 }}
+                  disabled={loading || (bulkMode === 'programme' && !selectedProgramme) || (bulkMode === 'department' && !selectedDepartment) || (bulkMode === 'faculty' && !selectedFaculty)}
+                  style={{ padding: "8px 14px", background: "#1e293b", color: "#fff", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 6, opacity: loading || (bulkMode === 'programme' && !selectedProgramme) || (bulkMode === 'department' && !selectedDepartment) || (bulkMode === 'faculty' && !selectedFaculty) ? 0.5 : 1 }}
                 >
                   <Users size={14} /> Load Bulk
                 </button>

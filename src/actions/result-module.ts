@@ -1,5 +1,6 @@
 "use server";
 
+import { hasRole, hasPermission } from "@/lib/rbac";
 import { revalidatePath } from "next/cache";
 import { sendEmail } from "@/lib/mail";
 import { db } from "@/db";
@@ -14,7 +15,7 @@ import {
   programmes,
   departments,
 } from "@/db/schema";
-import { eq, and, like, or, sql } from "drizzle-orm";
+import { eq, inArray, and, like, or, sql } from "drizzle-orm";
 import {
   resolveGrade,
   publishResultBatch,
@@ -362,14 +363,35 @@ export async function getMyTranscript(studentId: number) {
   }
 }
 
-export async function getBulkTranscripts(programmeId?: number) {
+export async function getBulkTranscripts(filters: { programmeId?: number, departmentId?: number, facultyId?: number, studentIds?: number[], all?: boolean }) {
   try {
-    const query = programmeId 
-      ? eq(students.programmeId, programmeId)
-      : undefined;
-      
+    let queryConditions = [];
+    
+    if (filters.studentIds && filters.studentIds.length > 0) {
+      queryConditions.push(inArray(students.id, filters.studentIds));
+    } else if (!filters.all) {
+      if (filters.programmeId) {
+        queryConditions.push(eq(students.programmeId, filters.programmeId));
+      } else if (filters.departmentId) {
+        queryConditions.push(eq(students.deptId, filters.departmentId));
+      } else if (filters.facultyId) {
+        // Find all departments in this faculty
+        const depts = await db.query.departments.findMany({
+          where: eq(departments.facultyId, filters.facultyId),
+          columns: { id: true }
+        });
+        const deptIds = depts.map(d => d.id);
+        if (deptIds.length > 0) {
+          queryConditions.push(inArray(students.deptId, deptIds));
+        } else {
+          // Empty faculty
+          queryConditions.push(eq(students.id, 0)); 
+        }
+      }
+    }
+
     const matchingStudents = await db.query.students.findMany({
-      where: query,
+      where: queryConditions.length > 0 ? and(...queryConditions) : undefined,
       with: { user: true }
     });
     
@@ -669,5 +691,69 @@ export async function bulkImportStudents(
     return { success: true, created: created.length, errors };
   } catch (e: any) {
     return { success: false, error: e.message };
+  }
+}
+
+export async function createStudentRm(data: any) {
+  try {
+    const allowed = await hasRole("admin") || await hasRole("superadmin") || await hasPermission("result_module.manage");
+    if (!allowed) return { success: false, error: "Unauthorized" };
+    
+    // Simplistic creation of user + student
+    const [userRes] = await db.insert(users).values({
+      name: data.name,
+      email: (data.matricNumber || "unknown") + "@fssibadan.edu.ng",
+      password: "hashed_password",
+      role: "student"
+    });
+    
+    await db.insert(students).values({
+      userId: userRes.insertId,
+      matricNumber: data.matricNumber,
+    });
+    
+    revalidatePath("/admin/result-module/students");
+    return { success: true };
+  } catch(e) {
+    return { success: false, error: "Failed to create student. " + String(e) };
+  }
+}
+
+export async function deleteStudentRm(id: number) {
+  try {
+    const allowed = await hasRole("admin") || await hasRole("superadmin") || await hasPermission("result_module.manage");
+    if (!allowed) return { success: false, error: "Unauthorized" };
+    
+    const [stu] = await db.select().from(students).where(eq(students.id, id));
+    if (stu) {
+      await db.delete(students).where(eq(students.id, id));
+      await db.delete(users).where(eq(users.id, stu.userId));
+    }
+    
+    revalidatePath("/admin/result-module/students");
+    return { success: true };
+  } catch(e) {
+    return { success: false, error: "Failed to delete student. " + String(e) };
+  }
+}
+
+export async function updateStudentRm(id: number, data: any) {
+  try {
+    const allowed = await hasRole("admin") || await hasRole("superadmin") || await hasPermission("result_module.manage");
+    if (!allowed) return { success: false, error: "Unauthorized" };
+    
+    await db.update(students).set({
+      matricNumber: data.matricNumber,
+    }).where(eq(students.id, id));
+    
+    const [stu] = await db.select().from(students).where(eq(students.id, id));
+    if (stu) {
+      await db.update(users).set({ name: data.name }).where(eq(users.id, stu.userId));
+    }
+    
+    revalidatePath("/admin/result-module/students");
+    return { success: true };
+  } catch(e) {
+    return { success: false, error: "Failed to update student. " + String(e) };
   }
 }
