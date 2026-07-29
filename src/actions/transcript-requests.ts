@@ -5,10 +5,19 @@ import { transcriptRequests, transactions, students, users } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
 import { initiatePayment, verifyPayment } from "./payment-gateways";
 import { sendEmail } from "@/lib/mail";
+import { getSettingByKey } from "@/actions/settings";
+// Fallback Constants for Fees (Now dynamically fetched from DB)
+const DEFAULT_TRANSCRIPT_FEE = 15000; // ALATPay fee
+const DEFAULT_PROCESSING_FEE = 5000;  // Paystack fee
 
-// Constants for Fees (Can be moved to DB settings later)
-const TRANSCRIPT_FEE = 15000; // ALATPay fee
-const PROCESSING_FEE = 5000;  // Paystack fee
+export async function getTranscriptFees() {
+    const tFeeStr = await getSettingByKey('transcript_fee');
+    const pFeeStr = await getSettingByKey('transcript_processing_fee');
+    return {
+        transcriptFee: tFeeStr !== null ? parseInt(tFeeStr) : DEFAULT_TRANSCRIPT_FEE,
+        processingFee: pFeeStr !== null ? parseInt(pFeeStr) : DEFAULT_PROCESSING_FEE,
+    };
+}
 
 export async function submitTranscriptApplication(data: {
     applicantName: string;
@@ -23,6 +32,34 @@ export async function submitTranscriptApplication(data: {
         // Look up student by matric if they exist
         const [student] = await db.select().from(students).where(eq(students.matricNumber, data.matricNumber)).limit(1);
 
+        const tFeeStr = await getSettingByKey('transcript_fee');
+        const pFeeStr = await getSettingByKey('transcript_processing_fee');
+        
+        // If not set, they fall back to the default. If explicitly '0', they become 0.
+        const transcriptFee = tFeeStr !== null ? parseInt(tFeeStr) : DEFAULT_TRANSCRIPT_FEE;
+        const processingFee = pFeeStr !== null ? parseInt(pFeeStr) : DEFAULT_PROCESSING_FEE;
+
+        if (transcriptFee === 0 && processingFee === 0) {
+            // Bypass all payments
+            const [result] = await db.insert(transcriptRequests).values({
+                studentId: student?.id || null,
+                applicantName: data.applicantName,
+                matricNumber: data.matricNumber,
+                applicantEmail: data.applicantEmail,
+                applicantPhone: data.applicantPhone,
+                destinationName: data.destinationName,
+                destinationAddress: data.destinationAddress,
+                deliveryMethod: data.deliveryMethod,
+                alatpayRef: 'FREE-BYPASS',
+                paystackRef: 'FREE-BYPASS',
+                alatpayStatus: 'paid',
+                paystackStatus: 'paid',
+                paymentStatus: 'paid',
+                approvalStatus: 'pending'
+            });
+            return { success: true, url: '/transcript-application/verify?ref=FREE-BYPASS', requestId: result.insertId };
+        }
+
         const alatRef = `TR-ALAT-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 
         const [result] = await db.insert(transcriptRequests).values({
@@ -35,16 +72,27 @@ export async function submitTranscriptApplication(data: {
             destinationAddress: data.destinationAddress,
             deliveryMethod: data.deliveryMethod,
             alatpayRef: alatRef,
-            alatpayStatus: 'unpaid',
-            paystackStatus: 'unpaid',
+            alatpayStatus: transcriptFee === 0 ? 'paid' : 'unpaid',
+            paystackStatus: processingFee === 0 ? 'paid' : 'unpaid',
             paymentStatus: 'unpaid',
             approvalStatus: 'pending'
         });
 
         const insertId = result.insertId;
+        
+        // If transcript fee is 0 but processing fee is > 0, we can skip alatpay and jump to paystack
+        if (transcriptFee === 0) {
+             const paystackRef = `TR-PAY-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+             await db.update(transcriptRequests).set({ paystackRef }).where(eq(transcriptRequests.id, insertId));
+             const initRes = await initiatePayment(paystackRef, processingFee, 'paystack', data.applicantEmail, data.applicantName, '');
+             if (initRes.error) {
+                 return { success: false, error: initRes.error };
+             }
+             return { success: true, url: initRes.paymentUrl, requestId: insertId };
+        }
 
         // Initialize ALATPay (Step 1)
-        const initRes = await initiatePayment(alatRef, TRANSCRIPT_FEE, 'alatpay', data.applicantEmail, data.applicantName, '');
+        const initRes = await initiatePayment(alatRef, transcriptFee, 'alatpay', data.applicantEmail, data.applicantName, '');
         if (initRes.error) {
             return { success: false, error: initRes.error };
         }
@@ -82,13 +130,25 @@ export async function verifyTranscriptAlatpay(reference: string) {
 }
 
 async function preparePaystackStep(req: any) {
-    const paystackRef = req.paystackRef || `TR-PAY-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+    const pFeeStr = await getSettingByKey('transcript_processing_fee');
+    const processingFee = pFeeStr !== null ? parseInt(pFeeStr) : DEFAULT_PROCESSING_FEE;
     
-    if (!req.paystackRef) {
+    if (processingFee === 0) {
+        // Skip paystack
+        await db.update(transcriptRequests).set({
+            paystackStatus: 'paid',
+            paymentStatus: 'paid'
+        }).where(eq(transcriptRequests.id, req.id));
+        return { success: true, nextStep: 'success', url: '/transcript-application/verify?ref=FREE-BYPASS' };
+    }
+
+    let paystackRef = req.paystackRef;
+    if (!paystackRef) {
+        paystackRef = `TR-PAY-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
         await db.update(transcriptRequests).set({ paystackRef }).where(eq(transcriptRequests.id, req.id));
     }
 
-    const initRes = await initiatePayment(paystackRef, PROCESSING_FEE, 'paystack', req.applicantEmail, req.applicantName, '');
+    const initRes = await initiatePayment(paystackRef, processingFee, 'paystack', req.applicantEmail, req.applicantName, '');
     if (initRes.error) {
         return { success: false, error: initRes.error };
     }

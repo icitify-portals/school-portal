@@ -94,8 +94,21 @@ const PRINT_CSS = `
     header, footer, nav, aside, .sidebar { display: none !important; }
     main { padding: 0 !important; margin: 0 !important; width: 100% !important; max-width: 100% !important; }
     .no-print { display: none !important; }
-    .transcript-sheet { box-shadow: none !important; page-break-after: always; break-after: page; }
+    .transcript-sheet { 
+        box-shadow: none !important; 
+        page-break-after: always; 
+        break-after: page; 
+        width: 100% !important; 
+        margin: 0 !important;
+        border: none !important;
+    }
     .transcript-sheet:last-child { page-break-after: avoid; break-after: avoid; }
+    
+    /* Remove background from the container during print */
+    div[style*="background: #f1f5f9"] {
+        background: transparent !important;
+        padding: 0 !important;
+    }
   }
   @page { margin: 0; size: A4 portrait; }
 `;

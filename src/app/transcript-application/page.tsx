@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
-import { submitTranscriptApplication } from "@/actions/transcript-requests";
+import React, { useState, useEffect } from "react";
+import { submitTranscriptApplication, getTranscriptFees } from "@/actions/transcript-requests";
 import { useRouter } from "next/navigation";
 import { Loader2, FileText, Send, Building } from "lucide-react";
 import Link from "next/link";
@@ -10,6 +10,12 @@ export default function TranscriptApplicationPage() {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
+    
+    const [fees, setFees] = useState({ transcriptFee: 15000, processingFee: 5000 });
+    
+    useEffect(() => {
+        getTranscriptFees().then(setFees);
+    }, []);
     
     const [formData, setFormData] = useState({
         applicantName: "",
@@ -114,12 +120,16 @@ export default function TranscriptApplicationPage() {
                         <div className="bg-indigo-50 border border-indigo-100 p-6 rounded-2xl flex flex-col sm:flex-row justify-between items-center gap-4 mt-8">
                             <div>
                                 <p className="text-sm text-indigo-800 font-semibold mb-1">Total Fee Required</p>
-                                <p className="text-2xl font-black text-indigo-900">₦20,000</p>
-                                <p className="text-xs text-indigo-600 mt-1">Transcript Fee (₦15k) + Processing (₦5k)</p>
+                                <p className="text-2xl font-black text-indigo-900">
+                                    {(fees.transcriptFee === 0 && fees.processingFee === 0) ? "Free" : `₦${((fees.transcriptFee + fees.processingFee)/1000).toLocaleString()}k`}
+                                </p>
+                                <p className="text-xs text-indigo-600 mt-1">
+                                    Transcript Fee (₦{(fees.transcriptFee/1000).toLocaleString()}k) + Processing (₦{(fees.processingFee/1000).toLocaleString()}k)
+                                </p>
                             </div>
                             <button disabled={loading} type="submit" className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-8 rounded-xl flex items-center gap-2 transition-all shadow-md shadow-indigo-600/30 disabled:opacity-70 disabled:cursor-not-allowed">
                                 {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
-                                Proceed to Payment
+                                {(fees.transcriptFee === 0 && fees.processingFee === 0) ? "Submit Application" : "Proceed to Payment"}
                             </button>
                         </div>
                     </form>

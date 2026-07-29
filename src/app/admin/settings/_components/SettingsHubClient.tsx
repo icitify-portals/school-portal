@@ -155,6 +155,15 @@ export default function SettingsHubClient({ initialSettings, modulesCount }: Set
       status: "Paystack + Remita Configured"
     },
     {
+      title: "Transcript & Processing Fees",
+      description: "Set the base fees for transcript requests and third-party gateway processing.",
+      href: "/admin/settings/transcript-fees",
+      category: "Finance & Integrations",
+      icon: CreditCard,
+      iconBg: "bg-blue-50 text-blue-600",
+      status: "Configured"
+    },
+    {
       title: "External Integrations",
       description: "Manage APIs and media buckets: AWS S3 storage, Twilio SMS routing, and Resend mail services.",
       href: "/admin/settings/integrations",

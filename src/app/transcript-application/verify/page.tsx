@@ -42,6 +42,9 @@ export default function TranscriptVerifyPage() {
                         setStatus('failed');
                         setMessage(res.error || "Verification failed");
                     }
+                } else if (reference === 'FREE-BYPASS') {
+                    setStatus('success');
+                    setMessage("Request submitted successfully (Fee waived). Your transcript request has been queued for processing.");
                 } else {
                     setStatus('failed');
                     setMessage("Unknown transaction reference.");
