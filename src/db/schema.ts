@@ -653,11 +653,19 @@ export const gradingSystems = mysqlTable('grading_systems', {
 
 export const transcriptRequests = mysqlTable('transcript_requests', {
   id: int('id').autoincrement().primaryKey(),
-  studentId: int('student_id').references(() => students.id).notNull(),
+  studentId: int('student_id').references(() => students.id),
+  applicantName: varchar('applicant_name', { length: 255 }),
+  matricNumber: varchar('matric_number', { length: 100 }),
+  applicantEmail: varchar('applicant_email', { length: 255 }),
+  applicantPhone: varchar('applicant_phone', { length: 50 }),
   destinationName: varchar('destination_name', { length: 255 }).notNull(), // Institution/Company name
   destinationAddress: text('destination_address').notNull(),
   deliveryMethod: mysqlEnum('delivery_method', ['email', 'courier', 'pickup']).default('email'),
-  paymentStatus: mysqlEnum('payment_status', ['unpaid', 'paid']).default('unpaid'),
+  alatpayStatus: mysqlEnum('alatpay_status', ['unpaid', 'paid']).default('unpaid'),
+  alatpayRef: varchar('alatpay_ref', { length: 255 }),
+  paystackStatus: mysqlEnum('paystack_status', ['unpaid', 'paid']).default('unpaid'),
+  paystackRef: varchar('paystack_ref', { length: 255 }),
+  paymentStatus: mysqlEnum('payment_status', ['unpaid', 'partial', 'paid']).default('unpaid'),
   approvalStatus: mysqlEnum('approval_status', ['pending', 'processing', 'dispatched', 'cancelled']).default('pending'),
   feePaid: decimal('fee_paid', { precision: 12, scale: 2 }).default('0.00'),
   transactionId: int('tx_id').references(() => transactions.id),

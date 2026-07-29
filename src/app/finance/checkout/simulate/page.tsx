@@ -122,6 +122,8 @@ function CheckoutSimulatorContent() {
                         setTimeout(() => router.push(`/applicant/application/${appId}`), 3000);
                     } else if (reference?.startsWith('PAY-ADM-')) {
                         setTimeout(() => router.push('/applicant'), 3000);
+                    } else if (reference?.startsWith('TR-')) {
+                        setTimeout(() => router.push(`/transcript-application/verify?ref=${reference}`), 3000);
                     } else {
                         setTimeout(() => router.push('/student/finance'), 3000);
                     }
@@ -183,7 +185,9 @@ function CheckoutSimulatorContent() {
                                     if (appId) {
                                         router.push(`/applicant/application/${appId}`);
                                     } else {
-                                        router.push(reference?.startsWith('PAY-ADM-') ? "/applicant" : "/student/finance");
+                                        if (reference?.startsWith('PAY-ADM-')) router.push("/applicant");
+                                        else if (reference?.startsWith('TR-')) router.push(`/transcript-application/verify?ref=${reference}`);
+                                        else router.push("/student/finance");
                                     }
                                 }}
                             >
@@ -273,7 +277,11 @@ function CheckoutSimulatorContent() {
                             <Button
                                 className="bg-slate-800 hover:bg-slate-700 text-white w-full py-6 font-semibold flex items-center justify-center gap-2 border border-slate-700"
                                 disabled={loading}
-                                onClick={() => router.push(reference?.startsWith('PAY-ADM-') ? "/applicant" : "/student/finance")}
+                                onClick={() => {
+                                    if (reference?.startsWith('PAY-ADM-')) router.push("/applicant");
+                                    else if (reference?.startsWith('TR-')) router.push(`/transcript-application/verify?ref=${reference}`);
+                                    else router.push("/student/finance");
+                                }}
                             >
                                 <Building2 className="w-5 h-5" />
                                 Return to Dashboard

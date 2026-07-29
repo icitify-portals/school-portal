@@ -90,7 +90,9 @@ function calcSemTotals(results: any[]): { totalCU: number; totalQP: number; gpa:
 /* ─── Self-contained print CSS (no external chunks needed) ───── */
 const PRINT_CSS = `
   @media print {
-    body { margin: 0 !important; background: #fff !important; }
+    body { margin: 0 !important; background: #fff !important; padding: 0 !important; }
+    header, footer, nav, aside, .sidebar { display: none !important; }
+    main { padding: 0 !important; margin: 0 !important; width: 100% !important; max-width: 100% !important; }
     .no-print { display: none !important; }
     .transcript-sheet { box-shadow: none !important; page-break-after: always; break-after: page; }
     .transcript-sheet:last-child { page-break-after: avoid; break-after: avoid; }
@@ -151,17 +153,17 @@ function TranscriptCardDetailed({ transcriptData, qrDataUrl }: { transcriptData:
             </div>
           </div>
 
-          <div style={{ fontWeight: 900, fontSize: 13, textTransform: "uppercase", textDecoration: "underline", letterSpacing: 1 }}>
+          <div style={{ fontWeight: 900, fontSize: 18, textTransform: "uppercase", textDecoration: "underline", letterSpacing: 1 }}>
             FEDERAL SCHOOL OF STATISTICS
           </div>
-          <div style={{ fontWeight: 700, fontSize: 9, textTransform: "uppercase" }}>
+          <div style={{ fontWeight: 700, fontSize: 11, textTransform: "uppercase" }}>
             (National Bureau of Statistics)
           </div>
           <div style={{ marginTop: 8 }}>
-            <div style={{ fontWeight: 900, fontSize: 12, textTransform: "uppercase", textDecoration: "underline", letterSpacing: 0.5 }}>
+            <div style={{ fontWeight: 900, fontSize: 14, textTransform: "uppercase", textDecoration: "underline", letterSpacing: 0.5 }}>
               EXAMINATION TRANSCRIPT
             </div>
-            <div style={{ fontWeight: 700, fontSize: 9, textTransform: "uppercase", marginTop: 2 }}>
+            <div style={{ fontWeight: 700, fontSize: 11, textTransform: "uppercase", marginTop: 2 }}>
               {programmeName}
             </div>
           </div>
@@ -452,10 +454,10 @@ function TranscriptCardOriginal({ transcriptData, qrDataUrl }: { transcriptData:
   }
 }
 
-/* ─── Grading Key Sheet (2nd page) ────────────────────────────── */
+/* ─── Grading Key Sheet (attached directly, no page break) ──────── */
 function GradingKeySheet() {
   return (
-    <div className="transcript-sheet" style={{ ...sheetStyle, display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center" }}>
+    <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", width: "210mm", padding: "10mm 16mm", margin: "0 auto", background: "#fff", color: "#000", fontFamily: "'Times New Roman', Times, serif" }}>
       <div style={{ width: "80%", maxWidth: 420 }}>
         <div style={{ fontWeight: 900, textTransform: "uppercase", textDecoration: "underline", textAlign: "center", fontSize: 12, marginBottom: 16, letterSpacing: 0.5 }}>
           GRADE POINT FOR EACH SUBJECT
@@ -547,9 +549,9 @@ export default function PrintTranscriptPage() {
   const printRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    getProgrammes().then(res => { if (res.success) setProgrammes(res.data || []); });
-    getFaculties().then(res => { if (res.success) setFaculties(res.data || []); });
-    getDepartments().then(res => { if (res.success) setDepartments(res.data || []); });
+    getProgrammes().then(res => { if (Array.isArray(res)) setProgrammes(res); });
+    getFaculties().then(res => { if (Array.isArray(res)) setFaculties(res); });
+    getDepartments().then(res => { if (Array.isArray(res)) setDepartments(res); });
   }, []);
 
   const searchStudentsFn = useCallback(async (q: string) => {

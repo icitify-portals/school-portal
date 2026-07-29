@@ -49,6 +49,9 @@ export default async function HomePage() {
                             <Link href="/register" className="inline-flex h-14 items-center justify-center rounded-2xl bg-emerald-600 px-8 text-sm font-bold uppercase tracking-wider text-white hover:bg-emerald-700 transition-colors shadow-xl shadow-emerald-500/25">
                                 2026/2027 Application Form <ArrowRight className="ml-2 w-4 h-4" />
                             </Link>
+                            <Link href="/transcript-application" className="inline-flex h-14 items-center justify-center rounded-2xl bg-amber-600 px-8 text-sm font-bold uppercase tracking-wider text-white hover:bg-amber-700 transition-colors shadow-xl shadow-amber-500/25">
+                                Order Transcript <ArrowRight className="ml-2 w-4 h-4" />
+                            </Link>
                             {session ? (
                                 <Link href="/dashboard" className="inline-flex h-14 items-center justify-center rounded-2xl bg-indigo-600 px-8 text-sm font-bold uppercase tracking-wider text-white hover:bg-indigo-700 transition-colors shadow-xl shadow-indigo-500/25">
                                     Enter Dashboard <ArrowRight className="ml-2 w-4 h-4" />

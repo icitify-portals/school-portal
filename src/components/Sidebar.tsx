@@ -197,6 +197,9 @@ const adminMenuItems: MenuItem[] = [
             { name: "Graduate Document Requests", href: "/admin/exams-records/documents" },
             { name: "Result Views", href: "/admin/exams-records/results" },
             { name: "Result Processing (Batches)", href: "/admin/result-module" },
+            { name: "Result Module - Courses", href: "/admin/result-module/courses" },
+            { name: "Result Module - Students", href: "/admin/result-module/students" },
+            { name: "Transcript Requests", href: "/admin/result-module/requests" },
             { name: "Grading Scales", href: "/admin/result-module/scales" },
             { name: "Quality Assurance", href: "/admin/quality-assurance" },
         ]
