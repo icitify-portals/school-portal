@@ -27,8 +27,16 @@ export async function getCrossTenantDeveloperRevenue() {
                 SELECT SUM(amount_due - amount_paid) as sum_unpaid FROM developer_subscriptions WHERE status != 'paid' AND status != 'exempt'
             `);
 
-            const rev = parseFloat(paidResult[0]?.sum_paid || 0);
-            const unp = parseFloat(unpaidResult[0]?.sum_unpaid || 0);
+            const [paystackPaidResult]: any = await connection.query(`
+                SELECT SUM(amount) as sum_paid FROM paystack_developer_fees WHERE status = 'paid'
+            `);
+            
+            const [paystackUnpaidResult]: any = await connection.query(`
+                SELECT SUM(amount) as sum_unpaid FROM paystack_developer_fees WHERE status != 'paid'
+            `);
+
+            const rev = parseFloat(paidResult[0]?.sum_paid || 0) + parseFloat(paystackPaidResult[0]?.sum_paid || 0);
+            const unp = parseFloat(unpaidResult[0]?.sum_unpaid || 0) + parseFloat(paystackUnpaidResult[0]?.sum_unpaid || 0);
 
             totalRevenue += rev;
             totalUnpaid += unp;
