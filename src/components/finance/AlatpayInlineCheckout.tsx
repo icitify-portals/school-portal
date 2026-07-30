@@ -15,6 +15,8 @@ interface AlatpayInlineCheckoutProps {
     onError: (error: any) => void;
     targetBusinessId?: string;
     publicKey?: string;
+    phone?: string;
+    description?: string;
 }
 
 export function AlatpayInlineCheckout({
@@ -27,7 +29,9 @@ export function AlatpayInlineCheckout({
     onClose,
     onError,
     targetBusinessId,
-    publicKey
+    publicKey,
+    phone,
+    description
 }: AlatpayInlineCheckoutProps) {
     const [isScriptLoaded, setIsScriptLoaded] = useState(false);
 
@@ -117,6 +121,8 @@ export function AlatpayInlineCheckout({
                     currency: "NGN",
                     firstName,
                     lastName,
+                    phone: phone || "",
+                    metadata: description || "Payment",
                     onTransaction: function (response: any) {
                         console.log("ALATPay onTransaction response:", JSON.stringify(response));
                         if (response.status === true || response.message === "Approved" || response.status === "Approved") {

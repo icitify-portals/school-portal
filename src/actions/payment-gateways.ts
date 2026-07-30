@@ -49,7 +49,7 @@ export async function getPaymentGatewayConfigs() {
     }
 }
 
-export async function initiatePayment(gateway: string, amount: number, reference: string, email: string, firstName?: string, lastName?: string) {
+export async function initiatePayment(gateway: string, amount: number, reference: string, email: string, firstName?: string, lastName?: string, phone?: string, description?: string) {
     try {
         const def = GATEWAY_DEFS[gateway];
         if (!def) return { error: "Unknown payment gateway" };
@@ -145,7 +145,7 @@ export async function initiatePayment(gateway: string, amount: number, reference
             }
         } else if (gateway === 'alatpay') {
             // Return a simulated checkout URL that handles ALATPay inline JS
-            paymentUrl = `/finance/checkout/simulate?gateway=alatpay&reference=${reference}&amount=${amount}&firstName=${encodeURIComponent(firstName || 'Student')}&lastName=${encodeURIComponent(lastName || 'Payer')}&email=${encodeURIComponent(email)}`;
+            paymentUrl = `/finance/checkout/simulate?gateway=alatpay&reference=${reference}&amount=${amount}&firstName=${encodeURIComponent(firstName || 'Student')}&lastName=${encodeURIComponent(lastName || 'Payer')}&email=${encodeURIComponent(email)}&phone=${encodeURIComponent(phone || '')}&description=${encodeURIComponent(description || '')}`;
         } else {
             // OPay: infrastructure placeholder
             return { error: `${def.name} integration coming soon.` };

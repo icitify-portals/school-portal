@@ -358,8 +358,10 @@ export class AlatpayAdapter implements PaymentGatewayAdapter {
         // Extract payer name from meta to include in the ALATPay checkout URL
         const payerFirstName = meta?.payerName ? (meta.payerName as string).split(' ')[0] : (meta?.payerFirstName as string || 'Student');
         const payerLastName = meta?.payerName ? (meta.payerName as string).split(' ').slice(1).join(' ') || payerFirstName : (meta?.payerLastName as string || 'Payer');
+        const payerPhone = meta?.payerPhone || meta?.phone || '';
+        const description = meta?.description || '2026/2027 Admission exercise';
 
-        let checkoutUrl = `/finance/checkout/simulate?gateway=alatpay&reference=${txReference}&amount=${totalAmount}&firstName=${encodeURIComponent(payerFirstName)}&lastName=${encodeURIComponent(payerLastName)}&email=${encodeURIComponent(payerEmail)}`;
+        let checkoutUrl = `/finance/checkout/simulate?gateway=alatpay&reference=${txReference}&amount=${totalAmount}&firstName=${encodeURIComponent(payerFirstName)}&lastName=${encodeURIComponent(payerLastName)}&email=${encodeURIComponent(payerEmail)}&phone=${encodeURIComponent(payerPhone)}&description=${encodeURIComponent(description)}`;
         if (targetBusinessId) checkoutUrl += `&businessId=${targetBusinessId}`;
         if (publicKey) checkoutUrl += `&publicKey=${publicKey}`;
 

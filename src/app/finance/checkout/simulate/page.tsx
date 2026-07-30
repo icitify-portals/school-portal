@@ -33,6 +33,8 @@ function CheckoutSimulatorContent() {
     const payerEmail = searchParams.get("email") || "student@school.edu";
     const payerFirstName = searchParams.get("firstName") || "Student";
     const payerLastName = searchParams.get("lastName") || "Payer";
+    const payerPhone = searchParams.get("phone") || "";
+    const description = searchParams.get("description") || "";
 
     const [amount, setAmount] = useState<number>(0);
     const [loading, setLoading] = useState(false);
@@ -312,6 +314,8 @@ function CheckoutSimulatorContent() {
                                         lastName={payerLastName}
                                         targetBusinessId={targetBusinessId}
                                         publicKey={publicKey}
+                                        phone={payerPhone}
+                                        description={description}
                                         onSuccess={() => handleSimulate('completed')} 
                                         onClose={() => setStatus('idle')}
                                         onError={(e) => {
