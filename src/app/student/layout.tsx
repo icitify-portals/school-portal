@@ -50,9 +50,10 @@ export default async function StudentLayout({
         isLockedBySubscription = !isSubscriptionPaid;
     }
 
-    const settings = await db.query.bursarySettings.findFirst() || {
-        financial_lock_type: 'none',
-        financial_lock_threshold: 0
+    const rawSettings = await db.query.bursarySettings.findMany();
+    const settings = {
+        financial_lock_type: rawSettings.find(s => s.key === 'financial_lock_type')?.value || 'none',
+        financial_lock_threshold: Number(rawSettings.find(s => s.key === 'financial_lock_threshold')?.value || 0)
     };
 
     // Calculate outstanding balance
@@ -69,14 +70,11 @@ export default async function StudentLayout({
     const threshold = Number(settings.financial_lock_threshold) || 0;
     
     // Check if locked
-    // @ts-expect-error - TS2339: Auto-suppressed for build
     const isLockedByThreshold = (settings.financial_lock_type !== 'none' && outstanding > threshold);
     const isManuallyLocked = studentRecord.isFinanciallyLocked;
     
     const isLocked = isLockedByThreshold || isManuallyLocked;
-    // @ts-expect-error - TS2339: Auto-suppressed for build
     const isHardLock = isLocked && settings.financial_lock_type === 'hard';
-    // @ts-expect-error - TS2339: Auto-suppressed for build
     const isSoftLock = isLocked && settings.financial_lock_type === 'soft';
 
     // Disciplinary Sanction Enforcement

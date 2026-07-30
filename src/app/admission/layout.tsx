@@ -1,23 +1,14 @@
-// @ts-nocheck
-import { Metadata } from "next";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
-import Link from "next/link";
-import { ApplicantSidebar } from "@/components/ApplicantSidebar";
 
-export const metadata: Metadata = {
-    title: "Applicant Portal",
-    description: "Applicant dashboard and application tracking",
-};
-
-export default async function ApplicantLayout({
+export default async function AdmissionLayout({
     children,
 }: {
     children: React.ReactNode;
 }) {
     const session = await auth();
 
-    // Prevent active students from accessing applicant flows
+    // Prevent active students from accessing admission/applicant flows
     // @ts-expect-error - TS18048: Auto-suppressed for build
     if (session?.user?.role === 'student') {
         return (
@@ -30,7 +21,7 @@ export default async function ApplicantLayout({
                     </div>
                     <h2 className="text-xl font-bold text-slate-900">Already a Student</h2>
                     <p className="text-slate-500 font-medium text-sm">
-                        You are already a registered student of this institution. You cannot access the applicant portal while logged in as a student.
+                        You are already a registered student of this institution. You cannot apply for a new admission while logged in as a student.
                     </p>
                     <div className="pt-4">
                         <a href="/student/dashboard" className="block w-full py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-colors">
@@ -42,21 +33,9 @@ export default async function ApplicantLayout({
         );
     }
 
-    // @ts-expect-error - TS18048: Auto-suppressed for build
-    if (!session || session.user.role !== 'applicant') {
-        redirect("/login");
-    }
-
     return (
-        <div className="min-h-screen bg-slate-950 flex flex-col md:flex-row print:bg-white">
-            <div className="print:hidden">
-                <ApplicantSidebar />
-            </div>
-
-            {/* Main Content */}
-            <main className="flex-1 p-6 md:p-12 overflow-y-auto print:p-0 print:overflow-visible print:bg-white">
-                {children}
-            </main>
-        </div>
+        <>
+            {children}
+        </>
     );
 }
