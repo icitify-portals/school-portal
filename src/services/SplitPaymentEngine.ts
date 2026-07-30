@@ -673,7 +673,7 @@ export class SplitPaymentEngine {
     }
 
     // Checkout for Admission Form (No student ID)
-    async checkoutAdmissionForm(applicationId: number, feeStructureId: number, applicantEmail: string, applicantName: string) {
+    async checkoutAdmissionForm(applicationId: number, feeStructureId: number, applicantEmail: string, applicantName: string, applicantPhone?: string) {
         // 1. Fetch Bursary Settings
         const settingsRecords = await db.query.bursarySettings.findMany();
         const settings: any = {};
@@ -805,7 +805,7 @@ export class SplitPaymentEngine {
             txRef,
             splits,
             feeBearerRule,
-            { studentLevel: "Applicant", payerName: applicantName, payerPhone: applicantUser?.phone }
+            { studentLevel: "Applicant", payerName: applicantName, payerPhone: applicantPhone || applicantUser?.phone, description: "2026/2027 Admission exercise" }
         );
         
         if (result.rrr) {

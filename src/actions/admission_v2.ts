@@ -1026,11 +1026,11 @@ export async function finalizeStudentAdmission(applicationId: number) {
 
 import { SplitPaymentEngine } from "@/services/SplitPaymentEngine";
 
-export async function processAdmissionPayment(applicationId: number, feeStructureId: number, applicantEmail: string, applicantName: string) {
+export async function processAdmissionPayment(applicationId: number, feeStructureId: number, applicantEmail: string, applicantName: string, applicantPhone?: string) {
     await requireApplicant();
     try {
         const engine = new SplitPaymentEngine();
-        const res = await engine.checkoutAdmissionForm(applicationId, feeStructureId, applicantEmail, applicantName);
+        const res = await engine.checkoutAdmissionForm(applicationId, feeStructureId, applicantEmail, applicantName, applicantPhone);
         return res;
     } catch (error: any) {
         console.error("Admission Payment Error:", error);

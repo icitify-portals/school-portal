@@ -563,7 +563,8 @@ export default function StatefulApplicationPage() {
             if (application.template.feeStructureId) {
                 // Proceed directly to payment
                 try {
-                    const res = await processAdmissionPayment(applicationId, application.template.feeStructureId!, session!.user!.email, session!.user!.name || "Applicant");
+                    const applicantPhone = application?.applicant?.phone || application?.phone || "";
+                    const res = await processAdmissionPayment(applicationId, application.template.feeStructureId!, session!.user!.email, session!.user!.name || "Applicant", applicantPhone);
                     if (res.success && res.checkoutUrl) {
                         window.location.href = res.checkoutUrl;
                     } else if (res.success && res.rrr) {
