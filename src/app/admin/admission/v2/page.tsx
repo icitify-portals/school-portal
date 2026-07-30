@@ -252,6 +252,12 @@ export default function AdminV2ApplicationsPage() {
                             <CheckCircle2 className="w-3.5 h-3.5 mr-2" /> Admit Selected
                         </Button>
                         <Button
+                            onClick={() => handleBulkAction('submitted')}
+                            className="rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-[10px] uppercase tracking-widest px-5 py-3"
+                        >
+                            Force Submit
+                        </Button>
+                        <Button
                             onClick={() => handleBulkAction('rejected')}
                             className="rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-black text-[10px] uppercase tracking-widest px-5 py-3"
                         >

@@ -860,7 +860,7 @@ export function Sidebar({ enabledModules = {}, mobileOpen = false, onClose }: {
                                                 "block px-3 py-1.5 text-[11px] font-bold rounded-lg transition-all",
                                                 pathname === sub.href
                                                     ? "bg-indigo-600/20 text-white"
-                                                    : "text-slate-400 hover:text-white hover:bg-white/5"
+                                                    : "text-white/90 hover:text-white hover:bg-white/10"
                                             )}
                                         >
                                             {sub.name.replace("Course", isK12 ? "Subject" : "Course").replace("course", isK12 ? "subject" : "course")}
