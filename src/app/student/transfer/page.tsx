@@ -203,7 +203,7 @@ export default function StudentTransferPage() {
                                     <div className="grid grid-cols-2 gap-4">
                                         <div>
                                             <Label className="text-[10px] font-black uppercase text-slate-400">Level</Label>
-                                            <p className="text-lg font-bold text-slate-900">{studentData?.currentLevel || 1}</p>
+                                            <p className="text-lg font-bold text-slate-900">{studentData?.programme?.programmeType ? `${studentData.programme.programmeType} ${studentData.currentLevel || 1}` : `Level ${studentData?.currentLevel || 1}`}</p>
                                         </div>
                                         <div>
                                             <Label className="text-[10px] font-black uppercase text-slate-400">Matric Number</Label>

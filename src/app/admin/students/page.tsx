@@ -145,7 +145,7 @@ function StudentsPageContent() {
                         <option value="">All Levels</option>
                         {levels.map((lvl) => (
                             <option key={lvl} value={lvl}>
-                                {isK12 ? `Grade ${lvl}` : `${lvl} Level`}
+                                {isK12 ? `Grade ${lvl}` : `Level ${lvl}`}
                             </option>
                         ))}
                     </select>
@@ -237,7 +237,7 @@ function StudentsPageContent() {
                                         </td>
                                         <td className="px-6 py-4">
                                             <span className="text-sm font-bold text-slate-600">
-                                                {isK12 ? `Grade ${s.currentLevel}` : `${s.currentLevel} L`}
+                                                {isK12 ? `Grade ${s.currentLevel}` : `${s.programme?.programmeType || ''} ${s.currentLevel}`.trim()}
                                             </span>
                                         </td>
                                         <td className="px-6 py-4">

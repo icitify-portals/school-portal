@@ -139,7 +139,7 @@ export default function StudentRegistration() {
                         </div>
                         <CardTitle className="text-4xl font-black italic uppercase tracking-tight text-slate-900">Portal Locked</CardTitle>
                         <p className="text-slate-400 font-bold uppercase tracking-widest text-xs leading-loose max-w-lg mx-auto">
-                            The registration portal is currently closed for your level ({student?.currentLevel}L).
+                            The registration portal is currently closed for your level ({student?.programme?.programmeType ? `${student.programme.programmeType} ${student.currentLevel}` : `Level ${student?.currentLevel}`}).
                             Standard enrollment is only available during the institution's official windows.
                         </p>
                     </CardHeader>
