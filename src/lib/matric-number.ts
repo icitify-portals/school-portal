@@ -70,8 +70,22 @@ export async function checkAndGenerateMatricNumber(studentId: number, tx: any) {
         
         const hasPaidAll = requiredFeeItemIds.every(id => paidFeeItemIds.has(id));
 
-        if (!hasPaidAll) {
-            console.log(`[Matric Generation] Student ${studentId} has not paid all required fees for matriculation.`);
+        // Calculate 60% total fees requirement
+        const allBills = await tx.select({
+            amount: studentBills.amount,
+            amountPaid: studentBills.amountPaid
+        }).from(studentBills).where(eq(studentBills.studentId, studentId));
+        
+        let totalBilled = 0;
+        let totalPaid = 0;
+        for (const bill of allBills) {
+            totalBilled += parseFloat(bill.amount?.toString() || '0');
+            totalPaid += parseFloat(bill.amountPaid?.toString() || '0');
+        }
+        const hasPaid60Percent = totalBilled > 0 ? (totalPaid >= totalBilled * 0.60) : true;
+
+        if (!hasPaidAll || !hasPaid60Percent) {
+            console.log(`[Matric Generation] Student ${studentId} failed conditions. RequiredFeesPaid: ${hasPaidAll}, 60%Paid: ${hasPaid60Percent}`);
             return false;
         }
 
@@ -117,20 +131,32 @@ export async function checkAndGenerateMatricNumber(studentId: number, tx: any) {
         prefix += `${year}/`;
 
         // 5. Get the next sequence
-        // We'll query students for the highest matric number starting with this prefix
+        // We'll query students for the highest matric number in the category (ND vs HND) for the year
+        const yearStr = `${year}`;
+        const searchPattern = `%/${yearStr}/%`;
+
         const [lastStudent] = await tx.select({ matricNumber: students.matricNumber })
             .from(students)
-            .where(sql`${students.matricNumber} LIKE ${prefix + '%'}`)
+            .where(
+                and(
+                    sql`${students.matricNumber} IS NOT NULL`,
+                    sql`${students.matricNumber} != ''`,
+                    sql`${students.matricNumber} LIKE ${searchPattern}`,
+                    isHND 
+                        ? sql`${students.matricNumber} LIKE '%HND%'` 
+                        : sql`${students.matricNumber} NOT LIKE '%HND%'`
+                )
+            )
             .orderBy(sql`CAST(SUBSTRING_INDEX(${students.matricNumber}, '/', -1) AS UNSIGNED) DESC`)
             .limit(1);
 
-        let nextSeq = 119000; // Starting sequence for FSS based on examples like 119613
+        let nextSeq = isHND ? 4103 : 120552;
         
         if (lastStudent && lastStudent.matricNumber) {
             const parts = lastStudent.matricNumber.split('/');
             const lastSeqStr = parts[parts.length - 1];
             const lastSeq = parseInt(lastSeqStr);
-            if (!isNaN(lastSeq)) {
+            if (!isNaN(lastSeq) && lastSeq >= nextSeq) {
                 nextSeq = lastSeq + 1;
             }
         }
