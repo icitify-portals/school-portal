@@ -5,6 +5,7 @@ import { TransactionsTable } from "./TransactionsTable";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
+export const dynamic = "force-dynamic";
 
 export default async function DeveloperFeeTransactionsPage() {
     // Fetch all developer fee transactions
