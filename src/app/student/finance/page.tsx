@@ -21,7 +21,8 @@ import {
     Sparkles,
     ShieldAlert,
     BookOpen,
-    GraduationCap
+    GraduationCap,
+    Archive
 } from "lucide-react";
 import { 
     getStudentLedger, 
@@ -30,7 +31,8 @@ import {
     getBursarySettings,
     payBillWithWalletAction,
     initializeOnlineCheckoutAction,
-    resolveOnlinePaymentAction
+    resolveOnlinePaymentAction,
+    getStudentPaymentHistory
 } from "@/actions/bursary";
 import { getStudentByUserId } from "@/actions/students";
 import { useSession } from "next-auth/react";
@@ -96,7 +98,12 @@ export default function StudentFinancePage() {
     const [student, setStudent] = useState<StudentProfile | null>(null);
     const [settings, setSettings] = useState<Record<string, string>>({});
     const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState<'ledger' | 'bills'>('ledger');
+    const [activeTab, setActiveTab] = useState<'ledger' | 'bills' | 'payments'>('ledger');
+    
+    // Payments State
+    const [legacyPayments, setLegacyPayments] = useState<any[]>([]);
+    const [subsequentOnlinePayments, setSubsequentOnlinePayments] = useState<any[]>([]);
+    const [subsequentWalletPayments, setSubsequentWalletPayments] = useState<any[]>([]);
 
     // Checkout Modal State
     const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
@@ -124,16 +131,22 @@ export default function StudentFinancePage() {
             setStudent(studentData as StudentProfile);
             const studentId = studentData.id;
 
-            const [ledgerData, billsData, summaryData, settingsData] = await Promise.all([
+            const [ledgerData, billsData, summaryData, settingsData, paymentHistory] = await Promise.all([
                 getStudentLedger(studentId),
                 getStudentBills(studentId),
                 getStudentFinancialSummary(studentId),
-                getBursarySettings()
+                getBursarySettings(),
+                getStudentPaymentHistory(parseInt(userId), studentId)
             ]);
             setLedger(ledgerData as LedgerEntry[]);
             setBills(billsData as Bill[]);
             setSummary(summaryData as FinancialSummary);
             setSettings(settingsData);
+            if (paymentHistory.success && paymentHistory.data) {
+                setLegacyPayments(paymentHistory.data.legacyPayments);
+                setSubsequentOnlinePayments(paymentHistory.data.subsequentOnlinePayments);
+                setSubsequentWalletPayments(paymentHistory.data.subsequentWalletPayments);
+            }
         } catch (error) {
             console.error("Failed to fetch financial data:", error);
         } finally {
@@ -411,6 +424,12 @@ export default function StudentFinancePage() {
                         >
                             My School Bills
                         </button>
+                        <button
+                            onClick={() => setActiveTab('payments')}
+                            className={cn("py-4 text-[10px] font-black uppercase tracking-widest border-b-2 px-4 transition-all", activeTab === 'payments' ? "border-indigo-600 text-indigo-600" : "border-transparent text-slate-400")}
+                        >
+                            Payment History
+                        </button>
                     </div>
                     <Button
                         variant="ghost"
@@ -491,7 +510,7 @@ export default function StudentFinancePage() {
                                 )}
                             </tbody>
                         </table>
-                    ) : (
+                    ) : activeTab === 'bills' ? (
                         <div className="p-8 space-y-6">
                             {bills.length === 0 ? (
                                 <div className="py-20 text-center text-slate-400 italic text-sm">No bills generated for your account yet.</div>
@@ -619,7 +638,97 @@ export default function StudentFinancePage() {
                                 })
                             )}
                         </div>
-                    )}
+                    ) : activeTab === 'payments' ? (
+                        <div className="p-8 space-y-12">
+                            {/* Subsequent Payments */}
+                            <div>
+                                <h4 className="text-sm font-black uppercase tracking-widest text-slate-800 mb-6 flex items-center gap-2">
+                                    <Sparkles className="w-4 h-4 text-indigo-600" /> Recent Portal Payments
+                                </h4>
+                                {subsequentOnlinePayments.length === 0 && subsequentWalletPayments.length === 0 ? (
+                                    <div className="py-10 text-center text-slate-400 italic text-sm border border-slate-100 rounded-2xl bg-slate-50">No recent payments recorded.</div>
+                                ) : (
+                                    <div className="space-y-4">
+                                        {/* Online Payments */}
+                                        {subsequentOnlinePayments.map(p => (
+                                            <div key={p.id} className="flex justify-between items-center p-5 rounded-2xl border border-slate-100 hover:shadow-md transition-all bg-white">
+                                                <div className="flex gap-4 items-center">
+                                                    <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600">
+                                                        <CreditCard className="w-5 h-5" />
+                                                    </div>
+                                                    <div>
+                                                        <h5 className="font-extrabold text-sm text-slate-900">{p.transactionType}</h5>
+                                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+                                                            {new Date(p.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })} • {p.paymentMethod}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <div className="text-right">
+                                                    <h4 className="font-black text-lg text-emerald-600">₦{parseFloat(p.amount).toLocaleString()}</h4>
+                                                    <span className="text-[9px] font-black bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-full uppercase">{p.status}</span>
+                                                </div>
+                                            </div>
+                                        ))}
+                                        {/* Wallet Payments (transactions) */}
+                                        {subsequentWalletPayments.map(p => (
+                                            <div key={p.id} className="flex justify-between items-center p-5 rounded-2xl border border-slate-100 hover:shadow-md transition-all bg-white">
+                                                <div className="flex gap-4 items-center">
+                                                    <div className="w-10 h-10 rounded-xl bg-teal-50 flex items-center justify-center text-teal-600">
+                                                        <Wallet className="w-5 h-5" />
+                                                    </div>
+                                                    <div>
+                                                        <h5 className="font-extrabold text-sm text-slate-900">{p.purpose}</h5>
+                                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+                                                            {new Date(p.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })} • Wallet Deduct
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <div className="text-right">
+                                                    <h4 className="font-black text-lg text-teal-600">₦{parseFloat(p.amount).toLocaleString()}</h4>
+                                                    <span className="text-[9px] font-black bg-teal-50 text-teal-600 px-2 py-0.5 rounded-full uppercase">{p.status}</span>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Legacy Payments */}
+                            <div>
+                                <h4 className="text-sm font-black uppercase tracking-widest text-slate-800 mb-6 flex items-center gap-2">
+                                    <History className="w-4 h-4 text-slate-500" /> Legacy Previous Payments
+                                </h4>
+                                {legacyPayments.length === 0 ? (
+                                    <div className="py-10 text-center text-slate-400 italic text-sm border border-slate-100 rounded-2xl bg-slate-50">No previous legacy payments found.</div>
+                                ) : (
+                                    <div className="space-y-4">
+                                        {legacyPayments.map(p => {
+                                            const metadata = p.metadata ? JSON.parse(p.metadata) : {};
+                                            return (
+                                                <div key={p.id} className="flex justify-between items-center p-5 rounded-2xl border border-slate-200 bg-slate-50 hover:border-slate-300 transition-all">
+                                                    <div className="flex gap-4 items-center">
+                                                        <div className="w-10 h-10 rounded-xl bg-slate-200 flex items-center justify-center text-slate-500">
+                                                            <Archive className="w-5 h-5" />
+                                                        </div>
+                                                        <div>
+                                                            <h5 className="font-extrabold text-sm text-slate-700">{p.transactionType.replace('Legacy FSS ', '')}</h5>
+                                                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">
+                                                                Session: {metadata.session || 'N/A'} • Legacy ID: {metadata.legacyId || 'N/A'}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <h4 className="font-black text-lg text-slate-700">₦{parseFloat(p.amount).toLocaleString()}</h4>
+                                                        <span className="text-[9px] font-black bg-slate-200 text-slate-600 px-2 py-0.5 rounded-full uppercase">Migrated</span>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    ) : null}
                 </div>
             </Card>
 

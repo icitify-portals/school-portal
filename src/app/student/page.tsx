@@ -35,6 +35,7 @@ import { HeroShop } from "@/components/ai/HeroShop";
 import { getStudentByUserId } from "@/actions/students";
 import { getStudentDashboardStats } from "@/actions/dashboards";
 import { getStudentLibraryFines } from "@/actions/library";
+import { ToggleableStatCard } from "@/components/student/ToggleableStatCard";
 import { cookies } from "next/headers";
 import { db } from "@/db/db";
 import { eq, and } from "drizzle-orm";
@@ -347,21 +348,16 @@ export default async function StudentDashboard() {
                     {/* Academic Stats Grid */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         {stats.map((stat) => (
-                            <Card key={stat.name} className="border border-white/40 shadow-xl shadow-slate-200/50 bg-white/60 backdrop-blur-3xl rounded-[2.5rem] hover:shadow-2xl transition-all relative overflow-hidden group">
-                                <div className={`absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform ${stat.color}`}>
-                                    <stat.icon className="w-16 h-16" />
-                                </div>
-                                <CardContent className="p-6">
-                                    <div className="flex items-center gap-4 mb-4">
-                                        <div className={`p-3 rounded-2xl ${stat.bg} shadow-inner`}>
-                                            <stat.icon className={`w-5 h-5 ${stat.color} drop-shadow-sm`} />
-                                        </div>
-                                        <span className="text-[10px] font-black uppercase text-slate-500 tracking-widest">{stat.name}</span>
-                                    </div>
-                                    <h3 className="text-3xl font-black text-slate-900 italic uppercase drop-shadow-sm">{stat.value}</h3>
-                                    <p className="text-xs text-slate-500 font-medium mt-1">{stat.desc}</p>
-                                </CardContent>
-                            </Card>
+                            <ToggleableStatCard
+                                key={stat.name}
+                                name={stat.name}
+                                value={stat.value}
+                                desc={stat.desc}
+                                color={stat.color}
+                                bg={stat.bg}
+                                iconBgNode={<stat.icon className="w-16 h-16" />}
+                                iconSmallNode={<stat.icon className={`w-5 h-5 ${stat.color} drop-shadow-sm`} />}
+                            />
                         ))}
                     </div>
 

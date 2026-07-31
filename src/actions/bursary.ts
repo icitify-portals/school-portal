@@ -3060,3 +3060,34 @@ export async function bulkDeleteTransactions(items: { id: number, sourceTable: '
         return { success: false, error: (error as Error).message };
     }
 }
+
+export async function getStudentPaymentHistory(userId: number, studentId: number) {
+    try {
+        const legacyPayments = await db.select()
+            .from(payment_transactions)
+            .where(and(
+                eq(payment_transactions.userId, userId),
+                eq(payment_transactions.paymentMethod, 'legacy')
+            ))
+            .orderBy(desc(payment_transactions.createdAt));
+
+        const subsequentOnlinePayments = await db.select()
+            .from(payment_transactions)
+            .where(and(
+                eq(payment_transactions.userId, userId),
+                ne(payment_transactions.paymentMethod, 'legacy')
+            ))
+            .orderBy(desc(payment_transactions.createdAt));
+
+        const subsequentWalletPayments = await db.select()
+            .from(transactions)
+            .where(eq(transactions.studentId, studentId))
+            .orderBy(desc(transactions.createdAt));
+
+        return { success: true, data: { legacyPayments, subsequentOnlinePayments, subsequentWalletPayments } };
+    } catch (error) {
+        console.error('Failed to fetch payment history:', error);
+        return { success: false, error: 'Failed to fetch payment history', data: { legacyPayments: [], subsequentOnlinePayments: [], subsequentWalletPayments: [] } };
+    }
+}
+
