@@ -30,9 +30,9 @@ async function uploadToCloud(filePath: string, provider: 's3' | 'wasabi') {
         bucket = await getSettingByKey('aws_s3_bucket') || process.env.AWS_S3_BUCKET;
     } else {
         region = await getSettingByKey('wasabi_region') || process.env.WASABI_REGION || 'us-east-1';
-        accessKey = await getSettingByKey('wasabi_access_key') || process.env.WASABI_ACCESS_KEY;
-        secretKey = await getSettingByKey('wasabi_secret_key') || process.env.WASABI_SECRET_KEY;
-        bucket = await getSettingByKey('wasabi_bucket') || process.env.WASABI_BUCKET;
+        accessKey = await getSettingByKey('wasabi_access_key') || process.env.WASABI_ACCESS_KEY_ID;
+        secretKey = await getSettingByKey('wasabi_secret_key') || process.env.WASABI_SECRET_ACCESS_KEY;
+        bucket = await getSettingByKey('wasabi_bucket') || process.env.WASABI_BUCKET_NAME;
         endpoint = `https://s3.${region}.wasabisys.com`;
     }
 

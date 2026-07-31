@@ -21,10 +21,10 @@ export interface PullOptions {
  * Supports both AWS S3 and Wasabi (custom endpoint) from env.
  */
 function buildS3Client(bucket?: string, key?: string): S3Client {
-    const accessKey = key || process.env.S3_ACCESS_KEY_ID || process.env.AWS_ACCESS_KEY_ID!;
-    const secretKey = process.env.S3_SECRET_ACCESS_KEY || process.env.AWS_SECRET_ACCESS_KEY!;
-    const endpoint = process.env.S3_ENDPOINT; // e.g. https://s3.wasabisys.com
-    const region   = process.env.S3_REGION   || process.env.AWS_REGION || "us-east-1";
+    const accessKey = key || process.env.S3_ACCESS_KEY_ID || process.env.AWS_ACCESS_KEY_ID || process.env.WASABI_ACCESS_KEY_ID!;
+    const secretKey = process.env.S3_SECRET_ACCESS_KEY || process.env.AWS_SECRET_ACCESS_KEY || process.env.WASABI_SECRET_ACCESS_KEY!;
+    const endpoint = process.env.S3_ENDPOINT || process.env.WASABI_ENDPOINT; // e.g. https://s3.wasabisys.com
+    const region   = process.env.S3_REGION   || process.env.AWS_REGION || process.env.WASABI_REGION || "us-east-1";
 
     return new S3Client({
         region,
@@ -35,7 +35,7 @@ function buildS3Client(bucket?: string, key?: string): S3Client {
 }
 
 function defaultBucket(): string {
-    return process.env.S3_BACKUP_BUCKET || process.env.S3_BUCKET || "school-portal-backups";
+    return process.env.S3_BACKUP_BUCKET || process.env.S3_BUCKET || process.env.WASABI_BUCKET_NAME || "school-portal-backups";
 }
 
 export class BackupService {
