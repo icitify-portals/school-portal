@@ -290,7 +290,17 @@ export async function assignCourseToLecturer(data: {
     role?: 'main' | 'co_lecturer';
 }) {
     try {
-        const allowed = await hasPermission("academic.timetable.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("hod");
+        const session = await auth();
+        const isAdmin = await hasRole(["admin", "superadmin"]) || await hasPermission("academic.timetable.manage");
+        let allowed = isAdmin;
+
+        if (!allowed && await hasRole("hod") && session?.user?.id) {
+            const [staffProfile] = await db.select().from(staffProfiles).where(eq(staffProfiles.userId, Number(session.user.id))).limit(1);
+            if (staffProfile && staffProfile.departmentId === data.deptId) {
+                allowed = true;
+            }
+        }
+
         if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to assign lecturer" };
         // Check if assignment already exists for this STAFF and COURSE
         const existing = await db.select().from(courseLecturers).where(and(
@@ -329,7 +339,18 @@ export async function assignCourseToLecturer(data: {
 
 export async function removeLecturerFromCourse(assignmentId: number) {
     try {
-        const allowed = await hasPermission("academic.timetable.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("hod");
+        const session = await auth();
+        const isAdmin = await hasRole(["admin", "superadmin"]) || await hasPermission("academic.timetable.manage");
+        let allowed = isAdmin;
+
+        if (!allowed && await hasRole("hod") && session?.user?.id) {
+            const [staffProfile] = await db.select().from(staffProfiles).where(eq(staffProfiles.userId, Number(session.user.id))).limit(1);
+            const [assignment] = await db.select().from(courseLecturers).where(eq(courseLecturers.id, assignmentId)).limit(1);
+            if (staffProfile && assignment && staffProfile.departmentId === assignment.deptId) {
+                allowed = true;
+            }
+        }
+
         if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to remove lecturer" };
         await db.delete(courseLecturers).where(eq(courseLecturers.id, assignmentId));
         revalidatePath("/admin/academics/timetable");
