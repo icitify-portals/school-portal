@@ -25,6 +25,9 @@ RUN adduser --system --uid 1001 nextjs
 # Install mysql-client to enable mysqldump for backup actions
 RUN apk add --no-cache mysql-client
 
+# Create backups directory with correct permissions so the Next.js user can write to it
+RUN mkdir -p /app/backups && chown nextjs:nodejs /app/backups
+
 COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
