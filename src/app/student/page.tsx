@@ -41,6 +41,9 @@ import { db } from "@/db/db";
 import { eq, and } from "drizzle-orm";
 import { institutionalUnits, medicalExcuses } from "@/db/schema";
 import DeveloperSubscriptionBanner from "@/components/finance/DeveloperSubscriptionBanner";
+import { NextUpWidget } from "@/components/student/NextUpWidget";
+import { SemesterProgress } from "@/components/student/SemesterProgress";
+import { PushSubscriptionToggle } from "@/components/notifications/PushSubscriptionToggle";
 
 export const dynamic = "force-dynamic";
 
@@ -202,34 +205,45 @@ export default async function StudentDashboard() {
             <DeveloperSubscriptionBanner />
 
             {/* Header Greeting Banner (FSS Style Bento) */}
-            <div className="flex flex-col md:flex-row items-center gap-6 bg-slate-900 text-white rounded-[3rem] p-8 lg:p-12 shadow-2xl relative overflow-hidden border border-slate-800">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-6 bg-slate-900 text-white rounded-[3rem] p-8 lg:p-12 shadow-2xl relative overflow-hidden border border-slate-800">
                 <div className="absolute inset-0 bg-gradient-to-r from-emerald-600/30 to-teal-600/30 opacity-50 mix-blend-overlay" />
                 <div className="absolute top-0 right-0 p-10 opacity-5 pointer-events-none">
                     <GraduationCap className="w-48 h-48 text-white" />
                 </div>
                 
-                <div className="w-24 h-24 rounded-[2.5rem] border-4 border-emerald-400/50 bg-emerald-900/55 flex items-center justify-center overflow-hidden shrink-0 shadow-lg relative z-10 backdrop-blur-sm">
-                    {studentRecord?.imageUrl ? (
-                        <img src={studentRecord.imageUrl} alt="Avatar" className="w-full h-full object-cover" />
-                    ) : (
-                        <User className="w-12 h-12 text-emerald-100 drop-shadow-md" />
-                    )}
-                </div>
-
-                <div className="space-y-2 relative z-10 text-center md:text-left">
-                    <h1 className="text-4xl lg:text-5xl font-black tracking-tighter text-white leading-none uppercase italic drop-shadow-md">
-                        Welcome, {studentInfo.name || `${studentInfo.firstName || ''} ${studentInfo.lastName || ''}`.trim() || 'Student'}
-                    </h1>
-                    <p className="text-slate-300 text-sm font-semibold tracking-wide uppercase opacity-90">
-                        Matriculation No: <span className="text-white font-mono font-black tracking-wider">{statsData?.matricNo || 'PENDING'}</span> • Level: <span className="text-white font-black">{statsData?.level || 1} Level</span>
-                    </p>
-                </div>
-
-                {isGraduated && (
-                    <div className="ml-auto bg-white/10 px-4 py-2 rounded-2xl border border-white/20 text-xs font-black uppercase tracking-widest text-emerald-100 shrink-0 relative z-10 backdrop-blur-md shadow-inner">
-                        Graduated
+                <div className="flex flex-col md:flex-row items-center gap-6 relative z-10 w-full">
+                    <div className="w-24 h-24 rounded-[2.5rem] border-4 border-emerald-400/50 bg-emerald-900/55 flex items-center justify-center overflow-hidden shrink-0 shadow-lg backdrop-blur-sm group hover:scale-105 transition-transform duration-300">
+                        {studentRecord?.imageUrl ? (
+                            <img src={studentRecord.imageUrl} alt="Avatar" className="w-full h-full object-cover" />
+                        ) : (
+                            <User className="w-12 h-12 text-emerald-100 drop-shadow-md group-hover:scale-110 transition-transform duration-300" />
+                        )}
                     </div>
-                )}
+
+                    <div className="space-y-2 text-center md:text-left flex-1">
+                        <h1 className="text-4xl lg:text-5xl font-black tracking-tighter text-white leading-none uppercase italic drop-shadow-md">
+                            Good Day, {studentInfo.name || `${studentInfo.firstName || ''} ${studentInfo.lastName || ''}`.trim() || 'Student'}
+                        </h1>
+                        <p className="text-slate-300 text-sm font-semibold tracking-wide uppercase opacity-90">
+                            Matriculation No: <span className="text-white font-mono font-black tracking-wider">{statsData?.matricNo || 'PENDING'}</span> • Level: <span className="text-white font-black">{statsData?.level || 1} Level</span>
+                        </p>
+                    </div>
+
+                    <div className="flex flex-col gap-3 items-center md:items-end">
+                        {isGraduated && (
+                            <div className="bg-white/10 px-4 py-2 rounded-2xl border border-white/20 text-xs font-black uppercase tracking-widest text-emerald-100 backdrop-blur-md shadow-inner">
+                                Graduated
+                            </div>
+                        )}
+                        <PushSubscriptionToggle />
+                    </div>
+                </div>
+            </div>
+
+            {/* Smart Dashboard Top Row: NextUp and Semester Progress */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+                <NextUpWidget />
+                <SemesterProgress />
             </div>
 
             {/* Medical Excuse Alert Banner */}
@@ -308,20 +322,20 @@ export default async function StudentDashboard() {
                         { name: "All Forms", href: "/student/clearance", icon: Clock, span: "col-span-1 row-span-1", color: "text-cyan-700 bg-cyan-50" },
                         { name: "Admission Letter", href: "/student/admission", icon: Award, span: "col-span-1 row-span-1", color: "text-rose-700 bg-rose-50" },
                         { name: "Biodata", href: "/profile", icon: User, span: "col-span-1 row-span-1", color: "text-sky-700 bg-sky-50" },
-                        { name: "Announcements", href: "/communications", icon: Megaphone, span: "col-span-2 row-span-1", color: "text-orange-700 bg-orange-50" },
+                        { name: "Notifications", href: "/student/notifications", icon: Megaphone, span: "col-span-2 row-span-1", color: "text-orange-700 bg-orange-50" },
                         { name: "Settings", href: "/profile", icon: Settings, span: "col-span-1 row-span-1", color: "text-slate-600 bg-slate-200" },
                     ].map((action, index) => {
                         const cardContent = (
                             <div className={cn(
-                                "bg-white/90 backdrop-blur-md border border-white/40 shadow-sm hover:shadow-xl transition-all duration-300 relative overflow-hidden group rounded-3xl h-full w-full flex flex-col justify-center",
+                                "bg-white/90 backdrop-blur-md border border-white/40 shadow-sm hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 relative overflow-hidden group rounded-3xl h-full w-full flex flex-col justify-center",
                                 action.span === "col-span-2 row-span-2" ? "items-start p-8" : "items-center text-center p-4",
                                 "active:scale-[0.98] cursor-pointer"
                             )}>
-                                <div className="absolute inset-0 bg-gradient-to-br from-white/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity z-0" />
-                                <div className={cn("relative z-10 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-110 shadow-inner", action.color, action.span === "col-span-2 row-span-2" ? "w-14 h-14 mb-4" : "w-12 h-12 mb-3 shrink-0")}>
+                                <div className="absolute inset-0 bg-gradient-to-br from-white/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity z-0 pointer-events-none" />
+                                <div className={cn("relative z-10 rounded-2xl flex items-center justify-center transition-all duration-500 group-hover:scale-110 group-hover:rotate-3 shadow-inner", action.color, action.span === "col-span-2 row-span-2" ? "w-14 h-14 mb-4" : "w-12 h-12 mb-3 shrink-0")}>
                                     <action.icon className={cn(action.span === "col-span-2 row-span-2" ? "w-7 h-7" : "w-5 h-5")} />
                                 </div>
-                                <span className={cn("relative z-10 font-bold text-slate-800 tracking-tight block", action.span === "col-span-2 row-span-2" ? "text-lg" : "text-xs uppercase leading-tight")}>
+                                <span className={cn("relative z-10 font-bold text-slate-800 tracking-tight block group-hover:text-black transition-colors", action.span === "col-span-2 row-span-2" ? "text-lg" : "text-xs uppercase leading-tight")}>
                                     {action.name}
                                 </span>
                             </div>
