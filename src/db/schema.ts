@@ -851,6 +851,9 @@ export const gatewaySubaccounts = mysqlTable('gateway_subaccounts', {
   settlementAccountId: int('settlement_account_id').references(() => settlementAccounts.id),
   gatewayName: mysqlEnum('gateway_name', ['paystack', 'flutterwave', 'remita', 'alatpay']).notNull(),
   gatewaySubaccountCode: varchar('gateway_subaccount_code', { length: 100 }).notNull(),
+  publicKey: varchar('public_key', { length: 255 }), // Allows isolated merchant accounts
+  secretKey: varchar('secret_key', { length: 255 }),
+  webhookSecret: varchar('webhook_secret', { length: 255 }),
 });
 
 export const feeItems = mysqlTable('fee_items', {
