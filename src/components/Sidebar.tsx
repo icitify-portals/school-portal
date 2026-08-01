@@ -83,6 +83,7 @@ const studentMenuItems: MenuItem[] = [
         icon: GraduationCap,
         subItems: [
             { name: "Admission Status", href: "/admission", module: "admission" },
+            { name: "Apply for HND / New Program", href: "/applicant" },
             { name: "Course Registration", href: "/student/registration" },
             { name: "Add/Drop Module", href: "/student/registration/add-drop" },
             { name: "My Registrations", href: "/student/registration" },
@@ -137,6 +138,7 @@ const studentMenuItems: MenuItem[] = [
         icon: Home,
         subItems: [
             { name: "Hostel Management", href: "/hostel", module: "hostels" },
+            { name: "Medical Form", href: "/student/medical" },
             { name: "SIWES Portal", href: "/student/siwes", module: "siwes" },
             { name: "Digital ID Card", href: "/student/id-card" },
             { name: "Library & OPAC", href: "/library", module: "library" },

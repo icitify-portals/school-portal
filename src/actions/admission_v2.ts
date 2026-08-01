@@ -924,26 +924,48 @@ export async function finalizeStudentAdmission(applicationId: number) {
             finalSignatureUrl = await processBase64Image(formData.signature, 'signatures');
         }
 
-        // 1. Create User - Handle new name structure (surname, firstName, middleName)
+        // 1. Check or Create User - Handle new name structure
         const userFullName = formData.surname 
             ? (formData.middleName 
                 ? `${formData.surname} ${formData.firstName} ${formData.middleName}`.trim()
                 : `${formData.surname} ${formData.firstName}`.trim())
             : `${formData.firstName || ''} ${formData.lastName || ''}`.trim() || formData.fullName || `Applicant ${application.id}`;
         
-        const defaultPasswordHash = await hash("Password123", 10);
-        const [userResult] = await db.insert(users).values({
-            name: userFullName,
-            email: formData.email || formData.guardianEmail || `applicant${application.id}@portal.edu`,
-            password: defaultPasswordHash, // Default: "Password123" — must be changed on first login
-            requiresPasswordChange: true,
-            role: 'student',
-            phone: formData.phone || formData.guardianPhone,
-            imageUrl: finalImageUrl,
-            status: 'active'
-        });
+        let userId = application.applicantId;
 
-        const userId = userResult.insertId;
+        if (userId) {
+            // Check if user exists
+            const existingUser = await db.query.users.findFirst({
+                where: eq(users.id, userId)
+            });
+            
+            if (existingUser) {
+                // If they are strictly an applicant, promote them to student
+                // If they are already a student (e.g. ND -> HND), we just leave them as student
+                if (existingUser.role === 'applicant') {
+                    await db.update(users)
+                        .set({ role: 'student', status: 'active', imageUrl: finalImageUrl || existingUser.imageUrl })
+                        .where(eq(users.id, userId));
+                }
+            } else {
+                userId = null;
+            }
+        }
+
+        if (!userId) {
+            const defaultPasswordHash = await hash("Password123", 10);
+            const [userResult] = await db.insert(users).values({
+                name: userFullName,
+                email: formData.email || formData.guardianEmail || `applicant${application.id}@portal.edu`,
+                password: defaultPasswordHash, // Default: "Password123" — must be changed on first login
+                requiresPasswordChange: true,
+                role: 'student',
+                phone: formData.phone || formData.guardianPhone,
+                imageUrl: finalImageUrl,
+                status: 'active'
+            });
+            userId = userResult.insertId;
+        }
 
         // 2. Create Student with extended mapping including Study Mode
         // @ts-expect-error - TS2769: Auto-suppressed for build
