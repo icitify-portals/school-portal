@@ -48,6 +48,11 @@ export default async function StudentLayout({
             activeSession.id
         );
         isLockedBySubscription = !isSubscriptionPaid;
+        
+        // Global Amnesty
+        if (activeSession.name.includes('2025/2026')) {
+            isLockedBySubscription = false;
+        }
     }
 
     const rawSettings = await db.query.bursarySettings.findMany();
@@ -73,7 +78,10 @@ export default async function StudentLayout({
     const isLockedByThreshold = (settings.financial_lock_type !== 'none' && outstanding > threshold);
     const isManuallyLocked = studentRecord.isFinanciallyLocked;
     
-    const isLocked = isLockedByThreshold || isManuallyLocked;
+    // Global Amnesty Enforcement for 2025/2026
+    const isAmnestyPeriod = activeSession?.name?.includes('2025/2026');
+    const isLocked = isAmnestyPeriod ? false : (isLockedByThreshold || isManuallyLocked);
+    
     const isHardLock = isLocked && settings.financial_lock_type === 'hard';
     const isSoftLock = isLocked && settings.financial_lock_type === 'soft';
 
