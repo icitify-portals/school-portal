@@ -747,11 +747,9 @@ export function Sidebar({ enabledModules = {}, mobileOpen = false, onClose }: {
                             <GraduationCap className="w-5 h-5 text-white" />
                         </div>
                     ) : (branding?.INST_LOGO?.trim() && branding.INST_LOGO !== 'null') ? (
-                        <img src={branding.INST_LOGO} alt="Logo" className="w-8 h-8 rounded-lg object-contain" onError={(e) => { e.currentTarget.src = "/logo.png"; }} />
+                        <img src={branding.INST_LOGO} alt="Logo" className="w-8 h-8 rounded-lg object-contain" onError={(e) => { e.currentTarget.src = "/fss_logo.png"; }} />
                     ) : (
-                        <div className="p-2 bg-indigo-600 rounded-lg shadow-lg shadow-indigo-500/20">
-                            <ShieldCheck className="w-5 h-5 text-white" />
-                        </div>
+                        <img src="/fss_logo.png" alt="Logo" className="w-8 h-8 rounded-lg object-contain" />
                     )}
                     <div>
                         <h1 className={cn(
