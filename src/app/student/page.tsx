@@ -225,7 +225,11 @@ export default async function StudentDashboard() {
                             Good Day, {studentInfo.name || `${studentInfo.firstName || ''} ${studentInfo.lastName || ''}`.trim() || 'Student'}
                         </h1>
                         <p className="text-slate-300 text-sm font-semibold tracking-wide uppercase opacity-90">
-                            Matriculation No: <span className="text-white font-mono font-black tracking-wider">{statsData?.matricNo || 'PENDING'}</span> • Level: <span className="text-white font-black">{statsData?.level || 1} Level</span>
+                            Matriculation No: <span className="text-white font-mono font-black tracking-wider">{statsData?.matricNo || 'PENDING'}</span> • Level: <span className="text-white font-black">
+                                {statsData?.studentStatus?.toLowerCase() === 'graduated' || statsData?.studentStatus?.toLowerCase() === 'alumni'
+                                    ? (statsData?.programmeType ? `${statsData.programmeType} Graduate` : 'Graduate')
+                                    : (statsData?.programmeType ? `${statsData.programmeType} ${statsData.level || 1}` : `Level ${statsData?.level || 1}`)}
+                            </span>
                         </p>
                     </div>
 

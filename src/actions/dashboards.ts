@@ -261,6 +261,8 @@ export async function getStudentDashboardStats(userId: number) {
             enrolledCourses: enrolledCourses.length,
             totalCredits: enrolledCourses.reduce((acc, c) => acc + (c.credits || 0), 0),
             level: student.currentLevel,
+            programmeType: programme?.programmeType,
+            studentStatus: student.status,
             matricNo: student.matricNumber || 'PENDING',
             cgpa,
             attendance: "94%",
