@@ -15,16 +15,19 @@ import {
     Calendar,
     Download
 } from "lucide-react";
-import { getAdmissionApplications, confirmAdmissionPayment } from "@/actions/admission_v2";
+import { getAdmissionApplications, confirmAdmissionPayment, deleteAdmissionApplication } from "@/actions/admission_v2";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { toast } from "sonner";
+import { Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 
 export default function AdmissionPaymentsPage() {
     const [applications, setApplications] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState("");
     const [filter, setFilter] = useState("all");
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 10;
 
     useEffect(() => {
         fetchApplications();
@@ -50,12 +53,32 @@ export default function AdmissionPaymentsPage() {
         }
     };
 
+    const handleDelete = async (id: number) => {
+        if (!confirm("Are you sure you want to delete this application? This action cannot be undone.")) return;
+        
+        const res = await deleteAdmissionApplication(id);
+        if (res.success) {
+            toast.success("Application deleted successfully");
+            fetchApplications();
+        } else {
+            toast.error(res.error);
+        }
+    };
+
     const filteredApps = applications.filter(app => {
         const matchesSearch = app.template.name.toLowerCase().includes(search.toLowerCase()) ||
                              (app.data && typeof app.data === 'string' && app.data.toLowerCase().includes(search.toLowerCase()));
         const matchesFilter = filter === "all" ? true : app.paymentStatus === filter;
         return matchesSearch && matchesFilter;
     });
+
+    const totalPages = Math.ceil(filteredApps.length / itemsPerPage);
+    const paginatedApps = filteredApps.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+    // Reset to page 1 when filter/search changes
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [search, filter]);
 
     return (
         <div className="p-4 sm:p-6 lg:p-8 min-h-screen">
@@ -107,6 +130,11 @@ export default function AdmissionPaymentsPage() {
                             {f}
                         </button>
                     ))}
+                    <div className="flex items-center px-4">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200 shadow-sm">
+                            Matches: <span className="text-emerald-600 ml-1">{filteredApps.length}</span>
+                        </span>
+                    </div>
                 </div>
             </div>
 
@@ -129,14 +157,14 @@ export default function AdmissionPaymentsPage() {
                                         <Loader2 className="w-10 h-10 animate-spin mx-auto text-indigo-500" />
                                     </td>
                                 </tr>
-                            ) : filteredApps.length === 0 ? (
+                            ) : paginatedApps.length === 0 ? (
                                 <tr>
                                     <td colSpan={5} className="px-8 py-20 text-center text-slate-400 font-bold uppercase text-[10px] tracking-widest italic">
                                         No matching transactions found
                                     </td>
                                 </tr>
                             ) : (
-                                filteredApps.map((app) => {
+                                paginatedApps.map((app) => {
                                     let data: any = {};
                                     try {
                                         data = typeof app.data === 'string' ? JSON.parse(app.data || "{}") : (app.data || {});
@@ -182,19 +210,30 @@ export default function AdmissionPaymentsPage() {
                                                 </span>
                                             </td>
                                             <td className="px-8 py-6 text-right">
-                                                {app.paymentStatus === 'pending' ? (
+                                                <div className="flex items-center justify-end gap-2">
+                                                    {app.paymentStatus === 'pending' ? (
+                                                        <Button 
+                                                            onClick={() => handleConfirm(app.id)}
+                                                            className="rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-black px-4 py-2 text-[9px] uppercase tracking-widest shadow-lg shadow-indigo-100"
+                                                        >
+                                                            Confirm Bank Pay
+                                                        </Button>
+                                                    ) : (
+                                                        <div className="flex flex-col items-end mr-4">
+                                                            <span className="text-[9px] font-black text-emerald-600 uppercase italic">Verified</span>
+                                                            <span className="text-[8px] font-bold text-slate-400 uppercase tracking-tighter">Ref: {app.paymentReference}</span>
+                                                        </div>
+                                                    )}
                                                     <Button 
-                                                        onClick={() => handleConfirm(app.id)}
-                                                        className="rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-black px-4 py-2 text-[9px] uppercase tracking-widest shadow-lg shadow-indigo-100"
+                                                        variant="ghost" 
+                                                        size="icon"
+                                                        onClick={() => handleDelete(app.id)}
+                                                        className="h-8 w-8 text-rose-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg"
+                                                        title="Remove Transaction"
                                                     >
-                                                        Confirm Bank Pay
+                                                        <Trash2 className="w-4 h-4" />
                                                     </Button>
-                                                ) : (
-                                                    <div className="flex flex-col items-end">
-                                                        <span className="text-[9px] font-black text-emerald-600 uppercase italic">Verified</span>
-                                                        <span className="text-[8px] font-bold text-slate-400 uppercase tracking-tighter">Ref: {app.paymentReference}</span>
-                                                    </div>
-                                                )}
+                                                </div>
                                             </td>
                                         </tr>
                                     );
@@ -203,6 +242,61 @@ export default function AdmissionPaymentsPage() {
                         </tbody>
                     </table>
                 </div>
+                
+                {/* Pagination Controls */}
+                {totalPages > 1 && (
+                    <div className="flex items-center justify-between px-8 py-4 bg-slate-50 border-t border-slate-100">
+                        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                            Showing <span className="text-slate-700">{(currentPage - 1) * itemsPerPage + 1}</span> to <span className="text-slate-700">{Math.min(currentPage * itemsPerPage, filteredApps.length)}</span> of <span className="text-slate-700">{filteredApps.length}</span> entries
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                disabled={currentPage === 1}
+                                className="h-8 rounded-xl border-slate-200 text-[10px] font-black uppercase tracking-widest"
+                            >
+                                <ChevronLeft className="w-4 h-4 mr-1" /> Prev
+                            </Button>
+                            <div className="flex items-center gap-1">
+                                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                                    // Show pages around current page
+                                    let pageNum = currentPage;
+                                    if (currentPage <= 3) pageNum = i + 1;
+                                    else if (currentPage >= totalPages - 2) pageNum = totalPages - 4 + i;
+                                    else pageNum = currentPage - 2 + i;
+                                    
+                                    if (pageNum < 1 || pageNum > totalPages) return null;
+                                    
+                                    return (
+                                        <button
+                                            key={pageNum}
+                                            onClick={() => setCurrentPage(pageNum)}
+                                            className={cn(
+                                                "w-8 h-8 rounded-xl text-[10px] font-black flex items-center justify-center transition-all",
+                                                currentPage === pageNum 
+                                                    ? "bg-slate-900 text-white shadow-md" 
+                                                    : "text-slate-500 hover:bg-slate-200"
+                                            )}
+                                        >
+                                            {pageNum}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                disabled={currentPage === totalPages}
+                                className="h-8 rounded-xl border-slate-200 text-[10px] font-black uppercase tracking-widest"
+                            >
+                                Next <ChevronRight className="w-4 h-4 ml-1" />
+                            </Button>
+                        </div>
+                    </div>
+                )}
             </Card>
         </div>
         </div>

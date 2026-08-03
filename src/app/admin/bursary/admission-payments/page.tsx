@@ -5,9 +5,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
     CreditCard, Search, Loader2, User, Calendar, CheckCircle2, XCircle,
-    Filter, FileText, Download, ExternalLink
+    Filter, FileText, Download, ExternalLink, Trash2, ChevronLeft, ChevronRight
 } from "lucide-react";
-import { getAdminV2Applications, confirmAdmissionPayment } from "@/actions/admission_v2";
+import { getAdminV2Applications, confirmAdmissionPayment, deleteAdmissionApplication } from "@/actions/admission_v2";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -18,6 +18,8 @@ export default function BursaryAdmissionPaymentsPage() {
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState("");
     const [filter, setFilter] = useState("all");
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 10;
 
     useEffect(() => { fetchData(); }, []);
 
@@ -46,6 +48,25 @@ export default function BursaryAdmissionPaymentsPage() {
         const matchesFilter = filter === "all" ? true : app.paymentStatus === filter;
         return matchesSearch && matchesFilter;
     });
+
+    const totalPages = Math.ceil(filtered.length / itemsPerPage);
+    const paginatedApps = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [search, filter]);
+
+    const handleDelete = async (id: number) => {
+        if (!confirm("Are you sure you want to delete this application? This action cannot be undone.")) return;
+        
+        const res = await deleteAdmissionApplication(id);
+        if (res.success) {
+            toast.success("Application deleted successfully");
+            fetchData();
+        } else {
+            toast.error(res.error);
+        }
+    };
 
     const paidTotal = data.applications.filter((a: any) => a.paymentStatus === 'paid').length;
     const pendingTotal = data.applications.filter((a: any) => a.paymentStatus === 'pending').length;
@@ -129,6 +150,11 @@ export default function BursaryAdmissionPaymentsPage() {
                                 {f}
                             </button>
                         ))}
+                        <div className="flex items-center px-4">
+                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200 shadow-sm">
+                                Matches: <span className="text-emerald-600 ml-1">{filtered.length}</span>
+                            </span>
+                        </div>
                     </div>
                 </div>
 
@@ -154,14 +180,14 @@ export default function BursaryAdmissionPaymentsPage() {
                                             <Loader2 className="w-10 h-10 animate-spin mx-auto text-emerald-500" />
                                         </td>
                                     </tr>
-                                ) : filtered.length === 0 ? (
+                                ) : paginatedApps.length === 0 ? (
                                     <tr>
                                         <td colSpan={8} className="px-8 py-20 text-center text-slate-400 font-bold uppercase text-[10px] tracking-widest italic">
                                             No admission payments found
                                         </td>
                                     </tr>
                                 ) : (
-                                    filtered.map((app: any) => (
+                                    paginatedApps.map((app: any) => (
                                         <tr key={app.id} className="hover:bg-slate-50 transition-colors group">
                                             <td className="px-8 py-6">
                                                 <div className="flex items-center gap-4">
@@ -223,6 +249,15 @@ export default function BursaryAdmissionPaymentsPage() {
                                                             Confirm
                                                         </Button>
                                                     )}
+                                                    <Button 
+                                                        variant="ghost" 
+                                                        size="icon"
+                                                        onClick={() => handleDelete(app.id)}
+                                                        className="h-8 w-8 text-rose-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg"
+                                                        title="Remove Transaction"
+                                                    >
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </Button>
                                                 </div>
                                             </td>
                                         </tr>
@@ -231,6 +266,61 @@ export default function BursaryAdmissionPaymentsPage() {
                             </tbody>
                         </table>
                     </div>
+                    
+                    {/* Pagination Controls */}
+                    {totalPages > 1 && (
+                        <div className="flex items-center justify-between px-8 py-4 bg-slate-50 border-t border-slate-100">
+                            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                                Showing <span className="text-slate-700">{(currentPage - 1) * itemsPerPage + 1}</span> to <span className="text-slate-700">{Math.min(currentPage * itemsPerPage, filtered.length)}</span> of <span className="text-slate-700">{filtered.length}</span> entries
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                    disabled={currentPage === 1}
+                                    className="h-8 rounded-xl border-slate-200 text-[10px] font-black uppercase tracking-widest"
+                                >
+                                    <ChevronLeft className="w-4 h-4 mr-1" /> Prev
+                                </Button>
+                                <div className="flex items-center gap-1">
+                                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                                        // Show pages around current page
+                                        let pageNum = currentPage;
+                                        if (currentPage <= 3) pageNum = i + 1;
+                                        else if (currentPage >= totalPages - 2) pageNum = totalPages - 4 + i;
+                                        else pageNum = currentPage - 2 + i;
+                                        
+                                        if (pageNum < 1 || pageNum > totalPages) return null;
+                                        
+                                        return (
+                                            <button
+                                                key={pageNum}
+                                                onClick={() => setCurrentPage(pageNum)}
+                                                className={cn(
+                                                    "w-8 h-8 rounded-xl text-[10px] font-black flex items-center justify-center transition-all",
+                                                    currentPage === pageNum 
+                                                        ? "bg-slate-900 text-white shadow-md" 
+                                                        : "text-slate-500 hover:bg-slate-200"
+                                                )}
+                                            >
+                                                {pageNum}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                    disabled={currentPage === totalPages}
+                                    className="h-8 rounded-xl border-slate-200 text-[10px] font-black uppercase tracking-widest"
+                                >
+                                    Next <ChevronRight className="w-4 h-4 ml-1" />
+                                </Button>
+                            </div>
+                        </div>
+                    )}
                 </Card>
             </div>
         </div>

@@ -546,6 +546,17 @@ export async function confirmAdmissionPayment(applicationId: number, reference: 
     }
 }
 
+export async function deleteAdmissionApplication(applicationId: number) {
+    await requireAdmin();
+    try {
+        await db.delete(admissionApplicationsV2).where(eq(admissionApplicationsV2.id, applicationId));
+        return { success: true };
+    } catch (error) {
+        console.error("Failed to delete application:", error);
+        return { success: false, error: "Failed to delete application" };
+    }
+}
+
 export async function getAdmissionSummary() {
     await requireAdmin();
     try {
