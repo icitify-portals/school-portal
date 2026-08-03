@@ -440,8 +440,8 @@ export default function FeesPage() {
                                         onChange={(e) => setStructLevel(e.target.value)}
                                     >
                                         <option value="0">Applicant</option>
-                                        <option value="1">Level 1</option>
-                                        <option value="2">Level 2</option>
+                                        <option value="1">ND 1 / HND 1</option>
+                                        <option value="2">ND 2 / HND 2</option>
                                     </select>
                                 </div>
                             </div>
@@ -530,8 +530,8 @@ export default function FeesPage() {
                                         onChange={(e) => setStructLevel(e.target.value)}
                                     >
                                         <option value="0">Applicant</option>
-                                        <option value="1">Level 1</option>
-                                        <option value="2">Level 2</option>
+                                        <option value="1">ND 1 / HND 1</option>
+                                        <option value="2">ND 2 / HND 2</option>
                                     </select>
                                 </div>
                             </div>
@@ -782,7 +782,7 @@ export default function FeesPage() {
                                     </td>
                                     <td className="px-6 py-4 text-sm text-slate-500">{s.academicYear}</td>
                                     <td className="px-6 py-4 text-sm text-slate-500">
-                                        {s.level === 0 ? "Applicant" : s.level === 1 ? "Level 1" : s.level === 2 ? "Level 2" : `${s.level} Level`}
+                                        {s.level === 0 ? "Applicant" : s.level === 1 ? "ND 1 / HND 1" : s.level === 2 ? "ND 2 / HND 2" : `${s.level} Level`}
                                     </td>
                                     <td className="px-6 py-4 text-sm text-slate-500 font-medium">
                                         {s.items?.length || 0} Fees
