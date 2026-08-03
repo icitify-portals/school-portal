@@ -6,7 +6,7 @@ async function migrate() {
 
     // Connect to both databases
     const oldDb = await createConnection('mysql://root:@127.0.0.1:3306/oldfsstable');
-    const newDb = await createConnection('mysql://root:@127.0.0.1:3306/school_portal');
+    const newDb = await createConnection('mysql://portal_user:StrongPassword123!@127.0.0.1:3307/school_portal');
 
     try {
         // 1. Fetch the legacy applicants (excluding 2025/2026 session)
@@ -80,7 +80,7 @@ async function migrate() {
 
             await newDb.execute(`
                 INSERT INTO admission_applications_v2 
-                (template_id, applicant_id, status, payment_status, payment_reference, form_data)
+                (template_id, applicant_id, status, payment_status, payment_reference, data)
                 VALUES (?, ?, 'paid', 'paid', ?, ?)
             `, [
                 templateId, 
