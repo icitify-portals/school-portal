@@ -6,7 +6,7 @@ async function migrate() {
 
     // Connect to both databases
     const oldDb = await createConnection('mysql://root:@127.0.0.1:3306/oldfsstable');
-    const newDb = await createConnection('mysql://portal_user:StrongPassword123!@127.0.0.1:3307/school_portal');
+    const newDb = await createConnection(process.env.DATABASE_URL || 'mysql://portal_user:PASSWORD_HERE@127.0.0.1:3307/school_portal');
 
     try {
         // 1. Fetch the legacy applicants (excluding 2025/2026 session)
