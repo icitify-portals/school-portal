@@ -440,10 +440,12 @@ export default function FeesPage() {
                                         onChange={(e) => setStructLevel(e.target.value)}
                                     >
                                         <option value="0">Applicant</option>
-                                        <option value="1">ND 1 / HND 1</option>
-                                        <option value="2">ND 2 / HND 2</option>
-                                        <option value="3">ND Graduated</option>
-                                        <option value="4">HND Graduated</option>
+                                        <option value="1">ND 1</option>
+                                        <option value="2">ND 2</option>
+                                        <option value="3">HND 1</option>
+                                        <option value="4">HND 2</option>
+                                        <option value="5">ND Graduated</option>
+                                        <option value="6">HND Graduated</option>
                                     </select>
                                 </div>
                             </div>
@@ -532,10 +534,12 @@ export default function FeesPage() {
                                         onChange={(e) => setStructLevel(e.target.value)}
                                     >
                                         <option value="0">Applicant</option>
-                                        <option value="1">ND 1 / HND 1</option>
-                                        <option value="2">ND 2 / HND 2</option>
-                                        <option value="3">ND Graduated</option>
-                                        <option value="4">HND Graduated</option>
+                                        <option value="1">ND 1</option>
+                                        <option value="2">ND 2</option>
+                                        <option value="3">HND 1</option>
+                                        <option value="4">HND 2</option>
+                                        <option value="5">ND Graduated</option>
+                                        <option value="6">HND Graduated</option>
                                     </select>
                                 </div>
                             </div>
@@ -786,7 +790,7 @@ export default function FeesPage() {
                                     </td>
                                     <td className="px-6 py-4 text-sm text-slate-500">{s.academicYear}</td>
                                     <td className="px-6 py-4 text-sm text-slate-500">
-                                        {s.level === 0 ? "Applicant" : s.level === 1 ? "ND 1 / HND 1" : s.level === 2 ? "ND 2 / HND 2" : s.level === 3 ? "ND Graduated" : s.level === 4 ? "HND Graduated" : `${s.level} Level`}
+                                        {s.level === 0 ? "Applicant" : s.level === 1 || s.level === 100 ? "ND 1" : s.level === 2 || s.level === 200 ? "ND 2" : s.level === 3 ? "HND 1" : s.level === 4 ? "HND 2" : s.level === 5 ? "ND Graduated" : s.level === 6 ? "HND Graduated" : `${s.level} Level`}
                                     </td>
                                     <td className="px-6 py-4 text-sm text-slate-500 font-medium">
                                         {s.items?.length || 0} Fees
