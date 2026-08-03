@@ -361,6 +361,11 @@ export class AlatpayAdapter implements PaymentGatewayAdapter {
         const payerPhone = meta?.payerPhone || meta?.phone || '';
         const description = meta?.description || '2026/2027 Admission exercise';
 
+        // Fallback to server-side env vars if no subaccount mapping was found
+        // (Next.js doesn't bake NEXT_PUBLIC_ vars into Docker builds if .env is missing at build-time)
+        if (!targetBusinessId) targetBusinessId = process.env.NEXT_PUBLIC_ALATPAY_BUSINESS_ID_MAIN;
+        if (!publicKey) publicKey = process.env.NEXT_PUBLIC_ALATPAY_API_KEY_MAIN;
+
         let checkoutUrl = `/finance/checkout/simulate?gateway=alatpay&reference=${txReference}&amount=${totalAmount}&firstName=${encodeURIComponent(payerFirstName)}&lastName=${encodeURIComponent(payerLastName)}&email=${encodeURIComponent(payerEmail)}&phone=${encodeURIComponent(payerPhone)}&description=${encodeURIComponent(description)}`;
         if (targetBusinessId) checkoutUrl += `&businessId=${targetBusinessId}`;
         if (publicKey) checkoutUrl += `&publicKey=${publicKey}`;
