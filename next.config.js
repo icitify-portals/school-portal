@@ -65,8 +65,22 @@ const nextConfig = {
   async headers() {
     return [
       {
+        // Apply security headers to all routes
         source: '/(.*)',
         headers: securityHeaders,
+      },
+      {
+        // Prevent browsers from caching HTML pages so server action IDs
+        // are always fresh after redeployments. This avoids the
+        // "Failed to find Server Action" error on clients with stale pages.
+        // Static assets (_next/static) are intentionally excluded and remain cached.
+        source: '/((?!_next/static|_next/image|favicon.ico).*)',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'no-store, must-revalidate',
+          },
+        ],
       },
     ];
   },
