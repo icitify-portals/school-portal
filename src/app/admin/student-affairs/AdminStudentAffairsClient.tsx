@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useRef, useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
@@ -479,7 +479,7 @@ export default function AdminStudentAffairsClient({
 
         <Card className="border-none shadow-xl rounded-2xl bg-white p-8 space-y-4">
           <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Event Revenues</p>
-          <h3 className="text-4xl font-black italic text-amber-600">\u20A6{stats.totalRevenue.toLocaleString()}</h3>
+          <h3 className="text-4xl font-black italic text-amber-600">₦{stats.totalRevenue.toLocaleString()}</h3>
           <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest italic">Settled registrations outlay</p>
         </Card>
       </div>
@@ -528,7 +528,7 @@ export default function AdminStudentAffairsClient({
                         <td className="px-6 py-6">
                           {event.isPaid ? (
                             <Badge className="bg-amber-50 text-amber-600 border-none font-black px-3 py-1 rounded-full text-[8px] italic">
-                              \u20A6{Number(event.fee).toLocaleString()}
+                              ₦{Number(event.fee).toLocaleString()}
                             </Badge>
                           ) : (
                             <Badge className="bg-emerald-50 text-emerald-600 border-none font-black px-3 py-1 rounded-full text-[8px]">
@@ -806,7 +806,7 @@ export default function AdminStudentAffairsClient({
 
             {eventIsPaid && (
               <div className="space-y-1">
-                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 block">Ticket Price (\u20A6)</label>
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 block">Ticket Price (₦)</label>
                 <Input 
                   type="number"
                   value={eventFee} 

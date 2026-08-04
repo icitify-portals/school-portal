@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useEffect, useState } from "react";
 import { getStudentLibraryFines, processLibraryFinePayment } from "@/actions/library";
@@ -79,7 +79,7 @@ export default function LibraryFinancePage() {
                     </CardHeader>
                     <CardContent className=" p-6">
                         <div className="text-4xl font-black mb-4">
-                            \u20A6{totalOwed}
+                            ₦{totalOwed}
                         </div>
                         {hasFines ? (
                             <div className="space-y-4">
@@ -138,7 +138,7 @@ export default function LibraryFinancePage() {
                                                     {row.fine.reason}
                                                 </Badge>
                                             </TableCell>
-                                            <TableCell className="text-right font-medium">\u20A6{row.fine.amount}</TableCell>
+                                            <TableCell className="text-right font-medium">₦{row.fine.amount}</TableCell>
                                         </TableRow>
                                     ))}
                                 </TableBody>

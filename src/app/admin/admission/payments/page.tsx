@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -198,7 +198,7 @@ export default function AdmissionPaymentsPage() {
                                                 </div>
                                             </td>
                                             <td className="px-8 py-6 font-black text-slate-900 italic">
-                                                \u20A6{app.template.applicationFee.toLocaleString()}
+                                                ₦{app.template.applicationFee.toLocaleString()}
                                             </td>
                                             <td className="px-8 py-6">
                                                 <span className={cn(

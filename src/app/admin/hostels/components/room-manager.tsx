@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import {
@@ -297,7 +297,7 @@ export function RoomManager({ hostelId, hostelName }: { hostelId: number, hostel
                                                     style={{ width: `${(r.occupiedCount / r.capacity) * 100}%` }}
                                                 />
                                             </div>
-                                            <p className="text-xs font-bold text-slate-700 mt-2">\u20A6{Number(r.price).toLocaleString()}</p>
+                                            <p className="text-xs font-bold text-slate-700 mt-2">₦{Number(r.price).toLocaleString()}</p>
                                         </div>
                                     </div>
                                 ))}

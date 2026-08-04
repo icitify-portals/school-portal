@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -427,9 +427,9 @@ export default function AdmissionBuilderPage() {
                                 <div className="flex items-center justify-between pt-4 border-t border-slate-50">
                                     <div className="flex flex-col">
                                         <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">App. Fee</p>
-                                        <p className="text-lg font-black text-slate-900">\u20A6{parseFloat(template.applicationFee || "0").toLocaleString()}</p>
+                                        <p className="text-lg font-black text-slate-900">₦{parseFloat(template.applicationFee || "0").toLocaleString()}</p>
                                         {parseFloat(template.processingFee || "0") > 0 && (
-                                            <p className="text-[10px] font-bold text-indigo-600">+ \u20A6{parseFloat(template.processingFee).toLocaleString()} processing</p>
+                                            <p className="text-[10px] font-bold text-indigo-600">+ ₦{parseFloat(template.processingFee).toLocaleString()} processing</p>
                                         )}
                                     </div>
                                     <div className="flex gap-2">
@@ -535,7 +535,7 @@ export default function AdmissionBuilderPage() {
                                     >
                                         <option value="">Select Bursary Fee Structure...</option>
                                         {feeStructures.map(fs => (
-                                            <option key={fs.id} value={fs.id}>{fs.name} (\u20A6{parseFloat(fs.totalAmount).toLocaleString()})</option>
+                                            <option key={fs.id} value={fs.id}>{fs.name} (₦{parseFloat(fs.totalAmount).toLocaleString()})</option>
                                         ))}
                                     </select>
                                     <p className="text-[9px] font-bold text-slate-500 px-1">Links to Remita Split Payment Engine</p>
@@ -555,7 +555,7 @@ export default function AdmissionBuilderPage() {
                                     <p className="text-[9px] font-bold text-slate-500 px-1">Controls the applicant portal experience</p>
                                 </div>
                                 <div className="space-y-2 hidden">
-                                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">Application Fee (\u20A6)</label>
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">Application Fee (₦)</label>
                                     <input
                                         type="number"
                                         className="w-full bg-slate-50 border-none rounded-2xl px-6 py-4 font-bold outline-none focus:ring-2 focus:ring-indigo-500"
@@ -565,7 +565,7 @@ export default function AdmissionBuilderPage() {
                                     />
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">Processing Fee (\u20A6) <span className="text-indigo-500">— Paystack</span></label>
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">Processing Fee (₦) <span className="text-indigo-500">— Paystack</span></label>
                                     <input
                                         type="number"
                                         className="w-full bg-slate-50 border-none rounded-2xl px-6 py-4 font-bold outline-none focus:ring-2 focus:ring-indigo-500"

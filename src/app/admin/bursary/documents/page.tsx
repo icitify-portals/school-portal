@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import { 
@@ -157,7 +157,7 @@ export default function BursaryDocumentPricing() {
                             </div>
                           </td>
                           <td className="px-8 py-4 text-right font-black text-slate-900 text-sm">
-                            \u20A6{parseFloat(rule.feeAmount).toLocaleString()}
+                            ₦{parseFloat(rule.feeAmount).toLocaleString()}
                           </td>
                         </tr>
                       ))
@@ -211,7 +211,7 @@ export default function BursaryDocumentPricing() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Configure Price (\u20A6)</label>
+                <label className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Configure Price (₦)</label>
                 <Input
                   required
                   type="number"

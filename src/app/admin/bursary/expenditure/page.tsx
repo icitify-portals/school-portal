@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -394,7 +394,7 @@ export default function ExpenditurePage() {
 
                                     <div className="p-6 lg:w-48 bg-slate-50/50 flex flex-col justify-center items-center text-center">
                                         <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Requested</p>
-                                        <p className="text-2xl font-bold text-slate-900">\u20A6{parseFloat(req.amount).toLocaleString()}</p>
+                                        <p className="text-2xl font-bold text-slate-900">₦{parseFloat(req.amount).toLocaleString()}</p>
                                     </div>
 
                                     <div className="p-6 lg:w-72 flex flex-col justify-center gap-4">

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import Link from "next/link";
@@ -59,7 +59,7 @@ export default function SettingsHubClient({ initialSettings, modulesCount }: Set
       category: "Branding & Profile",
       icon: Building2,
       iconBg: "bg-indigo-50 text-indigo-600",
-      status: "Epitome Academy / \u20A6"
+      status: "Epitome Academy / ₦"
     },
     {
       title: "Theme Customizer",

@@ -1,4 +1,4 @@
-// @ts-nocheck
+﻿// @ts-nocheck
 "use client";
 
 import { useState, useEffect } from "react";
@@ -173,7 +173,7 @@ export default function MaintenanceHeadDashboard() {
                     <CardContent className="p-4 flex items-center justify-between">
                         <div>
                             <p className="text-[10px] font-extrabold text-indigo-500 uppercase tracking-widest">Total Outlay Value</p>
-                            <h3 className="text-2xl font-black text-indigo-600 mt-1">\u20A6{stats.totalQuoteAmount.toLocaleString()}</h3>
+                            <h3 className="text-2xl font-black text-indigo-600 mt-1">₦{stats.totalQuoteAmount.toLocaleString()}</h3>
                         </div>
                         <div className="p-2.5 bg-indigo-50 rounded-lg text-indigo-500">
                             <DollarSign className="w-5 h-5" />
@@ -243,7 +243,7 @@ export default function MaintenanceHeadDashboard() {
                                                     </div>
                                                     <div className="text-right">
                                                         <span className="text-lg font-black text-indigo-600">
-                                                            \u20A6{parseFloat(quote.estimatedCost).toLocaleString()}
+                                                            ₦{parseFloat(quote.estimatedCost).toLocaleString()}
                                                         </span>
                                                         <p className="text-[10px] font-extrabold text-slate-400 uppercase">Estimated Cost</p>
                                                     </div>

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect } from 'react';
 import { 
@@ -157,11 +157,11 @@ export default function PayrollReconciliationDashboard() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
                   <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Expected</div>
-                  <div className="text-lg font-bold text-slate-900">\u20A6{parseFloat(selectedLog.totalExpected).toLocaleString()}</div>
+                  <div className="text-lg font-bold text-slate-900">₦{parseFloat(selectedLog.totalExpected).toLocaleString()}</div>
                 </div>
                 <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
                   <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Actual</div>
-                  <div className="text-lg font-bold text-slate-900">\u20A6{parseFloat(selectedLog.totalActual).toLocaleString()}</div>
+                  <div className="text-lg font-bold text-slate-900">₦{parseFloat(selectedLog.totalActual).toLocaleString()}</div>
                 </div>
               </div>
 
@@ -175,10 +175,10 @@ export default function PayrollReconciliationDashboard() {
                     <div key={i} className="p-3 bg-rose-50/50 border border-rose-100 rounded-xl space-y-1">
                       <div className="flex justify-between items-start">
                         <span className="text-[10px] font-bold text-rose-700 uppercase tracking-widest">{d.type}</span>
-                        {d.diff && <span className="text-[10px] font-bold text-rose-600">\u20A6{d.diff.toLocaleString()} diff</span>}
+                        {d.diff && <span className="text-[10px] font-bold text-rose-600">₦{d.diff.toLocaleString()} diff</span>}
                       </div>
                       <div className="text-sm font-bold text-slate-900">{d.name || d.email}</div>
-                      <div className="text-xs text-slate-500">{d.reason || `Expected \u20A6${d.expected?.toLocaleString()}, but paid \u20A6${d.actual?.toLocaleString()}`}</div>
+                      <div className="text-xs text-slate-500">{d.reason || `Expected ₦${d.expected?.toLocaleString()}, but paid ₦${d.actual?.toLocaleString()}`}</div>
                     </div>
                   ))}
                   {selectedLog.discrepancyDetails.length === 0 && (

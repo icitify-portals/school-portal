@@ -1,4 +1,4 @@
-
+﻿
 "use client";
 
 import { useState, useEffect } from "react";
@@ -141,7 +141,7 @@ export default function StudentRefundRequestPage() {
                                                     <option value="">Select previous payment...</option>
                                                     {ledger.map(tx => (
                                                         <option key={tx.id} value={tx.transactionId}>
-                                                            Ref: {tx.transactionId} - \u20A6{parseFloat(tx.credit).toLocaleString()} ({tx.description})
+                                                            Ref: {tx.transactionId} - ₦{parseFloat(tx.credit).toLocaleString()} ({tx.description})
                                                         </option>
                                                     ))}
                                                 </select>

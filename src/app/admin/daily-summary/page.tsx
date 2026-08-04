@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect } from "react";
 import { getDailySummary } from "@/actions/daily-summary";
@@ -125,7 +125,7 @@ export default function AdminDailySummaryPage() {
                     <CardContent className="relative z-10">
                         <div className="flex items-baseline gap-2">
                             <span className="text-5xl font-black tracking-tighter">
-                                {loading ? "..." : `\u20A6${Number(summary?.payments?.revenue || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}`}
+                                {loading ? "..." : `₦${Number(summary?.payments?.revenue || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}`}
                             </span>
                         </div>
                         <div className="mt-4 text-sm font-medium text-indigo-200 flex items-center gap-2">
@@ -254,7 +254,7 @@ export default function AdminDailySummaryPage() {
                                             </td>
                                             <td className="px-8 py-4 whitespace-nowrap text-xs font-black text-slate-900 text-right">
                                                 <span className={tx.type === 'credit' ? 'text-emerald-600' : 'text-rose-600'}>
-                                                    {tx.type === 'credit' ? '+' : '-'}\u20A6{parseFloat(tx.amount).toLocaleString()}
+                                                    {tx.type === 'credit' ? '+' : '-'}₦{parseFloat(tx.amount).toLocaleString()}
                                                 </span>
                                             </td>
                                         </tr>

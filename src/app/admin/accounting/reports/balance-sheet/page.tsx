@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -85,7 +85,7 @@ export default function BalanceSheetPage() {
                 </div>
                 <div className="text-left md:text-right relative z-10">
                     <p className="text-[10px] uppercase font-black tracking-widest opacity-60 mb-1">Variance</p>
-                    <p className="text-3xl font-black drop-shadow-md">\u20A6{Math.abs((report?.totalAssets || 0) - ((report?.totalLiabilities || 0) + (report?.totalEquity || 0))).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                    <p className="text-3xl font-black drop-shadow-md">₦{Math.abs((report?.totalAssets || 0) - ((report?.totalLiabilities || 0) + (report?.totalEquity || 0))).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
                 </div>
             </div>
 
@@ -106,7 +106,7 @@ export default function BalanceSheetPage() {
                                     {report?.assets?.map((acc: any) => (
                                         <tr key={acc.id} className="bg-white">
                                             <td className="py-4 px-6 text-sm font-bold text-slate-700">{acc.code} - {acc.name}</td>
-                                            <td className="py-4 px-6 text-right font-mono text-slate-900">\u20A6{acc.balance.toLocaleString()}</td>
+                                            <td className="py-4 px-6 text-right font-mono text-slate-900">₦{acc.balance.toLocaleString()}</td>
                                         </tr>
                                     ))}
                                     {report?.assets?.length === 0 && (
@@ -116,7 +116,7 @@ export default function BalanceSheetPage() {
                                 <tfoot>
                                     <tr className="bg-slate-900 text-white">
                                         <td className="py-5 px-6 text-sm font-black uppercase tracking-widest">Total Assets</td>
-                                        <td className="py-5 px-6 text-right font-black text-xl">\u20A6{report?.totalAssets?.toLocaleString()}</td>
+                                        <td className="py-5 px-6 text-right font-black text-xl">₦{report?.totalAssets?.toLocaleString()}</td>
                                     </tr>
                                 </tfoot>
                             </table>
@@ -140,7 +140,7 @@ export default function BalanceSheetPage() {
                                     {report?.liabilities?.map((acc: any) => (
                                         <tr key={acc.id} className="bg-white">
                                             <td className="py-4 px-6 text-sm font-bold text-slate-700">{acc.code} - {acc.name}</td>
-                                            <td className="py-4 px-6 text-right font-mono text-slate-900">\u20A6{acc.balance.toLocaleString()}</td>
+                                            <td className="py-4 px-6 text-right font-mono text-slate-900">₦{acc.balance.toLocaleString()}</td>
                                         </tr>
                                     ))}
                                     {report?.liabilities?.length === 0 && (
@@ -149,7 +149,7 @@ export default function BalanceSheetPage() {
                                 </tbody>
                                 <tr className="bg-rose-50/30">
                                     <td className="py-4 px-6 text-xs font-black text-rose-900 uppercase">Subtotal Liabilities</td>
-                                    <td className="py-4 px-6 text-right font-bold text-rose-900 font-mono">\u20A6{report?.totalLiabilities?.toLocaleString()}</td>
+                                    <td className="py-4 px-6 text-right font-bold text-rose-900 font-mono">₦{report?.totalLiabilities?.toLocaleString()}</td>
                                 </tr>
                             </table>
                         </CardContent>
@@ -169,7 +169,7 @@ export default function BalanceSheetPage() {
                                     {report?.equity?.map((acc: any) => (
                                         <tr key={acc.id} className="bg-white">
                                             <td className="py-4 px-6 text-sm font-bold text-slate-700">{acc.code} - {acc.name}</td>
-                                            <td className="py-4 px-6 text-right font-mono text-slate-900">\u20A6{acc.balance.toLocaleString()}</td>
+                                            <td className="py-4 px-6 text-right font-mono text-slate-900">₦{acc.balance.toLocaleString()}</td>
                                         </tr>
                                     ))}
                                     {report?.equity?.length === 0 && (
@@ -178,13 +178,13 @@ export default function BalanceSheetPage() {
                                 </tbody>
                                 <tr className="bg-emerald-50/30">
                                     <td className="py-4 px-6 text-xs font-black text-emerald-900 uppercase">Subtotal Equity</td>
-                                    <td className="py-4 px-6 text-right font-bold text-emerald-900 font-mono">\u20A6{report?.totalEquity?.toLocaleString()}</td>
+                                    <td className="py-4 px-6 text-right font-bold text-emerald-900 font-mono">₦{report?.totalEquity?.toLocaleString()}</td>
                                 </tr>
                                 <tfoot>
                                     <tr className="bg-slate-800 text-white">
                                         <td className="py-5 px-6 text-sm font-black uppercase tracking-widest">Total Liabilities & Equity</td>
                                         <td className="py-5 px-6 text-right font-black text-xl">
-                                            \u20A6{(report?.totalLiabilities + report?.totalEquity)?.toLocaleString()}
+                                            ₦{(report?.totalLiabilities + report?.totalEquity)?.toLocaleString()}
                                         </td>
                                     </tr>
                                 </tfoot>

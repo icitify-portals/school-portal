@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -104,7 +104,7 @@ export default function HostelSettingsForm({ hostelId, initialSettings }: {
                         </div>
                         {settings.paymentMode === 'standalone' && (
                             <div className="pt-2 animate-in fade-in slide-in-from-top-2">
-                                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block">Hostel Fee (\u20A6)</label>
+                                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block">Hostel Fee (₦)</label>
                                 <input
                                     type="number"
                                     step="0.01"

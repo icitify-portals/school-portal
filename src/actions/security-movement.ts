@@ -1,4 +1,4 @@
-"use server";
+﻿"use server";
 
 import { auth } from "@/auth";
 import { db } from "@/db/db";
@@ -170,7 +170,7 @@ async function checkBlockerConditions(qrData: QRPassData, scanType: string) {
     if (overdueCount > 0) {
       return {
         isBlocked: true,
-        reason: `Student has ${overdueCount} overdue book(s) and \u20A6${totalFines.toFixed(2)} in fines. Please clear library obligations before leaving.`,
+        reason: `Student has ${overdueCount} overdue book(s) and ₦${totalFines.toFixed(2)} in fines. Please clear library obligations before leaving.`,
         finesOwed: totalFines.toString(),
         photoUrl: overdueInfo?.userPhoto || null,
       };

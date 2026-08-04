@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -145,7 +145,7 @@ export default function AdminJournalPage() {
                                             <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="NGN">NGN (\u20A6)</SelectItem>
+                                            <SelectItem value="NGN">NGN (₦)</SelectItem>
                                             <SelectItem value="USD">USD ($)</SelectItem>
                                             <SelectItem value="GBP">GBP (£)</SelectItem>
                                         </SelectContent>

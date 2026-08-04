@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
@@ -311,7 +311,7 @@ export default function StudentTransferPage() {
                                 <>
                                     <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing...
                                 </>
-                            ) : (transferFee > 0 ? `Pay \u20A6${transferFee.toLocaleString()} & Submit` : "Submit Application")}
+                            ) : (transferFee > 0 ? `Pay ₦${transferFee.toLocaleString()} & Submit` : "Submit Application")}
                         </Button>
                     </div>
                 </form>

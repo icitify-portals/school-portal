@@ -1,4 +1,4 @@
-import { db } from "@/db/db";
+﻿import { db } from "@/db/db";
 import { transactions, directPayments, students, users, studentBills, studentBillItems, studentLedger, walletTransactions, feeItems } from "@/db/schema";
 import { eq, and, sql, desc, inArray } from "drizzle-orm";
 import crypto from "crypto";
@@ -201,9 +201,9 @@ export class PaymentService {
 
                     if (amount < (minFirstPayment - 0.01) && Math.abs(amount - outstanding) > 0.01) {
                         throw new Error(
-                            `In tuition-installment mode, you must pay all non-tuition items (\u20A6${otherTotal.toLocaleString()}) ` +
-                            `plus ${(installPct * 100).toFixed(0)}% of tuition (\u20A6${tuitionPart.toLocaleString()}). ` +
-                            `Minimum first payment: \u20A6${minFirstPayment.toLocaleString()}`
+                            `In tuition-installment mode, you must pay all non-tuition items (₦${otherTotal.toLocaleString()}) ` +
+                            `plus ${(installPct * 100).toFixed(0)}% of tuition (₦${tuitionPart.toLocaleString()}). ` +
+                            `Minimum first payment: ₦${minFirstPayment.toLocaleString()}`
                         );
                     }
                 }
@@ -214,18 +214,18 @@ export class PaymentService {
 
                 if (currentPaid < 0.01) {
                     if (amount < minAllowedAmount - 0.01 && Math.abs(amount - outstanding) > 0.01) {
-                        throw new Error(`Minimum initial installment payment of \u20A6${minAllowedAmount.toLocaleString()} (${minPercent}%) is required.`);
+                        throw new Error(`Minimum initial installment payment of ₦${minAllowedAmount.toLocaleString()} (${minPercent}%) is required.`);
                     }
                 }
 
                 if (!allowed && Math.abs(amount - outstanding) > 0.01) {
-                    throw new Error(`Installments are not enabled for this payment. Full payment of \u20A6${outstanding.toFixed(2)} is required.`);
+                    throw new Error(`Installments are not enabled for this payment. Full payment of ₦${outstanding.toFixed(2)} is required.`);
                 }
             }
 
             const newPaid = currentPaid + amount;
             if (newPaid > totalAmount + 0.01) {
-                throw new Error(`Payment amount exceeds outstanding bill balance. Max payable: \u20A6${outstanding.toFixed(2)}`);
+                throw new Error(`Payment amount exceeds outstanding bill balance. Max payable: ₦${outstanding.toFixed(2)}`);
             }
 
             // 3. Update student wallet balance

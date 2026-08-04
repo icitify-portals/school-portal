@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect } from 'react';
 import { 
@@ -149,7 +149,7 @@ export default function StudentTranscriptPortal() {
                     <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center shrink-0"><CreditCard size={16} /></div>
                     <div>
                        <div className="text-sm font-bold">Order Fee</div>
-                       <div className="text-xs text-indigo-100 opacity-80">\u20A65,000 Flat Rate per institutional copy.</div>
+                       <div className="text-xs text-indigo-100 opacity-80">₦5,000 Flat Rate per institutional copy.</div>
                     </div>
                  </div>
               </div>
@@ -221,7 +221,7 @@ export default function StudentTranscriptPortal() {
 
                 <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex justify-between items-center">
                    <div className="text-sm font-bold text-slate-600">Administrative Processing Fee</div>
-                   <div className="text-xl font-black text-slate-900">\u20A65,000.00</div>
+                   <div className="text-xl font-black text-slate-900">₦5,000.00</div>
                 </div>
 
                 <button 

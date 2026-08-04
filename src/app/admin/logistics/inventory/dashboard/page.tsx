@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect } from 'react';
 import { 
@@ -193,7 +193,7 @@ export default function InventoryDashboard() {
               </div>
               <div className="pt-6 border-t border-white/10 flex justify-between items-center">
                  <div className="text-xs font-bold text-slate-500 uppercase tracking-widest">Total Valuation</div>
-                 <div className="text-xl font-black text-indigo-400">\u20A624.8M</div>
+                 <div className="text-xl font-black text-indigo-400">₦24.8M</div>
               </div>
            </div>
 

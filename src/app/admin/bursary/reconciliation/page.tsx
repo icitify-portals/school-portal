@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -167,7 +167,7 @@ export default function BankReconciliationPage() {
                                                             Ref: {entry.reference} • {new Date(entry.transactionDate).toLocaleDateString()}
                                                         </p>
                                                         <p className="text-xs font-black text-slate-900 mt-1">
-                                                            \u20A6{Number(parseFloat(entry.credit) > 0 ? entry.credit : entry.debit).toLocaleString()}
+                                                            ₦{Number(parseFloat(entry.credit) > 0 ? entry.credit : entry.debit).toLocaleString()}
                                                         </p>
                                                     </div>
                                                 </div>

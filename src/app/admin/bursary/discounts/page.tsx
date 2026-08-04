@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -95,7 +95,7 @@ export default function DiscountsDashboardPage() {
                                 <div className="p-8 w-full md:w-80 bg-white/20 flex flex-col justify-center items-center text-center">
                                     <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Granting</p>
                                     <p className="text-3xl font-black text-indigo-600">
-                                        {discount.percentage ? `${discount.percentage}%` : `\u20A6${discount.amount}`}
+                                        {discount.percentage ? `${discount.percentage}%` : `₦${discount.amount}`}
                                     </p>
                                     <span className="mt-3 bg-indigo-100 text-indigo-700 border border-indigo-200 text-[10px] font-black uppercase tracking-wider px-3 py-1.5 rounded-full shadow-sm">
                                         {discount.feeItem?.name || "General Fee"}

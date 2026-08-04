@@ -1,4 +1,4 @@
-// @ts-nocheck
+﻿// @ts-nocheck
 "use client";
 
 import { useState, useEffect } from "react";
@@ -501,10 +501,10 @@ export default function TransportationAnalytics() {
                     <div className="ml-4">
                       <p className="text-sm font-medium text-gray-600">Total Revenue</p>
                       
-                      <p className="text-2xl font-bold text-gray-900">\u20A6{analytics.summary.trips.totalRevenue.toLocaleString()}</p>
+                      <p className="text-2xl font-bold text-gray-900">₦{analytics.summary.trips.totalRevenue.toLocaleString()}</p>
                       <p className="text-xs text-gray-500">
                         
-                        \u20A6{Math.round(analytics.summary.trips.totalRevenue / analytics.summary.trips.totalTrips)} per trip
+                        ₦{Math.round(analytics.summary.trips.totalRevenue / analytics.summary.trips.totalTrips)} per trip
                       </p>
                     </div>
                   </div>
@@ -520,7 +520,7 @@ export default function TransportationAnalytics() {
                     <div className="ml-4">
                       <p className="text-sm font-medium text-gray-600">Fuel Cost</p>
                       
-                      <p className="text-2xl font-bold text-gray-900">\u20A6{analytics.summary.fuel.totalFuelCost.toLocaleString()}</p>
+                      <p className="text-2xl font-bold text-gray-900">₦{analytics.summary.fuel.totalFuelCost.toLocaleString()}</p>
                       <p className="text-xs text-gray-500">
                         
                         {analytics.summary.fuel.totalLiters} liters
@@ -690,7 +690,7 @@ export default function TransportationAnalytics() {
                         <Input id="scheduledDate" name="scheduledDate" type="date" required />
                       </div>
                       <div>
-                        <Label htmlFor="cost">Cost (\u20A6) *</Label>
+                        <Label htmlFor="cost">Cost (₦) *</Label>
                         <Input id="cost" name="cost" type="number" step="0.01" required />
                       </div>
                       <div>
@@ -847,11 +847,11 @@ export default function TransportationAnalytics() {
                         <Input id="quantityLiters" name="quantityLiters" type="number" step="0.01" required />
                       </div>
                       <div>
-                        <Label htmlFor="costPerLiter">Cost per Liter (\u20A6) *</Label>
+                        <Label htmlFor="costPerLiter">Cost per Liter (₦) *</Label>
                         <Input id="costPerLiter" name="costPerLiter" type="number" step="0.01" required />
                       </div>
                       <div>
-                        <Label htmlFor="totalCost">Total Cost (\u20A6) *</Label>
+                        <Label htmlFor="totalCost">Total Cost (₦) *</Label>
                         <Input id="totalCost" name="totalCost" type="number" step="0.01" required />
                       </div>
                       <div>
@@ -922,7 +922,7 @@ export default function TransportationAnalytics() {
                       <div className="flex justify-between">
                         <span>Total Cost:</span>
                         
-                        <span className="font-bold">\u20A6{fuelReport.summary?.totalFuelCost || 0}</span>
+                        <span className="font-bold">₦{fuelReport.summary?.totalFuelCost || 0}</span>
                       </div>
                       <div className="flex justify-between">
                         <span>Total Liters:</span>
@@ -932,7 +932,7 @@ export default function TransportationAnalytics() {
                       <div className="flex justify-between">
                         <span>Avg Cost/Liter:</span>
                         
-                        <span className="font-bold">\u20A6{fuelReport.summary?.avgCostPerLiter || 0}</span>
+                        <span className="font-bold">₦{fuelReport.summary?.avgCostPerLiter || 0}</span>
                       </div>
                     </div>
                   </CardContent>
@@ -1048,7 +1048,7 @@ export default function TransportationAnalytics() {
                         <Input id="location" name="location" required />
                       </div>
                       <div>
-                        <Label htmlFor="estimatedCost">Estimated Cost (\u20A6) *</Label>
+                        <Label htmlFor="estimatedCost">Estimated Cost (₦) *</Label>
                         <Input id="estimatedCost" name="estimatedCost" type="number" step="0.01" required />
                       </div>
                       <div>
@@ -1133,7 +1133,7 @@ export default function TransportationAnalytics() {
                         </div>
                         <div className="text-sm text-gray-500 mt-1">
                           
-                          Cost: \u20A6{incident.incident.estimatedCost}
+                          Cost: ₦{incident.incident.estimatedCost}
                         </div>
                         <div className="text-sm text-gray-500">
                           

@@ -1,4 +1,4 @@
-"use server";
+﻿"use server";
 
 import { db } from "@/db/db";
 import { payrollLogs, staffProfiles, users, generalLedger } from "@/db/schema";
@@ -102,7 +102,7 @@ export async function approvePayrollBatch(batchId: string) {
                         <p>Your salary for <strong>${log.month}/${log.year}</strong> has been processed successfully.</p>
                         <div style="background: #f9fafb; padding: 20px; border-radius: 8px; margin: 20px 0;">
                             <p style="margin: 0; font-size: 14px; color: #6b7280;">Net Salary Disbursed</p>
-                            <h1 style="margin: 0; color: #111827;">\u20a6${log.netPay}</h1>
+                            <h1 style="margin: 0; color: #111827;">₦${log.netPay}</h1>
                         </div>
                         <p style="font-size: 14px; color: #6b7280;">You can view and download your full breakdown from the staff portal.</p>
                         <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;" />

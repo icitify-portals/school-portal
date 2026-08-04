@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -40,7 +40,7 @@ export default function BursarSubscriptionTable({ initialData }: { initialData: 
             // We simulate the gateway return reference here.
             const ref = `BULK-DEV-${Date.now()}`;
             await processBulkSubscriptionPayment(selected, ref);
-            toast.success(`Successfully paid \u20A6${totalSelectedAmount.toLocaleString()} for ${selected.length} students.`);
+            toast.success(`Successfully paid ₦${totalSelectedAmount.toLocaleString()} for ${selected.length} students.`);
             setSelected([]);
         } catch (e: any) {
             toast.error(e.message);
@@ -53,7 +53,7 @@ export default function BursarSubscriptionTable({ initialData }: { initialData: 
         <Card className=" border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
             <div className="p-4 flex items-center justify-between border-b bg-slate-50 dark:bg-slate-900">
                 <div className="text-sm">
-                    <span className="font-semibold">{selected.length}</span> selected • Total: <span className="font-bold text-lg text-blue-600">\u20A6{totalSelectedAmount.toLocaleString()}</span>
+                    <span className="font-semibold">{selected.length}</span> selected • Total: <span className="font-bold text-lg text-blue-600">₦{totalSelectedAmount.toLocaleString()}</span>
                 </div>
                 <Button onClick={handleBulkPay} disabled={selected.length === 0 || loading}>
                     {loading ? "Processing..." : "Process Bulk Payment"}
@@ -96,7 +96,7 @@ export default function BursarSubscriptionTable({ initialData }: { initialData: 
                                     <TableCell className="font-medium">{sub.studentName}</TableCell>
                                     <TableCell>{sub.matricNo}</TableCell>
                                     <TableCell>{sub.session}</TableCell>
-                                    <TableCell className="text-right font-bold">\u20A6{parseFloat(sub.amountDue).toLocaleString()}</TableCell>
+                                    <TableCell className="text-right font-bold">₦{parseFloat(sub.amountDue).toLocaleString()}</TableCell>
                                 </TableRow>
                             ))
                         )}

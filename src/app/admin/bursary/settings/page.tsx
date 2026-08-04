@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -441,7 +441,7 @@ export default function BursarySettingsPage() {
                             </div>
 
                             <div className="space-y-2">
-                                <label className="text-sm font-bold text-slate-700">Default Minimum Flat Amount (\u20A6)</label>
+                                <label className="text-sm font-bold text-slate-700">Default Minimum Flat Amount (₦)</label>
                                 <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tight">Enforced minimum flat currency amount threshold</p>
                                 <input
                                     type="number"
@@ -531,7 +531,7 @@ export default function BursarySettingsPage() {
                         {settings['gateway_paystack_active'] === "true" && (
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-indigo-50/50 rounded-xl border border-indigo-100">
                                 <div className="space-y-2">
-                                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider text-indigo-700">Paystack Admin Fee (\u20A6)</label>
+                                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider text-indigo-700">Paystack Admin Fee (₦)</label>
                                     <div className="flex items-center gap-2 mt-2">
                                         <input
                                             type="number"
@@ -885,7 +885,7 @@ export default function BursarySettingsPage() {
                                                     {item.category}
                                                 </Badge>
                                             </td>
-                                            <td className="p-4 font-mono text-slate-700">\u20A6{parseFloat(item.defaultAmount).toLocaleString()}</td>
+                                            <td className="p-4 font-mono text-slate-700">₦{parseFloat(item.defaultAmount).toLocaleString()}</td>
                                             <td className="p-4">
                                                 <select
                                                     className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs focus:ring-1 focus:ring-indigo-500 bg-white outline-none w-full max-w-xs"

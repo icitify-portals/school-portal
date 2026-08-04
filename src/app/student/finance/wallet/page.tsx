@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { 
@@ -157,7 +157,7 @@ export default function StudentWalletPortal() {
                     <div className="text-[10px] font-black text-indigo-200 uppercase tracking-widest flex items-center gap-1.5">
                       <Sparkles className="w-3.5 h-3.5" /> Available Wallet Balance
                     </div>
-                    <div className="text-5xl font-black tracking-tight">\u20A6{availableBalance}</div>
+                    <div className="text-5xl font-black tracking-tight">₦{availableBalance}</div>
                  </div>
                  <div className="p-3.5 bg-white/10 rounded-2xl backdrop-blur-md">
                     <TrendingUp size={24} />
@@ -181,7 +181,7 @@ export default function StudentWalletPortal() {
 
               <div className="pt-2 flex justify-between items-center relative z-10">
                  <div className="text-[9px] font-bold text-indigo-300 uppercase tracking-widest">Previous Payments</div>
-                 <div className="font-mono text-[10px] font-bold tracking-widest uppercase">\u20A6{parseFloat(data?.legacyBalance || "0").toLocaleString()}</div>
+                 <div className="font-mono text-[10px] font-bold tracking-widest uppercase">₦{parseFloat(data?.legacyBalance || "0").toLocaleString()}</div>
               </div>
            </div>
 
@@ -251,7 +251,7 @@ export default function StudentWalletPortal() {
                              </div>
                              <div className="flex flex-col items-end">
                                 <div className={`text-lg font-black ${tx.type === 'credit' ? 'text-emerald-600' : 'text-slate-900'}`}>
-                                   {tx.type === 'credit' ? '+' : '-'}\u20A6{parseFloat(tx.amount).toLocaleString()}
+                                   {tx.type === 'credit' ? '+' : '-'}₦{parseFloat(tx.amount).toLocaleString()}
                                 </div>
                                 {tx.paymentTransactionId && (
                                    <Button
@@ -319,7 +319,7 @@ export default function StudentWalletPortal() {
                   <div className="space-y-6">
                     <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 flex justify-between items-center">
                       <span className="text-sm font-medium text-slate-500">Amount</span>
-                      <span className="text-lg font-black text-slate-900">\u20A6{remitaData.amount.toLocaleString()}</span>
+                      <span className="text-lg font-black text-slate-900">₦{remitaData.amount.toLocaleString()}</span>
                     </div>
                     <div className="w-full">
                       <RemitaInlineCheckout 
@@ -376,7 +376,7 @@ export default function StudentWalletPortal() {
                           onClick={() => setCustomAmount(amt.toString())}
                           className="py-2.5 px-3 bg-slate-50 hover:bg-indigo-50 hover:text-indigo-600 rounded-xl border border-slate-100 hover:border-indigo-200 text-xs font-extrabold transition-all text-slate-700"
                         >
-                          \u20A6{amt.toLocaleString()}
+                          ₦{amt.toLocaleString()}
                         </button>
                       ))}
                     </div>
@@ -384,7 +384,7 @@ export default function StudentWalletPortal() {
 
                   {/* Custom input */}
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Enter Custom Amount (\u20A6)</label>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Enter Custom Amount (₦)</label>
                     <input
                       type="number"
                       required

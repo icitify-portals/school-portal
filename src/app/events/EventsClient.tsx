@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
@@ -304,7 +304,7 @@ export default function EventsClient({ initialEvents, session, userRegistrations
                       {event.isPaid ? (
                         <>
                           <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">REGISTRATION FEE</p>
-                          <p className="text-xl font-black text-slate-950 italic">\u20A6{Number(event.fee).toLocaleString()}</p>
+                          <p className="text-xl font-black text-slate-950 italic">₦{Number(event.fee).toLocaleString()}</p>
                         </>
                       ) : (
                         <>
@@ -377,7 +377,7 @@ export default function EventsClient({ initialEvents, session, userRegistrations
                 </div>
                 <div className="flex justify-between items-center pt-3 border-t border-slate-100">
                   <span className="font-bold text-slate-500 uppercase tracking-widest text-[10px]">SUBTOTAL</span>
-                  <span className="font-black text-slate-900 text-lg italic">\u20A6{Number(checkoutEvent.fee).toLocaleString()}</span>
+                  <span className="font-black text-slate-900 text-lg italic">₦{Number(checkoutEvent.fee).toLocaleString()}</span>
                 </div>
               </div>
 
@@ -409,7 +409,7 @@ export default function EventsClient({ initialEvents, session, userRegistrations
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
                 <>
-                  Pay \u20A6{checkoutEvent && Number(checkoutEvent.fee).toLocaleString()}
+                  Pay ₦{checkoutEvent && Number(checkoutEvent.fee).toLocaleString()}
                 </>
               )}
             </Button>

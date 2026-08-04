@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import { getBursaryStaffLoans, getBursaryCashAdvances } from "@/actions/bursary_loans";
@@ -144,7 +144,7 @@ export default function HRLoansDashboard() {
                                                         <div className="text-[10px] text-slate-500 font-black uppercase tracking-wider mt-0.5">{loan.staff?.staffId}</div>
                                                     </td>
                                                     <td className="px-8 py-6 text-sm font-extrabold text-slate-700 uppercase tracking-wide">{loan.template?.name || "General Loan"}</td>
-                                                    <td className="px-8 py-6 text-lg font-black text-slate-900">\u20A6{Number(loan.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                                                    <td className="px-8 py-6 text-lg font-black text-slate-900">₦{Number(loan.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                                                     <td className="px-8 py-6 text-sm font-bold text-slate-655">{loan.repaymentPeriodMonths} months</td>
                                                     <td className="px-8 py-6">{getStatusBadge(loan.status)}</td>
                                                 </tr>
@@ -197,7 +197,7 @@ export default function HRLoansDashboard() {
                                                         <div className="text-[10px] text-slate-500 font-black uppercase tracking-wider mt-0.5">{adv.staff?.staffId}</div>
                                                     </td>
                                                     <td className="px-8 py-6 font-bold text-slate-700 max-w-xs truncate" title={adv.purpose}>{adv.purpose}</td>
-                                                    <td className="px-8 py-6 text-lg font-black text-slate-900">\u20A6{Number(adv.requestedAmount).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                                                    <td className="px-8 py-6 text-lg font-black text-slate-900">₦{Number(adv.requestedAmount).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                                                     <td className="px-8 py-6">{getStatusBadge(adv.status)}</td>
                                                 </tr>
                                             ))

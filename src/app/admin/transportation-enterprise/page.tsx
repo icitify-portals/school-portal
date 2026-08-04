@@ -1,4 +1,4 @@
-// @ts-nocheck
+﻿// @ts-nocheck
 "use client";
 
 import { useState, useEffect } from "react";
@@ -1080,7 +1080,7 @@ export default function TransportationEnterprise() {
                         </Select>
                       </div>
                       <div>
-                        <Label htmlFor="costEstimate">Cost Estimate (\u20A6)</Label>
+                        <Label htmlFor="costEstimate">Cost Estimate (₦)</Label>
                         <Input id="costEstimate" name="costEstimate" type="number" step="0.01" />
                       </div>
                     </div>

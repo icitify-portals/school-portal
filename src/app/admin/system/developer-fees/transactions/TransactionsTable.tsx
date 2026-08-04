@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
@@ -57,7 +57,7 @@ export function TransactionsTable({ transactions }: { transactions: any[] }) {
                                 )}
                             </td>
                             <td className="px-6 py-4 font-bold text-slate-900">
-                                \u20A6{Number(tx.amount).toLocaleString()}
+                                ₦{Number(tx.amount).toLocaleString()}
                             </td>
                             <td className="px-6 py-4">
                                 <Badge variant="outline" className={`capitalize shadow-sm ${

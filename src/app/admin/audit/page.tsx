@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect } from 'react';
 import { 
@@ -154,7 +154,7 @@ export default function AuditDashboard() {
                       <div className="text-slate-400 text-xs line-clamp-1">Operational expenditure verification</div>
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <div className="text-slate-900 font-bold text-lg">\u20A6{parseFloat(item.totalSpent).toLocaleString()}</div>
+                      <div className="text-slate-900 font-bold text-lg">₦{parseFloat(item.totalSpent).toLocaleString()}</div>
                       <div className="text-emerald-500 text-xs font-medium">Verified Receipts: Yes</div>
                     </td>
                     <td className="px-6 py-4 text-center">

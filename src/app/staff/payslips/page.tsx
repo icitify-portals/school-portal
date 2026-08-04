@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import {
@@ -105,7 +105,7 @@ export default function StaffPayslipsPage() {
                                 </div>
                                 <div className="flex justify-between items-end">
                                     <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Net Pay</p>
-                                    <p className="text-sm font-black text-slate-900">\u20a6{parseFloat(p.netPay).toLocaleString()}</p>
+                                    <p className="text-sm font-black text-slate-900">₦{parseFloat(p.netPay).toLocaleString()}</p>
                                 </div>
                             </div>
                         ))}
@@ -181,16 +181,16 @@ export default function StaffPayslipsPage() {
                                         <div className="space-y-4">
                                             <div className="flex justify-between items-center">
                                                 <span className="text-xs font-bold text-slate-500">Basic Salary</span>
-                                                <span className="text-xs font-black text-slate-900">\u20a6{parseFloat(selectedPayslip.log.basePay).toLocaleString()}</span>
+                                                <span className="text-xs font-black text-slate-900">₦{parseFloat(selectedPayslip.log.basePay).toLocaleString()}</span>
                                             </div>
                                             <div className="flex justify-between items-center">
                                                 <span className="text-xs font-bold text-slate-500">Allowances</span>
-                                                <span className="text-xs font-black text-slate-900">\u20a6{parseFloat(selectedPayslip.log.allowances).toLocaleString()}</span>
+                                                <span className="text-xs font-black text-slate-900">₦{parseFloat(selectedPayslip.log.allowances).toLocaleString()}</span>
                                             </div>
                                             <div className="pt-4 border-t border-slate-50 flex justify-between items-center">
                                                 <span className="text-xs font-black text-slate-900 italic uppercase tracking-widest">Gross Total</span>
                                                 <span className="text-sm font-black text-indigo-600">
-                                                    \u20a6{(parseFloat(selectedPayslip.log.basePay) + parseFloat(selectedPayslip.log.allowances)).toLocaleString()}
+                                                    ₦{(parseFloat(selectedPayslip.log.basePay) + parseFloat(selectedPayslip.log.allowances)).toLocaleString()}
                                                 </span>
                                             </div>
                                         </div>
@@ -204,7 +204,7 @@ export default function StaffPayslipsPage() {
                                             </div>
                                             <div className="flex justify-between items-center">
                                                 <span className="text-xs font-bold text-slate-500">Statutory Deductions</span>
-                                                <span className="text-xs font-black text-rose-600">(\u20a6{parseFloat(selectedPayslip.log.deductions).toLocaleString()})</span>
+                                                <span className="text-xs font-black text-rose-600">(₦{parseFloat(selectedPayslip.log.deductions).toLocaleString()})</span>
                                             </div>
                                         </div>
                                     </div>
@@ -218,7 +218,7 @@ export default function StaffPayslipsPage() {
                                         </div>
                                         <div>
                                             <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 mb-1">Net Salary Pay</p>
-                                            <h2 className="text-4xl font-black italic tracking-tight">\u20a6{parseFloat(selectedPayslip.log.netPay).toLocaleString()}</h2>
+                                            <h2 className="text-4xl font-black italic tracking-tight">₦{parseFloat(selectedPayslip.log.netPay).toLocaleString()}</h2>
                                         </div>
                                     </div>
                                     <div className="text-right">

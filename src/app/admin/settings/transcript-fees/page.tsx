@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import { getSystemSettings, updateSystemSetting } from "@/actions/system-settings";
@@ -68,7 +68,7 @@ export default function TranscriptFeesSettings() {
                 <CardContent className="p-6 bg-white rounded-b-xl">
                     <form onSubmit={handleSave} className="space-y-6">
                         <div className="space-y-2">
-                            <Label htmlFor="tfee" className="text-sm font-bold text-slate-700">Transcript Fee (\u20A6)</Label>
+                            <Label htmlFor="tfee" className="text-sm font-bold text-slate-700">Transcript Fee (₦)</Label>
                             <Input 
                                 id="tfee"
                                 type="number" 
@@ -82,7 +82,7 @@ export default function TranscriptFeesSettings() {
                         </div>
                         
                         <div className="space-y-2">
-                            <Label htmlFor="pfee" className="text-sm font-bold text-slate-700">Processing Fee (\u20A6)</Label>
+                            <Label htmlFor="pfee" className="text-sm font-bold text-slate-700">Processing Fee (₦)</Label>
                             <Input 
                                 id="pfee"
                                 type="number" 

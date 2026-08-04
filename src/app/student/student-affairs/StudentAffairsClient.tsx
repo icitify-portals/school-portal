@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
@@ -669,7 +669,7 @@ export default function StudentAffairsClient({
                 </div>
                 <div className="flex justify-between items-center pt-3 border-t border-slate-100">
                   <span className="font-bold text-slate-500 uppercase tracking-widest text-[10px]">SUBTOTAL</span>
-                  <span className="font-black text-slate-900 text-lg italic">\u20A6{Number(checkoutReg.fee).toLocaleString()}</span>
+                  <span className="font-black text-slate-900 text-lg italic">₦{Number(checkoutReg.fee).toLocaleString()}</span>
                 </div>
               </div>
 
@@ -701,7 +701,7 @@ export default function StudentAffairsClient({
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
                 <>
-                  Pay \u20A6{checkoutReg && Number(checkoutReg.fee).toLocaleString()}
+                  Pay ₦{checkoutReg && Number(checkoutReg.fee).toLocaleString()}
                 </>
               )}
             </Button>

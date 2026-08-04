@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -218,11 +218,11 @@ export default function FixedAssetsPage() {
                             <Input className="rounded-[1rem] border-white/60 bg-white/60 focus:bg-white font-bold h-11 transition-all text-slate-800" type="date" value={purchaseDate} onChange={e => setPurchaseDate(e.target.value)} />
                         </div>
                         <div className="space-y-2">
-                            <Label className="text-xs font-black text-slate-500 uppercase tracking-widest ml-2">Purchase Price (\u20A6)</Label>
+                            <Label className="text-xs font-black text-slate-500 uppercase tracking-widest ml-2">Purchase Price (₦)</Label>
                             <Input className="rounded-[1rem] border-white/60 bg-white/60 focus:bg-white font-bold h-11 transition-all text-slate-800" type="number" value={purchasePrice} onChange={e => setPurchasePrice(e.target.value)} />
                         </div>
                         <div className="space-y-2">
-                            <Label className="text-xs font-black text-slate-500 uppercase tracking-widest ml-2">Salvage Value (\u20A6)</Label>
+                            <Label className="text-xs font-black text-slate-500 uppercase tracking-widest ml-2">Salvage Value (₦)</Label>
                             <Input className="rounded-[1rem] border-white/60 bg-white/60 focus:bg-white font-bold h-11 transition-all text-slate-800" type="number" value={salvageValue} onChange={e => setSalvageValue(e.target.value)} />
                         </div>
                         <div className="space-y-2">
@@ -275,7 +275,7 @@ export default function FixedAssetsPage() {
                         {actionType === 'dispose' && (
                             <>
                                 <div className="space-y-2">
-                                    <Label className="text-xs font-black text-slate-500 uppercase tracking-widest ml-2">Disposal Amount (\u20A6)</Label>
+                                    <Label className="text-xs font-black text-slate-500 uppercase tracking-widest ml-2">Disposal Amount (₦)</Label>
                                     <Input className="rounded-[1rem] border-white/60 bg-white/60 focus:bg-white font-bold h-11 transition-all text-slate-800" type="number" name="disposalAmount" required placeholder="Amount received" />
                                 </div>
                                 <div className="space-y-2">
@@ -295,7 +295,7 @@ export default function FixedAssetsPage() {
                         {actionType === 'revalue' && (
                             <>
                                 <div className="space-y-2">
-                                    <Label className="text-xs font-black text-slate-500 uppercase tracking-widest ml-2">New Valuation (\u20A6)</Label>
+                                    <Label className="text-xs font-black text-slate-500 uppercase tracking-widest ml-2">New Valuation (₦)</Label>
                                     <Input className="rounded-[1rem] border-white/60 bg-white/60 focus:bg-white font-bold h-11 transition-all text-slate-800" type="number" name="newValuation" required placeholder="Updated market value" />
                                 </div>
                                 <div className="space-y-2">
@@ -316,7 +316,7 @@ export default function FixedAssetsPage() {
                                     <Input className="rounded-[1rem] border-white/60 bg-white/60 focus:bg-white font-bold h-11 transition-all text-slate-800" name="description" placeholder="Details of work done" />
                                 </div>
                                 <div className="space-y-2">
-                                    <Label className="text-xs font-black text-slate-500 uppercase tracking-widest ml-2">Cost (\u20A6)</Label>
+                                    <Label className="text-xs font-black text-slate-500 uppercase tracking-widest ml-2">Cost (₦)</Label>
                                     <Input className="rounded-[1rem] border-white/60 bg-white/60 focus:bg-white font-bold h-11 transition-all text-slate-800" type="number" name="cost" required defaultValue={0} />
                                 </div>
                                 <div className="space-y-2">
@@ -362,7 +362,7 @@ export default function FixedAssetsPage() {
                             </div>
                             <div className="text-right">
                                 <p className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Book Value</p>
-                                <p className="text-xl font-black text-slate-800">\u20A6{bookValue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                                <p className="text-xl font-black text-slate-800">₦{bookValue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
                             </div>
                         </CardHeader>
                         <CardContent className="p-8 space-y-6 flex-1 flex flex-col justify-between">
@@ -377,11 +377,11 @@ export default function FixedAssetsPage() {
                             <div className="space-y-3 pt-4 border-t border-white/60">
                                 <div className="flex justify-between text-xs font-bold uppercase tracking-wider">
                                     <span className="text-slate-400">Original Cost</span>
-                                    <span className="text-slate-700">\u20A6{parseFloat(asset.purchasePrice).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                    <span className="text-slate-700">₦{parseFloat(asset.purchasePrice).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                                 </div>
                                 <div className="flex justify-between text-xs font-bold uppercase tracking-wider">
                                     <span className="text-slate-400">Accum. Depreciation</span>
-                                    <span className="text-rose-600">- \u20A6{totalDep.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                    <span className="text-rose-600">- ₦{totalDep.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                                 </div>
                                 <div className="w-full bg-slate-200/80 h-2.5 rounded-full overflow-hidden mt-4 shadow-inner border border-white/40">
                                     <div

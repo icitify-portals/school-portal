@@ -1,4 +1,4 @@
-"use server";
+﻿"use server";
 
 import { db } from "@/db/db";
 import {
@@ -692,7 +692,7 @@ export async function processPayment(data: {
             if (student?.barcode) {
                 NotificationService.sendDirectWhatsApp(
                     student.barcode,
-                    `✅ Payment Confirmed: Your payment of \u20A6${data.amount} for "${data.purpose}" was successful.`
+                    `✅ Payment Confirmed: Your payment of ₦${data.amount} for "${data.purpose}" was successful.`
                 );
             }
         }
@@ -1050,7 +1050,7 @@ export async function approveExpenditureRequest(id: number, userId: number, glAc
             if (analysis.budget > 0 && parseFloat(request.amount) > analysis.remaining) {
                 return {
                     success: false,
-                    error: `EXCEEDS_BUDGET: This request of \u20A6${parseFloat(request.amount).toLocaleString()} exceeds the remaining departmental budget of \u20A6${analysis.remaining.toLocaleString()}.`,
+                    error: `EXCEEDS_BUDGET: This request of ₦${parseFloat(request.amount).toLocaleString()} exceeds the remaining departmental budget of ₦${analysis.remaining.toLocaleString()}.`,
                     analysis
                 };
             }
@@ -1597,7 +1597,7 @@ export async function recordExternalInflow(data: {
         // Notify the recorder
         NotificationService.notifyUser(data.recordedBy, {
             title: "Inflow Recorded",
-            message: `External inflow of \u20A6${parseFloat(data.amount).toLocaleString()} from "${data.source}" has been recorded.`,
+            message: `External inflow of ₦${parseFloat(data.amount).toLocaleString()} from "${data.source}" has been recorded.`,
             type: 'success',
             channels: ['toast']
         });

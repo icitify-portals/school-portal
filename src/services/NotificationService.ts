@@ -1,4 +1,4 @@
-import { sendWhatsAppMessage } from "@/lib/twilio";
+﻿import { sendWhatsAppMessage } from "@/lib/twilio";
 import { sendEmail } from "@/lib/mail";
 import { config } from "@/lib/config";
 import { db } from "@/db/db";
@@ -155,7 +155,7 @@ export class NotificationService {
                 </div>
                 <div style="background: white; padding: 30px; border-radius: 10px; border: 1px solid #e2e8f0;">
                     <p style="font-size: 16px; color: #374151; margin-bottom: 15px;">Dear <strong>${details.payerName}</strong>,</p>
-                    <p style="font-size: 14px; color: #4b5563; margin-bottom: 15px;">Your payment of <strong>\u20A6${details.amount.toLocaleString()}</strong> for <strong>${details.purpose}</strong> has been successfully processed.</p>
+                    <p style="font-size: 14px; color: #4b5563; margin-bottom: 15px;">Your payment of <strong>₦${details.amount.toLocaleString()}</strong> for <strong>${details.purpose}</strong> has been successfully processed.</p>
                     <p style="font-size: 14px; color: #4b5563; margin-bottom: 20px;">Please find your official payment receipt attached to this email as a PDF document.</p>
                     <p style="font-size: 14px; color: #64748b;">If you have any questions, please contact the bursary department.</p>
                 </div>
@@ -179,8 +179,8 @@ export class NotificationService {
         const isCredit = data.type === 'credit';
         const title = isCredit ? "Payment Successful" : "Funds Disbursed";
         const message = isCredit
-            ? `Your payment of \u20A6${parseFloat(data.amount).toLocaleString()} for "${data.purpose}" has been confirmed.`
-            : `A disbursement of \u20A6${parseFloat(data.amount).toLocaleString()} for "${data.purpose}" has been processed.`;
+            ? `Your payment of ₦${parseFloat(data.amount).toLocaleString()} for "${data.purpose}" has been confirmed.`
+            : `A disbursement of ₦${parseFloat(data.amount).toLocaleString()} for "${data.purpose}" has been processed.`;
 
         return await this.notifyUser(userId, {
             title,

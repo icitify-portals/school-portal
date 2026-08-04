@@ -1,4 +1,4 @@
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+﻿import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Wallet, ArrowUpRight, ArrowDownLeft, CreditCard, Home, FileText } from "lucide-react";
@@ -19,7 +19,7 @@ export default function PaymentsPage() {
                             <Badge className="bg-white/20 text-white border-none">Active Balance</Badge>
                         </div>
                         <p className="text-blue-100 text-sm font-medium">Available Balance</p>
-                        <h3 className="text-4xl font-bold mt-1">\u20A645,250.00</h3>
+                        <h3 className="text-4xl font-bold mt-1">₦45,250.00</h3>
                         <div className="mt-8 flex gap-3">
                             <Button className="bg-white text-blue-600 hover:bg-blue-50 w-full font-semibold">
                                 Fund Wallet
@@ -82,7 +82,7 @@ export default function PaymentsPage() {
                                 </div>
                             </div>
                             <div className="text-right">
-                                <p className="font-bold text-slate-900">-\u20A6120,000.00</p>
+                                <p className="font-bold text-slate-900">-₦120,000.00</p>
                                 <Badge variant="secondary" className="bg-green-100 text-green-700 border-none px-2 py-0">Completed</Badge>
                             </div>
                         </div>
@@ -98,7 +98,7 @@ export default function PaymentsPage() {
                                 </div>
                             </div>
                             <div className="text-right">
-                                <p className="font-bold text-green-600">+\u20A650,000.00</p>
+                                <p className="font-bold text-green-600">+₦50,000.00</p>
                                 <Badge variant="secondary" className="bg-green-100 text-green-700 border-none px-2 py-0">Completed</Badge>
                             </div>
                         </div>

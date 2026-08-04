@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import { getMyTasksAction, resolveRequestAction, submitRepairQuoteAction } from "@/actions/works-actions";
@@ -251,7 +251,7 @@ export default function TechnicianTasksPage() {
                                                             />
                                                         </div>
                                                         <div className="space-y-2">
-                                                            <Label htmlFor="cost" className="flex items-center gap-0.5"><DollarSign className="w-3.5 h-3.5" /> Estimated Cost (\u20A6)</Label>
+                                                            <Label htmlFor="cost" className="flex items-center gap-0.5"><DollarSign className="w-3.5 h-3.5" /> Estimated Cost (₦)</Label>
                                                             <Input
                                                                 id="cost"
                                                                 type="number"

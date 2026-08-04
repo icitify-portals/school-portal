@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import { getAdmissionTemplates } from "@/actions/admission_v2";
@@ -252,7 +252,7 @@ function AdmissionCard({ template, isLoggedIn }: { template: any; isLoggedIn: bo
                 <div className="grid grid-cols-2 gap-4 p-4 bg-slate-900/40 rounded-2xl border border-slate-800/40">
                     <div className="space-y-1">
                         <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">Fee</p>
-                        <p className="text-sm font-black text-white">\u20A6{parseFloat(template.applicationFee).toLocaleString()}</p>
+                        <p className="text-sm font-black text-white">₦{parseFloat(template.applicationFee).toLocaleString()}</p>
                     </div>
                     <div className="space-y-1">
                         <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">Deadline</p>

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import { getMyUnpaidDeveloperSubscription } from "@/actions/developer-subscriptions";
@@ -32,7 +32,7 @@ export default function DeveloperSubscriptionBanner() {
                     </AlertTitle>
                     <AlertDescription className="mt-1 text-red-600/90 leading-relaxed">
                         You have an unpaid <strong>{sub.feeName}</strong> for the <strong>{sub.session?.name}</strong> session. 
-                        Amount due: <span className="font-bold text-red-800">\u20A6{Number(sub.amountDue).toLocaleString()}</span>. 
+                        Amount due: <span className="font-bold text-red-800">₦{Number(sub.amountDue).toLocaleString()}</span>. 
                         Please make payment before Week {sub.lockWeek} to avoid portal access restriction.
                     </AlertDescription>
                 </div>

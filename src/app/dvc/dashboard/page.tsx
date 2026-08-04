@@ -1,4 +1,4 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import {
     BarChart3,
@@ -30,7 +30,7 @@ export default async function DVCDashboard() {
         { name: "Total Enrollment", value: stats.totalStudents, icon: Users, color: "text-blue-600", bg: "bg-blue-50" },
         { name: "Staff Strength", value: stats.totalStaff, icon: Award, color: "text-indigo-600", bg: "bg-indigo-50" },
         { name: "Faculties", value: stats.totalFaculties, icon: Home, color: "text-rose-600", bg: "bg-rose-50" },
-        { name: "Total Revenue", value: `\u20A6${Number(stats.totalRevenue).toLocaleString()}`, icon: Wallet, color: "text-emerald-600", bg: "bg-emerald-50" },
+        { name: "Total Revenue", value: `₦${Number(stats.totalRevenue).toLocaleString()}`, icon: Wallet, color: "text-emerald-600", bg: "bg-emerald-50" },
     ];
 
     return (

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React from "react";
 import { cn } from "@/lib/utils";
@@ -99,7 +99,7 @@ export const ModernReceipt = ({ transaction, student, branding, bursar, arrears 
                         </div>
                         <div className="text-center md:text-right">
                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Amount Paid</p>
-                            <h2 className="text-4xl font-black text-white">\u20A6{parseFloat(transaction.amount).toLocaleString()}</h2>
+                            <h2 className="text-4xl font-black text-white">₦{parseFloat(transaction.amount).toLocaleString()}</h2>
                         </div>
                     </div>
 
@@ -108,7 +108,7 @@ export const ModernReceipt = ({ transaction, student, branding, bursar, arrears 
                         <div className="flex items-center gap-2">
                             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Arrears / Outstanding Balance:</span>
                             <span className={cn("text-lg font-black", isPaidInFull ? "text-emerald-400" : "text-amber-400")}>
-                                \u20A6{arrears.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                ₦{arrears.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </span>
                         </div>
                         <div>
@@ -223,7 +223,7 @@ export const ClassicReceipt = ({ transaction, student, branding, bursar, arrears
                     <tr className="border-b border-slate-100">
                         <td className="py-3 text-[10px] font-bold text-slate-400 uppercase">Outstanding Balance:</td>
                         <td className="py-3 text-right font-black text-red-600">
-                            \u20A6{arrears.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                            ₦{arrears.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                         </td>
                     </tr>
                 </tbody>
@@ -238,7 +238,7 @@ export const ClassicReceipt = ({ transaction, student, branding, bursar, arrears
                 </div>
                 <div className="bg-slate-50 border-2 border-slate-900 p-6 min-w-[250px] text-right">
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Amount Paid</p>
-                    <h2 className="text-3xl font-serif font-black text-slate-900">\u20A6{parseFloat(transaction.amount).toLocaleString()}</h2>
+                    <h2 className="text-3xl font-serif font-black text-slate-900">₦{parseFloat(transaction.amount).toLocaleString()}</h2>
                 </div>
             </div>
 
@@ -313,18 +313,18 @@ export const MinimalistReceipt = ({ transaction, student, branding, bursar, arre
                             Paid via {transaction.gateway === "wallet" ? "Student Wallet" : transaction.gateway}
                         </p>
                     </div>
-                    <p className="font-bold text-slate-900">\u20A6{parseFloat(transaction.amount).toLocaleString()}</p>
+                    <p className="font-bold text-slate-900">₦{parseFloat(transaction.amount).toLocaleString()}</p>
                 </div>
 
                 <div className="py-4 flex justify-between items-center text-sm border-b border-slate-100">
                     <span className="text-slate-500">Remaining Balance (Arrears):</span>
-                    <span className="font-bold text-slate-900">\u20A6{arrears.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                    <span className="font-bold text-slate-900">₦{arrears.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                 </div>
 
                 <div className="py-4 flex justify-between items-center">
                     <p className="text-sm font-bold text-slate-900">Total Settled In This Transaction</p>
                     <p className="text-2xl font-black text-slate-900 underline underline-offset-8 decoration-slate-200 leading-none">
-                        \u20A6{parseFloat(transaction.amount).toLocaleString()}
+                        ₦{parseFloat(transaction.amount).toLocaleString()}
                     </p>
                 </div>
 
@@ -504,7 +504,7 @@ export const HeritageReceipt = ({ transaction, student, branding, bursar, arrear
                     <div className="text-left font-sans">
                         <span className="text-xs font-bold text-slate-400 uppercase block tracking-wider">Bal:</span>
                         <span className="text-sm font-black text-slate-800">
-                            {arrears > 0.01 ? `\u20A6${arrears.toLocaleString()}` : "—"}
+                            {arrears > 0.01 ? `₦${arrears.toLocaleString()}` : "—"}
                         </span>
                     </div>
                 </div>

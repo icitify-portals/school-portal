@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import { getDeductionRules, saveDeductionRule, deleteDeductionRule } from "@/actions/hr";
@@ -91,7 +91,7 @@ export default function DeductionRulesPage() {
                                     <div className="flex items-center gap-6">
                                         <div className="text-right">
                                             <p className="text-2xl font-black text-slate-900">
-                                                {rule.type === 'percentage' ? `${rule.value}%` : `\u20A6${parseFloat(rule.value).toLocaleString()}`}
+                                                {rule.type === 'percentage' ? `${rule.value}%` : `₦${parseFloat(rule.value).toLocaleString()}`}
                                             </p>
                                         </div>
                                         <Button variant="ghost" size="icon" onClick={() => handleDelete(rule.id)} className="text-rose-500 hover:text-rose-600 hover:bg-rose-50">

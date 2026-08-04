@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import { getAccountsReceivableAging } from "@/actions/bursary";
@@ -65,21 +65,21 @@ export default function AgingAnalysisPage() {
             <Card className="border border-white/40 shadow-xl shadow-slate-200/50 bg-white/60 backdrop-blur-3xl rounded-[2rem] overflow-hidden relative group hover:shadow-2xl transition-all">
                 <CardContent className="p-6 text-center">
                     <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 mt-2">Current (0-30 Days)</p>
-                    <h3 className="text-2xl lg:text-3xl font-black text-slate-800">\u20A6{analysis.current.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</h3>
+                    <h3 className="text-2xl lg:text-3xl font-black text-slate-800">₦{analysis.current.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</h3>
                     <p className="text-xs font-bold text-slate-500 mt-2 uppercase tracking-wider">{analysis.current.count} Bills</p>
                 </CardContent>
             </Card>
             <Card className="border border-amber-200/40 shadow-xl shadow-amber-200/20 bg-amber-500/10 backdrop-blur-3xl rounded-[2rem] overflow-hidden relative group hover:shadow-2xl transition-all">
                 <CardContent className="p-6 text-center">
                     <p className="text-[10px] font-black uppercase tracking-widest text-amber-600 mb-2 mt-2">31-60 Days Late</p>
-                    <h3 className="text-2xl lg:text-3xl font-black text-amber-700">\u20A6{analysis.days30.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</h3>
+                    <h3 className="text-2xl lg:text-3xl font-black text-amber-700">₦{analysis.days30.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</h3>
                     <p className="text-xs font-bold text-amber-600/70 mt-2 uppercase tracking-wider">{analysis.days30.count} Bills</p>
                 </CardContent>
             </Card>
             <Card className="border border-orange-200/40 shadow-xl shadow-orange-200/20 bg-orange-500/10 backdrop-blur-3xl rounded-[2rem] overflow-hidden relative group hover:shadow-2xl transition-all">
                 <CardContent className="p-6 text-center">
                     <p className="text-[10px] font-black uppercase tracking-widest text-orange-600 mb-2 mt-2">61-90 Days Late</p>
-                    <h3 className="text-2xl lg:text-3xl font-black text-orange-700">\u20A6{analysis.days60.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</h3>
+                    <h3 className="text-2xl lg:text-3xl font-black text-orange-700">₦{analysis.days60.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</h3>
                     <p className="text-xs font-bold text-orange-600/70 mt-2 uppercase tracking-wider">{analysis.days60.count} Bills</p>
                 </CardContent>
             </Card>
@@ -89,7 +89,7 @@ export default function AgingAnalysisPage() {
                         <AlertTriangle className="w-4 h-4 text-rose-500 drop-shadow-sm" />
                         <p className="text-[10px] font-black uppercase tracking-widest">90+ Days Severe</p>
                     </div>
-                    <h3 className="text-2xl lg:text-3xl font-black text-rose-700">\u20A6{analysis.days90Plus.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</h3>
+                    <h3 className="text-2xl lg:text-3xl font-black text-rose-700">₦{analysis.days90Plus.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</h3>
                     <p className="text-xs font-bold text-rose-600/70 mt-2 uppercase tracking-wider">{analysis.days90Plus.count} Bills</p>
                 </CardContent>
             </Card>
@@ -148,7 +148,7 @@ export default function AgingAnalysisPage() {
                                         </div>
                                     </td>
                                     <td className="px-8 py-6 font-black text-slate-800 text-base">
-                                        \u20A6{bill.outstanding.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                        ₦{bill.outstanding.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                     </td>
                                     <td className="px-8 py-6 text-right">
                                         <Button variant="ghost" size="sm" className="h-9 px-4 text-[10px] font-black uppercase tracking-wider text-indigo-600 hover:bg-indigo-50 border border-transparent hover:border-indigo-200 rounded-xl transition-all shadow-sm">

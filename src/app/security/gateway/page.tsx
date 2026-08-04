@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Scanner } from "@yudiel/react-qr-scanner";
@@ -101,12 +101,12 @@ export default function SecurityGateway() {
       // Show appropriate toast notification
       if (response.success) {
         toast.success(`✅ ${response.message}`, {
-          description: response.finesOwed !== "0.00" ? `Fines: \u20A6${response.finesOwed}` : undefined,
+          description: response.finesOwed !== "0.00" ? `Fines: ₦${response.finesOwed}` : undefined,
         });
       } else {
         if (response.scanResult === 'blocked') {
           toast.error(`🚫 ${response.error}`, {
-            description: response.finesOwed !== "0.00" ? `Outstanding fines: \u20A6${response.finesOwed}` : undefined,
+            description: response.finesOwed !== "0.00" ? `Outstanding fines: ₦${response.finesOwed}` : undefined,
           });
         } else {
           toast.error(`❌ ${response.error}`);
@@ -298,7 +298,7 @@ export default function SecurityGateway() {
                           {lastScan.finesOwed && lastScan.finesOwed !== "0.00" && (
                             <div className="flex items-center gap-2 text-amber-600">
                               <DollarSign className="w-4 h-4" />
-                              <span className="font-medium">Outstanding Fines: \u20A6{lastScan.finesOwed}</span>
+                              <span className="font-medium">Outstanding Fines: ₦{lastScan.finesOwed}</span>
                             </div>
                           )}
                         </div>
