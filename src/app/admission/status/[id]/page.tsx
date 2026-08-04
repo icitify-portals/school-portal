@@ -148,7 +148,7 @@ export default function ApplicantStatusPage() {
                                                 onClick={handleAcceptancePayment}
                                                 className="rounded-2xl bg-slate-900 text-white font-black px-8 py-6 flex gap-3 uppercase text-xs tracking-widest shadow-xl"
                                             >
-                                                <CreditCard className="w-5 h-5" /> Pay Acceptance Fee (₦{parseFloat(data.template.acceptanceFee).toLocaleString()})
+                                                <CreditCard className="w-5 h-5" /> Pay Acceptance Fee (\u20A6{parseFloat(data.template.acceptanceFee).toLocaleString()})
                                             </Button>
                                         ) : data.template.requireAcceptanceFee && data.acceptancePaymentStatus === 'paid' && !data.admissionNotes?.includes('Matric Number') ? (
                                             <div className="flex flex-col gap-4">

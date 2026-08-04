@@ -127,7 +127,7 @@ export default function AdmissionInstructionsPage() {
     {
       step: "02",
       title: "Pay Application Fee",
-      desc: `An application fee of ₦${fee.toLocaleString()} is required to proceed. Payment is processed securely via the portal.`,
+      desc: `An application fee of \u20A6${fee.toLocaleString()} is required to proceed. Payment is processed securely via the portal.`,
       icon: <CreditCard className="w-5 h-5" />,
       color: "text-blue-400",
     },
@@ -188,7 +188,7 @@ export default function AdmissionInstructionsPage() {
           {/* Key Stats */}
           <div className="grid grid-cols-3 gap-4 max-w-2xl mx-auto mt-8">
             {[
-              { label: "Application Fee", value: `₦${fee.toLocaleString()}`, icon: <CreditCard className="w-4 h-4" /> },
+              { label: "Application Fee", value: `\u20A6${fee.toLocaleString()}`, icon: <CreditCard className="w-4 h-4" /> },
               { label: "Deadline", value: deadline, icon: <Clock className="w-4 h-4" /> },
               { label: "Intake Level", value: "Tertiary", icon: <GraduationCap className="w-4 h-4" /> },
             ].map(stat => (

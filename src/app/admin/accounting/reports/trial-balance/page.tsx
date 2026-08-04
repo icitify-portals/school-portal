@@ -63,13 +63,13 @@ export default function TrialBalancePage() {
                 <Card className="border border-white/40 shadow-xl shadow-slate-200/50 bg-white/60 backdrop-blur-3xl rounded-[2.5rem] relative overflow-hidden group">
                     <CardContent className="p-8">
                         <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 drop-shadow-sm">Total Debits</p>
-                        <h3 className="text-4xl font-black text-indigo-600 drop-shadow-md">₦{totalDebit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</h3>
+                        <h3 className="text-4xl font-black text-indigo-600 drop-shadow-md">\u20A6{totalDebit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</h3>
                     </CardContent>
                 </Card>
                 <Card className="border border-white/40 shadow-xl shadow-slate-200/50 bg-white/60 backdrop-blur-3xl rounded-[2.5rem] relative overflow-hidden group">
                     <CardContent className="p-8">
                         <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 drop-shadow-sm">Total Credits</p>
-                        <h3 className="text-4xl font-black text-slate-900 drop-shadow-md">₦{totalCredit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</h3>
+                        <h3 className="text-4xl font-black text-slate-900 drop-shadow-md">\u20A6{totalCredit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</h3>
                     </CardContent>
                 </Card>
                 <Card className={cn(

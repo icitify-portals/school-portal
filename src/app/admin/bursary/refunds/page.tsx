@@ -116,7 +116,7 @@ export default function AdminRefundsPage() {
                                         <div className="space-y-4">
                                             <div className="bg-white p-4 rounded-xl border border-slate-100">
                                                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Refund Amount</p>
-                                                <p className="text-2xl font-black text-indigo-600">₦{parseFloat(item.request.amount).toLocaleString()}</p>
+                                                <p className="text-2xl font-black text-indigo-600">\u20A6{parseFloat(item.request.amount).toLocaleString()}</p>
                                             </div>
 
                                             <div className="flex items-center gap-2 text-xs text-slate-500">

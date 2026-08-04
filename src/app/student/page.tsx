@@ -182,7 +182,7 @@ export default async function StudentDashboard() {
         },
         { 
             name: "Previous Payments", 
-            value: "₦" + parseFloat(statsData?.legacyBalance || "0.00").toLocaleString(), 
+            value: "\u20A6" + parseFloat(statsData?.legacyBalance || "0.00").toLocaleString(), 
             desc: "Historical school payments", 
             icon: Receipt, 
             color: "text-slate-600", 
@@ -190,7 +190,7 @@ export default async function StudentDashboard() {
         },
         { 
             name: "Wallet Balance", 
-            value: "₦" + parseFloat(statsData?.walletBalance || "0.00").toLocaleString(), 
+            value: "\u20A6" + parseFloat(statsData?.walletBalance || "0.00").toLocaleString(), 
             desc: "Available spendable funds", 
             icon: Wallet, 
             color: "text-purple-600", 
@@ -278,7 +278,7 @@ export default async function StudentDashboard() {
                         <div>
                             <h3 className="text-orange-800 font-bold">Outstanding Library Fines</h3>
                             <p className="text-orange-600 text-sm mt-1">
-                                You owe ₦{libraryFinesData.totalOwed} in overdue library fines. Your borrowing privileges are restricted.
+                                You owe \u20A6{libraryFinesData.totalOwed} in overdue library fines. Your borrowing privileges are restricted.
                             </p>
                         </div>
                     </div>

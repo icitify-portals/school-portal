@@ -64,7 +64,7 @@ export default async function HRSalaryStructuresPage() {
                         <div className="space-y-2">
                             <label className="block text-xs font-black text-slate-500 uppercase tracking-widest ml-2">Base Salary (Monthly)</label>
                             <div className="relative">
-                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">₦</span>
+                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">\u20A6</span>
                                 <input name="basePay" type="number" step="0.01" required className="w-full pl-9 pr-4 h-11 border border-white/60 bg-white/60 focus:bg-white rounded-xl text-sm font-bold text-slate-800 outline-none transition-all shadow-inner" />
                             </div>
                         </div>
@@ -109,19 +109,19 @@ export default async function HRSalaryStructuresPage() {
                                 <div className="space-y-3">
                                     <div className="flex justify-between items-center text-sm font-bold text-slate-500">
                                         <span>Base Pay:</span>
-                                        <span className="font-mono font-black text-slate-800 text-base">₦{parseFloat(s.basePay).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                        <span className="font-mono font-black text-slate-800 text-base">\u20A6{parseFloat(s.basePay).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                                     </div>
                                     <div className="flex justify-between items-center text-xs font-bold text-emerald-600">
                                         <span>(+) Allowances:</span>
-                                        <span className="font-mono font-extrabold">₦{parseFloat(s.allowances || "0").toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                        <span className="font-mono font-extrabold">\u20A6{parseFloat(s.allowances || "0").toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                                     </div>
                                     <div className="flex justify-between items-center text-xs font-bold text-rose-500 border-b border-white/40 pb-3">
                                         <span>(-) Deductions:</span>
-                                        <span className="font-mono font-extrabold">₦{parseFloat(s.deductions || "0").toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                        <span className="font-mono font-extrabold">\u20A6{parseFloat(s.deductions || "0").toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                                     </div>
                                     <div className="flex justify-between items-center pt-3">
                                         <span className="text-xs font-black uppercase tracking-widest text-slate-400">Net Take Home:</span>
-                                        <span className="text-xl font-black text-indigo-600">₦{(parseFloat(s.basePay) + parseFloat(s.allowances || "0") - parseFloat(s.deductions || "0")).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                        <span className="text-xl font-black text-indigo-600">\u20A6{(parseFloat(s.basePay) + parseFloat(s.allowances || "0") - parseFloat(s.deductions || "0")).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                                     </div>
                                 </div>
                             </div>

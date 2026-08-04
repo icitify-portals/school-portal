@@ -1286,7 +1286,7 @@ export async function getApplicantApplication(applicationId: number, applicantId
             ]);
             // @ts-expect-error
             app.template = template;
-            const isProcessingFeePaid = app.processingFeeStatus === 'paid' || app.paymentStatus === 'paid' || hasDeveloperFee;
+            const isProcessingFeePaid = app.processingFeeStatus === 'paid' || hasDeveloperFee;
             // @ts-expect-error
             app.isProcessingFeePaid = isProcessingFeePaid;
             

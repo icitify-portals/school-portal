@@ -232,7 +232,7 @@ export async function getStudentDashboardStats(userId: number) {
             activities.push({
                 type: 'payment',
                 title: t.purpose,
-                description: `₦${parseFloat(t.amount as any).toLocaleString()} payment ${t.status}`,
+                description: `\u20A6${parseFloat(t.amount as any).toLocaleString()} payment ${t.status}`,
                 date: t.createdAt,
                 color: t.status === 'completed' ? 'text-emerald-600' : 'text-rose-600',
                 bg: t.status === 'completed' ? 'bg-emerald-50' : 'bg-rose-50'

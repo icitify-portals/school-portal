@@ -73,13 +73,13 @@ export default function PNLPage() {
                 <Card className="border border-white/40 shadow-xl shadow-slate-200/50 bg-white/60 backdrop-blur-3xl rounded-[2.5rem] relative overflow-hidden group">
                     <CardContent className="p-8">
                         <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 drop-shadow-sm">Total Revenue</p>
-                        <h3 className="text-4xl font-black text-emerald-600 drop-shadow-md">₦{report?.totalRevenue?.toLocaleString()}</h3>
+                        <h3 className="text-4xl font-black text-emerald-600 drop-shadow-md">\u20A6{report?.totalRevenue?.toLocaleString()}</h3>
                     </CardContent>
                 </Card>
                 <Card className="border border-white/40 shadow-xl shadow-slate-200/50 bg-white/60 backdrop-blur-3xl rounded-[2.5rem] relative overflow-hidden group">
                     <CardContent className="p-8">
                         <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 drop-shadow-sm">Total Expenses</p>
-                        <h3 className="text-4xl font-black text-rose-600 drop-shadow-md">₦{report?.totalExpenses?.toLocaleString()}</h3>
+                        <h3 className="text-4xl font-black text-rose-600 drop-shadow-md">\u20A6{report?.totalExpenses?.toLocaleString()}</h3>
                     </CardContent>
                 </Card>
                 <Card className={cn(
@@ -88,7 +88,7 @@ export default function PNLPage() {
                 )}>
                     <CardContent className="p-8">
                         <p className="text-[10px] font-black uppercase tracking-widest opacity-80 mb-2 drop-shadow-sm">Net Surplus / (Deficit)</p>
-                        <h3 className="text-4xl font-black drop-shadow-md">₦{report?.netSurplus?.toLocaleString()}</h3>
+                        <h3 className="text-4xl font-black drop-shadow-md">\u20A6{report?.netSurplus?.toLocaleString()}</h3>
                     </CardContent>
                 </Card>
             </div>
@@ -108,13 +108,13 @@ export default function PNLPage() {
                                 {report?.revenue?.map((acc: any) => (
                                     <tr key={acc.id} className="group hover:bg-slate-50 transition-colors bg-white/20">
                                         <td className="py-4 px-6 text-sm font-bold text-slate-700">{acc.code} - {acc.name}</td>
-                                        <td className="py-4 px-6 text-right font-mono text-emerald-600">₦{acc.balance.toLocaleString()}</td>
+                                        <td className="py-4 px-6 text-right font-mono text-emerald-600">\u20A6{acc.balance.toLocaleString()}</td>
                                     </tr>
                                 ))}
                                 <tr className="bg-emerald-50/30">
                                     <td className="py-5 px-6 text-sm font-black text-slate-900 uppercase">Total Institutional Revenue</td>
                                     <td className="py-5 px-6 text-right font-black text-emerald-700 border-t-2 border-emerald-100">
-                                        ₦{report?.totalRevenue?.toLocaleString()}
+                                        \u20A6{report?.totalRevenue?.toLocaleString()}
                                     </td>
                                 </tr>
                             </tbody>
@@ -136,13 +136,13 @@ export default function PNLPage() {
                                 {report?.expenses?.map((acc: any) => (
                                     <tr key={acc.id} className="group hover:bg-slate-50 transition-colors bg-white/20">
                                         <td className="py-4 px-6 text-sm font-bold text-slate-700">{acc.code} - {acc.name}</td>
-                                        <td className="py-4 px-6 text-right font-mono text-rose-600">₦{acc.balance.toLocaleString()}</td>
+                                        <td className="py-4 px-6 text-right font-mono text-rose-600">\u20A6{acc.balance.toLocaleString()}</td>
                                     </tr>
                                 ))}
                                 <tr className="bg-rose-50/30">
                                     <td className="py-5 px-6 text-sm font-black text-slate-900 uppercase">Total Operating Expenses</td>
                                     <td className="py-5 px-6 text-right font-black text-rose-700 border-t-2 border-rose-100">
-                                        ₦{report?.totalExpenses?.toLocaleString()}
+                                        \u20A6{report?.totalExpenses?.toLocaleString()}
                                     </td>
                                 </tr>
                             </tbody>
@@ -155,7 +155,7 @@ export default function PNLPage() {
                     <div className="w-full md:w-1/2 space-y-4">
                         <div className="flex justify-between items-center py-4 border-b border-slate-200">
                             <p className="text-sm font-black uppercase tracking-widest text-slate-500">Gross Operating Result</p>
-                            <p className="text-2xl font-black text-slate-900">₦{report?.netSurplus?.toLocaleString()}</p>
+                            <p className="text-2xl font-black text-slate-900">\u20A6{report?.netSurplus?.toLocaleString()}</p>
                         </div>
                         <div className="flex justify-between items-center py-8 bg-slate-900 text-white px-10 rounded-[2.5rem] shadow-2xl border border-slate-800">
                             <div>
@@ -164,7 +164,7 @@ export default function PNLPage() {
                                     {(report?.netSurplus || 0) >= 0 ? "Surplus" : "Deficit"}
                                 </h4>
                             </div>
-                            <h4 className="text-4xl font-black drop-shadow-md">₦{report?.netSurplus?.toLocaleString()}</h4>
+                            <h4 className="text-4xl font-black drop-shadow-md">\u20A6{report?.netSurplus?.toLocaleString()}</h4>
                         </div>
                     </div>
                 </div>

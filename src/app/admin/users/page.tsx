@@ -184,7 +184,7 @@ function UserManagementPageContent() {
                                 <Search className="absolute left-4 top-3 w-4 h-4 text-slate-400" />
                                 <Input
                                     placeholder="Search users..."
-                                    className="pl-11 h-10 bg-slate-50 border-none rounded-xl text-sm font-medium"
+                                    className="pl-11 pr-20 h-10 bg-slate-50 border-none rounded-xl text-sm font-medium"
                                     defaultValue={searchString}
                                     onKeyDown={(e) => {
                                         if (e.key === "Enter") {
@@ -192,6 +192,11 @@ function UserManagementPageContent() {
                                         }
                                     }}
                                 />
+                                {searchString && (
+                                    <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400 bg-white px-2 py-0.5 rounded-md pointer-events-none border border-slate-200">
+                                        {totalCount}
+                                    </div>
+                                )}
                             </div>
                             <select 
                                 className="h-10 bg-slate-50 border-none rounded-xl text-sm font-medium px-4 text-slate-600 outline-none w-full md:w-auto"

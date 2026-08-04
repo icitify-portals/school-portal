@@ -121,10 +121,10 @@ export default function TranscriptApplicationPage() {
                             <div>
                                 <p className="text-sm text-indigo-800 font-semibold mb-1">Total Fee Required</p>
                                 <p className="text-2xl font-black text-indigo-900">
-                                    {(fees.transcriptFee === 0 && fees.processingFee === 0) ? "Free" : `₦${((fees.transcriptFee + fees.processingFee)/1000).toLocaleString()}k`}
+                                    {(fees.transcriptFee === 0 && fees.processingFee === 0) ? "Free" : `\u20A6${((fees.transcriptFee + fees.processingFee)/1000).toLocaleString()}k`}
                                 </p>
                                 <p className="text-xs text-indigo-600 mt-1">
-                                    Transcript Fee (₦{(fees.transcriptFee/1000).toLocaleString()}k) + Processing (₦{(fees.processingFee/1000).toLocaleString()}k)
+                                    Transcript Fee (\u20A6{(fees.transcriptFee/1000).toLocaleString()}k) + Processing (\u20A6{(fees.processingFee/1000).toLocaleString()}k)
                                 </p>
                             </div>
                             <button disabled={loading} type="submit" className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-8 rounded-xl flex items-center gap-2 transition-all shadow-md shadow-indigo-600/30 disabled:opacity-70 disabled:cursor-not-allowed">

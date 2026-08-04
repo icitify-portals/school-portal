@@ -251,7 +251,7 @@ export default function TechnicianTasksPage() {
                                                             />
                                                         </div>
                                                         <div className="space-y-2">
-                                                            <Label htmlFor="cost" className="flex items-center gap-0.5"><DollarSign className="w-3.5 h-3.5" /> Estimated Cost (₦)</Label>
+                                                            <Label htmlFor="cost" className="flex items-center gap-0.5"><DollarSign className="w-3.5 h-3.5" /> Estimated Cost (\u20A6)</Label>
                                                             <Input
                                                                 id="cost"
                                                                 type="number"

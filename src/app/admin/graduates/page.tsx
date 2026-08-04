@@ -336,7 +336,7 @@ function GraduatesPageContent() {
                                 <option value="">-- Choose a fee --</option>
                                 {feeStructures.map((fee: any) => (
                                     <option key={fee.id} value={fee.id}>
-                                        {fee.name} (₦{parseFloat(fee.totalAmount || '0').toLocaleString()})
+                                        {fee.name} (\u20A6{parseFloat(fee.totalAmount || '0').toLocaleString()})
                                     </option>
                                 ))}
                             </select>

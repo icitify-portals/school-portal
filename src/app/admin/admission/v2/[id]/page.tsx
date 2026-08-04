@@ -586,7 +586,7 @@ export default function V2ApplicationDetailPage() {
                             <CardContent className="p-6 space-y-4">
                                 <div className="flex justify-between items-center">
                                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Application Fee</span>
-                                    <span className="font-black text-slate-900">₦{app.template?.applicationFee?.toLocaleString() || '0'}</span>
+                                    <span className="font-black text-slate-900">\u20A6{app.template?.applicationFee?.toLocaleString() || '0'}</span>
                                 </div>
                                 <div className="flex justify-between items-center">
                                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Payment Status</span>
@@ -759,6 +759,19 @@ export default function V2ApplicationDetailPage() {
                                             className="w-full rounded-xl border-slate-300 text-slate-600 font-black text-[10px] uppercase tracking-widest py-4"
                                         >
                                             <AlertCircle className="w-4 h-4 mr-2" /> Reset to Submitted
+                                        </Button>
+                                    )}
+                                    {app.status === 'submitted' && (
+                                        <Button
+                                            onClick={() => {
+                                                if(confirm("Are you sure you want to reverse this submission? The applicant will need to resubmit their application.")) {
+                                                    handleStatusChange('draft')
+                                                }
+                                            }}
+                                            variant="outline"
+                                            className="w-full rounded-xl border-amber-300 text-amber-600 font-black text-[10px] uppercase tracking-widest py-4 hover:bg-amber-50"
+                                        >
+                                            <AlertCircle className="w-4 h-4 mr-2" /> Reverse Submission to Draft
                                         </Button>
                                     )}
                                 </div>

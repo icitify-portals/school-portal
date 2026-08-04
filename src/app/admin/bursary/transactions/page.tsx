@@ -378,7 +378,7 @@ export default function UnifiedTransactionsPage() {
                                         </td>
                                         <td className="px-6 py-4 font-black text-slate-900 whitespace-nowrap">
                                             <span className={tx.type === 'debit' ? 'text-red-600' : 'text-emerald-600'}>
-                                                {tx.type === 'debit' ? '-' : '+'} ₦{Number(tx.amount).toLocaleString()}
+                                                {tx.type === 'debit' ? '-' : '+'} \u20A6{Number(tx.amount).toLocaleString()}
                                             </span>
                                         </td>
                                         <td className="px-6 py-4 text-xs">
@@ -484,7 +484,7 @@ export default function UnifiedTransactionsPage() {
                                 <div>
                                     <div className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1">Amount</div>
                                     <div className={cn("text-4xl font-black tracking-tight", selectedTx.type === 'debit' ? "text-red-600" : "text-emerald-600")}>
-                                        {selectedTx.type === 'debit' ? '-' : '+'}₦{Number(selectedTx.amount).toLocaleString()}
+                                        {selectedTx.type === 'debit' ? '-' : '+'}\u20A6{Number(selectedTx.amount).toLocaleString()}
                                     </div>
                                 </div>
                                 <div className="text-right">

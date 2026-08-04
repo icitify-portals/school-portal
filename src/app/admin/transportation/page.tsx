@@ -404,7 +404,7 @@ export default function TransportationManagement() {
                           <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{type.count} routes</div>
                         </div>
                         <div className="text-right bg-white p-3 rounded-2xl shadow-sm border border-slate-100">
-                          <div className="text-sm font-black text-slate-900">₦{type.avgFare || 0}</div>
+                          <div className="text-sm font-black text-slate-900">\u20A6{type.avgFare || 0}</div>
                           <div className="text-[10px] text-slate-400 font-bold mt-1 uppercase tracking-widest">Avg Fare</div>
                         </div>
                       </div>
@@ -757,7 +757,7 @@ export default function TransportationManagement() {
                       </div>
                       <div className="flex items-center text-sm">
                         <DollarSign className="w-4 h-4 mr-2 text-gray-400" />
-                        <span>₦{route.fareAmount}</span>
+                        <span>\u20A6{route.fareAmount}</span>
                       </div>
                       {route.operatingHoursStart && route.operatingHoursEnd && (
                         <div className="flex items-center text-sm">

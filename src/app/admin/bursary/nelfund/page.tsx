@@ -52,7 +52,7 @@ export default function NelfundPage() {
             // Validate total
             const calcTotal = beneficiaries.reduce((sum: number, b: any) => sum + parseFloat(b.amount), 0);
             if (Math.abs(calcTotal - parseFloat(totalAmount)) > 1) { // Allowing 1 naira tolerance
-                alert(`Total amount mismatch. Beneficiaries total ₦${calcTotal.toLocaleString()}, but Batch Total is ₦${parseFloat(totalAmount).toLocaleString()}`);
+                alert(`Total amount mismatch. Beneficiaries total \u20A6${calcTotal.toLocaleString()}, but Batch Total is \u20A6${parseFloat(totalAmount).toLocaleString()}`);
                 setProcessingBatch(false);
                 return;
             }
@@ -147,7 +147,7 @@ export default function NelfundPage() {
                             <Input placeholder="e.g. NELF/2026/A4592" value={batchReference} onChange={e => setBatchReference(e.target.value)} className="rounded-[1rem] border-white/60 bg-white/60 focus:bg-white font-bold h-11 transition-all text-slate-800" />
                         </div>
                         <div className="space-y-2">
-                            <Label className="text-xs font-black text-slate-500 uppercase tracking-widest ml-2">Total Batch Amount (₦)</Label>
+                            <Label className="text-xs font-black text-slate-500 uppercase tracking-widest ml-2">Total Batch Amount (\u20A6)</Label>
                             <Input type="number" placeholder="5000000" value={totalAmount} onChange={e => setTotalAmount(e.target.value)} className="rounded-[1rem] border-white/60 bg-white/60 focus:bg-white font-bold h-11 transition-all text-slate-800" />
                         </div>
                         <div className="space-y-2">
@@ -208,7 +208,7 @@ export default function NelfundPage() {
                             </div>
                         </div>
                         <div className="text-right">
-                            <p className="text-xl font-black text-slate-800">₦{parseFloat(d.totalAmount).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                            <p className="text-xl font-black text-slate-800">\u20A6{parseFloat(d.totalAmount).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
                             <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 mt-0.5">Recorded by Admin</p>
                         </div>
                     </div>

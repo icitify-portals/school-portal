@@ -729,7 +729,7 @@ export default function FeesPage() {
                                                     <div className="space-y-1">
                                                         <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Currency</label>
                                                         <select className="w-full px-3 py-2 text-sm rounded-lg border border-slate-200" value={editItemCurrency} onChange={(e) => setEditItemCurrency(e.target.value)}>
-                                                            <option value="NGN">NGN (₦)</option>
+                                                            <option value="NGN">NGN (\u20A6)</option>
                                                             <option value="USD">USD ($)</option>
                                                         </select>
                                                     </div>

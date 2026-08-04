@@ -112,7 +112,7 @@ export default function BursaryDashboard() {
             </div>
             <div>
                <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Total Revenue</div>
-               <div className="text-4xl font-black text-slate-900">₦{overview?.revenue?.toLocaleString() || '0.00'}</div>
+               <div className="text-4xl font-black text-slate-900">\u20A6{overview?.revenue?.toLocaleString() || '0.00'}</div>
             </div>
          </div>
 
@@ -128,7 +128,7 @@ export default function BursaryDashboard() {
             </div>
             <div>
                <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Total Expenditure</div>
-               <div className="text-4xl font-black text-slate-900">₦{overview?.expenditure?.toLocaleString() || '0.00'}</div>
+               <div className="text-4xl font-black text-slate-900">\u20A6{overview?.expenditure?.toLocaleString() || '0.00'}</div>
             </div>
          </div>
 
@@ -143,7 +143,7 @@ export default function BursaryDashboard() {
             </div>
             <div>
                <div className="text-xs font-bold text-indigo-200 uppercase tracking-widest mb-1">Available Balance</div>
-               <div className="text-4xl font-black">₦{overview?.balance?.toLocaleString() || '0.00'}</div>
+               <div className="text-4xl font-black">\u20A6{overview?.balance?.toLocaleString() || '0.00'}</div>
             </div>
          </div>
       </div>
@@ -196,7 +196,7 @@ export default function BursaryDashboard() {
                                 </div>
                              </td>
                              <td className="px-8 py-6">
-                                <div className="text-lg font-black text-slate-900">₦{parseFloat(item.amount).toLocaleString()}</div>
+                                <div className="text-lg font-black text-slate-900">\u20A6{parseFloat(item.amount).toLocaleString()}</div>
                                 <div className="text-[10px] font-bold text-slate-400 flex items-center gap-1">
                                    <Clock size={10} />
                                    {new Date(item.date).toLocaleDateString()}
@@ -241,7 +241,7 @@ export default function BursaryDashboard() {
               <div className="space-y-4">
                  <h3 className="text-2xl font-bold">Accounting Policy</h3>
                  <p className="text-sm text-slate-400 leading-relaxed font-medium">
-                    All expenditure requests above ₦50,000 must be accompanied by three competitive vendor quotes and officially approved by the Bursar or Principal.
+                    All expenditure requests above \u20A650,000 must be accompanied by three competitive vendor quotes and officially approved by the Bursar or Principal.
                  </p>
               </div>
               <div className="pt-6 border-t border-white/10 space-y-4">
@@ -311,7 +311,7 @@ export default function BursaryDashboard() {
                       />
                    </div>
                    <div className="space-y-2">
-                      <label className="text-sm font-bold text-slate-700 ml-2">Amount (₦)</label>
+                      <label className="text-sm font-bold text-slate-700 ml-2">Amount (\u20A6)</label>
                       <input 
                         type="number" 
                         className="w-full px-6 py-4 rounded-2xl border border-slate-100 bg-slate-50 focus:bg-white focus:ring-4 focus:ring-rose-50 outline-none font-black text-xl transition-all"

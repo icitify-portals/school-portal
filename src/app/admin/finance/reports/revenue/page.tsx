@@ -81,7 +81,7 @@ export default function RevenueAnalysisDashboard() {
           </div>
           <div>
             <h3 className="text-slate-400 text-sm font-bold uppercase tracking-widest">Total Revenue</h3>
-            <p className="text-3xl font-black text-slate-900">₦{data.totalRevenue.toLocaleString()}</p>
+            <p className="text-3xl font-black text-slate-900">\u20A6{data.totalRevenue.toLocaleString()}</p>
           </div>
         </div>
 
@@ -97,7 +97,7 @@ export default function RevenueAnalysisDashboard() {
           </div>
           <div>
             <h3 className="text-slate-400 text-sm font-bold uppercase tracking-widest">Avg. Per Student</h3>
-            <p className="text-3xl font-black text-slate-900">₦{(data.totalRevenue / 1250).toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
+            <p className="text-3xl font-black text-slate-900">\u20A6{(data.totalRevenue / 1250).toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
           </div>
         </div>
 
@@ -145,7 +145,7 @@ export default function RevenueAnalysisDashboard() {
                         <span className="text-xs font-mono font-bold text-slate-400 bg-slate-50 px-2 py-0.5 rounded">{acc.accountCode}</span>
                         <span className="text-sm font-bold text-slate-700">{acc.accountName}</span>
                       </div>
-                      <span className="text-sm font-black text-slate-900">₦{Number(acc.total).toLocaleString()}</span>
+                      <span className="text-sm font-black text-slate-900">\u20A6{Number(acc.total).toLocaleString()}</span>
                    </div>
                    <div className="h-2 w-full bg-slate-50 rounded-full overflow-hidden">
                       <div 
@@ -196,7 +196,7 @@ export default function RevenueAnalysisDashboard() {
                          }`} />
                          <span className="text-sm font-bold text-slate-600 group-hover:text-indigo-600 transition-colors">{faculty.name}</span>
                       </div>
-                      <span className="text-sm font-black text-slate-900">₦{faculty.total.toLocaleString()}</span>
+                      <span className="text-sm font-black text-slate-900">\u20A6{faculty.total.toLocaleString()}</span>
                    </div>
                  ))}
               </div>
@@ -218,7 +218,7 @@ export default function RevenueAnalysisDashboard() {
                    <div key={i} className="space-y-1">
                       <div className="flex justify-between items-end">
                         <span className="text-xs font-bold text-slate-400">{month.month}</span>
-                        <span className="text-xs font-black text-slate-900">₦{Number(month.total).toLocaleString()}</span>
+                        <span className="text-xs font-black text-slate-900">\u20A6{Number(month.total).toLocaleString()}</span>
                       </div>
                       <div className="h-1 w-full bg-slate-50 rounded-full overflow-hidden">
                         <div 

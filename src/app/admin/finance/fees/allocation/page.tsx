@@ -121,7 +121,7 @@ export default function FeeAllocationManager() {
                     </div>
                     <div>
                       <div className="text-slate-900 font-bold">{fee.name}</div>
-                      <div className="text-slate-400 text-xs">₦{parseFloat(fee.defaultAmount).toLocaleString()} • {fee.category}</div>
+                      <div className="text-slate-400 text-xs">\u20A6{parseFloat(fee.defaultAmount).toLocaleString()} • {fee.category}</div>
                     </div>
                   </div>
                   <ChevronRight size={18} className={`transition-all ${selectedFee?.id === fee.id ? 'text-indigo-600 translate-x-1' : 'text-slate-300 group-hover:text-indigo-400'}`} />
@@ -169,7 +169,7 @@ export default function FeeAllocationManager() {
                     <div className="grid grid-cols-12 gap-4 px-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
                       <div className="col-span-6">Target General Ledger Account</div>
                       <div className="col-span-3 text-center">Split %</div>
-                      <div className="col-span-2 text-center">Fixed (₦)</div>
+                      <div className="col-span-2 text-center">Fixed (\u20A6)</div>
                       <div className="col-span-1"></div>
                     </div>
                     {rules.map((rule, index) => (

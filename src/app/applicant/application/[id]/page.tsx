@@ -636,7 +636,7 @@ export default function StatefulApplicationPage() {
                     <div className="space-y-4">
                         <h2 className="text-3xl font-black text-gray-900 uppercase">Application Fee</h2>
                         <p className="text-gray-500 font-medium text-sm leading-relaxed">
-                            You are required to pay an application fee of ₦{applicationFeeToPay.toLocaleString()} to continue with your application.
+                            You are required to pay an application fee of \u20A6{applicationFeeToPay.toLocaleString()} to continue with your application.
                         </p>
                     </div>
                     {application.paymentStatus === 'paid' ? (
@@ -656,7 +656,7 @@ export default function StatefulApplicationPage() {
                             onClick={handlePayment} disabled={paymentProcessing}
                             className="w-full bg-rose-600 hover:bg-rose-700 text-white font-bold py-6 rounded-xl uppercase text-sm tracking-widest transition-all shadow-md flex items-center justify-center gap-3"
                         >
-                            {paymentProcessing ? <Loader2 className="w-5 h-5 animate-spin" /> : <><CreditCard className="w-5 h-5" /> Pay ₦{applicationFeeToPay.toLocaleString()}</>}
+                            {paymentProcessing ? <Loader2 className="w-5 h-5 animate-spin" /> : <><CreditCard className="w-5 h-5" /> Pay \u20A6{applicationFeeToPay.toLocaleString()}</>}
                         </Button>
                     )}
                 </Card>
@@ -675,7 +675,7 @@ export default function StatefulApplicationPage() {
                     <div className="space-y-4">
                         <h2 className="text-3xl font-black text-gray-900 uppercase">Processing Fee</h2>
                         <p className="text-gray-500 font-medium text-sm leading-relaxed">
-                            You are required to pay a processing fee of ₦{processingFeeToPay.toLocaleString()} to proceed.
+                            You are required to pay a processing fee of \u20A6{processingFeeToPay.toLocaleString()} to proceed.
                         </p>
                     </div>
                     {application.isProcessingFeePaid ? (
@@ -701,7 +701,7 @@ export default function StatefulApplicationPage() {
                                 onClick={handleProcessingFee} disabled={isGateLoading}
                                 className="w-full bg-rose-600 hover:bg-rose-700 text-white font-bold py-6 rounded-xl uppercase text-sm tracking-widest transition-all shadow-md flex items-center justify-center gap-3 mb-4"
                             >
-                                {isGateLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <><CreditCard className="w-5 h-5" /> Pay ₦{processingFeeToPay.toLocaleString()}</>}
+                                {isGateLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <><CreditCard className="w-5 h-5" /> Pay \u20A6{processingFeeToPay.toLocaleString()}</>}
                             </Button>
                             <Button onClick={() => setActiveTabStage(0)} variant="outline" className="w-full border-slate-200 text-slate-600 font-bold py-6 rounded-xl uppercase text-xs tracking-widest transition-all">
                                 <ArrowLeft className="w-4 h-4 mr-2" /> Previous Step

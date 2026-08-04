@@ -262,7 +262,7 @@ export function PhdDefenseScheduler({ phdApplicationId, onSuccess }: PhdDefenseS
                             <div className="sm:col-span-3 space-y-1">
                                 <label className="text-[9px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
                                     <Coins className="w-3 h-3 text-teal-400" />
-                                    Honorarium (₦)
+                                    Honorarium (\u20A6)
                                 </label>
                                 <input
                                     type="number"

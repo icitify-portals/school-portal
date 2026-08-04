@@ -122,15 +122,15 @@ export const ItemizedReceipt = ({
                                             {item.category}
                                         </span>
                                     </td>
-                                    <td className="p-3 text-right font-medium text-slate-400">₦{item.originalAmount.toLocaleString()}</td>
+                                    <td className="p-3 text-right font-medium text-slate-400">\u20A6{item.originalAmount.toLocaleString()}</td>
                                     <td className="p-3 text-right font-medium text-emerald-600">
-                                        {item.scholarshipApplied > 0 ? `-₦${item.scholarshipApplied.toLocaleString()}` : '-'}
+                                        {item.scholarshipApplied > 0 ? `-\u20A6${item.scholarshipApplied.toLocaleString()}` : '-'}
                                     </td>
                                     <td className="p-3 text-right font-medium text-blue-600">
-                                        {item.discountApplied > 0 ? `-₦${item.discountApplied.toLocaleString()}` : '-'}
+                                        {item.discountApplied > 0 ? `-\u20A6${item.discountApplied.toLocaleString()}` : '-'}
                                     </td>
-                                    <td className="p-3 text-right font-bold text-slate-800">₦{item.finalAmount.toLocaleString()}</td>
-                                    <td className="p-3 text-right font-bold text-emerald-600">₦{item.amountPaid.toLocaleString()}</td>
+                                    <td className="p-3 text-right font-bold text-slate-800">\u20A6{item.finalAmount.toLocaleString()}</td>
+                                    <td className="p-3 text-right font-bold text-emerald-600">\u20A6{item.amountPaid.toLocaleString()}</td>
                                     <td className="p-3 text-center">
                                         {item.status === 'paid' ? (
                                             <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full uppercase tracking-wider">Paid</span>
@@ -147,19 +147,19 @@ export const ItemizedReceipt = ({
                             {totalScholarship > 0 && (
                                 <tr className="bg-emerald-50/50">
                                     <td colSpan={3} className="p-3 text-right font-black text-emerald-700 uppercase tracking-wider text-[10px]">Total Scholarship Aid</td>
-                                    <td colSpan={5} className="p-3 text-left font-bold text-emerald-600">-₦{totalScholarship.toLocaleString()}</td>
+                                    <td colSpan={5} className="p-3 text-left font-bold text-emerald-600">-\u20A6{totalScholarship.toLocaleString()}</td>
                                 </tr>
                             )}
                             {totalDiscount > 0 && (
                                 <tr className="bg-blue-50/50">
                                     <td colSpan={3} className="p-3 text-right font-black text-blue-700 uppercase tracking-wider text-[10px]">Total Discount Applied</td>
-                                    <td colSpan={5} className="p-3 text-left font-bold text-blue-600">-₦{totalDiscount.toLocaleString()}</td>
+                                    <td colSpan={5} className="p-3 text-left font-bold text-blue-600">-\u20A6{totalDiscount.toLocaleString()}</td>
                                 </tr>
                             )}
                             <tr className="bg-slate-100">
                                 <td colSpan={5} className="p-3 text-right font-black text-slate-800 uppercase tracking-wider text-xs">Total Net Due</td>
-                                <td className="p-3 text-right font-black text-slate-900 text-sm">₦{totalAfterAid.toLocaleString()}</td>
-                                <td className="p-3 text-right font-black text-emerald-700 text-sm">₦{totalPaid.toLocaleString()}</td>
+                                <td className="p-3 text-right font-black text-slate-900 text-sm">\u20A6{totalAfterAid.toLocaleString()}</td>
+                                <td className="p-3 text-right font-black text-emerald-700 text-sm">\u20A6{totalPaid.toLocaleString()}</td>
                                 <td className="p-3 text-center">
                                     <span className={`text-[10px] font-black uppercase tracking-wider ${isPaidInFull ? 'text-emerald-600' : 'text-amber-600'}`}>
                                         {isPaidInFull ? 'Settled' : 'Part Paid'}
@@ -180,14 +180,14 @@ export const ItemizedReceipt = ({
                         </div>
                         <div className="text-center md:text-right">
                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Amount Paid</p>
-                            <h2 className="text-4xl font-black text-white">₦{paymentAmount.toLocaleString()}</h2>
+                            <h2 className="text-4xl font-black text-white">\u20A6{paymentAmount.toLocaleString()}</h2>
                         </div>
                     </div>
                     <div className="flex justify-between items-center mt-4 pt-4 border-t border-white/10">
                         <div className="flex items-center gap-2">
                             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Outstanding:</span>
                             <span className={`text-lg font-black ${isPaidInFull ? 'text-emerald-400' : 'text-amber-400'}`}>
-                                ₦{arrears.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                \u20A6{arrears.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                             </span>
                         </div>
                         <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest ${isPaidInFull ? 'bg-emerald-500/20 text-emerald-300' : 'bg-amber-500/20 text-amber-300'}`}>

@@ -146,7 +146,7 @@ export async function payDeveloperSubscriptionWithWalletAction(subscriptionId: n
 
         const walletBalance = parseFloat(student.digitalWalletBalance || "0.00");
         if (walletBalance < amount) {
-            throw new Error(`Insufficient wallet balance. You have ₦${walletBalance.toLocaleString()}`);
+            throw new Error(`Insufficient wallet balance. You have \u20A6${walletBalance.toLocaleString()}`);
         }
 
         const [sub] = await tx.select().from(developerSubscriptions).where(eq(developerSubscriptions.id, subscriptionId)).limit(1);

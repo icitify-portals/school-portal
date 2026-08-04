@@ -121,8 +121,8 @@ export function AlatpayInlineCheckout({
                     currency: "NGN",
                     firstName,
                     lastName,
-                    phone: phone || "",
-                    metadata: description || "Payment",
+                    phone: phone && phone.trim() !== "" ? phone : "08012345678",
+                    metadata: "School Portal Payment",
                     onTransaction: function (response: any) {
                         console.log("ALATPay onTransaction response:", JSON.stringify(response));
                         if (response.status === true || response.message === "Approved" || response.status === "Approved") {
@@ -163,12 +163,12 @@ export function AlatpayInlineCheckout({
             {isScriptLoaded ? (
                 <>
                     <span className="font-extrabold tracking-widest text-white mr-1">ALATPay</span>
-                    Pay ₦{amount.toLocaleString()}
+                    Pay \u20A6{amount.toLocaleString()}
                 </>
             ) : (
                 <>
                     <Loader2 className="w-5 h-5 animate-spin" />
-                    Connecting...
+                    Loading...
                 </>
             )}
         </button>

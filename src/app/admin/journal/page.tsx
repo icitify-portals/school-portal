@@ -145,7 +145,7 @@ export default function AdminJournalPage() {
                                             <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="NGN">NGN (₦)</SelectItem>
+                                            <SelectItem value="NGN">NGN (\u20A6)</SelectItem>
                                             <SelectItem value="USD">USD ($)</SelectItem>
                                             <SelectItem value="GBP">GBP (£)</SelectItem>
                                         </SelectContent>

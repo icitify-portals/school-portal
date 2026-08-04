@@ -84,7 +84,7 @@ export default function FinancePayrollDashboard() {
                                     </div>
                                     <div className="flex justify-between items-center text-sm">
                                         <span className="text-slate-500 flex items-center gap-1"><DollarSign className="w-4 h-4" /> Net Payout</span>
-                                        <span className="font-black text-lg text-slate-900">₦{batch.totalAmount.toLocaleString()}</span>
+                                        <span className="font-black text-lg text-slate-900">\u20A6{batch.totalAmount.toLocaleString()}</span>
                                     </div>
                                 </div>
                                 <div className="bg-amber-50 text-amber-700 text-xs p-3 rounded-lg flex gap-2">

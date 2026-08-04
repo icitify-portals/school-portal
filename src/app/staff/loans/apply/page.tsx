@@ -137,7 +137,7 @@ export default function LoanApplicationPage() {
           <form onSubmit={handleApply} className="p-8 space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="text-sm font-bold text-slate-700">Requested Amount (₦)</label>
+                <label className="text-sm font-bold text-slate-700">Requested Amount (\u20A6)</label>
                 <input 
                   type="number" 
                   required
@@ -147,7 +147,7 @@ export default function LoanApplicationPage() {
                 />
                 <div className="flex items-center gap-1 text-xs text-slate-400">
                   <Info size={12} />
-                  Max: ₦{parseFloat(selectedTemplate.maxAmount).toLocaleString()}
+                  Max: \u20A6{parseFloat(selectedTemplate.maxAmount).toLocaleString()}
                 </div>
               </div>
 

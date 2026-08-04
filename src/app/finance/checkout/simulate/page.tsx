@@ -238,7 +238,7 @@ function CheckoutSimulatorContent() {
                             <div>
                                 <p className="text-slate-500 text-xs font-semibold uppercase tracking-wider">Amount Due</p>
                                 <h3 className="text-3xl font-extrabold text-white mt-1">
-                                    ₦{amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    \u20A6{amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                 </h3>
                             </div>
                             <div className="text-right">
@@ -261,7 +261,7 @@ function CheckoutSimulatorContent() {
                         <div className="bg-slate-950/40 rounded-xl border border-slate-800/80 p-4 space-y-3">
                             <div className="flex justify-between items-center text-sm border-slate-800 pt-1">
                                 <span className="font-bold text-white">Total Payable</span>
-                                <span className="font-mono font-extrabold text-white text-lg">₦{amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                <span className="font-mono font-extrabold text-white text-lg">\u20A6{amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                             </div>
                         </div>
 

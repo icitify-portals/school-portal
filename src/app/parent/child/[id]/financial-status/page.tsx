@@ -89,7 +89,7 @@ export default async function ParentChildFinancialPage({ params }: { params: { i
                     </div>
                     <CardContent className="p-10 space-y-4">
                         <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Current Balance</p>
-                        <h2 className="text-5xl font-black text-slate-900 tracking-tighter italic">₦{balance.toLocaleString()}</h2>
+                        <h2 className="text-5xl font-black text-slate-900 tracking-tighter italic">\u20A6{balance.toLocaleString()}</h2>
                         <div className="flex items-center gap-2">
                             <Badge className={cn("rounded-lg", balance > 0 ? "bg-rose-50 text-rose-600" : "bg-emerald-50 text-emerald-600")}>
                                 {balance > 0 ? "Outstanding" : "Cleared"}
@@ -105,7 +105,7 @@ export default async function ParentChildFinancialPage({ params }: { params: { i
                     </div>
                     <CardContent className="p-10 space-y-4 text-white">
                         <p className="text-[10px] font-black uppercase tracking-widest text-indigo-300">Total Invoiced</p>
-                        <h2 className="text-4xl font-black tracking-tighter">₦{totalInvoiced.toLocaleString()}</h2>
+                        <h2 className="text-4xl font-black tracking-tighter">\u20A6{totalInvoiced.toLocaleString()}</h2>
                         <p className="text-[10px] font-medium text-indigo-400">Total fees allocated for this session</p>
                     </CardContent>
                 </Card>
@@ -116,7 +116,7 @@ export default async function ParentChildFinancialPage({ params }: { params: { i
                     </div>
                     <CardContent className="p-10 space-y-4 text-white">
                         <p className="text-[10px] font-black uppercase tracking-widest text-emerald-200">Total Paid</p>
-                        <h2 className="text-4xl font-black tracking-tighter">₦{totalPaid.toLocaleString()}</h2>
+                        <h2 className="text-4xl font-black tracking-tighter">\u20A6{totalPaid.toLocaleString()}</h2>
                         <p className="text-[10px] font-medium text-emerald-100">Confirmed sessional payments</p>
                     </CardContent>
                 </Card>
@@ -148,7 +148,7 @@ export default async function ParentChildFinancialPage({ params }: { params: { i
                                         </div>
                                     </div>
                                     <div className="text-right">
-                                        <p className="font-black text-slate-900">₦{parseFloat(fee.amount || "0").toLocaleString()}</p>
+                                        <p className="font-black text-slate-900">\u20A6{parseFloat(fee.amount || "0").toLocaleString()}</p>
                                         <Badge variant="secondary" className="text-[8px] font-black text-emerald-600 uppercase">Mandatory</Badge>
                                     </div>
                                 </div>
@@ -188,7 +188,7 @@ export default async function ParentChildFinancialPage({ params }: { params: { i
                                             </div>
                                         </div>
                                         <div className="text-right">
-                                            <p className="font-black text-emerald-600">₦{parseFloat(p.credit || "0").toLocaleString()}</p>
+                                            <p className="font-black text-emerald-600">\u20A6{parseFloat(p.credit || "0").toLocaleString()}</p>
                                             <span className="text-[8px] font-black uppercase text-slate-400">TXN_ID_{p.id}</span>
                                         </div>
                                     </div>

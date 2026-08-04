@@ -481,7 +481,7 @@ export default function TransportationAI() {
                     <div className="flex justify-between">
                       <span>Fuel Savings:</span>
                       
-                      <span className="font-bold">₦{aiInsights.insights.routeOptimization.totalFuelSavings}</span>
+                      <span className="font-bold">\u20A6{aiInsights.insights.routeOptimization.totalFuelSavings}</span>
                     </div>
                     <div className="flex justify-between">
                       <span>Time Savings:</span>
@@ -517,7 +517,7 @@ export default function TransportationAI() {
                     <div className="flex justify-between">
                       <span>Cost Savings:</span>
                       
-                      <span className="font-bold">₦{aiInsights.insights.predictiveMaintenance.estimatedCostSavings}</span>
+                      <span className="font-bold">\u20A6{aiInsights.insights.predictiveMaintenance.estimatedCostSavings}</span>
                     </div>
                   </div>
                 </CardContent>
@@ -809,7 +809,7 @@ export default function TransportationAI() {
                       </div>
                       <div className="text-center">
                         
-                        <div className="text-2xl font-bold text-blue-600">₦{optimization.optimization.fuelSavings}</div>
+                        <div className="text-2xl font-bold text-blue-600">\u20A6{optimization.optimization.fuelSavings}</div>
                         <div className="text-sm text-gray-500">Fuel Saved</div>
                       </div>
                       <div className="text-center">
@@ -878,7 +878,7 @@ export default function TransportationAI() {
                       </div>
                       <div className="text-center">
                         
-                        <div className="text-2xl font-bold text-green-600">₦{forecast.forecast.predictedRevenue}</div>
+                        <div className="text-2xl font-bold text-green-600">\u20A6{forecast.forecast.predictedRevenue}</div>
                         <div className="text-sm text-gray-500">Predicted Revenue</div>
                       </div>
                     </div>
@@ -893,7 +893,7 @@ export default function TransportationAI() {
                         </div>
                         <div className="text-center">
                           
-                          <div className="text-2xl font-bold text-green-600">₦{forecast.forecast.actualRevenue}</div>
+                          <div className="text-2xl font-bold text-green-600">\u20A6{forecast.forecast.actualRevenue}</div>
                           <div className="text-sm text-gray-500">Actual Revenue</div>
                         </div>
                       </div>
@@ -972,7 +972,7 @@ export default function TransportationAI() {
                         </div>
                         <div className="text-sm text-gray-500 mt-1">
                           
-                          Est. Cost: ₦{alert.alert.estimatedCost}
+                          Est. Cost: \u20A6{alert.alert.estimatedCost}
                         </div>
                         <div className="text-sm text-gray-500">
                           
@@ -1058,7 +1058,7 @@ export default function TransportationAI() {
                       <div className="flex justify-between text-sm">
                         <span>Fare Paid:</span>
                         
-                        <span className="font-medium">₦{behavior.behavior.farePaid}</span>
+                        <span className="font-medium">\u20A6{behavior.behavior.farePaid}</span>
                       </div>
                       <div className="flex justify-between text-sm">
                         <span>Loyalty Score:</span>
@@ -1211,7 +1211,7 @@ export default function TransportationAI() {
                         </Select>
                       </div>
                       <div>
-                        <Label htmlFor="amount">Amount (₦) *</Label>
+                        <Label htmlFor="amount">Amount (\u20A6) *</Label>
                         <Input id="amount" name="amount" type="number" step="0.01" required />
                       </div>
                       <div>

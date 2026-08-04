@@ -114,7 +114,7 @@ export default function LedgerPage() {
                                         {parseFloat(entry.debit) > 0 ? (
                                             <div className="flex items-center gap-2 text-indigo-600 font-black text-base">
                                                 <ArrowUpRight className="w-4 h-4 text-indigo-500 drop-shadow-sm" />
-                                                <span>₦{parseFloat(entry.debit).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                                <span>\u20A6{parseFloat(entry.debit).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                                             </div>
                                         ) : (
                                             <span className="text-slate-300 font-bold">-</span>
@@ -124,7 +124,7 @@ export default function LedgerPage() {
                                         {parseFloat(entry.credit) > 0 ? (
                                             <div className="flex items-center gap-2 text-slate-900 font-black text-base">
                                                 <ArrowDownLeft className="w-4 h-4 text-slate-400" />
-                                                <span>₦{parseFloat(entry.credit).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                                <span>\u20A6{parseFloat(entry.credit).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                                             </div>
                                         ) : (
                                             <span className="text-slate-300 font-bold">-</span>

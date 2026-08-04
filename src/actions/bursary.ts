@@ -692,7 +692,7 @@ export async function processPayment(data: {
             if (student?.barcode) {
                 NotificationService.sendDirectWhatsApp(
                     student.barcode,
-                    `✅ Payment Confirmed: Your payment of ₦${data.amount} for "${data.purpose}" was successful.`
+                    `✅ Payment Confirmed: Your payment of \u20A6${data.amount} for "${data.purpose}" was successful.`
                 );
             }
         }
@@ -1050,7 +1050,7 @@ export async function approveExpenditureRequest(id: number, userId: number, glAc
             if (analysis.budget > 0 && parseFloat(request.amount) > analysis.remaining) {
                 return {
                     success: false,
-                    error: `EXCEEDS_BUDGET: This request of ₦${parseFloat(request.amount).toLocaleString()} exceeds the remaining departmental budget of ₦${analysis.remaining.toLocaleString()}.`,
+                    error: `EXCEEDS_BUDGET: This request of \u20A6${parseFloat(request.amount).toLocaleString()} exceeds the remaining departmental budget of \u20A6${analysis.remaining.toLocaleString()}.`,
                     analysis
                 };
             }
@@ -1384,10 +1384,11 @@ export async function requeryUnifiedTransaction(txId: number, sourceTable: 'tran
             console.log(`Bypassing gateway verification for Mock Reference during Re-query: ${reference}`);
             const newStatus = 'completed';
 
-            if (sourceTable === 'transactions') {
-                await db.update(transactions).set({ status: newStatus as any }).where(eq(transactions.id, txId));
-            } else if (sourceTable === 'payment_transactions') {
-                await db.update(payment_transactions).set({ status: newStatus }).where(eq(payment_transactions.id, txId));
+            if (sourceTable === 'transactions' || sourceTable === 'payment_transactions') {
+                const res = await resolveOnlinePaymentAction(reference, newStatus as any, undefined, true);
+                if (!res.success) {
+                    return { success: false, error: res.error || "Failed to resolve payment after verification." };
+                }
             } else {
                 return { success: false, error: 'Cannot re-query this table source.' };
             }
@@ -1428,10 +1429,11 @@ export async function requeryUnifiedTransaction(txId: number, sourceTable: 'tran
         if (verification.success) {
             const newStatus = verification.verified ? 'completed' : 'failed';
 
-            if (sourceTable === 'transactions') {
-                await db.update(transactions).set({ status: newStatus as any }).where(eq(transactions.id, txId));
-            } else if (sourceTable === 'payment_transactions') {
-                await db.update(payment_transactions).set({ status: newStatus }).where(eq(payment_transactions.id, txId));
+            if (sourceTable === 'transactions' || sourceTable === 'payment_transactions') {
+                const res = await resolveOnlinePaymentAction(reference, newStatus as any, undefined, true);
+                if (!res.success) {
+                    return { success: false, error: res.error || "Failed to resolve payment after verification." };
+                }
             } else {
                 return { success: false, error: 'Cannot re-query this table source.' };
             }
@@ -1595,7 +1597,7 @@ export async function recordExternalInflow(data: {
         // Notify the recorder
         NotificationService.notifyUser(data.recordedBy, {
             title: "Inflow Recorded",
-            message: `External inflow of ₦${parseFloat(data.amount).toLocaleString()} from "${data.source}" has been recorded.`,
+            message: `External inflow of \u20A6${parseFloat(data.amount).toLocaleString()} from "${data.source}" has been recorded.`,
             type: 'success',
             channels: ['toast']
         });

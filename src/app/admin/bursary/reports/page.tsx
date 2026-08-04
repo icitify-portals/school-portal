@@ -344,10 +344,10 @@ export default function BursaryReportsPage() {
                 "Department": item.department?.name || "N/A",
                 "Level": item.student?.currentLevel ? `${item.student.currentLevel}L` : "N/A",
                 "Session": item.session?.name || "N/A",
-                "Total Fee Amount (₦)": total,
-                "Amount Paid (₦)": paid,
+                "Total Fee Amount (\u20A6)": total,
+                "Amount Paid (\u20A6)": paid,
                 "Installment Coverage": coverage,
-                "Outstanding Balance (₦)": balance,
+                "Outstanding Balance (\u20A6)": balance,
                 "Billing Date": new Date(item.createdAt).toLocaleDateString()
             };
         });
@@ -635,7 +635,7 @@ export default function BursaryReportsPage() {
                                         <Coins className="w-24 h-24 text-emerald-500" />
                                     </div>
                                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Total Collections</p>
-                                    <h3 className="text-3xl font-black text-slate-900 tracking-tight">₦{totalCollections.toLocaleString()}</h3>
+                                    <h3 className="text-3xl font-black text-slate-900 tracking-tight">\u20A6{totalCollections.toLocaleString()}</h3>
                                     <div className="mt-6 flex items-center text-[10px] text-emerald-600 font-bold uppercase tracking-wider bg-emerald-50 w-fit px-3 py-1 rounded-full">
                                         <TrendingUp className="w-3.5 h-3.5 mr-1" />
                                         Gross Revenue Inflows
@@ -648,7 +648,7 @@ export default function BursaryReportsPage() {
                                         <TrendingDown className="w-24 h-24 text-indigo-500" />
                                     </div>
                                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Total Expenditures</p>
-                                    <h3 className="text-3xl font-black text-slate-900 tracking-tight">₦{expTotal.toLocaleString()}</h3>
+                                    <h3 className="text-3xl font-black text-slate-900 tracking-tight">\u20A6{expTotal.toLocaleString()}</h3>
                                     <div className="mt-6 flex items-center text-[10px] text-indigo-600 font-bold uppercase tracking-wider bg-indigo-50 w-fit px-3 py-1 rounded-full">
                                         <TrendingDown className="w-3.5 h-3.5 mr-1" />
                                         Disbursed Vouchers
@@ -661,7 +661,7 @@ export default function BursaryReportsPage() {
                                         <AlertCircle className="w-24 h-24 text-rose-500" />
                                     </div>
                                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Outstanding Arrears</p>
-                                    <h3 className="text-3xl font-black text-slate-900 tracking-tight">₦{arrearsTotal.toLocaleString()}</h3>
+                                    <h3 className="text-3xl font-black text-slate-900 tracking-tight">\u20A6{arrearsTotal.toLocaleString()}</h3>
                                     <div className="mt-6 flex items-center text-[10px] text-rose-600 font-bold uppercase tracking-wider bg-rose-50 w-fit px-3 py-1 rounded-full">
                                         <AlertCircle className="w-3.5 h-3.5 mr-1" />
                                         Accounts Receivable
@@ -697,10 +697,10 @@ export default function BursaryReportsPage() {
                                             <LineChart data={collectionsVsExpendituresData}>
                                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                                                 <XAxis dataKey="month" stroke="#94a3b8" fontSize={10} fontStyle="bold" />
-                                                <YAxis stroke="#94a3b8" fontSize={10} tickFormatter={(val) => `₦${val / 1000}k`} />
+                                                <YAxis stroke="#94a3b8" fontSize={10} tickFormatter={(val) => `\u20A6${val / 1000}k`} />
                                                 <Tooltip
                                                     contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 30px rgba(0,0,0,0.05)' }}
-                                                    formatter={((val: number | string) => [`₦${parseFloat(val.toString()).toLocaleString()}`]) as any}
+                                                    formatter={((val: number | string) => [`\u20A6${parseFloat(val.toString()).toLocaleString()}`]) as any}
                                                 />
                                                 <Legend verticalAlign="top" height={36} iconType="circle" />
                                                 <Line type="monotone" dataKey="Collections" stroke="#10b981" strokeWidth={4} dot={{ r: 4, fill: '#10b981', strokeWidth: 0 }} activeDot={{ r: 6 }} />
@@ -723,7 +723,7 @@ export default function BursaryReportsPage() {
                                             <BarChart data={programmeDebtData()}>
                                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                                                 <XAxis dataKey="name" stroke="#94a3b8" fontSize={9} fontStyle="bold" />
-                                                <YAxis stroke="#94a3b8" fontSize={10} tickFormatter={(val) => `₦${val / 1000}k`} />
+                                                <YAxis stroke="#94a3b8" fontSize={10} tickFormatter={(val) => `\u20A6${val / 1000}k`} />
                                                 <Tooltip cursor={{ fill: '#f8fafc' }} contentStyle={{ borderRadius: '16px' }} />
                                                 <Legend verticalAlign="top" height={36} iconType="circle" />
                                                 <Bar dataKey="Paid" fill="#10b981" radius={[4, 4, 0, 0]} barSize={24} />
@@ -756,7 +756,7 @@ export default function BursaryReportsPage() {
                                                             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                                                         ))}
                                                     </Pie>
-                                                    <Tooltip formatter={((val: number | string) => `₦${parseFloat(val.toString()).toLocaleString()}`) as any} />
+                                                    <Tooltip formatter={((val: number | string) => `\u20A6${parseFloat(val.toString()).toLocaleString()}`) as any} />
                                                     <Legend verticalAlign="bottom" height={36} iconType="circle" fontSize={10} />
                                                 </PieChart>
                                             </ResponsiveContainer>
@@ -787,7 +787,7 @@ export default function BursaryReportsPage() {
                                                             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                                                         ))}
                                                     </Pie>
-                                                    <Tooltip formatter={((val: number | string) => `₦${parseFloat(val.toString()).toLocaleString()}`) as any} />
+                                                    <Tooltip formatter={((val: number | string) => `\u20A6${parseFloat(val.toString()).toLocaleString()}`) as any} />
                                                     <Legend verticalAlign="bottom" height={36} iconType="circle" fontSize={10} />
                                                 </PieChart>
                                             </ResponsiveContainer>
@@ -855,7 +855,7 @@ export default function BursaryReportsPage() {
                                                                     "text-sm font-black",
                                                                     t.transaction.type === 'credit' ? "text-emerald-600" : "text-rose-600"
                                                                 )}>
-                                                                    {t.transaction.type === 'credit' ? '+' : '-'}₦{parseFloat(t.transaction.amount).toLocaleString()}
+                                                                    {t.transaction.type === 'credit' ? '+' : '-'}\u20A6{parseFloat(t.transaction.amount).toLocaleString()}
                                                                 </span>
                                                             </td>
                                                         </tr>
@@ -958,7 +958,7 @@ export default function BursaryReportsPage() {
 
                                 <div className="bg-white rounded-[2.5rem] p-8 relative overflow-hidden shadow-xl shadow-slate-100 border border-slate-100/50">
                                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Total Paid So Far</p>
-                                    <h3 className="text-3xl font-black text-emerald-600 tracking-tight">₦{sortedInstallments.reduce((sum, item) => sum + parseFloat(item.amountPaid || "0"), 0).toLocaleString()}</h3>
+                                    <h3 className="text-3xl font-black text-emerald-600 tracking-tight">\u20A6{sortedInstallments.reduce((sum, item) => sum + parseFloat(item.amountPaid || "0"), 0).toLocaleString()}</h3>
                                     <div className="mt-6 flex items-center text-[10px] text-emerald-600 font-bold uppercase tracking-wider bg-emerald-50 w-fit px-3 py-1 rounded-full">
                                         Realized Inflows
                                     </div>
@@ -966,7 +966,7 @@ export default function BursaryReportsPage() {
 
                                 <div className="bg-white rounded-[2.5rem] p-8 relative overflow-hidden shadow-xl shadow-slate-100 border border-slate-100/50">
                                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Outstanding Balances</p>
-                                    <h3 className="text-3xl font-black text-rose-600 tracking-tight">₦{sortedInstallments.reduce((sum, item) => sum + (parseFloat(item.totalAmount) - parseFloat(item.amountPaid || "0")), 0).toLocaleString()}</h3>
+                                    <h3 className="text-3xl font-black text-rose-600 tracking-tight">\u20A6{sortedInstallments.reduce((sum, item) => sum + (parseFloat(item.totalAmount) - parseFloat(item.amountPaid || "0")), 0).toLocaleString()}</h3>
                                     <div className="mt-6 flex items-center text-[10px] text-rose-600 font-bold uppercase tracking-wider bg-rose-50 w-fit px-3 py-1 rounded-full">
                                         Outstanding Receivables
                                     </div>
@@ -1036,7 +1036,7 @@ export default function BursaryReportsPage() {
                                                                 {item.department?.name || 'General'}
                                                             </td>
                                                             <td className="px-8 py-5 text-xs font-bold text-slate-800">
-                                                                ₦{total.toLocaleString()}
+                                                                \u20A6{total.toLocaleString()}
                                                             </td>
                                                             <td className="px-8 py-5">
                                                                 <div className="flex items-center gap-2">
@@ -1045,11 +1045,11 @@ export default function BursaryReportsPage() {
                                                                     </div>
                                                                     <span className="text-[10px] font-black text-indigo-600">{percent.toFixed(1)}%</span>
                                                                 </div>
-                                                                <p className="text-[9px] text-slate-400 mt-0.5">Paid: ₦{paid.toLocaleString()}</p>
+                                                                <p className="text-[9px] text-slate-400 mt-0.5">Paid: \u20A6{paid.toLocaleString()}</p>
                                                             </td>
                                                             <td className="px-8 py-5 text-right">
                                                                 <span className="text-sm font-black text-rose-600">
-                                                                    ₦{balance.toLocaleString()}
+                                                                    \u20A6{balance.toLocaleString()}
                                                                 </span>
                                                             </td>
                                                         </tr>
@@ -1119,15 +1119,15 @@ export default function BursaryReportsPage() {
                                                             {item.category}
                                                         </span>
                                                     </td>
-                                                    <td className="px-8 py-5 text-right text-sm font-bold text-slate-900">₦{item.totalBillable.toLocaleString()}</td>
-                                                    <td className="px-8 py-5 text-right text-sm font-bold text-emerald-600">₦{item.totalPaid.toLocaleString()}</td>
+                                                    <td className="px-8 py-5 text-right text-sm font-bold text-slate-900">\u20A6{item.totalBillable.toLocaleString()}</td>
+                                                    <td className="px-8 py-5 text-right text-sm font-bold text-emerald-600">\u20A6{item.totalPaid.toLocaleString()}</td>
                                                     <td className="px-8 py-5 text-right text-sm font-medium text-indigo-500">
-                                                        {item.totalScholarship > 0 ? `₦${item.totalScholarship.toLocaleString()}` : '-'}
+                                                        {item.totalScholarship > 0 ? `\u20A6${item.totalScholarship.toLocaleString()}` : '-'}
                                                     </td>
                                                     <td className="px-8 py-5 text-right text-sm font-medium text-blue-500">
-                                                        {item.totalDiscount > 0 ? `₦${item.totalDiscount.toLocaleString()}` : '-'}
+                                                        {item.totalDiscount > 0 ? `\u20A6${item.totalDiscount.toLocaleString()}` : '-'}
                                                     </td>
-                                                    <td className="px-8 py-5 text-right text-sm font-bold text-rose-600">₦{item.outstanding.toLocaleString()}</td>
+                                                    <td className="px-8 py-5 text-right text-sm font-bold text-rose-600">\u20A6{item.outstanding.toLocaleString()}</td>
                                                     <td className="px-8 py-5 text-center">
                                                         <div className="flex items-center gap-2 justify-center">
                                                             <div className="w-16 h-2 bg-slate-100 rounded-full overflow-hidden">

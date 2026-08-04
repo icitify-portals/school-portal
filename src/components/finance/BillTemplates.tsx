@@ -156,9 +156,9 @@ export const SchoolBillTemplate = ({
                     <tr className="bg-slate-50">
                         <th className="border border-slate-400 px-2 py-1.5 text-center font-bold text-slate-700 w-[40px]">S/N</th>
                         <th className="border border-slate-400 px-2 py-1.5 text-center font-bold text-slate-700">Item</th>
-                        <th className="border border-slate-400 px-2 py-1.5 text-center font-bold text-slate-700 w-[100px]">Cost (₦)</th>
-                        <th className="border border-slate-400 px-2 py-1.5 text-center font-bold text-slate-700 w-[95px]">Discount (₦)</th>
-                        <th className="border border-slate-400 px-2 py-1.5 text-center font-bold text-slate-700 w-[100px]">Amount (₦)</th>
+                        <th className="border border-slate-400 px-2 py-1.5 text-center font-bold text-slate-700 w-[100px]">Cost (\u20A6)</th>
+                        <th className="border border-slate-400 px-2 py-1.5 text-center font-bold text-slate-700 w-[95px]">Discount (\u20A6)</th>
+                        <th className="border border-slate-400 px-2 py-1.5 text-center font-bold text-slate-700 w-[100px]">Amount (\u20A6)</th>
                         <th className="border border-slate-400 px-2 py-1.5 text-center font-bold text-slate-700 w-[95px]">Bill Type</th>
                     </tr>
                 </thead>
@@ -191,7 +191,7 @@ export const SchoolBillTemplate = ({
                 <tbody>
                     <tr>
                         <td className="border border-slate-400 px-3 py-1.5 text-left font-bold text-slate-800 w-[55%]">
-                            Total Cost (₦) :
+                            Total Cost (\u20A6) :
                         </td>
                         <td className="border border-slate-400 px-3 py-1.5 text-right font-bold text-slate-900">
                             {fmt(summary.totalCost)}
@@ -199,7 +199,7 @@ export const SchoolBillTemplate = ({
                     </tr>
                     <tr>
                         <td className="border border-slate-400 px-3 py-1.5 text-left font-bold text-slate-800">
-                            Total Discount (₦) :
+                            Total Discount (\u20A6) :
                         </td>
                         <td className="border border-slate-400 px-3 py-1.5 text-right font-bold text-slate-900">
                             {fmt(summary.totalDiscount)}
@@ -207,7 +207,7 @@ export const SchoolBillTemplate = ({
                     </tr>
                     <tr>
                         <td className="border border-slate-400 px-3 py-1.5 text-left font-bold text-slate-800">
-                            Brought Forward (₦) :
+                            Brought Forward (\u20A6) :
                         </td>
                         <td className="border border-slate-400 px-3 py-1.5 text-right font-bold text-slate-900">
                             {fmt(summary.broughtForward)}
@@ -215,7 +215,7 @@ export const SchoolBillTemplate = ({
                     </tr>
                     <tr>
                         <td className="border border-slate-400 px-3 py-1.5 text-left font-bold text-slate-800">
-                            Outstanding Debt (₦) :
+                            Outstanding Debt (\u20A6) :
                         </td>
                         <td className="border border-slate-400 px-3 py-1.5 text-right font-bold text-rose-700">
                             {fmt(summary.outstandingDebt)}
@@ -223,7 +223,7 @@ export const SchoolBillTemplate = ({
                     </tr>
                     <tr className="bg-slate-50">
                         <td className="border border-slate-400 px-3 py-2 text-left font-extrabold text-slate-900 text-[13px]">
-                            Amount Expected (₦) :
+                            Amount Expected (\u20A6) :
                         </td>
                         <td className="border border-slate-400 px-3 py-2 text-right font-extrabold text-slate-900 text-[14px]">
                             {fmt(summary.amountExpected)}

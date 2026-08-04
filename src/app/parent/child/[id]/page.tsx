@@ -210,7 +210,7 @@ export default async function ChildDetailsPage({ params }: { params: { id: strin
                             {[
                                 { title: "New Result Uploaded", time: "2h ago", type: "academic", desc: "Mathematics (1st Term)" },
                                 { title: "Daily Attendance", time: "5h ago", type: "attendance", desc: "Clocked in at 07:45 AM" },
-                                { title: "Payment Confirmed", time: "1d ago", type: "finance", desc: "Fee: ₦50,000.00" },
+                                { title: "Payment Confirmed", time: "1d ago", type: "finance", desc: "Fee: \u20A650,000.00" },
                                 { title: "Assignment Due", time: "Tomorrow", type: "academic", desc: "Physics Sessional Project" },
                             ].map((event, idx) => (
                                 <div key={idx} className="flex gap-4 relative group">

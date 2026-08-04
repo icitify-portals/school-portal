@@ -207,7 +207,7 @@ export default function BursaryAdmissionPaymentsPage() {
                                                 <span className="text-xs font-bold text-indigo-600">{app.templateName}</span>
                                             </td>
                                             <td className="px-8 py-6 font-black text-slate-900">
-                                                ₦{app.template?.applicationFee?.toLocaleString() || '0'}
+                                                \u20A6{app.template?.applicationFee?.toLocaleString() || '0'}
                                             </td>
                                             <td className="px-8 py-6">
                                                 <span className={cn(

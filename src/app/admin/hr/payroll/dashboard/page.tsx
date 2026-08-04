@@ -109,7 +109,7 @@ export default function PayrollDashboard() {
       {/* Monthly Summary Statistics */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
          {[
-           { label: 'Total Payroll', value: `₦${totalPayroll.toLocaleString()}`, icon: DollarSign, color: 'text-indigo-600', bg: 'bg-indigo-50' },
+           { label: 'Total Payroll', value: `\u20A6${totalPayroll.toLocaleString()}`, icon: DollarSign, color: 'text-indigo-600', bg: 'bg-indigo-50' },
            { label: 'Staff Count', value: logs.length, icon: Users, color: 'text-emerald-600', bg: 'bg-emerald-50' },
            { label: 'Payments Disbursed', value: paidCount, icon: CheckCircle2, color: 'text-sky-600', bg: 'bg-sky-50' },
            { label: 'Pending Approval', value: logs.length - paidCount, icon: Clock, color: 'text-amber-600', bg: 'bg-amber-50' }
@@ -172,7 +172,7 @@ export default function PayrollDashboard() {
                                 </div>
                              </td>
                              <td className="px-8 py-6 font-black text-slate-900 text-lg">
-                                ₦{parseFloat(item.netPay).toLocaleString()}
+                                \u20A6{parseFloat(item.netPay).toLocaleString()}
                              </td>
                              <td className="px-8 py-6">
                                 <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
@@ -201,7 +201,7 @@ export default function PayrollDashboard() {
                       </div>
                       <div>
                          <div className="text-xs font-bold text-slate-400 uppercase tracking-widest">Awaiting Institutional Authorization</div>
-                         <div className="text-lg font-bold">Total Disbursable: ₦{totalPayroll.toLocaleString()}</div>
+                         <div className="text-lg font-bold">Total Disbursable: \u20A6{totalPayroll.toLocaleString()}</div>
                       </div>
                    </div>
                    <button 

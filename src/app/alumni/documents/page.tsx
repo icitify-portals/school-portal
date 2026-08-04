@@ -398,10 +398,10 @@ export default function GraduateDocumentWorkspace() {
                             <SelectValue placeholder="Delivery Route" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="email" className="font-bold">Secure Email copy (+₦10,000)</SelectItem>
-                            <SelectItem value="courier_local" className="font-bold">Courier Local (Nigeria) (+₦10,000)</SelectItem>
-                            <SelectItem value="courier_international" className="font-bold">Courier International (+₦35,000)</SelectItem>
-                            <SelectItem value="pickup" className="font-bold">In-Person Pickup (+₦0)</SelectItem>
+                            <SelectItem value="email" className="font-bold">Secure Email copy (+\u20A610,000)</SelectItem>
+                            <SelectItem value="courier_local" className="font-bold">Courier Local (Nigeria) (+\u20A610,000)</SelectItem>
+                            <SelectItem value="courier_international" className="font-bold">Courier International (+\u20A635,000)</SelectItem>
+                            <SelectItem value="pickup" className="font-bold">In-Person Pickup (+\u20A60)</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -461,7 +461,7 @@ export default function GraduateDocumentWorkspace() {
                     <div className="bg-slate-900 rounded-[1.5rem] p-6 text-white flex flex-col md:flex-row justify-between items-center gap-4">
                       <div>
                         <p className="text-slate-400 font-bold uppercase tracking-widest text-[9px] mb-1">Bursary Checkout Total</p>
-                        <h4 className="text-3xl font-black italic">₦{getCalculatedPrice().toLocaleString()}</h4>
+                        <h4 className="text-3xl font-black italic">\u20A6{getCalculatedPrice().toLocaleString()}</h4>
                       </div>
                       <Button
                         type="submit"
@@ -492,7 +492,7 @@ export default function GraduateDocumentWorkspace() {
                   <p className="text-xs font-black text-slate-800">In-Person Pickup</p>
                   <p className="text-[10px] text-slate-400 font-bold">Standard turnaround</p>
                 </div>
-                <span className="text-xs font-black text-slate-900">₦0.00</span>
+                <span className="text-xs font-black text-slate-900">\u20A60.00</span>
               </div>
 
               <div className="flex justify-between items-center p-3 bg-slate-50 rounded-xl">
@@ -500,7 +500,7 @@ export default function GraduateDocumentWorkspace() {
                   <p className="text-xs font-black text-slate-800">Secure E-Copy</p>
                   <p className="text-[10px] text-slate-400 font-bold">Direct to Admissions desk</p>
                 </div>
-                <span className="text-xs font-black text-indigo-600">₦10,000.00</span>
+                <span className="text-xs font-black text-indigo-600">\u20A610,000.00</span>
               </div>
 
               <div className="flex justify-between items-center p-3 bg-slate-50 rounded-xl">
@@ -508,7 +508,7 @@ export default function GraduateDocumentWorkspace() {
                   <p className="text-xs font-black text-slate-800">Courier Local</p>
                   <p className="text-[10px] text-slate-400 font-bold">Inside Nigeria</p>
                 </div>
-                <span className="text-xs font-black text-slate-900">₦10,000.00</span>
+                <span className="text-xs font-black text-slate-900">\u20A610,000.00</span>
               </div>
 
               <div className="flex justify-between items-center p-3 bg-slate-50 rounded-xl">
@@ -516,7 +516,7 @@ export default function GraduateDocumentWorkspace() {
                   <p className="text-xs font-black text-slate-800">Courier International</p>
                   <p className="text-[10px] text-slate-400 font-bold">DHL Global Express</p>
                 </div>
-                <span className="text-xs font-black text-slate-900">₦35,000.00</span>
+                <span className="text-xs font-black text-slate-900">\u20A635,000.00</span>
               </div>
             </div>
             <div className="p-4 bg-indigo-50 text-indigo-700 text-xs rounded-xl font-bold leading-relaxed">
@@ -579,7 +579,7 @@ export default function GraduateDocumentWorkspace() {
                         </Badge>
                       </td>
                       <td className="px-8 py-4 font-black text-slate-800">
-                        ₦{parseFloat(app.amountPaid || "0.00").toLocaleString()}
+                        \u20A6{parseFloat(app.amountPaid || "0.00").toLocaleString()}
                       </td>
                       <td className="px-8 py-4">
                         <Badge className={`rounded-full text-[10px] font-black uppercase tracking-widest ${app.paymentStatus === "paid" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>

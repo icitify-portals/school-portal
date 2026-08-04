@@ -149,7 +149,7 @@ export default function PrincipalAuditVault() {
 
                        <div className="text-right space-y-2">
                           <div className="flex items-center gap-2 justify-end">
-                             <span className="text-xs font-bold text-slate-400 line-through">₦{log.oldScore || 0}</span>
+                             <span className="text-xs font-bold text-slate-400 line-through">\u20A6{log.oldScore || 0}</span>
                              <div className="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-lg text-sm font-black shadow-sm">
                                 {log.newScore}
                              </div>

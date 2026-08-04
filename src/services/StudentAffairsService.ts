@@ -701,7 +701,7 @@ export class StudentAffairsService {
       }
 
       if (reg.isPaid && reg.paymentStatus !== 'paid') {
-        return { success: false, error: `Unpaid ticket: ₦${Number(reg.fee).toLocaleString()} registration fee required.` };
+        return { success: false, error: `Unpaid ticket: \u20A6${Number(reg.fee).toLocaleString()} registration fee required.` };
       }
 
       if (reg.checkedIn) {

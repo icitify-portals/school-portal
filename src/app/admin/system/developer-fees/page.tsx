@@ -38,7 +38,7 @@ export default async function DeveloperFeesPage() {
                         <Globe2 className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent className=" p-6">
-                        <div className="text-2xl font-bold">₦{revenue.totalRevenue.toLocaleString()}</div>
+                        <div className="text-2xl font-bold">\u20A6{revenue.totalRevenue.toLocaleString()}</div>
                         <p className="text-xs text-muted-foreground">Across all deployed portals</p>
                     </CardContent>
                 </Card>
@@ -48,7 +48,7 @@ export default async function DeveloperFeesPage() {
                         <Activity className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent className=" p-6">
-                        <div className="text-2xl font-bold text-red-500">₦{revenue.totalUnpaid.toLocaleString()}</div>
+                        <div className="text-2xl font-bold text-red-500">\u20A6{revenue.totalUnpaid.toLocaleString()}</div>
                         <p className="text-xs text-muted-foreground">Pending bulk or individual payments</p>
                     </CardContent>
                 </Card>
@@ -68,11 +68,11 @@ export default async function DeveloperFeesPage() {
                         <CardContent className=" p-6">
                             <div className="flex justify-between items-center mt-4">
                                 <span className="text-sm text-muted-foreground">Paid:</span>
-                                <span className="font-bold text-green-600">₦{p.revenue.toLocaleString()}</span>
+                                <span className="font-bold text-green-600">\u20A6{p.revenue.toLocaleString()}</span>
                             </div>
                             <div className="flex justify-between items-center mt-2">
                                 <span className="text-sm text-muted-foreground">Unpaid:</span>
-                                <span className="font-bold text-red-500">₦{p.unpaid.toLocaleString()}</span>
+                                <span className="font-bold text-red-500">\u20A6{p.unpaid.toLocaleString()}</span>
                             </div>
                         </CardContent>
                     </Card>

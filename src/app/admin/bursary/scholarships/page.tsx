@@ -171,7 +171,7 @@ export default function ScholarshipsPage() {
 
                                 {type === 'partial_fixed' && (
                                     <div className="space-y-2 animate-in fade-in slide-in-from-left-2 duration-300">
-                                        <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Grant Amount (₦)</Label>
+                                        <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Grant Amount (\u20A6)</Label>
                                         <Input type="number" placeholder="50000" className="h-12 rounded-xl text-lg font-bold" value={amount} onChange={e => setAmount(e.target.value)} />
                                     </div>
                                 )}
@@ -252,7 +252,7 @@ export default function ScholarshipsPage() {
 
                                     <div className="text-4xl font-black text-slate-800 mb-8 tracking-tighter italic">
                                         {s.type === 'full' && '100% FREE'}
-                                        {s.type === 'partial_fixed' && `₦${parseFloat(s.amount).toLocaleString()}`}
+                                        {s.type === 'partial_fixed' && `\u20A6${parseFloat(s.amount).toLocaleString()}`}
                                         {s.type === 'partial_percentage' && `${parseFloat(s.percentage)}% OFF`}
                                     </div>
 

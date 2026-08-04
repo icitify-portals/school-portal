@@ -152,7 +152,7 @@ export default function StudentHostelPortal({
                                             disabled={paying}
                                             className="w-full mt-4 h-14 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl shadow-lg font-black tracking-widest uppercase text-xs active:scale-95 border border-white/10"
                                         >
-                                            {paying ? <Loader2 className="w-5 h-5 animate-spin" /> : `Pay Hostel Fee (₦${hostelSettings?.hostelFee || '0.00'})`}
+                                            {paying ? <Loader2 className="w-5 h-5 animate-spin" /> : `Pay Hostel Fee (\u20A6${hostelSettings?.hostelFee || '0.00'})`}
                                         </Button>
                                     )}
                                     {application.paymentStatus === 'paid' && (

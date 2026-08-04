@@ -48,7 +48,7 @@ export default function DeveloperFeeSettingsForm({ initialData }: { initialData?
             </div>
 
             <div className="space-y-2">
-                <Label>Fee Amount (₦)</Label>
+                <Label>Fee Amount (\u20A6)</Label>
                 <Input type="number" step="0.01" value={feeAmount} onChange={(e) => setFeeAmount(e.target.value)} required />
             </div>
 

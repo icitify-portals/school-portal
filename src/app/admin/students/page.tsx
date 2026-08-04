@@ -22,7 +22,7 @@ function StudentsPageContent() {
     const pathname = usePathname();
     const searchParams = useSearchParams();
     const { isK12 } = useBranch();
-    const settings = { base_currency: "₦" };
+    const settings = { base_currency: "\u20A6" };
 
     const [students, setStudents] = useState<any[]>([]);
     const [totalCount, setTotalCount] = useState(0);
@@ -150,19 +150,24 @@ function StudentsPageContent() {
                         ))}
                     </select>
 
-                    <div className="relative w-full md:w-64">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                        <input
-                            className="w-full pl-10 pr-4 py-2 h-10 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white shadow-sm text-sm"
-                            placeholder="Search students..."
-                            defaultValue={search}
-                            onKeyDown={(e) => {
-                                if (e.key === "Enter") {
-                                    handleSearch((e.target as HTMLInputElement).value);
-                                }
-                            }}
-                        />
-                    </div>
+                      <div className="relative w-full md:w-64">
+                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                          <input
+                              className="w-full pl-10 pr-20 py-2 h-10 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white shadow-sm text-sm"
+                              placeholder="Search students..."
+                              defaultValue={search}
+                              onKeyDown={(e) => {
+                                  if (e.key === "Enter") {
+                                      handleSearch((e.target as HTMLInputElement).value);
+                                  }
+                              }}
+                          />
+                          {search && (
+                              <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-md pointer-events-none">
+                                  {totalCount}
+                              </div>
+                          )}
+                      </div>
                 </div>
             </div>
 
@@ -244,7 +249,7 @@ function StudentsPageContent() {
                                             <span className="text-sm text-slate-600">{s.programme?.name || 'Not Assigned'}</span>
                                         </td>
                                         <td className="px-6 py-4">
-                                            <span className="text-sm font-bold text-slate-700">{settings?.base_currency || "₦"}{parseFloat(s.digitalWalletBalance || '0').toLocaleString()}</span>
+                                            <span className="text-sm font-bold text-slate-700">{settings?.base_currency || "\u20A6"}{parseFloat(s.digitalWalletBalance || '0').toLocaleString()}</span>
                                         </td>
                                         <td className="px-6 py-4">
                                             <Button

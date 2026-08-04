@@ -1547,12 +1547,12 @@ export default function AdmissionFormBuilder() {
                                         >
                                             <option value="">No Fee Structure</option>
                                             {feeStructures?.map(fs => (
-                                                <option key={fs.id} value={fs.id.toString()}>{fs.name} (₦{Number(fs.totalAmount || 0).toLocaleString()})</option>
+                                                <option key={fs.id} value={fs.id.toString()}>{fs.name} (\u20A6{Number(fs.totalAmount || 0).toLocaleString()})</option>
                                             ))}
                                         </select>
                                     </div>
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">Application Fee (₦)</label>
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">Application Fee (\u20A6)</label>
                                         <input 
                                             type="number"
                                             className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 font-bold outline-none focus:ring-2 focus:ring-indigo-500"
@@ -1561,7 +1561,7 @@ export default function AdmissionFormBuilder() {
                                         />
                                     </div>
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">Platform Processing Fee (₦)</label>
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">Platform Processing Fee (\u20A6)</label>
                                         <input 
                                             type="number"
                                             className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 font-bold outline-none focus:ring-2 focus:ring-indigo-500"

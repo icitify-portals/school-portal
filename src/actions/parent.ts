@@ -141,7 +141,7 @@ export async function getChildDetailedData(studentId: number) {
         const stats = [
             { name: "Attendance Rate", value: "85%", color: "text-green-600", bg: "bg-green-50" },
             { name: "GPA", value: "3.75", color: "text-amber-600", bg: "bg-amber-50" },
-            { name: "Outstanding Fees", value: "₦0.00", color: "text-red-600", bg: "bg-red-50" },
+            { name: "Outstanding Fees", value: "\u20A60.00", color: "text-red-600", bg: "bg-red-50" },
             { name: "Active Courses", value: "6", color: "text-blue-600", bg: "bg-blue-50" },
         ];
 
@@ -161,7 +161,7 @@ export async function getChildActivityTimeline(studentId: number) {
         // I'll simulate a chronological feed of recent events for this student.
         const events = [
             { id: 1, type: 'academic', title: 'New Result Uploaded', desc: 'Mathematics (First Term) result is now available.', date: new Date(Date.now() - 3600000 * 24) },
-            { id: 2, type: 'finance', title: 'Payment Confirmed', desc: 'School fee payment of ₦50,000 received.', date: new Date(Date.now() - 3600000 * 48) },
+            { id: 2, type: 'finance', title: 'Payment Confirmed', desc: 'School fee payment of \u20A650,000 received.', date: new Date(Date.now() - 3600000 * 48) },
             { id: 3, type: 'attendance', title: 'Daily Attendance', desc: 'Student checked in at 07:45 AM.', date: new Date(Date.now() - 3600000 * 5) },
             { id: 4, type: 'academic', title: 'Assignment Due', desc: 'Physics assignment submission deadline approaching.', date: new Date(Date.now() + 3600000 * 24) },
         ];

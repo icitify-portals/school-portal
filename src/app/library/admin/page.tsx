@@ -25,7 +25,7 @@ export default function LibraryAdminPage() {
         setCalculating(true);
         const res = await calculateAndApplyFines();
         if (res.success) {
-            toast.success(`Fines processed! Total Amount: ₦${(res as any).totalAmount}`);
+            toast.success(`Fines processed! Total Amount: \u20A6${(res as any).totalAmount}`);
         } else {
             toast.error(res.error || "Failed to calculate fines");
         }
@@ -55,7 +55,7 @@ export default function LibraryAdminPage() {
                     </CardHeader>
                     <CardContent className="p-8 space-y-6">
                         <p className="text-sm font-medium text-slate-500 leading-relaxed">
-                            Automatically identify overdue items and apply fines based on the institutional library policy (₦50/day).
+                            Automatically identify overdue items and apply fines based on the institutional library policy (\u20A650/day).
                         </p>
                         <Button 
                             onClick={handleCalculateFines}
@@ -116,7 +116,7 @@ export default function LibraryAdminPage() {
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 {[
                     { label: "Overdue Books", value: "12", color: "text-rose-600" },
-                    { label: "Total Fine Revenue", value: "₦4,500", color: "text-emerald-600" },
+                    { label: "Total Fine Revenue", value: "\u20A64,500", color: "text-emerald-600" },
                     { label: "Active Loans", value: "148", color: "text-indigo-600" },
                     { label: "New Returns", value: "5", color: "text-blue-600" },
                 ].map((stat) => (

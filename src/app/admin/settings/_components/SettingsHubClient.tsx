@@ -59,7 +59,7 @@ export default function SettingsHubClient({ initialSettings, modulesCount }: Set
       category: "Branding & Profile",
       icon: Building2,
       iconBg: "bg-indigo-50 text-indigo-600",
-      status: "Epitome Academy / ₦"
+      status: "Epitome Academy / \u20A6"
     },
     {
       title: "Theme Customizer",

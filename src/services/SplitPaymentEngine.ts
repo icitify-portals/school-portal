@@ -56,7 +56,7 @@ export class PaystackAdapter implements PaymentGatewayAdapter {
         meta?: Record<string, any>
     ): Promise<GatewayCheckoutResponse> {
         console.log("=== PAYSTACK SPLIT PAYMENT INITIALIZATION ===");
-        console.log(`Payer: ${payerEmail}, Reference: ${txReference}, Total: ₦${totalAmount}`);
+        console.log(`Payer: ${payerEmail}, Reference: ${txReference}, Total: \u20A6${totalAmount}`);
         
         // Map splits to Paystack kobo format
         const subaccountsPayload = splits
@@ -154,7 +154,7 @@ export class FlutterwaveAdapter implements PaymentGatewayAdapter {
         meta?: Record<string, any>
     ): Promise<GatewayCheckoutResponse> {
         console.log("=== FLUTTERWAVE SPLIT PAYMENT INITIALIZATION ===");
-        console.log(`Payer: ${payerEmail}, Reference: ${txReference}, Total: ₦${totalAmount}`);
+        console.log(`Payer: ${payerEmail}, Reference: ${txReference}, Total: \u20A6${totalAmount}`);
         
         // Map splits to Flutterwave payload
         const subaccountsPayload = splits.map(item => ({
@@ -205,7 +205,7 @@ export class RemitaAdapter implements PaymentGatewayAdapter {
         meta?: Record<string, any>
     ): Promise<GatewayCheckoutResponse> {
         console.log("=== REMITA SPLIT PAYMENT INITIALIZATION (DYNAMIC INLINE) ===");
-        console.log(`Payer: ${payerEmail}, Reference: ${txReference}, Total: ₦${totalAmount}`);
+        console.log(`Payer: ${payerEmail}, Reference: ${txReference}, Total: \u20A6${totalAmount}`);
         // Remita line items take beneficiary details inline dynamically
         const lineItems = splits.map((item, index) => ({
             lineItemsId: (index + 1).toString(),
@@ -327,7 +327,7 @@ export class AlatpayAdapter implements PaymentGatewayAdapter {
         meta?: Record<string, any>
     ): Promise<GatewayCheckoutResponse> {
         console.log("=== ALATPAY SPLIT PAYMENT INITIALIZATION ===");
-        console.log(`Payer: ${payerEmail}, Reference: ${txReference}, Total: ₦${totalAmount}`);
+        console.log(`Payer: ${payerEmail}, Reference: ${txReference}, Total: \u20A6${totalAmount}`);
         
         // For AlatPay, we will handle the 3DS inline checkout on the frontend
         // Determine target Business ID from splits if configured
@@ -388,16 +388,16 @@ export class SplitPaymentEngine {
         if (gateway === 'paystack') {
             const flatFeeStr = settings ? settings['paystack_flat_fee'] : undefined;
             const flatFee = flatFeeStr !== undefined && flatFeeStr !== '' ? parseFloat(flatFeeStr) : 100;
-            // Paystack Local: 1.5% + Configurable Flat Fee (capped at ₦2000), Flat fee is waived for transactions under ₦2500
+            // Paystack Local: 1.5% + Configurable Flat Fee (capped at \u20A62000), Flat fee is waived for transactions under \u20A62500
             const fee = (amount * 0.015) + (amount >= 2500 ? flatFee : 0);
             return Math.min(2000, fee);
         }
         if (gateway === 'flutterwave') {
-            // Flutterwave Local: 1.4% (capped at ₦2000)
+            // Flutterwave Local: 1.4% (capped at \u20A62000)
             return Math.min(2000, amount * 0.014);
         }
         if (gateway === 'remita') {
-            // Remita Flat Transaction Fee: ₦150 standard
+            // Remita Flat Transaction Fee: \u20A6150 standard
             return 150;
         }
         return 0;
@@ -433,7 +433,7 @@ export class SplitPaymentEngine {
      * initializes gateway checkout and returns the response.
      */
     static async checkoutBill(studentId: number, billId: number, selectedAmount: number): Promise<GatewayCheckoutResponse> {
-        console.log(`Starting Checkout: StudentId ${studentId}, BillId ${billId}, SelectedAmount ₦${selectedAmount}`);
+        console.log(`Starting Checkout: StudentId ${studentId}, BillId ${billId}, SelectedAmount \u20A6${selectedAmount}`);
         
         // 1. Fetch Student details
         const studentRows = await db.select({
@@ -502,7 +502,7 @@ export class SplitPaymentEngine {
                 const minFirstPayment = otherTotal + tuitionPart;
 
                 if (selectedAmount < (minFirstPayment - 0.01) && Math.abs(selectedAmount - outstanding) > 0.01) {
-                    return { success: false, reference: "", error: `In tuition-installment mode, you must pay all non-tuition items (₦${otherTotal.toLocaleString()}) plus ${(installPct * 100).toFixed(0)}% of tuition (₦${tuitionPart.toLocaleString()}). Minimum first payment: ₦${minFirstPayment.toLocaleString()}` };
+                    return { success: false, reference: "", error: `In tuition-installment mode, you must pay all non-tuition items (\u20A6${otherTotal.toLocaleString()}) plus ${(installPct * 100).toFixed(0)}% of tuition (\u20A6${tuitionPart.toLocaleString()}). Minimum first payment: \u20A6${minFirstPayment.toLocaleString()}` };
                 }
             }
         } else {
@@ -512,17 +512,17 @@ export class SplitPaymentEngine {
 
             if (currentPaid < 0.01) {
                 if (selectedAmount < minAllowedAmount - 0.01) {
-                    return { success: false, reference: "", error: `Minimum initial installment payment of ₦${minAllowedAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })} (${minPercent}%) is required.` };
+                    return { success: false, reference: "", error: `Minimum initial installment payment of \u20A6${minAllowedAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })} (${minPercent}%) is required.` };
                 }
             }
 
             if (!allowed && Math.abs(selectedAmount - outstanding) > 0.01) {
-                return { success: false, reference: "", error: `Installments are not enabled for this payment. Full payment of ₦${outstanding.toLocaleString()} is required.` };
+                return { success: false, reference: "", error: `Installments are not enabled for this payment. Full payment of \u20A6${outstanding.toLocaleString()} is required.` };
             }
         }
 
         if (selectedAmount > outstanding + 0.01) {
-            return { success: false, reference: "", error: `Payment amount exceeds outstanding bill balance of ₦${outstanding.toLocaleString()}.` };
+            return { success: false, reference: "", error: `Payment amount exceeds outstanding bill balance of \u20A6${outstanding.toLocaleString()}.` };
         }
 
         // 4. Pro-rate fee items across checkout amount (for part-payments)
@@ -588,7 +588,7 @@ export class SplitPaymentEngine {
         const baseGatewayFee = this.calculateGatewayFee(selectedAmount, activeGateway, settings);
         let checkoutTotal = selectedAmount;
 
-        console.log(`Fee Bearer Setting: ${feeBearerRule}. Calculated Base Gateway Fee: ₦${baseGatewayFee}`);
+        console.log(`Fee Bearer Setting: ${feeBearerRule}. Calculated Base Gateway Fee: \u20A6${baseGatewayFee}`);
 
         if (feeBearerRule === 'student') {
             // Student bears fee: Added on top of student checkout total

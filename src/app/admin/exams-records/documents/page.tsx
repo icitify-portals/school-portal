@@ -274,7 +274,7 @@ export default function RegistryDocumentQueue() {
                                 <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wide">Route: {app.deliveryMethod.replace("_", " ")}</span>
                               </td>
                               <td className="px-8 py-4">
-                                <p className="text-xs font-black text-slate-800">₦{parseFloat(app.amountPaid || "0.00").toLocaleString()}</p>
+                                <p className="text-xs font-black text-slate-800">\u20A6{parseFloat(app.amountPaid || "0.00").toLocaleString()}</p>
                                 <Badge className={`rounded-full text-[9px] font-black uppercase tracking-wider ${
                                   app.registryStatus === "pending" ? "bg-amber-100 text-amber-700" :
                                   app.registryStatus === "processing" ? "bg-blue-100 text-blue-700" :

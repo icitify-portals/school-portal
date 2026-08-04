@@ -57,7 +57,7 @@ export function TransactionsTable({ transactions }: { transactions: any[] }) {
                                 )}
                             </td>
                             <td className="px-6 py-4 font-bold text-slate-900">
-                                ₦{Number(tx.amount).toLocaleString()}
+                                \u20A6{Number(tx.amount).toLocaleString()}
                             </td>
                             <td className="px-6 py-4">
                                 <Badge variant="outline" className={`capitalize shadow-sm ${

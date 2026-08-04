@@ -97,7 +97,7 @@ export default async function ApplicationReceipt(props: { params: Promise<{ id: 
                                     <p className="font-black text-slate-900 uppercase">{application.template.name}</p>
                                     <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">{isAppFee ? 'Application Fee' : 'Processing Fee'}</p>
                                 </div>
-                                <p className="font-black text-slate-900 text-xl">₦{parseFloat(feeAmount?.toString() || "0").toLocaleString()}</p>
+                                <p className="font-black text-slate-900 text-xl">\u20A6{parseFloat(feeAmount?.toString() || "0").toLocaleString()}</p>
                             </div>
                         </div>
 

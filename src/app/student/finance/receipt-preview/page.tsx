@@ -85,7 +85,7 @@ export default async function ReceiptPreviewPage({
                             <thead className="bg-slate-50 border-b">
                                 <tr>
                                     <th className="p-4 text-xs font-bold text-slate-500 uppercase tracking-widest">Description</th>
-                                    <th className="p-4 text-xs font-bold text-slate-500 uppercase tracking-widest text-right">Amount (₦)</th>
+                                    <th className="p-4 text-xs font-bold text-slate-500 uppercase tracking-widest text-right">Amount (\u20A6)</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100">
@@ -107,7 +107,7 @@ export default async function ReceiptPreviewPage({
                     {/* Outstanding Balance Notice */}
                     <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex justify-between items-center shadow-sm">
                         <span className="text-amber-800 font-bold text-sm">Outstanding Balance Remaining:</span>
-                        <span className="text-amber-600 font-black text-lg">₦ 50,000.00</span>
+                        <span className="text-amber-600 font-black text-lg">\u20A6 50,000.00</span>
                     </div>
 
                     {/* Signatures & Footer */}

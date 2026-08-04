@@ -106,7 +106,7 @@ export default function CheckoutPage() {
                     <CardContent className="p-8 space-y-8">
                         <div className="bg-slate-50 rounded-2xl p-6 border border-slate-100 flex items-center justify-between">
                             <span className="text-slate-500 font-bold uppercase tracking-widest text-xs">Total Due</span>
-                            <span className="text-4xl font-black text-slate-900">₦{amountNum.toLocaleString()}</span>
+                            <span className="text-4xl font-black text-slate-900">\u20A6{amountNum.toLocaleString()}</span>
                         </div>
 
                         <div className="space-y-4">
@@ -122,7 +122,7 @@ export default function CheckoutPage() {
                                     </div>
                                     <div>
                                         <p className="font-bold text-slate-900">Digital Wallet</p>
-                                        <p className="text-sm text-slate-500">Available Balance: <span className="font-bold text-slate-700">₦{walletBal.toLocaleString()}</span></p>
+                                        <p className="text-sm text-slate-500">Available Balance: <span className="font-bold text-slate-700">\u20A6{walletBal.toLocaleString()}</span></p>
                                     </div>
                                 </div>
 
@@ -145,7 +145,7 @@ export default function CheckoutPage() {
                             {processing ? (
                                 <Loader2 className="w-6 h-6 animate-spin mx-auto" />
                             ) : (
-                                "Confirm & Pay ₦" + amountNum.toLocaleString()
+                                "Confirm & Pay \u20A6" + amountNum.toLocaleString()
                             )}
                         </Button>
                     </CardContent>

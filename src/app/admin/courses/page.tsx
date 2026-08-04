@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileText, Plus, Trash2, Loader2, BookOpen, ChevronRight, Settings2, Link as LinkIcon, FileUp, X, UserPlus } from "lucide-react";
+import { FileText, Plus, Trash2, Loader2, BookOpen, ChevronRight, Settings2, Link as LinkIcon, FileUp, X, UserPlus, Search } from "lucide-react";
 import { getCourses, createCourse, updateCourse, addCourseToDepartment, updateCourseDepartmentSetting, removeCourseFromDepartment, addPrerequisite, removePrerequisite, deleteCourse, bulkImportCourses } from "@/actions/courses";
 import { UniversalImporter } from "@/components/UniversalImporter";
 import { getDepartments } from "@/actions/departments";
@@ -21,6 +21,7 @@ export default function CoursesPage() {
     const [loading, setLoading] = useState(true);
     const [isAdding, setIsAdding] = useState(false);
     const [showImporter, setShowImporter] = useState(false);
+    const [search, setSearch] = useState("");
 
     // Form States
     const [step, setStep] = useState(1); // 1: Base, 2: Depts, 3: Prerequisites
@@ -486,6 +487,23 @@ export default function CoursesPage() {
                 </div>
             )}
 
+            <div className="flex justify-between items-center bg-white p-4 rounded-[2rem] border border-slate-100 shadow-sm">
+                <div className="relative w-full md:w-96">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                    <Input
+                        placeholder={isK12 ? "Search subjects..." : "Search courses..."}
+                        className="pl-12 pr-24 h-14 bg-slate-50 border-none rounded-[1.5rem] text-sm font-medium focus-visible:ring-indigo-500"
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                    />
+                    {search && (
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-500 bg-white px-3 py-1.5 rounded-xl shadow-sm border border-slate-200 pointer-events-none uppercase tracking-wider">
+                            {courses.filter(c => c.name.toLowerCase().includes(search.toLowerCase()) || c.code.toLowerCase().includes(search.toLowerCase())).length} found
+                        </div>
+                    )}
+                </div>
+            </div>
+
             {loading ? (
                 <div className="grid grid-cols-1 gap-6">
                     {[1,2,3].map(i => (
@@ -497,7 +515,7 @@ export default function CoursesPage() {
                 </div>
             ) : (
                 <div className="grid grid-cols-1 gap-8">
-                    {courses.map((course) => (
+                    {courses.filter(c => c.name.toLowerCase().includes(search.toLowerCase()) || c.code.toLowerCase().includes(search.toLowerCase())).map((course) => (
                         <Card key={course.id} className="group border border-white/40 shadow-xl shadow-slate-200/50 bg-white/60 backdrop-blur-3xl rounded-[3rem] overflow-hidden hover:-translate-y-2 transition-all duration-500">
                             <CardHeader className="bg-gradient-to-br from-slate-900 to-slate-800 py-8 px-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 relative overflow-hidden">
                                 <div className="absolute inset-0 bg-white/5 mix-blend-overlay" />

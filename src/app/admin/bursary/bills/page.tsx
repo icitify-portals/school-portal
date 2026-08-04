@@ -544,11 +544,11 @@ export default function BursaryBillsPage() {
                                                         {bill.session?.name}
                                                     </td>
                                                     <td className="px-8 py-5 text-sm font-black text-slate-900">
-                                                        ₦{parseFloat(bill.totalAmount).toLocaleString()}
+                                                        \u20A6{parseFloat(bill.totalAmount).toLocaleString()}
                                                     </td>
                                                     <td className="px-8 py-5">
-                                                        <p className="text-xs font-bold text-emerald-600">₦{parseFloat(bill.amountPaid || "0.00").toLocaleString()}</p>
-                                                        <p className="text-[10px] text-slate-400">Owed: ₦{outstanding.toLocaleString()}</p>
+                                                        <p className="text-xs font-bold text-emerald-600">\u20A6{parseFloat(bill.amountPaid || "0.00").toLocaleString()}</p>
+                                                        <p className="text-[10px] text-slate-400">Owed: \u20A6{outstanding.toLocaleString()}</p>
                                                     </td>
                                                     <td className="px-8 py-5">
                                                         <div className="flex flex-col gap-2">

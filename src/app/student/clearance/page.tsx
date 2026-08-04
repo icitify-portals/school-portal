@@ -135,11 +135,11 @@ export default function StudentClearancePage() {
                                 <div className="grid grid-cols-2 gap-4 mt-6">
                                     <div className="p-4 bg-slate-50 rounded-2xl">
                                         <p className="text-[10px] font-bold uppercase text-slate-400 mb-1">Total Bill</p>
-                                        <p className="text-lg font-black text-slate-900">₦{Number(stats?.totalDebit).toLocaleString()}</p>
+                                        <p className="text-lg font-black text-slate-900">\u20A6{Number(stats?.totalDebit).toLocaleString()}</p>
                                     </div>
                                     <div className="p-4 bg-slate-50 rounded-2xl">
                                         <p className="text-[10px] font-bold uppercase text-slate-400 mb-1">Total Paid</p>
-                                        <p className="text-lg font-black text-emerald-600">₦{Number(stats?.totalCredit).toLocaleString()}</p>
+                                        <p className="text-lg font-black text-emerald-600">\u20A6{Number(stats?.totalCredit).toLocaleString()}</p>
                                     </div>
                                 </div>
                             </div>
@@ -152,7 +152,7 @@ export default function StudentClearancePage() {
                             <div>
                                 <p className="text-sm font-bold text-amber-900 mb-1">Attention Required</p>
                                 <p className="text-xs text-amber-700 leading-relaxed font-medium">
-                                    You need to pay at least **₦{(stats?.totalDebit * (stats?.threshold / 100) - stats?.totalCredit).toLocaleString()}** more to reach the {stats?.threshold}% clearance threshold.
+                                    You need to pay at least **\u20A6{(stats?.totalDebit * (stats?.threshold / 100) - stats?.totalCredit).toLocaleString()}** more to reach the {stats?.threshold}% clearance threshold.
                                 </p>
                                 <Link href="/student/finance">
                                     <Button variant="link" className="p-0 h-auto text-amber-800 font-black uppercase text-[10px] tracking-widest mt-2 gap-1">

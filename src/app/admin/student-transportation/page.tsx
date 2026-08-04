@@ -318,7 +318,7 @@ export default function StudentTransportation() {
                             <Label>Route Fare</Label>
                             <div className="text-lg font-medium text-gray-900">
                               
-                              ₦{studentDashboard.registration.route.fareAmount}
+                              \u20A6{studentDashboard.registration.route.fareAmount}
                             </div>
                           </div>
                           <div>
@@ -604,7 +604,7 @@ export default function StudentTransportation() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         
-                        <div className="text-sm text-gray-900">₦{reg.registration.fareAmount}</div>
+                        <div className="text-sm text-gray-900">\u20A6{reg.registration.fareAmount}</div>
                         
                         <div className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getPaymentStatusColor(reg.registration.paymentStatus)}`}>
                           
@@ -673,7 +673,7 @@ export default function StudentTransportation() {
                       <div className="flex items-center text-sm">
                         <CreditCard className="w-4 h-4 mr-2 text-gray-400" />
                         
-                        <span>Fare: ₦{route.route.fareAmount}</span>
+                        <span>Fare: \u20A6{route.route.fareAmount}</span>
                       </div>
                     </div>
                     

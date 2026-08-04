@@ -1080,7 +1080,7 @@ export default function TransportationEnterprise() {
                         </Select>
                       </div>
                       <div>
-                        <Label htmlFor="costEstimate">Cost Estimate (₦)</Label>
+                        <Label htmlFor="costEstimate">Cost Estimate (\u20A6)</Label>
                         <Input id="costEstimate" name="costEstimate" type="number" step="0.01" />
                       </div>
                     </div>

@@ -188,12 +188,12 @@ export default function StudentFinancePage() {
             : Math.min(outstanding, 1000);
 
         if (selectedAmount < minPayment) {
-            setCheckoutError(`Minimum payment of ₦${minPayment.toLocaleString()} is required.`);
+            setCheckoutError(`Minimum payment of \u20A6${minPayment.toLocaleString()} is required.`);
             return;
         }
 
         if (selectedAmount > outstanding + 0.01) {
-            setCheckoutError(`Payment exceeds outstanding balance of ₦${outstanding.toLocaleString()}.`);
+            setCheckoutError(`Payment exceeds outstanding balance of \u20A6${outstanding.toLocaleString()}.`);
             return;
         }
 
@@ -333,7 +333,7 @@ export default function StudentFinancePage() {
                     <p className="text-indigo-100 text-[10px] font-black uppercase tracking-widest mb-2 opacity-80 flex items-center gap-1.5">
                         <Coins className="w-4 h-4" /> Available Wallet Balance
                     </p>
-                    <h3 className="text-4xl font-black mb-10 tracking-tight">₦{walletBalanceText}</h3>
+                    <h3 className="text-4xl font-black mb-10 tracking-tight">\u20A6{walletBalanceText}</h3>
                     <div className="flex gap-2">
                         <Button 
                             className="bg-white text-indigo-600 hover:bg-indigo-50 w-full font-black rounded-2xl h-12 shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all"
@@ -353,7 +353,7 @@ export default function StudentFinancePage() {
                         <ArrowDownCircle className="w-3.5 h-3.5" />
                         Outstanding Balance
                     </div>
-                    <h3 className="text-4xl font-black text-slate-900 mb-10 tracking-tight">₦{totalOwedText}</h3>
+                    <h3 className="text-4xl font-black text-slate-900 mb-10 tracking-tight">\u20A6{totalOwedText}</h3>
                     <Button 
                         disabled={!unpaidBill}
                         onClick={() => unpaidBill && openCheckout(unpaidBill)}
@@ -381,11 +381,11 @@ export default function StudentFinancePage() {
                         <div className="p-4 bg-slate-800/80 rounded-2xl border border-slate-700 space-y-2">
                             <div className="flex justify-between items-center">
                                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Paid:</span>
-                                <span className="font-extrabold text-sm text-indigo-400">₦{totalPaidText}</span>
+                                <span className="font-extrabold text-sm text-indigo-400">\u20A6{totalPaidText}</span>
                             </div>
                             <div className="flex justify-between items-center pt-2 border-t border-slate-700/50">
                                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Previous Payments:</span>
-                                <span className="font-extrabold text-sm text-slate-300">₦{legacyBalanceText}</span>
+                                <span className="font-extrabold text-sm text-slate-300">\u20A6{legacyBalanceText}</span>
                             </div>
                         </div>
                     </div>
@@ -474,19 +474,19 @@ export default function StudentFinancePage() {
                                             </td>
                                             <td className="px-8 py-5">
                                                 {parseFloat(entry.debit) > 0 ? (
-                                                    <span className="text-sm font-black text-rose-600">₦{parseFloat(entry.debit).toLocaleString()}</span>
+                                                    <span className="text-sm font-black text-rose-600">\u20A6{parseFloat(entry.debit).toLocaleString()}</span>
                                                 ) : "-"}
                                             </td>
                                             <td className="px-8 py-5">
                                                 {parseFloat(entry.credit) > 0 ? (
-                                                    <span className="text-sm font-black text-emerald-600">₦{parseFloat(entry.credit).toLocaleString()}</span>
+                                                    <span className="text-sm font-black text-emerald-600">\u20A6{parseFloat(entry.credit).toLocaleString()}</span>
                                                 ) : "-"}
                                             </td>
                                             <td className="px-8 py-5 text-sm font-black text-slate-900">
                                                 {String(entry.id).startsWith('w-') ? (
                                                     <span className="text-xs text-slate-400 uppercase tracking-widest font-bold">Wallet Tx</span>
                                                 ) : (
-                                                    `₦${parseFloat(entry.balance).toLocaleString()}`
+                                                    `\u20A6${parseFloat(entry.balance).toLocaleString()}`
                                                 )}
                                             </td>
                                             <td className="px-8 py-5 font-mono text-[10px] text-slate-400 group-hover:text-slate-600">
@@ -538,7 +538,7 @@ export default function StudentFinancePage() {
                                                 </div>
                                                 <div className="text-right">
                                                     <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Outstanding Balance</p>
-                                                    <h3 className="text-2xl font-black text-slate-900">₦{outstanding.toLocaleString()}</h3>
+                                                    <h3 className="text-2xl font-black text-slate-900">\u20A6{outstanding.toLocaleString()}</h3>
                                                     <span className={cn("inline-block px-3 py-1 rounded-full text-[9px] font-black uppercase mt-3 tracking-wider",
                                                         bill.status === 'paid' ? "bg-emerald-100 text-emerald-800" : bill.status === 'partially_paid' ? "bg-amber-100 text-amber-800" : "bg-rose-100 text-rose-800")}>
                                                         {bill.status === 'partially_paid' ? 'Part-Paid' : bill.status}
@@ -570,10 +570,10 @@ export default function StudentFinancePage() {
                                                                     <td className="py-2 pr-2 font-semibold text-slate-700 truncate max-w-[140px]" title={item.feeItem?.name}>
                                                                         {item.feeItem?.name || `Item #${item.feeItemId}`}
                                                                     </td>
-                                                                    <td className="py-2 text-right text-slate-400">₦{itemOrig.toLocaleString()}</td>
-                                                                    <td className="py-2 text-right text-indigo-500">{itemAid > 0 ? `-₦${itemAid.toLocaleString()}` : '-'}</td>
-                                                                    <td className="py-2 text-right font-bold text-slate-800">₦{itemNet.toLocaleString()}</td>
-                                                                    <td className="py-2 text-right font-bold text-emerald-600">₦{itemPaid.toLocaleString()}</td>
+                                                                    <td className="py-2 text-right text-slate-400">\u20A6{itemOrig.toLocaleString()}</td>
+                                                                    <td className="py-2 text-right text-indigo-500">{itemAid > 0 ? `-\u20A6${itemAid.toLocaleString()}` : '-'}</td>
+                                                                    <td className="py-2 text-right font-bold text-slate-800">\u20A6{itemNet.toLocaleString()}</td>
+                                                                    <td className="py-2 text-right font-bold text-emerald-600">\u20A6{itemPaid.toLocaleString()}</td>
                                                                     <td className="py-2 text-center">
                                                                         <span className={cn(
                                                                             "inline-block px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider",
@@ -597,10 +597,10 @@ export default function StudentFinancePage() {
                                                 {(parseFloat(bill.totalScholarshipApplied || "0") > 0 || parseFloat(bill.totalDiscountApplied || "0") > 0) && (
                                                     <div className="mt-1 flex gap-3 text-[9px] font-bold text-slate-500">
                                                         {parseFloat(bill.totalScholarshipApplied || "0") > 0 && (
-                                                            <span className="text-indigo-500">Scholarship: -₦{parseFloat(bill.totalScholarshipApplied).toLocaleString()}</span>
+                                                            <span className="text-indigo-500">Scholarship: -\u20A6{parseFloat(bill.totalScholarshipApplied).toLocaleString()}</span>
                                                         )}
                                                         {parseFloat(bill.totalDiscountApplied || "0") > 0 && (
-                                                            <span className="text-blue-500">Discount: -₦{parseFloat(bill.totalDiscountApplied).toLocaleString()}</span>
+                                                            <span className="text-blue-500">Discount: -\u20A6{parseFloat(bill.totalDiscountApplied).toLocaleString()}</span>
                                                         )}
                                                     </div>
                                                 )}
@@ -664,7 +664,7 @@ export default function StudentFinancePage() {
                                                     </div>
                                                 </div>
                                                 <div className="text-right">
-                                                    <h4 className="font-black text-lg text-emerald-600">₦{parseFloat(p.amount).toLocaleString()}</h4>
+                                                    <h4 className="font-black text-lg text-emerald-600">\u20A6{parseFloat(p.amount).toLocaleString()}</h4>
                                                     <span className="text-[9px] font-black bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-full uppercase">{p.status}</span>
                                                 </div>
                                             </div>
@@ -684,7 +684,7 @@ export default function StudentFinancePage() {
                                                     </div>
                                                 </div>
                                                 <div className="text-right">
-                                                    <h4 className="font-black text-lg text-teal-600">₦{parseFloat(p.amount).toLocaleString()}</h4>
+                                                    <h4 className="font-black text-lg text-teal-600">\u20A6{parseFloat(p.amount).toLocaleString()}</h4>
                                                     <span className="text-[9px] font-black bg-teal-50 text-teal-600 px-2 py-0.5 rounded-full uppercase">{p.status}</span>
                                                 </div>
                                             </div>
@@ -718,7 +718,7 @@ export default function StudentFinancePage() {
                                                         </div>
                                                     </div>
                                                     <div className="text-right">
-                                                        <h4 className="font-black text-lg text-slate-700">₦{parseFloat(p.amount).toLocaleString()}</h4>
+                                                        <h4 className="font-black text-lg text-slate-700">\u20A6{parseFloat(p.amount).toLocaleString()}</h4>
                                                         <span className="text-[9px] font-black bg-slate-200 text-slate-600 px-2 py-0.5 rounded-full uppercase">Migrated</span>
                                                     </div>
                                                 </div>
@@ -824,7 +824,7 @@ export default function StudentFinancePage() {
                                         <div className="flex justify-between items-center text-xs">
                                             <span className="text-slate-400 font-bold uppercase tracking-wider text-[9px]">Outstanding:</span>
                                             <span className="font-extrabold text-slate-800">
-                                                ₦{(parseFloat(selectedBill.totalAmount) - parseFloat(selectedBill.amountPaid || "0.00")).toLocaleString()}
+                                                \u20A6{(parseFloat(selectedBill.totalAmount) - parseFloat(selectedBill.amountPaid || "0.00")).toLocaleString()}
                                             </span>
                                         </div>
                                     </div>
@@ -844,7 +844,7 @@ export default function StudentFinancePage() {
                                         return (
                                             <div className="space-y-4">
                                                 <div className="flex justify-between items-center">
-                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Amount to Settle (₦)</label>
+                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Amount to Settle (\u20A6)</label>
                                                     {partPaymentEnabled && (
                                                         <span className="text-[10px] text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full font-black uppercase tracking-wider">
                                                             Installments Allowed (Min: {minPercentage}%)
@@ -885,8 +885,8 @@ export default function StudentFinancePage() {
                                                             className="w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-indigo-600"
                                                         />
                                                         <div className="flex justify-between text-[9px] font-bold text-slate-400 uppercase tracking-wider">
-                                                            <span>Min: ₦{minPayment.toLocaleString()}</span>
-                                                            <span>Max: ₦{outstanding.toLocaleString()}</span>
+                                                            <span>Min: \u20A6{minPayment.toLocaleString()}</span>
+                                                            <span>Max: \u20A6{outstanding.toLocaleString()}</span>
                                                         </div>
                                                     </div>
                                                 )}
@@ -895,7 +895,7 @@ export default function StudentFinancePage() {
                                                     <div className="flex items-start gap-2 text-amber-600 bg-amber-50/50 p-4 rounded-2xl border border-amber-100/50 text-xs">
                                                         <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
                                                         <p className="leading-relaxed">
-                                                            Amount is below the minimum required installment of <strong>₦{minPayment.toLocaleString()}</strong> ({minPercentage}% setting threshold).
+                                                            Amount is below the minimum required installment of <strong>\u20A6{minPayment.toLocaleString()}</strong> ({minPercentage}% setting threshold).
                                                         </p>
                                                     </div>
                                                 )}
@@ -934,7 +934,7 @@ export default function StudentFinancePage() {
                                             >
                                                 <Wallet className={cn("w-5 h-5 mb-2", paymentMode === 'wallet' ? "text-indigo-600" : "text-slate-400")} />
                                                 <p className="font-extrabold text-slate-800 text-xs">Digital Wallet</p>
-                                                <p className="text-[9px] text-slate-400 leading-tight mt-1">Instant debit (Bal: ₦{walletBalanceText})</p>
+                                                <p className="text-[9px] text-slate-400 leading-tight mt-1">Instant debit (Bal: \u20A6{walletBalanceText})</p>
                                             </button>
                                         </div>
                                     </div>
@@ -944,7 +944,7 @@ export default function StudentFinancePage() {
                                         <div className="flex items-start gap-2 text-rose-600 bg-rose-50/50 p-4 rounded-2xl border border-rose-100/50 text-xs">
                                             <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
                                             <p className="leading-relaxed">
-                                                Your digital wallet has insufficient funds (₦{walletBalanceText} available). Please fund your wallet in the Wallet Portal before finalizing.
+                                                Your digital wallet has insufficient funds (\u20A6{walletBalanceText} available). Please fund your wallet in the Wallet Portal before finalizing.
                                             </p>
                                         </div>
                                     )}

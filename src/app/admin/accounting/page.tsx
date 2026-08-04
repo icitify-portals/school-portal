@@ -171,7 +171,7 @@ export default function AccountingDashboard() {
                 <Card className="border border-white/40 shadow-xl shadow-slate-200/50 bg-indigo-600 text-white backdrop-blur-3xl rounded-[2.5rem] hover:shadow-2xl transition-all relative overflow-hidden group">
                     <CardContent className="p-8">
                         <p className="text-[10px] font-black uppercase tracking-widest opacity-80 mb-2 drop-shadow-sm">Total Assets</p>
-                        <h3 className="text-4xl font-black mb-1 drop-shadow-md">₦0.00</h3>
+                        <h3 className="text-4xl font-black mb-1 drop-shadow-md">\u20A60.00</h3>
                         <p className="text-xs font-bold opacity-70">Aggregated from Asset COA codes</p>
                         <div className="absolute top-0 right-0 p-6 opacity-20 group-hover:scale-110 transition-transform">
                             <BarChart3 className="w-16 h-16" />
@@ -181,7 +181,7 @@ export default function AccountingDashboard() {
                 <Card className="border border-white/40 shadow-xl shadow-slate-200/50 bg-slate-900 text-white backdrop-blur-3xl rounded-[2.5rem] hover:shadow-2xl transition-all relative overflow-hidden group">
                     <CardContent className="p-8">
                         <p className="text-[10px] font-black uppercase tracking-widest opacity-80 mb-2 drop-shadow-sm">Total Liabilities</p>
-                        <h3 className="text-4xl font-black mb-1 drop-shadow-md">₦0.00</h3>
+                        <h3 className="text-4xl font-black mb-1 drop-shadow-md">\u20A60.00</h3>
                         <p className="text-xs font-bold opacity-70">Aggregated from Liability COA codes</p>
                         <div className="absolute top-0 right-0 p-6 opacity-20 group-hover:scale-110 transition-transform">
                             <BarChart3 className="w-16 h-16" />
@@ -191,7 +191,7 @@ export default function AccountingDashboard() {
                 <Card className="border border-white/40 shadow-xl shadow-slate-200/50 bg-white/60 text-slate-900 backdrop-blur-3xl rounded-[2.5rem] hover:shadow-2xl transition-all relative overflow-hidden group">
                     <CardContent className="p-8">
                         <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 drop-shadow-sm">Net Equity</p>
-                        <h3 className="text-4xl font-black mb-1 drop-shadow-md">₦0.00</h3>
+                        <h3 className="text-4xl font-black mb-1 drop-shadow-md">\u20A60.00</h3>
                         <p className="text-xs font-bold text-slate-500">Assets minus Liabilities</p>
                         <div className="absolute top-0 right-0 p-6 opacity-5 group-hover:scale-110 transition-transform text-slate-900">
                             <Scale className="w-16 h-16" />
