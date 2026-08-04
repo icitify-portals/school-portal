@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ALATPay Standalone Test</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8fafc;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .card {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            max-width: 400px;
+            width: 100%;
+        }
+        button {
+            background-color: #8A2132;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            width: 100%;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background-color: #6c1a27;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        .log {
+            margin-top: 20px;
+            text-align: left;
+            background: #f1f5f9;
+            padding: 10px;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 12px;
+            min-height: 100px;
+            color: #334155;
+            word-wrap: break-word;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <h2>ALATPay Test</h2>
+        <p>Testing checkout outside the portal</p>
+        <button id="pay-btn" disabled>Loading ALATPay...</button>
+        <div class="log" id="log-box">Awaiting interaction...</div>
+    </div>
+
+    <!-- ALATPay Script -->
+    <script src="https://web.alatpay.ng/js/alatpay.js"></script>
+    
+    <script>
+        const btn = document.getElementById('pay-btn');
+        const logBox = document.getElementById('log-box');
+
+        function log(msg) {
+            console.log(msg);
+            logBox.innerHTML += `<div>> ${msg}</div>`;
+        }
+
+        // Wait for script to load
+        const checkReady = setInterval(() => {
+            if (window.Alatpay) {
+                clearInterval(checkReady);
+                btn.innerText = "Pay ₦100 Test";
+                btn.disabled = false;
+                log("ALATPay script loaded successfully.");
+            }
+        }, 500);
+
+        btn.addEventListener('click', () => {
+            if (!window.Alatpay) return;
+            
+            log("Initializing ALATPay...");
+
+            try {
+                let popup = window.Alatpay.setup({
+                    // Main Account Credentials
+                    businessId: "0cb45b96-9b38-46e5-5d2f-08dd240a980b",
+                    apiKey: "01b86183964c4f1fb4654990bc48e969",
+                    email: "test@example.com",
+                    amount: 100, // 100 Naira
+                    currency: "NGN",
+                    firstName: "John",
+                    lastName: "Doe",
+                    phone: "08012345678",
+                    metadata: "Standalone Test Payment",
+                    onTransaction: function (response) {
+                        log("Transaction Callback: " + JSON.stringify(response));
+                        if (response.status === true || response.message === "Approved" || response.status === "Approved") {
+                            log("✅ SUCCESS!");
+                        } else {
+                            log("❌ FAILED / DECLINED");
+                        }
+                    },
+                    onClose: function () {
+                        log("Popup closed by user.");
+                    },
+                });
+
+                popup.show();
+            } catch (err) {
+                log("Error: " + err.message);
+            }
+        });
+    </script>
+</body>
+</html>
