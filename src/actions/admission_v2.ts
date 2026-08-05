@@ -1420,18 +1420,10 @@ export async function submitApplicationFinal(applicationId: number, applicantId:
         }
 
         // Enforce O-Level details are filled
-        let hasOlevel = false;
-        try {
-            const olevelParsed = typeof application.olevelData === 'string' ? JSON.parse(application.olevelData) : application.olevelData;
-            if (olevelParsed) {
-                if (Array.isArray(olevelParsed) && olevelParsed.length > 0) hasOlevel = true;
-                else if (olevelParsed.sittings && olevelParsed.sittings.length > 0) hasOlevel = true;
-                else if (olevelParsed.firstSitting || olevelParsed.secondSitting) hasOlevel = true;
-                else if (Object.keys(olevelParsed).length > 0) hasOlevel = true;
-            }
-        } catch(e) {}
+        const sittings = await db.select().from(applicantOLevelSittings)
+            .where(eq(applicantOLevelSittings.applicationId, applicationId));
 
-        if (!hasOlevel) {
+        if (!sittings || sittings.length === 0) {
             return { success: false, error: "O-Level details are required. Please go back to the O-Level section and fill your results." };
         }
 
