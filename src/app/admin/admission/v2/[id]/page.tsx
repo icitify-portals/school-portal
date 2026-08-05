@@ -8,7 +8,7 @@ import {
     Loader2, ArrowLeft, Printer, CreditCard, GraduationCap, BookOpen, Hash,
     Image as ImageIcon, ChevronDown, ChevronUp, Shield, ShieldAlert, ShieldCheck
 } from "lucide-react";
-import { getAdminV2ApplicationDetail, updateAdmissionStatus, confirmAdmissionPayment, confirmAcceptancePayment } from "@/actions/admission_v2";
+import { getAdminV2ApplicationDetail, updateAdmissionStatus, confirmAdmissionPayment, confirmAcceptancePayment, reverseAdmissionPayment } from "@/actions/admission_v2";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -64,6 +64,20 @@ export default function V2ApplicationDetailPage() {
             setApp(data);
         } else {
             toast.error(res.error);
+        }
+    };
+
+    const handleReversePayment = async () => {
+        if (!app) return;
+        const confirm = window.confirm("Are you sure you want to reverse this payment?");
+        if (!confirm) return;
+        const res = await reverseAdmissionPayment(app.id);
+        if (res.success) {
+            toast.success("Payment reversed");
+            const data = await getAdminV2ApplicationDetail(app.id);
+            setApp(data);
+        } else {
+            toast.error(res.error || "Action failed");
         }
     };
 
@@ -644,6 +658,15 @@ export default function V2ApplicationDetailPage() {
                                             className="w-full rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] uppercase tracking-widest py-4"
                                         >
                                             <CheckCircle2 className="w-4 h-4 mr-2" /> Confirm Payment
+                                        </Button>
+                                    )}
+                                    {app.paymentStatus === 'paid' && (
+                                        <Button
+                                            onClick={handleReversePayment}
+                                            variant="outline"
+                                            className="w-full rounded-xl text-rose-600 border-rose-200 hover:bg-rose-50 hover:text-rose-700 font-black text-[10px] uppercase tracking-widest py-4"
+                                        >
+                                            <XCircle className="w-4 h-4 mr-2" /> Reverse Payment
                                         </Button>
                                     )}
                                     {app.status === 'admitted' && app.acceptancePaymentStatus !== 'paid' && app.acceptancePaymentStatus !== 'not_applicable' && (

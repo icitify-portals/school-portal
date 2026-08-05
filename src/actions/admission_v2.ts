@@ -506,6 +506,32 @@ export async function getAdmissionApplications(templateId?: number) {
         return [];
     }
 }
+export async function reverseAdmissionPayment(applicationId: number) {
+    await requireAdmin();
+    try {
+        const application = await db.query.admissionApplicationsV2.findFirst({
+            where: eq(admissionApplicationsV2.id, applicationId)
+        });
+
+        if (!application) return { success: false, error: "Not found" };
+
+        await db.update(admissionApplicationsV2)
+            .set({ 
+                paymentStatus: 'pending', 
+                status: 'draft',
+                paymentReference: null 
+            })
+            .where(eq(admissionApplicationsV2.id, applicationId));
+
+        revalidatePath('/admin/admission/v2');
+        revalidatePath(`/admin/admission/v2/${applicationId}`);
+        revalidatePath('/admin/admission/payments');
+        
+        return { success: true };
+    } catch (e: any) {
+        return { success: false, error: e.message };
+    }
+}
 
 export async function confirmAdmissionPayment(applicationId: number, reference: string) {
     await requireAdmin();
