@@ -523,6 +523,8 @@ export default function ProgrammeRequirementsPage() {
                               <option value="C6">C6</option>
                               <option value="D7">D7</option>
                               <option value="E8">E8</option>
+                              <option value="F9">F9</option>
+                              <option value="AR">AR (Awaiting Result)</option>
                             </select>
                           </div>
                           <div className="space-y-2">

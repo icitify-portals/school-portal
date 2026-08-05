@@ -196,7 +196,7 @@ export async function validateOLevelResults(jambRegNo: string, programmeId: numb
 
 // Helper function to check if grade passes minimum requirement
 function isGradePassing(grade: string, minGrade: string): boolean {
-  const gradeOrder = ['A1', 'B2', 'B3', 'C4', 'C5', 'C6', 'D7', 'E8', 'F9'];
+  const gradeOrder = ['A1', 'B2', 'B3', 'C4', 'C5', 'C6', 'D7', 'E8', 'F9', 'AR'];
   const gradeIndex = gradeOrder.indexOf(grade);
   const minIndex = gradeOrder.indexOf(minGrade);
 

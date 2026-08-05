@@ -9,7 +9,7 @@ interface OLevelConfig {
 }
 
 const DEFAULT_GRADING: Record<string, number> = {
-    "A1": 6, "B2": 5, "B3": 4, "C4": 3, "C5": 2, "C6": 1, "D7": 0, "E8": 0, "F9": 0
+    "A1": 6, "B2": 5, "B3": 4, "C4": 3, "C5": 2, "C6": 1, "D7": 0, "E8": 0, "F9": 0, "AR": 0
 };
 
 export class OLevelPointsStrategy implements ScoringStrategy {

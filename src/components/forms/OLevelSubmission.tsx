@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Trash2, PlusCircle, ChevronDown } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-const GRADES = ["A1", "B2", "B3", "C4", "C5", "C6", "D7", "E8", "F9"];
+const GRADES = ["A1", "B2", "B3", "C4", "C5", "C6", "D7", "E8", "F9", "AR"];
 
 const GRADE_LABELS: Record<string, string> = {
     A1: "Excellent",
@@ -17,6 +17,7 @@ const GRADE_LABELS: Record<string, string> = {
     D7: "Pass",
     E8: "Pass",
     F9: "Fail",
+    AR: "Awaiting Result",
 };
 
 const OLEVEL_SUBJECTS = [
