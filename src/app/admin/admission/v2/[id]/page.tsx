@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -429,7 +429,28 @@ export default function V2ApplicationDetailPage() {
                             </CardContent>
                         </Card>
 
-                        {app.formStructure && app.formStructure.length > 0 && (
+                        {/* Show a clear banner when the applicant hasn't filled any form data yet */}
+                        {(!app.parsedData || Object.keys(app.parsedData).filter(k => !k.startsWith('__')).length === 0) && (
+                            <Card className="border border-amber-200 shadow-xl bg-amber-50/80 rounded-[3rem] overflow-hidden print-card">
+                                <CardContent className="p-8 flex flex-col items-center text-center gap-4">
+                                    <AlertCircle className="w-12 h-12 text-amber-400" />
+                                    <div>
+                                        <p className="font-black text-amber-800 text-lg">No Form Data Submitted Yet</p>
+                                        <p className="text-amber-600 text-sm mt-1">This applicant (<strong>{app.userAccountInfo?.name || app.userAccountInfo?.email || 'Unknown'}</strong>) has registered but has not filled in or submitted the application form. Their payment status is <strong>{app.paymentStatus}</strong>.</p>
+                                    </div>
+                                    {app.userAccountInfo && (
+                                        <div className="grid grid-cols-2 gap-4 w-full mt-2 text-left">
+                                            <div><p className="text-[10px] font-black text-amber-700 uppercase tracking-widest mb-1">Name</p><p className="text-sm font-bold text-amber-900">{app.userAccountInfo.name || '—'}</p></div>
+                                            <div><p className="text-[10px] font-black text-amber-700 uppercase tracking-widest mb-1">Email</p><p className="text-sm font-bold text-amber-900">{app.userAccountInfo.email || '—'}</p></div>
+                                            <div><p className="text-[10px] font-black text-amber-700 uppercase tracking-widest mb-1">Status</p><p className="text-sm font-bold text-amber-900 capitalize">{app.status}</p></div>
+                                            <div><p className="text-[10px] font-black text-amber-700 uppercase tracking-widest mb-1">Template</p><p className="text-sm font-bold text-amber-900">{app.templateName}</p></div>
+                                        </div>
+                                    )}
+                                </CardContent>
+                            </Card>
+                        )}
+
+                        {app.formStructure && app.formStructure.length > 0 && app.parsedData && Object.keys(app.parsedData).filter(k => !k.startsWith('__')).length > 0 && (
                             <Card className="border border-white/40 shadow-xl bg-white/80 backdrop-blur-3xl rounded-[3rem] overflow-hidden print-card">
                                 <CardHeader className="bg-slate-50 border-b border-slate-100 p-6">
                                     <CardTitle className="text-lg flex items-center gap-2 text-slate-800">
@@ -481,7 +502,7 @@ export default function V2ApplicationDetailPage() {
                                                                 return (
                                                                     <div key={field.id} className={field.width === 'full' ? 'md:col-span-2' : ''}>
                                                                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{field.label}</p>
-                                                                        <div className="text-sm">{renderFieldValue(value, field.type)}</div>
+                                                                        <div className="text-sm">{renderFieldValue(value, field)}</div>
                                                                     </div>
                                                                 );
                                                             })}
