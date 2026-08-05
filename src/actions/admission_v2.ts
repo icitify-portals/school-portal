@@ -515,10 +515,17 @@ export async function confirmAdmissionPayment(applicationId: number, reference: 
             with: { template: true }
         });
 
+        // Determine the new workflow status:
+        // - 'draft' → 'submitted' (admin-confirmed payment implies the applicant submitted)
+        // - All other valid statuses (submitted, screened, admitted, rejected) remain unchanged
+        // - NEVER set status to 'paid' — that is not a valid workflow status value
+        const currentStatus = application?.status || 'draft';
+        const newStatus = currentStatus === 'draft' ? 'submitted' : currentStatus;
+
         await db.update(admissionApplicationsV2)
             .set({ 
                 paymentStatus: 'paid', 
-                status: 'paid',
+                status: newStatus,
                 paymentReference: reference 
             })
             .where(eq(admissionApplicationsV2.id, applicationId));
