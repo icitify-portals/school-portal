@@ -331,7 +331,7 @@ export default function V2ApplicationDetailPage() {
                         </div>
                         <div className="flex flex-wrap gap-3 no-print">
                             <Button
-                                onClick={() => window.print()}
+                                onClick={() => window.open(`/admin/admission/v2/${app.id}/print`, '_blank')}
                                 className="rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/20 font-black text-[10px] uppercase tracking-widest px-5 py-3 backdrop-blur-md"
                             >
                                 <Printer className="w-4 h-4 mr-2" /> Print
