@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -171,10 +171,18 @@ export default function AdmissionPaymentsPage() {
                                     } catch (e) {
                                         console.error("Failed to parse app data", app.id);
                                     }
-                                    const candidateName = data.firstName || data.lastName 
-                                        ? `${data.firstName || ''} ${data.lastName || ''}`.trim() 
-                                        : (app.student?.firstName ? `${app.student.firstName} ${app.student.surname}`.trim() 
-                                            : (app.applicant?.firstName ? `${app.applicant.firstName} ${app.applicant.surname}`.trim() : (app.applicant?.name || "Unnamed Candidate")));
+                                    // Resolve candidate name — form data keys vary widely across templates
+                                    const fn = data.firstName || data.FirstName || data['First Name'] || data['first_name'] || '';
+                                    const ln = data.lastName || data.LastName || data['Last Name'] || data['last_name'] || data.surname || data.Surname || '';
+                                    const mn = data.middleName || data.MiddleName || data['Middle Name'] || data['middle_name'] || '';
+                                    const fromFormData = [fn, mn, ln].filter(Boolean).join(' ').trim();
+                                    // Fall back to users.name (from the applicant account)
+                                    const fromUser = app.applicant?.name || '';
+                                    // Final fallback chain
+                                    const candidateName = fromFormData || fromUser || 'Unnamed Candidate';
+                                    // Resolve email for sub-label
+                                    const candidateEmail = data.email || data.Email || data['email_address'] || app.applicant?.email || '';
+
                                     
                                     return (
                                         <tr key={app.id} className="hover:bg-slate-50 transition-colors group">
@@ -185,6 +193,9 @@ export default function AdmissionPaymentsPage() {
                                                     </div>
                                                     <div>
                                                         <p className="text-sm font-black text-slate-900 uppercase italic">{candidateName}</p>
+                                                        {candidateEmail && (
+                                                            <p className="text-[10px] font-bold text-slate-500 normal-case">{candidateEmail}</p>
+                                                        )}
                                                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
                                                             <Calendar className="w-3 h-3" /> {format(new Date(app.appliedAt), 'MMM dd, HH:mm')}
                                                         </p>
