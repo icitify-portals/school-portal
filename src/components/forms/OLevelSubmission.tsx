@@ -27,6 +27,7 @@ const OLEVEL_SUBJECTS = [
     "Chemistry",
     "Biology",
     "Agricultural Science",
+    "Animal Husbandry",
     "Economics",
     "Geography",
     "Government",
