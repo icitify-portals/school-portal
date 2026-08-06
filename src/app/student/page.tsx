@@ -1,4 +1,4 @@
-﻿import { auth } from "@/auth";
+import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { cn, isGraduatedStatus } from "@/lib/utils";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
@@ -315,6 +315,7 @@ export default async function StudentDashboard() {
                 <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Portal Console Shortcuts</h3>
                 <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-7 gap-4 auto-rows-[120px]">
                     {[
+                        ...(studentRecord?.status === 'nd_graduated' ? [{ name: "Apply for HND", href: "/applicant", icon: GraduationCap, span: "col-span-2 row-span-1", color: "text-white bg-indigo-600 hover:bg-indigo-700" }] : []),
                         { name: "Course Registration", href: "/student/registration", icon: BookOpen, span: "col-span-2 row-span-2", color: "text-blue-700 bg-blue-50" },
                         { name: "Results", href: "/results", icon: FileText, span: "col-span-1 row-span-1", color: "text-emerald-700 bg-emerald-50" },
                         { name: "Bursary", href: "/student/finance", icon: Wallet, span: "col-span-1 row-span-1", color: "text-amber-700 bg-amber-50" },
