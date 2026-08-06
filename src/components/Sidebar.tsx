@@ -217,6 +217,7 @@ const adminMenuItems: MenuItem[] = [
             { name: "Grievances & Appeals", href: "/admin/registrar/grievances" },
             { name: "Alumni Transition", href: "/admin/registrar/alumni" },
             { name: "Exams & Records", href: "/admin/exams-records" },
+            { name: "Registrar Guide", href: "/admin/registrar/guide" },
         ]
     },
     {
