@@ -57,7 +57,7 @@ async function requireApplicant() {
             .from(students)
             .where(eq(students.userId, parseInt(session.user.id)));
         
-        if (student?.status === 'nd_graduated') {
+        if (student?.status === 'nd_graduated' || student?.status === 'graduated') {
             return session;
         }
     }
