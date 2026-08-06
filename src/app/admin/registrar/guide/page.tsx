@@ -46,7 +46,7 @@ export default function RegistrarGuidePage() {
                                 <ul className="list-disc list-inside text-sm font-medium text-slate-600 mb-6 space-y-2">
                                     <li>Navigate to <strong>Graduation & Clearance</strong>.</li>
                                     <li>Review pending clearance requests from final-year students.</li>
-                                    <li>Verify that all academic (CGPA >= 1.0), library, and bursary debts have been settled.</li>
+                                    <li>Verify that all academic (CGPA &gt;= 1.0), library, and bursary debts have been settled.</li>
                                     <li>Approve the clearance to generate their final statement of result.</li>
                                 </ul>
                                 <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 flex items-start gap-3">
