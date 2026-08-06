@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
@@ -359,7 +359,11 @@ export default function StatefulApplicationPage() {
         }
 
         setValidationErrors(errors);
-        return Object.keys(errors).length === 0;
+        if (Object.keys(errors).length > 0) {
+            toast.error(Object.values(errors)[0]);
+            return false;
+        }
+        return true;
     };
 
     const evaluateCondition = (field: any): boolean => {
@@ -444,7 +448,6 @@ export default function StatefulApplicationPage() {
         
         // Validate current section
         if (!validateCurrentSection()) {
-            toast.error("Please fix the validation errors before proceeding.");
             return;
         }
         
@@ -506,7 +509,7 @@ export default function StatefulApplicationPage() {
         
         if (Object.keys(allErrors).length > 0) {
             setValidationErrors(allErrors);
-            toast.error("Please fix all validation errors before submitting.");
+            toast.error(Object.values(allErrors)[0]);
             return;
         }
 
