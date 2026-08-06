@@ -1021,46 +1021,96 @@ export async function finalizeStudentAdmission(applicationId: number) {
             userId = userResult.insertId;
         }
 
-        // 2. Create Student with extended mapping including Study Mode
-        // @ts-expect-error - TS2769: Auto-suppressed for build
-        const [studentResult] = await db.insert(students).values({
-            userId: userId,
-            firstName: formData.firstName || formData.fullName?.split(' ')[0],
-            lastName: formData.surname || formData.lastName || formData.fullName?.split(' ').slice(1).join(' '),
-            matricNumber: matricNumber,
-            jambNumber: jambRegNo || null,
-            modeOfEntry: modeOfEntry,
-            studyMode: studyMode,
-            programmeType: programmeType,
-            programmeId: selectedProgrammeId,
-            deptId: deptId,
-            admissionSessionId: activeSession?.id || null,
-            currentLevel: 1,
-            admissionYear: year,
-            gender: (formData.gender?.toLowerCase() || 'other') as any,
-            dob: formData.dob,
-            imageUrl: finalImageUrl,
-            signatureUrl: finalSignatureUrl,
-            nationality: formData.nationality || 'Nigerian',
-            
-            // Guardian Details mapping
-            guardianName: formData.parentName || formData.guardianName || formData.fatherName || formData.motherName,
-            guardianPhone: formData.parentPhone || formData.guardianPhone || formData.fatherPhone || formData.motherPhone,
-            guardianEmail: formData.parentEmail || formData.guardianEmail,
-            guardianAddress: formData.address || formData.guardianAddress || formData.homeAddress,
-            
-            // Health Details
-            bloodGroup: formData.bloodGroup || formData.blood_group,
-            genotype: formData.genotype,
-            ailments: formData.immunizationHistory || formData.ailments || formData.medicalHistory,
-            
-            status: 'active'
+        // 2. Check if student record exists (e.g. ND -> HND transition)
+        const existingStudent = await db.query.students.findFirst({
+            where: eq(students.userId, userId)
         });
+
+        let finalStudentId: number;
+
+        if (existingStudent) {
+            // Update existing student and handle matric number transition
+            let prevMatrics: string[] = [];
+            if (existingStudent.previousMatricNumbers) {
+                try {
+                    prevMatrics = JSON.parse(existingStudent.previousMatricNumbers);
+                } catch (e) {
+                    console.error("Failed to parse previousMatricNumbers:", e);
+                }
+            }
+            
+            // Add current matric number to history if it exists and is different
+            if (existingStudent.matricNumber && existingStudent.matricNumber !== matricNumber) {
+                if (!prevMatrics.includes(existingStudent.matricNumber)) {
+                    prevMatrics.push(existingStudent.matricNumber);
+                }
+            }
+
+            await db.update(students).set({
+                firstName: formData.firstName || formData.fullName?.split(' ')[0] || existingStudent.firstName,
+                lastName: formData.surname || formData.lastName || formData.fullName?.split(' ').slice(1).join(' ') || existingStudent.lastName,
+                matricNumber: matricNumber,
+                previousMatricNumbers: JSON.stringify(prevMatrics),
+                jambNumber: jambRegNo || existingStudent.jambNumber,
+                modeOfEntry: modeOfEntry || existingStudent.modeOfEntry,
+                studyMode: studyMode || existingStudent.studyMode,
+                programmeType: programmeType || existingStudent.programmeType,
+                programmeId: selectedProgrammeId || existingStudent.programmeId,
+                deptId: deptId || existingStudent.deptId,
+                admissionSessionId: activeSession?.id || existingStudent.admissionSessionId,
+                currentLevel: 1, // Reset level for HND
+                admissionYear: year || existingStudent.admissionYear,
+                gender: (formData.gender?.toLowerCase() || existingStudent.gender || 'other') as any,
+                dob: formData.dob || existingStudent.dob,
+                imageUrl: finalImageUrl || existingStudent.imageUrl,
+                signatureUrl: finalSignatureUrl || existingStudent.signatureUrl,
+                status: 'active'
+            }).where(eq(students.id, existingStudent.id));
+            
+            finalStudentId = existingStudent.id;
+        } else {
+            // Create Student with extended mapping including Study Mode
+            // @ts-expect-error - TS2769: Auto-suppressed for build
+            const [studentResult] = await db.insert(students).values({
+                userId: userId,
+                firstName: formData.firstName || formData.fullName?.split(' ')[0],
+                lastName: formData.surname || formData.lastName || formData.fullName?.split(' ').slice(1).join(' '),
+                matricNumber: matricNumber,
+                jambNumber: jambRegNo || null,
+                modeOfEntry: modeOfEntry,
+                studyMode: studyMode,
+                programmeType: programmeType,
+                programmeId: selectedProgrammeId,
+                deptId: deptId,
+                admissionSessionId: activeSession?.id || null,
+                currentLevel: 1,
+                admissionYear: year,
+                gender: (formData.gender?.toLowerCase() || 'other') as any,
+                dob: formData.dob,
+                imageUrl: finalImageUrl,
+                signatureUrl: finalSignatureUrl,
+                nationality: formData.nationality || 'Nigerian',
+                
+                // Guardian Details mapping
+                guardianName: formData.parentName || formData.guardianName || formData.fatherName || formData.motherName,
+                guardianPhone: formData.parentPhone || formData.guardianPhone || formData.fatherPhone || formData.motherPhone,
+                guardianEmail: formData.parentEmail || formData.guardianEmail,
+                guardianAddress: formData.address || formData.guardianAddress || formData.homeAddress,
+                
+                // Health Details
+                bloodGroup: formData.bloodGroup || formData.blood_group,
+                genotype: formData.genotype,
+                ailments: formData.immunizationHistory || formData.ailments || formData.medicalHistory,
+                
+                status: 'active'
+            });
+            finalStudentId = studentResult.insertId;
+        }
 
         // 3. Update Application Status
         await db.update(admissionApplicationsV2)
             .set({ 
-                studentId: studentResult.insertId,
+                studentId: finalStudentId,
                 admissionNotes: `Admission accepted and finalized. Matric Number: ${matricNumber}`,
                 updatedAt: new Date()
             })
