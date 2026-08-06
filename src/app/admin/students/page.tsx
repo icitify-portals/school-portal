@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect, useCallback } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
@@ -14,6 +14,7 @@ import { StudentSeeder } from "@/components/StudentSeeder";
 import { DataTablePagination } from "@/components/DataTablePagination";
 import { Suspense } from "react";
 import { AccountManagementModal } from "@/components/admin/AccountManagementModal";
+import Link from "next/link";
 
 import { useBranch } from "@/providers/BranchProvider";
 
@@ -227,7 +228,9 @@ function StudentsPageContent() {
                                     <tr key={s.id} className="hover:bg-slate-50/50 transition-colors">
                                         <td className="px-6 py-4">
                                             <div className="flex flex-col">
-                                                <span className="text-sm font-bold text-slate-700">{s.user?.name}</span>
+                                                <Link href={`/admin/students/${s.id}`} className="text-sm font-bold text-indigo-600 hover:underline hover:text-indigo-800 transition-colors cursor-pointer">
+                                                    {s.user?.name}
+                                                </Link>
                                                 <span className="text-xs text-slate-400">{s.user?.email}</span>
                                             </div>
                                         </td>
