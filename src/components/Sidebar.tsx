@@ -204,6 +204,7 @@ const adminMenuItems: MenuItem[] = [
             { name: "Transcript Requests", href: "/admin/result-module/requests" },
             { name: "Grading Scales", href: "/admin/result-module/scales" },
             { name: "Result Module Guide", href: "/admin/result-module/guide" },
+            { name: "Academics Guide", href: "/admin/academics/guide" },
             { name: "Quality Assurance", href: "/admin/quality-assurance" },
         ]
     },
