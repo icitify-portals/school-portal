@@ -1075,7 +1075,10 @@ export default function StatefulApplicationPage() {
                                                         const selectedState = stateField ? formData[stateField.label] : null;
                                                         if (selectedState) {
                                                             try {
-                                                                const lgas = naija.lgas(selectedState).lgas;
+                                                                let lgas = naija.lgas(selectedState).lgas;
+                                                                if (selectedState === "Benue" && !lgas.includes("Obi")) {
+                                                                    lgas = [...lgas, "Obi"].sort();
+                                                                }
                                                                 return lgas.map((lga: string) => (
                                                                     <option key={lga} value={lga}>{lga}</option>
                                                                 ));
