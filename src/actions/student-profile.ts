@@ -33,6 +33,7 @@ export async function updateStudentProfile(userId: number, data: {
     bloodGroup?: string;
     genotype?: string;
     imageUrl?: string;
+    dob?: string;
 }) {
     try {
         const [currentProfile] = await db.select().from(students).where(eq(students.userId, userId)).limit(1);

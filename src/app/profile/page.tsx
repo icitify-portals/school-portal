@@ -330,10 +330,14 @@ export default function ProfilePage() {
                                             </div>
                                         </>
                                     ) : (
-                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pt-6 border-t border-slate-50">
+                                        <div className="grid grid-cols-1 md:grid-cols-4 gap-8 pt-6 border-t border-slate-50">
                                             <div className="space-y-3">
                                                 <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 italic">Gender</Label>
                                                 <Input readOnly value={profile.gender?.toUpperCase() || ""} className="bg-slate-50 h-14 rounded-2xl font-bold text-slate-400 border-slate-100" />
+                                            </div>
+                                            <div className="space-y-3">
+                                                <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 italic">Date of Birth</Label>
+                                                <Input type="date" name="dob" value={profile.dob ? new Date(profile.dob).toISOString().split('T')[0] : ""} onChange={handleChange} className="h-14 rounded-2xl font-bold text-slate-900 border-slate-200 focus:ring-2 focus:ring-emerald-500" />
                                             </div>
                                             <div className="space-y-3">
                                                 <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 italic">Genotype</Label>

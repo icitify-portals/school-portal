@@ -74,7 +74,7 @@ import { PushNotificationManager } from "@/components/PushNotificationManager";
 
 import { BranchProvider } from "@/providers/BranchProvider";
 import { auth } from "@/auth";
-import { DobEnforcer } from "@/components/DobEnforcer";
+
 
 
 import { getEnabledModules } from "@/actions/system-settings";
@@ -108,7 +108,7 @@ export default async function RootLayout({
               <AnnouncementBanner />
               <ThemeInjector />
               <AppContent enabledModules={enabledModules}>
-                <DobEnforcer />
+
                 {children}
                 <PushNotificationManager />
                 <ServiceWorkerRegistrar />
