@@ -92,7 +92,7 @@ export function ProgramSelectionModal({ templates }: Props) {
                                     </div>
                                     <div className="text-lg font-black text-slate-900 tracking-tight leading-tight">{template.name}</div>
                                     <div className="text-sm font-medium text-slate-500 mt-1">
-                                        {template.applicationFee ? `Application Fee: ?${parseFloat(template.applicationFee.toString()).toLocaleString()}` : "Free Application"}
+                                        {template.applicationFee ? `Application Fee: ₦${parseFloat(template.applicationFee.toString()).toLocaleString()}` : "Free Application"}
                                     </div>
                                 </div>
                                 <div className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${loadingId === template.id ? "bg-indigo-600" : "bg-slate-100"}`}>

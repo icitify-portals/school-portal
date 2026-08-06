@@ -1,4 +1,4 @@
-﻿import { db } from "@/db/db";
+import { db } from "@/db/db";
 import { 
     settlementAccounts, 
     gatewaySubaccounts, 
@@ -11,7 +11,8 @@ import {
     feeItems,
     admissionApplicationsV2,
     users,
-    studentBillItems
+    studentBillItems,
+    walletTransactions
 } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 
@@ -677,7 +678,7 @@ export class SplitPaymentEngine {
         return result;
     }
 
-    // Checkout for Admission Form (No student ID)
+    // Checkout for Admission Form (No student ID originally, but we'll try to find the student by email)
     async checkoutAdmissionForm(applicationId: number, feeStructureId: number, applicantEmail: string, applicantName: string, applicantPhone?: string) {
         // 1. Fetch Bursary Settings
         const settingsRecords = await db.query.bursarySettings.findMany();
@@ -706,6 +707,53 @@ export class SplitPaymentEngine {
         if (billTotal <= 0) {
             return { success: false, reference: "", error: "This fee structure has no fee items configured. Please add at least one item with an amount." };
         }
+
+        // --- WALLET DEDUCTION LOGIC ---
+        let student: any = null;
+        if (applicantEmail) {
+            const user = await db.query.users.findFirst({ where: eq(users.email, applicantEmail) });
+            if (user?.studentId) {
+                student = await db.query.students.findFirst({ where: eq(students.id, user.studentId) });
+            }
+        }
+        
+        if (student && parseFloat(student.walletBalance?.toString() || "0") >= billTotal) {
+            const txReference = `WAL-ADM-${Date.now()}`;
+            
+            // Deduct from wallet
+            await db.update(students).set({ 
+                walletBalance: (parseFloat(student.walletBalance?.toString() || "0") - billTotal).toString()
+            }).where(eq(students.id, student.id));
+            
+            // Record wallet transaction
+            await db.insert(walletTransactions).values({
+                studentId: student.id,
+                amount: billTotal.toString(),
+                type: 'debit',
+                description: `Payment for Admission Form Application ID: ${applicationId}`,
+                reference: txReference
+            });
+            
+            // Record main transaction as completed
+            await db.insert(transactions).values({
+                amount: billTotal.toFixed(2),
+                gatewayName: 'wallet',
+                purpose: `Admission Form Application ID: ${applicationId}`,
+                studentId: student.id,
+                status: 'completed',
+                gatewayReference: txReference
+            });
+            
+            // Mark application as paid
+            await db.update(admissionApplicationsV2).set({ 
+                paymentStatus: 'paid',
+                paymentReference: txReference
+            }).where(eq(admissionApplicationsV2.id, applicationId));
+
+            const callbackUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/applicant/application/${applicationId}`;
+            return { success: true, authorizationUrl: callbackUrl, reference: txReference };
+        }
+        // --- END WALLET DEDUCTION LOGIC ---
 
         let splits: SplitItem[] = [];
         let totalAllocated = 0;
