@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -197,8 +197,7 @@ export default function BursarySettingsPage() {
             const res = await createGatewaySubaccountAction({
                 settlementAccountId: mappingAcctId,
                 gatewayName: mappingGateway,
-                gatewaySubaccountCode: mappingCode,
-                businessId: mappingGateway === 'alatpay' ? mappingBusinessId : undefined,
+                gatewaySubaccountCode: (mappingGateway === 'alatpay' && mappingBusinessId) ? mappingBusinessId : mappingCode,
                 publicKey: mappingGateway === 'alatpay' ? mappingPublicKey : undefined,
                 secretKey: mappingGateway === 'alatpay' ? mappingSecretKey : undefined,
                 webhookSecret: mappingGateway === 'alatpay' ? mappingWebhookSecret : undefined

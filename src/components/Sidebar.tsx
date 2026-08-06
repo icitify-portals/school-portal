@@ -266,6 +266,7 @@ const adminMenuItems: MenuItem[] = [
             { name: "Platform Subscriptions", href: "/admin/bursary/developer-subscriptions" },
             { name: "Financial Reports", href: "/admin/bursary/reports" },
             { name: "Bursary Settings", href: "/admin/bursary/settings" },
+            { name: "Bursary Guide", href: "/admin/bursary/guide" },
         ]
     },
     {

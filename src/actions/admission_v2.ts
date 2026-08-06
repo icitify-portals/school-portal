@@ -2174,3 +2174,15 @@ export async function getApplicantOLevelData(applicationId: number, applicantId:
         return [];
     }
 }
+
+export async function bulkDeleteAdmissionApplications(ids: number[]) {
+    try {
+        if (!ids || ids.length === 0) return { success: true };
+        await db.delete(admissionApplicationsV2).where(inArray(admissionApplicationsV2.id, ids));
+        revalidatePath("/admin/admission/payments");
+        return { success: true };
+    } catch (error) {
+        console.error("Failed to bulk delete applications:", error);
+        return { success: false, error: "Failed to bulk delete applications" };
+    }
+}

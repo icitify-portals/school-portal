@@ -16,7 +16,8 @@ import {
     getFeeStructures,
     allocateFeeStructure,
     getFeeAllocations,
-    deleteFeeAllocation
+    deleteFeeAllocation,
+    bulkDeleteFeeAllocations
 } from "@/actions/bursary";
 import { getFaculties } from "@/actions/faculties";
 import { getDepartments } from "@/actions/departments";
@@ -29,6 +30,7 @@ export default function AllocationsPage() {
     const [depts, setDepts] = useState<any[]>([]);
     const [progs, setProgs] = useState<any[]>([]);
     const [allocations, setAllocations] = useState<any[]>([]);
+    const [selectedIds, setSelectedIds] = useState<number[]>([]);
 
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
@@ -58,6 +60,7 @@ export default function AllocationsPage() {
         setDepts(deptData);
         setProgs(progData);
         setAllocations(allocData);
+        setSelectedIds([]);
         setLoading(false);
     };
 
@@ -89,6 +92,31 @@ export default function AllocationsPage() {
         } else {
             alert(res.error || "Failed to delete allocation");
             setLoading(false);
+        }
+    };
+
+    const handleBulkDelete = async () => {
+        if (selectedIds.length === 0) return;
+        if (!confirm(`Are you sure you want to delete ${selectedIds.length} allocations?`)) return;
+        setLoading(true);
+        const res = await bulkDeleteFeeAllocations(selectedIds);
+        if (res.success) {
+            fetchData();
+        } else {
+            alert(res.error || "Failed to delete allocations");
+            setLoading(false);
+        }
+    };
+
+    const toggleSelect = (id: number) => {
+        setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+    };
+
+    const toggleSelectAll = () => {
+        if (selectedIds.length === allocations.length) {
+            setSelectedIds([]);
+        } else {
+            setSelectedIds(allocations.map(a => a.id));
         }
     };
 
@@ -175,6 +203,24 @@ export default function AllocationsPage() {
                 </Card>
             )}
 
+            <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                    <input 
+                        type="checkbox"
+                        checked={allocations.length > 0 && selectedIds.length === allocations.length}
+                        onChange={toggleSelectAll}
+                        className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500"
+                    />
+                    <span className="text-sm font-bold text-slate-600">Select All</span>
+                </div>
+                {selectedIds.length > 0 && (
+                    <Button onClick={handleBulkDelete} variant="destructive" size="sm" className="h-9 px-4 rounded-lg flex items-center gap-2">
+                        <Trash2 className="w-4 h-4" />
+                        Delete Selected ({selectedIds.length})
+                    </Button>
+                )}
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {loading ? (
                     <div className="col-span-full py-20 text-center">
@@ -196,10 +242,18 @@ export default function AllocationsPage() {
                         const targetType = alloc.programmeId ? 'Programme' : alloc.deptId ? 'Department' : alloc.facultyId ? 'Faculty' : 'Global';
 
                         return (
-                            <Card key={alloc.id} className="border border-slate-100 shadow-lg rounded-[2rem] hover:shadow-xl transition-shadow bg-white relative overflow-hidden">
+                            <Card key={alloc.id} className={cn("border shadow-lg rounded-[2rem] hover:shadow-xl transition-shadow bg-white relative overflow-hidden", selectedIds.includes(alloc.id) ? "border-indigo-500 ring-2 ring-indigo-200" : "border-slate-100")}>
+                                <div className="absolute top-4 left-4 z-10">
+                                    <input 
+                                        type="checkbox" 
+                                        checked={selectedIds.includes(alloc.id)}
+                                        onChange={() => toggleSelect(alloc.id)}
+                                        className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500"
+                                    />
+                                </div>
                                 <CardContent className="p-6">
                                     <div className="flex justify-between items-start mb-4">
-                                        <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600">
+                                        <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600 ml-8">
                                             <LinkIcon className="w-5 h-5" />
                                         </div>
                                         <Button 

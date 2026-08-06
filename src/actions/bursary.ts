@@ -1,4 +1,4 @@
-﻿"use server";
+"use server";
 
 import { db } from "@/db/db";
 import {
@@ -2794,7 +2794,6 @@ export async function createGatewaySubaccountAction(data: {
     settlementAccountId: number;
     gatewayName: 'paystack' | 'flutterwave' | 'remita' | 'alatpay';
     gatewaySubaccountCode: string;
-    businessId?: string;
     publicKey?: string;
     secretKey?: string;
     webhookSecret?: string;
@@ -2805,7 +2804,6 @@ export async function createGatewaySubaccountAction(data: {
             settlementAccountId: data.settlementAccountId,
             gatewayName: data.gatewayName,
             gatewaySubaccountCode: data.gatewaySubaccountCode,
-            businessId: data.businessId,
             publicKey: data.publicKey,
             secretKey: data.secretKey,
             webhookSecret: data.webhookSecret
@@ -3090,6 +3088,19 @@ export async function getStudentPaymentHistory(userId: number, studentId: number
     } catch (error) {
         console.error('Failed to fetch payment history:', error);
         return { success: false, error: 'Failed to fetch payment history', data: { legacyPayments: [], subsequentOnlinePayments: [], subsequentWalletPayments: [] } };
+    }
+}
+
+export async function bulkDeleteFeeAllocations(ids: number[]) {
+    try {
+        await ensureBursaryStaff();
+        if (!ids || ids.length === 0) return { success: true };
+        await db.delete(feeStructureAllocations).where(inArray(feeStructureAllocations.id, ids));
+        revalidatePath("/admin/bursary/allocations");
+        return { success: true };
+    } catch (error) {
+        console.error("Failed to bulk delete fee allocations:", error);
+        return { success: false, error: (error as Error).message };
     }
 }
 

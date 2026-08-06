@@ -15,7 +15,7 @@ import {
     Calendar,
     Download
 } from "lucide-react";
-import { getAdmissionApplications, confirmAdmissionPayment, deleteAdmissionApplication } from "@/actions/admission_v2";
+import { getAdmissionApplications, confirmAdmissionPayment, deleteAdmissionApplication, bulkDeleteAdmissionApplications } from "@/actions/admission_v2";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -23,6 +23,7 @@ import { Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 
 export default function AdmissionPaymentsPage() {
     const [applications, setApplications] = useState<any[]>([]);
+    const [selectedIds, setSelectedIds] = useState<number[]>([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState("");
     const [filter, setFilter] = useState("all");
@@ -37,6 +38,7 @@ export default function AdmissionPaymentsPage() {
         setLoading(true);
         const data = await getAdmissionApplications();
         setApplications(data);
+        setSelectedIds([]);
         setLoading(false);
     };
 
@@ -62,6 +64,37 @@ export default function AdmissionPaymentsPage() {
             fetchApplications();
         } else {
             toast.error(res.error);
+        }
+    };
+
+    const handleBulkDelete = async () => {
+        if (selectedIds.length === 0) return;
+        if (!confirm(`Are you sure you want to delete ${selectedIds.length} applications? This action cannot be undone.`)) return;
+        
+        const res = await bulkDeleteAdmissionApplications(selectedIds);
+        if (res.success) {
+            toast.success(`${selectedIds.length} applications deleted successfully`);
+            fetchApplications();
+        } else {
+            toast.error(res.error);
+        }
+    };
+
+    const toggleSelect = (id: number) => {
+        setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+    };
+
+    const toggleSelectAll = () => {
+        const paginatedIds = paginatedApps.map(a => a.id);
+        const allSelected = paginatedIds.every(id => selectedIds.includes(id));
+        if (allSelected) {
+            setSelectedIds(prev => prev.filter(id => !paginatedIds.includes(id)));
+        } else {
+            const newIds = [...selectedIds];
+            paginatedIds.forEach(id => {
+                if (!newIds.includes(id)) newIds.push(id);
+            });
+            setSelectedIds(newIds);
         }
     };
 
@@ -100,6 +133,14 @@ export default function AdmissionPaymentsPage() {
                         </div>
                         
                         <div className="flex bg-white/10 p-1.5 rounded-2xl backdrop-blur-md border border-white/10 shadow-inner gap-2 flex-wrap">
+                            {selectedIds.length > 0 && (
+                                <button 
+                                    onClick={handleBulkDelete}
+                                    className="flex items-center gap-2 px-6 py-4 text-xs font-black uppercase tracking-widest rounded-xl transition-all whitespace-nowrap bg-rose-600 text-white hover:bg-rose-500 shadow-lg hover:-translate-y-1"
+                                >
+                                    <Trash2 className="w-4 h-4" /> Delete Selected ({selectedIds.length})
+                                </button>
+                            )}
                             <button className="flex items-center gap-2 px-6 py-4 text-xs font-black uppercase tracking-widest rounded-xl transition-all whitespace-nowrap bg-emerald-600 text-white hover:bg-emerald-500 shadow-lg hover:-translate-y-1">
                                 <Download className="w-4 h-4" /> Export Ledger
                             </button>
@@ -143,6 +184,14 @@ export default function AdmissionPaymentsPage() {
                     <table className="w-full text-left">
                         <thead>
                             <tr className="bg-slate-900 text-white">
+                                <th className="px-8 py-6 w-16 text-center">
+                                    <input 
+                                        type="checkbox" 
+                                        className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 bg-slate-800 border-slate-700"
+                                        checked={paginatedApps.length > 0 && paginatedApps.every(a => selectedIds.includes(a.id))}
+                                        onChange={toggleSelectAll}
+                                    />
+                                </th>
                                 <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest">Candidate</th>
                                 <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest">Form Level</th>
                                 <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest">Amount</th>
@@ -159,7 +208,7 @@ export default function AdmissionPaymentsPage() {
                                 </tr>
                             ) : paginatedApps.length === 0 ? (
                                 <tr>
-                                    <td colSpan={5} className="px-8 py-20 text-center text-slate-400 font-bold uppercase text-[10px] tracking-widest italic">
+                                    <td colSpan={6} className="px-8 py-20 text-center text-slate-400 font-bold uppercase text-[10px] tracking-widest italic">
                                         No matching transactions found
                                     </td>
                                 </tr>
@@ -185,7 +234,15 @@ export default function AdmissionPaymentsPage() {
 
                                     
                                     return (
-                                        <tr key={app.id} className="hover:bg-slate-50 transition-colors group">
+                                        <tr key={app.id} className={cn("hover:bg-slate-50 transition-colors group", selectedIds.includes(app.id) ? "bg-emerald-50/50" : "")}>
+                                            <td className="px-8 py-6 text-center">
+                                                <input 
+                                                    type="checkbox"
+                                                    className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 border-slate-300"
+                                                    checked={selectedIds.includes(app.id)}
+                                                    onChange={() => toggleSelect(app.id)}
+                                                />
+                                            </td>
                                             <td className="px-8 py-6">
                                                 <div className="flex items-center gap-4">
                                                     <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center text-slate-400">
