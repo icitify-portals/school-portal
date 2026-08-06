@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -17,6 +17,7 @@ interface AlatpayInlineCheckoutProps {
     publicKey?: string;
     phone?: string;
     description?: string;
+    session?: string | null;
 }
 
 export function AlatpayInlineCheckout({
@@ -31,7 +32,8 @@ export function AlatpayInlineCheckout({
     targetBusinessId,
     publicKey,
     phone,
-    description
+    description,
+    session,
 }: AlatpayInlineCheckoutProps) {
     const [isScriptLoaded, setIsScriptLoaded] = useState(false);
 
@@ -122,7 +124,11 @@ export function AlatpayInlineCheckout({
                     firstName,
                     lastName,
                     phone: phone && phone.trim() !== "" ? phone : "08012345678",
-                    metadata: "School Portal Payment",
+                    metadata: JSON.stringify({
+                        payment_purpose: description || "School Portal Payment",
+                        session: session || "2025/2026",
+                        user_email: email
+                    }),
                     onTransaction: function (response: any) {
                         console.log("ALATPay onTransaction response:", JSON.stringify(response));
                         if (response.status === true || response.message === "Approved" || response.status === "Approved") {

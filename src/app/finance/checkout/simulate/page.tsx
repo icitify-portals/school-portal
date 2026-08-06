@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { Suspense, useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
@@ -35,6 +35,7 @@ function CheckoutSimulatorContent() {
     const payerLastName = searchParams.get("lastName") || "Payer";
     const payerPhone = searchParams.get("phone") || "";
     const description = searchParams.get("description") || "";
+    const sessionParam = searchParams.get("session") || "2025/2026";
 
     const [amount, setAmount] = useState<number>(0);
     const [loading, setLoading] = useState(false);
@@ -316,6 +317,7 @@ function CheckoutSimulatorContent() {
                                         publicKey={publicKey}
                                         phone={payerPhone}
                                         description={description}
+                                        session={searchParams.get('session')}
                                         onSuccess={() => handleSimulate('completed')} 
                                         onClose={() => setStatus('idle')}
                                         onError={(e) => {

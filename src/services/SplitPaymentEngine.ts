@@ -12,9 +12,10 @@ import {
     admissionApplicationsV2,
     users,
     studentBillItems,
-    walletTransactions
+    walletTransactions,
+    academicSessions
 } from "@/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, desc } from "drizzle-orm";
 
 export interface SplitItem {
     amount: number;             // Flat amount for this split
@@ -360,14 +361,27 @@ export class AlatpayAdapter implements PaymentGatewayAdapter {
         const payerFirstName = meta?.payerName ? (meta.payerName as string).split(' ')[0] : (meta?.payerFirstName as string || 'Student');
         const payerLastName = meta?.payerName ? (meta.payerName as string).split(' ').slice(1).join(' ') || payerFirstName : (meta?.payerLastName as string || 'Payer');
         const payerPhone = meta?.payerPhone || meta?.phone || '';
-        const description = meta?.description || '2026/2027 Admission exercise';
+        const description = meta?.description || 'School Portal Payment';
+
+        let sessionStr = meta?.session;
+        if (!sessionStr) {
+            try {
+                const activeSession = await db.query.academicSessions.findFirst({
+                    where: eq(academicSessions.isActive, true),
+                    orderBy: desc(academicSessions.startDate)
+                });
+                sessionStr = activeSession?.name || '2025/2026';
+            } catch (err) {
+                sessionStr = '2025/2026';
+            }
+        }
 
         // Fallback to server-side env vars if no subaccount mapping was found
         // (Next.js doesn't bake NEXT_PUBLIC_ vars into Docker builds if .env is missing at build-time)
         if (!targetBusinessId) targetBusinessId = process.env.NEXT_PUBLIC_ALATPAY_BUSINESS_ID_MAIN;
         if (!publicKey) publicKey = process.env.NEXT_PUBLIC_ALATPAY_API_KEY_MAIN;
 
-        let checkoutUrl = `/finance/checkout/simulate?gateway=alatpay&reference=${txReference}&amount=${totalAmount}&firstName=${encodeURIComponent(payerFirstName)}&lastName=${encodeURIComponent(payerLastName)}&email=${encodeURIComponent(payerEmail)}&phone=${encodeURIComponent(payerPhone)}&description=${encodeURIComponent(description)}`;
+        let checkoutUrl = `/finance/checkout/simulate?gateway=alatpay&reference=${txReference}&amount=${totalAmount}&firstName=${encodeURIComponent(payerFirstName)}&lastName=${encodeURIComponent(payerLastName)}&email=${encodeURIComponent(payerEmail)}&phone=${encodeURIComponent(payerPhone)}&description=${encodeURIComponent(description)}&session=${encodeURIComponent(sessionStr)}`;
         if (targetBusinessId) checkoutUrl += `&businessId=${targetBusinessId}`;
         if (publicKey) checkoutUrl += `&publicKey=${publicKey}`;
 
@@ -858,7 +872,7 @@ export class SplitPaymentEngine {
             txRef,
             splits,
             feeBearerRule,
-            { studentLevel: "Applicant", payerName: applicantName, payerPhone: applicantPhone || applicantUser?.phone, description: "2026/2027 Admission exercise" }
+            { studentLevel: "Applicant", payerName: applicantName, payerPhone: applicantPhone || applicantUser?.phone, description: structure.name }
         );
         
         if (result.rrr) {
