@@ -10,7 +10,7 @@ import { auth } from "@/auth";
 import { generateMatricNumber } from "@/actions/matriculation";
 import { hasPermission, hasRole } from "@/lib/rbac";
 
-export async function getStudents(options: { search?: string, page?: number, pageSize?: number, level?: number } = {}) {
+export async function getStudents(options: { search?: string, page?: number, pageSize?: number, level?: number | string } = {}) {
     try {
         const allowed = await hasPermission("students.view") || await hasRole("admin") || await hasRole("superadmin");
         if (!allowed) {
@@ -63,12 +63,43 @@ export async function getStudents(options: { search?: string, page?: number, pag
             scopeCondition = inArray(students.deptId, deanDeptIds);
         }
 
+        let levelCondition: any = undefined;
+        if (typeof level === 'string') {
+            switch(level) {
+                case "ND 1":
+                    levelCondition = and(eq(students.currentLevel, 1), eq(programmes.programmeType, 'ND'));
+                    break;
+                case "ND 2":
+                    levelCondition = and(eq(students.currentLevel, 2), eq(programmes.programmeType, 'ND'));
+                    break;
+                case "ND_GRADUATED":
+                    levelCondition = eq(students.status, 'nd_graduated');
+                    break;
+                case "HND 1":
+                    levelCondition = and(eq(students.currentLevel, 1), eq(programmes.programmeType, 'HND'));
+                    break;
+                case "HND 2":
+                    levelCondition = and(eq(students.currentLevel, 2), eq(programmes.programmeType, 'HND'));
+                    break;
+                case "HND_GRADUATED":
+                    levelCondition = eq(students.status, 'hnd_graduated');
+                    break;
+                default:
+                    if (!isNaN(Number(level))) {
+                        levelCondition = eq(students.currentLevel, Number(level));
+                    }
+            }
+        } else if (level !== undefined && level !== null) {
+            levelCondition = eq(students.currentLevel, level);
+        }
+
         const countConditions = [
-            level !== undefined && level !== null ? eq(students.currentLevel, level) : undefined,
+            levelCondition,
             search ? or(
                 like(users.name, searchPattern),
                 like(users.email, searchPattern),
-                like(students.matricNumber, searchPattern)
+                like(students.matricNumber, searchPattern),
+                like(programmes.name, searchPattern)
             ) : undefined,
             scopeCondition
         ].filter(Boolean);
@@ -79,6 +110,7 @@ export async function getStudents(options: { search?: string, page?: number, pag
         const [countRes] = await db.select({ count: sql<number>`count(*)` })
             .from(students)
             .innerJoin(users, eq(students.userId, users.id))
+            .leftJoin(programmes, eq(students.programmeId, programmes.id))
             .where(countWhere);
         const totalCount = countRes?.count || 0;
 

@@ -39,11 +39,11 @@ function StudentsPageContent() {
     const pageSize = parseInt(searchParams.get("pageSize") || "10");
     const search = searchParams.get("search") || "";
     const levelParam = searchParams.get("level");
-    const level = levelParam ? parseInt(levelParam) : undefined;
+    const level = levelParam || undefined;
 
     const levels = isK12 
         ? [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
-        : [100, 200, 300, 400, 500, 600, 700, 800];
+        : ["ND 1", "ND 2", "ND_GRADUATED", "HND 1", "HND 2", "HND_GRADUATED"];
 
     const fetchStudents = useCallback(async () => {
         setLoading(true);
@@ -146,7 +146,7 @@ function StudentsPageContent() {
                         <option value="">All Levels</option>
                         {levels.map((lvl) => (
                             <option key={lvl} value={lvl}>
-                                {isK12 ? `Grade ${lvl}` : `Level ${lvl}`}
+                                {isK12 ? `Grade ${lvl}` : lvl}
                             </option>
                         ))}
                     </select>
