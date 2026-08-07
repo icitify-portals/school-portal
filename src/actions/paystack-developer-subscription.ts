@@ -1,7 +1,7 @@
 "use server";
 
 import { db } from "@/db/db";
-import { paystackDeveloperFees, bursarySettings, admissionApplicationsV2 } from "@/db/schema";
+import { paystackDeveloperFees, bursarySettings, admissionApplicationsV2, users } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 
 const PAYSTACK_SECRET = process.env.PAYSTACK_SECRET_KEY || ""; 
@@ -84,6 +84,15 @@ export async function initiateDeveloperFee(
         status: 'pending'
     });
 
+    // 4b. Fetch user details to prefill Paystack
+    const user = await db.query.users.findFirst({
+        where: eq(users.email, email)
+    });
+
+    const firstName = user?.firstName || '';
+    const lastName = user?.lastName || '';
+    const phone = user?.phone || '';
+
     // 5. Hit Paystack API to initialize standard checkout
     try {
         const paystackRes = await fetch(`https://api.paystack.co/transaction/initialize`, {
@@ -97,7 +106,17 @@ export async function initiateDeveloperFee(
                 amount: Math.round(amount * 100),
                 reference,
                 // Redirect back to our verify page
-                callback_url: `${process.env.NEXT_PUBLIC_APP_URL || 'https://portal.fssibadan.edu.ng'}/finance/checkout/developer-verify?reference=${reference}`
+                callback_url: `${process.env.NEXT_PUBLIC_APP_URL || 'https://portal.fssibadan.edu.ng'}/finance/checkout/developer-verify?reference=${reference}`,
+                first_name: firstName,
+                last_name: lastName,
+                phone: phone,
+                metadata: {
+                    custom_fields: [
+                        { display_name: "First Name", variable_name: "first_name", value: firstName },
+                        { display_name: "Last Name", variable_name: "last_name", value: lastName },
+                        { display_name: "Phone", variable_name: "phone", value: phone }
+                    ]
+                }
             })
         });
         

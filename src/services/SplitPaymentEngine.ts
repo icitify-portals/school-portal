@@ -76,14 +76,24 @@ export class PaystackAdapter implements PaymentGatewayAdapter {
             paystackBearer = 'all';
         }
 
+        const firstName = meta?.payerFirstName || meta?.payerName?.split(' ')[0] || '';
+        const lastName = meta?.payerLastName || meta?.payerName?.split(' ').slice(1).join(' ') || '';
+        const phone = meta?.payerPhone || meta?.phone || '';
+
         const payload: any = {
             email: payerEmail,
             amount: Math.round(totalAmount * 100), // in kobo
             reference: txReference,
             callback_url: `https://portal.fssibadan.edu.ng/student/finance`,
+            first_name: firstName,
+            last_name: lastName,
+            phone: phone,
             metadata: {
                 custom_fields: [
-                    { display_name: "Payer Name", variable_name: "payer_name", value: meta?.payerName || payerEmail.split('@')[0] }
+                    { display_name: "Payer Name", variable_name: "payer_name", value: meta?.payerName || payerEmail.split('@')[0] },
+                    { display_name: "First Name", variable_name: "first_name", value: firstName },
+                    { display_name: "Last Name", variable_name: "last_name", value: lastName },
+                    { display_name: "Phone", variable_name: "phone", value: phone }
                 ]
             }
         };
@@ -682,7 +692,13 @@ export class SplitPaymentEngine {
             txRef,
             splits,
             feeBearerRule,
-            { studentLevel: student.level || "", payerName: `${student.user.firstName || ''} ${student.user.lastName || ''}`.trim() || student.user.email }
+            { 
+                studentLevel: student.level || "", 
+                payerName: `${student.user.firstName || ''} ${student.user.lastName || ''}`.trim() || student.user.email,
+                payerFirstName: student.user.firstName || "",
+                payerLastName: student.user.lastName || "",
+                payerPhone: student.user.phone || ""
+            }
         );
         
         if (result.rrr) {
@@ -872,7 +888,14 @@ export class SplitPaymentEngine {
             txRef,
             splits,
             feeBearerRule,
-            { studentLevel: "Applicant", payerName: applicantName, payerPhone: applicantPhone || applicantUser?.phone, description: structure.name }
+            { 
+                studentLevel: "Applicant", 
+                payerName: applicantName, 
+                payerFirstName: applicantUser?.firstName || "",
+                payerLastName: applicantUser?.lastName || "",
+                payerPhone: applicantPhone || applicantUser?.phone || "",
+                description: structure.name 
+            }
         );
         
         if (result.rrr) {

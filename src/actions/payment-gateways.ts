@@ -75,10 +75,14 @@ export async function initiatePayment(gateway: string, amount: number, reference
                     amount: amount * 100, // kobo
                     reference,
                     callback_url: `${process.env.NEXTAUTH_URL}/student/finance?ref=${reference}`,
+                    first_name: firstName || '',
+                    last_name: lastName || '',
+                    phone: phone || '',
                     metadata: {
                         custom_fields: [
                             { display_name: "First Name", variable_name: "first_name", value: firstName || 'Student/Applicant' },
-                            { display_name: "Last Name", variable_name: "last_name", value: lastName || '' }
+                            { display_name: "Last Name", variable_name: "last_name", value: lastName || '' },
+                            { display_name: "Phone", variable_name: "phone", value: phone || '' }
                         ]
                     }
                 }),
