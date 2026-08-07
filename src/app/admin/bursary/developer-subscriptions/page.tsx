@@ -11,55 +11,83 @@ export const dynamic = "force-dynamic";
 export default async function DeveloperSubscriptionsBursaryPage() {
     const subscriptions = await getUnpaidSubscriptions();
 
-    // Fetch all developer fee transactions
-    const fees = await db.select()
-        .from(paystackDeveloperFees)
-        .orderBy(desc(paystackDeveloperFees.createdAt));
+    let enrichedFees: any[] = [];
+    const PAYSTACK_SECRET = process.env.PAYSTACK_SECRET_KEY;
 
-    // Gather applicant IDs from admission_form fees
-    const appIdsToFetch = new Set<number>();
-    for (const f of fees) {
-        if (f.type === 'admission_form' && f.identifier) {
-            const parsed = parseInt(f.identifier);
-            if (!isNaN(parsed)) {
-                appIdsToFetch.add(parsed);
+    if (PAYSTACK_SECRET) {
+        try {
+            const res = await fetch(`https://api.paystack.co/transaction?status=success&perPage=100`, {
+                headers: { Authorization: `Bearer ${PAYSTACK_SECRET}` },
+                next: { revalidate: 60 }
+            });
+            const data = await res.json();
+            if (data.status && data.data) {
+                enrichedFees = data.data.map((tx: any) => ({
+                    id: tx.id,
+                    reference: tx.reference,
+                    type: tx.metadata?.type || 'Paystack Transaction',
+                    identifier: tx.metadata?.identifier || tx.metadata?.["Application ID"] || '',
+                    amount: tx.amount / 100,
+                    status: 'paid', // filtered by success
+                    createdAt: new Date(tx.created_at),
+                    applicant: {
+                        name: tx.customer?.first_name ? `${tx.customer.first_name} ${tx.customer.last_name || ''}` : tx.metadata?.payerName || tx.customer?.email || 'N/A',
+                        email: tx.customer?.email || 'N/A'
+                    }
+                }));
+            }
+        } catch (e) {
+            console.error("Failed to fetch paystack api", e);
+        }
+    }
+
+    // Fallback to database if Paystack API fails or is unavailable
+    if (enrichedFees.length === 0) {
+        const fees = await db.select()
+            .from(paystackDeveloperFees)
+            .where(eq(paystackDeveloperFees.status, 'paid'))
+            .orderBy(desc(paystackDeveloperFees.createdAt));
+
+        const appIdsToFetch = new Set<number>();
+        for (const f of fees) {
+            if (f.type === 'admission_form' && f.identifier) {
+                const parsed = parseInt(f.identifier);
+                if (!isNaN(parsed)) appIdsToFetch.add(parsed);
             }
         }
-    }
 
-    // Fetch applicant details
-    const applicantMap = new Map<number, any>();
-    if (appIdsToFetch.size > 0) {
-        const apps = await db.select({
-            id: admissionApplicationsV2.id,
-            name: users.name,
-            email: users.email
-        })
-        .from(admissionApplicationsV2)
-        .leftJoin(users, eq(admissionApplicationsV2.applicantId, users.id))
-        .where(inArray(admissionApplicationsV2.id, Array.from(appIdsToFetch)));
+        const applicantMap = new Map<number, any>();
+        if (appIdsToFetch.size > 0) {
+            const apps = await db.select({
+                id: admissionApplicationsV2.id,
+                name: users.name,
+                email: users.email
+            })
+            .from(admissionApplicationsV2)
+            .leftJoin(users, eq(admissionApplicationsV2.applicantId, users.id))
+            .where(inArray(admissionApplicationsV2.id, Array.from(appIdsToFetch)));
 
-        apps.forEach(app => applicantMap.set(app.id, app));
-    }
-
-    // Attach applicant data
-    const enrichedFees = fees.map(f => {
-        let applicant = null;
-        if (f.type === 'admission_form' && f.identifier) {
-            applicant = applicantMap.get(parseInt(f.identifier));
+            apps.forEach(app => applicantMap.set(app.id, app));
         }
-        return {
-            ...f,
-            applicant
-        };
-    });
+
+        enrichedFees = fees.map(f => {
+            let applicant = null;
+            if (f.type === 'admission_form' && f.identifier) {
+                applicant = applicantMap.get(parseInt(f.identifier));
+            }
+            return {
+                ...f,
+                applicant
+            };
+        });
+    }
 
     return (
         <div className="p-6 max-w-7xl mx-auto space-y-6">
             <div>
-                <h1 className="text-3xl font-bold tracking-tight">Platform Subscriptions & Fees</h1>
+                <h1 className="text-3xl font-bold tracking-tight">Platform Subscriptions & Paystack Payments</h1>
                 <p className="text-muted-foreground mt-2">
-                    Review outstanding platform subscription fees on behalf of enrolled students and track all paid Paystack processing fees.
+                    Review outstanding platform subscription fees on behalf of enrolled students and track all successful payments made to Paystack till date.
                 </p>
             </div>
 
@@ -69,7 +97,7 @@ export default async function DeveloperSubscriptionsBursaryPage() {
                         Outstanding (Bulk Settlement)
                     </TabsTrigger>
                     <TabsTrigger value="paid" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">
-                        Paid Transactions History
+                        All Successful Paystack Payments
                     </TabsTrigger>
                 </TabsList>
 
