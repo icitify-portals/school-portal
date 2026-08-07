@@ -93,6 +93,11 @@ export async function GET(req: Request) {
 
         if (execute) {
             for (const match of matches) {
+                // Free up the new email by changing the duplicate user's email
+                await db.update(users)
+                    .set({ email: `merged_${match.newUserId}_${match.newEmail}`, name: `${match.name} (MERGED)` })
+                    .where(eq(users.id, match.newUserId));
+
                 // Update old user email
                 await db.update(users)
                     .set({ email: match.newEmail })
@@ -102,9 +107,6 @@ export async function GET(req: Request) {
                 await db.update(admissionApplicationsV2)
                     .set({ applicantId: match.oldUserId })
                     .where(eq(admissionApplicationsV2.id, match.appId));
-
-                // Delete the new user record
-                await db.delete(users).where(eq(users.id, match.newUserId));
 
                 logs.push(`Successfully merged ${match.name}`);
             }
