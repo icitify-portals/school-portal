@@ -2,7 +2,7 @@ import { getUnpaidSubscriptions } from "@/actions/developer-subscriptions";
 import BursarSubscriptionTable from "./BursarSubscriptionTable";
 import { db } from "@/db/db";
 import { paystackDeveloperFees, admissionApplicationsV2, users } from "@/db/schema";
-import { desc, eq, inArray } from "drizzle-orm";
+import { desc, eq, inArray, like } from "drizzle-orm";
 import { TransactionsTable } from "@/app/admin/system/developer-fees/transactions/TransactionsTable";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
@@ -22,7 +22,9 @@ export default async function DeveloperSubscriptionsBursaryPage() {
             });
             const data = await res.json();
             if (data.status && data.data) {
-                enrichedFees = data.data.map((tx: any) => ({
+                enrichedFees = data.data
+                    .filter((tx: any) => tx.reference && tx.reference.startsWith('DEV-ADM-'))
+                    .map((tx: any) => ({
                     id: tx.id,
                     reference: tx.reference,
                     type: tx.metadata?.type || 'Paystack Transaction',
@@ -45,6 +47,7 @@ export default async function DeveloperSubscriptionsBursaryPage() {
     if (enrichedFees.length === 0) {
         const fees = await db.select()
             .from(paystackDeveloperFees)
+            .where(like(paystackDeveloperFees.reference, 'DEV-ADM-%'))
             .orderBy(desc(paystackDeveloperFees.createdAt));
 
         const appIdsToFetch = new Set<number>();
