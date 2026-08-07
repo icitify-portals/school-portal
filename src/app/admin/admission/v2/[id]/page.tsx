@@ -661,6 +661,11 @@ export default function V2ApplicationDetailPage() {
                                         {app.paymentStatus}
                                     </span>
                                 </div>
+                                {app.paymentReference && (
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Ref</span>
+                                        <span className="font-mono text-xs font-bold text-slate-600">{app.paymentReference}</span>
+                                    </div>
                                 )}
                                 <div className="flex justify-between items-center">
                                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Processing Fee</span>
