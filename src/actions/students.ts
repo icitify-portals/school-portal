@@ -98,6 +98,7 @@ export async function getStudents(options: { search?: string, page?: number, pag
             search ? or(
                 like(users.name, searchPattern),
                 like(users.email, searchPattern),
+                like(users.phone, searchPattern),
                 like(students.matricNumber, searchPattern),
                 like(programmes.name, searchPattern)
             ) : undefined,
