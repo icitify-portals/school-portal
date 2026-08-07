@@ -1,14 +1,15 @@
-﻿import { auth } from "@/auth";
+import { auth } from "@/auth";
 import { db } from "@/db/db";
 import { admissionApplicationsV2, admissionFormTemplates } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { ArrowRight, FileText, CheckCircle2, Clock, CreditCard, CheckSquare, Sparkles, Printer, GraduationCap, Globe } from "lucide-react";
+import { AlertCircle, ArrowRight, FileText, CheckCircle2, Clock, CreditCard, CheckSquare, Sparkles, Printer, GraduationCap, Globe } from "lucide-react";
 import { StartApplicationButton } from "./StartApplicationButton";
 import { ProgramSelectionModal } from "./ProgramSelectionModal";
 import { AdmissionsAnnouncement } from "@/components/AdmissionsAnnouncement";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default async function ApplicantDashboard() {
     const session = await auth();
@@ -72,6 +73,15 @@ export default async function ApplicantDashboard() {
                     </Link>
                 </div>
             </div>
+
+            {/* Exam Date Notification */}
+            <Alert className="bg-amber-50 border-amber-200 shadow-sm rounded-2xl">
+                <AlertCircle className="h-5 w-5 text-amber-600" />
+                <AlertTitle className="text-amber-900 font-bold ml-2">Entrance Examination Notice</AlertTitle>
+                <AlertDescription className="text-amber-800 font-medium ml-2 mt-1">
+                    Please be informed that the entrance examination is scheduled for the <strong className="text-amber-950 font-black">22nd of August 2026</strong> at the school premises. Kindly ensure you bring your printed application slip.
+                </AlertDescription>
+            </Alert>
             
             <AdmissionsAnnouncement />
 
