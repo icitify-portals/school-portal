@@ -35,34 +35,57 @@ export async function GET(req: Request) {
             )
         );
 
+        // only the 16 with phone
+        const targetApplicants = newApplicants.filter(a => a.phone != null && a.phone.length > 5);
+
         let logs: string[] = [];
         let matches: any[] = [];
 
-        for (const applicant of newApplicants) {
-            // Find old student record by name
-            const oldUsers = await db.select({
-                userId: users.id,
-                name: users.name,
-                email: users.email,
-                studentId: students.id,
-                matricNumber: students.matricNumber
-            })
-            .from(users)
-            .innerJoin(students, eq(users.id, students.userId))
-            .where(eq(users.name, applicant.name));
+        // Pre-fetch all old students for fast matching
+        const oldStudents = await db.select({
+            userId: users.id,
+            name: users.name,
+            email: users.email,
+            phone: users.phone,
+            studentId: students.id,
+        })
+        .from(users)
+        .innerJoin(students, eq(users.id, students.userId));
 
-            if (oldUsers.length === 1) {
-                const oldUser = oldUsers[0];
+        const normalize = (str: string | null) => (str || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+
+        for (const applicant of targetApplicants) {
+            const newPhone = normalize(applicant.phone);
+
+            const possibleMatches = oldStudents.filter(old => {
+                const oldPhone = normalize(old.phone);
+                
+                // Match by exact phone OR normalized name
+                if (newPhone && oldPhone && newPhone === oldPhone) return true;
+                if (applicant.name && old.name) {
+                    // Check if all parts of new name are in old name (or vice versa)
+                    const newParts = applicant.name.toLowerCase().split(/\s+/).filter(Boolean);
+                    const oldParts = old.name.toLowerCase().split(/\s+/).filter(Boolean);
+                    
+                    const commonParts = newParts.filter(p => oldParts.includes(p));
+                    if (commonParts.length >= 2) return true; // at least 2 matching name parts (first & last)
+                }
+                return false;
+            });
+
+            if (possibleMatches.length === 1) {
+                const oldUser = possibleMatches[0];
                 matches.push({
                     newUserId: applicant.userId,
                     oldUserId: oldUser.userId,
                     name: applicant.name,
+                    oldName: oldUser.name,
                     newEmail: applicant.email,
                     oldEmail: oldUser.email,
                     appId: applicant.appId
                 });
-            } else if (oldUsers.length > 1) {
-                 logs.push(`Could not automatically match ${applicant.name}. Found ${oldUsers.length} old student records.`);
+            } else if (possibleMatches.length > 1) {
+                 logs.push(`Could not automatically match ${applicant.name}. Found ${possibleMatches.length} possible matches: ${possibleMatches.map(m=>m.name).join(', ')}.`);
             } else {
                  logs.push(`Could not automatically match ${applicant.name}. No old student record found.`);
             }
@@ -88,8 +111,8 @@ export async function GET(req: Request) {
         }
 
         return NextResponse.json({ 
-            totalNewApplicantsFound: newApplicants.length,
-            totalMatchesFound: matches.length,
+            targetCount: targetApplicants.length,
+            matchCount: matches.length,
             matches, 
             logs, 
             executed: execute 
