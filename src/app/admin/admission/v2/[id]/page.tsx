@@ -8,7 +8,7 @@ import {
     Loader2, ArrowLeft, Printer, CreditCard, GraduationCap, BookOpen, Hash,
     Image as ImageIcon, ChevronDown, ChevronUp, Shield, ShieldAlert, ShieldCheck
 } from "lucide-react";
-import { getAdminV2ApplicationDetail, updateAdmissionStatus, confirmAdmissionPayment, confirmAcceptancePayment, reverseAdmissionPayment } from "@/actions/admission_v2";
+import { getAdminV2ApplicationDetail, updateAdmissionStatus, confirmAdmissionPayment, confirmAcceptancePayment, reverseAdmissionPayment, confirmProcessingFeePayment, reverseProcessingFeePayment } from "@/actions/admission_v2";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -74,6 +74,34 @@ export default function V2ApplicationDetailPage() {
         const res = await reverseAdmissionPayment(app.id);
         if (res.success) {
             toast.success("Payment reversed");
+            const data = await getAdminV2ApplicationDetail(app.id);
+            setApp(data);
+        } else {
+            toast.error(res.error || "Action failed");
+        }
+    };
+
+    const handleConfirmProcessingFee = async () => {
+        if (!app) return;
+        const confirm = window.confirm("Are you sure you want to manually mark this processing fee as paid?");
+        if (!confirm) return;
+        const res = await confirmProcessingFeePayment(app.id);
+        if (res.success) {
+            toast.success("Processing fee confirmed");
+            const data = await getAdminV2ApplicationDetail(app.id);
+            setApp(data);
+        } else {
+            toast.error(res.error || "Action failed");
+        }
+    };
+
+    const handleReverseProcessingFee = async () => {
+        if (!app) return;
+        const confirm = window.confirm("Are you sure you want to reverse this processing fee?");
+        if (!confirm) return;
+        const res = await reverseProcessingFeePayment(app.id);
+        if (res.success) {
+            toast.success("Processing fee reversed");
             const data = await getAdminV2ApplicationDetail(app.id);
             setApp(data);
         } else {
@@ -633,12 +661,17 @@ export default function V2ApplicationDetailPage() {
                                         {app.paymentStatus}
                                     </span>
                                 </div>
-                                {app.paymentReference && (
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Ref</span>
-                                        <span className="font-mono text-xs font-bold text-slate-600">{app.paymentReference}</span>
-                                    </div>
                                 )}
+                                <div className="flex justify-between items-center">
+                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Processing Fee</span>
+                                    <span className={cn(
+                                        "px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border",
+                                        app.processingFeeStatus === 'paid' ? "bg-emerald-100 text-emerald-700 border-emerald-200" :
+                                        "bg-amber-100 text-amber-700 border-amber-200"
+                                    )}>
+                                        {app.processingFeeStatus}
+                                    </span>
+                                </div>
                                 <div className="flex justify-between items-center">
                                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Acceptance Fee</span>
                                     <span className={cn(
@@ -667,6 +700,23 @@ export default function V2ApplicationDetailPage() {
                                             className="w-full rounded-xl text-rose-600 border-rose-200 hover:bg-rose-50 hover:text-rose-700 font-black text-[10px] uppercase tracking-widest py-4"
                                         >
                                             <XCircle className="w-4 h-4 mr-2" /> Reverse Payment
+                                        </Button>
+                                    )}
+                                    {app.processingFeeStatus !== 'paid' && (
+                                        <Button
+                                            onClick={handleConfirmProcessingFee}
+                                            className="w-full rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-[10px] uppercase tracking-widest py-4"
+                                        >
+                                            <CheckCircle2 className="w-4 h-4 mr-2" /> Confirm Processing Fee
+                                        </Button>
+                                    )}
+                                    {app.processingFeeStatus === 'paid' && (
+                                        <Button
+                                            onClick={handleReverseProcessingFee}
+                                            variant="outline"
+                                            className="w-full rounded-xl text-rose-600 border-rose-200 hover:bg-rose-50 hover:text-rose-700 font-black text-[10px] uppercase tracking-widest py-4"
+                                        >
+                                            <XCircle className="w-4 h-4 mr-2" /> Reverse Processing Fee
                                         </Button>
                                     )}
                                     {app.status === 'admitted' && app.acceptancePaymentStatus !== 'paid' && app.acceptancePaymentStatus !== 'not_applicable' && (

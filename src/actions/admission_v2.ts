@@ -600,6 +600,36 @@ export async function deleteAdmissionApplication(applicationId: number) {
     }
 }
 
+export async function confirmProcessingFeePayment(applicationId: number) {
+    await requireAdmin();
+    try {
+        await db.update(admissionApplicationsV2)
+            .set({ processingFeeStatus: 'paid' })
+            .where(eq(admissionApplicationsV2.id, applicationId));
+        
+        revalidatePath(`/admin/admission/v2/${applicationId}`);
+        return { success: true };
+    } catch (error) {
+        console.error("Failed to confirm processing fee:", error);
+        return { success: false, error: "Failed to confirm payment" };
+    }
+}
+
+export async function reverseProcessingFeePayment(applicationId: number) {
+    await requireAdmin();
+    try {
+        await db.update(admissionApplicationsV2)
+            .set({ processingFeeStatus: 'pending' })
+            .where(eq(admissionApplicationsV2.id, applicationId));
+        
+        revalidatePath(`/admin/admission/v2/${applicationId}`);
+        return { success: true };
+    } catch (error) {
+        console.error("Failed to reverse processing fee:", error);
+        return { success: false, error: "Failed to reverse payment" };
+    }
+}
+
 export async function getAdmissionSummary() {
     await requireAdmin();
     try {
