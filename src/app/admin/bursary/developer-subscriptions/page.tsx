@@ -45,7 +45,6 @@ export default async function DeveloperSubscriptionsBursaryPage() {
     if (enrichedFees.length === 0) {
         const fees = await db.select()
             .from(paystackDeveloperFees)
-            .where(eq(paystackDeveloperFees.status, 'paid'))
             .orderBy(desc(paystackDeveloperFees.createdAt));
 
         const appIdsToFetch = new Set<number>();
