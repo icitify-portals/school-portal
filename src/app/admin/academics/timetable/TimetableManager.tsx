@@ -101,7 +101,7 @@ export default function TimetableManager({
         endTime: `${(parseInt(settings.timetableStart.split(':')[0]) + 1).toString().padStart(2, '0')}:00`,
         venueId: "",
         type: "lecture",
-        level: 100
+        level: 1
     });
 
     useEffect(() => {
@@ -601,7 +601,7 @@ export default function TimetableManager({
                                                                                     <span>{slot.venue?.name || 'No Venue'}</span>
                                                                                 </div>
                                                                                 <div className="flex gap-1 mt-1">
-                                                                                    <Badge className="bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border-none text-[8px] h-4 py-0 px-1">L{slot.level}</Badge>
+                                                                                    <Badge className="bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border-none text-[8px] h-4 py-0 px-1">{slot.level === 1 ? 'ND1' : slot.level === 2 ? 'ND2' : slot.level === 3 ? 'HND1' : slot.level === 4 ? 'HND2' : `L${slot.level}`}</Badge>
                                                                                     {slot.type === 'practical' && <Badge className="bg-teal-50 text-teal-600 border-none text-[8px] h-4 py-0 px-1 uppercase">P</Badge>}
                                                                                 </div>
                                                                             </div>
@@ -712,8 +712,11 @@ export default function TimetableManager({
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent className="rounded-xl bg-white">
-                                    {[100, 200, 300, 400, 500, 600].map(l => (
-                                        <SelectItem key={l} value={l.toString()}>{l} Level</SelectItem>
+                                    {[
+                                        {v: 1, l: "ND 1"}, {v: 2, l: "ND 2"},
+                                        {v: 3, l: "HND 1"}, {v: 4, l: "HND 2"}
+                                    ].map(opt => (
+                                        <SelectItem key={opt.v} value={opt.v.toString()}>{opt.l}</SelectItem>
                                     ))}
                                 </SelectContent>
                             </Select>

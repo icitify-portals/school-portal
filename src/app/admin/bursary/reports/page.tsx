@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect, useCallback } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -557,7 +557,11 @@ export default function BursaryReportsPage() {
                                         className="w-full h-11 border border-slate-100 bg-slate-50 rounded-xl px-4 text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500"
                                     >
                                         <option value="">All Levels</option>
-                                        {[100, 200, 300, 400, 500, 600, 700].map(l => <option key={l} value={l}>{l}L</option>)}
+                                        {[
+                                            {v: "1", l: "ND 1"}, {v: "2", l: "ND 2"},
+                                            {v: "3", l: "HND 1"}, {v: "4", l: "HND 2"},
+                                            {v: "nd_graduated", l: "ND Graduated"}, {v: "hnd_graduated", l: "HND Graduated"}
+                                        ].map(opt => <option key={opt.v} value={opt.v}>{opt.l}</option>)}
                                     </select>
                                 </div>
                                 <div className="space-y-2">
@@ -909,7 +913,11 @@ export default function BursaryReportsPage() {
                                         className="w-full h-11 border border-slate-100 bg-slate-50 rounded-xl px-4 text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500"
                                     >
                                         <option value="">All Levels</option>
-                                        {[100, 200, 300, 400, 500, 600, 700].map(l => <option key={l} value={l}>{l}L</option>)}
+                                        {[
+                                            {v: "1", l: "ND 1"}, {v: "2", l: "ND 2"},
+                                            {v: "3", l: "HND 1"}, {v: "4", l: "HND 2"},
+                                            {v: "nd_graduated", l: "ND Graduated"}, {v: "hnd_graduated", l: "HND Graduated"}
+                                        ].map(opt => <option key={opt.v} value={opt.v}>{opt.l}</option>)}
                                     </select>
                                 </div>
                                 <div className="space-y-2">

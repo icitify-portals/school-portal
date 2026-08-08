@@ -1,4 +1,4 @@
-﻿
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -362,8 +362,12 @@ export default function BursaryBillsPage() {
                                                         onChange={(e) => setSelectedLevel(e.target.value)}
                                                     >
                                                         <option value="">Select Level...</option>
-                                                        {[100, 200, 300, 400, 500, 600, 700].map(l => (
-                                                            <option key={l} value={l}>{l} Level</option>
+                                                        {[
+                                                            {v: "1", l: "ND 1"}, {v: "2", l: "ND 2"},
+                                                            {v: "3", l: "HND 1"}, {v: "4", l: "HND 2"},
+                                                            {v: "nd_graduated", l: "ND Graduated"}, {v: "hnd_graduated", l: "HND Graduated"}
+                                                        ].map(opt => (
+                                                            <option key={opt.v} value={opt.v}>{opt.l}</option>
                                                         ))}
                                                     </select>
                                                 )}
@@ -491,7 +495,7 @@ export default function BursaryBillsPage() {
                             <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
                             <input
                                 className="pl-11 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none w-full h-11 transition-all"
-                                placeholder="Search by student, matric, or bill..."
+                                placeholder="Search by student name, email, phone, matric, or bill..."
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                             />

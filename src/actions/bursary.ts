@@ -2917,7 +2917,9 @@ export async function getStudentBillsAdmin(data: { search?: string }) {
                 r.bill.billNumber.toLowerCase().includes(s) ||
                 (r.student?.matricNumber && r.student.matricNumber.toLowerCase().includes(s)) ||
                 (r.student?.firstName && r.student.firstName.toLowerCase().includes(s)) ||
-                (r.student?.lastName && r.student.lastName.toLowerCase().includes(s))
+                (r.student?.lastName && r.student.lastName.toLowerCase().includes(s)) ||
+                (r.student?.email && r.student.email.toLowerCase().includes(s)) ||
+                (r.student?.phone && r.student.phone.toLowerCase().includes(s))
             );
         }
 
