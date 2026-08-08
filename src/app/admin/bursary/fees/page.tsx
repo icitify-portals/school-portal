@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -83,7 +83,7 @@ export default function FeesPage() {
     // Fee Structure Form State
     const [structName, setStructName] = useState("");
     const [structYear, setStructYear] = useState("2024/2025");
-    const [structLevel, setStructLevel] = useState("100");
+    const [structLevel, setStructLevel] = useState<string[]>(["1"]);
     const [selectedItems, setSelectedItems] = useState<{ feeItemId: number, amount: string, semester: '1' | '2' | 'both' }[]>([]);
 
     useEffect(() => {
@@ -150,7 +150,8 @@ export default function FeesPage() {
         const res = await createFeeStructure({
             name: structName,
             academicYear: structYear,
-            level: parseInt(structLevel),
+            level: parseInt(structLevel[0] || "1"),
+            targetGroups: structLevel.join(","),
             items: selectedItems
         });
         if (res.success) {
@@ -259,7 +260,7 @@ export default function FeesPage() {
         setEditingStructureId(s.id);
         setStructName(s.name);
         setStructYear(s.academicYear);
-        setStructLevel(s.level.toString());
+        setStructLevel(s.targetGroups ? s.targetGroups.split(",") : [s.level.toString()]);
         setSelectedItems(s.items.map((i: any) => ({
             feeItemId: i.feeItemId,
             amount: i.amount,
@@ -276,7 +277,8 @@ export default function FeesPage() {
         const res = await updateFeeStructure(editingStructureId, {
             name: structName,
             academicYear: structYear,
-            level: parseInt(structLevel),
+            level: parseInt(structLevel[0] || "1"),
+            targetGroups: structLevel.join(","),
             items: selectedItems
         });
         if (res.success) {
@@ -433,20 +435,27 @@ export default function FeesPage() {
                                     />
                                 </div>
                                 <div className="space-y-1">
-                                    <label className="text-xs font-bold text-slate-500 uppercase">Level</label>
-                                    <select
-                                        className="w-full px-4 py-2 rounded-lg border border-slate-200 h-10"
-                                        value={structLevel}
-                                        onChange={(e) => setStructLevel(e.target.value)}
-                                    >
-                                        <option value="0">Applicant</option>
-                                        <option value="1">ND 1</option>
-                                        <option value="2">ND 2</option>
-                                        <option value="3">HND 1</option>
-                                        <option value="4">HND 2</option>
-                                        <option value="5">ND Graduated</option>
-                                        <option value="6">HND Graduated</option>
-                                    </select>
+                                    <label className="text-xs font-bold text-slate-500 uppercase">Levels / Target Groups</label>
+                                    <div className="flex flex-wrap gap-2 pt-1">
+                                        {[
+                                            {v: "0", l: "Applicant"}, {v: "1", l: "ND 1"}, {v: "2", l: "ND 2"},
+                                            {v: "3", l: "HND 1"}, {v: "4", l: "HND 2"}, {v: "nd_graduated", l: "ND Graduated"},
+                                            {v: "hnd_graduated", l: "HND Graduated"}, {v: "all", l: "All Levels"}
+                                        ].map(opt => (
+                                            <label key={opt.v} className="flex items-center gap-1.5 bg-slate-50 px-3 py-1.5 rounded border border-slate-200 text-sm cursor-pointer hover:bg-slate-100">
+                                                <input 
+                                                    type="checkbox" 
+                                                    checked={structLevel.includes(opt.v)}
+                                                    onChange={(e) => {
+                                                        if (e.target.checked) setStructLevel(prev => [...prev, opt.v]);
+                                                        else setStructLevel(prev => prev.filter(v => v !== opt.v));
+                                                    }}
+                                                    className="rounded text-indigo-600 focus:ring-indigo-500"
+                                                />
+                                                {opt.l}
+                                            </label>
+                                        ))}
+                                    </div>
                                 </div>
                             </div>
 
@@ -527,20 +536,27 @@ export default function FeesPage() {
                                     />
                                 </div>
                                 <div className="space-y-1">
-                                    <label className="text-xs font-bold text-slate-500 uppercase">Level</label>
-                                    <select
-                                        className="w-full px-4 py-2 rounded-lg border border-slate-200 h-10"
-                                        value={structLevel}
-                                        onChange={(e) => setStructLevel(e.target.value)}
-                                    >
-                                        <option value="0">Applicant</option>
-                                        <option value="1">ND 1</option>
-                                        <option value="2">ND 2</option>
-                                        <option value="3">HND 1</option>
-                                        <option value="4">HND 2</option>
-                                        <option value="5">ND Graduated</option>
-                                        <option value="6">HND Graduated</option>
-                                    </select>
+                                    <label className="text-xs font-bold text-slate-500 uppercase">Levels / Target Groups</label>
+                                    <div className="flex flex-wrap gap-2 pt-1">
+                                        {[
+                                            {v: "0", l: "Applicant"}, {v: "1", l: "ND 1"}, {v: "2", l: "ND 2"},
+                                            {v: "3", l: "HND 1"}, {v: "4", l: "HND 2"}, {v: "nd_graduated", l: "ND Graduated"},
+                                            {v: "hnd_graduated", l: "HND Graduated"}, {v: "all", l: "All Levels"}
+                                        ].map(opt => (
+                                            <label key={opt.v} className="flex items-center gap-1.5 bg-slate-50 px-3 py-1.5 rounded border border-slate-200 text-sm cursor-pointer hover:bg-slate-100">
+                                                <input 
+                                                    type="checkbox" 
+                                                    checked={structLevel.includes(opt.v)}
+                                                    onChange={(e) => {
+                                                        if (e.target.checked) setStructLevel(prev => [...prev, opt.v]);
+                                                        else setStructLevel(prev => prev.filter(v => v !== opt.v));
+                                                    }}
+                                                    className="rounded text-indigo-600 focus:ring-indigo-500"
+                                                />
+                                                {opt.l}
+                                            </label>
+                                        ))}
+                                    </div>
                                 </div>
                             </div>
 

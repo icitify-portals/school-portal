@@ -894,7 +894,8 @@ export const feeStructures = mysqlTable('fee_structures', {
   id: int('id').autoincrement().primaryKey(),
   name: varchar('name', { length: 255 }).notNull(),
   academicYear: varchar('academic_year', { length: 20 }).notNull(),
-  level: int('level').notNull(), // Level this fee structure applies to
+  level: int('level').notNull(), // Level this fee structure applies to (Legacy single level)
+  targetGroups: varchar('target_groups', { length: 255 }), // Comma separated list (e.g., '100,200,nd_graduated,all')
   programmeId: int('programme_id').references(() => programmes.id),
   status: mysqlEnum('status', ['draft', 'pending_approval', 'approved', 'archived']).default('draft'),
   approvedBy: int('approved_by').references(() => users.id),

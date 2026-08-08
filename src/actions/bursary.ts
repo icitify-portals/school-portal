@@ -226,6 +226,7 @@ export async function createFeeStructure(data: {
     name: string;
     academicYear?: string;
     level: number;
+    targetGroups?: string;
     items: { feeItemId: number; amount: string; semester: '1' | '2' | 'both' }[]
 }) {
     try {
@@ -240,6 +241,7 @@ export async function createFeeStructure(data: {
                 name: data.name,
                 academicYear: yearToUse,
                 level: data.level,
+                targetGroups: data.targetGroups,
                 status: 'draft'
             });
 
@@ -302,6 +304,7 @@ export async function updateFeeStructure(id: number, data: any) {
                     name: `${data.name} (v2)`,
                     academicYear: data.academicYear,
                     level: data.level,
+                    targetGroups: data.targetGroups,
                     status: 'draft'
                 });
 
@@ -327,7 +330,8 @@ export async function updateFeeStructure(id: number, data: any) {
                 .set({
                     name: data.name,
                     academicYear: data.academicYear,
-                    level: data.level
+                    level: data.level,
+                    targetGroups: data.targetGroups
                 })
                 .where(eq(feeStructures.id, id));
 

@@ -19,7 +19,7 @@ import {
     discounts,
     bursarySettings,
 } from "@/db/schema";
-import { eq, sum, and, sql, desc, inArray, isNotNull } from "drizzle-orm";
+import { eq, sum, and, or, sql, desc, inArray, isNotNull } from "drizzle-orm";
 
 export class BursaryService {
 
@@ -186,7 +186,12 @@ export class BursaryService {
                     .where(and(
                         eq(feeStructures.isSpillOver, true),
                         eq(feeStructures.status, 'approved'),
-                        eq(feeStructures.level, student.currentLevel || 1)
+                        or(
+                            eq(feeStructures.level, student.currentLevel || 1),
+                            sql`FIND_IN_SET(${student.currentLevel?.toString() || '1'}, ${feeStructures.targetGroups}) > 0`,
+                            sql`FIND_IN_SET(${student.status}, ${feeStructures.targetGroups}) > 0`,
+                            sql`FIND_IN_SET('all', ${feeStructures.targetGroups}) > 0`
+                        )
                     ))
                     .limit(1);
                 
@@ -214,7 +219,12 @@ export class BursaryService {
                     .where(and(
                         eq(feeAllocations.programmeId, student.programmeId),
                         eq(feeAllocations.sessionId, sessionId),
-                        eq(feeStructures.level, student.currentLevel || 1)
+                        or(
+                            eq(feeStructures.level, student.currentLevel || 1),
+                            sql`FIND_IN_SET(${student.currentLevel?.toString() || '1'}, ${feeStructures.targetGroups}) > 0`,
+                            sql`FIND_IN_SET(${student.status}, ${feeStructures.targetGroups}) > 0`,
+                            sql`FIND_IN_SET('all', ${feeStructures.targetGroups}) > 0`
+                        )
                     ))
                     .limit(1);
                     allocation = progAlloc?.feeAllocation || null;
@@ -229,7 +239,12 @@ export class BursaryService {
                     .where(and(
                         eq(feeAllocations.deptId, student.deptId),
                         eq(feeAllocations.sessionId, sessionId),
-                        eq(feeStructures.level, student.currentLevel || 1)
+                        or(
+                            eq(feeStructures.level, student.currentLevel || 1),
+                            sql`FIND_IN_SET(${student.currentLevel?.toString() || '1'}, ${feeStructures.targetGroups}) > 0`,
+                            sql`FIND_IN_SET(${student.status}, ${feeStructures.targetGroups}) > 0`,
+                            sql`FIND_IN_SET('all', ${feeStructures.targetGroups}) > 0`
+                        )
                     ))
                     .limit(1);
                     allocation = deptAlloc?.feeAllocation || null;
@@ -244,7 +259,12 @@ export class BursaryService {
                     .where(and(
                         eq(feeAllocations.sessionId, sessionId),
                         sql`faculty_id IS NULL AND dept_id IS NULL AND programme_id IS NULL AND student_id IS NULL`,
-                        eq(feeStructures.level, student.currentLevel || 1)
+                        or(
+                            eq(feeStructures.level, student.currentLevel || 1),
+                            sql`FIND_IN_SET(${student.currentLevel?.toString() || '1'}, ${feeStructures.targetGroups}) > 0`,
+                            sql`FIND_IN_SET(${student.status}, ${feeStructures.targetGroups}) > 0`,
+                            sql`FIND_IN_SET('all', ${feeStructures.targetGroups}) > 0`
+                        )
                     ))
                     .limit(1);
                     allocation = levelAlloc?.feeAllocation || null;
