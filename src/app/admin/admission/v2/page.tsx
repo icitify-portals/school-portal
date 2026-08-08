@@ -37,7 +37,7 @@ export default function AdminV2ApplicationsPage() {
             paymentStatus: paymentFilter !== 'all' ? paymentFilter : undefined,
             templateId: templateFilter,
             page,
-            pageSize: 20,
+            pageSize: 10,
         });
         setData(result);
         setLoading(false);
