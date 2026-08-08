@@ -2897,7 +2897,7 @@ export async function updateBillInstallmentSettings(billId: number, data: {
 
 
 // Added to resolve Next.js build module resolution errors
-export async function getStudentBillsAdmin(data: { search?: string }) {
+export async function getStudentBillsAdmin(data: { search?: string; level?: string }) {
     try {
         const query = db.select({
             bill: studentBills,
@@ -2911,9 +2911,16 @@ export async function getStudentBillsAdmin(data: { search?: string }) {
         const result = await query;
 
         let filtered = result;
+        if (data?.level) {
+            // Apply level mapping (e.g. "1" matches level 1)
+            let levelVal: number | string = data.level;
+            if (["1","2","3","4","5","6"].includes(levelVal)) levelVal = parseInt(levelVal);
+            filtered = filtered.filter(r => r.student?.level === levelVal || r.student?.academicStatus === levelVal);
+        }
+
         if (data?.search) {
             const s = data.search.toLowerCase();
-            filtered = result.filter(r => 
+            filtered = filtered.filter(r => 
                 r.bill.billNumber.toLowerCase().includes(s) ||
                 (r.student?.matricNumber && r.student.matricNumber.toLowerCase().includes(s)) ||
                 (r.student?.firstName && r.student.firstName.toLowerCase().includes(s)) ||
@@ -2933,6 +2940,28 @@ export async function getStudentBillsAdmin(data: { search?: string }) {
     } catch (error) {
         console.error("Failed to fetch admin bills:", error);
         return { success: false, data: [] };
+    }
+}
+
+export async function unassignStudentBillAdmin(billId: number) {
+    try {
+        const bill = await db.query.studentBills.findFirst({
+            where: eq(studentBills.id, billId)
+        });
+
+        if (!bill) {
+            return { success: false, error: "Bill not found." };
+        }
+
+        if (bill.status !== 'unpaid' && parseFloat(bill.amountPaid || "0") > 0) {
+            return { success: false, error: "Cannot unassign a bill that has already been partially or fully paid." };
+        }
+
+        await db.delete(studentBills).where(eq(studentBills.id, billId));
+        return { success: true, message: "Bill unassigned successfully." };
+    } catch (error) {
+        console.error("Failed to unassign bill:", error);
+        return { success: false, error: "An error occurred while unassigning the bill." };
     }
 }
 

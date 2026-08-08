@@ -27,7 +27,8 @@ import {
     generateBatchBills,
     getFeeStructures,
     getStudentBillsAdmin,
-    updateBillInstallmentSettings
+    updateBillInstallmentSettings,
+    unassignStudentBillAdmin
 } from "@/actions/bursary";
 import { toast } from "sonner";
 import { getStudents } from "@/actions/students";
@@ -68,14 +69,17 @@ export default function BursaryBillsPage() {
     const [billsList, setBillsList] = useState<any[]>([]);
     const [billsLoading, setBillsLoading] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
+    const [levelFilter, setLevelFilter] = useState("");
+    const [studentSearchInput, setStudentSearchInput] = useState("");
+    const [showStudentDropdown, setShowStudentDropdown] = useState(false);
     const [updatingBillId, setUpdatingBillId] = useState<number | null>(null);
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 20;
 
-    const fetchBills = async (search?: string) => {
+    const fetchBills = async (search?: string, level?: string) => {
         setBillsLoading(true);
         // @ts-expect-error - TS2554: Auto-suppressed for build
-        const res = await getStudentBillsAdmin({ search });
+        const res = await getStudentBillsAdmin({ search, level });
         if (res.success && res.data) {
             setBillsList(res.data);
         }
@@ -89,12 +93,25 @@ export default function BursaryBillsPage() {
 
     useEffect(() => {
         const delayDebounceFn = setTimeout(() => {
-            fetchBills(searchQuery);
+            fetchBills(searchQuery, levelFilter);
             setCurrentPage(1);
         }, 500);
 
         return () => clearTimeout(delayDebounceFn);
-    }, [searchQuery]);
+    }, [searchQuery, levelFilter]);
+
+    const handleUnassignBill = async (billId: number) => {
+        if (!confirm("Are you sure you want to unassign and delete this bill? This action cannot be undone.")) return;
+        setUpdatingBillId(billId);
+        const res = await unassignStudentBillAdmin(billId);
+        if (res.success) {
+            toast.success(res.message);
+            fetchBills(searchQuery, levelFilter);
+        } else {
+            toast.error(res.error || "Failed to unassign bill");
+        }
+        setUpdatingBillId(null);
+    };
 
     const handleToggleInstallment = async (billId: number, currentEnabled: boolean, percent: number) => {
         setUpdatingBillId(billId);
@@ -317,19 +334,47 @@ export default function BursaryBillsPage() {
                                     </div>
 
                                     {genMode === 'single' ? (
-                                        <div className="md:col-span-2 space-y-1">
+                                        <div className="md:col-span-2 space-y-1 relative">
                                             <label className="text-xs font-bold text-slate-500 uppercase tracking-tight">Select Student</label>
-                                            <select
-                                                required
-                                                className="w-full px-4 py-2 rounded-lg border border-slate-200 h-11 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-                                                value={selectedStudent}
-                                                onChange={(e) => setSelectedStudent(e.target.value)}
-                                            >
-                                                <option value="">Choose Student (ID/Name)...</option>
-                                                {studentsList.map(s => (
-                                                    <option key={s.id} value={s.id}>{s.firstName} {s.lastName} ({s.matricNumber || s.id})</option>
-                                                ))}
-                                            </select>
+                                            <div className="relative">
+                                                <input
+                                                    type="text"
+                                                    required={!selectedStudent}
+                                                    placeholder="Type to search student name or ID..."
+                                                    className="w-full px-4 py-2 rounded-lg border border-slate-200 h-11 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                                                    value={studentSearchInput}
+                                                    onChange={(e) => {
+                                                        setStudentSearchInput(e.target.value);
+                                                        setSelectedStudent("");
+                                                        setShowStudentDropdown(true);
+                                                    }}
+                                                    onFocus={() => setShowStudentDropdown(true)}
+                                                    onBlur={() => setTimeout(() => setShowStudentDropdown(false), 200)}
+                                                />
+                                                {showStudentDropdown && studentSearchInput && (
+                                                    <div className="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                                                        {studentsList.filter(s => 
+                                                            `${s.firstName} ${s.lastName} ${s.matricNumber} ${s.id}`.toLowerCase().includes(studentSearchInput.toLowerCase())
+                                                        ).slice(0, 20).map(s => (
+                                                            <div 
+                                                                key={s.id}
+                                                                className="px-4 py-2 hover:bg-slate-50 cursor-pointer text-sm flex justify-between"
+                                                                onClick={() => {
+                                                                    setSelectedStudent(s.id.toString());
+                                                                    setStudentSearchInput(`${s.firstName} ${s.lastName} (${s.matricNumber || s.id})`);
+                                                                    setShowStudentDropdown(false);
+                                                                }}
+                                                            >
+                                                                <span className="font-semibold">{s.firstName} {s.lastName}</span>
+                                                                <span className="text-slate-400 text-xs">{s.matricNumber || s.id}</span>
+                                                            </div>
+                                                        ))}
+                                                        {studentsList.filter(s => `${s.firstName} ${s.lastName} ${s.matricNumber} ${s.id}`.toLowerCase().includes(studentSearchInput.toLowerCase())).length === 0 && (
+                                                            <div className="px-4 py-3 text-sm text-slate-500 italic">No students found matching your search.</div>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
                                     ) : (
                                         <>
@@ -491,14 +536,30 @@ export default function BursaryBillsPage() {
                             <CardTitle className="text-lg font-bold text-slate-800">Student Bills & Installment Overrides</CardTitle>
                             <p className="text-xs text-slate-500 font-medium mt-1">Configure part payment availability and minimum percentages per student bill</p>
                         </div>
-                        <div className="relative w-full sm:w-80">
-                            <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-                            <input
-                                className="pl-11 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none w-full h-11 transition-all"
-                                placeholder="Search by student name, email, phone, matric, or bill..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                            />
+                        <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto items-center">
+                            <select
+                                className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none w-full sm:w-40 h-11 transition-all"
+                                value={levelFilter}
+                                onChange={(e) => setLevelFilter(e.target.value)}
+                            >
+                                <option value="">All Levels</option>
+                                {[
+                                    {v: "1", l: "ND 1"}, {v: "2", l: "ND 2"},
+                                    {v: "3", l: "HND 1"}, {v: "4", l: "HND 2"},
+                                    {v: "nd_graduated", l: "ND Graduated"}, {v: "hnd_graduated", l: "HND Graduated"}
+                                ].map(opt => (
+                                    <option key={opt.v} value={opt.v}>{opt.l}</option>
+                                ))}
+                            </select>
+                            <div className="relative w-full sm:w-80">
+                                <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                                <input
+                                    className="pl-11 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none w-full h-11 transition-all"
+                                    placeholder="Search by student name, email, phone, matric, or bill..."
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                />
+                            </div>
                         </div>
                     </CardHeader>
                     <div className="bg-white">
@@ -608,9 +669,21 @@ export default function BursaryBillsPage() {
                                                         </span>
                                                     </td>
                                                     <td className="px-8 py-5 text-right">
-                                                        <Button variant="ghost" size="sm" asChild className="text-indigo-600 hover:bg-indigo-50 hover:text-indigo-700">
-                                                            <Link href={`/admin/bursary/ledger/${bill.student?.id}`}>View Ledger</Link>
-                                                        </Button>
+                                                        <div className="flex items-center justify-end gap-2">
+                                                            <Button variant="ghost" size="sm" asChild className="text-indigo-600 hover:bg-indigo-50 hover:text-indigo-700">
+                                                                <Link href={`/admin/bursary/ledger/${bill.student?.id}`}>View Ledger</Link>
+                                                            </Button>
+                                                            {bill.status === 'unpaid' && parseFloat(bill.amountPaid || "0") === 0 && (
+                                                                <Button 
+                                                                    variant="ghost" 
+                                                                    size="sm" 
+                                                                    onClick={() => handleUnassignBill(bill.id)} 
+                                                                    className="text-rose-600 hover:bg-rose-50 hover:text-rose-700"
+                                                                >
+                                                                    Unassign
+                                                                </Button>
+                                                            )}
+                                                        </div>
                                                     </td>
                                                 </tr>
                                             );
