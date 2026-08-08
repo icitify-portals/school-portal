@@ -163,7 +163,7 @@ export default function AdminV2ApplicationsPage() {
     };
 
     return (
-        <div className="p-4 sm:p-6 lg:p-8 min-h-screen">
+        <div className="p-4 sm:p-6 lg:p-8 pb-24 sm:pb-24 lg:pb-24 min-h-screen">
             <div className="max-w-[1600px] w-full mx-auto space-y-8">
                 <div className="relative overflow-hidden bg-slate-900 rounded-3xl p-8 lg:p-12 text-white shadow-2xl border border-slate-800">
                     <div className="absolute inset-0 bg-gradient-to-r from-indigo-600/30 to-emerald-600/30 opacity-50 mix-blend-overlay" />
