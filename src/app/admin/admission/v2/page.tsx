@@ -401,7 +401,7 @@ export default function AdminV2ApplicationsPage() {
                     </div>
                 </Card>
 
-                {data.totalPages > 1 && (
+                {data.totalPages > 0 && (
                     <div className="flex items-center justify-between">
                         <span className="text-sm text-slate-500 font-bold">
                             Page {data.page} of {data.totalPages} ({data.total} total)
