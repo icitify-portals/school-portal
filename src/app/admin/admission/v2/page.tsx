@@ -401,8 +401,7 @@ export default function AdminV2ApplicationsPage() {
                     </div>
                 </Card>
 
-                {data.totalPages > 0 && (
-                    <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between">
                         <span className="text-sm text-slate-500 font-bold">
                             Page {data.page} of {data.totalPages} ({data.total} total)
                         </span>
@@ -422,8 +421,7 @@ export default function AdminV2ApplicationsPage() {
                                 Next <ChevronRight className="w-4 h-4 ml-1" />
                             </Button>
                         </div>
-                    </div>
-                )}
+                </div>
             </div>
         </div>
     );
