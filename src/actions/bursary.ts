@@ -2914,7 +2914,7 @@ export async function getStudentBillsAdmin(data: { search?: string; level?: stri
         if (data?.level) {
             // Apply level mapping (e.g. "1" matches level 1)
             let levelVal: number | string = data.level;
-            if (["1","2","3","4","5","6"].includes(levelVal)) levelVal = parseInt(levelVal);
+            if (["1","2","3","4","5","6"].includes(levelVal as string)) levelVal = parseInt(levelVal as string);
             filtered = filtered.filter(r => r.student?.level === levelVal || r.student?.academicStatus === levelVal);
         }
 
