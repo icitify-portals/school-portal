@@ -73,9 +73,9 @@ export async function bulkImportUsers(data: any[]) {
     }
 }
 
-export async function getAllUsers(options: { search?: string, page?: number, pageSize?: number, facultyId?: number, deptId?: number, level?: number, exportMode?: boolean } = {}) {
+export async function getAllUsers(options: { search?: string, page?: number, pageSize?: number, facultyId?: number, deptId?: number, userType?: string, exportMode?: boolean } = {}) {
     try {
-        const { search = "", page = 1, pageSize = 10, facultyId, deptId, level, exportMode } = options;
+        const { search = "", page = 1, pageSize = 10, facultyId, deptId, userType, exportMode } = options;
         const offset = (page - 1) * pageSize;
 
         const searchPattern = `%${search}%`;
@@ -90,8 +90,30 @@ export async function getAllUsers(options: { search?: string, page?: number, pag
         if (deptId) {
             conditions.push(eq(departments.id, deptId));
         }
-        if (level) {
-            conditions.push(eq(students.currentLevel, level));
+        if (userType) {
+            switch (userType) {
+                case "Applicant":
+                    conditions.push(eq(users.role, 'applicant'));
+                    break;
+                case "ND_1":
+                    conditions.push(and(eq(students.programmeType, 'ND'), eq(students.currentLevel, 1)));
+                    break;
+                case "ND_2":
+                    conditions.push(and(eq(students.programmeType, 'ND'), eq(students.currentLevel, 2)));
+                    break;
+                case "ND_GRADUATED":
+                    conditions.push(eq(students.status, 'nd_graduated'));
+                    break;
+                case "HND_1":
+                    conditions.push(and(eq(students.programmeType, 'HND'), eq(students.currentLevel, 1)));
+                    break;
+                case "HND_2":
+                    conditions.push(and(eq(students.programmeType, 'HND'), eq(students.currentLevel, 2)));
+                    break;
+                case "HND_GRADUATED":
+                    conditions.push(eq(students.status, 'hnd_graduated'));
+                    break;
+            }
         }
 
         const whereClause = conditions.length > 0 ? and(...conditions) : undefined;

@@ -46,7 +46,7 @@ function UserManagementPageContent() {
     const searchString = searchParams.get("search") || "";
     const facultyId = searchParams.get("facultyId") ? parseInt(searchParams.get("facultyId")!) : undefined;
     const deptId = searchParams.get("deptId") ? parseInt(searchParams.get("deptId")!) : undefined;
-    const level = searchParams.get("level") ? parseInt(searchParams.get("level")!) : undefined;
+    const userType = searchParams.get("userType") || undefined;
 
     const [faculties, setFaculties] = useState<any[]>([]);
     const [departments, setDepartments] = useState<any[]>([]);
@@ -59,13 +59,13 @@ function UserManagementPageContent() {
 
     const fetchData = useCallback(async () => {
         setLoading(true);
-        const res = await getAllUsers({ search: searchString, page, pageSize, facultyId, deptId, level });
+        const res = await getAllUsers({ search: searchString, page, pageSize, facultyId, deptId, userType });
         if (res.success) {
             setUsers(res.data);
             setTotalCount(res.totalCount);
         }
         setLoading(false);
-    }, [searchString, page, pageSize, facultyId, deptId, level]);
+    }, [searchString, page, pageSize, facultyId, deptId, userType]);
 
     useEffect(() => {
         fetchData();
@@ -88,7 +88,7 @@ function UserManagementPageContent() {
 
     const handleExport = async () => {
         setIsExporting(true);
-        const res = await getAllUsers({ search: searchString, facultyId, deptId, level, exportMode: true });
+        const res = await getAllUsers({ search: searchString, facultyId, deptId, userType, exportMode: true });
         if (res.success && res.data) {
             const csv = Papa.unparse(res.data.map((u: any) => ({
                 Name: u.name,
@@ -220,12 +220,17 @@ function UserManagementPageContent() {
                             </select>
                             <select 
                                 className="h-10 bg-slate-50 border-none rounded-xl text-sm font-medium px-4 text-slate-600 outline-none w-full md:w-auto"
-                                value={level || ""}
-                                onChange={(e) => handleFilterChange("level", e.target.value)}
+                                value={userType || ""}
+                                onChange={(e) => handleFilterChange("userType", e.target.value)}
                             >
-                                <option value="">All Levels</option>
-                                <option value="1">Level 1</option>
-                                <option value="2">Level 2</option>
+                                <option value="">All Users/Levels</option>
+                                <option value="Applicant">Applicant</option>
+                                <option value="ND_1">ND 1</option>
+                                <option value="ND_2">ND 2</option>
+                                <option value="ND_GRADUATED">ND GRADUATED</option>
+                                <option value="HND_1">HND 1</option>
+                                <option value="HND_2">HND 2</option>
+                                <option value="HND_GRADUATED">HND GRADUATED</option>
                             </select>
                         </div>
                         <div className="text-[10px] font-black uppercase text-slate-400 tracking-widest whitespace-nowrap">

@@ -40,19 +40,14 @@ export default function BursaryGuidePage() {
                             </div>
                             <div className="pb-8">
                                 <h2 className="text-2xl font-black text-slate-900 tracking-tight mb-3">Creating a Settlement Account</h2>
-                                <p className="text-slate-500 font-medium leading-relaxed mb-6">
+                                <p className="text-slate-500 font-medium leading-relaxed mb-4">
                                     Before you can receive payments (like Application fees or Tuition), you must create a physical Settlement Bank Account in the system. This tells the system where the money should ultimately go.
                                 </p>
                                 <ul className="list-disc list-inside text-sm font-medium text-slate-600 mb-6 space-y-2">
                                     <li>Navigate to <strong>Bursary Settings</strong>.</li>
                                     <li>Scroll down to the <strong>Settlement Accounts Console</strong>.</li>
                                     <li>Fill in the Bank Name, CBN Code (e.g. 011 for First Bank), and the 10-digit NUBAN Account Number.</li>
-                                    <li>Click "Add Settlement Account".</li>
                                 </ul>
-                                <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 flex items-start gap-3">
-                                    <FileText className="w-5 h-5 text-indigo-500 shrink-0 mt-0.5" />
-                                    <p className="text-sm font-medium text-slate-600">You can create multiple settlement accounts (e.g., one for SUG dues, one for Tuition, one for Tech Studio).</p>
-                                </div>
                             </div>
                         </div>
 
@@ -64,20 +59,14 @@ export default function BursaryGuidePage() {
                             </div>
                             <div className="pb-8">
                                 <h2 className="text-2xl font-black text-slate-900 tracking-tight mb-3">Mapping Payment Gateways (e.g. ALATPay)</h2>
-                                <p className="text-slate-500 font-medium leading-relaxed mb-6">
+                                <p className="text-slate-500 font-medium leading-relaxed mb-4">
                                     Once the settlement account is created, you must map it to a payment gateway so that the gateway knows where to route the split funds.
                                 </p>
                                 <ul className="list-disc list-inside text-sm font-medium text-slate-600 mb-6 space-y-2">
                                     <li>Locate the settlement account card you just created.</li>
                                     <li>Click the <strong>Map Subaccount</strong> button on that card.</li>
-                                    <li>Select your provider (e.g., ALATPay).</li>
-                                    <li><strong>For ALATPay:</strong> Enter the provided Business ID (e.g., 254d0a99-...) and the Public Key.</li>
-                                    <li>Click "Save Mapping".</li>
+                                    <li>Select your provider (e.g., ALATPay) and enter the Business ID and Public Key.</li>
                                 </ul>
-                                <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-100 flex items-start gap-3">
-                                    <LinkIcon className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
-                                    <p className="text-sm font-medium text-emerald-800">The gateway mapping ensures that funds processed online are automatically split and settled into the correct physical bank account the next morning.</p>
-                                </div>
                             </div>
                         </div>
 
@@ -88,18 +77,18 @@ export default function BursaryGuidePage() {
                                 <div className="w-0.5 h-full bg-slate-100 my-2"></div>
                             </div>
                             <div className="pb-8">
-                                <h2 className="text-2xl font-black text-slate-900 tracking-tight mb-3">Creating Fee Structures & Allocations</h2>
-                                <p className="text-slate-500 font-medium leading-relaxed mb-6">
-                                    A Fee Structure defines what a student needs to pay. You create the structure, add line items (like Tuition, ID Card, SUG Dues), and then <strong>allocate</strong> it to the relevant department or faculty.
+                                <h2 className="text-2xl font-black text-slate-900 tracking-tight mb-3">Fee Structures & Multi-Level Targeting</h2>
+                                <p className="text-slate-500 font-medium leading-relaxed mb-4">
+                                    A Fee Structure defines the template of what students should pay. You can now use <strong>Multi-Level Targeting</strong> to assign a fee structure to multiple target groups simultaneously.
                                 </p>
                                 <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 flex flex-col gap-3">
                                     <div className="flex items-start gap-3">
                                         <CreditCard className="w-5 h-5 text-indigo-500 shrink-0 mt-0.5" />
-                                        <p className="text-sm font-medium text-slate-600"><strong>Structures:</strong> Go to 'Fee Structures', create a new structure, add your fee items and map each item to a Settlement Account. Once done, mark it as Approved.</p>
+                                        <p className="text-sm font-medium text-slate-600"><strong>Structures:</strong> Go to 'Fee Structures', create a new structure, add your fee items and map each item to a Settlement Account.</p>
                                     </div>
                                     <div className="flex items-start gap-3 mt-2">
                                         <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
-                                        <p className="text-sm font-medium text-slate-600"><strong>Allocations:</strong> Go to 'Fee Allocations' to assign the Approved structure to a target (e.g., 100 Level Computer Science students). You can bulk-delete allocations if you make a mistake.</p>
+                                        <p className="text-sm font-medium text-slate-600"><strong>Targeting:</strong> You can target multiple levels (e.g., ND 1, HND 2), specific statuses (e.g., <code>nd_graduated</code>), or simply select <code>all</code> to blanket-apply it.</p>
                                     </div>
                                 </div>
                             </div>
@@ -109,18 +98,38 @@ export default function BursaryGuidePage() {
                         <div className="flex gap-6">
                             <div className="flex flex-col items-center">
                                 <div className="w-12 h-12 rounded-2xl bg-emerald-100 flex items-center justify-center text-emerald-600 font-black text-xl shrink-0">4</div>
+                                <div className="w-0.5 h-full bg-slate-100 my-2"></div>
                             </div>
-                            <div>
-                                <h2 className="text-2xl font-black text-slate-900 tracking-tight mb-3">Managing & Reversing Transactions</h2>
-                                <p className="text-slate-500 font-medium leading-relaxed mb-6">
-                                    If an applicant pays twice, or a transaction is mistakenly marked as successful by an admin, you can reverse it.
+                            <div className="pb-8">
+                                <h2 className="text-2xl font-black text-slate-900 tracking-tight mb-3">Generating Student Invoices (Bills)</h2>
+                                <p className="text-slate-500 font-medium leading-relaxed mb-4">
+                                    <strong>Important:</strong> Students do not pay directly based on the fee structure template alone. You must generate personalized invoices (bills) for them first.
                                 </p>
-                                <div className="p-4 bg-rose-50 rounded-xl border border-rose-100 flex items-start gap-3">
-                                    <RotateCcw className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
-                                    <p className="text-sm font-medium text-rose-800">
-                                        Navigate to <strong>All Transactions</strong> or the specific Applicant's view. You will find a <strong>Reverse Transaction</strong> button. This will revert the payment status and immediately unlink the generated receipt.
-                                    </p>
-                                </div>
+                                <ul className="list-disc list-inside text-sm font-medium text-slate-600 mb-6 space-y-2">
+                                    <li>Navigate to <strong>School Bills</strong>.</li>
+                                    <li>Select <strong>Batch Generation</strong> to run mass billing for a specific level, department, or the whole school.</li>
+                                    <li>The system generates unique invoices representing the fee structure template applied to each specific student.</li>
+                                    <li>Students will log in, see their invoice, and pay (via wallet or gateway).</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        {/* Practical Example */}
+                        <div className="bg-slate-900 rounded-2xl overflow-hidden shadow-2xl mt-8">
+                            <div className="p-6 border-b border-white/10 bg-black/20 flex items-center gap-3">
+                                <FileText className="w-6 h-6 text-indigo-400" />
+                                <h3 className="text-lg font-black text-white uppercase tracking-widest">Typical Example Workflow</h3>
+                            </div>
+                            <div className="p-8 space-y-6 text-slate-300 text-sm leading-relaxed">
+                                <p>Let's say a new academic session starts and you need to collect <strong>Tuition</strong> and <strong>SUG Dues</strong> for ND 1 and HND 1 Computer Science students.</p>
+                                
+                                <ol className="list-decimal list-inside space-y-4 marker:font-bold marker:text-indigo-400">
+                                    <li><strong>Setup Accounts:</strong> Ensure you have two Settlement Accounts: "FSS Tuition Account" and "SUG Dues Account". Map them to your gateway (ALATPay).</li>
+                                    <li><strong>Create Fee Structure:</strong> Create a new Fee Structure named "New Session Levies". Add two items: "Tuition" (₦50,000, mapped to Tuition Account) and "SUG Dues" (₦2,000, mapped to SUG Account).</li>
+                                    <li><strong>Targeting:</strong> Assign the structure's target group to <code>1, 3</code> (ND 1 and HND 1) and link it to the Computer Science department. Approve it.</li>
+                                    <li><strong>Billing:</strong> Go to the Bills page and generate batch bills for Computer Science, ND 1 & HND 1.</li>
+                                    <li><strong>Payment:</strong> When Student A logs in, they see a bill for ₦52,000. They click pay. The ALATPay gateway splits the ₦52,000 in real-time — ₦50,000 drops into the Tuition account and ₦2,000 into the SUG account.</li>
+                                </ol>
                             </div>
                         </div>
 
