@@ -2,7 +2,7 @@
 "use server";
 
 import { db } from "@/db/db";
-import { roles, permissions, rolePermissions, userRoles, users, systemAuditLogs } from "@/db/schema";
+import { roles, permissions, rolePermissions, userRoles, users, systemAuditLogs, staffProfiles } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
@@ -136,6 +136,25 @@ export async function assignRoleToUser(userId: number, roleId: number) {
             return { success: false, error: "Unauthorized: Only superadmin, vice chancellor, bursar, and registrar can edit." };
         }
 
+        if (actorRole === 'bursar' && actorId) {
+            const [targetUser] = await db.select({ role: users.role, deptId: staffProfiles.departmentId })
+                .from(users)
+                .leftJoin(staffProfiles, eq(users.id, staffProfiles.userId))
+                .where(eq(users.id, userId));
+
+            if (!targetUser || targetUser.role !== 'staff') {
+                return { success: false, error: "Unauthorized: Bursars can only assign roles to staff." };
+            }
+
+            const [bursarProfile] = await db.select({ deptId: staffProfiles.departmentId })
+                .from(staffProfiles)
+                .where(eq(staffProfiles.userId, actorId));
+
+            if (!bursarProfile || !targetUser.deptId || bursarProfile.deptId !== targetUser.deptId) {
+                return { success: false, error: "Unauthorized: Staff member is not in your department." };
+            }
+        }
+
         await db.insert(userRoles).values({ userId, roleId });
 
         if (actorId) {
@@ -163,6 +182,25 @@ export async function removeRoleFromUser(userId: number, roleId: number) {
         const actorId = session?.user?.id ? parseInt(session.user.id) : null;
         if (!['superadmin', 'admin', 'dvc', 'bursar', 'registrar'].includes(actorRole)) {
             return { success: false, error: "Unauthorized: Only superadmin, vice chancellor, bursar, and registrar can edit." };
+        }
+
+        if (actorRole === 'bursar' && actorId) {
+            const [targetUser] = await db.select({ role: users.role, deptId: staffProfiles.departmentId })
+                .from(users)
+                .leftJoin(staffProfiles, eq(users.id, staffProfiles.userId))
+                .where(eq(users.id, userId));
+
+            if (!targetUser || targetUser.role !== 'staff') {
+                return { success: false, error: "Unauthorized: Bursars can only remove roles from staff." };
+            }
+
+            const [bursarProfile] = await db.select({ deptId: staffProfiles.departmentId })
+                .from(staffProfiles)
+                .where(eq(staffProfiles.userId, actorId));
+
+            if (!bursarProfile || !targetUser.deptId || bursarProfile.deptId !== targetUser.deptId) {
+                return { success: false, error: "Unauthorized: Staff member is not in your department." };
+            }
         }
 
         await db.delete(userRoles).where(
