@@ -19,7 +19,7 @@ import {
     discounts,
     bursarySettings,
 } from "@/db/schema";
-import { eq, sum, and, or, sql, desc, inArray, isNotNull } from "drizzle-orm";
+import { eq, sum, and, or, sql, desc, inArray, isNotNull, isNull } from "drizzle-orm";
 
 export class BursaryService {
 
@@ -180,6 +180,9 @@ export class BursaryService {
             let allocation = null;
             let directFeeStructureId = null;
 
+            // Note: student.academicStatus and feeStructures.isSpillOver do not exist in the schema.
+            // Spill-overs (or any special status) are naturally matched by the FIND_IN_SET(student.status, targetGroups) logic in the allocation queries below.
+            /*
             if (student.academicStatus === 'spill_over') {
                 const [spillOverStruct] = await tx.select()
                     .from(feeStructures)
@@ -199,6 +202,7 @@ export class BursaryService {
                     directFeeStructureId = spillOverStruct.id;
                 }
             }
+            */
 
             if (!directFeeStructureId) {
                 const [specificAlloc] = await tx.select()
@@ -258,7 +262,10 @@ export class BursaryService {
                     .innerJoin(feeStructures, eq(feeAllocations.feeStructureId, feeStructures.id))
                     .where(and(
                         eq(feeAllocations.sessionId, sessionId),
-                        sql`faculty_id IS NULL AND dept_id IS NULL AND programme_id IS NULL AND student_id IS NULL`,
+                        isNull(feeAllocations.facultyId),
+                        isNull(feeAllocations.deptId),
+                        isNull(feeAllocations.programmeId),
+                        isNull(feeAllocations.studentId),
                         or(
                             eq(feeStructures.level, student.currentLevel || 1),
                             sql`FIND_IN_SET(${student.currentLevel?.toString() || '1'}, ${feeStructures.targetGroups}) > 0`,
