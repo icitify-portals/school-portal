@@ -33,9 +33,26 @@ export default function CohortManagementPage() {
         fetchData();
     }, []);
 
+    useEffect(() => {
+        const timer = setTimeout(async () => {
+            if (userSearch.trim().length > 1) {
+                const res = await getAllUsers({ search: userSearch, pageSize: 20 });
+                if (res.success) {
+                    setUsers((res as any).data || []);
+                }
+            } else if (userSearch.trim().length === 0) {
+                const res = await getAllUsers({ pageSize: 10 });
+                if (res.success) {
+                    setUsers((res as any).data || []);
+                }
+            }
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [userSearch]);
+
     const fetchData = async () => {
         setLoading(true);
-        const [cData, uData] = await Promise.all([getAllCohorts(), getAllUsers()]);
+        const [cData, uData] = await Promise.all([getAllCohorts(), getAllUsers({ pageSize: 10 })]);
         setCohorts(cData);
         setUsers((uData as any).data || []);
         setLoading(false);
@@ -162,7 +179,7 @@ export default function CohortManagementPage() {
                                         />
                                         {userSearch && (
                                             <div className="absolute top-12 left-0 w-full bg-white border border-slate-100 shadow-2xl rounded-2xl z-50 overflow-hidden max-h-60 overflow-y-auto border-2">
-                                                {users.filter(u => u.name.toLowerCase().includes(userSearch.toLowerCase()) || u.email.toLowerCase().includes(userSearch.toLowerCase())).map(u => (
+                                                {users.map(u => (
                                                     <div
                                                         key={u.id}
                                                         onClick={() => {

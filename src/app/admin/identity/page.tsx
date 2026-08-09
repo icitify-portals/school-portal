@@ -18,7 +18,7 @@ export default function IdentityCenter() {
 
     const fetchData = async () => {
         setLoading(true);
-        const [stu, stf] = await Promise.all([getStudents(), getStaffProfiles()]);
+        const [stu, stf] = await Promise.all([getStudents({ pageSize: 10 }), getStaffProfiles()]);
         setStudents((stu as any).data || []);
         setStaff(stf);
         setLoading(false);
@@ -27,6 +27,23 @@ export default function IdentityCenter() {
     useEffect(() => {
         fetchData();
     }, []);
+
+    useEffect(() => {
+        const timer = setTimeout(async () => {
+            if (search.trim().length > 1) {
+                const res = await getStudents({ search, pageSize: 20 });
+                if (res.success) {
+                    setStudents((res as any).data || []);
+                }
+            } else if (search.trim().length === 0) {
+                const res = await getStudents({ pageSize: 10 });
+                if (res.success) {
+                    setStudents((res as any).data || []);
+                }
+            }
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [search]);
 
     const allUsers = [
         ...students.map(s => ({ ...s, type: 'student', displayId: s.matricNumber || "NOT_APPROVED" })),

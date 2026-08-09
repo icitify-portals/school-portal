@@ -47,10 +47,29 @@ export default function CoursesPage() {
     const [students, setStudents] = useState<any[]>([]);
     const [enrollType, setEnrollType] = useState<"individual" | "cohort">("individual");
     const [enrollData, setEnrollData] = useState({ studentId: "", cohortId: "", session: "2024/2025", semester: "1" });
+    const [studentSearchInput, setStudentSearchInput] = useState("");
+    const [showStudentDropdown, setShowStudentDropdown] = useState(false);
 
     useEffect(() => {
         fetchData();
     }, []);
+
+    useEffect(() => {
+        const timer = setTimeout(async () => {
+            if (studentSearchInput.trim().length > 1) {
+                const res = await getStudents({ search: studentSearchInput, pageSize: 20 });
+                if (res.success) {
+                    setStudents((res as any).data || []);
+                }
+            } else if (studentSearchInput.trim().length === 0) {
+                const res = await getStudents({ pageSize: 10 });
+                if (res.success) {
+                    setStudents((res as any).data || []);
+                }
+            }
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [studentSearchInput]);
 
     const fetchData = async () => {
         setLoading(true);
@@ -414,14 +433,43 @@ export default function CoursesPage() {
                                 <div className="space-y-4">
                                     <div className="space-y-1">
                                         <label className="text-[10px] font-black text-slate-400 uppercase">Select Student</label>
-                                        <select
-                                            className="w-full bg-slate-50 border-none rounded-xl h-11 px-4 text-sm font-medium"
-                                            value={enrollData.studentId}
-                                            onChange={e => setEnrollData({ ...enrollData, studentId: e.target.value })}
-                                        >
-                                            <option value="">Choose a student...</option>
-                                            {students.map(s => <option key={s.id} value={s.id}>{s.user?.name} ({s.matricNumber || 'No ID'})</option>)}
-                                        </select>
+                                        <div className="relative">
+                                            <input
+                                                type="text"
+                                                required={!enrollData.studentId}
+                                                placeholder="Type to search student name or ID..."
+                                                className="w-full bg-slate-50 border-none rounded-xl h-11 px-4 text-sm font-medium focus:ring-2 focus:ring-indigo-500 outline-none"
+                                                value={studentSearchInput}
+                                                onChange={(e) => {
+                                                    setStudentSearchInput(e.target.value);
+                                                    setEnrollData({ ...enrollData, studentId: "" });
+                                                    setShowStudentDropdown(true);
+                                                }}
+                                                onFocus={() => setShowStudentDropdown(true)}
+                                                onBlur={() => setTimeout(() => setShowStudentDropdown(false), 200)}
+                                            />
+                                            {showStudentDropdown && studentSearchInput && (
+                                                <div className="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                                                    {students.map(s => (
+                                                        <div 
+                                                            key={s.id}
+                                                            className="px-4 py-2 hover:bg-slate-50 cursor-pointer text-sm flex justify-between"
+                                                            onClick={() => {
+                                                                setEnrollData({ ...enrollData, studentId: s.id.toString() });
+                                                                setStudentSearchInput(`${s.user?.name || s.firstName} (${s.matricNumber || s.id})`);
+                                                                setShowStudentDropdown(false);
+                                                            }}
+                                                        >
+                                                            <span className="font-semibold">{s.user?.name || s.firstName} {s.lastName}</span>
+                                                            <span className="text-slate-400 text-xs">{s.matricNumber || s.id}</span>
+                                                        </div>
+                                                    ))}
+                                                    {students.length === 0 && (
+                                                        <div className="px-4 py-3 text-sm text-slate-500 italic">No students found.</div>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="space-y-1">

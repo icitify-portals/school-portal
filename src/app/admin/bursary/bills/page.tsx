@@ -169,13 +169,11 @@ export default function BursaryBillsPage() {
 
     const fetchInitialData = async () => {
         setLoading(true);
-        const [st, sess, depts, progs] = await Promise.all([
-            getStudents(),
+        const [sess, depts, progs] = await Promise.all([
             getAcademicSessions(),
             getDepartments(),
             getProgrammes()
         ]);
-        setStudentsList((st as any).data || []);
         setSessionsList(sess);
         setDepartmentsList(depts);
         setProgrammesList(progs);
@@ -183,6 +181,21 @@ export default function BursaryBillsPage() {
         if (sess.length > 0) setSelectedSession(sess[0].id.toString());
         setLoading(false);
     };
+
+    useEffect(() => {
+        const timer = setTimeout(async () => {
+            if (studentSearchInput.trim().length > 1) {
+                const res = await getStudents({ search: studentSearchInput, pageSize: 20 });
+                if (res.success) {
+                    setStudentsList((res as any).data || []);
+                }
+            } else if (studentSearchInput.trim().length === 0) {
+                const res = await getStudents({ pageSize: 10 });
+                setStudentsList((res as any).data || []);
+            }
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [studentSearchInput]);
 
     const handleGenerate = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -353,9 +366,7 @@ export default function BursaryBillsPage() {
                                                 />
                                                 {showStudentDropdown && studentSearchInput && (
                                                     <div className="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                                                        {studentsList.filter(s => 
-                                                            `${s.firstName} ${s.lastName} ${s.matricNumber} ${s.id}`.toLowerCase().includes(studentSearchInput.toLowerCase())
-                                                        ).slice(0, 20).map(s => (
+                                                        {studentsList.map(s => (
                                                             <div 
                                                                 key={s.id}
                                                                 className="px-4 py-2 hover:bg-slate-50 cursor-pointer text-sm flex justify-between"
@@ -369,7 +380,7 @@ export default function BursaryBillsPage() {
                                                                 <span className="text-slate-400 text-xs">{s.matricNumber || s.id}</span>
                                                             </div>
                                                         ))}
-                                                        {studentsList.filter(s => `${s.firstName} ${s.lastName} ${s.matricNumber} ${s.id}`.toLowerCase().includes(studentSearchInput.toLowerCase())).length === 0 && (
+                                                        {studentsList.length === 0 && (
                                                             <div className="px-4 py-3 text-sm text-slate-500 italic">No students found matching your search.</div>
                                                         )}
                                                     </div>
