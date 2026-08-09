@@ -2,7 +2,7 @@
 "use server";
 
 import { db } from "@/db/db";
-import { academicSessions, courses, staffProfiles, departments, courseLecturers, timetableSlots, users, students, enrollments, timetableSubmissions, timetableComments, institutionalUnits, courseDepartmentSettings, venues as venuesTable } from "@/db/schema";
+import { academicSessions, courses, staffProfiles, departments, faculties, courseLecturers, timetableSlots, users, students, enrollments, timetableSubmissions, timetableComments, institutionalUnits, courseDepartmentSettings, venues as venuesTable } from "@/db/schema";
 import { eq, and, or, gte, lte, count, sql, desc, inArray } from "drizzle-orm";
 import { auth } from "@/auth";
 import { revalidatePath } from "next/cache";
@@ -190,7 +190,7 @@ export async function approveTimetable(submissionId: number, notes?: string) {
         const allowed = await hasPermission("academic.timetable.approve") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("dean");
         if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to approve timetable" };
         const session = await auth();
-        if (!session?.user) return { success: false, error: "Unauthorized" };
+        if (!session?.user) return { success: "Unauthorized" };
 
         const submissionRows = await db.select({
             submission: timetableSubmissions,
@@ -624,4 +624,59 @@ export async function getFacultyDepartments(facultyId: number) {
     }
 }
 
+/**
+ * Fetch all staff profiles (all departments) — for admin-level cross-department assignment.
+ */
+export async function getAllStaff() {
+    try {
+        return await db.select({
+            id: staffProfiles.id,
+            userId: staffProfiles.userId,
+            departmentId: staffProfiles.departmentId,
+            jobTitle: staffProfiles.jobTitle,
+            rank: staffProfiles.rank,
+            user: users,
+        })
+            .from(staffProfiles)
+            .innerJoin(users, eq(staffProfiles.userId, users.id))
+            .orderBy(users.name);
+    } catch (error) {
+        console.error("Failed to fetch all staff:", error);
+        return [];
+    }
+}
 
+/**
+ * Fetch ALL course assignments across all departments for the current session.
+ * Used by the admin global assignment manager.
+ */
+export async function getAllCourseAssignmentsForSession(sessionId: number, semester: '1' | '2') {
+    try {
+        const rows = await db.select({
+            assignment: courseLecturers,
+            course: courses,
+            staff: staffProfiles,
+            user: users,
+            dept: departments,
+        })
+            .from(courseLecturers)
+            .leftJoin(courses, eq(courseLecturers.courseId, courses.id))
+            .leftJoin(staffProfiles, eq(courseLecturers.staffId, staffProfiles.id))
+            .leftJoin(users, eq(staffProfiles.userId, users.id))
+            .leftJoin(departments, eq(courseLecturers.deptId, departments.id))
+            .where(and(
+                eq(courseLecturers.sessionId, sessionId),
+                eq(courseLecturers.semester, semester)
+            ));
+
+        return rows.map(r => ({
+            ...r.assignment,
+            course: r.course,
+            staff: r.staff ? { ...r.staff, user: r.user } : null,
+            department: r.dept,
+        }));
+    } catch (error) {
+        console.error("Failed to fetch all course assignments:", error);
+        return [];
+    }
+}
