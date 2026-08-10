@@ -27,7 +27,7 @@ export function getPoolForDb(dbName: string): mysql.Pool {
         globalCache.pools[dbName] = mysql.createPool({
             uri: parsedUrl.toString(),
             waitForConnections: true,
-            connectionLimit: 10,
+            connectionLimit: 100,
             queueLimit: 0
         });
     }
