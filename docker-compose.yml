@@ -17,6 +17,14 @@ services:
     networks:
       - portal_network
 
+  school-portal-redis:
+    image: redis:7-alpine
+    container_name: school-portal-redis
+    restart: always
+    command: redis-server --requirepass SecureRedisAuth123!
+    networks:
+      - portal_network
+
   school-portal-app:
     build: .
     container_name: school-portal-app

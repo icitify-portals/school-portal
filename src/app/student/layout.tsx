@@ -7,6 +7,7 @@ import { eq, inArray, and } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { AlertTriangle, Lock } from "lucide-react";
 import { SubscriptionLockEnforcer } from "@/components/finance/SubscriptionLockEnforcer";
+import { SubscriptionToastNotification } from "@/components/finance/SubscriptionToastNotification";
 import { getBursarySettings } from "@/actions/bursary";
 import { checkDeveloperFeeStatus } from "@/actions/paystack-developer-subscription";
 
@@ -39,7 +40,11 @@ export default async function StudentLayout({
 
     // Developer Subscription Fee Enforcement
     const isSubscriptionEnforced = devSettings?.isActive === true;
+    const isStrictLockActive = devSettings?.isStrictLockActive === true;
+    
     let isLockedBySubscription = false;
+    let hasUnpaidSubscription = false;
+    let subscriptionLockOverride = studentRecord.subscriptionLockOverride || 'default';
     
     if (isSubscriptionEnforced && activeSession) {
         const isSubscriptionPaid = await checkDeveloperFeeStatus(
@@ -47,11 +52,18 @@ export default async function StudentLayout({
             'school_fees',
             activeSession.id
         );
-        isLockedBySubscription = !isSubscriptionPaid;
         
-        // Global Amnesty
-        if (activeSession.name.includes('2025/2026')) {
-            isLockedBySubscription = false;
+        hasUnpaidSubscription = !isSubscriptionPaid;
+        
+        if (hasUnpaidSubscription) {
+            if (subscriptionLockOverride === 'exempt') {
+                isLockedBySubscription = false;
+            } else if (subscriptionLockOverride === 'enforce') {
+                isLockedBySubscription = true;
+            } else {
+                // Default: only lock if strict lock is active globally
+                isLockedBySubscription = isStrictLockActive;
+            }
         }
     }
 
@@ -123,17 +135,7 @@ export default async function StudentLayout({
                     </div>
                 </div>
             )}
-            {isSoftLock && !isDisciplinarilyLocked && (
-                <div className="bg-rose-50 border-b border-rose-200 px-4 py-3 flex items-start gap-3">
-                    <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
-                    <div>
-                        <h3 className="text-sm font-black text-rose-900 uppercase tracking-widest">Financial Hold Notice</h3>
-                        <p className="text-xs text-rose-700 mt-1 font-medium">
-                            You have an outstanding balance that exceeds the allowed threshold. Please proceed to the Finance portal to settle your bills.
-                        </p>
-                    </div>
-                </div>
-            )}
+            <SubscriptionToastNotification hasUnpaidSubscription={hasUnpaidSubscription} hasUnpaidSchoolFees={isSoftLock} />
             {children}
             </SubscriptionLockEnforcer>
         </FinancialLockEnforcer>

@@ -477,7 +477,7 @@ export class SplitPaymentEngine {
 
         // 2. Fetch Active Settings
         const settings = await this.getBursarySettingsMap();
-        const activeGateway = settings['active_payment_gateway'] || 'paystack';
+        let activeGateway = settings['active_payment_gateway'] || 'paystack';
         const feeBearerRule = (settings['gateway_fee_bearer'] || 'default') as 'developer' | 'default' | 'subaccounts' | 'student' | 'prorated';
         
         // 3. Fetch Student Bill & Items
@@ -486,6 +486,11 @@ export class SplitPaymentEngine {
             return { success: false, reference: "", error: "Student bill not found." };
         }
         const bill = billRows[0];
+
+        // Gateway Override for Outstanding Bills
+        if (bill.note === 'Outstanding Balance 2025/2026') {
+            activeGateway = 'alatpay';
+        }
         
         const billItemRows = await db.select({
             item: studentBillItems,

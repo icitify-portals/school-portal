@@ -1,0 +1,1 @@
+ssh deploy@147.93.84.90 "echo 'UPDATE programmes SET name=\"Accountancy (Faculty of Business Administration)\" WHERE name=\"Accountancy (Faculty of Science)\"; SELECT id, name FROM programmes WHERE name LIKE \"%Accountancy%\";' > update_prog.sql && sudo docker exec -i school-portal-db mysql -u root -pStrongPassword123! school_portal < update_prog.sql"

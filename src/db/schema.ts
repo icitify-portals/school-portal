@@ -243,6 +243,7 @@ export const students = mysqlTable('students', {
   nin: varchar('nin', { length: 11 }),
   ninVerified: boolean('nin_verified').default(false),
   status: mysqlEnum('status', ['active', 'nd_graduated', 'hnd_graduated', 'withdrawn', 'suspended', 'rusticated']).default('active'),
+  subscriptionLockOverride: mysqlEnum('subscription_lock_override', ['default', 'enforce', 'exempt']).default('default'),
 
   // Guardian Details
   guardianName: varchar('guardian_name', { length: 255 }),
@@ -7184,6 +7185,7 @@ export const developerSubscriptionSettings = mysqlTable('developer_subscription_
   syncWithCalendar: boolean('sync_with_calendar').default(false),
   lockWeek: int('lock_week').default(4),
   isActive: boolean('is_active').default(true),
+  isStrictLockActive: boolean('is_strict_lock_active').default(false),
   updatedBy: int('updated_by').references(() => users.id),
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),

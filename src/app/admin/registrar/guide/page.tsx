@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Award, ShieldAlert, GraduationCap, Gavel, Users, FileText, CheckCircle2, History } from "lucide-react";
+import { Award, ShieldAlert, GraduationCap, Gavel, Users, FileText, CheckCircle2, History, Settings, RefreshCcw, Database } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +16,7 @@ export default function RegistrarGuidePage() {
                             Registrar Module Guide
                         </h1>
                         <p className="text-slate-400 font-medium text-lg max-w-2xl relative z-10">
-                            A comprehensive manual for managing graduations, student clearance, Senate conduct cases, grievances, and alumni records.
+                            A comprehensive manual for managing matriculation allocations, graduations, student clearance, Senate conduct cases, grievances, and alumni records.
                         </p>
                     </div>
 
@@ -27,15 +27,45 @@ export default function RegistrarGuidePage() {
                             <div>
                                 <h3 className="font-bold text-rose-900 mb-1">High-Level Administrative Authority</h3>
                                 <p className="text-rose-800/80 font-medium text-sm leading-relaxed">
-                                    The Registrar Module governs the legal and official academic standing of students. Actions taken here—such as rustication, expulsion, or graduation approvals—permanently alter student records and access rights.
+                                    The Registrar Module governs the legal and official academic standing of students. Actions taken here—such as matriculation, rustication, expulsion, or graduation approvals—permanently alter student records and access rights.
                                 </p>
                             </div>
                         </div>
 
-                        {/* Step 1 */}
+                        {/* Step 1: Matriculation Allocation */}
                         <div className="flex gap-6">
                             <div className="flex flex-col items-center">
                                 <div className="w-12 h-12 rounded-2xl bg-indigo-100 flex items-center justify-center text-indigo-600 font-black text-xl shrink-0">1</div>
+                                <div className="w-0.5 h-full bg-slate-100 my-2"></div>
+                            </div>
+                            <div className="pb-8">
+                                <h2 className="text-2xl font-black text-slate-900 tracking-tight mb-3">Matriculation Allocation</h2>
+                                <p className="text-slate-500 font-medium leading-relaxed mb-6">
+                                    Dynamically allocate, format, and secure matriculation numbers for new students based on Senate-approved configurations.
+                                </p>
+                                <ul className="list-disc list-inside text-sm font-medium text-slate-600 mb-6 space-y-2">
+                                    <li>Navigate to <strong>Matriculation</strong>.</li>
+                                    <li>Review the global and departmental <strong>Matriculation Settings</strong> for format rules.</li>
+                                    <li>Assign numbers individually or use <strong>Batch Allocation</strong>.</li>
+                                    <li>The system guarantees thread-safe serial sequencing to prevent duplicates.</li>
+                                </ul>
+                                <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 flex flex-col gap-3">
+                                    <div className="flex items-start gap-3">
+                                        <Settings className="w-5 h-5 text-indigo-500 shrink-0 mt-0.5" />
+                                        <p className="text-sm font-medium text-slate-600">The priority sequence for applying format rules is: <strong>Department &rarr; Faculty &rarr; Unit &rarr; Global Default</strong>.</p>
+                                    </div>
+                                    <div className="flex items-start gap-3 mt-2">
+                                        <Database className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
+                                        <p className="text-sm font-medium text-emerald-800">Every single allocation is logged securely in the Matriculation Audit Log. If reassigned, previous numbers are archived to preserve historical integrity.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Step 2 */}
+                        <div className="flex gap-6">
+                            <div className="flex flex-col items-center">
+                                <div className="w-12 h-12 rounded-2xl bg-indigo-100 flex items-center justify-center text-indigo-600 font-black text-xl shrink-0">2</div>
                                 <div className="w-0.5 h-full bg-slate-100 my-2"></div>
                             </div>
                             <div className="pb-8">
@@ -56,10 +86,10 @@ export default function RegistrarGuidePage() {
                             </div>
                         </div>
 
-                        {/* Step 2 */}
+                        {/* Step 3 */}
                         <div className="flex gap-6">
                             <div className="flex flex-col items-center">
-                                <div className="w-12 h-12 rounded-2xl bg-indigo-100 flex items-center justify-center text-indigo-600 font-black text-xl shrink-0">2</div>
+                                <div className="w-12 h-12 rounded-2xl bg-indigo-100 flex items-center justify-center text-indigo-600 font-black text-xl shrink-0">3</div>
                                 <div className="w-0.5 h-full bg-slate-100 my-2"></div>
                             </div>
                             <div className="pb-8">
@@ -80,10 +110,10 @@ export default function RegistrarGuidePage() {
                             </div>
                         </div>
 
-                        {/* Step 3 */}
+                        {/* Step 4 */}
                         <div className="flex gap-6">
                             <div className="flex flex-col items-center">
-                                <div className="w-12 h-12 rounded-2xl bg-indigo-100 flex items-center justify-center text-indigo-600 font-black text-xl shrink-0">3</div>
+                                <div className="w-12 h-12 rounded-2xl bg-indigo-100 flex items-center justify-center text-indigo-600 font-black text-xl shrink-0">4</div>
                                 <div className="w-0.5 h-full bg-slate-100 my-2"></div>
                             </div>
                             <div className="pb-8">
@@ -104,10 +134,10 @@ export default function RegistrarGuidePage() {
                             </div>
                         </div>
 
-                        {/* Step 4 */}
+                        {/* Step 5 */}
                         <div className="flex gap-6">
                             <div className="flex flex-col items-center">
-                                <div className="w-12 h-12 rounded-2xl bg-indigo-100 flex items-center justify-center text-indigo-600 font-black text-xl shrink-0">4</div>
+                                <div className="w-12 h-12 rounded-2xl bg-indigo-100 flex items-center justify-center text-indigo-600 font-black text-xl shrink-0">5</div>
                             </div>
                             <div>
                                 <h2 className="text-2xl font-black text-slate-900 tracking-tight mb-3">Alumni Transition</h2>
