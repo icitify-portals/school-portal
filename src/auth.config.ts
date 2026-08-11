@@ -121,6 +121,9 @@ export const authConfig = {
                 if (userRole === 'hod' && (nextUrl.pathname === "/admin/dashboard" || nextUrl.pathname.startsWith("/admin/hod") || nextUrl.pathname.startsWith("/admin/academics") || nextUrl.pathname.startsWith("/admin/academic") || nextUrl.pathname.startsWith("/admin/students") || nextUrl.pathname.startsWith("/admin/hr"))) return true;
                 if (userRole === 'dean' && (nextUrl.pathname === "/admin/dashboard" || nextUrl.pathname.startsWith("/admin/dean") || nextUrl.pathname.startsWith("/admin/academics") || nextUrl.pathname.startsWith("/admin/academic") || nextUrl.pathname.startsWith("/admin/students") || nextUrl.pathname.startsWith("/admin/hr"))) return true;
                 if (userRole === 'staff' && allowedAdminPaths.some(p => nextUrl.pathname.startsWith(p))) return true;
+                // Result Module Officer: grant access to result-module only via permission
+                const hasResultModulePermission = userPermissions.includes("result_module.manage");
+                if (hasResultModulePermission && (nextUrl.pathname === "/admin/dashboard" || nextUrl.pathname.startsWith("/admin/result-module"))) return true;
                 return Response.redirect(new URL("/dashboard", nextUrl));
             }
 
