@@ -22,6 +22,9 @@ export const authConfig = {
                 if (session.twoFactorVerified !== undefined) {
                     token.twoFactorPending = !session.twoFactorVerified;
                 }
+                if (session.requiresPasswordChange !== undefined) {
+                    token.requiresPasswordChange = session.requiresPasswordChange;
+                }
             }
             return token;
         },
@@ -113,6 +116,15 @@ export const authConfig = {
 
             if (isAdminPage) {
                 if (userRole === 'admin' || userRole === 'superadmin' || userRole === 'dvc' || userRole === 'icitify_dev') return true;
+
+                // Permission-scoped access: checked BEFORE role rules to enforce strict path restrictions
+                const hasResultModulePermission = userPermissions.includes("result_module.manage");
+                if (hasResultModulePermission) {
+                    // Strictly restrict to result-module only — no other admin paths allowed
+                    if (nextUrl.pathname === "/admin/dashboard" || nextUrl.pathname.startsWith("/admin/result-module")) return true;
+                    return Response.redirect(new URL("/dashboard", nextUrl));
+                }
+
                 if (nextUrl.pathname.startsWith("/admin/cms") && hasCmsAccess) return true;
                 if (userRole === 'bursar' && (nextUrl.pathname === "/admin/dashboard" || nextUrl.pathname.startsWith("/admin/bursary") || nextUrl.pathname.startsWith("/admin/accounting") || nextUrl.pathname.startsWith("/admin/analytics") || nextUrl.pathname.startsWith("/admin/students") || nextUrl.pathname.startsWith("/admin/hr"))) return true;
                 if (userRole === 'registrar' && (nextUrl.pathname === "/admin/dashboard" || nextUrl.pathname.startsWith("/admin/admission") || nextUrl.pathname.startsWith("/admin/admissions") || nextUrl.pathname.startsWith("/admin/academics") || nextUrl.pathname.startsWith("/admin/academic") || nextUrl.pathname.startsWith("/admin/courses") || nextUrl.pathname.startsWith("/admin/faculties") || nextUrl.pathname.startsWith("/admin/departments") || nextUrl.pathname.startsWith("/admin/programmes") || nextUrl.pathname.startsWith("/admin/curriculum") || nextUrl.pathname.startsWith("/admin/calendar") || nextUrl.pathname.startsWith("/admin/quality-assurance") || nextUrl.pathname.startsWith("/admin/registration") || nextUrl.pathname.startsWith("/admin/cbt") || nextUrl.pathname.startsWith("/admin/students") || nextUrl.pathname.startsWith("/admin/hr") || nextUrl.pathname.startsWith("/admin/exams-records") || nextUrl.pathname.startsWith("/admin/registrar"))) return true;
@@ -121,9 +133,6 @@ export const authConfig = {
                 if (userRole === 'hod' && (nextUrl.pathname === "/admin/dashboard" || nextUrl.pathname.startsWith("/admin/hod") || nextUrl.pathname.startsWith("/admin/academics") || nextUrl.pathname.startsWith("/admin/academic") || nextUrl.pathname.startsWith("/admin/students") || nextUrl.pathname.startsWith("/admin/hr"))) return true;
                 if (userRole === 'dean' && (nextUrl.pathname === "/admin/dashboard" || nextUrl.pathname.startsWith("/admin/dean") || nextUrl.pathname.startsWith("/admin/academics") || nextUrl.pathname.startsWith("/admin/academic") || nextUrl.pathname.startsWith("/admin/students") || nextUrl.pathname.startsWith("/admin/hr"))) return true;
                 if (userRole === 'staff' && allowedAdminPaths.some(p => nextUrl.pathname.startsWith(p))) return true;
-                // Result Module Officer: grant access to result-module only via permission
-                const hasResultModulePermission = userPermissions.includes("result_module.manage");
-                if (hasResultModulePermission && (nextUrl.pathname === "/admin/dashboard" || nextUrl.pathname.startsWith("/admin/result-module"))) return true;
                 return Response.redirect(new URL("/dashboard", nextUrl));
             }
 

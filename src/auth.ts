@@ -16,7 +16,7 @@ import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
 import MicrosoftEntraID from "next-auth/providers/microsoft-entra-id";
 import { db } from "@/db/db";
-import { users, roles, permissions, rolePermissions, userRoles, students, staffProfiles } from "@/db/schema";
+import { users, roles, permissions, rolePermissions, userRoles, students, staffProfiles, userPermissions } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { authConfig } from "./auth.config";
@@ -45,6 +45,16 @@ async function fetchUserRolesAndPermissions(userId: number) {
         rolesAndPermissions.forEach(row => {
             if (row.roleName) roleSet.add(row.roleName);
             if (row.permissionName) permissionSet.add(row.permissionName);
+        });
+
+        // Also load direct user_permissions (not role-based)
+        const directPerms = await db
+            .select({ permissionKey: userPermissions.permissionKey })
+            .from(userPermissions)
+            .where(and(eq(userPermissions.userId, userId), eq(userPermissions.isGranted, true)));
+
+        directPerms.forEach(row => {
+            if (row.permissionKey) permissionSet.add(row.permissionKey);
         });
 
         roleNames = Array.from(roleSet);
@@ -183,8 +193,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                             const fallbackPassword = staffRecord?.staffId || "password123";
                             if (providedPassword === fallbackPassword) {
                                 isAuthenticated = true;
-                                user.requiresPasswordChange = true;
-                                await db.update(users).set({ requiresPasswordChange: true }).where(eq(users.id, user.id));
+                                // Only force password change if the stored password is NOT already a bcrypt hash.
+                                // If the user has intentionally set a bcrypt password equal to the fallback, don't re-trigger the loop.
+                                const isAlreadyBcrypt = user.password?.startsWith('$2');
+                                if (!isAlreadyBcrypt) {
+                                    user.requiresPasswordChange = true;
+                                    await db.update(users).set({ requiresPasswordChange: true }).where(eq(users.id, user.id));
+                                }
                             }
                         }
                     }
