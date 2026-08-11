@@ -40,8 +40,7 @@ import { cookies } from "next/headers";
 import { db } from "@/db/db";
 import { eq, and } from "drizzle-orm";
 import { institutionalUnits, medicalExcuses } from "@/db/schema";
-import { NextUpWidget } from "@/components/student/NextUpWidget";
-import { SemesterProgress } from "@/components/student/SemesterProgress";
+
 import { PushSubscriptionToggle } from "@/components/notifications/PushSubscriptionToggle";
 
 export const dynamic = "force-dynamic";
@@ -253,11 +252,7 @@ export default async function StudentDashboard() {
                 </div>
             </div>
 
-            {/* Smart Dashboard Top Row: NextUp and Semester Progress */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-                <NextUpWidget />
-                <SemesterProgress />
-            </div>
+
 
             {/* Medical Excuse Alert Banner */}
             {hasActiveExcuse && activeExcuse && (
