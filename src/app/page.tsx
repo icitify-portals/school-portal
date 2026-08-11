@@ -24,8 +24,8 @@ export default async function HomePage() {
                     <div className="w-10 h-full absolute left-0 bg-gradient-to-r from-amber-500 to-transparent z-10 pointer-events-none"></div>
                     <div className="w-10 h-full absolute right-0 bg-gradient-to-l from-amber-500 to-transparent z-10 pointer-events-none"></div>
                     <div className="flex whitespace-nowrap animate-marquee items-center gap-2">
-                        <span className="flex-none">🚨 <strong>IMPORTANT NOTICE:</strong> The entrance examination date is scheduled for the <strong>22nd of August 2026</strong> at the school premises. Please come with your printed application slip.</span>
-                        <span className="flex-none ml-20">🚨 <strong>IMPORTANT NOTICE:</strong> The entrance examination date is scheduled for the <strong>22nd of August 2026</strong> at the school premises. Please come with your printed application slip.</span>
+                        <span className="flex-none">🚨 <strong>IMPORTANT NOTICE:</strong> The entrance examination date is scheduled for the <strong>22nd of August 2026</strong> at <strong>9am prompt</strong> at the school premises. Please come with your printed application slip.</span>
+                        <span className="flex-none ml-20">🚨 <strong>IMPORTANT NOTICE:</strong> The entrance examination date is scheduled for the <strong>22nd of August 2026</strong> at <strong>9am prompt</strong> at the school premises. Please come with your printed application slip.</span>
                     </div>
                 </div>
 

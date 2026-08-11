@@ -79,7 +79,7 @@ export default async function ApplicantDashboard() {
                 <AlertCircle className="h-5 w-5 text-amber-600" />
                 <AlertTitle className="text-amber-900 font-bold ml-2">Entrance Examination Notice</AlertTitle>
                 <AlertDescription className="text-amber-800 font-medium ml-2 mt-1">
-                    Please be informed that the entrance examination is scheduled for the <strong className="text-amber-950 font-black">22nd of August 2026</strong> at the school premises. Kindly ensure you bring your printed application slip.
+                    Please be informed that the entrance examination is scheduled for the <strong className="text-amber-950 font-black">22nd of August 2026</strong> at <strong>9am prompt</strong> at the school premises. Kindly ensure you bring your printed application slip.
                 </AlertDescription>
             </Alert>
             
