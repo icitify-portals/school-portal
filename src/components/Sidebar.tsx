@@ -96,11 +96,11 @@ const studentMenuItems: MenuItem[] = [
             { name: "Learning Analytics", href: "/student/analytics", module: "results" },
         ]
     },
-    {
         name: "E-Learning & ITS",
         icon: BrainCircuit,
         subItems: [
             { name: "CBT Center", href: "/student/cbt" },
+            { name: "CBT Guide", href: "/student/cbt/guide" },
             { name: "SmartBooks", href: "/student/smartbooks", module: "its" },
             { name: "Tutor Feedback", href: "/student/evaluations" },
         ]
@@ -229,6 +229,7 @@ const adminMenuItems: MenuItem[] = [
             { name: "Add/Drop Approvals", href: "/admin/students/add-drop" },
             { name: "Registration Approvals", href: "/admin/courses/approvals" },
             { name: "CBT Assessments", href: "/admin/cbt" },
+            { name: "CBT Guide", href: "/admin/cbt/guide" },
             { name: "ITS Classroom Mode", href: "/admin/its/classroom", module: "its" },
             { name: "ITS Offline Sync", href: "/admin/its/sync", module: "its" },
             { name: "AI Grading Settings", href: "/admin/settings/ai", module: "its" },
