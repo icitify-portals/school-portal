@@ -96,6 +96,7 @@ const studentMenuItems: MenuItem[] = [
             { name: "Learning Analytics", href: "/student/analytics", module: "results" },
         ]
     },
+    {
         name: "E-Learning & ITS",
         icon: BrainCircuit,
         subItems: [
