@@ -121,7 +121,7 @@ export const authConfig = {
                 const hasResultModulePermission = userPermissions.includes("result_module.manage");
                 if (hasResultModulePermission) {
                     // Strictly restrict to result-module only — no other admin paths allowed
-                    if (nextUrl.pathname === "/admin/dashboard" || nextUrl.pathname.startsWith("/admin/result-module")) return true;
+                    if (nextUrl.pathname.startsWith("/admin/result-module")) return true;
                     return Response.redirect(new URL("/dashboard", nextUrl));
                 }
 

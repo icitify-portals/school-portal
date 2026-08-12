@@ -13,6 +13,11 @@ export default async function DashboardRedirectPage() {
     }
 
     const role = (session.user as any).role;
+    const permissions = (session.user as any).permissions || [];
+
+    if (permissions.includes("result_module.manage") && !['admin', 'superadmin', 'dvc', 'icitify_dev'].includes(role)) {
+        redirect("/admin/result-module");
+    }
 
     switch (role) {
         case 'superadmin':

@@ -578,6 +578,11 @@ export function Sidebar({ enabledModules = {}, mobileOpen = false, onClose }: {
     }, []);
 
     const role = (session?.user as any)?.role || 'student';
+    const userPermissions = (session?.user as any)?.permissions || [];
+    const userRolesList = (session?.user as any)?.roles || [];
+
+    const hasResultModulePermission = userPermissions.includes("result_module.manage");
+    const isRestrictedResultOfficer = hasResultModulePermission && !['admin', 'superadmin', 'dvc', 'icitify_dev'].includes(role);
 
     // Close mobile sidebar on navigation
     useEffect(() => {
@@ -651,6 +656,25 @@ export function Sidebar({ enabledModules = {}, mobileOpen = false, onClose }: {
     };
 
     const rawMenuItems = (() => {
+        if (isRestrictedResultOfficer) {
+            return [
+                { name: "Result Module", icon: LayoutDashboard, href: "/admin/result-module" },
+                {
+                    name: "Result Processing",
+                    icon: GraduationCap,
+                    subItems: [
+                        { name: "Result Processing (Batches)", href: "/admin/result-module" },
+                        { name: "Result Module - Courses", href: "/admin/result-module/courses" },
+                        { name: "Result Module - Students", href: "/admin/result-module/students" },
+                        { name: "Transcript Requests", href: "/admin/result-module/requests" },
+                        { name: "Grading Scales", href: "/admin/result-module/scales" },
+                        { name: "Result Module Guide", href: "/admin/result-module/guide" },
+                    ]
+                },
+                { name: "Profile", icon: User, href: "/profile" }
+            ];
+        }
+
         if (role === 'admin' || role === 'superadmin' || role === 'registrar' || role === 'bursar' || role === 'librarian' || role === 'admission_officer' || role === 'icitify_dev') {
             return adminMenuItems;
         } else if (role === 'dvc') {
@@ -694,8 +718,6 @@ export function Sidebar({ enabledModules = {}, mobileOpen = false, onClose }: {
         }
     })();
 
-    const userPermissions = (session?.user as any)?.permissions || [];
-    const userRolesList = (session?.user as any)?.roles || [];
     const hasCmsPermission = userPermissions.some((p: string) => p.startsWith("cms.")) || userRolesList.includes("CMS Manager");
 
     let finalRawItems = [...rawMenuItems];
