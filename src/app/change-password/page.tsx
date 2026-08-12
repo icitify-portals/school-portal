@@ -5,9 +5,10 @@ import { changePasswordForced } from "@/actions/auth-actions";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ShieldAlert, AlertCircle, CheckCircle2, Loader2, Lock } from "lucide-react";
-import { signOut } from "next-auth/react";
+import { useSession } from "next-auth/react";
 
 export default function ChangePasswordPage() {
+    const { data: session, update } = useSession();
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
     const [dob, setDob] = useState("");
@@ -43,10 +44,16 @@ export default function ChangePasswordPage() {
             } else {
                 setStatus(result);
                 if (result.success) {
-                    // Force logout so token refreshes with updated requiresPasswordChange flag
+                    // Patch the JWT token in-place — no sign-out needed.
+                    // This clears the requiresPasswordChange flag immediately so
+                    // the middleware no longer redirects back here.
+                    await update({ requiresPasswordChange: false });
+                    // Use a hard navigation so the new token is picked up by the middleware.
+                    const role = session?.user?.role;
+                    const isAdmin = role && !['student', 'applicant', 'fresher', 'parent'].includes(role);
                     setTimeout(() => {
-                        signOut({ callbackUrl: '/login' });
-                    }, 2000);
+                        window.location.href = isAdmin ? '/admin/dashboard' : '/dashboard';
+                    }, 1500);
                 }
             }
         } catch (err) {
