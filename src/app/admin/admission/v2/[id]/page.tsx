@@ -33,15 +33,17 @@ export default function V2ApplicationDetailPage() {
 
     const openEditModal = () => {
         if (!app) return;
-        setEditData({
-            firstName: app.parsedData?.firstName || app.parsedData?.first_name || '',
-            lastName: app.parsedData?.lastName || app.parsedData?.last_name || app.parsedData?.surname || '',
-            middleName: app.parsedData?.middleName || app.parsedData?.middle_name || '',
-            email: app.parsedData?.email || app.parsedData?.email_address || '',
-            phone: app.parsedData?.phone || app.parsedData?.phone_number || '',
-            nin: app.nin || '',
-            jambRegNumber: app.jambRegNumber || ''
-        });
+        const initialData: any = {};
+        if (app.parsedData) {
+            Object.keys(app.parsedData).forEach(key => {
+                if (typeof app.parsedData[key] === 'string' || typeof app.parsedData[key] === 'number') {
+                    // Skip long text blocks or things that look like URLs/files if we wanted, 
+                    // but we'll include all scalar data so the admin can fix typos everywhere.
+                    initialData[key] = app.parsedData[key];
+                }
+            });
+        }
+        setEditData(initialData);
         setEditOpen(true);
     };
 
@@ -985,39 +987,16 @@ export default function V2ApplicationDetailPage() {
                     <DialogHeader>
                         <DialogTitle>Edit Applicant Data</DialogTitle>
                     </DialogHeader>
-                    <div className="grid gap-4 py-4">
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <Label>First Name</Label>
-                                <Input value={editData.firstName || ''} onChange={e => setEditData({...editData, firstName: e.target.value})} />
+                    <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto px-2">
+                        {Object.keys(editData).map((key) => (
+                            <div key={key} className="space-y-2">
+                                <Label className="capitalize">{key.replace(/_/g, ' ')}</Label>
+                                <Input 
+                                    value={editData[key] || ''} 
+                                    onChange={e => setEditData({...editData, [key]: e.target.value})} 
+                                />
                             </div>
-                            <div className="space-y-2">
-                                <Label>Middle Name</Label>
-                                <Input value={editData.middleName || ''} onChange={e => setEditData({...editData, middleName: e.target.value})} />
-                            </div>
-                        </div>
-                        <div className="space-y-2">
-                            <Label>Last Name</Label>
-                            <Input value={editData.lastName || ''} onChange={e => setEditData({...editData, lastName: e.target.value})} />
-                        </div>
-                        <div className="space-y-2">
-                            <Label>Email</Label>
-                            <Input value={editData.email || ''} onChange={e => setEditData({...editData, email: e.target.value})} />
-                        </div>
-                        <div className="space-y-2">
-                            <Label>Phone</Label>
-                            <Input value={editData.phone || ''} onChange={e => setEditData({...editData, phone: e.target.value})} />
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <Label>JAMB Reg No</Label>
-                                <Input value={editData.jambRegNumber || ''} onChange={e => setEditData({...editData, jambRegNumber: e.target.value})} />
-                            </div>
-                            <div className="space-y-2">
-                                <Label>NIN</Label>
-                                <Input value={editData.nin || ''} onChange={e => setEditData({...editData, nin: e.target.value})} />
-                            </div>
-                        </div>
+                        ))}
                     </div>
                     <div className="flex justify-end gap-3 mt-4">
                         <Button variant="outline" onClick={() => setEditOpen(false)}>Cancel</Button>

@@ -2302,38 +2302,46 @@ export async function updateApplicantData(appId: number, updatePayload: any) {
             } catch (e) {}
         }
 
-        // Handle variations in field names
-        const mergedData = { ...parsedData };
-        if (updatePayload.firstName) { mergedData.firstName = updatePayload.firstName; mergedData.first_name = updatePayload.firstName; }
-        if (updatePayload.lastName) { mergedData.lastName = updatePayload.lastName; mergedData.last_name = updatePayload.lastName; mergedData.surname = updatePayload.lastName; }
-        if (updatePayload.middleName) { mergedData.middleName = updatePayload.middleName; mergedData.middle_name = updatePayload.middleName; }
-        if (updatePayload.email) { mergedData.email = updatePayload.email; mergedData.email_address = updatePayload.email; }
-        if (updatePayload.phone) { mergedData.phone = updatePayload.phone; mergedData.phone_number = updatePayload.phone; }
-        if (updatePayload.jambRegNumber) { mergedData.jambRegNumber = updatePayload.jambRegNumber; mergedData.jamb_reg_no = updatePayload.jambRegNumber; }
-        if (updatePayload.nin) { mergedData.nin = updatePayload.nin; }
+        // Simply merge the payload into parsedData without duplicating keys
+        const mergedData = { ...parsedData, ...updatePayload };
+
+        // For discrete columns we can try to extract from the merged data
+        const extractedNin = mergedData.nin || mergedData.NIN || app.nin;
+        const extractedJamb = mergedData.jambRegNumber || mergedData.jamb_reg_no || mergedData['JAMB Registration Number'] || app.jambRegNumber;
 
         await db.update(admissionApplicationsV2)
             .set({ 
                 data: JSON.stringify(mergedData),
-                nin: updatePayload.nin || app.nin,
-                jambRegNumber: updatePayload.jambRegNumber || app.jambRegNumber,
+                nin: extractedNin,
+                jambRegNumber: extractedJamb,
             })
             .where(eq(admissionApplicationsV2.id, appId));
 
         if (app.userId) {
             const updates: any = {};
-            let newFirstName = updatePayload.firstName || parsedData.firstName || parsedData.first_name || '';
-            let newLastName = updatePayload.lastName || parsedData.lastName || parsedData.last_name || parsedData.surname || '';
-            let newMiddleName = updatePayload.middleName || parsedData.middleName || parsedData.middle_name || '';
+            // Extract the canonical names dynamically from merged data for the users table
+            let newFirstName = mergedData.firstName || mergedData.first_name || mergedData['First Name'] || '';
+            let newLastName = mergedData.lastName || mergedData.last_name || mergedData.surname || mergedData['Surname'] || '';
+            let newMiddleName = mergedData.middleName || mergedData.middle_name || mergedData['Middle Name'] || '';
 
-            if (updatePayload.firstName || updatePayload.lastName || updatePayload.middleName) {
+            // We update users name if any of the name components changed in the payload
+            const nameChanged = Object.keys(updatePayload).some(k => 
+                k.toLowerCase().includes('name') || k.toLowerCase().includes('surname')
+            );
+
+            if (nameChanged && (newFirstName || newLastName || newMiddleName)) {
                 updates.name = `${newFirstName} ${newMiddleName} ${newLastName}`.replace(/\s+/g, ' ').trim();
                 updates.firstName = newFirstName;
                 updates.surname = newLastName;
                 updates.middleName = newMiddleName;
             }
-            if (updatePayload.email) updates.email = updatePayload.email;
-            if (updatePayload.phone) updates.phone = updatePayload.phone;
+            
+            // Check for email/phone changes
+            const emailKey = Object.keys(updatePayload).find(k => k.toLowerCase().includes('email'));
+            if (emailKey) updates.email = updatePayload[emailKey];
+            
+            const phoneKey = Object.keys(updatePayload).find(k => k.toLowerCase().includes('phone'));
+            if (phoneKey) updates.phone = updatePayload[phoneKey];
 
             if (Object.keys(updates).length > 0) {
                 await db.update(users).set(updates).where(eq(users.id, app.userId));
