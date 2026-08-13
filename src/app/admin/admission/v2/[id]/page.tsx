@@ -36,10 +36,16 @@ export default function V2ApplicationDetailPage() {
         const initialData: any = {};
         if (app.parsedData) {
             Object.keys(app.parsedData).forEach(key => {
-                if (typeof app.parsedData[key] === 'string' || typeof app.parsedData[key] === 'number') {
-                    // Skip long text blocks or things that look like URLs/files if we wanted, 
-                    // but we'll include all scalar data so the admin can fix typos everywhere.
-                    initialData[key] = app.parsedData[key];
+                const val = app.parsedData[key];
+                if (typeof val === 'string' || typeof val === 'number') {
+                    // Skip long strings like base64 images or large text
+                    if (typeof val === 'string' && val.length > 255) return;
+                    
+                    // Skip keys that sound like images
+                    const lowerKey = key.toLowerCase();
+                    if (lowerKey.includes('photo') || lowerKey.includes('passport') || lowerKey.includes('signature')) return;
+                    
+                    initialData[key] = val;
                 }
             });
         }

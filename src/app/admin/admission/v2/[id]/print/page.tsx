@@ -106,7 +106,7 @@ export default function AdminApplicationPrintPage() {
                     {/* School Header */}
                     <div className="border-b-[3px] border-indigo-600 px-6 py-4 flex items-center justify-between gap-4">
                         {branding?.portalLogo ? (
-                            <img src={branding.portalLogo} crossOrigin="anonymous" alt="School Logo" className="w-16 h-16 print:w-14 print:h-14 object-contain shrink-0" style={{ WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }} />
+                            <img src={branding.portalLogo} alt="School Logo" className="w-16 h-16 print:w-14 print:h-14 object-contain shrink-0" style={{ WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }} />
                         ) : (
                             <div className="w-16 h-16 print:w-14 print:h-14 bg-indigo-50 rounded-xl flex items-center justify-center shrink-0">
                                 <span className="text-xl font-black text-indigo-300">LOGO</span>
