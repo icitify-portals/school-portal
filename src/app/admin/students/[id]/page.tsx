@@ -4,10 +4,14 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, ArrowLeft, User, Mail, Phone, Calendar, Briefcase, Droplet, Hash, BookOpen, MapPin, Activity } from "lucide-react";
-import { getStudentById } from "@/actions/students";
+import { Loader2, ArrowLeft, User, Mail, Phone, Calendar, Briefcase, Droplet, Hash, BookOpen, MapPin, Activity, Edit } from "lucide-react";
+import { getStudentById, updateAdminStudentProfile } from "@/actions/students";
 import { useBranch } from "@/providers/BranchProvider";
 import Image from "next/image";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
 
 export default function StudentDetailsPage() {
     const params = useParams();
@@ -17,6 +21,39 @@ export default function StudentDetailsPage() {
 
     const [student, setStudent] = useState<any>(null);
     const [loading, setLoading] = useState(true);
+    
+    const [editOpen, setEditOpen] = useState(false);
+    const [editData, setEditData] = useState<any>({});
+    const [isSaving, setIsSaving] = useState(false);
+
+    const openEditModal = () => {
+        if (!student) return;
+        setEditData({
+            firstName: student.firstName || '',
+            lastName: student.lastName || '',
+            otherNames: student.otherNames || '',
+            email: student.user?.email || '',
+            phone: student.user?.phone || '',
+            nin: student.nin || '',
+            jambNumber: student.jambNumber || '',
+            matricNumber: student.matricNumber || ''
+        });
+        setEditOpen(true);
+    };
+
+    const handleSaveEdit = async () => {
+        setIsSaving(true);
+        const res = await updateAdminStudentProfile(studentId, editData);
+        setIsSaving(false);
+        if (res.success) {
+            toast.success("Student profile updated successfully");
+            setEditOpen(false);
+            const data = await getStudentById(studentId);
+            setStudent(data);
+        } else {
+            toast.error(res.error || "Failed to update");
+        }
+    };
 
     useEffect(() => {
         if (!studentId) return;
@@ -52,9 +89,14 @@ export default function StudentDetailsPage() {
                 <Button variant="ghost" size="icon" onClick={() => router.push("/admin/students")} className="rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600">
                     <ArrowLeft className="w-5 h-5" />
                 </Button>
-                <div>
-                    <h2 className="text-3xl font-bold text-slate-900 tracking-tight">Student Details</h2>
-                    <p className="text-slate-500 mt-1">View comprehensive student profile and records</p>
+                <div className="flex-1 flex justify-between items-center">
+                    <div>
+                        <h2 className="text-3xl font-bold text-slate-900 tracking-tight">Student Details</h2>
+                        <p className="text-slate-500 mt-1">View comprehensive student profile and records</p>
+                    </div>
+                    <Button onClick={openEditModal} className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl">
+                        <Edit className="w-4 h-4 mr-2" /> Edit Profile
+                    </Button>
                 </div>
             </div>
 
@@ -185,6 +227,59 @@ export default function StudentDetailsPage() {
                     </Card>
                 </div>
             </div>
+
+            <Dialog open={editOpen} onOpenChange={setEditOpen}>
+                <DialogContent className="sm:max-w-[425px]">
+                    <DialogHeader>
+                        <DialogTitle>Edit Student Data</DialogTitle>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto px-1">
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label>First Name</Label>
+                                <Input value={editData.firstName || ''} onChange={e => setEditData({...editData, firstName: e.target.value})} />
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Middle Name</Label>
+                                <Input value={editData.otherNames || ''} onChange={e => setEditData({...editData, otherNames: e.target.value})} />
+                            </div>
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Last Name</Label>
+                            <Input value={editData.lastName || ''} onChange={e => setEditData({...editData, lastName: e.target.value})} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Email</Label>
+                            <Input value={editData.email || ''} onChange={e => setEditData({...editData, email: e.target.value})} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Phone</Label>
+                            <Input value={editData.phone || ''} onChange={e => setEditData({...editData, phone: e.target.value})} />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label>Matric No</Label>
+                                <Input value={editData.matricNumber || ''} onChange={e => setEditData({...editData, matricNumber: e.target.value})} />
+                            </div>
+                            <div className="space-y-2">
+                                <Label>JAMB No</Label>
+                                <Input value={editData.jambNumber || ''} onChange={e => setEditData({...editData, jambNumber: e.target.value})} />
+                            </div>
+                        </div>
+                        <div className="space-y-2">
+                            <Label>NIN</Label>
+                            <Input value={editData.nin || ''} onChange={e => setEditData({...editData, nin: e.target.value})} />
+                        </div>
+                    </div>
+                    <div className="flex justify-end gap-3 mt-4">
+                        <Button variant="outline" onClick={() => setEditOpen(false)}>Cancel</Button>
+                        <Button onClick={handleSaveEdit} disabled={isSaving}>
+                            {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            Save Changes
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

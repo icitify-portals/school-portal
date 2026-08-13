@@ -6,14 +6,17 @@ import { Button } from "@/components/ui/button";
 import {
     FileText, User, Mail, Phone, Calendar, CheckCircle2, XCircle, AlertCircle,
     Loader2, ArrowLeft, Printer, CreditCard, GraduationCap, BookOpen, Hash,
-    Image as ImageIcon, ChevronDown, ChevronUp, Shield, ShieldAlert, ShieldCheck
+    Image as ImageIcon, ChevronDown, ChevronUp, Shield, ShieldAlert, ShieldCheck, Edit
 } from "lucide-react";
-import { getAdminV2ApplicationDetail, updateAdmissionStatus, confirmAdmissionPayment, confirmAcceptancePayment, reverseAdmissionPayment, confirmProcessingFeePayment, reverseProcessingFeePayment } from "@/actions/admission_v2";
+import { getAdminV2ApplicationDetail, updateAdmissionStatus, confirmAdmissionPayment, confirmAcceptancePayment, reverseAdmissionPayment, confirmProcessingFeePayment, reverseProcessingFeePayment, updateApplicantData } from "@/actions/admission_v2";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 export default function V2ApplicationDetailPage() {
     const params = useParams();
@@ -24,6 +27,37 @@ export default function V2ApplicationDetailPage() {
     const [showNotes, setShowNotes] = useState(false);
     const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(["__all__"]));
     const [isOLevelExpanded, setIsOLevelExpanded] = useState(true);
+    const [editOpen, setEditOpen] = useState(false);
+    const [editData, setEditData] = useState<any>({});
+    const [isSaving, setIsSaving] = useState(false);
+
+    const openEditModal = () => {
+        if (!app) return;
+        setEditData({
+            firstName: app.parsedData?.firstName || app.parsedData?.first_name || '',
+            lastName: app.parsedData?.lastName || app.parsedData?.last_name || app.parsedData?.surname || '',
+            middleName: app.parsedData?.middleName || app.parsedData?.middle_name || '',
+            email: app.parsedData?.email || app.parsedData?.email_address || '',
+            phone: app.parsedData?.phone || app.parsedData?.phone_number || '',
+            nin: app.nin || '',
+            jambRegNumber: app.jambRegNumber || ''
+        });
+        setEditOpen(true);
+    };
+
+    const handleSaveEdit = async () => {
+        setIsSaving(true);
+        const res = await updateApplicantData(app.id, editData);
+        setIsSaving(false);
+        if (res.success) {
+            toast.success("Applicant updated successfully");
+            setEditOpen(false);
+            const data = await getAdminV2ApplicationDetail(app.id);
+            setApp(data);
+        } else {
+            toast.error(res.error || "Failed to update");
+        }
+    };
 
     useEffect(() => {
         const id = parseInt(params.id as string);
@@ -358,6 +392,12 @@ export default function V2ApplicationDetailPage() {
                             </div>
                         </div>
                         <div className="flex flex-wrap gap-3 no-print">
+                            <Button
+                                onClick={openEditModal}
+                                className="rounded-xl bg-indigo-600/20 hover:bg-indigo-600/40 text-white border border-indigo-500/20 font-black text-[10px] uppercase tracking-widest px-5 py-3 backdrop-blur-md"
+                            >
+                                <Edit className="w-4 h-4 mr-2" /> Edit
+                            </Button>
                             <Button
                                 onClick={() => window.open(`/admin/admission/v2/${app.id}/print`, '_blank')}
                                 className="rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/20 font-black text-[10px] uppercase tracking-widest px-5 py-3 backdrop-blur-md"
@@ -939,6 +979,55 @@ export default function V2ApplicationDetailPage() {
                     </div>
                 </div>
             </div>
+
+            <Dialog open={editOpen} onOpenChange={setEditOpen}>
+                <DialogContent className="sm:max-w-[425px]">
+                    <DialogHeader>
+                        <DialogTitle>Edit Applicant Data</DialogTitle>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label>First Name</Label>
+                                <Input value={editData.firstName || ''} onChange={e => setEditData({...editData, firstName: e.target.value})} />
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Middle Name</Label>
+                                <Input value={editData.middleName || ''} onChange={e => setEditData({...editData, middleName: e.target.value})} />
+                            </div>
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Last Name</Label>
+                            <Input value={editData.lastName || ''} onChange={e => setEditData({...editData, lastName: e.target.value})} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Email</Label>
+                            <Input value={editData.email || ''} onChange={e => setEditData({...editData, email: e.target.value})} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Phone</Label>
+                            <Input value={editData.phone || ''} onChange={e => setEditData({...editData, phone: e.target.value})} />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label>JAMB Reg No</Label>
+                                <Input value={editData.jambRegNumber || ''} onChange={e => setEditData({...editData, jambRegNumber: e.target.value})} />
+                            </div>
+                            <div className="space-y-2">
+                                <Label>NIN</Label>
+                                <Input value={editData.nin || ''} onChange={e => setEditData({...editData, nin: e.target.value})} />
+                            </div>
+                        </div>
+                    </div>
+                    <div className="flex justify-end gap-3 mt-4">
+                        <Button variant="outline" onClick={() => setEditOpen(false)}>Cancel</Button>
+                        <Button onClick={handleSaveEdit} disabled={isSaving}>
+                            {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            Save Changes
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

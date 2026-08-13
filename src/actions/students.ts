@@ -530,3 +530,50 @@ export async function updateStudentProfile(userId: number, data: any) {
         return { success: false, error: error.message || "Failed to update student profile." };
     }
 }
+
+export async function updateAdminStudentProfile(studentId: number, updatePayload: any) {
+    try {
+        const allowed = await hasPermission("admin.students.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("admission_officer") || await hasRole("registrar");
+        if (!allowed) return { success: false, error: "Unauthorized" };
+
+        const [student] = await db.select().from(students).where(eq(students.id, studentId)).limit(1);
+        if (!student) return { success: false, error: "Student not found" };
+
+        const studentUpdates: any = {};
+        if (updatePayload.firstName !== undefined) studentUpdates.firstName = updatePayload.firstName;
+        if (updatePayload.lastName !== undefined) studentUpdates.lastName = updatePayload.lastName;
+        if (updatePayload.otherNames !== undefined) studentUpdates.otherNames = updatePayload.otherNames;
+        if (updatePayload.jambNumber !== undefined) studentUpdates.jambNumber = updatePayload.jambNumber;
+        if (updatePayload.matricNumber !== undefined) studentUpdates.matricNumber = updatePayload.matricNumber;
+        if (updatePayload.nin !== undefined) studentUpdates.nin = updatePayload.nin;
+        
+        if (Object.keys(studentUpdates).length > 0) {
+            await db.update(students).set(studentUpdates).where(eq(students.id, studentId));
+        }
+
+        if (student.userId) {
+            const userUpdates: any = {};
+            let newFirstName = updatePayload.firstName !== undefined ? updatePayload.firstName : student.firstName || '';
+            let newLastName = updatePayload.lastName !== undefined ? updatePayload.lastName : student.lastName || '';
+            let newMiddleName = updatePayload.otherNames !== undefined ? updatePayload.otherNames : student.otherNames || '';
+
+            if (updatePayload.firstName !== undefined || updatePayload.lastName !== undefined || updatePayload.otherNames !== undefined) {
+                userUpdates.name = `${newFirstName} ${newMiddleName} ${newLastName}`.replace(/\s+/g, ' ').trim();
+                userUpdates.firstName = newFirstName;
+                userUpdates.surname = newLastName;
+                userUpdates.middleName = newMiddleName;
+            }
+            if (updatePayload.email !== undefined) userUpdates.email = updatePayload.email;
+            if (updatePayload.phone !== undefined) userUpdates.phone = updatePayload.phone;
+
+            if (Object.keys(userUpdates).length > 0) {
+                await db.update(users).set(userUpdates).where(eq(users.id, student.userId));
+            }
+        }
+        revalidatePath(`/admin/students/${studentId}`);
+        return { success: true };
+    } catch (error: any) {
+        console.error("Failed to update student data:", error);
+        return { success: false, error: error.message || "Failed to update student data" };
+    }
+}

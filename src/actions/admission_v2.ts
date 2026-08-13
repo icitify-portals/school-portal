@@ -2288,3 +2288,61 @@ export async function bulkDeleteAdmissionApplications(ids: number[]) {
         return { success: false, error: "Failed to bulk delete applications" };
     }
 }
+
+export async function updateApplicantData(appId: number, updatePayload: any) {
+    try {
+        await requireAdmin();
+        const [app] = await db.select().from(admissionApplicationsV2).where(eq(admissionApplicationsV2.id, appId)).limit(1);
+        if (!app) return { success: false, error: "Application not found" };
+
+        let parsedData: any = {};
+        if (app.data) {
+            try {
+                parsedData = JSON.parse(app.data);
+            } catch (e) {}
+        }
+
+        // Handle variations in field names
+        const mergedData = { ...parsedData };
+        if (updatePayload.firstName) { mergedData.firstName = updatePayload.firstName; mergedData.first_name = updatePayload.firstName; }
+        if (updatePayload.lastName) { mergedData.lastName = updatePayload.lastName; mergedData.last_name = updatePayload.lastName; mergedData.surname = updatePayload.lastName; }
+        if (updatePayload.middleName) { mergedData.middleName = updatePayload.middleName; mergedData.middle_name = updatePayload.middleName; }
+        if (updatePayload.email) { mergedData.email = updatePayload.email; mergedData.email_address = updatePayload.email; }
+        if (updatePayload.phone) { mergedData.phone = updatePayload.phone; mergedData.phone_number = updatePayload.phone; }
+        if (updatePayload.jambRegNumber) { mergedData.jambRegNumber = updatePayload.jambRegNumber; mergedData.jamb_reg_no = updatePayload.jambRegNumber; }
+        if (updatePayload.nin) { mergedData.nin = updatePayload.nin; }
+
+        await db.update(admissionApplicationsV2)
+            .set({ 
+                data: JSON.stringify(mergedData),
+                nin: updatePayload.nin || app.nin,
+                jambRegNumber: updatePayload.jambRegNumber || app.jambRegNumber,
+            })
+            .where(eq(admissionApplicationsV2.id, appId));
+
+        if (app.userId) {
+            const updates: any = {};
+            let newFirstName = updatePayload.firstName || parsedData.firstName || parsedData.first_name || '';
+            let newLastName = updatePayload.lastName || parsedData.lastName || parsedData.last_name || parsedData.surname || '';
+            let newMiddleName = updatePayload.middleName || parsedData.middleName || parsedData.middle_name || '';
+
+            if (updatePayload.firstName || updatePayload.lastName || updatePayload.middleName) {
+                updates.name = `${newFirstName} ${newMiddleName} ${newLastName}`.replace(/\s+/g, ' ').trim();
+                updates.firstName = newFirstName;
+                updates.surname = newLastName;
+                updates.middleName = newMiddleName;
+            }
+            if (updatePayload.email) updates.email = updatePayload.email;
+            if (updatePayload.phone) updates.phone = updatePayload.phone;
+
+            if (Object.keys(updates).length > 0) {
+                await db.update(users).set(updates).where(eq(users.id, app.userId));
+            }
+        }
+        revalidatePath(`/admin/admission/v2/${appId}`);
+        return { success: true };
+    } catch (error: any) {
+        console.error("Failed to update applicant data:", error);
+        return { success: false, error: error.message || "Failed to update applicant data" };
+    }
+}
