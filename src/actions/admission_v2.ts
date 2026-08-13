@@ -21,7 +21,7 @@ import {
     transactions,
     academicSessions
 } from "@/db/schema";
-import { eq, and, desc, asc, sql, inArray } from "drizzle-orm";
+import { eq, and, desc, asc, sql, inArray, like, or } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import crypto from "crypto";
@@ -1948,6 +1948,25 @@ export async function getAdminV2Applications(filters?: {
 
         const conditions = [];
 
+        if (filters?.search) {
+            const q = `%${filters.search}%`;
+            const matchingUsers = await db.select({ id: users.id })
+                .from(users)
+                .where(like(users.name, q));
+            const userIds = matchingUsers.map(u => u.id);
+
+            const searchOr = [
+                like(admissionApplicationsV2.formNumber, q),
+                like(admissionApplicationsV2.data, q)
+            ];
+            
+            if (userIds.length > 0) {
+                searchOr.push(inArray(admissionApplicationsV2.applicantId, userIds));
+            }
+            
+            conditions.push(or(...searchOr));
+        }
+
         if (filters?.status && filters.status !== 'all') {
             conditions.push(eq(admissionApplicationsV2.status, filters.status as any));
         }
@@ -1977,20 +1996,6 @@ export async function getAdminV2Applications(filters?: {
             }
         });
 
-        // Apply search filter in-memory if needed
-        if (filters?.search) {
-            const q = filters.search.toLowerCase();
-            applications = applications.filter((app: any) => {
-                let formData: any = {};
-                try { formData = typeof app.data === 'string' ? JSON.parse(app.data) : app.data || {}; } catch {}
-                const fullName = `${formData.firstName || formData.first_name || ''} ${formData.surname || formData.lastName || formData.last_name || ''}`.toLowerCase();
-                const surname = `${formData.surname || formData.lastName || formData.last_name || ''} ${formData.firstName || formData.first_name || ''}`.toLowerCase();
-                const userFullName = app.applicant ? `${app.applicant.firstName || ''} ${app.applicant.surname || ''} ${app.applicant.name || ''}`.toLowerCase() : '';
-                const formNum = (app.formNumber || '').toLowerCase();
-                return fullName.includes(q) || surname.includes(q) || userFullName.includes(q) || formNum.includes(q);
-            });
-        }
-
         return {
             applications: applications.map((app: any) => {
                 let formData: any = {};
@@ -2004,7 +2009,7 @@ export async function getAdminV2Applications(filters?: {
                     templateName: app.template?.name || 'N/A',
                 };
             }),
-            total: filters?.search ? applications.length : total,
+            total: total,
             page,
             pageSize,
             totalPages: Math.ceil(total / pageSize),
@@ -2024,6 +2029,26 @@ export async function exportAdminV2Applications(filters?: {
     await requireAdmin();
     try {
         const conditions = [];
+
+        if (filters?.search) {
+            const q = `%${filters.search}%`;
+            const matchingUsers = await db.select({ id: users.id })
+                .from(users)
+                .where(like(users.name, q));
+            const userIds = matchingUsers.map(u => u.id);
+
+            const searchOr = [
+                like(admissionApplicationsV2.formNumber, q),
+                like(admissionApplicationsV2.data, q)
+            ];
+            
+            if (userIds.length > 0) {
+                searchOr.push(inArray(admissionApplicationsV2.applicantId, userIds));
+            }
+            
+            conditions.push(or(...searchOr));
+        }
+
         if (filters?.status && filters.status !== 'all') {
             conditions.push(eq(admissionApplicationsV2.status, filters.status as any));
         }
@@ -2045,19 +2070,6 @@ export async function exportAdminV2Applications(filters?: {
                 applicant: true
             }
         });
-
-        if (filters?.search) {
-            const q = filters.search.toLowerCase();
-            applications = applications.filter((app: any) => {
-                let formData: any = {};
-                try { formData = typeof app.data === 'string' ? JSON.parse(app.data) : app.data || {}; } catch {}
-                const fullName = `${formData.firstName || formData.first_name || ''} ${formData.surname || formData.lastName || formData.last_name || ''}`.toLowerCase();
-                const surname = `${formData.surname || formData.lastName || formData.last_name || ''} ${formData.firstName || formData.first_name || ''}`.toLowerCase();
-                const userFullName = app.applicant ? `${app.applicant.firstName || ''} ${app.applicant.surname || ''} ${app.applicant.name || ''}`.toLowerCase() : '';
-                const formNum = (app.formNumber || '').toLowerCase();
-                return fullName.includes(q) || surname.includes(q) || userFullName.includes(q) || formNum.includes(q);
-            });
-        }
 
         return {
             success: true,
