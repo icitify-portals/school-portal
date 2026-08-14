@@ -504,6 +504,12 @@ export class SplitPaymentEngine {
             items: billItemRows.map(r => ({ ...r.item, item: r.feeItem }))
         };
 
+        const isTuitionFee = billItemRows.some(bi => bi.feeItem?.category === 'tuition' || bi.feeItem?.name?.toLowerCase().includes('tuition'));
+        if (isTuitionFee) {
+            activeGateway = 'remita';
+            console.log("Gateway Override: Enforcing Remita for Tuition bill.");
+        }
+
         const billTotal = parseFloat(billWithItems.totalAmount);
         if (billTotal <= 0) {
             return { success: false, reference: "", error: "Invalid bill amount." };

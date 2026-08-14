@@ -59,6 +59,7 @@ export default function AdminApplicationPrintPage() {
         formData["Passport Photo"] ||
         formData["Passport"] ||
         formData["Photo"] ||
+        formData["Photograph/camera"] ||
         null;
 
     const applicantSignature =
@@ -68,7 +69,7 @@ export default function AdminApplicationPrintPage() {
         null;
 
     const SKIP_TYPES = ["image", "olevel_result", "signature", "file"];
-    const SKIP_LABELS = ["Passport Photograph", "Photo", "Passport Photo", "Signature", "Applicant Signature", "Student Signature"];
+    const SKIP_LABELS = ["Passport Photograph", "Photo", "Photograph/camera", "Passport Photo", "Signature", "Applicant Signature", "Student Signature"];
 
     const allFields: any[] = [];
     if (data.formStructure) {

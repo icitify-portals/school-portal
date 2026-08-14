@@ -383,8 +383,8 @@ export default function V2ApplicationDetailPage() {
                     <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                         <div className="flex items-center gap-6">
                             <div className="w-32 h-32 md:w-40 md:h-40 relative rounded-2xl overflow-hidden border-4 border-slate-900 bg-slate-800 shadow-2xl flex-shrink-0 z-10 print-avatar">
-                                {app.applicantPhoto ? (
-                                    <img src={app.applicantPhoto} alt={app.applicantName} className="w-full h-full object-cover relative z-10" />
+                                {app.applicantPhoto || app.parsedData?.["Passport Photograph"] || app.parsedData?.["Passport Photo"] || app.parsedData?.["Passport"] || app.parsedData?.["Photo"] || app.parsedData?.["Photograph/camera"] ? (
+                                    <img src={app.applicantPhoto || app.parsedData?.["Passport Photograph"] || app.parsedData?.["Passport Photo"] || app.parsedData?.["Passport"] || app.parsedData?.["Photo"] || app.parsedData?.["Photograph/camera"]} alt={app.applicantName} className="w-full h-full object-cover relative z-10" />
                                 ) : (
                                     <div className="w-full h-full flex items-center justify-center relative z-10">
                                         <User className="w-16 h-16 text-slate-600" />

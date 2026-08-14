@@ -2354,3 +2354,69 @@ export async function updateApplicantData(appId: number, updatePayload: any) {
         return { success: false, error: error.message || "Failed to update applicant data" };
     }
 }
+export async function getAdmissionV2Stats() {
+    await requireAdmin();
+    try {
+        const apps = await db.query.admissionApplicationsV2.findMany({
+            with: {
+                template: true,
+                programme: true
+            }
+        });
+
+        let totalApplicants = apps.length;
+        let byLevel: Record<string, number> = { ND: 0, HND: 0, Unspecified: 0 };
+        let byProgramme: Record<string, number> = {};
+
+        for (const app of apps) {
+            let levelAssigned = false;
+            const progName = app.programme?.name || 'Unspecified';
+            
+            const progNameUpper = progName.toUpperCase();
+            const templateNameUpper = app.template?.name?.toUpperCase() || '';
+
+            if (progNameUpper.includes('HND') || templateNameUpper.includes('HND')) {
+                byLevel.HND++;
+                levelAssigned = true;
+            } else if (progNameUpper.includes('ND') || templateNameUpper.includes('ND')) {
+                byLevel.ND++;
+                levelAssigned = true;
+            } else {
+                try {
+                    if (app.formData) {
+                        const fd = typeof app.formData === 'string' ? JSON.parse(app.formData) : app.formData;
+                        const possibleProg = String(fd.programme || fd.Programme || '').toUpperCase();
+                        if (possibleProg.includes('HND')) {
+                            byLevel.HND++; levelAssigned = true;
+                        } else if (possibleProg.includes('ND')) {
+                            byLevel.ND++; levelAssigned = true;
+                        }
+                    }
+                } catch (e) {}
+            }
+
+            if (!levelAssigned) {
+                byLevel.Unspecified++;
+            }
+
+            if (!byProgramme[progName]) {
+                byProgramme[progName] = 0;
+            }
+            byProgramme[progName]++;
+        }
+
+        return {
+            totalApplicants,
+            byLevel,
+            byProgramme
+        };
+
+    } catch (error: any) {
+        console.error("[getAdmissionV2Stats] Failed:", error);
+        return {
+            totalApplicants: 0,
+            byLevel: { ND: 0, HND: 0, Unspecified: 0 },
+            byProgramme: {}
+        };
+    }
+}
