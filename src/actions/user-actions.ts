@@ -267,7 +267,7 @@ export async function updateUserBaseRole(userId: number, role: 'applicant' | 'st
         const session = await auth();
         const actorRole = (session?.user as any)?.role?.toLowerCase() || "";
         const actorId = session?.user?.id ? parseInt(session.user.id) : null;
-        if (!['superadmin', 'admin', 'dvc', 'bursar', 'registrar', 'admission_officer'].includes(actorRole)) {
+        if (!['superadmin', 'icitify_dev', 'admin', 'dvc', 'bursar', 'registrar', 'admission_officer'].includes(actorRole)) {
             return { success: false, error: "Unauthorized: You do not have permission to change user roles." };
         }
 
