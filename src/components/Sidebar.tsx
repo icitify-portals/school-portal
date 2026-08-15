@@ -677,8 +677,16 @@ export function Sidebar({ enabledModules = {}, mobileOpen = false, onClose }: {
             ];
         }
 
-        if (role === 'admin' || role === 'superadmin' || role === 'registrar' || role === 'bursar' || role === 'librarian' || role === 'admission_officer' || role === 'icitify_dev') {
+        if (role === 'admin' || role === 'superadmin' || role === 'icitify_dev') {
             return adminMenuItems;
+        } else if (role === 'bursar') {
+            return adminMenuItems.filter(item => ["Admin Dashboard", "Finance & Accounting", "Bursary & Fees", "Accounting & Reports", "Analytics & Reports", "Inventory & Stock"].includes(item.name));
+        } else if (role === 'registrar') {
+            return adminMenuItems.filter(item => ["Admin Dashboard", "Academics", "Office of the Registrar", "Admission Management", "Student Management", "Academic Calendar", "Student Promotion", "Communication", "Registration Concessions", "SIWES Management"].includes(item.name));
+        } else if (role === 'admission_officer') {
+            return adminMenuItems.filter(item => ["Admin Dashboard", "Admission Management", "Student Management"].includes(item.name));
+        } else if (role === 'librarian') {
+            return adminMenuItems.filter(item => ["Admin Dashboard", "Library Management"].includes(item.name));
         } else if (role === 'dvc') {
             return dvcMenuItems;
         } else if (role === 'hod' || role === 'dean') {
