@@ -7354,3 +7354,38 @@ export const studentTranscriptsRelations = relations(studentTranscripts, ({ one 
     references: [academicSessions.id]
   })
 }));
+
+// --- ALUMNI MODULE ---
+export const processingFeeRules = mysqlTable('processing_fee_rules', {
+  id: int('id').autoincrement().primaryKey(),
+  serviceType: varchar('service_type', { length: 100 }).unique().notNull(), // e.g. CERTIFICATE_REQUEST, TRANSCRIPT_REQUEST
+  amount: decimal('amount', { precision: 12, scale: 2 }).notNull().default('0.00'),
+  isActive: boolean('is_active').default(true),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow().onUpdateNow()
+});
+
+export const alumniCertificateRequests = mysqlTable('alumni_certificate_requests', {
+  id: int('id').autoincrement().primaryKey(),
+  applicantName: varchar('applicant_name', { length: 255 }).notNull(),
+  matricNumber: varchar('matric_number', { length: 50 }).notNull(),
+  email: varchar('email', { length: 255 }).notNull(),
+  phone: varchar('phone', { length: 20 }),
+  programmeType: mysqlEnum('programme_type', ['ND', 'HND']).notNull(),
+  department: varchar('department', { length: 255 }).notNull(),
+  yearOfGraduation: varchar('year_of_graduation', { length: 4 }).notNull(),
+  deliveryMethod: mysqlEnum('delivery_method', ['email', 'courier', 'pickup']).default('pickup'),
+  deliveryAddress: text('delivery_address'),
+  
+  convocationFeeRef: varchar('convocation_fee_ref', { length: 100 }),
+  convocationFeeStatus: mysqlEnum('convocation_fee_status', ['paid', 'unpaid']).default('unpaid'),
+  
+  processingFeeRef: varchar('processing_fee_ref', { length: 100 }),
+  processingFeeStatus: mysqlEnum('processing_fee_status', ['paid', 'unpaid']).default('unpaid'),
+  
+  paymentStatus: mysqlEnum('payment_status', ['paid', 'unpaid', 'partial']).default('unpaid'),
+  approvalStatus: mysqlEnum('approval_status', ['pending', 'approved', 'fulfilled', 'rejected']).default('pending'),
+  
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow().onUpdateNow()
+});
