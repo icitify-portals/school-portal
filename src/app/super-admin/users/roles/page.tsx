@@ -23,6 +23,7 @@ const ROLES = [
   { id: 'icitify_dev', label: 'Icitify Developer', desc: 'System hooks & dynamic logic access' },
   { id: 'staff', label: 'Academic/Non-Academic Staff', desc: 'Standard staff access' },
   { id: 'student', label: 'Student', desc: 'Student portal access' },
+  { id: 'applicant', label: 'Applicant', desc: 'Admission applicant access' },
 ];
 
 export default function RoleManagerPage() {

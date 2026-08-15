@@ -181,7 +181,7 @@ export async function onboardUnit(data: {
 /**
  * Elevate a user's role.
  */
-export async function elevateUserRole(userId: number, newRole: 'admin' | 'staff' | 'student' | 'superadmin' | 'icitify_dev') {
+export async function elevateUserRole(userId: number, newRole: 'admin' | 'staff' | 'student' | 'superadmin' | 'icitify_dev' | 'applicant') {
     try {
         // 1. Ensure current user is a superadmin
         const { hasRole } = await import("@/lib/rbac");
