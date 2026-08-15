@@ -23,12 +23,12 @@ import {
     ShieldAlert
 } from "lucide-react";
 import { UniversalImporter } from "@/components/UniversalImporter";
-import { bulkImportUsers } from "@/actions/user-actions";
 import { cn } from "@/lib/utils";
 import { impersonateUser } from "@/actions/impersonation";
 import { DataTablePagination } from "@/components/DataTablePagination";
 import { Suspense } from "react";
 import { AccountManagementModal } from "@/components/admin/AccountManagementModal";
+import { AddUserModal } from "@/components/admin/AddUserModal";
 
 function UserManagementPageContent() {
     const router = useRouter();
@@ -39,6 +39,7 @@ function UserManagementPageContent() {
     const [totalCount, setTotalCount] = useState(0);
     const [loading, setLoading] = useState(true);
     const [showImport, setShowImport] = useState(false);
+    const [showAddUser, setShowAddUser] = useState(false);
     const [selectedUser, setSelectedUser] = useState<any | null>(null);
 
     const page = parseInt(searchParams.get("page") || "1");
@@ -153,11 +154,21 @@ function UserManagementPageContent() {
                     >
                         <Upload className="w-4 h-4 mr-2" /> {showImport ? "Cancel Import" : "Bulk Import"}
                     </Button>
-                    <Button className="rounded-xl font-bold text-xs uppercase tracking-widest h-11 px-6 bg-slate-900 hover:bg-black shadow-lg">
+                    <Button 
+                        onClick={() => setShowAddUser(true)}
+                        className="rounded-xl font-bold text-xs uppercase tracking-widest h-11 px-6 bg-slate-900 hover:bg-black shadow-lg"
+                    >
                         <UserPlus className="w-4 h-4 mr-2" /> Add User
                     </Button>
                 </div>
             </div>
+
+            {showAddUser && (
+                <AddUserModal 
+                    onClose={() => setShowAddUser(false)} 
+                    onUpdate={() => fetchData()} 
+                />
+            )}
 
             {showImport && (
                 <Card className="-100 /30 overflow-hidden animate-in fade-in slide-in-from-top-4 duration-300 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">

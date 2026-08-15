@@ -293,3 +293,62 @@ export async function updateUserBaseRole(userId: number, role: 'applicant' | 'st
         return { success: false, error: "Failed to update user role." };
     }
 }
+
+export async function createSingleUser(data: { name: string; email: string; role: 'applicant' | 'student' | 'staff' | 'admin' }) {
+    try {
+        const session = await auth();
+        const actorRole = (session?.user as any)?.role?.toLowerCase() || "";
+        const actorId = session?.user?.id ? parseInt(session.user.id) : null;
+        if (!['superadmin', 'icitify_dev', 'admin', 'dvc', 'bursar', 'registrar', 'admission_officer'].includes(actorRole)) {
+            return { success: false, error: "Unauthorized: You do not have permission to create users." };
+        }
+
+        const passwordHash = await bcrypt.hash("welcome123", 10);
+        
+        const existing = await db.select().from(users).where(eq(users.email, data.email)).limit(1);
+        if (existing.length > 0) {
+            return { success: false, error: "A user with this email already exists." };
+        }
+
+        const [newUser] = await db.insert(users).values({
+            name: data.name,
+            email: data.email,
+            password: passwordHash,
+            role: data.role,
+            requiresPasswordChange: true,
+            emailVerified: true
+        });
+
+        const userId = newUser.insertId;
+
+        if (data.role === 'student') {
+            await db.insert(students).values({
+                userId,
+                barcode: `${data.name} | PENDING`,
+                currentLevel: 1,
+            });
+        } else if (data.role === 'staff') {
+            await db.insert(staffProfiles).values({
+                userId,
+                jobTitle: "Staff",
+            });
+        }
+
+        if (actorId) {
+            await db.insert(systemAuditLogs).values({
+                actorId,
+                action: 'CREATE_USER',
+                targetId: userId.toString(),
+                details: JSON.stringify({ userId, role: data.role, timestamp: new Date() }),
+                status: 'success'
+            });
+        }
+
+        revalidatePath("/admin/users");
+        return { success: true, message: "User created successfully! Default password is: welcome123" };
+    } catch (error) {
+        console.error("Create User Error:", error);
+        return { success: false, error: "Failed to create user." };
+    }
+}
+
