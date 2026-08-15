@@ -23,7 +23,7 @@ import {
     History,
     ShieldCheck
 } from "lucide-react";
-import { resetUserPassword, updateUserStatus, verifyUserEmailManually } from "@/actions/user-actions";
+import { resetUserPassword, updateUserStatus, verifyUserEmailManually, updateUserBaseRole } from "@/actions/user-actions";
 import { getAllRoles, assignRoleToUser, removeRoleFromUser } from "@/actions/rbac";
 import { cn } from "@/lib/utils";
 
@@ -233,6 +233,42 @@ export function AccountManagementModal({ user, onClose, onUpdate }: AccountManag
                                 );
                             })}
                         </div>
+                    </div>
+
+                    {/* Base Role Management */}
+                    <div className="space-y-4">
+                        <div className="flex items-center gap-2 text-slate-900 border-b border-slate-100 pb-2">
+                            <UserCheck className="w-4 h-4 text-indigo-600" />
+                            <h3 className="font-black uppercase text-[10px] tracking-[0.2em]">Change Primary Role</h3>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <select 
+                                className="h-11 rounded-xl bg-slate-50 border-slate-100 text-sm font-medium focus:ring-2 focus:ring-indigo-500 px-4 w-full"
+                                value={user.role}
+                                onChange={async (e) => {
+                                    const newRole = e.target.value as 'applicant' | 'student' | 'staff' | 'admin';
+                                    if (confirm(`Are you sure you want to change this user's primary role to ${newRole}?`)) {
+                                        setActionLoading("baseRole");
+                                        const res = await updateUserBaseRole(user.id, newRole);
+                                        if (res.success) {
+                                            alert(res.message);
+                                            onUpdate?.();
+                                        } else {
+                                            alert(res.error);
+                                        }
+                                        setActionLoading(null);
+                                    }
+                                }}
+                                disabled={actionLoading === "baseRole"}
+                            >
+                                <option value="applicant">Applicant</option>
+                                <option value="student">Student</option>
+                                <option value="staff">Staff</option>
+                                <option value="admin">Admin</option>
+                            </select>
+                            {actionLoading === "baseRole" && <Loader2 className="w-5 h-5 animate-spin text-indigo-500" />}
+                        </div>
+                        <p className="text-[10px] text-slate-400 font-medium italic">Changes user dashboard layout and permissions.</p>
                     </div>
 
                     {/* Meta Info / Footer Action */}

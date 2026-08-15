@@ -261,3 +261,35 @@ export async function verifyUserEmailManually(userId: number) {
         return { success: false, error: "Failed to verify email manually." };
     }
 }
+
+export async function updateUserBaseRole(userId: number, role: 'applicant' | 'student' | 'staff' | 'admin') {
+    try {
+        const session = await auth();
+        const actorRole = (session?.user as any)?.role?.toLowerCase() || "";
+        const actorId = session?.user?.id ? parseInt(session.user.id) : null;
+        if (!['superadmin', 'admin', 'dvc', 'bursar', 'registrar', 'admission_officer'].includes(actorRole)) {
+            return { success: false, error: "Unauthorized: You do not have permission to change user roles." };
+        }
+
+        await db.update(users).set({
+            role
+        }).where(eq(users.id, userId));
+
+        if (actorId) {
+            await db.insert(systemAuditLogs).values({
+                actorId,
+                action: 'UPDATE_USER_BASE_ROLE',
+                targetId: userId.toString(),
+                details: JSON.stringify({ userId, role, timestamp: new Date() }),
+                status: 'success'
+            });
+        }
+
+        revalidatePath("/admin/users");
+        revalidatePath("/admin/students");
+        return { success: true, message: `User role successfully updated to ${role}.` };
+    } catch (error) {
+        console.error("Update User Role Error:", error);
+        return { success: false, error: "Failed to update user role." };
+    }
+}
