@@ -23,6 +23,14 @@ export default function AdminV2ApplicationsPage() {
     const [search, setSearch] = useState("");
     const [statusFilter, setStatusFilter] = useState("all");
     const [paymentFilter, setPaymentFilter] = useState("all");
+
+    useEffect(() => {
+        if (typeof window !== "undefined") {
+            const params = new URLSearchParams(window.location.search);
+            const q = params.get("search");
+            if (q) setSearch(q);
+        }
+    }, []);
     const [templateFilter, setTemplateFilter] = useState<number | undefined>(undefined);
     const [templates, setTemplates] = useState<any[]>([]);
     const [page, setPage] = useState(1);

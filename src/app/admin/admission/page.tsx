@@ -139,9 +139,11 @@ export default function AdminAdmissionDashboard() {
                                                         </span>
                                                     </td>
                                                     <td className="px-8 py-6">
-                                                        <span className="px-4 py-1.5 bg-indigo-100 text-indigo-800 border border-indigo-200 rounded-xl text-sm font-black tracking-widest shadow-sm font-mono">
-                                                            {String(count)}
-                                                        </span>
+                                                        <Link href={`/admin/admission/v2?search=${encodeURIComponent(progName)}`}>
+                                                            <span className="px-4 py-1.5 bg-indigo-100 text-indigo-800 border border-indigo-200 rounded-xl text-sm font-black tracking-widest shadow-sm font-mono hover:bg-indigo-200 hover:text-indigo-900 transition-colors cursor-pointer inline-block">
+                                                                {String(count)}
+                                                            </span>
+                                                        </Link>
                                                     </td>
                                                 </tr>
                                             ))
