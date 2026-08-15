@@ -24,6 +24,12 @@ export default function AdminV2ApplicationsPage() {
     const [statusFilter, setStatusFilter] = useState("all");
     const [paymentFilter, setPaymentFilter] = useState("all");
 
+    const [templateFilter, setTemplateFilter] = useState<number | undefined>(undefined);
+    const [templates, setTemplates] = useState<any[]>([]);
+    const [page, setPage] = useState(1);
+    const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+    const [bulkAction, setBulkAction] = useState("");
+
     useEffect(() => {
         if (typeof window !== "undefined") {
             const params = new URLSearchParams(window.location.search);
@@ -31,11 +37,6 @@ export default function AdminV2ApplicationsPage() {
             if (q) setSearch(q);
         }
     }, []);
-    const [templateFilter, setTemplateFilter] = useState<number | undefined>(undefined);
-    const [templates, setTemplates] = useState<any[]>([]);
-    const [page, setPage] = useState(1);
-    const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
-    const [bulkAction, setBulkAction] = useState("");
 
     const fetchData = useCallback(async () => {
         setLoading(true);
@@ -82,10 +83,10 @@ export default function AdminV2ApplicationsPage() {
     };
 
     const toggleSelectAll = () => {
-        if (selectedIds.size === data.applications.length) {
+        if (selectedIds.size === (data?.applications?.length || 0)) {
             setSelectedIds(new Set());
         } else {
-            setSelectedIds(new Set(data.applications.map((a: any) => a.id)));
+            setSelectedIds(new Set(data?.applications?.map((a: any) => a.id) || []));
         }
     };
 
@@ -127,7 +128,7 @@ export default function AdminV2ApplicationsPage() {
         if (selectedIds.size === 0) { toast.error("No applications selected"); return; }
         setLoading(true);
         try {
-            const selectedApps = data.applications.filter((a: any) => selectedIds.has(a.id));
+            const selectedApps = (data?.applications || []).filter((a: any) => selectedIds.has(a.id));
             const doc = new jsPDF();
             
             doc.setFontSize(20);
@@ -294,7 +295,7 @@ export default function AdminV2ApplicationsPage() {
                                 <tr className="bg-slate-900 text-white">
                                     <th className="px-6 py-5 w-12">
                                         <button onClick={toggleSelectAll} className="text-white/80 hover:text-white">
-                                            {selectedIds.size === data.applications.length && data.applications.length > 0
+                                            {selectedIds.size === (data?.applications?.length || 0) && (data?.applications?.length || 0) > 0
                                                 ? <CheckSquare className="w-4 h-4" />
                                                 : <Square className="w-4 h-4" />}
                                         </button>
@@ -315,7 +316,7 @@ export default function AdminV2ApplicationsPage() {
                                             <Loader2 className="w-10 h-10 animate-spin mx-auto text-indigo-500" />
                                         </td>
                                     </tr>
-                                ) : data.applications.length === 0 ? (
+                                ) : (data?.applications || []).length === 0 ? (
                                     <tr>
                                         <td colSpan={8} className="px-8 py-20 text-center">
                                             <div className="max-w-xs mx-auto space-y-4">
@@ -327,7 +328,7 @@ export default function AdminV2ApplicationsPage() {
                                         </td>
                                     </tr>
                                 ) : (
-                                    data.applications.map((app: any) => (
+                                    (data?.applications || []).map((app: any) => (
                                         <tr key={app.id} className="hover:bg-slate-50 transition-colors group">
                                             <td className="px-6 py-5">
                                                 <button onClick={() => toggleSelect(app.id)} className="text-slate-300 hover:text-slate-500">
