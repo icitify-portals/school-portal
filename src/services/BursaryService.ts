@@ -177,6 +177,13 @@ export class BursaryService {
 
             if (!student) throw new Error("Student not found.");
 
+            // Cohort-Aware Billing Logic:
+            // If student is Level 1 and has an admissionSessionId, bill them for their specific admission session.
+            let billingSessionId = sessionId;
+            if (student.currentLevel === 1 && student.admissionSessionId) {
+                billingSessionId = student.admissionSessionId;
+            }
+
             let allocation = null;
             let directFeeStructureId = null;
 
@@ -209,7 +216,7 @@ export class BursaryService {
                     .from(feeAllocations)
                     .where(and(
                         eq(feeAllocations.studentId, studentId),
-                        eq(feeAllocations.sessionId, sessionId)
+                        eq(feeAllocations.sessionId, billingSessionId)
                     ))
                     .limit(1);
                 allocation = specificAlloc;
@@ -222,7 +229,7 @@ export class BursaryService {
                     .innerJoin(feeStructures, eq(feeAllocations.feeStructureId, feeStructures.id))
                     .where(and(
                         eq(feeAllocations.programmeId, student.programmeId),
-                        eq(feeAllocations.sessionId, sessionId),
+                        eq(feeAllocations.sessionId, billingSessionId),
                         or(
                             eq(feeStructures.level, student.currentLevel || 1),
                             sql`FIND_IN_SET(${student.currentLevel?.toString() || '1'}, ${feeStructures.targetGroups}) > 0`,
@@ -242,7 +249,7 @@ export class BursaryService {
                     .innerJoin(feeStructures, eq(feeAllocations.feeStructureId, feeStructures.id))
                     .where(and(
                         eq(feeAllocations.deptId, student.deptId),
-                        eq(feeAllocations.sessionId, sessionId),
+                        eq(feeAllocations.sessionId, billingSessionId),
                         or(
                             eq(feeStructures.level, student.currentLevel || 1),
                             sql`FIND_IN_SET(${student.currentLevel?.toString() || '1'}, ${feeStructures.targetGroups}) > 0`,
@@ -261,7 +268,7 @@ export class BursaryService {
                     .from(feeAllocations)
                     .innerJoin(feeStructures, eq(feeAllocations.feeStructureId, feeStructures.id))
                     .where(and(
-                        eq(feeAllocations.sessionId, sessionId),
+                        eq(feeAllocations.sessionId, billingSessionId),
                         isNull(feeAllocations.facultyId),
                         isNull(feeAllocations.deptId),
                         isNull(feeAllocations.programmeId),
@@ -301,7 +308,7 @@ export class BursaryService {
             }
 
             // --- Apply Scholarships ---
-            const scholarshipResult = await this.resolveScholarships(studentId, sessionId);
+            const scholarshipResult = await this.resolveScholarships(studentId, billingSessionId);
             let totalScholarshipApplied = 0;
 
             // If full scholarship, all items drop to 0
@@ -381,7 +388,7 @@ export class BursaryService {
             const billNumber = `BILL-${Date.now()}-${studentId}`;
             const [newBill] = await tx.insert(studentBills).values({
                 studentId,
-                sessionId,
+                sessionId: billingSessionId,
                 billNumber,
                 currency: billCurrency,
                 totalAmount: total.toFixed(2),

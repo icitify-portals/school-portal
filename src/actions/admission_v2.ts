@@ -949,11 +949,21 @@ export async function finalizeStudentAdmission(applicationId: number) {
             }
         }
 
-        // Find active academic session for admission
-        const [activeSession] = await db.select().from(academicSessions)
-            .where(eq(academicSessions.isActive, true))
-            .orderBy(desc(academicSessions.startDate))
+        // Find academic session for admission based on current year (e.g., 2026/2027)
+        const nextSessionName = `${year}/${year + 1}`;
+        
+        let [targetSession] = await db.select().from(academicSessions)
+            .where(eq(academicSessions.name, nextSessionName))
             .limit(1);
+            
+        if (!targetSession) {
+            // Fallback to active session
+            const [activeSession] = await db.select().from(academicSessions)
+                .where(eq(academicSessions.isActive, true))
+                .orderBy(desc(academicSessions.startDate))
+                .limit(1);
+            targetSession = activeSession;
+        }
 
         // Query total student count for the year to generate a unique sequence number (Legacy fallback)
         const countRes = await db.select({ count: sql<number>`count(*)` })
@@ -1087,7 +1097,7 @@ export async function finalizeStudentAdmission(applicationId: number) {
                 programmeType: programmeType || existingStudent.programmeType,
                 programmeId: selectedProgrammeId || existingStudent.programmeId,
                 deptId: deptId || existingStudent.deptId,
-                admissionSessionId: activeSession?.id || existingStudent.admissionSessionId,
+                admissionSessionId: targetSession?.id || existingStudent.admissionSessionId,
                 currentLevel: 1, // Reset level for HND
                 admissionYear: year || existingStudent.admissionYear,
                 gender: (formData.gender?.toLowerCase() || existingStudent.gender || 'other') as any,
@@ -1112,7 +1122,7 @@ export async function finalizeStudentAdmission(applicationId: number) {
                 programmeType: programmeType,
                 programmeId: selectedProgrammeId,
                 deptId: deptId,
-                admissionSessionId: activeSession?.id || null,
+                admissionSessionId: targetSession?.id || null,
                 currentLevel: 1,
                 admissionYear: year,
                 gender: (formData.gender?.toLowerCase() || 'other') as any,
