@@ -19,7 +19,8 @@ import {
     admissionTemplateProgrammes,
     programmes,
     transactions,
-    academicSessions
+    academicSessions,
+    processingFeeRules
 } from "@/db/schema";
 import { eq, and, desc, asc, sql, inArray, like, or } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
@@ -866,9 +867,65 @@ export async function getApplicantStatusData(applicationId: number) {
     }
 }
 
-export async function confirmAcceptancePayment(applicationId: number, reference: string) {
-    await requireAdmin();
+export async function initiateAcceptancePaymentCheckout(applicationId: number) {
     try {
+        const app = await db.query.admissionApplicationsV2.findFirst({
+            where: eq(admissionApplicationsV2.id, applicationId),
+            with: { template: true }
+        });
+
+        if (!app || !app.template) return { success: false, error: "Application or Template not found" };
+
+        let acceptanceFee = parseFloat(app.template.acceptanceFee || "0");
+        let processingFee = 0;
+
+        // Fetch processing fee specifically for acceptance fee using service type 'ACCEPTANCE_FEE'
+        const pRule = await db.select().from(processingFeeRules).where(eq(processingFeeRules.serviceType, 'ACCEPTANCE_FEE')).limit(1);
+        if (pRule.length > 0 && pRule[0].isActive) {
+            processingFee = parseFloat(pRule[0].amount);
+        }
+
+        const totalAmount = acceptanceFee + processingFee;
+        const reference = `ACC-${applicationId}-${Date.now()}`;
+        const formData = typeof app.data === 'string' ? JSON.parse(app.data || '{}') : (app.data || {});
+
+        const email = formData.email || "student@school.edu.ng";
+        const firstName = formData.firstName || "Applicant";
+        const lastName = formData.lastName || "";
+
+        // Record pending transaction
+        await db.insert(transactions).values({
+            amount: totalAmount.toString(),
+            type: 'credit',
+            purpose: `Acceptance Fee Payment`,
+            status: 'pending',
+            gateway: 'alatpay',
+            gatewayReference: reference
+        });
+
+        return {
+            success: true,
+            reference,
+            amount: totalAmount,
+            email,
+            firstName,
+            lastName
+        };
+    } catch (error) {
+        console.error("Failed to initiate acceptance payment:", error);
+        return { success: false, error: "An error occurred" };
+    }
+}
+
+export async function confirmAcceptancePayment(applicationId: number, reference: string) {
+    try {
+        const { verifyPayment } = await import('@/actions/payment-gateways');
+        const verification = await verifyPayment('alatpay', reference);
+
+        if (!verification.success || !verification.verified) {
+            return { success: false, error: "Payment verification failed. Please try again." };
+        }
+
         await db.update(admissionApplicationsV2)
             .set({ 
                 acceptancePaymentStatus: 'paid',
@@ -876,9 +933,21 @@ export async function confirmAcceptancePayment(applicationId: number, reference:
             })
             .where(eq(admissionApplicationsV2.id, applicationId));
 
+        // Mark the transaction as completed
+        await db.update(transactions)
+            .set({ status: 'completed' })
+            .where(eq(transactions.gatewayReference, reference));
+
         // Auto-finalize the admission and generate the matric number immediately!
-        await finalizeStudentAdmission(applicationId);
+        const finalization = await finalizeStudentAdmission(applicationId);
         
+        if (finalization.success && finalization.studentId) {
+             // Link the transaction to the newly created student profile
+             await db.update(transactions)
+                 .set({ studentId: finalization.studentId })
+                 .where(eq(transactions.gatewayReference, reference));
+        }
+
         revalidatePath(`/admission/status/${applicationId}`);
         return { success: true };
     } catch (error) {
@@ -888,7 +957,6 @@ export async function confirmAcceptancePayment(applicationId: number, reference:
 }
 
 export async function finalizeStudentAdmission(applicationId: number) {
-    await requireAdmin();
     try {
         const application = await db.query.admissionApplicationsV2.findFirst({
             where: eq(admissionApplicationsV2.id, applicationId),
@@ -1182,7 +1250,7 @@ export async function finalizeStudentAdmission(applicationId: number) {
             type: "success"
         });
         
-        return { success: true, matricNumber };
+        return { success: true, matricNumber, studentId: finalStudentId };
     } catch (error: any) {
         console.error("Failed to finalize admission:", error);
         return { success: false, error: error.message || "An error occurred during registration" };

@@ -1,8 +1,9 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
-import { getApplicantStatusData, confirmAcceptancePayment, finalizeStudentAdmission } from "@/actions/admission_v2";
+import { getApplicantStatusData, confirmAcceptancePayment, finalizeStudentAdmission, initiateAcceptancePaymentCheckout } from "@/actions/admission_v2";
+import { AlatpayInlineCheckout } from "@/components/finance/AlatpayInlineCheckout";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { 
@@ -29,6 +30,8 @@ export default function ApplicantStatusPage() {
     const id = parseInt(params.id as string);
     const [data, setData] = useState<any>(null);
     const [loading, setLoading] = useState(true);
+    const [checkoutPayload, setCheckoutPayload] = useState<any>(null);
+    const [verifying, setVerifying] = useState(false);
 
     useEffect(() => {
         fetchData();
@@ -55,14 +58,27 @@ export default function ApplicantStatusPage() {
     };
 
     const handleAcceptancePayment = async () => {
-        const ref = prompt("Enter Acceptance Fee Payment Reference:");
-        if (!ref) return;
-        const res = await confirmAcceptancePayment(id, ref);
+        setLoading(true);
+        const res = await initiateAcceptancePaymentCheckout(id);
+        setLoading(false);
         if (res && res.success) {
-            toast.success("Acceptance fee confirmed! Welcome to the school.");
+            setCheckoutPayload(res);
+        } else {
+            toast.error(res?.error || "Failed to initiate payment");
+        }
+    };
+
+    const handleAlatpaySuccess = async () => {
+        setVerifying(true);
+        toast.loading("Verifying your payment, please wait...", { id: "verify-toast" });
+        const res = await confirmAcceptancePayment(id, checkoutPayload.reference);
+        setVerifying(false);
+        setCheckoutPayload(null);
+        if (res && res.success) {
+            toast.success("Acceptance fee confirmed! Welcome to the school.", { id: "verify-toast" });
             fetchData();
         } else {
-            toast.error(res?.error || "Failed to confirm payment");
+            toast.error(res?.error || "Failed to confirm payment.", { id: "verify-toast" });
         }
     };
 
@@ -75,6 +91,22 @@ export default function ApplicantStatusPage() {
 
     return (
         <div className="min-h-screen bg-slate-50 pb-20">
+            {checkoutPayload && (
+                <AlatpayInlineCheckout
+                    reference={checkoutPayload.reference}
+                    amount={checkoutPayload.amount}
+                    email={checkoutPayload.email}
+                    firstName={checkoutPayload.firstName}
+                    lastName={checkoutPayload.lastName}
+                    onSuccess={handleAlatpaySuccess}
+                    onClose={() => setCheckoutPayload(null)}
+                    onError={(err) => {
+                        console.error(err);
+                        toast.error("Payment failed or was cancelled.");
+                        setCheckoutPayload(null);
+                    }}
+                />
+            )}
             {/* Header */}
             <div className={cn(
                 "py-20 px-8 text-white transition-colors duration-1000",

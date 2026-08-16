@@ -13,7 +13,8 @@ import {
     users,
     studentBillItems,
     walletTransactions,
-    academicSessions
+    academicSessions,
+    processingFeeRules
 } from "@/db/schema";
 import { eq, and, desc } from "drizzle-orm";
 
@@ -681,6 +682,27 @@ export class SplitPaymentEngine {
 
         // Double check splits totals to match checkout total (if not student bearer, splits must sum to selectedAmount)
         console.log("Final compiled payment splits:\n", JSON.stringify(splits, null, 2));
+
+        // 5.5 Standalone Processing Fee (General Bill Fee)
+        try {
+            const pRule = await db.select().from(processingFeeRules).where(eq(processingFeeRules.serviceType, 'GENERAL_BILL_FEE')).limit(1);
+            if (pRule.length > 0 && pRule[0].isActive) {
+                const pFee = parseFloat(pRule[0].amount);
+                if (pFee > 0) {
+                    checkoutTotal += pFee;
+                    // Add processing fee as a standalone developer split
+                    splits.push({
+                        amount: pFee,
+                        accountName: settings['main_school_account_name'] || "School Processing",
+                        bankCode: settings['main_school_bank_code'] || "011",
+                        accountNumber: settings['main_school_account_number'] || "0123456789",
+                        isDeveloperAccount: true
+                    });
+                }
+            }
+        } catch (err) {
+            console.error("Failed to fetch processing fee rule:", err);
+        }
 
         // 6. Record pending transaction in database
         const txRef = `TX-SPL-${Date.now()}`;
