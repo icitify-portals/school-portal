@@ -289,10 +289,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         },
     },
     callbacks: {
-        async jwt({ token, user, trigger, account }) {
+        async jwt({ token, user, trigger, account, session }) {
             // Call the base jwt from authConfig
             if (authConfig.callbacks?.jwt) {
-                token = await authConfig.callbacks.jwt({ token, user, trigger, account } as any) as any;
+                token = await authConfig.callbacks.jwt({ token, user, trigger, account, session } as any) as any;
             }
 
             // For OAuth sign-ins, fetch from DB on first OAuth token creation
