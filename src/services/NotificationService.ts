@@ -366,7 +366,7 @@ export class NotificationService {
             notificationResult = await this.createNotification({
                 userId: data.userId,
                 title: "Admission Offered!",
-                message: \`Congratulations! You have been offered provisional admission for \${data.templateName}.\`,
+                message: `Congratulations! You have been offered provisional admission for ${data.templateName}.`,
                 type: "success",
                 channel: "both"
             });
