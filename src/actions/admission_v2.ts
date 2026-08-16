@@ -827,9 +827,8 @@ export async function updateAdmissionStatus(applicationId: number, status: any, 
                     userId: application.applicantId || undefined
                 }).catch((err) => console.error("Failed to send rejection email:", err));
             } else if (status === 'admitted' && applicantEmail) {
-                NotificationService.sendApplicationUnderReview(applicantEmail, {
+                NotificationService.sendAdmissionOfferedByEmail(applicantEmail, {
                     applicantName,
-                    formNumber: application.formNumber || undefined,
                     templateName: application.template.name,
                     userId: application.applicantId || undefined
                 }).catch((err) => console.error("Failed to send admitted notification:", err));
@@ -2245,6 +2244,42 @@ export async function bulkUpdateAdmissionStatus(ids: number[], status: string, n
                     .where(eq(admissionApplicationsV2.id, id));
             }
         });
+
+        // Send emails
+        if (status === 'admitted' || status === 'rejected') {
+            const apps = await db.query.admissionApplicationsV2.findMany({
+                where: inArray(admissionApplicationsV2.id, ids),
+                with: { template: true }
+            });
+            
+            for (const app of apps) {
+                if (!app.template) continue;
+                const formData = typeof app.data === 'string' ? JSON.parse(app.data || '{}') : (app.data || {});
+                const applicantEmail = formData.email || "";
+                if (!applicantEmail) continue;
+                
+                const applicantName = formData.surname 
+                    ? (formData.middleName 
+                        ? `${formData.surname} ${formData.firstName} ${formData.middleName}`.trim()
+                        : `${formData.surname} ${formData.firstName}`.trim())
+                    : `${formData.firstName || ''} ${formData.lastName || ''}`.trim() || 'Applicant';
+                
+                if (status === 'admitted') {
+                    NotificationService.sendAdmissionOfferedByEmail(applicantEmail, {
+                        applicantName,
+                        templateName: app.template.name,
+                        userId: app.applicantId || undefined
+                    }).catch(err => console.error("Failed to send admitted notification:", err));
+                } else if (status === 'rejected') {
+                    NotificationService.sendAdmissionRejectedByEmail(applicantEmail, {
+                        applicantName,
+                        templateName: app.template.name,
+                        reason: notes || undefined,
+                        userId: app.applicantId || undefined
+                    }).catch(err => console.error("Failed to send rejection notification:", err));
+                }
+            }
+        }
 
         revalidatePath("/admin/admission/v2");
         revalidatePath("/admin/admission/reports");

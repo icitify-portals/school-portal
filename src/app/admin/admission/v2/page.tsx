@@ -16,11 +16,16 @@ import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 
-export default function AdminV2ApplicationsPage() {
+function AdminV2ApplicationsContent() {
+    const searchParams = useSearchParams();
+    const urlSearchParam = searchParams.get("search") || "";
+    
     const [data, setData] = useState<any>({ applications: [], total: 0, page: 1, totalPages: 0 });
     const [loading, setLoading] = useState(true);
-    const [search, setSearch] = useState("");
+    const [search, setSearch] = useState(urlSearchParam);
     const [statusFilter, setStatusFilter] = useState("all");
     const [paymentFilter, setPaymentFilter] = useState("all");
 
@@ -31,12 +36,8 @@ export default function AdminV2ApplicationsPage() {
     const [bulkAction, setBulkAction] = useState("");
 
     useEffect(() => {
-        if (typeof window !== "undefined") {
-            const params = new URLSearchParams(window.location.search);
-            const q = params.get("search");
-            if (q) setSearch(q);
-        }
-    }, []);
+        setSearch(urlSearchParam);
+    }, [urlSearchParam]);
 
     const fetchData = useCallback(async () => {
         setLoading(true);
@@ -433,5 +434,13 @@ export default function AdminV2ApplicationsPage() {
                 </div>
             </div>
         </div>
+    );
+}
+
+export default function AdminV2ApplicationsPage() {
+    return (
+        <Suspense fallback={<div className="p-8 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto text-indigo-500" /></div>}>
+            <AdminV2ApplicationsContent />
+        </Suspense>
     );
 }

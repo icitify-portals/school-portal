@@ -1,4 +1,4 @@
-﻿import { sendWhatsAppMessage } from "@/lib/twilio";
+import { sendWhatsAppMessage } from "@/lib/twilio";
 import { sendEmail } from "@/lib/mail";
 import { config } from "@/lib/config";
 import { db } from "@/db/db";
@@ -316,6 +316,63 @@ export class NotificationService {
         if (!user?.email) return { error: "User email not found" };
 
         return await this.sendAdmissionAcceptedByEmail(user.email, { ...data, userId });
+    }
+
+    /**
+     * Admission Offered - HTML Email
+     */
+    static async sendAdmissionOffered(userId: number, data: {
+        applicantName: string;
+        templateName: string;
+    }) {
+        const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+        if (!user?.email) return { error: "User email not found" };
+
+        return await this.sendAdmissionOfferedByEmail(user.email, { ...data, userId });
+    }
+
+    /**
+     * Admission Offered - Email by address
+     */
+    static async sendAdmissionOfferedByEmail(email: string, data: {
+        applicantName: string;
+        templateName: string;
+        userId?: number;
+    }) {
+        const subject = `Congratulations! You have been Offered Admission - ${data.templateName}`;
+        const htmlMessage = `
+            <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 30px; background: #f8fafc; border-radius: 10px;">
+                <div style="background: linear-gradient(135deg, #059669 0%, #10b981 100%); padding: 30px; border-radius: 10px; text-align: center; margin-bottom: 20px;">
+                    <h1 style="color: white; margin: 0; font-size: 24px; text-transform: uppercase; letter-spacing: 2px;">Admission Offered!</h1>
+                </div>
+                <div style="background: white; padding: 30px; border-radius: 10px; border: 1px solid #e2e8f0;">
+                    <p style="font-size: 16px; color: #374151; margin-bottom: 15px;">Dear <strong>${data.applicantName}</strong>,</p>
+                    <p style="font-size: 14px; color: #4b5563; margin-bottom: 15px;">Congratulations! We are delighted to inform you that you have been offered provisional admission for <strong>${data.templateName}</strong>.</p>
+                    <p style="font-size: 14px; color: #4b5563; margin-bottom: 15px;">Please proceed to the student portal to accept your admission, view your admission letter, and pay your acceptance fee.</p>
+                    <div style="background: #eff6ff; padding: 15px; border-radius: 8px; border-left: 4px solid #3b82f6;">
+                        <p style="margin: 0; font-size: 13px; color: #1e40af;"><strong>Next Steps:</strong><br/>1. Log in to the Student Portal<br/>2. View your Admission Status<br/>3. Print your Admission Letter<br/>4. Pay your acceptance fee to secure your admission</p>
+                    </div>
+                </div>
+                <div style="text-align: center; padding: 20px; font-size: 12px; color: #9ca3af;">
+                    This is an automated message from the Admission Portal. Please do not reply directly to this email.
+                </div>
+            </div>
+        `;
+        
+        const emailResult = await sendEmail(email, subject, htmlMessage, ADMISSION_FROM);
+        
+        let notificationResult = null;
+        if (data.userId) {
+            notificationResult = await this.createNotification({
+                userId: data.userId,
+                title: "Admission Offered!",
+                message: \`Congratulations! You have been offered provisional admission for \${data.templateName}.\`,
+                type: "success",
+                channel: "both"
+            });
+        }
+        
+        return { email: emailResult, notification: notificationResult };
     }
 
     /**
