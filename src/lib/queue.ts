@@ -5,6 +5,7 @@ const connection = config.redis.enabled ? {
     host: config.redis.host,
     port: config.redis.port,
     password: config.redis.password,
+    maxRetriesPerRequest: null,
 } : undefined;
 
 // --- QUEUE DEFINITION ---
@@ -18,8 +19,8 @@ export const queueEvents = connection ? new QueueEvents('task-queue', { connecti
  */
 export async function addJob(name: string, data: any, cron?: string, delay?: number) {
     if (!taskQueue) {
-        console.warn(`[QUEUE] Redis is disabled. Skipping job: ${name}`);
-        return { id: 'mock-id-' + Date.now(), name, data };
+        console.warn(`[QUEUE] Redis is disabled. Throwing error to trigger inline processing for job: ${name}`);
+        throw new Error("Redis is disabled");
     }
 
     const options: any = {

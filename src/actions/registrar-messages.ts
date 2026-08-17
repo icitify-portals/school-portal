@@ -36,12 +36,22 @@ export async function dispatchBulkMessage(data: {
         if (data.targetType === "programmes") targetCriteria.programmes = data.programmes;
         if (data.targetType === "users") {
             let ids: number[] = data.userIds || [];
+            let externalEmails: string[] = [];
+            
             if (data.emails && data.emails.length > 0) {
                 const { inArray } = await import("drizzle-orm");
-                const emailUsers = await db.select({ id: users.id }).from(users).where(inArray(users.email, data.emails));
+                const emailUsers = await db.select({ id: users.id, email: users.email }).from(users).where(inArray(users.email, data.emails));
                 ids = [...ids, ...emailUsers.map(u => u.id)];
+                
+                // Track emails not found in the users table
+                const foundEmails = emailUsers.map(u => u.email?.toLowerCase());
+                externalEmails = data.emails.filter(e => !foundEmails.includes(e.toLowerCase()));
             }
+            
             targetCriteria.userIds = ids;
+            if (externalEmails.length > 0) {
+                targetCriteria.externalEmails = externalEmails;
+            }
         }
 
         // Calculate delay for scheduler
@@ -77,15 +87,15 @@ export async function dispatchBulkMessage(data: {
                 targetCriteria: targetCriteria
             }, undefined, delayMs);
         } catch (queueError) {
-            console.error("Queue unavailable, processing inline asynchronously:", queueError);
-            // Fire and forget inline processing if Redis is down
-            processBulkMessageInline({
+            console.error("Queue unavailable, processing inline synchronously:", queueError);
+            // Fallback inline processing if Redis is down
+            await processBulkMessageInline({
                 broadcastId: insertId,
                 title: data.title,
                 message: data.message,
                 channel: data.channel,
                 targetCriteria: targetCriteria
-            }).catch(console.error);
+            });
         }
 
         return { success: true };
@@ -147,12 +157,14 @@ export async function processBulkMessageInline(jobData: any) {
             studentIds = queryResult.filter((r: any) => r.userId).map((r: any) => r.userId as number);
         }
         
-        if (!studentIds.length) {
+        const externalEmails: string[] = targetCriteria.externalEmails || [];
+        
+        if (!studentIds.length && !externalEmails.length) {
             await db.update(broadcastMessages).set({ status: 'completed', totalRecipients: 0 }).where(eq(broadcastMessages.id, broadcastId));
             return;
         }
         
-        await db.update(broadcastMessages).set({ status: 'processing', totalRecipients: studentIds.length }).where(eq(broadcastMessages.id, broadcastId));
+        await db.update(broadcastMessages).set({ status: 'processing', totalRecipients: studentIds.length + externalEmails.length }).where(eq(broadcastMessages.id, broadcastId));
         
         for (let i = 0; i < studentIds.length; i++) {
             try {
@@ -164,6 +176,27 @@ export async function processBulkMessageInline(jobData: any) {
                     channel: channel
                 });
             } catch (err) {}
+        }
+        
+        if (externalEmails.length > 0 && (channel === 'both' || channel === 'email')) {
+            const { sendEmail } = await import('@/lib/mail');
+            const { config } = await import('@/lib/config');
+            const html = `<div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+                    <h2 style="color: #4f46e5;">${title}</h2>
+                    <p style="font-size: 16px; color: #374151;">${message}</p>
+                    <hr style="margin: 20px 0; border: none; border-top: 1px solid #eee;" />
+                    <p style="font-size: 12px; color: #9ca3af;">This is an automated alert from your FSS Portal.</p>
+                </div>`;
+            for (let i = 0; i < externalEmails.length; i++) {
+                try {
+                    const res = await sendEmail(externalEmails[i], title, html, config.mail.from);
+                    if (!res.success) {
+                        console.error(`[REGISTRAR MESSAGE EMAIL ERROR] ${externalEmails[i]}:`, res.error);
+                    }
+                } catch (err) {
+                    console.error(`[REGISTRAR MESSAGE EXCEPTION] ${externalEmails[i]}:`, err);
+                }
+            }
         }
         
         await db.update(broadcastMessages).set({ status: 'completed' }).where(eq(broadcastMessages.id, broadcastId));

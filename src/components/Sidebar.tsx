@@ -255,6 +255,7 @@ const adminMenuItems: MenuItem[] = [
         name: "Bursary & Fees",
         icon: Wallet,
         subItems: [
+            { name: "Bursar Dashboard", href: "/admin/bursary" },
             { name: "Fee Structures", href: "/admin/bursary/fees" },
             { name: "Fee Allocations", href: "/admin/bursary/allocations" },
             { name: "Discounts", href: "/admin/bursary/discounts" },

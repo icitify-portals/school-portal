@@ -1,4 +1,4 @@
-﻿
+
 import { db } from "@/db/db";
 import { 
     generalLedger, 
@@ -23,8 +23,8 @@ import {
 export default async function FraudAuditDashboard() {
     // 1. Detect Unbalanced Batches
     const [unbalancedBatches] = await db.execute(sql`
-        SELECT batch_id, SUM(debit) as total_debit, SUM(credit) as total_credit, description
-        FROM ${generalLedger}
+        SELECT batch_id, SUM(debit) as total_debit, SUM(credit) as total_credit, ANY_VALUE(description) as description
+        FROM general_ledger
         GROUP BY batch_id
         HAVING ABS(SUM(debit) - SUM(credit)) > 0.01
     `);

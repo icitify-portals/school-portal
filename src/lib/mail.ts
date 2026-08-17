@@ -10,11 +10,28 @@ export async function sendEmail(
     apiKey?: string,
     attachments?: { filename: string, content: Buffer | string }[]
 ) {
-    const finalKey = apiKey || process.env.RESEND_API_KEY;
+    let finalKey = apiKey || process.env.RESEND_API_KEY;
 
     if (!finalKey) {
-        console.error("Email error: RESEND_API_KEY is not configured in .env or settings");
-        return { success: false, error: "Email service not configured" };
+        try {
+            const { db } = await import('@/db/db');
+            const { hrSettings } = await import('@/db/schema');
+            const { eq } = await import('drizzle-orm');
+            const [setting] = await db.select({ value: hrSettings.value })
+                .from(hrSettings)
+                .where(eq(hrSettings.settingKey, 'resend_api_key'))
+                .limit(1);
+            if (setting?.value) {
+                finalKey = setting.value;
+            }
+        } catch (dbErr) {
+            console.error("Failed to query resend_api_key from DB settings:", dbErr);
+        }
+    }
+
+    if (!finalKey) {
+        console.error("Email error: RESEND_API_KEY is not configured in .env or HR settings");
+        return { success: false, error: "Email service not configured. Please add RESEND_API_KEY to your .env file or HR settings." };
     }
 
     const resend = new Resend(finalKey);

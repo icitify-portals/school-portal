@@ -228,6 +228,27 @@ export default function BursaryReportsPage() {
         }
     }, [startDate, endDate, level, deptId, programmeId, feeItemId, facultyId]);
 
+    const fetchFeeItemReport = useCallback(async () => {
+        setFeeItemReportLoading(true);
+        try {
+            const res = await getFeeItemCollectionReport({
+                startDate: startDate ? new Date(startDate) : undefined,
+                endDate: endDate ? new Date(endDate) : undefined,
+                deptId: deptId ? parseInt(deptId) : undefined,
+                programmeId: programmeId ? parseInt(programmeId) : undefined,
+                level: level ? parseInt(level) : undefined,
+                feeItemId: feeItemId ? parseInt(feeItemId) : undefined
+            });
+            if (res.success && res.data) {
+                setFeeItemReportData(res.data);
+            }
+        } catch (error) {
+            console.error("Failed to fetch fee item report:", error);
+        } finally {
+            setFeeItemReportLoading(false);
+        }
+    }, [startDate, endDate, deptId, programmeId, level, feeItemId]);
+
     const fetchInstallments = useCallback(async () => {
         setInstallmentLoading(true);
         try {

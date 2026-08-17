@@ -883,6 +883,18 @@ export default function V2ApplicationDetailPage() {
                                 </div>
 
                                 <div className="space-y-2">
+                                    {(app.status === 'pending' || app.status === 'paid' || app.status === 'draft') && (
+                                        <Button
+                                            onClick={() => {
+                                                if(confirm("Are you sure you want to force submit this application on behalf of the applicant?")) {
+                                                    handleStatusChange('submitted')
+                                                }
+                                            }}
+                                            className="w-full rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-[10px] uppercase tracking-widest py-4 mb-4"
+                                        >
+                                            Force Submit Application
+                                        </Button>
+                                    )}
                                     {app.status !== 'admitted' && app.status !== 'rejected' && (
                                         <>
                                             <Button

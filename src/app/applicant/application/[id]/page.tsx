@@ -537,26 +537,38 @@ export default function StatefulApplicationPage() {
             setSubmitting(false);
         } else {
             // Application fee is paid or not required first.
-            // Stage 2: Enforce Paystack processing fee sequentially
-            triggerSubscriptionGate({
-                identifier: applicationId.toString(),
-                email: session!.user!.email!,
-                type: 'admission_form',
-                onSuccess: async () => {
-                    // @ts-expect-error - TS2345: Auto-suppressed for build
-                    const res = await submitApplicationFinal(applicationId, parseInt(session!.user!.id));
-                    if (res.success) {
-                        toast.success("Application submitted successfully!");
-                        router.push("/applicant");
-                    } else {
-                        toast.error("Failed to submit");
-                        setSubmitting(false);
-                    }
-                },
-                onError: () => {
+            if (application.isProcessingFeePaid) {
+                // @ts-expect-error - TS2345: Auto-suppressed for build
+                const res = await submitApplicationFinal(applicationId, parseInt(session!.user!.id));
+                if (res.success) {
+                    toast.success("Application submitted successfully!");
+                    router.push("/applicant");
+                } else {
+                    toast.error(res.error || "Failed to submit");
                     setSubmitting(false);
                 }
-            });
+            } else {
+                // Stage 2: Enforce Paystack processing fee sequentially
+                triggerSubscriptionGate({
+                    identifier: applicationId.toString(),
+                    email: session!.user!.email!,
+                    type: 'admission_form',
+                    onSuccess: async () => {
+                        // @ts-expect-error - TS2345: Auto-suppressed for build
+                        const res = await submitApplicationFinal(applicationId, parseInt(session!.user!.id));
+                        if (res.success) {
+                            toast.success("Application submitted successfully!");
+                            router.push("/applicant");
+                        } else {
+                            toast.error(res.error || "Failed to submit");
+                            setSubmitting(false);
+                        }
+                    },
+                    onError: () => {
+                        setSubmitting(false);
+                    }
+                });
+            }
         }
     };
 

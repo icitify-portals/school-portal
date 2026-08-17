@@ -9,6 +9,7 @@ const connection = config.redis.enabled ? {
     host: config.redis.host,
     port: config.redis.port,
     password: config.redis.password,
+    maxRetriesPerRequest: null,
 } : undefined;
 
 if (!connection) {
@@ -121,7 +122,9 @@ if (!connection) {
                     studentIds = queryResult.filter(r => r.userId).map(r => r.userId as number);
                 }
                 
-                if (!studentIds.length) {
+                const externalEmails: string[] = targetCriteria.externalEmails || [];
+                
+                if (!studentIds.length && !externalEmails.length) {
                     await db.update(broadcastMessages)
                         .set({ status: 'completed', totalRecipients: 0 })
                         .where(eq(broadcastMessages.id, broadcastId));
@@ -129,7 +132,7 @@ if (!connection) {
                 }
                 
                 await db.update(broadcastMessages)
-                    .set({ status: 'processing', totalRecipients: studentIds.length })
+                    .set({ status: 'processing', totalRecipients: studentIds.length + externalEmails.length })
                     .where(eq(broadcastMessages.id, broadcastId));
                 
                 let success = 0;
@@ -151,7 +154,27 @@ if (!connection) {
                     }
                     
                     if (i % 20 === 0 || i === studentIds.length - 1) {
-                        await job.updateProgress(Math.floor(((i + 1) / studentIds.length) * 100));
+                        await job.updateProgress(Math.floor(((i + 1) / (studentIds.length + externalEmails.length)) * 100));
+                    }
+                }
+                
+                if (externalEmails.length > 0 && (channel === 'both' || channel === 'email')) {
+                    const { sendEmail } = await import('./lib/mail');
+                    const { config } = await import('./lib/config');
+                    const html = `<div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+                            <h2 style="color: #4f46e5;">${title}</h2>
+                            <p style="font-size: 16px; color: #374151;">${message}</p>
+                            <hr style="margin: 20px 0; border: none; border-top: 1px solid #eee;" />
+                            <p style="font-size: 12px; color: #9ca3af;">This is an automated alert from your FSS Portal.</p>
+                        </div>`;
+                    
+                    for (let i = 0; i < externalEmails.length; i++) {
+                        try {
+                            await sendEmail(externalEmails[i], title, html, config.mail.from);
+                            success++;
+                        } catch (err) {
+                            fail++;
+                        }
                     }
                 }
                 
@@ -159,7 +182,7 @@ if (!connection) {
                     .set({ status: 'completed' })
                     .where(eq(broadcastMessages.id, broadcastId));
                     
-                return { success, fail, total: studentIds.length };
+                return { success, fail, total: studentIds.length + externalEmails.length };
             } catch (error) {
                 console.error(`[JOB ${job.id}] Fatal error:`, error);
                 await db.update(broadcastMessages)
