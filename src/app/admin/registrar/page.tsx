@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Users, AlertTriangle, GraduationCap, FileCheck2, School, Hash, Camera, Mail } from "lucide-react";
+import { Users, AlertTriangle, GraduationCap, FileCheck2, School, Hash, Camera, Mail, MessageSquare } from "lucide-react";
 import { db } from "@/db/db";
 import { students } from "@/db/schema";
 import { count, eq } from "drizzle-orm";
