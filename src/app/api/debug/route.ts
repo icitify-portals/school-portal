@@ -1,0 +1,1 @@
+import { db } from '@/db'; import { users, students } from '@/db/schema'; import { NextResponse } from 'next/server'; import { inArray } from 'drizzle-orm'; export async function GET() { try { const s = await db.select().from(students).where(inArray(students.userId, [7271, 8512])); return NextResponse.json(s); } catch (e: any) { return NextResponse.json({error: e.message}); } }

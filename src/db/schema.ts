@@ -7406,3 +7406,15 @@ export const alumniCertificateRequests = mysqlTable('alumni_certificate_requests
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow().onUpdateNow()
 });
+
+export const automatedMessageSchedules = mysqlTable('automated_message_schedules', {
+  id: int('id').autoincrement().primaryKey(),
+  title: varchar('title', { length: 255 }).notNull(),
+  messageTemplate: text('message_template').notNull(),
+  triggerType: mysqlEnum('trigger_type', ['fixed_date', 'birthday', 'custom_event']).notNull(),
+  triggerDate: date('trigger_date'),
+  targetCriteria: text('target_criteria').notNull(), // JSON
+  isActive: boolean('is_active').default(true),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow().onUpdateNow()
+});

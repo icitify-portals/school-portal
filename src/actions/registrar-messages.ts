@@ -96,7 +96,7 @@ export async function dispatchBulkMessage(data: {
 }
 
 // Inline fallback processor
-async function processBulkMessageInline(jobData: any) {
+export async function processBulkMessageInline(jobData: any) {
     const { broadcastId, title, message, channel, targetCriteria } = jobData;
     const { sendInAppNotification } = await import('./notifications');
     const { broadcastMessages, users, students } = await import('@/db/schema');

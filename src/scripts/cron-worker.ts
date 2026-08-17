@@ -1,6 +1,7 @@
 import "dotenv/config";
 import cron from "node-cron";
 import { runBackup } from "../actions/backup";
+import { processAutomatedMessages } from "../actions/automated-messages-processor";
 import "../worker";
 
 console.log("==========================================");
@@ -24,5 +25,18 @@ cron.schedule("0 2 * * *", async () => {
     }
 });
 
-console.log("✅ Cron scheduled: '0 2 * * *' (Daily at 2:00 AM)");
+console.log("✅ Cron scheduled: '0 2 * * *' (Daily at 2:00 AM for Backup)");
+
+// Schedule Automated Felicitation Messages daily at 1:00 AM server time
+cron.schedule("0 1 * * *", async () => {
+    console.log(`[${new Date().toISOString()}] CRON TRIGGERED: Daily Automated Felicitation Messages`);
+    try {
+        await processAutomatedMessages();
+        console.log(`[${new Date().toISOString()}] ✅ Automated Messages Queued`);
+    } catch (error) {
+        console.error(`[${new Date().toISOString()}] ❌ Automated Messages CRON Encountered Fatal Error:`, error);
+    }
+});
+console.log("✅ Cron scheduled: '0 1 * * *' (Daily at 1:00 AM for Felicitation Messages)");
+
 console.log("Listening for cron triggers... (Press Ctrl+C to exit)");
