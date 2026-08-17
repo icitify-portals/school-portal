@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Users, AlertTriangle, GraduationCap, FileCheck2, School, Hash, Camera } from "lucide-react";
+import { Users, AlertTriangle, GraduationCap, FileCheck2, School, Hash, Camera, Mail } from "lucide-react";
 import { db } from "@/db/db";
 import { students } from "@/db/schema";
 import { count, eq } from "drizzle-orm";
@@ -158,6 +158,20 @@ export default async function RegistrarDashboardPage() {
                             <div>
                                 <h3 className="font-semibold text-lg text-slate-900">Exams & Records</h3>
                                 <p className="text-sm text-slate-500 mt-2">Access the Exams & Records module to manage transcripts and results.</p>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </Link>
+
+                <Link href="/admin/registrar/messages" className="group">
+                    <Card className="h-full transition-all duration-200 hover: hover:-300 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
+                        <CardContent className="p-6 flex flex-col items-center text-center space-y-4">
+                            <div className="p-4 rounded-full bg-orange-100 text-orange-600 group-hover:scale-110 transition-transform">
+                                <Mail className="h-8 w-8" />
+                            </div>
+                            <div>
+                                <h3 className="font-semibold text-lg text-slate-900">Bulk Messaging</h3>
+                                <p className="text-sm text-slate-500 mt-2">Dispatch and schedule broadcast notifications or emails to students.</p>
                             </div>
                         </CardContent>
                     </Card>
