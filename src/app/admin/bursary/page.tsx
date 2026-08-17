@@ -129,8 +129,10 @@ export default function BursaryDashboardPage() {
     const permissions = (session?.user as any)?.permissions || [];
     const isSuperAdmin = (session?.user as any)?.role === "superadmin";
 
+    const isBursar = (session?.user as any)?.role === "bursar";
+
     const allowedModules = bursaryModules.filter(m => 
-        isSuperAdmin || permissions.includes(m.permission) || !m.permission
+        isSuperAdmin || isBursar || permissions.includes(m.permission) || !m.permission
     );
 
     return (
