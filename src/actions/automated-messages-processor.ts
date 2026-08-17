@@ -1,3 +1,5 @@
+"use server";
+
 import { db } from "@/db/db";
 import { automatedMessageSchedules, broadcastMessages } from "@/db/schema";
 import { eq, and, desc } from "drizzle-orm";
