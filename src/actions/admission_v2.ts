@@ -2151,6 +2151,8 @@ export async function exportAdminV2Applications(filters?: {
                     ...app,
                     parsedData: formData,
                     applicantName: nameFromForm || nameFromUser || 'N/A',
+                    applicantEmail: app.applicant?.email || formData.email || formData.email_address || 'N/A',
+                    applicantPhone: app.applicant?.phone || app.applicant?.phoneNumber || formData.phone || formData.phone_number || 'N/A',
                     templateName: app.template?.name || 'N/A',
                 };
             })

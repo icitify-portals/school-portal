@@ -1909,11 +1909,13 @@ export async function getFinancialReports(filters: {
         const data = await db.select({
             transaction: transactions,
             student: students,
+            user: users,
             programme: programmes,
             department: departments
         })
             .from(transactions)
             .leftJoin(students, eq(transactions.studentId, students.id))
+            .leftJoin(users, eq(students.userId, users.id))
             .leftJoin(programmes, eq(students.programmeId, programmes.id))
             .leftJoin(departments, eq(students.deptId, departments.id))
             .where(and(...conditions))

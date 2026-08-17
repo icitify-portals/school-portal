@@ -105,8 +105,8 @@ function AdminV2ApplicationsContent() {
                     'Application Date': app.appliedAt ? format(new Date(app.appliedAt), 'yyyy-MM-dd') : 'N/A',
                     'Form Number': app.formNumber || 'N/A',
                     'Applicant Name': app.applicantName,
-                    'Email': app.parsedData?.email || app.parsedData?.email_address || 'N/A',
-                    'Phone': app.parsedData?.phone || 'N/A',
+                    'Email': app.applicantEmail,
+                    'Phone': app.applicantPhone,
                     'Status': app.status,
                     'Payment Status': app.paymentStatus,
                     'Template': app.templateName

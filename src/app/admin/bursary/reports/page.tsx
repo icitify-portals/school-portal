@@ -305,6 +305,8 @@ export default function BursaryReportsPage() {
             Date: new Date(d.transaction.createdAt).toLocaleDateString(),
             Student: d.student ? `${d.student.firstName} ${d.student.lastName}` : 'N/A',
             Matric: d.student?.matricNumber || 'N/A',
+            Email: d.user?.email || 'N/A',
+            Phone: d.user?.phone || 'N/A',
             Faculty: faculties.find(f => f.id === d.department?.facultyId)?.name || 'N/A',
             Department: d.department?.name || 'N/A',
             Level: d.student ? `${d.student.currentLevel}L` : 'N/A',
