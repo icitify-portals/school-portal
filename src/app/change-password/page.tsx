@@ -5,7 +5,7 @@ import { changePasswordForced } from "@/actions/auth-actions";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ShieldAlert, AlertCircle, CheckCircle2, Loader2, Lock } from "lucide-react";
-import { useSession } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
 
 export default function ChangePasswordPage() {
     const { data: session, update } = useSession();
@@ -138,6 +138,17 @@ export default function ChangePasswordPage() {
                             </>
                         )}
                     </form>
+                    
+                    <div className="mt-6 pt-4 border-t border-slate-100">
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            onClick={async () => { await signOut({ redirect: false }); window.location.href = '/login'; }}
+                            className="w-full text-slate-500 hover:text-slate-800 hover:bg-slate-100 py-4"
+                        >
+                            Cancel and Sign Out
+                        </Button>
+                    </div>
                 </CardContent>
             </Card>
         </div>

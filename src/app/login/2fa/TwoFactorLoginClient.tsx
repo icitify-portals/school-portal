@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useSession, signOut } from "next-auth/react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -169,6 +169,14 @@ export default function TwoFactorLoginClient() {
                             <ArrowLeft className="w-3 h-3" /> Back to Verification
                         </button>
                     )}
+                    
+                    <button 
+                        type="button"
+                        onClick={async () => { await signOut({ redirect: false }); window.location.href = '/login'; }}
+                        className="block mt-4 text-center w-full text-[10px] font-black text-rose-500 hover:text-rose-700 uppercase tracking-widest transition-colors"
+                    >
+                        Cancel and Sign Out
+                    </button>
                 </div>
             </div>
         </Card>
