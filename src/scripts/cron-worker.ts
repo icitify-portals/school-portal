@@ -1,6 +1,7 @@
 import "dotenv/config";
 import cron from "node-cron";
 import { runBackup } from "../actions/backup";
+import "../worker";
 
 console.log("==========================================");
 console.log("🚀 Starting Icitify Background Worker Daemon");

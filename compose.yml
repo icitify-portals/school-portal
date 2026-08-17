@@ -26,8 +26,33 @@ services:
     environment:
       - DATABASE_URL=mysql://portal_user:StrongPassword123!@school-portal-db:3306/school_portal
       - NEXT_PUBLIC_APP_URL=https://portal.fssibadan.edu.ng
+      - REDIS_HOST=school-portal-redis
     ports:
       - "3005:3000"
+    networks:
+      - portal_network
+
+  school-portal-redis:
+    image: redis:alpine
+    container_name: school-portal-redis
+    restart: always
+    ports:
+      - "127.0.0.1:6379:6379"
+    networks:
+      - portal_network
+
+  school-portal-worker:
+    build: .
+    container_name: school-portal-worker
+    restart: always
+    command: npm run worker
+    depends_on:
+      - school-portal-db
+      - school-portal-redis
+    env_file: .env
+    environment:
+      - DATABASE_URL=mysql://portal_user:StrongPassword123!@school-portal-db:3306/school_portal
+      - REDIS_HOST=school-portal-redis
     networks:
       - portal_network
 
