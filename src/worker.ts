@@ -60,6 +60,12 @@ if (!connection) {
                 
                 if (targetCriteria.type === 'users') {
                     studentIds = targetCriteria.userIds || [];
+                } else if (targetCriteria.type === 'staff') {
+                    const { users } = await import('./db/schema');
+                    const queryResult = await db.select({ id: users.id })
+                        .from(users)
+                        .where(inArray(users.role, ['staff', 'admin', 'bursar', 'registrar', 'librarian', 'hod', 'dean', 'admission_officer', 'dvc', 'superadmin']));
+                    studentIds = queryResult.map(r => r.id);
                 } else if (targetCriteria.type === 'levels' && targetCriteria.levels?.length) {
                     const levelStr = targetCriteria.levels[0]; // Currently UI supports 1 level at a time
                     if (levelStr === 'Applicant') {

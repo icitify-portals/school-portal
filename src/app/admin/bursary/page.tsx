@@ -10,7 +10,8 @@ import {
     ArrowRight,
     GraduationCap,
     Landmark,
-    BarChart3
+    BarChart3,
+    MessageSquare
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -109,6 +110,15 @@ const bursaryModules = [
         icon: Settings,
         color: "text-slate-600",
         bg: "bg-slate-50",
+        permission: "finance.view_detailed"
+    },
+    {
+        name: "Bulk Messaging",
+        description: "Send emails and in-app notifications to students and staff",
+        href: "/admin/bursary/messages",
+        icon: MessageSquare,
+        color: "text-blue-600",
+        bg: "bg-blue-50",
         permission: "finance.view_detailed"
     }
 ];

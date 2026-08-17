@@ -12,7 +12,7 @@ import { getDepartments } from "@/actions/departments";
 import { Loader2 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
-export default function BulkMessageDashboard() {
+export default function BursaryMessagesPage() {
     const [title, setTitle] = useState("");
     const [message, setMessage] = useState("");
     const [channel, setChannel] = useState<"toast" | "email" | "both">("both");

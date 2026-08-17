@@ -11,7 +11,7 @@ export async function dispatchBulkMessage(data: {
     title: string;
     message: string;
     channel: "toast" | "email" | "both";
-    targetType: "all" | "levels" | "departments" | "programmes" | "users";
+    targetType: "all" | "levels" | "departments" | "programmes" | "users" | "staff";
     levels?: string[];
     departments?: number[];
     programmes?: number[];
@@ -23,7 +23,7 @@ export async function dispatchBulkMessage(data: {
         const session = await auth();
         if (!session?.user?.id) return { success: false, error: "Unauthorized" };
 
-        const isAllowed = await hasRole("admin") || await hasRole("registrar") || await hasRole("superadmin");
+        const isAllowed = await hasRole("admin") || await hasRole("registrar") || await hasRole("superadmin") || await hasRole("bursar");
         if (!isAllowed) {
             return { success: false, error: "Forbidden: You do not have permission to send bulk messages." };
         }
