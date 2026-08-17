@@ -51,16 +51,8 @@ async function requireApplicant() {
     const session = await auth();
     if (!session?.user) throw new Error("Unauthorized: Please log in");
     
-    if (session.user.role === 'applicant') return session;
-
-    if (session.user.role === 'student') {
-        const [student] = await db.select({ status: students.status })
-            .from(students)
-            .where(eq(students.userId, parseInt(session.user.id)));
-        
-        if (student?.status === 'nd_graduated' || student?.status === 'graduated') {
-            return session;
-        }
+    if (session.user.role === 'applicant' || session.user.role === 'student') {
+        return session;
     }
     
     throw new Error("Forbidden: Only applicants can perform this action");

@@ -1712,6 +1712,23 @@ export const notifications = mysqlTable('notifications', {
   createdAt: timestamp('created_at').defaultNow(),
 });
 
+export const broadcastMessages = mysqlTable('broadcast_messages', {
+  id: int('id').autoincrement().primaryKey(),
+  senderId: int('sender_id').references(() => users.id).notNull(),
+  title: varchar('title', { length: 255 }).notNull(),
+  message: text('message').notNull(),
+  channel: mysqlEnum('channel', ['toast', 'email', 'both']).default('both'),
+  targetCriteria: text('target_criteria'), // JSON storing the audience params
+  totalRecipients: int('total_recipients').default(0),
+  status: mysqlEnum('status', ['pending', 'processing', 'completed', 'failed']).default('pending'),
+  scheduledFor: timestamp('scheduled_for'),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const broadcastMessagesRelations = relations(broadcastMessages, ({ one }) => ({
+  sender: one(users, { fields: [broadcastMessages.senderId], references: [users.id] }),
+}));
+
 export const directMessages = mysqlTable('direct_messages', {
   id: int('id').autoincrement().primaryKey(),
   senderId: int('sender_id').references(() => users.id).notNull(),

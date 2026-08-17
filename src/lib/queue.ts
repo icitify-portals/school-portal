@@ -16,7 +16,7 @@ export const queueEvents = connection ? new QueueEvents('task-queue', { connecti
 /**
  * Helper to add a job to the queue
  */
-export async function addJob(name: string, data: any, cron?: string) {
+export async function addJob(name: string, data: any, cron?: string, delay?: number) {
     if (!taskQueue) {
         console.warn(`[QUEUE] Redis is disabled. Skipping job: ${name}`);
         return { id: 'mock-id-' + Date.now(), name, data };
@@ -34,6 +34,10 @@ export async function addJob(name: string, data: any, cron?: string) {
 
     if (cron) {
         options.repeat = { pattern: cron };
+    }
+    
+    if (delay) {
+        options.delay = delay;
     }
 
     return await taskQueue.add(name, data, options);
