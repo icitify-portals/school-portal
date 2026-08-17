@@ -36,8 +36,6 @@ services:
     image: redis:alpine
     container_name: school-portal-redis
     restart: always
-    ports:
-      - "127.0.0.1:6379:6379"
     networks:
       - portal_network
 
