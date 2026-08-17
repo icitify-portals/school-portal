@@ -67,19 +67,109 @@ export async function dispatchBulkMessage(data: {
             scheduledFor: scheduledForDate
         });
 
-        // Add to bullmq queue
-        await addJob("SEND_BULK_MESSAGE", {
-            broadcastId: insertId,
-            title: data.title,
-            message: data.message,
-            channel: data.channel,
-            targetCriteria: targetCriteria
-        }, undefined, delayMs);
+        try {
+            // Add to bullmq queue
+            await addJob("SEND_BULK_MESSAGE", {
+                broadcastId: insertId,
+                title: data.title,
+                message: data.message,
+                channel: data.channel,
+                targetCriteria: targetCriteria
+            }, undefined, delayMs);
+        } catch (queueError) {
+            console.error("Queue unavailable, processing inline asynchronously:", queueError);
+            // Fire and forget inline processing if Redis is down
+            processBulkMessageInline({
+                broadcastId: insertId,
+                title: data.title,
+                message: data.message,
+                channel: data.channel,
+                targetCriteria: targetCriteria
+            }).catch(console.error);
+        }
 
         return { success: true };
     } catch (error) {
         console.error("Failed to dispatch bulk message:", error);
         return { success: false, error: "Internal Server Error" };
+    }
+}
+
+// Inline fallback processor
+async function processBulkMessageInline(jobData: any) {
+    const { broadcastId, title, message, channel, targetCriteria } = jobData;
+    const { sendInAppNotification } = await import('./notifications');
+    const { broadcastMessages, users, students } = await import('@/db/schema');
+    
+    try {
+        let studentIds: number[] = [];
+        if (targetCriteria.type === 'users') {
+            studentIds = targetCriteria.userIds || [];
+        } else if (targetCriteria.type === 'staff') {
+            const { inArray } = await import('drizzle-orm');
+            const queryResult = await db.select({ id: users.id })
+                .from(users)
+                .where(inArray(users.role, ['staff', 'admin', 'bursar', 'registrar', 'librarian', 'hod', 'dean', 'admission_officer', 'dvc', 'superadmin']));
+            studentIds = queryResult.map((r: any) => r.id);
+        } else if (targetCriteria.type === 'levels' && targetCriteria.levels?.length) {
+            const levelStr = targetCriteria.levels[0];
+            if (levelStr === 'Applicant') {
+                const queryResult = await db.select({ id: users.id })
+                    .from(users)
+                    .where(eq(users.role, 'applicant'));
+                studentIds = queryResult.map((r: any) => r.id);
+            } else {
+                const { and } = await import('drizzle-orm');
+                let conditions: any[] = [];
+                if (levelStr === 'ND_graduated') conditions.push(eq(students.status, 'nd_graduated'));
+                else if (levelStr === 'HND_graduated') conditions.push(eq(students.status, 'hnd_graduated'));
+                else if (levelStr === 'ND 1') { conditions.push(eq(students.status, 'active'), eq(students.currentLevel, 100), eq(students.programmeType, 'ND')); }
+                else if (levelStr === 'ND 2') { conditions.push(eq(students.status, 'active'), eq(students.currentLevel, 200), eq(students.programmeType, 'ND')); }
+                else if (levelStr === 'HND 1') { conditions.push(eq(students.status, 'active'), eq(students.currentLevel, 100), eq(students.programmeType, 'HND')); }
+                else if (levelStr === 'HND 2') { conditions.push(eq(students.status, 'active'), eq(students.currentLevel, 200), eq(students.programmeType, 'HND')); }
+
+                if (conditions.length > 0) {
+                    const queryResult = await db.select({ userId: students.userId })
+                        .from(students).where(and(...conditions));
+                    studentIds = queryResult.filter((r: any) => r.userId).map((r: any) => r.userId as number);
+                }
+            }
+        } else {
+            const { inArray, and } = await import('drizzle-orm');
+            let conditions = [eq(students.status, 'active')];
+            if (targetCriteria.type === 'departments' && targetCriteria.departments?.length) {
+                conditions.push(inArray(students.deptId, targetCriteria.departments));
+            } else if (targetCriteria.type === 'programmes' && targetCriteria.programmes?.length) {
+                conditions.push(inArray(students.programmeId, targetCriteria.programmes));
+            }
+            const queryResult = await db.select({ userId: students.userId })
+                .from(students).where(and(...conditions));
+            studentIds = queryResult.filter((r: any) => r.userId).map((r: any) => r.userId as number);
+        }
+        
+        if (!studentIds.length) {
+            await db.update(broadcastMessages).set({ status: 'completed', totalRecipients: 0 }).where(eq(broadcastMessages.id, broadcastId));
+            return;
+        }
+        
+        await db.update(broadcastMessages).set({ status: 'processing', totalRecipients: studentIds.length }).where(eq(broadcastMessages.id, broadcastId));
+        
+        for (let i = 0; i < studentIds.length; i++) {
+            try {
+                await sendInAppNotification({
+                    userId: studentIds[i],
+                    title,
+                    message,
+                    type: 'info',
+                    channel: channel
+                });
+            } catch (err) {}
+        }
+        
+        await db.update(broadcastMessages).set({ status: 'completed' }).where(eq(broadcastMessages.id, broadcastId));
+    } catch (error) {
+        console.error(`Inline Job Fatal error:`, error);
+        await db.update(broadcastMessages).set({ status: 'failed' }).where(eq(broadcastMessages.id, broadcastId));
     }
 }
 
