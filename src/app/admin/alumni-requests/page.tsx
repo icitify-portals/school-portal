@@ -105,11 +105,17 @@ export default function AdminAlumniRequestsPage() {
                                         )}
                                     </td>
                                     <td className="p-4">
-                                        {req.paymentStatus === 'paid' ? (
-                                            <span className="text-emerald-700 bg-emerald-100 px-2 py-1 rounded text-xs font-bold">PAID</span>
-                                        ) : (
-                                            <span className="text-rose-700 bg-rose-100 px-2 py-1 rounded text-xs font-bold uppercase">{req.paymentStatus}</span>
-                                        )}
+                                        <div className="mb-1">
+                                            {req.paymentStatus === 'paid' ? (
+                                                <span className="text-emerald-700 bg-emerald-100 px-2 py-1 rounded text-xs font-bold">ALL PAID</span>
+                                            ) : (
+                                                <span className="text-amber-700 bg-amber-100 px-2 py-1 rounded text-xs font-bold uppercase">{req.paymentStatus}</span>
+                                            )}
+                                        </div>
+                                        <div className="text-xs text-slate-500 mt-2 flex flex-col gap-1">
+                                            <span>Convocation: <span className={req.convocationFeeStatus === 'paid' ? 'text-emerald-600 font-bold uppercase' : 'text-rose-600 font-bold uppercase'}>{req.convocationFeeStatus}</span></span>
+                                            <span>Processing: <span className={req.processingFeeStatus === 'paid' ? 'text-emerald-600 font-bold uppercase' : 'text-rose-600 font-bold uppercase'}>{req.processingFeeStatus}</span></span>
+                                        </div>
                                     </td>
                                     <td className="p-4">
                                         <span className={`px-2 py-1 rounded text-xs font-bold uppercase ${req.approvalStatus === 'fulfilled' ? 'bg-emerald-100 text-emerald-700' : req.approvalStatus === 'approved' ? 'bg-blue-100 text-blue-700' : req.approvalStatus === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>

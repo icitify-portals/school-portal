@@ -94,6 +94,7 @@ export default function AdminTranscriptRequestsPage() {
                                 <tr>
                                     <th className="py-4 px-6">Applicant</th>
                                     <th className="py-4 px-6">Destination</th>
+                                    <th className="py-4 px-6">Payment</th>
                                     <th className="py-4 px-6">Status</th>
                                     <th className="py-4 px-6">Date</th>
                                     <th className="py-4 px-6 text-right">Action</th>
@@ -111,6 +112,19 @@ export default function AdminTranscriptRequestsPage() {
                                             <div className="font-medium text-slate-700">{req.destinationName}</div>
                                             <div className="text-xs text-slate-500 truncate">{req.destinationAddress}</div>
                                             <div className="text-xs font-semibold text-indigo-600 mt-1 uppercase tracking-wider">{req.deliveryMethod}</div>
+                                        </td>
+                                        <td className="py-4 px-6">
+                                            <div className="mb-1">
+                                                {req.paymentStatus === 'paid' ? (
+                                                    <span className="text-emerald-700 bg-emerald-100 px-2 py-1 rounded text-xs font-bold">ALL PAID</span>
+                                                ) : (
+                                                    <span className="text-amber-700 bg-amber-100 px-2 py-1 rounded text-xs font-bold uppercase">{req.paymentStatus}</span>
+                                                )}
+                                            </div>
+                                            <div className="text-xs text-slate-500 mt-2 flex flex-col gap-1">
+                                                <span>Transcript: <span className={req.alatpayStatus === 'paid' ? 'text-emerald-600 font-bold uppercase' : 'text-rose-600 font-bold uppercase'}>{req.alatpayStatus}</span></span>
+                                                <span>Processing: <span className={req.paystackStatus === 'paid' ? 'text-emerald-600 font-bold uppercase' : 'text-rose-600 font-bold uppercase'}>{req.paystackStatus}</span></span>
+                                            </div>
                                         </td>
                                         <td className="py-4 px-6">
                                             {req.approvalStatus === 'dispatched' ? (
