@@ -12,10 +12,11 @@ export async function dispatchBulkMessage(data: {
     message: string;
     channel: "toast" | "email" | "both";
     targetType: "all" | "levels" | "departments" | "programmes" | "users";
-    levels?: number[];
+    levels?: string[];
     departments?: number[];
     programmes?: number[];
     userIds?: number[];
+    emails?: string[];
     scheduledFor?: string | null;
 }) {
     try {
@@ -33,7 +34,15 @@ export async function dispatchBulkMessage(data: {
         if (data.targetType === "levels") targetCriteria.levels = data.levels;
         if (data.targetType === "departments") targetCriteria.departments = data.departments;
         if (data.targetType === "programmes") targetCriteria.programmes = data.programmes;
-        if (data.targetType === "users") targetCriteria.userIds = data.userIds;
+        if (data.targetType === "users") {
+            let ids: number[] = data.userIds || [];
+            if (data.emails && data.emails.length > 0) {
+                const { inArray } = await import("drizzle-orm");
+                const emailUsers = await db.select({ id: users.id }).from(users).where(inArray(users.email, data.emails));
+                ids = [...ids, ...emailUsers.map(u => u.id)];
+            }
+            targetCriteria.userIds = ids;
+        }
 
         // Calculate delay for scheduler
         let delayMs: number | undefined = undefined;

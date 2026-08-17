@@ -60,12 +60,49 @@ if (!connection) {
                 
                 if (targetCriteria.type === 'users') {
                     studentIds = targetCriteria.userIds || [];
+                } else if (targetCriteria.type === 'levels' && targetCriteria.levels?.length) {
+                    const levelStr = targetCriteria.levels[0]; // Currently UI supports 1 level at a time
+                    if (levelStr === 'Applicant') {
+                        const { users } = await import('./db/schema');
+                        const queryResult = await db.select({ id: users.id })
+                            .from(users)
+                            .where(eq(users.role, 'applicant'));
+                        studentIds = queryResult.map(r => r.id);
+                    } else {
+                        let conditions: any[] = [];
+                        if (levelStr === 'ND_graduated') {
+                            conditions.push(eq(students.status, 'nd_graduated'));
+                        } else if (levelStr === 'HND_graduated') {
+                            conditions.push(eq(students.status, 'hnd_graduated'));
+                        } else if (levelStr === 'ND 1') {
+                            conditions.push(eq(students.status, 'active'));
+                            conditions.push(eq(students.currentLevel, 100));
+                            conditions.push(eq(students.programmeType, 'ND'));
+                        } else if (levelStr === 'ND 2') {
+                            conditions.push(eq(students.status, 'active'));
+                            conditions.push(eq(students.currentLevel, 200));
+                            conditions.push(eq(students.programmeType, 'ND'));
+                        } else if (levelStr === 'HND 1') {
+                            conditions.push(eq(students.status, 'active'));
+                            conditions.push(eq(students.currentLevel, 100));
+                            conditions.push(eq(students.programmeType, 'HND'));
+                        } else if (levelStr === 'HND 2') {
+                            conditions.push(eq(students.status, 'active'));
+                            conditions.push(eq(students.currentLevel, 200));
+                            conditions.push(eq(students.programmeType, 'HND'));
+                        }
+
+                        if (conditions.length > 0) {
+                            const queryResult = await db.select({ userId: students.userId })
+                                .from(students)
+                                .where(and(...conditions));
+                            studentIds = queryResult.filter(r => r.userId).map(r => r.userId as number);
+                        }
+                    }
                 } else {
                     let conditions = [eq(students.status, 'active')];
                     
-                    if (targetCriteria.type === 'levels' && targetCriteria.levels?.length) {
-                        conditions.push(inArray(students.currentLevel, targetCriteria.levels));
-                    } else if (targetCriteria.type === 'departments' && targetCriteria.departments?.length) {
+                    if (targetCriteria.type === 'departments' && targetCriteria.departments?.length) {
                         conditions.push(inArray(students.deptId, targetCriteria.departments));
                     } else if (targetCriteria.type === 'programmes' && targetCriteria.programmes?.length) {
                         conditions.push(inArray(students.programmeId, targetCriteria.programmes));

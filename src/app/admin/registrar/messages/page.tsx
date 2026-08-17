@@ -29,6 +29,7 @@ export default function BulkMessageDashboard() {
     const [selectedLevel, setSelectedLevel] = useState<string>("");
     const [selectedDept, setSelectedDept] = useState<string>("");
     const [selectedProg, setSelectedProg] = useState<string>("");
+    const [targetCriteriaEmails, setTargetCriteriaEmails] = useState<string>("");
 
     useEffect(() => {
         loadData();
@@ -41,8 +42,8 @@ export default function BulkMessageDashboard() {
             getBroadcastMessages()
         ]);
         
-        if (progRes.success) setProgrammesList(progRes.data || []);
-        if (deptRes.success) setDepartmentsList(deptRes.data || []);
+        if (Array.isArray(progRes)) setProgrammesList(progRes);
+        if (Array.isArray(deptRes)) setDepartmentsList(deptRes);
         if (bRes.success) setBroadcasts(bRes.data || []);
     };
 
@@ -64,11 +65,13 @@ export default function BulkMessageDashboard() {
         }
 
         if (targetType === "levels" && selectedLevel) {
-            payload.levels = [parseInt(selectedLevel)];
+            payload.levels = [selectedLevel];
         } else if (targetType === "departments" && selectedDept) {
             payload.departments = [parseInt(selectedDept)];
         } else if (targetType === "programmes" && selectedProg) {
             payload.programmes = [parseInt(selectedProg)];
+        } else if (targetType === "users" && targetCriteriaEmails) {
+            payload.emails = targetCriteriaEmails.split(",").map(e => e.trim());
         }
 
         setLoading(true);
@@ -130,17 +133,26 @@ export default function BulkMessageDashboard() {
                         </div>
                     </div>
 
+                    {targetType === "users" && (
+                        <div>
+                            <label className="text-sm font-medium">Individual Emails (comma separated)</label>
+                            <Input value={targetCriteriaEmails} onChange={(e) => setTargetCriteriaEmails(e.target.value)} placeholder="e.g. user1@example.com, aa.adelopo2@gmail.com" />
+                        </div>
+                    )}
+
                     {targetType === "levels" && (
                         <div>
                             <label className="text-sm font-medium">Select Level</label>
                             <Select value={selectedLevel} onValueChange={setSelectedLevel}>
                                 <SelectTrigger><SelectValue placeholder="Choose a level" /></SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="100">100 Level</SelectItem>
-                                    <SelectItem value="200">200 Level</SelectItem>
-                                    <SelectItem value="300">300 Level</SelectItem>
-                                    <SelectItem value="400">400 Level</SelectItem>
-                                    <SelectItem value="500">500 Level</SelectItem>
+                                    <SelectItem value="Applicant">Applicant</SelectItem>
+                                    <SelectItem value="ND 1">ND 1</SelectItem>
+                                    <SelectItem value="ND 2">ND 2</SelectItem>
+                                    <SelectItem value="ND_graduated">ND Graduated</SelectItem>
+                                    <SelectItem value="HND 1">HND 1</SelectItem>
+                                    <SelectItem value="HND 2">HND 2</SelectItem>
+                                    <SelectItem value="HND_graduated">HND Graduated</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
