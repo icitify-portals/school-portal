@@ -9,6 +9,7 @@ import {
     Image as ImageIcon, ChevronDown, ChevronUp, Shield, ShieldAlert, ShieldCheck, Edit
 } from "lucide-react";
 import { getAdminV2ApplicationDetail, updateAdmissionStatus, confirmAdmissionPayment, confirmAcceptancePayment, reverseAdmissionPayment, confirmProcessingFeePayment, reverseProcessingFeePayment, updateApplicantData, changeApplicantProgramme, getAdmissionAcademicUnits } from "@/actions/admission_v2";
+import { verifyUserEmailManually } from "@/actions/user-actions";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -39,6 +40,24 @@ export default function V2ApplicationDetailPage() {
     const [selectedProgId, setSelectedProgId] = useState<number | "">("");
     const [transferReason, setTransferReason] = useState("");
     const [isTransferring, setIsTransferring] = useState(false);
+    const [isVerifyingEmail, setIsVerifyingEmail] = useState(false);
+
+    const handleVerifyEmail = async () => {
+        const targetUserId = app?.applicantId || app?.userId || app?.id;
+        if (!targetUserId) {
+            toast.error("User ID not found for this applicant.");
+            return;
+        }
+        setIsVerifyingEmail(true);
+        const res = await verifyUserEmailManually(targetUserId);
+        setIsVerifyingEmail(false);
+        if (res.success) {
+            toast.success(res.message || "Email verified successfully.");
+            setApp((prev: any) => prev ? { ...prev, emailVerified: true } : prev);
+        } else {
+            toast.error(res.error || "Failed to verify email.");
+        }
+    };
 
     const openTransferModal = async () => {
         const units = await getAdmissionAcademicUnits();
@@ -436,6 +455,14 @@ export default function V2ApplicationDetailPage() {
                             </div>
                         </div>
                         <div className="flex flex-wrap gap-3 no-print">
+                            <Button
+                                onClick={handleVerifyEmail}
+                                disabled={isVerifyingEmail || app.emailVerified}
+                                className={`rounded-xl border font-black text-[10px] uppercase tracking-widest px-5 py-3 backdrop-blur-md transition-all ${app.emailVerified ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40 cursor-default" : "bg-sky-600/20 hover:bg-sky-600/40 text-white border-sky-500/30 shadow-lg"}`}
+                            >
+                                {isVerifyingEmail ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <CheckCircle2 className="w-4 h-4 mr-2" />}
+                                {app.emailVerified ? "Email Verified" : "Verify Email"}
+                            </Button>
                             <Button
                                 onClick={openTransferModal}
                                 className="rounded-xl bg-emerald-600/20 hover:bg-emerald-600/40 text-white border border-emerald-500/30 font-black text-[10px] uppercase tracking-widest px-5 py-3 backdrop-blur-md"

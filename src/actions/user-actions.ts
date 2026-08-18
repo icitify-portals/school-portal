@@ -238,7 +238,10 @@ export async function verifyUserEmailManually(userId: number) {
     try {
         const session = await auth();
         const actorId = session?.user?.id ? parseInt(session.user.id) : null;
-        if (!actorId) return { success: false, error: "Unauthorized" };
+        const actorRole = (session?.user as any)?.role?.toLowerCase() || "";
+        if (!actorId || !['superadmin', 'icitify_dev', 'admin', 'dvc', 'bursar', 'registrar', 'admission_officer', 'hod', 'dean'].includes(actorRole)) {
+            return { success: false, error: "Unauthorized access for email verification" };
+        }
         
         await db.update(users).set({
             emailVerified: true
@@ -249,12 +252,14 @@ export async function verifyUserEmailManually(userId: number) {
                 actorId,
                 action: 'MANUAL_EMAIL_VERIFICATION',
                 targetId: userId.toString(),
-                details: JSON.stringify({ userId, timestamp: new Date() }),
+                details: JSON.stringify({ userId, actorRole, timestamp: new Date() }),
                 status: 'success'
             });
         }
         
         revalidatePath("/admin/users");
+        revalidatePath("/admin/students");
+        revalidatePath("/admin/admission/v2");
         return { success: true, message: "Email verified successfully." };
     } catch (error) {
         console.error("Manual Email Verification Error:", error);
