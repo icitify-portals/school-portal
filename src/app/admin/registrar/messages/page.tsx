@@ -5,11 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { dispatchBulkMessage, getBroadcastMessages } from "@/actions/registrar-messages";
+import { dispatchBulkMessage, getBroadcastMessages, deleteBroadcastMessage, clearBroadcastHistory } from "@/actions/registrar-messages";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { getProgrammes } from "@/actions/programmes";
 import { getDepartments } from "@/actions/departments";
-import { Loader2 } from "lucide-react";
+import { Loader2, Trash2 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function BulkMessageDashboard() {
@@ -85,6 +85,28 @@ export default function BulkMessageDashboard() {
             loadData();
         } else {
             toast.error(res.error || "Failed to dispatch message.");
+        }
+    };
+
+    const handleDelete = async (id: number) => {
+        if (!confirm("Are you sure you want to delete this message record?")) return;
+        const res = await deleteBroadcastMessage(id);
+        if (res.success) {
+            toast.success("Message record deleted");
+            setBroadcasts(prev => prev.filter(b => b.id !== id));
+        } else {
+            toast.error(res.error || "Failed to delete message record");
+        }
+    };
+
+    const handleClearAll = async () => {
+        if (!confirm("Are you sure you want to clear ALL broadcast message history? This action cannot be undone.")) return;
+        const res = await clearBroadcastHistory();
+        if (res.success) {
+            toast.success("Broadcast history cleared");
+            setBroadcasts([]);
+        } else {
+            toast.error(res.error || "Failed to clear broadcast history");
         }
     };
 
@@ -202,9 +224,16 @@ export default function BulkMessageDashboard() {
             </Card>
 
             <Card>
-                <CardHeader>
-                    <CardTitle>Broadcast History</CardTitle>
-                    <CardDescription>Recent messages sent by the registrar</CardDescription>
+                <CardHeader className="flex flex-row items-center justify-between">
+                    <div>
+                        <CardTitle>Broadcast History</CardTitle>
+                        <CardDescription>Recent messages sent by the registrar</CardDescription>
+                    </div>
+                    {broadcasts.length > 0 && (
+                        <Button variant="outline" size="sm" onClick={handleClearAll} className="text-xs text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200">
+                            <Trash2 className="w-3.5 h-3.5 mr-1" /> Clear All History
+                        </Button>
+                    )}
                 </CardHeader>
                 <CardContent>
                     <div className="space-y-4 max-h-[600px] overflow-y-auto">
@@ -212,17 +241,26 @@ export default function BulkMessageDashboard() {
                             <p className="text-sm text-gray-500 text-center py-4">No broadcasts found.</p>
                         ) : (
                             broadcasts.map(b => (
-                                <div key={b.id} className="border p-4 rounded-lg flex flex-col gap-1">
+                                <div key={b.id} className="border p-4 rounded-lg flex flex-col gap-1 relative group">
                                     <div className="flex justify-between items-start">
                                         <h4 className="font-semibold">{b.title}</h4>
-                                        <span className={`text-xs px-2 py-1 rounded-full ${
-                                            b.status === 'completed' ? 'bg-green-100 text-green-800' : 
-                                            b.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                                            b.status === 'failed' ? 'bg-red-100 text-red-800' :
-                                            'bg-blue-100 text-blue-800'
-                                        }`}>
-                                            {b.status}
-                                        </span>
+                                        <div className="flex items-center gap-2">
+                                            <span className={`text-xs px-2 py-1 rounded-full ${
+                                                b.status === 'completed' ? 'bg-green-100 text-green-800' : 
+                                                b.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                                                b.status === 'failed' ? 'bg-red-100 text-red-800' :
+                                                'bg-blue-100 text-blue-800'
+                                            }`}>
+                                                {b.status}
+                                            </span>
+                                            <button 
+                                                onClick={() => handleDelete(b.id)}
+                                                className="text-slate-400 hover:text-red-600 transition-colors p-1"
+                                                title="Delete record"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
+                                        </div>
                                     </div>
                                     <p className="text-sm text-gray-600 line-clamp-2">{b.message}</p>
                                     <div className="flex justify-between text-xs text-gray-500 mt-2">

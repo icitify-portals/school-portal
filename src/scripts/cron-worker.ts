@@ -1,4 +1,5 @@
-import "dotenv/config";
+import dotenv from "dotenv";
+dotenv.config();
 import cron from "node-cron";
 import { runBackup } from "../actions/backup";
 import { processAutomatedMessages } from "../actions/automated-messages-processor";

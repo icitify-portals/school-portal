@@ -227,3 +227,39 @@ export async function getBroadcastMessages() {
         return { success: false, error: "Internal Server Error" };
     }
 }
+
+export async function deleteBroadcastMessage(broadcastId: number) {
+    try {
+        const session = await auth();
+        if (!session?.user?.id) return { success: false, error: "Unauthorized" };
+        
+        const isAllowed = await hasRole("admin") || await hasRole("registrar") || await hasRole("superadmin");
+        if (!isAllowed) {
+            return { success: false, error: "Forbidden" };
+        }
+
+        await db.delete(broadcastMessages).where(eq(broadcastMessages.id, broadcastId));
+        return { success: true };
+    } catch (error) {
+        console.error("Failed to delete broadcast message:", error);
+        return { success: false, error: "Internal Server Error" };
+    }
+}
+
+export async function clearBroadcastHistory() {
+    try {
+        const session = await auth();
+        if (!session?.user?.id) return { success: false, error: "Unauthorized" };
+        
+        const isAllowed = await hasRole("admin") || await hasRole("registrar") || await hasRole("superadmin");
+        if (!isAllowed) {
+            return { success: false, error: "Forbidden" };
+        }
+
+        await db.delete(broadcastMessages);
+        return { success: true };
+    } catch (error) {
+        console.error("Failed to clear broadcast history:", error);
+        return { success: false, error: "Internal Server Error" };
+    }
+}
