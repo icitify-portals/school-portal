@@ -1,5 +1,9 @@
-import dotenv from "dotenv";
-dotenv.config();
+try {
+    const dotenv = await import("dotenv");
+    dotenv.default.config();
+} catch (e) {
+    // Environment variables supplied directly by container in production
+}
 import cron from "node-cron";
 import { runBackup } from "../actions/backup";
 import { processAutomatedMessages } from "../actions/automated-messages-processor";
