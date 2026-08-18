@@ -36,7 +36,11 @@ import { writeFile, mkdir } from "fs/promises";
 import path from "path";
 import { randomUUID } from "crypto";
 
-const ADMIN_ROLES = ['admin', 'superadmin', 'icitify_dev', 'dvc', 'registrar', 'admission_officer'];
+const ADMIN_ROLES = [
+    'admin', 'superadmin', 'icitify_dev', 'dvc', 'vc',
+    'registrar', 'admission_officer', 'bursar', 'bursary',
+    'accountant', 'auditor'
+];
 
 async function requireAdmin() {
     const session = await auth();

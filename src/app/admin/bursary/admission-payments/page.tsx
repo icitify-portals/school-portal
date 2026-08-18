@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -25,9 +25,21 @@ export default function BursaryAdmissionPaymentsPage() {
 
     const fetchData = async () => {
         setLoading(true);
-        const result = await getAdminV2Applications({ pageSize: 100 });
-        setData(result);
-        setLoading(false);
+        try {
+            const result = await getAdminV2Applications({ pageSize: 100 });
+            if (result && Array.isArray(result.applications)) {
+                setData(result);
+            } else {
+                setData({ applications: [], total: 0 });
+                if (result?.error) toast.error(result.error);
+            }
+        } catch (err: any) {
+            console.error("Failed to load admission payments:", err);
+            toast.error(err?.message || "Failed to load admission payments");
+            setData({ applications: [], total: 0 });
+        } finally {
+            setLoading(false);
+        }
     };
 
     const handleConfirm = async (id: number) => {
@@ -42,8 +54,10 @@ export default function BursaryAdmissionPaymentsPage() {
         }
     };
 
-    const filtered = data.applications.filter((app: any) => {
-        const matchesSearch = app.applicantName?.toLowerCase().includes(search.toLowerCase()) ||
+    const appsList = Array.isArray(data?.applications) ? data.applications : [];
+
+    const filtered = appsList.filter((app: any) => {
+        const matchesSearch = (app.applicantName || '').toLowerCase().includes(search.toLowerCase()) ||
                              (app.formNumber || '').toLowerCase().includes(search.toLowerCase());
         const matchesFilter = filter === "all" ? true : app.paymentStatus === filter;
         return matchesSearch && matchesFilter;
@@ -68,8 +82,8 @@ export default function BursaryAdmissionPaymentsPage() {
         }
     };
 
-    const paidTotal = data.applications.filter((a: any) => a.paymentStatus === 'paid').length;
-    const pendingTotal = data.applications.filter((a: any) => a.paymentStatus === 'pending').length;
+    const paidTotal = appsList.filter((a: any) => a.paymentStatus === 'paid').length;
+    const pendingTotal = appsList.filter((a: any) => a.paymentStatus === 'pending').length;
 
     return (
         <div className="p-4 sm:p-6 lg:p-8 min-h-screen">
