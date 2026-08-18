@@ -392,6 +392,49 @@ export default function CentralBroadcastCommunicationsPage() {
                                 <p className="text-[11px] text-slate-400 mt-1">Leave empty to dispatch broadcast immediately.</p>
                             </div>
 
+                            {/* Preset Template Selector */}
+                            <div>
+                                <div className="flex items-center justify-between mb-2">
+                                    <Label className="text-xs font-black uppercase tracking-wider text-slate-500 block flex items-center gap-1.5">
+                                        <Sparkles className="w-3.5 h-3.5 text-indigo-600" /> Load Preset Message Template (Optional)
+                                    </Label>
+                                    <span className="text-[11px] font-semibold text-indigo-600">Supports [Name], [Department], [Level] tags</span>
+                                </div>
+                                <select
+                                    onChange={(e) => {
+                                        const val = e.target.value;
+                                        if (val === "bday_student") {
+                                            setTitle("🎉 Happy Birthday from FSS Ibadan!");
+                                            setMessage("Dear [Name],\n\nThe management and staff of Federal School of Statistics, Ibadan wish you a very Happy Birthday! May this new year of your life bring academic excellence, joy, and fulfilled dreams.\n\nWarm regards,\nManagement");
+                                        } else if (val === "bday_staff") {
+                                            setTitle("🎂 Happy Birthday from FSS Management!");
+                                            setMessage("Dear [Name],\n\nOn behalf of the Governing Board and Management of FSS Ibadan, we wish you a joyful Happy Birthday! Thank you for your continued dedication to our institution.\n\nBest wishes,\nOffice of the Rector");
+                                        } else if (val === "anniv_staff") {
+                                            setTitle("🏅 Happy Work Anniversary!");
+                                            setMessage("Dear [Name],\n\nCongratulations on reaching another milestone with FSS Ibadan! We celebrate your hard work, service, and contribution to our institution.\n\nSincerely,\nDirector of Human Resources");
+                                        } else if (val === "holiday_greeting") {
+                                            setTitle("✨ Season's Greetings & Holiday Wishes");
+                                            setMessage("Dear Students & Staff,\n\nAs we celebrate this holiday season, management wishes the entire FSS Ibadan community peace, joy, and restful moments with loved ones. Please note normal academic activities resume promptly as scheduled.\n\nHappy Holidays!");
+                                        } else if (val === "registration_reminder") {
+                                            setTitle("📢 Urgent Reminder: Course Registration Deadline");
+                                            setMessage("Dear Student,\n\nThis is a friendly reminder that official course registration for the current semester closes shortly. Kindly complete your departmental course registration and fee verification on your student portal.\n\nThank you,\nAcademic Registry");
+                                        } else if (val === "admission_notice") {
+                                            setTitle("🎓 FSS Ibadan Admission & Screening Update");
+                                            setMessage("Dear Applicant,\n\nWe are pleased to inform you that the admission screening status for your application has been updated. Please log into your admission portal to view your status and proceed with fee payment.\n\nAdmission Office");
+                                        }
+                                    }}
+                                    className="w-full p-3 border border-slate-200 rounded-xl text-xs font-bold bg-slate-50 text-slate-700 focus:ring-2 focus:ring-indigo-500"
+                                >
+                                    <option value="">-- Choose a Preset Template to Auto-Fill --</option>
+                                    <option value="bday_student">🎉 Student Birthday Greeting</option>
+                                    <option value="bday_staff">🎂 Staff Birthday Greeting</option>
+                                    <option value="anniv_staff">🏅 Staff Work Anniversary</option>
+                                    <option value="holiday_greeting">✨ Festival / Holiday Greeting</option>
+                                    <option value="registration_reminder">📢 Academic Course Registration Reminder</option>
+                                    <option value="admission_notice">🎓 Admission Screening & Offer Notice</option>
+                                </select>
+                            </div>
+
                             {/* Message Body Input */}
                             <div>
                                 <Label className="text-xs font-black uppercase tracking-wider text-slate-500 mb-2 block">Message Content</Label>
