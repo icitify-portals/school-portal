@@ -2433,7 +2433,8 @@ export async function updateApplicantData(appId: number, updatePayload: any) {
             })
             .where(eq(admissionApplicationsV2.id, appId));
 
-        if (app.userId) {
+        const targetUserId = app.applicantId || app.userId;
+        if (targetUserId) {
             const updates: any = {};
             // Extract the canonical names dynamically from merged data for the users table
             let newFirstName = mergedData.firstName || mergedData.first_name || mergedData['First Name'] || '';
@@ -2460,7 +2461,7 @@ export async function updateApplicantData(appId: number, updatePayload: any) {
             if (phoneKey) updates.phone = updatePayload[phoneKey];
 
             if (Object.keys(updates).length > 0) {
-                await db.update(users).set(updates).where(eq(users.id, app.userId));
+                await db.update(users).set(updates).where(eq(users.id, targetUserId));
             }
         }
         revalidatePath(`/admin/admission/v2/${appId}`);
