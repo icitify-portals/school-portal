@@ -170,8 +170,8 @@ export async function resetUserPassword(userId: number, newPassword?: string) {
         const session = await auth();
         const actorRole = (session?.user as any)?.role?.toLowerCase() || "";
         const actorId = session?.user?.id ? parseInt(session.user.id) : null;
-        if (!['superadmin', 'admin', 'dvc', 'bursar', 'registrar'].includes(actorRole)) {
-            return { success: false, error: "Unauthorized: Only superadmin, vice chancellor, bursar, and registrar can edit." };
+        if (!['superadmin', 'icitify_dev', 'admin', 'dvc', 'bursar', 'registrar', 'admission_officer', 'hod', 'dean'].includes(actorRole)) {
+            return { success: false, error: "Unauthorized access to reset password." };
         }
 
         const passwordToSet = newPassword || "welcome123";
@@ -186,15 +186,17 @@ export async function resetUserPassword(userId: number, newPassword?: string) {
                 actorId,
                 action: 'RESET_PASSWORD',
                 targetId: userId.toString(),
-                details: JSON.stringify({ userId, timestamp: new Date() }),
+                details: JSON.stringify({ userId, actorRole, timestamp: new Date() }),
                 status: 'success'
             });
         }
 
         revalidatePath("/admin/users");
+        revalidatePath("/admin/students");
+        revalidatePath("/admin/hr");
         // SECURITY FIX M-2: Never include the password value in a server action response.
         // The password is never returned to the client — callers receive a generic acknowledgment.
-        return { success: true, message: "Password has been reset. The user will be prompted to change it on next login." };
+        return { success: true, message: "Password has been reset successfully." };
     } catch (error) {
         console.error("Reset Password Error:", error);
         return { success: false, error: "Failed to reset password." };
@@ -206,8 +208,8 @@ export async function updateUserStatus(userId: number, status: 'active' | 'suspe
         const session = await auth();
         const actorRole = (session?.user as any)?.role?.toLowerCase() || "";
         const actorId = session?.user?.id ? parseInt(session.user.id) : null;
-        if (!['superadmin', 'admin', 'dvc', 'bursar', 'registrar'].includes(actorRole)) {
-            return { success: false, error: "Unauthorized: Only superadmin, vice chancellor, bursar, and registrar can edit." };
+        if (!['superadmin', 'icitify_dev', 'admin', 'dvc', 'bursar', 'registrar', 'admission_officer', 'hod', 'dean'].includes(actorRole)) {
+            return { success: false, error: "Unauthorized access to update user status." };
         }
 
         await db.update(users).set({

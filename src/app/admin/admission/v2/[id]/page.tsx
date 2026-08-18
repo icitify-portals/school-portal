@@ -6,10 +6,10 @@ import { Button } from "@/components/ui/button";
 import {
     FileText, User, Mail, Phone, Calendar, CheckCircle2, XCircle, AlertCircle,
     Loader2, ArrowLeft, Printer, CreditCard, GraduationCap, BookOpen, Hash,
-    Image as ImageIcon, ChevronDown, ChevronUp, Shield, ShieldAlert, ShieldCheck, Edit
+    Image as ImageIcon, ChevronDown, ChevronUp, Shield, ShieldAlert, ShieldCheck, Edit, Lock
 } from "lucide-react";
 import { getAdminV2ApplicationDetail, updateAdmissionStatus, confirmAdmissionPayment, confirmAcceptancePayment, reverseAdmissionPayment, confirmProcessingFeePayment, reverseProcessingFeePayment, updateApplicantData, changeApplicantProgramme, getAdmissionAcademicUnits } from "@/actions/admission_v2";
-import { verifyUserEmailManually } from "@/actions/user-actions";
+import { verifyUserEmailManually, resetUserPassword } from "@/actions/user-actions";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -41,6 +41,7 @@ export default function V2ApplicationDetailPage() {
     const [transferReason, setTransferReason] = useState("");
     const [isTransferring, setIsTransferring] = useState(false);
     const [isVerifyingEmail, setIsVerifyingEmail] = useState(false);
+    const [isResettingPassword, setIsResettingPassword] = useState(false);
 
     const handleVerifyEmail = async () => {
         const targetUserId = app?.applicantId || app?.userId || app?.id;
@@ -56,6 +57,25 @@ export default function V2ApplicationDetailPage() {
             setApp((prev: any) => prev ? { ...prev, emailVerified: true } : prev);
         } else {
             toast.error(res.error || "Failed to verify email.");
+        }
+    };
+
+    const handleResetPassword = async () => {
+        const targetUserId = app?.applicantId || app?.userId || app?.id;
+        if (!targetUserId) {
+            toast.error("User ID not found for this applicant.");
+            return;
+        }
+        const newPass = prompt("Enter a new password for this user (leave blank to default to 'welcome123'):");
+        if (newPass === null) return;
+        
+        setIsResettingPassword(true);
+        const res = await resetUserPassword(targetUserId, newPass || undefined);
+        setIsResettingPassword(false);
+        if (res.success) {
+            toast.success(res.message || "Password reset successfully.");
+        } else {
+            toast.error(res.error || "Failed to reset password.");
         }
     };
 
@@ -462,6 +482,14 @@ export default function V2ApplicationDetailPage() {
                             >
                                 {isVerifyingEmail ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <CheckCircle2 className="w-4 h-4 mr-2" />}
                                 {app.emailVerified ? "Email Verified" : "Verify Email"}
+                            </Button>
+                            <Button
+                                onClick={handleResetPassword}
+                                disabled={isResettingPassword}
+                                className="rounded-xl bg-amber-600/20 hover:bg-amber-600/40 text-amber-300 border border-amber-500/30 font-black text-[10px] uppercase tracking-widest px-5 py-3 backdrop-blur-md"
+                            >
+                                {isResettingPassword ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Lock className="w-4 h-4 mr-2" />}
+                                Reset Password
                             </Button>
                             <Button
                                 onClick={openTransferModal}
