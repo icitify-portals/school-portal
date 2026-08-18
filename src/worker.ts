@@ -138,43 +138,65 @@ if (!connection) {
                 let success = 0;
                 let fail = 0;
                 
-                for (let i = 0; i < studentIds.length; i++) {
-                    const userId = studentIds[i];
+                // 1. High-Performance Bulk In-App Notification Insertion
+                if ((channel === 'both' || channel === 'toast') && studentIds.length > 0) {
                     try {
-                        await sendInAppNotification({
-                            userId,
+                        const { notifications } = await import('./db/schema');
+                        const notifValues = studentIds.map(uid => ({
+                            userId: uid,
                             title,
                             message,
-                            type: 'info',
-                            channel: channel
-                        });
-                        success++;
-                    } catch (err) {
-                        fail++;
-                    }
-                    
-                    if (i % 20 === 0 || i === studentIds.length - 1) {
-                        await job.updateProgress(Math.floor(((i + 1) / (studentIds.length + externalEmails.length)) * 100));
+                            type: 'info' as const,
+                            channel: channel,
+                            isRead: false,
+                            isToasted: false,
+                        }));
+                        
+                        const NOTIF_CHUNK = 250;
+                        for (let i = 0; i < notifValues.length; i += NOTIF_CHUNK) {
+                            const chunk = notifValues.slice(i, i + NOTIF_CHUNK);
+                            await db.insert(notifications).values(chunk);
+                        }
+                    } catch (notifErr) {
+                        console.error(`[JOB ${job.id}] In-app notification bulk insert error:`, notifErr);
                     }
                 }
                 
-                if (externalEmails.length > 0 && (channel === 'both' || channel === 'email')) {
+                // 2. High-Speed Concurrent Batch Email Dispatching
+                if (channel === 'both' || channel === 'email') {
                     const { sendEmail } = await import('./lib/mail');
                     const { config } = await import('./lib/config');
-                    const html = `<div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
-                            <h2 style="color: #4f46e5;">${title}</h2>
-                            <p style="font-size: 16px; color: #374151;">${message}</p>
-                            <hr style="margin: 20px 0; border: none; border-top: 1px solid #eee;" />
-                            <p style="font-size: 12px; color: #9ca3af;">This is an automated alert from your FSS Portal.</p>
+                    const { users } = await import('./db/schema');
+                    
+                    let recipientEmails: string[] = [...externalEmails];
+                    if (studentIds.length > 0) {
+                        const dbUsers = await db.select({ email: users.email }).from(users).where(inArray(users.id, studentIds));
+                        for (const u of dbUsers) {
+                            if (u.email && !recipientEmails.includes(u.email)) {
+                                recipientEmails.push(u.email);
+                            }
+                        }
+                    }
+
+                    const html = `<div style="font-family: sans-serif; padding: 24px; border: 1px solid #e2e8f0; border-radius: 16px; background-color: #ffffff;">
+                            <h2 style="color: #4f46e5; margin-top: 0;">${title}</h2>
+                            <p style="font-size: 15px; color: #334155; line-height: 1.6;">${message}</p>
+                            <hr style="margin: 24px 0; border: none; border-top: 1px solid #e2e8f0;" />
+                            <p style="font-size: 12px; color: #94a3b8;">This is an automated notification from your institution's official portal.</p>
                         </div>`;
                     
-                    for (let i = 0; i < externalEmails.length; i++) {
-                        try {
-                            await sendEmail(externalEmails[i], title, html, config.mail.from);
-                            success++;
-                        } catch (err) {
-                            fail++;
-                        }
+                    const EMAIL_BATCH_SIZE = 10;
+                    for (let i = 0; i < recipientEmails.length; i += EMAIL_BATCH_SIZE) {
+                        const batch = recipientEmails.slice(i, i + EMAIL_BATCH_SIZE);
+                        await Promise.all(batch.map(async (email) => {
+                            try {
+                                const res = await sendEmail(email, title, html, config.mail.from);
+                                if (res.success) success++; else fail++;
+                            } catch (err) {
+                                fail++;
+                            }
+                        }));
+                        await job.updateProgress(Math.floor(((i + batch.length) / recipientEmails.length) * 100));
                     }
                 }
                 

@@ -188,36 +188,63 @@ export async function processBulkMessageInline(jobData: any) {
         
         await db.update(broadcastMessages).set({ status: 'processing', totalRecipients: studentIds.length + externalEmails.length }).where(eq(broadcastMessages.id, broadcastId));
         
-        for (let i = 0; i < studentIds.length; i++) {
+        // 1. High-Performance Bulk In-App Notification Insertion
+        if ((channel === 'both' || channel === 'toast') && studentIds.length > 0) {
             try {
-                await sendInAppNotification({
-                    userId: studentIds[i],
+                const { notifications } = await import('@/db/schema');
+                const notifValues = studentIds.map(uid => ({
+                    userId: uid,
                     title,
                     message,
-                    type: 'info',
-                    channel: channel
-                });
-            } catch (err) {}
+                    type: 'info' as const,
+                    channel: channel,
+                    isRead: false,
+                    isToasted: false,
+                }));
+                
+                const NOTIF_CHUNK = 250;
+                for (let i = 0; i < notifValues.length; i += NOTIF_CHUNK) {
+                    const chunk = notifValues.slice(i, i + NOTIF_CHUNK);
+                    await db.insert(notifications).values(chunk);
+                }
+            } catch (notifErr) {
+                console.error("[processBulkMessageInline] In-app notification bulk insert error:", notifErr);
+            }
         }
         
-        if (externalEmails.length > 0 && (channel === 'both' || channel === 'email')) {
+        // 2. High-Speed Concurrent Batch Email Dispatching
+        if (channel === 'both' || channel === 'email') {
             const { sendEmail } = await import('@/lib/mail');
             const { config } = await import('@/lib/config');
-            const html = `<div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
-                    <h2 style="color: #4f46e5;">${title}</h2>
-                    <p style="font-size: 16px; color: #374151;">${message}</p>
-                    <hr style="margin: 20px 0; border: none; border-top: 1px solid #eee;" />
-                    <p style="font-size: 12px; color: #9ca3af;">This is an automated alert from your FSS Portal.</p>
-                </div>`;
-            for (let i = 0; i < externalEmails.length; i++) {
-                try {
-                    const res = await sendEmail(externalEmails[i], title, html, config.mail.from);
-                    if (!res.success) {
-                        console.error(`[REGISTRAR MESSAGE EMAIL ERROR] ${externalEmails[i]}:`, res.error);
+            const { inArray } = await import('drizzle-orm');
+            
+            let recipientEmails: string[] = [...externalEmails];
+            if (studentIds.length > 0) {
+                const dbUsers = await db.select({ email: users.email }).from(users).where(inArray(users.id, studentIds));
+                for (const u of dbUsers) {
+                    if (u.email && !recipientEmails.includes(u.email)) {
+                        recipientEmails.push(u.email);
                     }
-                } catch (err) {
-                    console.error(`[REGISTRAR MESSAGE EXCEPTION] ${externalEmails[i]}:`, err);
                 }
+            }
+
+            const html = `<div style="font-family: sans-serif; padding: 24px; border: 1px solid #e2e8f0; border-radius: 16px; background-color: #ffffff;">
+                    <h2 style="color: #4f46e5; margin-top: 0;">${title}</h2>
+                    <p style="font-size: 15px; color: #334155; line-height: 1.6;">${message}</p>
+                    <hr style="margin: 24px 0; border: none; border-top: 1px solid #e2e8f0;" />
+                    <p style="font-size: 12px; color: #94a3b8;">This is an automated notification from your institution's official portal.</p>
+                </div>`;
+            
+            const EMAIL_BATCH_SIZE = 10;
+            for (let i = 0; i < recipientEmails.length; i += EMAIL_BATCH_SIZE) {
+                const batch = recipientEmails.slice(i, i + EMAIL_BATCH_SIZE);
+                await Promise.all(batch.map(async (email) => {
+                    try {
+                        await sendEmail(email, title, html, config.mail.from);
+                    } catch (err) {
+                        console.error(`[processBulkMessageInline] Email exception ${email}:`, err);
+                    }
+                }));
             }
         }
         
