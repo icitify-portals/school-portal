@@ -181,8 +181,6 @@ export async function processBulkMessageInline(jobData: any) {
             studentIds = queryResult.filter((r: any) => r.userId).map((r: any) => r.userId as number);
         }
         
-        const externalEmails: string[] = targetCriteria.externalEmails || [];
-        
         if (!studentIds.length && !externalEmails.length) {
             await db.update(broadcastMessages).set({ status: 'completed', totalRecipients: 0 }).where(eq(broadcastMessages.id, broadcastId));
             return;
