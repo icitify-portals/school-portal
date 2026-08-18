@@ -399,6 +399,7 @@ const adminMenuItems: MenuItem[] = [
         icon: Megaphone,
         module: "communications",
         subItems: [
+            { name: "Broadcast Communications", href: "/admin/communications/broadcasts" },
             { name: "Broadcast Center", href: "/admin/announcements" },
             { name: "Global Forums", href: "/forums" },
             { name: "Direct Messages", href: "/communications" },
@@ -681,11 +682,11 @@ export function Sidebar({ enabledModules = {}, mobileOpen = false, onClose }: {
         if (role === 'admin' || role === 'superadmin' || role === 'icitify_dev') {
             return adminMenuItems;
         } else if (role === 'bursar') {
-            return adminMenuItems.filter(item => ["Admin Dashboard", "Finance & Accounting", "Bursary & Fees", "Accounting & Reports", "Analytics & Reports", "Inventory & Stock"].includes(item.name));
+            return adminMenuItems.filter(item => ["Admin Dashboard", "Finance & Accounting", "Bursary & Fees", "Accounting & Reports", "Analytics & Reports", "Inventory & Stock", "Communication"].includes(item.name));
         } else if (role === 'registrar') {
             return adminMenuItems.filter(item => ["Admin Dashboard", "Academics", "Office of the Registrar", "Admission Management", "Student Management", "Academic Calendar", "Student Promotion", "Communication", "Registration Concessions", "SIWES Management"].includes(item.name));
         } else if (role === 'admission_officer') {
-            return adminMenuItems.filter(item => ["Admin Dashboard", "Admission Management", "Student Management"].includes(item.name));
+            return adminMenuItems.filter(item => ["Admin Dashboard", "Admission Management", "Student Management", "Communication"].includes(item.name));
         } else if (role === 'librarian') {
             return adminMenuItems.filter(item => ["Admin Dashboard", "Library Management"].includes(item.name));
         } else if (role === 'dvc') {

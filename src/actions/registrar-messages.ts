@@ -113,6 +113,8 @@ export async function processBulkMessageInline(jobData: any) {
     
     try {
         let studentIds: number[] = [];
+        let externalEmails: string[] = targetCriteria.externalEmails || [];
+
         if (targetCriteria.type === 'users') {
             studentIds = targetCriteria.userIds || [];
         } else if (targetCriteria.type === 'staff') {
@@ -121,6 +123,28 @@ export async function processBulkMessageInline(jobData: any) {
                 .from(users)
                 .where(inArray(users.role, ['staff', 'admin', 'bursar', 'registrar', 'librarian', 'hod', 'dean', 'admission_officer', 'dvc', 'superadmin']));
             studentIds = queryResult.map((r: any) => r.id);
+        } else if (targetCriteria.type === 'applicants') {
+            const { inArray, and, sql } = await import('drizzle-orm');
+            const { admissionApplicationsV2 } = await import('@/db/schema');
+            let appConditions: any[] = [];
+            if (targetCriteria.admissionStatus && targetCriteria.admissionStatus.length > 0 && !targetCriteria.admissionStatus.includes('all')) {
+                appConditions.push(inArray(admissionApplicationsV2.status, targetCriteria.admissionStatus));
+            }
+            const apps = await db.select({ applicantId: admissionApplicationsV2.applicantId, data: admissionApplicationsV2.data })
+                .from(admissionApplicationsV2)
+                .where(appConditions.length > 0 ? and(...appConditions) : sql`1=1`);
+
+            for (const app of apps) {
+                if (app.applicantId) studentIds.push(app.applicantId);
+                if (app.data) {
+                    try {
+                        const parsed = JSON.parse(app.data);
+                        if (parsed.email && !externalEmails.includes(parsed.email)) {
+                            externalEmails.push(parsed.email);
+                        }
+                    } catch (e) {}
+                }
+            }
         } else if (targetCriteria.type === 'levels' && targetCriteria.levels?.length) {
             const levelStr = targetCriteria.levels[0];
             if (levelStr === 'Applicant') {
@@ -148,7 +172,7 @@ export async function processBulkMessageInline(jobData: any) {
             const { inArray, and } = await import('drizzle-orm');
             let conditions = [eq(students.status, 'active')];
             if (targetCriteria.type === 'departments' && targetCriteria.departments?.length) {
-                conditions.push(inArray(students.deptId, targetCriteria.departments));
+                conditions.push(inArray(students.departmentId, targetCriteria.departments));
             } else if (targetCriteria.type === 'programmes' && targetCriteria.programmes?.length) {
                 conditions.push(inArray(students.programmeId, targetCriteria.programmes));
             }
