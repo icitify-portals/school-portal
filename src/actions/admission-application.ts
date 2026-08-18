@@ -50,6 +50,7 @@ export async function submitAdmissionApplication(data: {
         const [application] = await db.insert(admissionApplicationsV2).values({
             templateId: data.templateId,
             studentId: studentId,
+            applicantId: userId || undefined,
             data: JSON.stringify(data.formData),
             applicantPhoto: data.applicantPhoto,
             status: 'submitted',

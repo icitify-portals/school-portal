@@ -6,9 +6,9 @@ import { Button } from "@/components/ui/button";
 import {
     FileText, Search, Loader2, User, Calendar, CheckCircle2,
     XCircle, AlertCircle, Activity, Filter, ExternalLink, ChevronLeft, ChevronRight,
-    CheckSquare, Square, Download, FileSpreadsheet, Printer
+    CheckSquare, Square, Download, FileSpreadsheet, Printer, Trash2
 } from "lucide-react";
-import { getAdminV2Applications, bulkUpdateAdmissionStatus, getAdmissionTemplates, exportAdminV2Applications } from "@/actions/admission_v2";
+import { getAdminV2Applications, bulkUpdateAdmissionStatus, getAdmissionTemplates, exportAdminV2Applications, deleteAdmissionApplication, bulkDeleteAdmissionApplications } from "@/actions/admission_v2";
 import * as xlsx from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -73,6 +73,46 @@ function AdminV2ApplicationsContent() {
             toast.error(res.error || "Action failed");
         }
         setBulkAction("");
+    };
+
+    const handleSingleDelete = async (appId: number) => {
+        if (!confirm("Are you sure you want to delete this application record?")) return;
+        setLoading(true);
+        const res = await deleteAdmissionApplication(appId);
+        setLoading(false);
+        if (res.success) {
+            toast.success("Application deleted successfully");
+            fetchData();
+        } else {
+            toast.error(res.error || "Failed to delete application");
+        }
+    };
+
+    const handleBulkDelete = async () => {
+        if (selectedIds.size === 0) return;
+        if (!confirm(`Are you sure you want to delete ${selectedIds.size} selected application(s)? This action cannot be undone.`)) return;
+        setLoading(true);
+        const res = await bulkDeleteAdmissionApplications(Array.from(selectedIds));
+        setLoading(false);
+        if (res.success) {
+            toast.success("Selected applications deleted successfully");
+            setSelectedIds(new Set());
+            fetchData();
+        } else {
+            toast.error(res.error || "Failed to delete selected applications");
+        }
+    };
+
+    const selectNaRecords = () => {
+        const naIds = (data?.applications || [])
+            .filter((app: any) => app.applicantName === 'N/A' || app.templateName === 'N/A' || !app.formNumber || app.formNumber === '—')
+            .map((app: any) => app.id);
+        if (naIds.length === 0) {
+            toast.info("No N/A records found on current page");
+            return;
+        }
+        setSelectedIds(new Set(naIds));
+        toast.success(`Selected ${naIds.length} N/A record(s)`);
     };
 
     const toggleSelect = (id: number) => {
@@ -243,6 +283,16 @@ function AdminV2ApplicationsContent() {
                                 <option key={t.id} value={t.id}>{t.name}</option>
                             ))}
                         </select>
+
+                        <Button
+                            onClick={selectNaRecords}
+                            variant="outline"
+                            className="px-5 py-4 rounded-2xl border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-800 font-bold text-sm shadow-sm flex items-center h-full"
+                            title="Select all records on current page that display N/A or missing information"
+                        >
+                            <AlertCircle className="w-4 h-4 mr-2" /> Select N/A Records
+                        </Button>
+
                         <Button 
                             onClick={handleExportExcel}
                             className="px-6 py-4 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-sm flex items-center h-full"
@@ -272,6 +322,12 @@ function AdminV2ApplicationsContent() {
                             className="rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-black text-[10px] uppercase tracking-widest px-5 py-3"
                         >
                             <XCircle className="w-3.5 h-3.5 mr-2" /> Reject Selected
+                        </Button>
+                        <Button
+                            onClick={handleBulkDelete}
+                            className="rounded-xl bg-red-600 hover:bg-red-700 text-white font-black text-[10px] uppercase tracking-widest px-5 py-3 shadow-md shadow-red-200"
+                        >
+                            <Trash2 className="w-3.5 h-3.5 mr-2" /> Delete Selected
                         </Button>
                         <Button
                             onClick={handleBulkDownloadPDFs}
@@ -397,11 +453,21 @@ function AdminV2ApplicationsContent() {
                                                 {app.appliedAt ? format(new Date(app.appliedAt), 'MMM dd, yyyy') : '—'}
                                             </td>
                                             <td className="px-6 py-5 text-right">
-                                                <Link href={`/admin/admission/v2/${app.id}`}>
-                                                    <Button className="rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-[9px] uppercase tracking-widest px-4 py-2 shadow-lg shadow-indigo-100">
-                                                        <ExternalLink className="w-3 h-3 mr-1.5" /> Review
+                                                <div className="flex items-center justify-end gap-2">
+                                                    <Link href={`/admin/admission/v2/${app.id}`}>
+                                                        <Button className="rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-[9px] uppercase tracking-widest px-4 py-2 shadow-lg shadow-indigo-100">
+                                                            <ExternalLink className="w-3 h-3 mr-1.5" /> Review
+                                                        </Button>
+                                                    </Link>
+                                                    <Button
+                                                        onClick={() => handleSingleDelete(app.id)}
+                                                        variant="outline"
+                                                        className="rounded-xl border-rose-200 text-rose-600 hover:bg-rose-50 hover:text-rose-700 font-black text-[9px] uppercase tracking-widest px-3 py-2"
+                                                        title="Delete Application Record"
+                                                    >
+                                                        <Trash2 className="w-3 h-3" />
                                                     </Button>
-                                                </Link>
+                                                </div>
                                             </td>
                                         </tr>
                                     ))

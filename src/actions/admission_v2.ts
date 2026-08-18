@@ -453,6 +453,13 @@ export async function submitAdmissionApplication(data: any) {
             return { success: false, error: `You must be at least ${template.minAge} years old for this admission.` };
         }
 
+        const session = await auth();
+        let applicantId = session?.user?.id ? parseInt(session.user.id) : undefined;
+        if (!applicantId && formData.email) {
+            const [u] = await db.select({ id: users.id }).from(users).where(eq(users.email, formData.email.toLowerCase())).limit(1);
+            if (u) applicantId = u.id;
+        }
+
         // Generate unique form number
         const formNumber = await generateFormNumber(template.level);
 
@@ -463,6 +470,7 @@ export async function submitAdmissionApplication(data: any) {
 
         const [result] = await db.insert(admissionApplicationsV2).values({
             templateId,
+            applicantId,
             data: JSON.stringify(formData),
             applicantPhoto,
             ageAtAdmission,
@@ -2071,10 +2079,11 @@ export async function getAdminV2Applications(filters?: {
                 try { formData = typeof app.data === 'string' ? JSON.parse(app.data) : app.data || {}; } catch {}
                 const nameFromForm = `${formData.firstName || formData.first_name || ''} ${formData.surname || formData.lastName || formData.last_name || ''}`.trim();
                 const nameFromUser = app.applicant ? (app.applicant.name || `${app.applicant.firstName || ''} ${app.applicant.surname || ''}`.trim()) : '';
+                const fallbackEmail = formData.email || formData.applicantEmail || app.applicant?.email || '';
                 return {
                     ...app,
                     parsedData: formData,
-                    applicantName: nameFromForm || nameFromUser || 'N/A',
+                    applicantName: nameFromForm || nameFromUser || fallbackEmail || 'N/A',
                     templateName: app.template?.name || 'N/A',
                 };
             }),
