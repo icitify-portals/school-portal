@@ -2537,3 +2537,68 @@ export async function getAdmissionV2Stats() {
         };
     }
 }
+
+export async function changeApplicantProgramme(appId: number, departmentId: number, programmeId: number, reason?: string) {
+    try {
+        await requireAdmin();
+        const [app] = await db.select().from(admissionApplicationsV2).where(eq(admissionApplicationsV2.id, appId)).limit(1);
+        if (!app) return { success: false, error: "Application not found" };
+
+        const [dept] = await db.select().from(departments).where(eq(departments.id, departmentId)).limit(1);
+        const [prog] = await db.select().from(programmes).where(eq(programmes.id, programmeId)).limit(1);
+
+        let parsedData: any = {};
+        if (app.data) {
+            try { parsedData = JSON.parse(app.data); } catch (e) {}
+        }
+
+        const oldProgName = parsedData.programmeName || parsedData.programme || 'Original Course';
+
+        parsedData.departmentId = departmentId;
+        parsedData.programmeId = programmeId;
+        if (dept) parsedData.departmentName = dept.name;
+        if (prog) parsedData.programmeName = prog.name;
+
+        const changeNote = `[Course Transfer] Changed from "${oldProgName}" to "${prog?.name || 'New Course'}". Reason: ${reason || 'Admission Officer Directive'}`;
+        const updatedNotes = app.admissionNotes ? `${app.admissionNotes}\n${changeNote}` : changeNote;
+
+        await db.update(admissionApplicationsV2)
+            .set({ 
+                data: JSON.stringify(parsedData),
+                admissionNotes: updatedNotes,
+                updatedAt: new Date()
+            })
+            .where(eq(admissionApplicationsV2.id, appId));
+
+        const applicantEmail = parsedData.email || "";
+        if (applicantEmail && prog) {
+            NotificationService.sendGenericEmail(
+                applicantEmail,
+                "Admission Course Recommendation Update",
+                `<div style="font-family:sans-serif;padding:20px;line-height:1.6;">
+                    <h2>Admission Update</h2>
+                    <p>Dear ${parsedData.firstName || 'Applicant'},</p>
+                    <p>Your admission application course recommendation has been updated by the Admission Office to <strong>${prog.name}</strong> (${dept?.name || ''}).</p>
+                    <p><strong>Note/Reason:</strong> ${reason || 'Transferred based on entry requirements.'}</p>
+                    <p>Please log in to your admission portal to track your application status.</p>
+                </div>`
+            ).catch(err => console.error("Failed to send course change email:", err));
+        }
+
+        revalidatePath(`/admin/admission/v2/${appId}`);
+        return { success: true };
+    } catch (error: any) {
+        console.error("Failed to change applicant programme:", error);
+        return { success: false, error: error.message || "Failed to change programme" };
+    }
+}
+
+export async function getAdmissionAcademicUnits() {
+    try {
+        const depts = await db.select({ id: departments.id, name: departments.name, code: departments.code }).from(departments);
+        const progs = await db.select({ id: programmes.id, name: programmes.name, code: programmes.code, departmentId: programmes.departmentId }).from(programmes);
+        return { success: true, departments: depts, programmes: progs };
+    } catch (e: any) {
+        return { success: false, error: e.message, departments: [], programmes: [] };
+    }
+}

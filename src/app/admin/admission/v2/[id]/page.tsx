@@ -8,7 +8,7 @@ import {
     Loader2, ArrowLeft, Printer, CreditCard, GraduationCap, BookOpen, Hash,
     Image as ImageIcon, ChevronDown, ChevronUp, Shield, ShieldAlert, ShieldCheck, Edit
 } from "lucide-react";
-import { getAdminV2ApplicationDetail, updateAdmissionStatus, confirmAdmissionPayment, confirmAcceptancePayment, reverseAdmissionPayment, confirmProcessingFeePayment, reverseProcessingFeePayment, updateApplicantData } from "@/actions/admission_v2";
+import { getAdminV2ApplicationDetail, updateAdmissionStatus, confirmAdmissionPayment, confirmAcceptancePayment, reverseAdmissionPayment, confirmProcessingFeePayment, reverseProcessingFeePayment, updateApplicantData, changeApplicantProgramme, getAdmissionAcademicUnits } from "@/actions/admission_v2";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -30,6 +30,42 @@ export default function V2ApplicationDetailPage() {
     const [editOpen, setEditOpen] = useState(false);
     const [editData, setEditData] = useState<any>({});
     const [isSaving, setIsSaving] = useState(false);
+
+    // Course Transfer State
+    const [transferOpen, setTransferOpen] = useState(false);
+    const [departmentsList, setDepartmentsList] = useState<any[]>([]);
+    const [programmesList, setProgrammesList] = useState<any[]>([]);
+    const [selectedDeptId, setSelectedDeptId] = useState<number | "">("");
+    const [selectedProgId, setSelectedProgId] = useState<number | "">("");
+    const [transferReason, setTransferReason] = useState("");
+    const [isTransferring, setIsTransferring] = useState(false);
+
+    const openTransferModal = async () => {
+        const units = await getAdmissionAcademicUnits();
+        if (units.success) {
+            setDepartmentsList(units.departments);
+            setProgrammesList(units.programmes);
+        }
+        setTransferOpen(true);
+    };
+
+    const handleSaveTransfer = async () => {
+        if (!selectedDeptId || !selectedProgId) {
+            toast.error("Please select both a department and a programme");
+            return;
+        }
+        setIsTransferring(true);
+        const res = await changeApplicantProgramme(app.id, Number(selectedDeptId), Number(selectedProgId), transferReason);
+        setIsTransferring(false);
+        if (res.success) {
+            toast.success("Course transfer completed & applicant notified via email");
+            setTransferOpen(false);
+            const data = await getAdminV2ApplicationDetail(app.id);
+            setApp(data);
+        } else {
+            toast.error(res.error || "Failed to transfer course");
+        }
+    };
 
     const openEditModal = () => {
         if (!app) return;
@@ -401,6 +437,12 @@ export default function V2ApplicationDetailPage() {
                         </div>
                         <div className="flex flex-wrap gap-3 no-print">
                             <Button
+                                onClick={openTransferModal}
+                                className="rounded-xl bg-emerald-600/20 hover:bg-emerald-600/40 text-white border border-emerald-500/30 font-black text-[10px] uppercase tracking-widest px-5 py-3 backdrop-blur-md"
+                            >
+                                <GraduationCap className="w-4 h-4 mr-2" /> Transfer Course
+                            </Button>
+                            <Button
                                 onClick={openEditModal}
                                 className="rounded-xl bg-indigo-600/20 hover:bg-indigo-600/40 text-white border border-indigo-500/20 font-black text-[10px] uppercase tracking-widest px-5 py-3 backdrop-blur-md"
                             >
@@ -415,6 +457,69 @@ export default function V2ApplicationDetailPage() {
                         </div>
                     </div>
                 </div>
+
+                {/* Transfer Course Modal Dialog */}
+                <Dialog open={transferOpen} onOpenChange={setTransferOpen}>
+                    <DialogContent className="max-w-md bg-white rounded-3xl p-6 border border-slate-200 shadow-2xl">
+                        <DialogHeader>
+                            <DialogTitle className="text-xl font-bold flex items-center gap-2 text-slate-800">
+                                <GraduationCap className="w-6 h-6 text-emerald-600" /> Transfer Choice of Course
+                            </DialogTitle>
+                        </DialogHeader>
+                        <div className="space-y-4 my-2">
+                            <div>
+                                <Label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Department</Label>
+                                <select
+                                    value={selectedDeptId}
+                                    onChange={(e) => setSelectedDeptId(e.target.value ? Number(e.target.value) : "")}
+                                    className="w-full mt-1 p-3 border border-slate-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-emerald-500 bg-white"
+                                >
+                                    <option value="">-- Select Department --</option>
+                                    {departmentsList.map(d => (
+                                        <option key={d.id} value={d.id}>{d.name} ({d.code})</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div>
+                                <Label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Programme / Course</Label>
+                                <select
+                                    value={selectedProgId}
+                                    onChange={(e) => setSelectedProgId(e.target.value ? Number(e.target.value) : "")}
+                                    className="w-full mt-1 p-3 border border-slate-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-emerald-500 bg-white"
+                                >
+                                    <option value="">-- Select Programme --</option>
+                                    {programmesList
+                                        .filter(p => !selectedDeptId || p.departmentId === Number(selectedDeptId))
+                                        .map(p => (
+                                            <option key={p.id} value={p.id}>{p.name} ({p.code})</option>
+                                        ))
+                                    }
+                                </select>
+                            </div>
+                            <div>
+                                <Label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Reason / Transfer Note</Label>
+                                <Input
+                                    value={transferReason}
+                                    onChange={(e) => setTransferReason(e.target.value)}
+                                    placeholder="e.g. Recommended for ND Computer Science based on JAMB cut-off"
+                                    className="mt-1 p-3 rounded-xl border border-slate-200 text-sm"
+                                />
+                            </div>
+                        </div>
+                        <div className="flex justify-end gap-3 mt-4">
+                            <Button variant="outline" onClick={() => setTransferOpen(false)} className="rounded-xl font-bold">
+                                Cancel
+                            </Button>
+                            <Button
+                                onClick={handleSaveTransfer}
+                                disabled={isTransferring}
+                                className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-5"
+                            >
+                                {isTransferring ? <Loader2 className="w-4 h-4 animate-spin" /> : "Confirm Transfer & Notify"}
+                            </Button>
+                        </div>
+                    </DialogContent>
+                </Dialog>
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 print-layout">
                     <div className="lg:col-span-2 space-y-6 print-col">
