@@ -40,14 +40,19 @@ import { randomUUID } from "crypto";
 
 const ADMIN_ROLES = [
     'admin', 'superadmin', 'icitify_dev', 'dvc', 'vc',
-    'registrar', 'admission_officer', 'bursar', 'bursary',
-    'accountant', 'auditor'
+    'registrar', 'admission_officer', 'admission officer', 'admission',
+    'bursar', 'bursary', 'accountant', 'auditor'
 ];
 
 async function requireAdmin() {
     const session = await auth();
     if (!session?.user) throw new Error("Unauthorized: Please log in");
-    if (!ADMIN_ROLES.includes(session.user.role as string)) {
+    
+    const role = ((session.user.role as string) || '').toLowerCase();
+    const roles = (((session.user as any).roles as string[]) || []).map(r => String(r).toLowerCase());
+
+    const hasAccess = ADMIN_ROLES.some(r => role === r || roles.includes(r));
+    if (!hasAccess) {
         throw new Error("Forbidden: You do not have permission to perform this action");
     }
     return session;

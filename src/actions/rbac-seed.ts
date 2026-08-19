@@ -209,7 +209,10 @@ export async function seedPrincipalRoles() {
                     "finance.payroll.run",
                     "finance.payroll.approve",
                     "finance.clearance.manage",
-                    "finance.vendors.manage"
+                    "finance.vendors.manage",
+                    "admission.screening.view",
+                    "admission.applications.manage",
+                    "admission.manage"
                 ] 
             },
             {
@@ -232,7 +235,38 @@ export async function seedPrincipalRoles() {
             },
             { name: "Principal", description: "Head of School Operations and Academic Oversight", permissions: ["academic.sign_report", "finance.view_summary", "officers.manage", "academic.results.approve", "academic.results.audit", "academic.results.compute"] },
             { name: "Headteacher", description: "Primary School Head of Operations", permissions: ["academic.sign_report", "finance.view_summary"] },
-            { name: "Registrar", description: "Custodian of Academic Records", permissions: ["academic.sign_transcript", "officers.manage", "academic.registration.approve", "academic.waiver.manage", "academic.results.audit", "admission.manage", "admission.screening.view", "admission.applicant.admit"] },
+            { 
+                name: "Registrar", 
+                description: "Custodian of Academic and Admission Records", 
+                permissions: [
+                    "academic.sign_transcript", 
+                    "officers.manage", 
+                    "academic.registration.approve", 
+                    "academic.waiver.manage", 
+                    "academic.results.audit", 
+                    "academic.results.approve",
+                    "academic.results.compute",
+                    "admission.manage", 
+                    "admission.screening.view", 
+                    "admission.applicant.admit",
+                    "admission.sessions.manage",
+                    "admission.applications.manage",
+                    "admission.data.capture",
+                    "admission.cbt.manage",
+                    "admission.exams.manage",
+                    "students.manage",
+                    "students.view",
+                    "students.transfer",
+                    "students.enroll",
+                    "communication.broadcast.manage",
+                    "communication.announcements.manage",
+                    "registry.documents.view",
+                    "registry.documents.process",
+                    "registry.forms.manage",
+                    "registry.pricing.manage",
+                    "registry.graduation.promote"
+                ] 
+            },
             { name: "VP Academics", description: "Vice Principal (Academic Affairs)", permissions: ["academic.sign_report", "academic.sign_transcript", "academic.results.approve", "academic.results.compute"] },
             { name: "Dean", description: "Dean of Faculty. Approves faculty-level results and course waivers.", permissions: ["academic.results.approve", "academic.waiver.manage"] },
             { name: "HOD", description: "Head of Department. Computes department GPAs, approves department-level results, and course waivers.", permissions: ["academic.results.approve", "academic.waiver.manage", "academic.results.compute"] },
@@ -240,8 +274,19 @@ export async function seedPrincipalRoles() {
                 name: "Admission Officer",
                 description: "Admissions Office staff responsible for applicant screening and validation.",
                 permissions: [
+                    "admission.manage",
                     "admission.screening.view",
-                    "admission.applicant.admit"
+                    "admission.applicant.admit",
+                    "admission.sessions.manage",
+                    "admission.applications.manage",
+                    "admission.data.capture",
+                    "admission.cbt.manage",
+                    "admission.exams.manage",
+                    "students.manage",
+                    "students.view",
+                    "students.enroll",
+                    "communication.broadcast.manage",
+                    "communication.announcements.manage"
                 ]
             },
             { name: "Stakeholder", description: "External auditor or observer with limited view access", permissions: ["finance.view_summary"] },

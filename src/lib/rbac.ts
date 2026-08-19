@@ -7,10 +7,41 @@ export async function getSessionPermissions() {
 
 export async function hasPermission(permission: string) {
     const session = await auth();
-    const baseRole = (session?.user as any)?.role;
+    const baseRole = ((session?.user as any)?.role || "").toString().toLowerCase();
     
-    // Absolute power for developer and superadmin
-    if (baseRole === "icitify_dev" || baseRole === "superadmin") return true;
+    // Absolute power for developer, superadmin, and admin
+    if (baseRole === "icitify_dev" || baseRole === "superadmin" || baseRole === "admin") return true;
+
+    // Registrar automatically has access to all academic, admission, student, registry, and communication features
+    if (baseRole === "registrar" && (
+        permission.startsWith("admission.") || 
+        permission.startsWith("academic.") || 
+        permission.startsWith("students.") || 
+        permission.startsWith("registry.") || 
+        permission.startsWith("communication.") ||
+        permission.startsWith("officers.")
+    )) {
+        return true;
+    }
+
+    // Admission Officer automatically has access to all admission, student, and communication features
+    if ((baseRole === "admission_officer" || baseRole === "admission officer" || baseRole === "admission") && (
+        permission.startsWith("admission.") || 
+        permission.startsWith("students.") || 
+        permission.startsWith("communication.")
+    )) {
+        return true;
+    }
+
+    // Bursar / Bursary staff automatically has access to all financial and admission view/payment features
+    if ((baseRole === "bursar" || baseRole === "bursary" || baseRole === "accountant") && (
+        permission.startsWith("finance.") || 
+        permission.startsWith("admission.screening.") || 
+        permission.startsWith("admission.applications.") ||
+        permission === "admission.manage"
+    )) {
+        return true;
+    }
 
     const permissions = await getSessionPermissions();
     if (permissions.includes("system.all")) return true;
@@ -19,27 +50,34 @@ export async function hasPermission(permission: string) {
 
 export async function hasAnyPermission(requiredPermissions: string[]) {
     const session = await auth();
-    const baseRole = (session?.user as any)?.role;
+    const baseRole = ((session?.user as any)?.role || "").toString().toLowerCase();
     
-    // Absolute power for developer and superadmin
-    if (baseRole === "icitify_dev" || baseRole === "superadmin") return true;
+    if (baseRole === "icitify_dev" || baseRole === "superadmin" || baseRole === "admin") return true;
 
-    const permissions = await getSessionPermissions();
-    if (permissions.includes("system.all")) return true;
-    return requiredPermissions.some(p => permissions.includes(p));
+    for (const p of requiredPermissions) {
+        if (await hasPermission(p)) return true;
+    }
+    return false;
 }
 
 export async function hasRole(roleName: string | string[]) {
     const session = await auth();
-    const baseRole = (session?.user as any)?.role;
-    const roles = (session?.user as any)?.roles || [];
+    const baseRole = ((session?.user as any)?.role || "").toString().toLowerCase();
+    const userRoles = (((session?.user as any)?.roles || []) as string[]).map(r => r.toLowerCase());
 
     // Absolute power for developer and superadmin
     if (baseRole === "icitify_dev" || baseRole === "superadmin") return true;
 
-    if (Array.isArray(roleName)) {
-        return roleName.some(r => roles.includes(r)) || roleName.includes(baseRole);
-    }
+    const targets = (Array.isArray(roleName) ? roleName : [roleName]).map(r => r.toLowerCase());
 
-    return roles.includes(roleName) || baseRole === "admin" || baseRole === roleName;
+    // System admin has access to all admin checks
+    if (baseRole === "admin") return true;
+
+    return targets.some(t => 
+        baseRole === t || 
+        userRoles.includes(t) ||
+        (t === "bursar" && (baseRole === "bursary" || userRoles.includes("bursary") || baseRole === "accountant")) ||
+        (t === "bursary" && (baseRole === "bursar" || userRoles.includes("bursar"))) ||
+        (t === "admission_officer" && (baseRole === "admission officer" || baseRole === "admission" || userRoles.includes("admission_officer")))
+    );
 }
