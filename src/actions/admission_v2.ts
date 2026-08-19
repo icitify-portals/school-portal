@@ -2201,6 +2201,11 @@ export async function exportAdminV2Applications(filters?: {
     status?: string;
     paymentStatus?: string;
     templateId?: number;
+    facultyId?: number;
+    departmentId?: number;
+    programmeId?: number;
+    level?: string;
+    applicationMode?: string;
 }) {
     await requireAdmin();
     try {
@@ -2213,6 +2218,11 @@ export async function exportAdminV2Applications(filters?: {
                 .where(like(users.name, q));
             const userIds = matchingUsers.map(u => u.id);
 
+            const matchingProgs = await db.select({ id: programmes.id })
+                .from(programmes)
+                .where(like(programmes.name, q));
+            const searchProgIds = matchingProgs.map(p => p.id);
+
             const searchOr = [
                 like(admissionApplicationsV2.formNumber, q),
                 like(admissionApplicationsV2.data, q)
@@ -2220,6 +2230,12 @@ export async function exportAdminV2Applications(filters?: {
             
             if (userIds.length > 0) {
                 searchOr.push(inArray(admissionApplicationsV2.applicantId, userIds));
+            }
+            if (searchProgIds.length > 0) {
+                searchOr.push(inArray(admissionApplicationsV2.programmeId, searchProgIds));
+            }
+            if (filters.search.toLowerCase().includes('pending') || filters.search.toLowerCase().includes('unassigned')) {
+                searchOr.push(isNull(admissionApplicationsV2.programmeId));
             }
             
             conditions.push(or(...searchOr));
@@ -2234,35 +2250,113 @@ export async function exportAdminV2Applications(filters?: {
         if (filters?.templateId) {
             conditions.push(eq(admissionApplicationsV2.templateId, filters.templateId));
         }
+        if (filters?.applicationMode && filters.applicationMode !== 'all') {
+            conditions.push(eq(admissionApplicationsV2.applicationMode, filters.applicationMode as any));
+        }
+        if (filters?.programmeId) {
+            if (filters.programmeId === -1) {
+                conditions.push(isNull(admissionApplicationsV2.programmeId));
+            } else {
+                conditions.push(eq(admissionApplicationsV2.programmeId, filters.programmeId));
+            }
+        }
+        if (filters?.departmentId) {
+            const deptProgs = await db.select({ id: programmes.id }).from(programmes).where(eq(programmes.deptId, filters.departmentId));
+            const progIds = deptProgs.map(p => p.id);
+            if (progIds.length > 0) {
+                conditions.push(inArray(admissionApplicationsV2.programmeId, progIds));
+            } else {
+                conditions.push(sql`1=0`);
+            }
+        }
+        if (filters?.facultyId && !filters?.departmentId) {
+            const facDepts = await db.select({ id: departments.id }).from(departments).where(eq(departments.facultyId, filters.facultyId));
+            const deptIds = facDepts.map(d => d.id);
+            if (deptIds.length > 0) {
+                const facProgs = await db.select({ id: programmes.id }).from(programmes).where(inArray(programmes.deptId, deptIds));
+                const progIds = facProgs.map(p => p.id);
+                if (progIds.length > 0) {
+                    conditions.push(inArray(admissionApplicationsV2.programmeId, progIds));
+                } else {
+                    conditions.push(sql`1=0`);
+                }
+            } else {
+                conditions.push(sql`1=0`);
+            }
+        }
 
         const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
         let applications = await db.query.admissionApplicationsV2.findMany({
             where: whereClause,
             orderBy: [desc(admissionApplicationsV2.appliedAt)],
-            limit: 5000,
+            limit: 10000,
             with: {
                 template: true,
-                applicant: true
+                applicant: true,
+                programme: {
+                    with: {
+                        department: {
+                            with: {
+                                faculty: true
+                            }
+                        }
+                    }
+                }
             }
         });
 
+        let mapped = applications.map((app: any) => {
+            let formData: any = {};
+            try { formData = typeof app.data === 'string' ? JSON.parse(app.data) : app.data || {}; } catch {}
+            const nameFromForm = `${formData.firstName || formData.first_name || ''} ${formData.surname || formData.lastName || formData.last_name || ''}`.trim();
+            const nameFromUser = app.applicant ? (app.applicant.name || `${app.applicant.firstName || ''} ${app.applicant.surname || ''}`.trim()) : '';
+            
+            const progName = app.programme?.name || 'Pending Course Selection';
+            const deptName = app.programme?.department?.name || 'N/A';
+            const facName = app.programme?.department?.faculty?.name || 'N/A';
+
+            const templateNameUpper = app.template?.name?.toUpperCase() || '';
+            const progNameUpper = progName.toUpperCase();
+
+            let academicLevel = 'ND 1';
+            if (progNameUpper.includes('HND') || templateNameUpper.includes('HND')) {
+                academicLevel = 'HND 1';
+            } else if (progNameUpper.includes('ND') || templateNameUpper.includes('ND')) {
+                academicLevel = 'ND 1';
+            } else {
+                try {
+                    const possibleProg = String(formData.programme || formData.Programme || formData.programmeName || '').toUpperCase();
+                    if (possibleProg.includes('HND')) academicLevel = 'HND 1';
+                } catch (e) {}
+            }
+
+            return {
+                ...app,
+                parsedData: formData,
+                applicantName: nameFromForm || nameFromUser || 'N/A',
+                applicantEmail: app.applicant?.email || formData.email || formData.email_address || 'N/A',
+                applicantPhone: app.applicant?.phone || app.applicant?.phoneNumber || formData.phone || formData.phone_number || 'N/A',
+                templateName: app.template?.name || 'N/A',
+                programmeName: progName,
+                departmentName: deptName,
+                facultyName: facName,
+                academicLevel,
+                administrativeLevel: 'Applicant'
+            };
+        });
+
+        if (filters?.level && filters.level !== 'all') {
+            const targetLevel = filters.level.toUpperCase();
+            mapped = mapped.filter((a: any) => 
+                a.academicLevel.toUpperCase() === targetLevel ||
+                a.administrativeLevel.toUpperCase() === targetLevel
+            );
+        }
+
         return {
             success: true,
-            applications: applications.map((app: any) => {
-                let formData: any = {};
-                try { formData = typeof app.data === 'string' ? JSON.parse(app.data) : app.data || {}; } catch {}
-                const nameFromForm = `${formData.firstName || formData.first_name || ''} ${formData.surname || formData.lastName || formData.last_name || ''}`.trim();
-                const nameFromUser = app.applicant ? (app.applicant.name || `${app.applicant.firstName || ''} ${app.applicant.surname || ''}`.trim()) : '';
-                return {
-                    ...app,
-                    parsedData: formData,
-                    applicantName: nameFromForm || nameFromUser || 'N/A',
-                    applicantEmail: app.applicant?.email || formData.email || formData.email_address || 'N/A',
-                    applicantPhone: app.applicant?.phone || app.applicant?.phoneNumber || formData.phone || formData.phone_number || 'N/A',
-                    templateName: app.template?.name || 'N/A',
-                };
-            })
+            applications: mapped
         };
     } catch (error) {
         console.error("[exportAdminV2Applications] Failed:", error);

@@ -184,27 +184,38 @@ function AdminV2ApplicationsContent() {
                 status: statusFilter !== 'all' ? statusFilter : undefined,
                 paymentStatus: paymentFilter !== 'all' ? paymentFilter : undefined,
                 templateId: templateFilter,
+                facultyId: facultyFilter,
+                departmentId: departmentFilter,
+                programmeId: programmeFilter,
+                level: levelFilter !== 'all' ? levelFilter : undefined,
+                applicationMode: modeFilter !== 'all' ? modeFilter : undefined,
             });
             if (result.success && result.applications.length > 0) {
                 const exportData = result.applications.map((app: any) => ({
-                    'Application Date': app.appliedAt ? format(new Date(app.appliedAt), 'yyyy-MM-dd') : 'N/A',
+                    'Application Date': app.appliedAt ? format(new Date(app.appliedAt), 'yyyy-MM-dd HH:mm') : 'N/A',
                     'Form Number': app.formNumber || 'N/A',
-                    'Applicant Name': app.applicantName,
-                    'Email': app.applicantEmail,
-                    'Phone': app.applicantPhone,
-                    'Status': app.status,
-                    'Payment Status': app.paymentStatus,
-                    'Template': app.templateName
+                    'Applicant Name': app.applicantName || 'N/A',
+                    'Email': app.applicantEmail || 'N/A',
+                    'Phone': app.applicantPhone || 'N/A',
+                    'Faculty': app.facultyName || 'N/A',
+                    'Department': app.departmentName || 'N/A',
+                    'Programme': app.programmeName || 'Pending Course Selection',
+                    'Mode of Study': app.applicationMode === 'full_time' ? 'Full Time' : app.applicationMode === 'part_time' ? 'Part Time' : 'N/A',
+                    'Level': app.academicLevel || 'N/A',
+                    'Status': app.status ? String(app.status).toUpperCase() : 'N/A',
+                    'Payment Status': app.paymentStatus ? String(app.paymentStatus).toUpperCase() : 'N/A',
+                    'Template': app.templateName || 'N/A'
                 }));
                 const worksheet = xlsx.utils.json_to_sheet(exportData);
                 const workbook = xlsx.utils.book_new();
-                xlsx.utils.book_append_sheet(workbook, worksheet, "Applications");
-                xlsx.writeFile(workbook, "admission_applications.xlsx");
-                toast.success("Export downloaded successfully");
+                xlsx.utils.book_append_sheet(workbook, worksheet, "Filtered Applications");
+                xlsx.writeFile(workbook, `admission_applications_filtered_${format(new Date(), 'yyyyMMdd_HHmm')}.xlsx`);
+                toast.success(`Exported ${exportData.length} matching application(s) to Excel`);
             } else {
-                toast.error("No applications found to export");
+                toast.error("No applications match the currently selected filters");
             }
         } catch (error) {
+            console.error("Export failed:", error);
             toast.error("Export failed");
         }
         setLoading(false);
