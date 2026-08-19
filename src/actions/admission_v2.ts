@@ -18,6 +18,8 @@ import {
     emailVerificationTokens,
     admissionTemplateProgrammes,
     programmes,
+    faculties,
+    departments,
     transactions,
     academicSessions,
     processingFeeRules
