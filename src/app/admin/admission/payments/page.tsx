@@ -15,7 +15,7 @@ import {
     Calendar,
     Download
 } from "lucide-react";
-import { getAdmissionApplications, confirmAdmissionPayment, deleteAdmissionApplication, bulkDeleteAdmissionApplications } from "@/actions/admission_v2";
+import { getAdminV2Applications, confirmAdmissionPayment, deleteAdmissionApplication, bulkDeleteAdmissionApplications, getAdmissionAcademicUnits } from "@/actions/admission_v2";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -27,20 +27,38 @@ export default function AdmissionPaymentsPage() {
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState("");
     const [filter, setFilter] = useState("all");
+
+    const [departmentFilter, setDepartmentFilter] = useState<number | undefined>(undefined);
+    const [programmeFilter, setProgrammeFilter] = useState<number | undefined>(undefined);
+    const [levelFilter, setLevelFilter] = useState<string>("all");
+
+    const [departments, setDepartments] = useState<any[]>([]);
+    const [programmes, setProgrammes] = useState<any[]>([]);
+
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 10;
 
     useEffect(() => {
         fetchApplications();
+        getAdmissionAcademicUnits().then((res) => {
+            if (res.success) {
+                setDepartments(res.departments || []);
+                setProgrammes(res.programmes || []);
+            }
+        }).catch(() => {});
     }, []);
 
     const fetchApplications = async () => {
         setLoading(true);
-        const data = await getAdmissionApplications();
-        setApplications(data);
+        const result = await getAdminV2Applications({ pageSize: 5000 });
+        setApplications(result.applications || []);
         setSelectedIds([]);
         setLoading(false);
     };
+
+    const filteredProgrammes = departmentFilter
+        ? programmes.filter((p: any) => p.departmentId === departmentFilter || p.deptId === departmentFilter)
+        : programmes;
 
     const handleConfirm = async (id: number) => {
         const reference = prompt("Enter Bank Transaction Reference:");
@@ -99,10 +117,17 @@ export default function AdmissionPaymentsPage() {
     };
 
     const filteredApps = applications.filter(app => {
-        const matchesSearch = app.template.name.toLowerCase().includes(search.toLowerCase()) ||
-                             (app.data && typeof app.data === 'string' && app.data.toLowerCase().includes(search.toLowerCase()));
+        const matchesSearch = (app.applicantName || '').toLowerCase().includes(search.toLowerCase()) ||
+                             (app.formNumber || '').toLowerCase().includes(search.toLowerCase()) ||
+                             (app.templateName || '').toLowerCase().includes(search.toLowerCase());
         const matchesFilter = filter === "all" ? true : app.paymentStatus === filter;
-        return matchesSearch && matchesFilter;
+        const matchesDept = !departmentFilter ? true : (app.programme?.deptId === departmentFilter || app.programme?.departmentId === departmentFilter);
+        const matchesProg = !programmeFilter ? true : app.programmeId === programmeFilter;
+        const matchesLevel = levelFilter === "all" ? true : (
+            (app.academicLevel || '').toUpperCase() === levelFilter.toUpperCase() ||
+            (app.administrativeLevel || '').toUpperCase() === levelFilter.toUpperCase()
+        );
+        return matchesSearch && matchesFilter && matchesDept && matchesProg && matchesLevel;
     });
 
     const totalPages = Math.ceil(filteredApps.length / itemsPerPage);
@@ -111,7 +136,7 @@ export default function AdmissionPaymentsPage() {
     // Reset to page 1 when filter/search changes
     useEffect(() => {
         setCurrentPage(1);
-    }, [search, filter]);
+    }, [search, filter, departmentFilter, programmeFilter, levelFilter]);
 
     return (
         <div className="p-4 sm:p-6 lg:p-8 min-h-screen">
@@ -148,30 +173,72 @@ export default function AdmissionPaymentsPage() {
                     </div>
                 </div>
 
-            <div className="flex gap-4">
-                <div className="relative flex-1">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                    <input 
-                        className="w-full pl-12 pr-4 py-5 rounded-2xl border-none shadow-sm focus:ring-2 focus:ring-emerald-500 bg-white/80 backdrop-blur-3xl font-bold text-sm"
-                        placeholder="Search by candidate name or form type..."
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                    />
+            <div className="flex flex-col gap-4">
+                <div className="flex flex-col md:flex-row gap-4">
+                    <div className="relative flex-1">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                        <input 
+                            className="w-full pl-12 pr-4 py-5 rounded-2xl border-none shadow-sm focus:ring-2 focus:ring-emerald-500 bg-white/80 backdrop-blur-3xl font-bold text-sm"
+                            placeholder="Search by candidate name or form type..."
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                        />
+                    </div>
+                    <div className="flex bg-white/60 backdrop-blur-3xl p-1.5 rounded-2xl shadow-sm border border-slate-200">
+                        {["all", "pending", "paid"].map((f) => (
+                            <button
+                                key={f}
+                                onClick={() => setFilter(f)}
+                                className={cn(
+                                    "px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                                    filter === f ? "bg-emerald-600 text-white shadow-lg" : "text-slate-500 hover:text-slate-700 hover:bg-white/50"
+                                )}
+                            >
+                                {f}
+                            </button>
+                        ))}
+                    </div>
                 </div>
-                <div className="flex bg-white/60 backdrop-blur-3xl p-1.5 rounded-2xl shadow-sm border border-slate-200">
-                    {["all", "pending", "paid"].map((f) => (
-                        <button
-                            key={f}
-                            onClick={() => setFilter(f)}
-                            className={cn(
-                                "px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
-                                filter === f ? "bg-emerald-600 text-white shadow-lg" : "text-slate-500 hover:text-slate-700 hover:bg-white/50"
-                            )}
-                        >
-                            {f}
-                        </button>
-                    ))}
-                    <div className="flex items-center px-4">
+
+                <div className="flex flex-wrap gap-3">
+                    <select
+                        value={departmentFilter || ""}
+                        onChange={(e) => { setDepartmentFilter(e.target.value ? Number(e.target.value) : undefined); setProgrammeFilter(undefined); setCurrentPage(1); }}
+                        className="px-4 py-3.5 rounded-2xl border border-slate-200 bg-white/80 text-sm font-bold shadow-sm focus:ring-2 focus:ring-emerald-500"
+                    >
+                        <option value="">All Departments</option>
+                        {departments.map((d: any) => (
+                            <option key={d.id} value={d.id}>{d.name}</option>
+                        ))}
+                    </select>
+
+                    <select
+                        value={programmeFilter || ""}
+                        onChange={(e) => { setProgrammeFilter(e.target.value ? Number(e.target.value) : undefined); setCurrentPage(1); }}
+                        className="px-4 py-3.5 rounded-2xl border border-slate-200 bg-white/80 text-sm font-bold shadow-sm focus:ring-2 focus:ring-emerald-500"
+                    >
+                        <option value="">All Programmes</option>
+                        {filteredProgrammes.map((p: any) => (
+                            <option key={p.id} value={p.id}>{p.name}</option>
+                        ))}
+                    </select>
+
+                    <select
+                        value={levelFilter}
+                        onChange={(e) => { setLevelFilter(e.target.value); setCurrentPage(1); }}
+                        className="px-4 py-3.5 rounded-2xl border border-slate-200 bg-white/80 text-sm font-bold shadow-sm focus:ring-2 focus:ring-emerald-500"
+                    >
+                        <option value="all">All Levels</option>
+                        <option value="Applicant">Applicant</option>
+                        <option value="ND 1">ND 1</option>
+                        <option value="ND 2">ND 2</option>
+                        <option value="ND_GRADUATED">ND_GRADUATED</option>
+                        <option value="HND 1">HND 1</option>
+                        <option value="HND 2">HND 2</option>
+                        <option value="HND_GRADUATED">HND_GRADUATED</option>
+                    </select>
+
+                    <div className="flex items-center px-4 ml-auto">
                         <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200 shadow-sm">
                             Matches: <span className="text-emerald-600 ml-1">{filteredApps.length}</span>
                         </span>

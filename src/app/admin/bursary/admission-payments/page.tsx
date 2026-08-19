@@ -7,7 +7,7 @@ import {
     CreditCard, Search, Loader2, User, Calendar, CheckCircle2, XCircle,
     Filter, FileText, Download, ExternalLink, Trash2, ChevronLeft, ChevronRight
 } from "lucide-react";
-import { getAdminV2Applications, confirmAdmissionPayment, deleteAdmissionApplication } from "@/actions/admission_v2";
+import { getAdminV2Applications, confirmAdmissionPayment, deleteAdmissionApplication, getAdmissionAcademicUnits } from "@/actions/admission_v2";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -18,10 +18,26 @@ export default function BursaryAdmissionPaymentsPage() {
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState("");
     const [filter, setFilter] = useState("all");
+
+    const [departmentFilter, setDepartmentFilter] = useState<number | undefined>(undefined);
+    const [programmeFilter, setProgrammeFilter] = useState<number | undefined>(undefined);
+    const [levelFilter, setLevelFilter] = useState<string>("all");
+
+    const [departments, setDepartments] = useState<any[]>([]);
+    const [programmes, setProgrammes] = useState<any[]>([]);
+
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 10;
 
-    useEffect(() => { fetchData(); }, []);
+    useEffect(() => { 
+        fetchData(); 
+        getAdmissionAcademicUnits().then((res) => {
+            if (res.success) {
+                setDepartments(res.departments || []);
+                setProgrammes(res.programmes || []);
+            }
+        }).catch(() => {});
+    }, []);
 
     const fetchData = async () => {
         setLoading(true);
@@ -54,13 +70,24 @@ export default function BursaryAdmissionPaymentsPage() {
         }
     };
 
+    const filteredProgrammes = departmentFilter
+        ? programmes.filter((p: any) => p.departmentId === departmentFilter || p.deptId === departmentFilter)
+        : programmes;
+
     const appsList = Array.isArray(data?.applications) ? data.applications : [];
 
     const filtered = appsList.filter((app: any) => {
         const matchesSearch = (app.applicantName || '').toLowerCase().includes(search.toLowerCase()) ||
-                             (app.formNumber || '').toLowerCase().includes(search.toLowerCase());
+                             (app.formNumber || '').toLowerCase().includes(search.toLowerCase()) ||
+                             (app.templateName || '').toLowerCase().includes(search.toLowerCase());
         const matchesFilter = filter === "all" ? true : app.paymentStatus === filter;
-        return matchesSearch && matchesFilter;
+        const matchesDept = !departmentFilter ? true : (app.programme?.deptId === departmentFilter || app.programme?.departmentId === departmentFilter);
+        const matchesProg = !programmeFilter ? true : app.programmeId === programmeFilter;
+        const matchesLevel = levelFilter === "all" ? true : (
+            (app.academicLevel || '').toUpperCase() === levelFilter.toUpperCase() ||
+            (app.administrativeLevel || '').toUpperCase() === levelFilter.toUpperCase()
+        );
+        return matchesSearch && matchesFilter && matchesDept && matchesProg && matchesLevel;
     });
 
     const totalPages = Math.ceil(filtered.length / itemsPerPage);
@@ -68,7 +95,7 @@ export default function BursaryAdmissionPaymentsPage() {
 
     useEffect(() => {
         setCurrentPage(1);
-    }, [search, filter]);
+    }, [search, filter, departmentFilter, programmeFilter, levelFilter]);
 
     const handleDelete = async (id: number) => {
         if (!confirm("Are you sure you want to delete this application? This action cannot be undone.")) return;
@@ -141,30 +168,72 @@ export default function BursaryAdmissionPaymentsPage() {
                     </Card>
                 </div>
 
-                <div className="flex gap-4">
-                    <div className="relative flex-1">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                        <input
-                            className="w-full pl-12 pr-4 py-5 rounded-2xl border border-slate-200 shadow-sm focus:ring-2 focus:ring-emerald-500 bg-white/80 text-sm font-bold"
-                            placeholder="Search by name or form number..."
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                        />
+                <div className="flex flex-col gap-4">
+                    <div className="flex flex-col md:flex-row gap-4">
+                        <div className="relative flex-1">
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                            <input
+                                className="w-full pl-12 pr-4 py-5 rounded-2xl border border-slate-200 shadow-sm focus:ring-2 focus:ring-emerald-500 bg-white/80 text-sm font-bold"
+                                placeholder="Search by name or form number..."
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                            />
+                        </div>
+                        <div className="flex bg-white/60 rounded-2xl shadow-sm border border-slate-200 p-1.5">
+                            {["all", "paid", "pending"].map((f) => (
+                                <button
+                                    key={f}
+                                    onClick={() => setFilter(f)}
+                                    className={cn(
+                                        "px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                                        filter === f ? "bg-emerald-600 text-white shadow-lg" : "text-slate-500 hover:text-slate-700"
+                                    )}
+                                >
+                                    {f}
+                                </button>
+                            ))}
+                        </div>
                     </div>
-                    <div className="flex bg-white/60 rounded-2xl shadow-sm border border-slate-200 p-1.5">
-                        {["all", "paid", "pending"].map((f) => (
-                            <button
-                                key={f}
-                                onClick={() => setFilter(f)}
-                                className={cn(
-                                    "px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
-                                    filter === f ? "bg-emerald-600 text-white shadow-lg" : "text-slate-500 hover:text-slate-700"
-                                )}
-                            >
-                                {f}
-                            </button>
-                        ))}
-                        <div className="flex items-center px-4">
+
+                    <div className="flex flex-wrap gap-3">
+                        <select
+                            value={departmentFilter || ""}
+                            onChange={(e) => { setDepartmentFilter(e.target.value ? Number(e.target.value) : undefined); setProgrammeFilter(undefined); setCurrentPage(1); }}
+                            className="px-4 py-3.5 rounded-2xl border border-slate-200 bg-white/80 text-sm font-bold shadow-sm focus:ring-2 focus:ring-emerald-500"
+                        >
+                            <option value="">All Departments</option>
+                            {departments.map((d: any) => (
+                                <option key={d.id} value={d.id}>{d.name}</option>
+                            ))}
+                        </select>
+
+                        <select
+                            value={programmeFilter || ""}
+                            onChange={(e) => { setProgrammeFilter(e.target.value ? Number(e.target.value) : undefined); setCurrentPage(1); }}
+                            className="px-4 py-3.5 rounded-2xl border border-slate-200 bg-white/80 text-sm font-bold shadow-sm focus:ring-2 focus:ring-emerald-500"
+                        >
+                            <option value="">All Programmes</option>
+                            {filteredProgrammes.map((p: any) => (
+                                <option key={p.id} value={p.id}>{p.name}</option>
+                            ))}
+                        </select>
+
+                        <select
+                            value={levelFilter}
+                            onChange={(e) => { setLevelFilter(e.target.value); setCurrentPage(1); }}
+                            className="px-4 py-3.5 rounded-2xl border border-slate-200 bg-white/80 text-sm font-bold shadow-sm focus:ring-2 focus:ring-emerald-500"
+                        >
+                            <option value="all">All Levels</option>
+                            <option value="Applicant">Applicant</option>
+                            <option value="ND 1">ND 1</option>
+                            <option value="ND 2">ND 2</option>
+                            <option value="ND_GRADUATED">ND_GRADUATED</option>
+                            <option value="HND 1">HND 1</option>
+                            <option value="HND 2">HND 2</option>
+                            <option value="HND_GRADUATED">HND_GRADUATED</option>
+                        </select>
+
+                        <div className="flex items-center px-4 ml-auto">
                             <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200 shadow-sm">
                                 Matches: <span className="text-emerald-600 ml-1">{filtered.length}</span>
                             </span>

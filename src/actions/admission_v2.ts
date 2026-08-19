@@ -2018,6 +2018,9 @@ export async function getAdminV2Applications(filters?: {
     status?: string;
     paymentStatus?: string;
     templateId?: number;
+    departmentId?: number;
+    programmeId?: number;
+    level?: string;
     page?: number;
     pageSize?: number;
 }) {
@@ -2057,6 +2060,18 @@ export async function getAdminV2Applications(filters?: {
         if (filters?.templateId) {
             conditions.push(eq(admissionApplicationsV2.templateId, filters.templateId));
         }
+        if (filters?.programmeId) {
+            conditions.push(eq(admissionApplicationsV2.programmeId, filters.programmeId));
+        }
+        if (filters?.departmentId) {
+            const deptProgs = await db.select({ id: programmes.id }).from(programmes).where(eq(programmes.deptId, filters.departmentId));
+            const progIds = deptProgs.map(p => p.id);
+            if (progIds.length > 0) {
+                conditions.push(inArray(admissionApplicationsV2.programmeId, progIds));
+            } else {
+                conditions.push(eq(admissionApplicationsV2.id, -1)); // No matching programmes
+            }
+        }
 
         const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
@@ -2073,28 +2088,83 @@ export async function getAdminV2Applications(filters?: {
             offset: offset,
             with: {
                 template: true,
-                applicant: true
+                applicant: true,
+                programme: {
+                    with: {
+                        department: true
+                    }
+                },
+                student: true
             }
         });
 
+        // Helper function for academic & administrative levels
+        const formatLevels = (app: any) => {
+            const progName = (app.programme?.name || app.template?.name || '').toUpperCase();
+            const progType = (app.programme?.programmeType || (progName.includes('HND') ? 'HND' : 'ND')).toUpperCase();
+            
+            let academicLevel = 'ND 1';
+            if (progType === 'HND') {
+                academicLevel = app.student?.currentLevel === 2 || app.student?.currentLevel === 200 ? 'HND 2' : 'HND 1';
+            } else {
+                academicLevel = app.student?.currentLevel === 2 || app.student?.currentLevel === 200 ? 'ND 2' : 'ND 1';
+            }
+
+            let administrativeLevel = 'Applicant';
+            if (app.student) {
+                const sStatus = (app.student.status || '').toLowerCase();
+                if (sStatus.includes('graduated')) {
+                    administrativeLevel = progType === 'HND' ? 'HND_GRADUATED' : 'ND_GRADUATED';
+                } else {
+                    administrativeLevel = academicLevel;
+                }
+            } else if (app.status === 'admitted') {
+                administrativeLevel = academicLevel;
+            } else {
+                administrativeLevel = 'Applicant';
+            }
+
+            return { academicLevel, administrativeLevel };
+        };
+
+        let mapped = applications.map((app: any) => {
+            let formData: any = {};
+            try { formData = typeof app.data === 'string' ? JSON.parse(app.data) : app.data || {}; } catch {}
+            const nameFromForm = `${formData.firstName || formData.first_name || ''} ${formData.surname || formData.lastName || formData.last_name || ''}`.trim();
+            const nameFromUser = app.applicant ? (app.applicant.name || `${app.applicant.firstName || ''} ${app.applicant.surname || ''}`.trim()) : '';
+            const fallbackEmail = formData.email || formData.applicantEmail || app.applicant?.email || '';
+
+            const { academicLevel, administrativeLevel } = formatLevels(app);
+
+            return {
+                ...app,
+                parsedData: formData,
+                applicantName: nameFromForm || nameFromUser || fallbackEmail || 'N/A',
+                applicantEmail: fallbackEmail || app.applicant?.email || 'N/A',
+                applicantPhone: formData.phone || formData.phone_number || app.applicant?.phone || 'N/A',
+                templateName: app.template?.name || 'N/A',
+                departmentName: app.programme?.department?.name || 'Unassigned Department',
+                programmeName: app.programme?.name || formData.programme || 'Unassigned Programme',
+                academicLevel,
+                administrativeLevel
+            };
+        });
+
+        // Filter by level if specified
+        if (filters?.level && filters.level !== 'all') {
+            const targetLevel = filters.level.trim().toUpperCase();
+            mapped = mapped.filter((a: any) => 
+                a.academicLevel.toUpperCase() === targetLevel ||
+                a.administrativeLevel.toUpperCase() === targetLevel
+            );
+        }
+
         return {
-            applications: applications.map((app: any) => {
-                let formData: any = {};
-                try { formData = typeof app.data === 'string' ? JSON.parse(app.data) : app.data || {}; } catch {}
-                const nameFromForm = `${formData.firstName || formData.first_name || ''} ${formData.surname || formData.lastName || formData.last_name || ''}`.trim();
-                const nameFromUser = app.applicant ? (app.applicant.name || `${app.applicant.firstName || ''} ${app.applicant.surname || ''}`.trim()) : '';
-                const fallbackEmail = formData.email || formData.applicantEmail || app.applicant?.email || '';
-                return {
-                    ...app,
-                    parsedData: formData,
-                    applicantName: nameFromForm || nameFromUser || fallbackEmail || 'N/A',
-                    templateName: app.template?.name || 'N/A',
-                };
-            }),
-            total: total,
+            applications: mapped,
+            total: filters?.level && filters.level !== 'all' ? mapped.length : total,
             page,
             pageSize,
-            totalPages: Math.ceil(total / pageSize),
+            totalPages: Math.ceil((filters?.level && filters.level !== 'all' ? mapped.length : total) / pageSize),
         };
     } catch (error) {
         console.error("[getAdminV2Applications] Failed:", error);

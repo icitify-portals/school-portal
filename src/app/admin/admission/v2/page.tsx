@@ -8,7 +8,7 @@ import {
     XCircle, AlertCircle, Activity, Filter, ExternalLink, ChevronLeft, ChevronRight,
     CheckSquare, Square, Download, FileSpreadsheet, Printer, Trash2
 } from "lucide-react";
-import { getAdminV2Applications, bulkUpdateAdmissionStatus, getAdmissionTemplates, exportAdminV2Applications, deleteAdmissionApplication, bulkDeleteAdmissionApplications } from "@/actions/admission_v2";
+import { getAdminV2Applications, bulkUpdateAdmissionStatus, getAdmissionTemplates, exportAdminV2Applications, deleteAdmissionApplication, bulkDeleteAdmissionApplications, getAdmissionAcademicUnits } from "@/actions/admission_v2";
 import * as xlsx from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -30,6 +30,13 @@ function AdminV2ApplicationsContent() {
     const [paymentFilter, setPaymentFilter] = useState("all");
 
     const [templateFilter, setTemplateFilter] = useState<number | undefined>(undefined);
+    const [departmentFilter, setDepartmentFilter] = useState<number | undefined>(undefined);
+    const [programmeFilter, setProgrammeFilter] = useState<number | undefined>(undefined);
+    const [levelFilter, setLevelFilter] = useState<string>("all");
+
+    const [departments, setDepartments] = useState<any[]>([]);
+    const [programmes, setProgrammes] = useState<any[]>([]);
+
     const [templates, setTemplates] = useState<any[]>([]);
     const [page, setPage] = useState(1);
     const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
@@ -46,18 +53,31 @@ function AdminV2ApplicationsContent() {
             status: statusFilter !== 'all' ? statusFilter : undefined,
             paymentStatus: paymentFilter !== 'all' ? paymentFilter : undefined,
             templateId: templateFilter,
+            departmentId: departmentFilter,
+            programmeId: programmeFilter,
+            level: levelFilter !== 'all' ? levelFilter : undefined,
             page,
             pageSize: 10,
         });
         setData(result);
         setLoading(false);
-    }, [search, statusFilter, paymentFilter, templateFilter, page]);
+    }, [search, statusFilter, paymentFilter, templateFilter, departmentFilter, programmeFilter, levelFilter, page]);
 
     useEffect(() => { fetchData(); }, [fetchData]);
 
     useEffect(() => {
         getAdmissionTemplates().then(setTemplates).catch(() => {});
+        getAdmissionAcademicUnits().then((res) => {
+            if (res.success) {
+                setDepartments(res.departments || []);
+                setProgrammes(res.programmes || []);
+            }
+        }).catch(() => {});
     }, []);
+
+    const filteredProgrammes = departmentFilter
+        ? programmes.filter((p: any) => p.departmentId === departmentFilter || p.deptId === departmentFilter)
+        : programmes;
 
     const handleBulkAction = async (action: string) => {
         if (selectedIds.size === 0) { toast.error("No applications selected"); return; }
@@ -274,6 +294,43 @@ function AdminV2ApplicationsContent() {
                         </select>
 
                         <select
+                            value={departmentFilter || ""}
+                            onChange={(e) => { setDepartmentFilter(e.target.value ? Number(e.target.value) : undefined); setProgrammeFilter(undefined); setPage(1); }}
+                            className="px-4 py-4 rounded-2xl border border-slate-200 bg-white/80 text-sm font-bold shadow-sm focus:ring-2 focus:ring-indigo-500"
+                        >
+                            <option value="">All Departments</option>
+                            {departments.map((d: any) => (
+                                <option key={d.id} value={d.id}>{d.name}</option>
+                            ))}
+                        </select>
+
+                        <select
+                            value={programmeFilter || ""}
+                            onChange={(e) => { setProgrammeFilter(e.target.value ? Number(e.target.value) : undefined); setPage(1); }}
+                            className="px-4 py-4 rounded-2xl border border-slate-200 bg-white/80 text-sm font-bold shadow-sm focus:ring-2 focus:ring-indigo-500"
+                        >
+                            <option value="">All Programmes</option>
+                            {filteredProgrammes.map((p: any) => (
+                                <option key={p.id} value={p.id}>{p.name}</option>
+                            ))}
+                        </select>
+
+                        <select
+                            value={levelFilter}
+                            onChange={(e) => { setLevelFilter(e.target.value); setPage(1); }}
+                            className="px-4 py-4 rounded-2xl border border-slate-200 bg-white/80 text-sm font-bold shadow-sm focus:ring-2 focus:ring-indigo-500"
+                        >
+                            <option value="all">All Levels</option>
+                            <option value="Applicant">Applicant</option>
+                            <option value="ND 1">ND 1</option>
+                            <option value="ND 2">ND 2</option>
+                            <option value="ND_GRADUATED">ND_GRADUATED</option>
+                            <option value="HND 1">HND 1</option>
+                            <option value="HND 2">HND 2</option>
+                            <option value="HND_GRADUATED">HND_GRADUATED</option>
+                        </select>
+
+                        <select
                             value={templateFilter || ""}
                             onChange={(e) => { setTemplateFilter(e.target.value ? Number(e.target.value) : undefined); setPage(1); }}
                             className="px-4 py-4 rounded-2xl border border-slate-200 bg-white/80 text-sm font-bold shadow-sm focus:ring-2 focus:ring-indigo-500"
@@ -359,7 +416,8 @@ function AdminV2ApplicationsContent() {
                                     </th>
                                     <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest">Applicant</th>
                                     <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest">Form #</th>
-                                    <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest">Template</th>
+                                    <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest">Dept & Programme</th>
+                                    <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest">Level</th>
                                     <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest">Status</th>
                                     <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest">Payment</th>
                                     <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest">Date</th>
@@ -417,7 +475,20 @@ function AdminV2ApplicationsContent() {
                                                 </span>
                                             </td>
                                             <td className="px-6 py-5">
-                                                <span className="text-xs font-bold text-indigo-600">{app.templateName}</span>
+                                                <div className="flex flex-col">
+                                                    <span className="text-xs font-black text-slate-800">{app.programmeName}</span>
+                                                    <span className="text-[10px] font-bold text-slate-400">{app.departmentName}</span>
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-5">
+                                                <div className="flex flex-col gap-1">
+                                                    <span className="px-2.5 py-1 bg-indigo-50 border border-indigo-200 text-indigo-700 rounded-lg text-[10px] font-black uppercase tracking-wider w-fit">
+                                                        Acad: {app.academicLevel}
+                                                    </span>
+                                                    <span className="px-2.5 py-1 bg-slate-100 border border-slate-200 text-slate-700 rounded-lg text-[9px] font-bold uppercase tracking-wider w-fit">
+                                                        Admin: {app.administrativeLevel}
+                                                    </span>
+                                                </div>
                                             </td>
                                             <td className="px-6 py-5">
                                                 <span className={cn(
