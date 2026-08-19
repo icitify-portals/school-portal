@@ -22,18 +22,23 @@ import { Suspense } from "react";
 function AdminV2ApplicationsContent() {
     const searchParams = useSearchParams();
     const urlSearchParam = searchParams.get("search") || "";
+    const urlStatusParam = searchParams.get("status") || "all";
+    const urlPaymentParam = searchParams.get("paymentStatus") || "all";
+    const urlLevelParam = searchParams.get("level") || "all";
+    const urlDeptParam = searchParams.get("departmentId") ? Number(searchParams.get("departmentId")) : undefined;
+    const urlProgParam = searchParams.get("programmeId") ? Number(searchParams.get("programmeId")) : undefined;
     
     const [data, setData] = useState<any>({ applications: [], total: 0, page: 1, totalPages: 0 });
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState(urlSearchParam);
-    const [statusFilter, setStatusFilter] = useState("all");
-    const [paymentFilter, setPaymentFilter] = useState("all");
+    const [statusFilter, setStatusFilter] = useState(urlStatusParam);
+    const [paymentFilter, setPaymentFilter] = useState(urlPaymentParam);
 
     const [templateFilter, setTemplateFilter] = useState<number | undefined>(undefined);
     const [facultyFilter, setFacultyFilter] = useState<number | undefined>(undefined);
-    const [departmentFilter, setDepartmentFilter] = useState<number | undefined>(undefined);
-    const [programmeFilter, setProgrammeFilter] = useState<number | undefined>(undefined);
-    const [levelFilter, setLevelFilter] = useState<string>("all");
+    const [departmentFilter, setDepartmentFilter] = useState<number | undefined>(urlDeptParam);
+    const [programmeFilter, setProgrammeFilter] = useState<number | undefined>(urlProgParam);
+    const [levelFilter, setLevelFilter] = useState<string>(urlLevelParam);
     const [modeFilter, setModeFilter] = useState<string>("all");
 
     const [faculties, setFaculties] = useState<any[]>([]);
@@ -46,8 +51,13 @@ function AdminV2ApplicationsContent() {
     const [bulkAction, setBulkAction] = useState("");
 
     useEffect(() => {
-        setSearch(urlSearchParam);
-    }, [urlSearchParam]);
+        setSearch(searchParams.get("search") || "");
+        setStatusFilter(searchParams.get("status") || "all");
+        setPaymentFilter(searchParams.get("paymentStatus") || "all");
+        setLevelFilter(searchParams.get("level") || "all");
+        setDepartmentFilter(searchParams.get("departmentId") ? Number(searchParams.get("departmentId")) : undefined);
+        setProgrammeFilter(searchParams.get("programmeId") ? Number(searchParams.get("programmeId")) : undefined);
+    }, [searchParams]);
 
     const fetchData = useCallback(async () => {
         setLoading(true);

@@ -2563,38 +2563,41 @@ export async function getAdmissionV2Stats() {
         });
 
         let totalApplicants = apps.length;
-        let byLevel: Record<string, number> = { ND: 0, HND: 0, Unspecified: 0 };
+        let byLevel: Record<string, number> = { ND: 0, HND: 0 };
         let byProgramme: Record<string, number> = {};
 
         for (const app of apps) {
             let levelAssigned = false;
-            const progName = app.programme?.name || 'Unspecified';
+            const progName = app.programme?.name || 'Pending Course Selection';
             
             const progNameUpper = progName.toUpperCase();
             const templateNameUpper = app.template?.name?.toUpperCase() || '';
 
             if (progNameUpper.includes('HND') || templateNameUpper.includes('HND')) {
-                byLevel.HND++;
+                byLevel.HND = (byLevel.HND || 0) + 1;
                 levelAssigned = true;
             } else if (progNameUpper.includes('ND') || templateNameUpper.includes('ND')) {
-                byLevel.ND++;
+                byLevel.ND = (byLevel.ND || 0) + 1;
                 levelAssigned = true;
             } else {
                 try {
-                    if (app.formData) {
-                        const fd = typeof app.formData === 'string' ? JSON.parse(app.formData) : app.formData;
-                        const possibleProg = String(fd.programme || fd.Programme || '').toUpperCase();
+                    if (app.data) {
+                        const fd = typeof app.data === 'string' ? JSON.parse(app.data) : app.data;
+                        const possibleProg = String(fd.programme || fd.Programme || fd.programmeName || '').toUpperCase();
                         if (possibleProg.includes('HND')) {
-                            byLevel.HND++; levelAssigned = true;
+                            byLevel.HND = (byLevel.HND || 0) + 1;
+                            levelAssigned = true;
                         } else if (possibleProg.includes('ND')) {
-                            byLevel.ND++; levelAssigned = true;
+                            byLevel.ND = (byLevel.ND || 0) + 1;
+                            levelAssigned = true;
                         }
                     }
                 } catch (e) {}
             }
 
             if (!levelAssigned) {
-                byLevel.Unspecified++;
+                // Fallback to ND for default entry applications
+                byLevel.ND = (byLevel.ND || 0) + 1;
             }
 
             if (!byProgramme[progName]) {
@@ -2613,7 +2616,7 @@ export async function getAdmissionV2Stats() {
         console.error("[getAdmissionV2Stats] Failed:", error);
         return {
             totalApplicants: 0,
-            byLevel: { ND: 0, HND: 0, Unspecified: 0 },
+            byLevel: { ND: 0, HND: 0 },
             byProgramme: {}
         };
     }
