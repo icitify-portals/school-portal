@@ -46,25 +46,13 @@ export class CommunicationService {
         const senderRoleNames = sender.roles.map(r => r.role?.name).filter((name): name is string => !!name);
         const recipientRoleNames = recipient.roles.map(r => r.role?.name).filter((name): name is string => !!name);
 
-        // Rule 1: Administrator can message ANYONE
-        if (senderRoleNames.includes("Administrator") || sender.role === 'admin') {
+        const isSenderStaffOrAdmin = [
+            'admin', 'superadmin', 'icitify_dev', 'bursar', 'registrar', 
+            'admission_officer', 'dvc', 'vc', 'staff', 'hod', 'dean', 'librarian'
+        ].includes((sender.role || '').toLowerCase()) || senderRoleNames.length > 0;
+
+        if (isSenderStaffOrAdmin) {
             return true;
-        }
-
-        // Rule 2: Other roles (Staff, Manager, etc.) 
-        // Can message Students AND members of their OWN role
-        const isSenderStaff = senderRoleNames.some(r => r !== "Student");
-        if (isSenderStaff) {
-            // Can message any student
-            if (recipientRoleNames.includes("Student") || recipient.role === 'student') {
-                return true;
-            }
-
-            // Can message members of the same role
-            const commonRoles = senderRoleNames.filter(r => recipientRoleNames.includes(r));
-            if (commonRoles.length > 0) {
-                return true;
-            }
         }
 
         // Rule 3: Students can only reply

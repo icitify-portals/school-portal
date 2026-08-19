@@ -32,7 +32,13 @@ export default function CommunicationsPage() {
     const [activeTab, setActiveTab] = useState<'inbox' | 'sent'>('inbox');
     const [isComposing, setIsComposing] = useState(false);
     const [composeData, setComposeData] = useState({ recipientId: "", subject: "", content: "" });
-    const [query, setQuery] = useState("");
+    const [recipientSearch, setRecipientSearch] = useState("");
+
+    const filteredRecipients = (context?.validRecipients || []).filter((r: any) =>
+        (r.name || '').toLowerCase().includes(recipientSearch.toLowerCase()) ||
+        (r.email || '').toLowerCase().includes(recipientSearch.toLowerCase()) ||
+        (r.role || '').toLowerCase().includes(recipientSearch.toLowerCase())
+    );
 
     useEffect(() => {
         loadData();
@@ -253,17 +259,25 @@ export default function CommunicationsPage() {
                         </div>
                         <div className="p-8 space-y-6">
                             <div>
-                                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block ml-1">Recipient</label>
-                                <select
-                                    className="w-full p-3.5 bg-slate-50 border-none ring-1 ring-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 transition-all outline-none text-slate-900"
-                                    value={composeData.recipientId}
-                                    onChange={(e) => setComposeData({ ...composeData, recipientId: e.target.value })}
-                                >
-                                    <option value="">Select recipient...</option>
-                                    {context?.validRecipients?.map((r: any) => (
-                                        <option key={r.id} value={r.id}>{r.name} ({r.role})</option>
-                                    ))}
-                                </select>
+                                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block ml-1">Search & Select Recipient</label>
+                                <div className="space-y-2">
+                                    <Input
+                                        className="bg-slate-50 border-none ring-1 ring-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-blue-500 transition-all text-sm mb-2"
+                                        placeholder="Type name, email, or role to search..."
+                                        value={recipientSearch}
+                                        onChange={(e) => setRecipientSearch(e.target.value)}
+                                    />
+                                    <select
+                                        className="w-full p-3.5 bg-slate-50 border-none ring-1 ring-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 transition-all outline-none text-slate-900"
+                                        value={composeData.recipientId}
+                                        onChange={(e) => setComposeData({ ...composeData, recipientId: e.target.value })}
+                                    >
+                                        <option value="">Select recipient ({filteredRecipients.length} available)...</option>
+                                        {filteredRecipients.map((r: any) => (
+                                            <option key={r.id} value={r.id}>{r.name} — {r.email} ({r.role})</option>
+                                        ))}
+                                    </select>
+                                </div>
                             </div>
                             <div>
                                 <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block ml-1">Topic</label>

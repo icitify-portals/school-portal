@@ -682,7 +682,17 @@ export function Sidebar({ enabledModules = {}, mobileOpen = false, onClose }: {
         if (role === 'admin' || role === 'superadmin' || role === 'icitify_dev') {
             return adminMenuItems;
         } else if (role === 'bursar') {
-            return adminMenuItems.filter(item => ["Admin Dashboard", "Finance & Accounting", "Bursary & Fees", "Accounting & Reports", "Analytics & Reports", "Inventory & Stock", "Communication"].includes(item.name));
+            return adminMenuItems
+                .filter(item => ["Admin Dashboard", "Finance & Accounting", "Bursary & Fees", "Accounting & Reports", "Analytics & Reports", "Inventory & Stock", "Communication"].includes(item.name))
+                .map(item => {
+                    if (item.name === "Communication" && item.subItems) {
+                        return {
+                            ...item,
+                            subItems: item.subItems.filter(sub => sub.name !== "Global Forums")
+                        };
+                    }
+                    return item;
+                });
         } else if (role === 'registrar') {
             return adminMenuItems.filter(item => ["Admin Dashboard", "Academics", "Office of the Registrar", "Admission Management", "Student Management", "Academic Calendar", "Student Promotion", "Communication", "Registration Concessions", "SIWES Management"].includes(item.name));
         } else if (role === 'admission_officer') {

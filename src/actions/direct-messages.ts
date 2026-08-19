@@ -15,42 +15,28 @@ export async function getMessagingContext() {
     const userId = parseInt(user.id);
     const inbox = await CommunicationService.getInbox(userId);
 
-    // Fetch potential recipients based on rules
-    // This is for the "Compose" dropdown
-    const allUsersRaw = await db.select({
-        user: users,
-        role: roles
+    // Fetch potential recipients directly from users table
+    const allUsers = await db.select({
+        id: users.id,
+        name: users.name,
+        email: users.email,
+        role: users.role,
     })
         .from(users)
-        .innerJoin(userRoles, eq(users.id, userRoles.userId))
-        .innerJoin(roles, eq(userRoles.roleId, roles.id))
-        .where(ne(users.id, userId));
+        .where(ne(users.id, userId))
+        .limit(500);
 
-    const allUsers = allUsersRaw.reduce((acc, curr) => {
-        const existing = acc.find((u: any) => u.id === curr.user.id);
-        if (existing) {
-            existing.roles.push({ role: curr.role });
-        } else {
-            acc.push({
-                ...curr.user,
-                roles: [{ role: curr.role }]
-            });
-        }
-        return acc;
-    }, [] as any[]);
-
-    // Filter recipients based on canMessage logic
-    // Optimized: filter in memory for now, or we could refine the query
     const validRecipients = [];
     for (const u of allUsers) {
         try {
             const can = await CommunicationService.canMessage(userId, u.id);
             if (can) {
+                const formattedRole = (u.role || 'User').replace(/_/g, ' ').toUpperCase();
                 validRecipients.push({
                     id: u.id,
-                    name: u.name,
-                    email: u.email,
-                    role: u.roles.map((r: any) => r.role.name).join(", ")
+                    name: u.name || u.email || `User #${u.id}`,
+                    email: u.email || '',
+                    role: formattedRole
                 });
             }
         } catch (e) { }
