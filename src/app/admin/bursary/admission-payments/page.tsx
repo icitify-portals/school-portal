@@ -26,7 +26,7 @@ export default function BursaryAdmissionPaymentsPage() {
     const fetchData = async () => {
         setLoading(true);
         try {
-            const result = await getAdminV2Applications({ pageSize: 100 });
+            const result = await getAdminV2Applications({ pageSize: 5000 });
             if (result && Array.isArray(result.applications)) {
                 setData(result);
             } else {
