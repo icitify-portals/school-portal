@@ -143,8 +143,9 @@ export default function ApplicantStatusPage() {
                             <div className="flex-1 space-y-4">
                                 <div className="space-y-1">
                                     <h2 className="text-4xl font-black text-slate-900 italic uppercase">
-                                        {data.status === 'admitted' ? "Admission Granted" : 
-                                         data.status === 'rejected' ? "Admission Denied" : "Processing Status"}
+                                        {data.status === 'admitted' && data.acceptancePaymentStatus === 'paid' ? "Admission Confirmed" : 
+                                         data.status === 'admitted' ? "Provisional Admission Offered" : 
+                                         data.status === 'rejected' ? "Admission Denied" : "Application Status: Pending"}
                                     </h2>
                                     <p className="text-xs font-black text-slate-400 uppercase tracking-widest italic">
                                         Ref: #{data.id.toString().padStart(6, '0')} • {data.template.name}
@@ -165,38 +166,38 @@ export default function ApplicantStatusPage() {
                                                 onClick={() => window.open(`/admission/letter/${id}`, '_blank')}
                                                 className="rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-black px-8 py-6 flex gap-3 uppercase text-xs tracking-widest shadow-xl shadow-emerald-100"
                                             >
-                                                <Download className="w-5 h-5" /> Download Admission Letter
+                                                <Download className="w-5 h-5" /> Download Official Admission Letter
                                             </Button>
                                         ) : (
                                             <Button 
                                                 disabled
                                                 className="rounded-2xl bg-slate-200 text-slate-400 font-black px-8 py-6 flex gap-3 uppercase text-xs tracking-widest cursor-not-allowed opacity-60"
                                             >
-                                                <Download className="w-5 h-5 text-slate-300" /> Letter Locked (Acceptance Fee Required)
+                                                <Download className="w-5 h-5 text-slate-300" /> Letter Locked (Pay Acceptance Fee to Unlock)
                                             </Button>
                                         )}
                                         {data.template.requireAcceptanceFee && data.acceptancePaymentStatus !== 'paid' ? (
                                             <Button 
                                                 onClick={handleAcceptancePayment}
-                                                className="rounded-2xl bg-slate-900 text-white font-black px-8 py-6 flex gap-3 uppercase text-xs tracking-widest shadow-xl"
+                                                className="rounded-2xl bg-slate-900 hover:bg-indigo-600 text-white font-black px-8 py-6 flex gap-3 uppercase text-xs tracking-widest shadow-xl"
                                             >
-                                                <CreditCard className="w-5 h-5" /> Pay Acceptance Fee (₦{parseFloat(data.template.acceptanceFee).toLocaleString()})
+                                                <CreditCard className="w-5 h-5 text-emerald-400" /> Pay Acceptance Fee (₦{parseFloat(data.template.acceptanceFee).toLocaleString()})
                                             </Button>
                                         ) : data.template.requireAcceptanceFee && data.acceptancePaymentStatus === 'paid' && !data.admissionNotes?.includes('Matric Number') ? (
                                             <div className="flex flex-col gap-4">
                                                 <div className="px-6 py-4 bg-emerald-50 rounded-2xl flex items-center gap-3 text-emerald-600 font-black uppercase text-[10px] tracking-widest italic">
-                                                    <CheckCircle2 className="w-4 h-4" /> Acceptance Fee Paid
+                                                    <CheckCircle2 className="w-4 h-4" /> Acceptance Fee Paid — Status: Confirmed Admitted
                                                 </div>
                                                 <Button 
                                                     onClick={handleAcceptAdmission}
-                                                    className="rounded-2xl bg-slate-900 text-white font-black px-8 py-6 flex gap-3 uppercase text-xs tracking-widest shadow-xl animate-bounce"
+                                                    className="rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black px-8 py-6 flex gap-3 uppercase text-xs tracking-widest shadow-xl"
                                                 >
-                                                    <CheckCircle2 className="w-5 h-5" /> Accept Admission & Finalize Registration
+                                                    <CheckCircle2 className="w-5 h-5" /> Proceed to Student Portal & Pay Tuition Fees
                                                 </Button>
                                             </div>
                                         ) : (
                                             <div className="px-6 py-4 bg-emerald-50 rounded-2xl flex items-center gap-3 text-emerald-600 font-black uppercase text-[10px] tracking-widest italic">
-                                                <CheckCircle2 className="w-4 h-4" /> Admission Accepted & Registered
+                                                <CheckCircle2 className="w-4 h-4" /> Admission Confirmed & Registered — Proceed to Student Portal
                                             </div>
                                         )}
                                     </div>
