@@ -125,10 +125,21 @@ export async function processBulkMessageInline(jobData: any) {
             studentIds = queryResult.map((r: any) => r.id);
         } else if (targetCriteria.type === 'applicants') {
             const { inArray, and, sql } = await import('drizzle-orm');
-            const { admissionApplicationsV2 } = await import('@/db/schema');
+            const { admissionApplicationsV2, programmes } = await import('@/db/schema');
             let appConditions: any[] = [];
             if (targetCriteria.admissionStatus && targetCriteria.admissionStatus.length > 0 && !targetCriteria.admissionStatus.includes('all')) {
                 appConditions.push(inArray(admissionApplicationsV2.status, targetCriteria.admissionStatus));
+            }
+            if (targetCriteria.programmes && targetCriteria.programmes.length > 0) {
+                appConditions.push(inArray(admissionApplicationsV2.programmeId, targetCriteria.programmes));
+            } else if (targetCriteria.departments && targetCriteria.departments.length > 0) {
+                const deptProgs = await db.select({ id: programmes.id }).from(programmes).where(inArray(programmes.deptId, targetCriteria.departments));
+                const progIds = deptProgs.map(p => p.id);
+                if (progIds.length > 0) {
+                    appConditions.push(inArray(admissionApplicationsV2.programmeId, progIds));
+                } else {
+                    appConditions.push(sql`1=0`);
+                }
             }
             const apps = await db.select({ applicantId: admissionApplicationsV2.applicantId, data: admissionApplicationsV2.data })
                 .from(admissionApplicationsV2)
@@ -138,7 +149,7 @@ export async function processBulkMessageInline(jobData: any) {
                 if (app.applicantId) studentIds.push(app.applicantId);
                 if (app.data) {
                     try {
-                        const parsed = JSON.parse(app.data);
+                        const parsed = typeof app.data === 'string' ? JSON.parse(app.data) : app.data;
                         if (parsed.email && !externalEmails.includes(parsed.email)) {
                             externalEmails.push(parsed.email);
                         }

@@ -44,6 +44,7 @@ export async function dispatchCentralBroadcast(data: CentralBroadcastPayload) {
         if (data.targetType === "programmes") targetCriteria.programmes = data.programmes || [];
         if (data.targetType === "applicants") {
             targetCriteria.admissionStatus = data.admissionStatus || ["all"];
+            if (data.departments && data.departments.length > 0) targetCriteria.departments = data.departments;
             if (data.programmes && data.programmes.length > 0) targetCriteria.programmes = data.programmes;
         }
         if (data.targetType === "users") {
@@ -182,6 +183,17 @@ export async function getAudienceCountPreview(criteria: {
             let conditions: any[] = [];
             if (criteria.admissionStatus && criteria.admissionStatus.length > 0 && !criteria.admissionStatus.includes("all")) {
                 conditions.push(inArray(admissionApplicationsV2.status, criteria.admissionStatus as any));
+            }
+            if (criteria.programmes && criteria.programmes.length > 0) {
+                conditions.push(inArray(admissionApplicationsV2.programmeId, criteria.programmes));
+            } else if (criteria.departments && criteria.departments.length > 0) {
+                const deptProgs = await db.select({ id: programmes.id }).from(programmes).where(inArray(programmes.deptId, criteria.departments));
+                const progIds = deptProgs.map(p => p.id);
+                if (progIds.length > 0) {
+                    conditions.push(inArray(admissionApplicationsV2.programmeId, progIds));
+                } else {
+                    conditions.push(sql`1=0`);
+                }
             }
             const query = db.select({ count: sql<number>`count(*)` }).from(admissionApplicationsV2);
             const [appCount] = conditions.length > 0 ? await query.where(and(...conditions)) : await query;

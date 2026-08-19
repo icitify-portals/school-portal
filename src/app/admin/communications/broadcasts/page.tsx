@@ -276,26 +276,95 @@ export default function CentralBroadcastCommunicationsPage() {
 
                             {/* Target Sub-Filters */}
                             {targetType === "applicants" && (
-                                <div className="p-4 rounded-2xl bg-amber-500/5 border border-amber-500/20 space-y-3">
-                                    <Label className="text-xs font-bold text-amber-700 uppercase tracking-wider block">Filter Applicants by Admission Status</Label>
-                                    <div className="flex flex-wrap gap-2">
-                                        {["all", "applied", "screened", "admitted", "rejected"].map(status => (
-                                            <button
-                                                type="button"
-                                                key={status}
-                                                onClick={() => {
-                                                    if (status === "all") setAdmissionStatus(["all"]);
-                                                    else {
-                                                        const clean = admissionStatus.filter(s => s !== "all");
-                                                        if (clean.includes(status)) setAdmissionStatus(clean.filter(s => s !== status));
-                                                        else setAdmissionStatus([...clean, status]);
-                                                    }
-                                                }}
-                                                className={`px-3 py-1.5 rounded-lg text-xs font-bold capitalize transition-all ${admissionStatus.includes(status) ? "bg-amber-500 text-white shadow-sm" : "bg-white text-slate-600 border border-slate-200"}`}
-                                            >
-                                                {status}
-                                            </button>
-                                        ))}
+                                <div className="space-y-4">
+                                    <div className="p-4 rounded-2xl bg-amber-500/5 border border-amber-500/20 space-y-3">
+                                        <Label className="text-xs font-bold text-amber-700 uppercase tracking-wider block">Filter Applicants by Admission Status</Label>
+                                        <div className="flex flex-wrap gap-2">
+                                            {["all", "applied", "screened", "admitted", "rejected"].map(status => (
+                                                <button
+                                                    type="button"
+                                                    key={status}
+                                                    onClick={() => {
+                                                        if (status === "all") setAdmissionStatus(["all"]);
+                                                        else {
+                                                            const clean = admissionStatus.filter(s => s !== "all");
+                                                            if (clean.includes(status)) setAdmissionStatus(clean.filter(s => s !== status));
+                                                            else setAdmissionStatus([...clean, status]);
+                                                        }
+                                                    }}
+                                                    className={`px-3 py-1.5 rounded-lg text-xs font-bold capitalize transition-all ${admissionStatus.includes(status) ? "bg-amber-500 text-white shadow-sm" : "bg-white text-slate-600 border border-slate-200"}`}
+                                                >
+                                                    {status}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Department Selection for Applicants */}
+                                    <div className="p-4 rounded-2xl bg-purple-50/50 border border-purple-100 space-y-3">
+                                        <div className="flex justify-between items-center">
+                                            <Label className="text-xs font-bold text-purple-800 uppercase tracking-wider block">Filter Applicants by Department (Optional)</Label>
+                                            {selectedDepts.length > 0 && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setSelectedDepts([])}
+                                                    className="text-[10px] font-bold text-purple-600 hover:underline"
+                                                >
+                                                    Clear Departments
+                                                </button>
+                                            )}
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto custom-scrollbar p-1">
+                                            {departments.map(d => (
+                                                <label key={d.id} className="flex items-center gap-2 text-xs font-semibold text-slate-700 bg-white p-2.5 rounded-xl border border-slate-200 cursor-pointer hover:bg-slate-50">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={selectedDepts.includes(d.id)}
+                                                        onChange={(e) => {
+                                                            if (e.target.checked) setSelectedDepts([...selectedDepts, d.id]);
+                                                            else setSelectedDepts(selectedDepts.filter(id => id !== d.id));
+                                                        }}
+                                                        className="rounded text-purple-600 focus:ring-purple-500"
+                                                    />
+                                                    <span className="truncate">{d.name} ({d.code})</span>
+                                                </label>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Programme Selection for Applicants */}
+                                    <div className="p-4 rounded-2xl bg-blue-50/50 border border-blue-100 space-y-3">
+                                        <div className="flex justify-between items-center">
+                                            <Label className="text-xs font-bold text-blue-800 uppercase tracking-wider block">Filter Applicants by Programme / Course (Optional)</Label>
+                                            {selectedProgs.length > 0 && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setSelectedProgs([])}
+                                                    className="text-[10px] font-bold text-blue-600 hover:underline"
+                                                >
+                                                    Clear Programmes
+                                                </button>
+                                            )}
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto custom-scrollbar p-1">
+                                            {(selectedDepts.length > 0 
+                                                ? programmes.filter(p => selectedDepts.includes(p.deptId || p.departmentId))
+                                                : programmes
+                                            ).map(p => (
+                                                <label key={p.id} className="flex items-center gap-2 text-xs font-semibold text-slate-700 bg-white p-2.5 rounded-xl border border-slate-200 cursor-pointer hover:bg-slate-50">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={selectedProgs.includes(p.id)}
+                                                        onChange={(e) => {
+                                                            if (e.target.checked) setSelectedProgs([...selectedProgs, p.id]);
+                                                            else setSelectedProgs(selectedProgs.filter(id => id !== p.id));
+                                                        }}
+                                                        className="rounded text-blue-600 focus:ring-blue-500"
+                                                    />
+                                                    <span className="truncate">{p.name}</span>
+                                                </label>
+                                            ))}
+                                        </div>
                                     </div>
                                 </div>
                             )}
