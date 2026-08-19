@@ -682,9 +682,15 @@ export function Sidebar({ enabledModules = {}, mobileOpen = false, onClose }: {
 
         if (role === 'admin' || role === 'superadmin' || role === 'icitify_dev') {
             return adminMenuItems;
-        } else if (role === 'bursar') {
+        } else if (role === 'bursar' || role === 'registrar' || role === 'admission_officer') {
+            const allowedItems = role === 'bursar'
+                ? ["Admin Dashboard", "Finance & Accounting", "Bursary & Fees", "Accounting & Reports", "Admission Management", "Analytics & Reports", "Inventory & Stock", "Communication"]
+                : role === 'registrar'
+                ? ["Admin Dashboard", "Academics", "Office of the Registrar", "Admission Management", "Student Management", "Academic Calendar", "Student Promotion", "Communication", "Registration Concessions", "SIWES Management"]
+                : ["Admin Dashboard", "Admission Management", "Student Management", "Communication"];
+
             return adminMenuItems
-                .filter(item => ["Admin Dashboard", "Finance & Accounting", "Bursary & Fees", "Accounting & Reports", "Admission Management", "Analytics & Reports", "Inventory & Stock", "Communication"].includes(item.name))
+                .filter(item => allowedItems.includes(item.name))
                 .map(item => {
                     if (item.name === "Communication" && item.subItems) {
                         return {
@@ -694,10 +700,6 @@ export function Sidebar({ enabledModules = {}, mobileOpen = false, onClose }: {
                     }
                     return item;
                 });
-        } else if (role === 'registrar') {
-            return adminMenuItems.filter(item => ["Admin Dashboard", "Academics", "Office of the Registrar", "Admission Management", "Student Management", "Academic Calendar", "Student Promotion", "Communication", "Registration Concessions", "SIWES Management"].includes(item.name));
-        } else if (role === 'admission_officer') {
-            return adminMenuItems.filter(item => ["Admin Dashboard", "Admission Management", "Student Management", "Communication"].includes(item.name));
         } else if (role === 'librarian') {
             return adminMenuItems.filter(item => ["Admin Dashboard", "Library Management"].includes(item.name));
         } else if (role === 'dvc') {
