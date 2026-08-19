@@ -281,22 +281,74 @@ function AdminV2ApplicationsContent() {
                     </div>
                 </div>
 
-                <div className="flex flex-col lg:flex-row gap-4">
-                    <div className="relative flex-1">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                        <input
-                            className="w-full pl-12 pr-4 py-4 rounded-2xl border border-slate-200 shadow-sm focus:ring-2 focus:ring-indigo-500 bg-white/80 text-sm font-bold"
-                            placeholder="Search by name or form number..."
-                            value={search}
-                            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                        />
+                {/* Search & Filter Controls Block */}
+                <div className="bg-white/70 backdrop-blur-3xl rounded-[2.5rem] border border-white/50 p-6 shadow-xl space-y-5">
+                    {/* Top Search & Actions Row */}
+                    <div className="flex flex-col lg:flex-row gap-4 items-center justify-between">
+                        <div className="relative flex-1 w-full">
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-indigo-500" />
+                            <input
+                                className="w-full pl-12 pr-20 py-4 rounded-2xl border border-slate-200 shadow-sm focus:ring-2 focus:ring-indigo-500 bg-white text-base font-bold text-slate-800 placeholder:text-slate-400 placeholder:font-medium"
+                                placeholder="Search by applicant name, form number, email, or programme..."
+                                value={search}
+                                onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                            />
+                            {search && (
+                                <button
+                                    onClick={() => { setSearch(""); setPage(1); }}
+                                    className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 hover:text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl px-3 py-1.5 transition-colors"
+                                >
+                                    Clear
+                                </button>
+                            )}
+                        </div>
+
+                        <div className="flex items-center gap-3 w-full lg:w-auto shrink-0 justify-between lg:justify-end">
+                            <Button
+                                onClick={selectNaRecords}
+                                variant="outline"
+                                className="px-4 py-4 rounded-2xl border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-800 font-bold text-xs shadow-sm flex items-center"
+                                title="Select all records on current page that display N/A or missing information"
+                            >
+                                <AlertCircle className="w-4 h-4 mr-2" /> Select N/A
+                            </Button>
+
+                            <Button 
+                                onClick={handleExportExcel}
+                                className="px-5 py-4 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm flex items-center"
+                            >
+                                <FileSpreadsheet className="w-4 h-4 mr-2" /> Export Excel
+                            </Button>
+
+                            {(search || statusFilter !== 'all' || paymentFilter !== 'all' || facultyFilter || departmentFilter || programmeFilter || levelFilter !== 'all' || modeFilter !== 'all' || templateFilter) && (
+                                <Button
+                                    variant="ghost"
+                                    onClick={() => {
+                                        setSearch("");
+                                        setStatusFilter("all");
+                                        setPaymentFilter("all");
+                                        setFacultyFilter(undefined);
+                                        setDepartmentFilter(undefined);
+                                        setProgrammeFilter(undefined);
+                                        setLevelFilter("all");
+                                        setModeFilter("all");
+                                        setTemplateFilter(undefined);
+                                        setPage(1);
+                                    }}
+                                    className="text-xs font-bold text-rose-600 hover:bg-rose-50 rounded-2xl px-3 py-4"
+                                >
+                                    Reset Filters
+                                </Button>
+                            )}
+                        </div>
                     </div>
 
-                    <div className="flex flex-wrap gap-3">
+                    {/* Bottom Filter Dropdowns Grid */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3 pt-4 border-t border-slate-100">
                         <select
                             value={statusFilter}
                             onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
-                            className="px-4 py-4 rounded-2xl border border-slate-200 bg-white/80 text-sm font-bold shadow-sm focus:ring-2 focus:ring-indigo-500"
+                            className="px-3 py-3.5 rounded-2xl border border-slate-200 bg-white text-xs font-bold shadow-sm focus:ring-2 focus:ring-indigo-500"
                         >
                             <option value="all">All Status</option>
                             <option value="draft">Draft</option>
@@ -310,7 +362,7 @@ function AdminV2ApplicationsContent() {
                         <select
                             value={paymentFilter}
                             onChange={(e) => { setPaymentFilter(e.target.value); setPage(1); }}
-                            className="px-4 py-4 rounded-2xl border border-slate-200 bg-white/80 text-sm font-bold shadow-sm focus:ring-2 focus:ring-indigo-500"
+                            className="px-3 py-3.5 rounded-2xl border border-slate-200 bg-white text-xs font-bold shadow-sm focus:ring-2 focus:ring-indigo-500"
                         >
                             <option value="all">All Payments</option>
                             <option value="pending">Pending</option>
@@ -321,7 +373,7 @@ function AdminV2ApplicationsContent() {
                         <select
                             value={facultyFilter || ""}
                             onChange={(e) => { setFacultyFilter(e.target.value ? Number(e.target.value) : undefined); setDepartmentFilter(undefined); setProgrammeFilter(undefined); setPage(1); }}
-                            className="px-4 py-4 rounded-2xl border border-slate-200 bg-white/80 text-sm font-bold shadow-sm focus:ring-2 focus:ring-indigo-500"
+                            className="px-3 py-3.5 rounded-2xl border border-slate-200 bg-white text-xs font-bold shadow-sm focus:ring-2 focus:ring-indigo-500"
                         >
                             <option value="">All Faculties</option>
                             {faculties.map((f: any) => (
@@ -332,7 +384,7 @@ function AdminV2ApplicationsContent() {
                         <select
                             value={departmentFilter || ""}
                             onChange={(e) => { setDepartmentFilter(e.target.value ? Number(e.target.value) : undefined); setProgrammeFilter(undefined); setPage(1); }}
-                            className="px-4 py-4 rounded-2xl border border-slate-200 bg-white/80 text-sm font-bold shadow-sm focus:ring-2 focus:ring-indigo-500"
+                            className="px-3 py-3.5 rounded-2xl border border-slate-200 bg-white text-xs font-bold shadow-sm focus:ring-2 focus:ring-indigo-500"
                         >
                             <option value="">All Departments</option>
                             {filteredDepartments.map((d: any) => (
@@ -343,7 +395,7 @@ function AdminV2ApplicationsContent() {
                         <select
                             value={programmeFilter || ""}
                             onChange={(e) => { setProgrammeFilter(e.target.value ? Number(e.target.value) : undefined); setPage(1); }}
-                            className="px-4 py-4 rounded-2xl border border-slate-200 bg-white/80 text-sm font-bold shadow-sm focus:ring-2 focus:ring-indigo-500"
+                            className="px-3 py-3.5 rounded-2xl border border-slate-200 bg-white text-xs font-bold shadow-sm focus:ring-2 focus:ring-indigo-500"
                         >
                             <option value="">All Programmes</option>
                             <option value="-1">Pending Course Selection</option>
@@ -355,7 +407,7 @@ function AdminV2ApplicationsContent() {
                         <select
                             value={levelFilter}
                             onChange={(e) => { setLevelFilter(e.target.value); setPage(1); }}
-                            className="px-4 py-4 rounded-2xl border border-slate-200 bg-white/80 text-sm font-bold shadow-sm focus:ring-2 focus:ring-indigo-500"
+                            className="px-3 py-3.5 rounded-2xl border border-slate-200 bg-white text-xs font-bold shadow-sm focus:ring-2 focus:ring-indigo-500"
                         >
                             <option value="all">All Entry Levels</option>
                             <option value="ND 1">ND 1</option>
@@ -365,9 +417,9 @@ function AdminV2ApplicationsContent() {
                         <select
                             value={modeFilter}
                             onChange={(e) => { setModeFilter(e.target.value); setPage(1); }}
-                            className="px-4 py-4 rounded-2xl border border-slate-200 bg-white/80 text-sm font-bold shadow-sm focus:ring-2 focus:ring-indigo-500"
+                            className="px-3 py-3.5 rounded-2xl border border-slate-200 bg-white text-xs font-bold shadow-sm focus:ring-2 focus:ring-indigo-500"
                         >
-                            <option value="all">All Modes of Study</option>
+                            <option value="all">All Modes</option>
                             <option value="full_time">Full Time</option>
                             <option value="part_time">Part Time</option>
                         </select>
@@ -375,29 +427,13 @@ function AdminV2ApplicationsContent() {
                         <select
                             value={templateFilter || ""}
                             onChange={(e) => { setTemplateFilter(e.target.value ? Number(e.target.value) : undefined); setPage(1); }}
-                            className="px-4 py-4 rounded-2xl border border-slate-200 bg-white/80 text-sm font-bold shadow-sm focus:ring-2 focus:ring-indigo-500"
+                            className="px-3 py-3.5 rounded-2xl border border-slate-200 bg-white text-xs font-bold shadow-sm focus:ring-2 focus:ring-indigo-500"
                         >
                             <option value="">All Templates</option>
                             {templates.map((t: any) => (
                                 <option key={t.id} value={t.id}>{t.name}</option>
                             ))}
                         </select>
-
-                        <Button
-                            onClick={selectNaRecords}
-                            variant="outline"
-                            className="px-5 py-4 rounded-2xl border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-800 font-bold text-sm shadow-sm flex items-center h-full"
-                            title="Select all records on current page that display N/A or missing information"
-                        >
-                            <AlertCircle className="w-4 h-4 mr-2" /> Select N/A Records
-                        </Button>
-
-                        <Button 
-                            onClick={handleExportExcel}
-                            className="px-6 py-4 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-sm flex items-center h-full"
-                        >
-                            <FileSpreadsheet className="w-4 h-4 mr-2" /> Export Excel
-                        </Button>
                     </div>
                 </div>
 
