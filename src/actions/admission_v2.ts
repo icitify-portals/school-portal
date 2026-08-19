@@ -2022,6 +2022,7 @@ export async function getAdminV2Applications(filters?: {
     departmentId?: number;
     programmeId?: number;
     level?: string;
+    applicationMode?: string;
     page?: number;
     pageSize?: number;
 }) {
@@ -2060,6 +2061,9 @@ export async function getAdminV2Applications(filters?: {
         }
         if (filters?.templateId) {
             conditions.push(eq(admissionApplicationsV2.templateId, filters.templateId));
+        }
+        if (filters?.applicationMode && filters.applicationMode !== 'all') {
+            conditions.push(eq(admissionApplicationsV2.applicationMode, filters.applicationMode as any));
         }
         if (filters?.programmeId) {
             conditions.push(eq(admissionApplicationsV2.programmeId, filters.programmeId));

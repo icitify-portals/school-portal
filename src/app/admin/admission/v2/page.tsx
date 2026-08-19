@@ -34,6 +34,7 @@ function AdminV2ApplicationsContent() {
     const [departmentFilter, setDepartmentFilter] = useState<number | undefined>(undefined);
     const [programmeFilter, setProgrammeFilter] = useState<number | undefined>(undefined);
     const [levelFilter, setLevelFilter] = useState<string>("all");
+    const [modeFilter, setModeFilter] = useState<string>("all");
 
     const [faculties, setFaculties] = useState<any[]>([]);
     const [departments, setDepartments] = useState<any[]>([]);
@@ -59,12 +60,13 @@ function AdminV2ApplicationsContent() {
             departmentId: departmentFilter,
             programmeId: programmeFilter,
             level: levelFilter !== 'all' ? levelFilter : undefined,
+            applicationMode: modeFilter !== 'all' ? modeFilter : undefined,
             page,
             pageSize: 10,
         });
         setData(result);
         setLoading(false);
-    }, [search, statusFilter, paymentFilter, templateFilter, facultyFilter, departmentFilter, programmeFilter, levelFilter, page]);
+    }, [search, statusFilter, paymentFilter, templateFilter, facultyFilter, departmentFilter, programmeFilter, levelFilter, modeFilter, page]);
 
     useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -350,6 +352,16 @@ function AdminV2ApplicationsContent() {
                         </select>
 
                         <select
+                            value={modeFilter}
+                            onChange={(e) => { setModeFilter(e.target.value); setPage(1); }}
+                            className="px-4 py-4 rounded-2xl border border-slate-200 bg-white/80 text-sm font-bold shadow-sm focus:ring-2 focus:ring-indigo-500"
+                        >
+                            <option value="all">All Modes of Study</option>
+                            <option value="full_time">Full Time</option>
+                            <option value="part_time">Part Time</option>
+                        </select>
+
+                        <select
                             value={templateFilter || ""}
                             onChange={(e) => { setTemplateFilter(e.target.value ? Number(e.target.value) : undefined); setPage(1); }}
                             className="px-4 py-4 rounded-2xl border border-slate-200 bg-white/80 text-sm font-bold shadow-sm focus:ring-2 focus:ring-indigo-500"
@@ -438,6 +450,7 @@ function AdminV2ApplicationsContent() {
                                     <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest">Faculty</th>
                                     <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest">Department</th>
                                     <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest">Programme</th>
+                                    <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest">Mode</th>
                                     <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest">Level</th>
                                     <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest">Status</th>
                                     <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest">Payment</th>
@@ -448,13 +461,13 @@ function AdminV2ApplicationsContent() {
                             <tbody className="divide-y divide-slate-100 bg-white">
                                 {loading ? (
                                     <tr>
-                                        <td colSpan={10} className="px-8 py-20 text-center">
+                                        <td colSpan={11} className="px-8 py-20 text-center">
                                             <Loader2 className="w-10 h-10 animate-spin mx-auto text-indigo-500" />
                                         </td>
                                     </tr>
                                 ) : (data?.applications || []).length === 0 ? (
                                     <tr>
-                                        <td colSpan={10} className="px-8 py-20 text-center">
+                                        <td colSpan={11} className="px-8 py-20 text-center">
                                             <div className="max-w-xs mx-auto space-y-4">
                                                 <FileText className="w-12 h-12 text-slate-300 mx-auto" />
                                                 <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest italic">
@@ -503,6 +516,11 @@ function AdminV2ApplicationsContent() {
                                             </td>
                                             <td className="px-6 py-5">
                                                 <span className="text-xs font-black text-indigo-600">{app.programmeName}</span>
+                                            </td>
+                                            <td className="px-6 py-5">
+                                                <span className="px-2.5 py-1 bg-slate-100 border border-slate-200 text-slate-700 rounded-lg text-[9px] font-black uppercase tracking-wider inline-block">
+                                                    {app.applicationMode === 'part_time' ? 'Part-Time' : 'Full-Time'}
+                                                </span>
                                             </td>
                                             <td className="px-6 py-5">
                                                 <span className="px-2.5 py-1 bg-indigo-50 border border-indigo-200 text-indigo-700 rounded-lg text-[10px] font-black uppercase tracking-wider inline-block">
