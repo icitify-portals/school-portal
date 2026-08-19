@@ -2613,9 +2613,7 @@ export async function resolveOnlinePaymentAction(reference: string, status: 'com
                     const { admissionApplicationsV2, users } = await import('@/db/schema');
                     await tx.update(admissionApplicationsV2)
                         .set({ 
-                            paymentStatus: 'paid',
-                            processingFeeStatus: 'paid',
-                            processingFeeReference: reference
+                            paymentStatus: 'paid'
                         })
                         .where(eq(admissionApplicationsV2.id, applicationId));
                     
