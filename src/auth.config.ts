@@ -117,22 +117,73 @@ export const authConfig = {
             if (isAdminPage) {
                 if (userRole === 'admin' || userRole === 'superadmin' || userRole === 'dvc' || userRole === 'icitify_dev') return true;
 
+                const isRegistrar = userRole === 'registrar' || userRoles.includes('registrar') || userRoles.includes('Registrar');
+                const isAdmissionOfficer = userRole === 'admission_officer' || userRole === 'admission officer' || userRoles.includes('admission_officer') || userRoles.includes('Admission Officer');
+                const isBursar = userRole === 'bursar' || userRole === 'bursary' || userRoles.includes('bursar') || userRoles.includes('Bursar');
+
                 // Permission-scoped access: checked BEFORE role rules to enforce strict path restrictions
                 const hasResultModulePermission = userPermissions.includes("result_module.manage");
-                if (hasResultModulePermission) {
+                if (hasResultModulePermission && !isRegistrar) {
                     // Strictly restrict to result-module only — no other admin paths allowed
                     if (nextUrl.pathname.startsWith("/admin/result-module")) return true;
                     return Response.redirect(new URL("/dashboard", nextUrl));
                 }
 
                 if (nextUrl.pathname.startsWith("/admin/cms") && hasCmsAccess) return true;
-                if (userRole === 'bursar' && (nextUrl.pathname === "/admin/dashboard" || nextUrl.pathname.startsWith("/admin/bursary") || nextUrl.pathname.startsWith("/admin/accounting") || nextUrl.pathname.startsWith("/admin/analytics") || nextUrl.pathname.startsWith("/admin/inventory") || nextUrl.pathname.startsWith("/admin/communications") || nextUrl.pathname.startsWith("/admin/announcements") || nextUrl.pathname.startsWith("/admin/admission"))) return true;
-                if (userRole === 'registrar' && (nextUrl.pathname === "/admin/dashboard" || nextUrl.pathname.startsWith("/admin/admission") || nextUrl.pathname.startsWith("/admin/admissions") || nextUrl.pathname.startsWith("/admin/academics") || nextUrl.pathname.startsWith("/admin/academic") || nextUrl.pathname.startsWith("/admin/courses") || nextUrl.pathname.startsWith("/admin/faculties") || nextUrl.pathname.startsWith("/admin/departments") || nextUrl.pathname.startsWith("/admin/programmes") || nextUrl.pathname.startsWith("/admin/curriculum") || nextUrl.pathname.startsWith("/admin/calendar") || nextUrl.pathname.startsWith("/admin/quality-assurance") || nextUrl.pathname.startsWith("/admin/registration") || nextUrl.pathname.startsWith("/admin/cbt") || nextUrl.pathname.startsWith("/admin/students") || nextUrl.pathname.startsWith("/admin/exams-records") || nextUrl.pathname.startsWith("/admin/registrar") || nextUrl.pathname.startsWith("/admin/promotion") || nextUrl.pathname.startsWith("/admin/siwes"))) return true;
-                if (userRole === 'admission_officer' && (nextUrl.pathname === "/admin/dashboard" || nextUrl.pathname.startsWith("/admin/admission") || nextUrl.pathname.startsWith("/admin/admissions") || nextUrl.pathname.startsWith("/admin/students"))) return true;
-                if (userRole === 'librarian' && (nextUrl.pathname === "/admin/dashboard" || nextUrl.pathname.startsWith("/admin/library") || nextUrl.pathname.startsWith("/admin/journal"))) return true;
-                if (userRole === 'hod' && (nextUrl.pathname === "/admin/dashboard" || nextUrl.pathname.startsWith("/admin/hod") || nextUrl.pathname.startsWith("/admin/academics") || nextUrl.pathname.startsWith("/admin/academic") || nextUrl.pathname.startsWith("/admin/students") || nextUrl.pathname.startsWith("/admin/hr"))) return true;
-                if (userRole === 'dean' && (nextUrl.pathname === "/admin/dashboard" || nextUrl.pathname.startsWith("/admin/dean") || nextUrl.pathname.startsWith("/admin/academics") || nextUrl.pathname.startsWith("/admin/academic") || nextUrl.pathname.startsWith("/admin/students") || nextUrl.pathname.startsWith("/admin/hr"))) return true;
-                if (userRole === 'staff' && allowedAdminPaths.some(p => nextUrl.pathname.startsWith(p))) return true;
+
+                if (isBursar && (
+                    nextUrl.pathname === "/admin/dashboard" || 
+                    nextUrl.pathname.startsWith("/admin/bursary") || 
+                    nextUrl.pathname.startsWith("/admin/accounting") || 
+                    nextUrl.pathname.startsWith("/admin/analytics") || 
+                    nextUrl.pathname.startsWith("/admin/inventory") || 
+                    nextUrl.pathname.startsWith("/admin/communications") || 
+                    nextUrl.pathname.startsWith("/admin/announcements") || 
+                    nextUrl.pathname.startsWith("/admin/admission")
+                )) return true;
+
+                if (isRegistrar && (
+                    nextUrl.pathname === "/admin/dashboard" || 
+                    nextUrl.pathname.startsWith("/admin/admission") || 
+                    nextUrl.pathname.startsWith("/admin/admissions") || 
+                    nextUrl.pathname.startsWith("/admin/academics") || 
+                    nextUrl.pathname.startsWith("/admin/academic") || 
+                    nextUrl.pathname.startsWith("/admin/courses") || 
+                    nextUrl.pathname.startsWith("/admin/faculties") || 
+                    nextUrl.pathname.startsWith("/admin/departments") || 
+                    nextUrl.pathname.startsWith("/admin/programmes") || 
+                    nextUrl.pathname.startsWith("/admin/curriculum") || 
+                    nextUrl.pathname.startsWith("/admin/calendar") || 
+                    nextUrl.pathname.startsWith("/admin/quality-assurance") || 
+                    nextUrl.pathname.startsWith("/admin/registration") || 
+                    nextUrl.pathname.startsWith("/admin/cbt") || 
+                    nextUrl.pathname.startsWith("/admin/students") || 
+                    nextUrl.pathname.startsWith("/admin/exams-records") || 
+                    nextUrl.pathname.startsWith("/admin/registrar") || 
+                    nextUrl.pathname.startsWith("/admin/promotion") || 
+                    nextUrl.pathname.startsWith("/admin/siwes") || 
+                    nextUrl.pathname.startsWith("/admin/communications") || 
+                    nextUrl.pathname.startsWith("/admin/announcements") || 
+                    nextUrl.pathname.startsWith("/admin/result-module")
+                )) return true;
+
+                if (isAdmissionOfficer && (
+                    nextUrl.pathname === "/admin/dashboard" || 
+                    nextUrl.pathname.startsWith("/admin/admission") || 
+                    nextUrl.pathname.startsWith("/admin/admissions") || 
+                    nextUrl.pathname.startsWith("/admin/students") || 
+                    nextUrl.pathname.startsWith("/admin/communications") || 
+                    nextUrl.pathname.startsWith("/admin/announcements") || 
+                    nextUrl.pathname.startsWith("/admin/faculties") || 
+                    nextUrl.pathname.startsWith("/admin/departments") || 
+                    nextUrl.pathname.startsWith("/admin/programmes")
+                )) return true;
+
+                if (userRole === 'librarian' && (nextUrl.pathname === "/admin/dashboard" || nextUrl.pathname.startsWith("/admin/library") || nextUrl.pathname.startsWith("/admin/journal") || nextUrl.pathname.startsWith("/admin/communications") || nextUrl.pathname.startsWith("/admin/announcements"))) return true;
+                if (userRole === 'hod' && (nextUrl.pathname === "/admin/dashboard" || nextUrl.pathname.startsWith("/admin/hod") || nextUrl.pathname.startsWith("/admin/academics") || nextUrl.pathname.startsWith("/admin/academic") || nextUrl.pathname.startsWith("/admin/students") || nextUrl.pathname.startsWith("/admin/hr") || nextUrl.pathname.startsWith("/admin/communications") || nextUrl.pathname.startsWith("/admin/announcements"))) return true;
+                if (userRole === 'dean' && (nextUrl.pathname === "/admin/dashboard" || nextUrl.pathname.startsWith("/admin/dean") || nextUrl.pathname.startsWith("/admin/academics") || nextUrl.pathname.startsWith("/admin/academic") || nextUrl.pathname.startsWith("/admin/students") || nextUrl.pathname.startsWith("/admin/hr") || nextUrl.pathname.startsWith("/admin/communications") || nextUrl.pathname.startsWith("/admin/announcements"))) return true;
+                if (userRole === 'staff' && (allowedAdminPaths.some(p => nextUrl.pathname.startsWith(p)) || nextUrl.pathname.startsWith("/admin/communications") || nextUrl.pathname.startsWith("/admin/announcements"))) return true;
+
                 return Response.redirect(new URL("/dashboard", nextUrl));
             }
 
