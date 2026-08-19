@@ -220,31 +220,39 @@ export default function AdminAdmissionDashboard() {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-white/40 bg-white/20">
-                                        {!stats?.byProgramme || Object.keys(stats.byProgramme).length === 0 ? (
+                                        {!stats?.byProgrammeDetails && !stats?.byProgramme || Object.keys(stats?.byProgrammeDetails || stats?.byProgramme || {}).length === 0 ? (
                                             <tr>
                                                 <td colSpan={2} className="px-8 py-20 text-center">
                                                     <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest">No applicants found</p>
                                                 </td>
                                             </tr>
                                         ) : (
-                                            Object.entries(stats.byProgramme).map(([progName, count], idx) => (
-                                                <tr key={idx} className="hover:bg-white/60 transition-colors group">
-                                                    <td className="px-8 py-6">
-                                                        <Link href={`/admin/admission/v2?search=${encodeURIComponent(progName === 'Pending Course Selection' ? 'draft' : progName)}`}>
-                                                            <span className="text-base font-black text-slate-800 uppercase group-hover:text-indigo-700 transition-colors cursor-pointer">
-                                                                {progName}
-                                                            </span>
-                                                        </Link>
-                                                    </td>
-                                                    <td className="px-8 py-6 text-right">
-                                                        <Link href={`/admin/admission/v2?search=${encodeURIComponent(progName === 'Pending Course Selection' ? 'draft' : progName)}`}>
-                                                            <span className="px-5 py-2 bg-indigo-100 text-indigo-800 border border-indigo-200 rounded-xl text-sm font-black tracking-widest shadow-sm font-mono group-hover:bg-indigo-600 group-hover:text-white transition-colors inline-flex items-center gap-2 cursor-pointer">
-                                                                {String(count)} <ExternalLink className="w-3.5 h-3.5 opacity-70" />
-                                                            </span>
-                                                        </Link>
-                                                    </td>
-                                                </tr>
-                                            ))
+                                            Object.entries(stats.byProgrammeDetails || {}).map(([progName, item]: [string, any], idx) => {
+                                                const progCount = typeof item === 'object' ? item.count : item;
+                                                const progId = typeof item === 'object' ? item.id : null;
+                                                const href = progId 
+                                                    ? `/admin/admission/v2?programmeId=${progId}`
+                                                    : `/admin/admission/v2?programmeId=-1`;
+
+                                                return (
+                                                    <tr key={idx} className="hover:bg-white/60 transition-colors group">
+                                                        <td className="px-8 py-6">
+                                                            <Link href={href}>
+                                                                <span className="text-base font-black text-slate-800 uppercase group-hover:text-indigo-700 transition-colors cursor-pointer">
+                                                                    {progName}
+                                                                </span>
+                                                            </Link>
+                                                        </td>
+                                                        <td className="px-8 py-6 text-right">
+                                                            <Link href={href}>
+                                                                <span className="px-5 py-2 bg-indigo-100 text-indigo-800 border border-indigo-200 rounded-xl text-sm font-black tracking-widest shadow-sm font-mono group-hover:bg-indigo-600 group-hover:text-white transition-colors inline-flex items-center gap-2 cursor-pointer">
+                                                                    {String(progCount)} <ExternalLink className="w-3.5 h-3.5 opacity-70" />
+                                                                </span>
+                                                            </Link>
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })
                                         )}
                                     </tbody>
                                 </table>

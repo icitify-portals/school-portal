@@ -2041,6 +2041,11 @@ export async function getAdminV2Applications(filters?: {
                 .where(like(users.name, q));
             const userIds = matchingUsers.map(u => u.id);
 
+            const matchingProgs = await db.select({ id: programmes.id })
+                .from(programmes)
+                .where(like(programmes.name, q));
+            const searchProgIds = matchingProgs.map(p => p.id);
+
             const searchOr = [
                 like(admissionApplicationsV2.formNumber, q),
                 like(admissionApplicationsV2.data, q)
@@ -2048,6 +2053,12 @@ export async function getAdminV2Applications(filters?: {
             
             if (userIds.length > 0) {
                 searchOr.push(inArray(admissionApplicationsV2.applicantId, userIds));
+            }
+            if (searchProgIds.length > 0) {
+                searchOr.push(inArray(admissionApplicationsV2.programmeId, searchProgIds));
+            }
+            if (filters.search.toLowerCase().includes('pending') || filters.search.toLowerCase().includes('unassigned')) {
+                searchOr.push(isNull(admissionApplicationsV2.programmeId));
             }
             
             conditions.push(or(...searchOr));
@@ -2066,7 +2077,11 @@ export async function getAdminV2Applications(filters?: {
             conditions.push(eq(admissionApplicationsV2.applicationMode, filters.applicationMode as any));
         }
         if (filters?.programmeId) {
-            conditions.push(eq(admissionApplicationsV2.programmeId, filters.programmeId));
+            if (filters.programmeId === -1) {
+                conditions.push(isNull(admissionApplicationsV2.programmeId));
+            } else {
+                conditions.push(eq(admissionApplicationsV2.programmeId, filters.programmeId));
+            }
         }
         if (filters?.departmentId) {
             const deptProgs = await db.select({ id: programmes.id }).from(programmes).where(eq(programmes.deptId, filters.departmentId));
@@ -2565,10 +2580,12 @@ export async function getAdmissionV2Stats() {
         let totalApplicants = apps.length;
         let byLevel: Record<string, number> = { ND: 0, HND: 0 };
         let byProgramme: Record<string, number> = {};
+        let byProgrammeDetails: Record<string, { count: number; id: number | null }> = {};
 
         for (const app of apps) {
             let levelAssigned = false;
             const progName = app.programme?.name || 'Pending Course Selection';
+            const progId = app.programme?.id || null;
             
             const progNameUpper = progName.toUpperCase();
             const templateNameUpper = app.template?.name?.toUpperCase() || '';
@@ -2604,12 +2621,18 @@ export async function getAdmissionV2Stats() {
                 byProgramme[progName] = 0;
             }
             byProgramme[progName]++;
+
+            if (!byProgrammeDetails[progName]) {
+                byProgrammeDetails[progName] = { count: 0, id: progId };
+            }
+            byProgrammeDetails[progName].count++;
         }
 
         return {
             totalApplicants,
             byLevel,
-            byProgramme
+            byProgramme,
+            byProgrammeDetails
         };
 
     } catch (error: any) {
@@ -2617,7 +2640,8 @@ export async function getAdmissionV2Stats() {
         return {
             totalApplicants: 0,
             byLevel: { ND: 0, HND: 0 },
-            byProgramme: {}
+            byProgramme: {},
+            byProgrammeDetails: {}
         };
     }
 }

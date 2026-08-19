@@ -346,6 +346,7 @@ function AdminV2ApplicationsContent() {
                             className="px-4 py-4 rounded-2xl border border-slate-200 bg-white/80 text-sm font-bold shadow-sm focus:ring-2 focus:ring-indigo-500"
                         >
                             <option value="">All Programmes</option>
+                            <option value="-1">Pending Course Selection</option>
                             {filteredProgrammes.map((p: any) => (
                                 <option key={p.id} value={p.id}>{p.name}</option>
                             ))}
