@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -87,6 +87,8 @@ export default function AdmissionBuilderPage() {
         feeStructureId: string;
         applicationFee: string;
         processingFee: string;
+        requireAcceptanceFee: boolean;
+        acceptanceFee: string;
         flowType: string;
     }>({
         name: "",
@@ -97,6 +99,8 @@ export default function AdmissionBuilderPage() {
         feeStructureId: "",
         applicationFee: "0",
         processingFee: "0",
+        requireAcceptanceFee: false,
+        acceptanceFee: "0",
         flowType: "form_first"
     });
 
@@ -352,7 +356,23 @@ export default function AdmissionBuilderPage() {
                                     <div className="flex items-center gap-2">
                                         <button
                                             type="button"
-                                            onClick={(e) => { e.stopPropagation(); handleEditClick(template); }}
+                                            onClick={() => {
+                                                setNewData({
+                                                    id: template.id,
+                                                    name: template.name,
+                                                    level: template.level || "primary",
+                                                    slug: template.slug,
+                                                    startDate: template.startDate ? new Date(template.startDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+                                                    endDate: template.endDate ? new Date(template.endDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+                                                    feeStructureId: template.feeStructureId?.toString() || "",
+                                                    applicationFee: template.applicationFee?.toString() || "0",
+                                                    processingFee: template.processingFee?.toString() || "0",
+                                                    requireAcceptanceFee: !!template.requireAcceptanceFee,
+                                                    acceptanceFee: template.acceptanceFee?.toString() || "0",
+                                                    flowType: template.flowType || "form_first"
+                                                });
+                                                setShowCreateModal(true);
+                                            }}
                                             className="text-white/60 hover:text-white transition-colors disabled:opacity-50"
                                             title="Edit template details"
                                         >
@@ -431,6 +451,14 @@ export default function AdmissionBuilderPage() {
                                         {parseFloat(template.processingFee || "0") > 0 && (
                                             <p className="text-[10px] font-bold text-indigo-600">+ ₦{parseFloat(template.processingFee).toLocaleString()} processing</p>
                                         )}
+                                        <div className="mt-2 pt-2 border-t border-slate-100">
+                                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Acceptance Fee</p>
+                                            {template.requireAcceptanceFee ? (
+                                                <p className="text-xs font-black text-emerald-600">₦{parseFloat(template.acceptanceFee || "0").toLocaleString()} (Required)</p>
+                                            ) : (
+                                                <p className="text-[10px] font-bold text-slate-400">Disabled (₦0)</p>
+                                            )}
+                                        </div>
                                     </div>
                                     <div className="flex gap-2">
                                         <Button
@@ -565,16 +593,44 @@ export default function AdmissionBuilderPage() {
                                     />
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">Processing Fee (₦) <span className="text-indigo-500">— Paystack</span></label>
-                                    <input
-                                        type="number"
-                                        className="w-full bg-slate-50 border-none rounded-2xl px-6 py-4 font-bold outline-none focus:ring-2 focus:ring-indigo-500"
-                                        placeholder="0.00"
-                                        value={newData.processingFee}
-                                        onChange={(e) => setNewData({...newData, processingFee: e.target.value})}
-                                    />
-                                    <p className="text-[9px] font-bold text-slate-500 px-1">Payable via Paystack after application fee is confirmed</p>
-                                </div>
+                                     <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">Processing Fee (₦) <span className="text-indigo-500">— Paystack</span></label>
+                                     <input
+                                         type="number"
+                                         className="w-full bg-slate-50 border-none rounded-2xl px-6 py-4 font-bold outline-none focus:ring-2 focus:ring-indigo-500"
+                                         placeholder="0.00"
+                                         value={newData.processingFee}
+                                         onChange={(e) => setNewData({...newData, processingFee: e.target.value})}
+                                     />
+                                     <p className="text-[9px] font-bold text-slate-500 px-1">Payable via Paystack after application fee is confirmed</p>
+                                 </div>
+
+                                 <div className="p-5 bg-slate-50 rounded-2xl border border-slate-200 space-y-4">
+                                     <div className="flex items-center justify-between">
+                                         <div>
+                                             <label className="text-xs font-black uppercase tracking-widest text-slate-800">Require Acceptance Fee</label>
+                                             <p className="text-[10px] text-slate-500 font-bold">Require candidates to pay acceptance fee after admission offer</p>
+                                         </div>
+                                         <input
+                                             type="checkbox"
+                                             className="w-5 h-5 accent-indigo-600 rounded cursor-pointer"
+                                             checked={newData.requireAcceptanceFee}
+                                             onChange={(e) => setNewData({ ...newData, requireAcceptanceFee: e.target.checked })}
+                                         />
+                                     </div>
+
+                                     {newData.requireAcceptanceFee && (
+                                         <div className="space-y-2 pt-3 border-t border-slate-200">
+                                             <label className="text-[10px] font-black uppercase tracking-widest text-slate-600 px-1">Acceptance Fee Amount (₦)</label>
+                                             <input
+                                                 type="number"
+                                                 className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 font-bold outline-none focus:ring-2 focus:ring-indigo-500 text-slate-900"
+                                                 placeholder="e.g. 35000.00"
+                                                 value={newData.acceptanceFee}
+                                                 onChange={(e) => setNewData({ ...newData, acceptanceFee: e.target.value })}
+                                             />
+                                         </div>
+                                     )}
+                                 </div>
                                 <div className="flex gap-4 pt-4">
                                     <Button
                                         type="button"

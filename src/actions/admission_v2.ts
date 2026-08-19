@@ -171,17 +171,17 @@ export async function linkProgrammesToTemplate(templateId: number, programmeIds:
 export async function saveFormTemplate(data: any) {
     try {
         await requireAdmin();
-        const { id, name, level, slug, description, flowType, feeStructureId, applicationFee, processingFee, lateFee, startDate, endDate, lateEndDate, minAge, isActive, ninVerificationConfig } = data;
+        const { id, name, level, slug, description, flowType, feeStructureId, applicationFee, processingFee, requireAcceptanceFee, acceptanceFee, lateFee, startDate, endDate, lateEndDate, minAge, isActive, ninVerificationConfig } = data;
         
         if (id) {
             await db.update(admissionFormTemplates)
-                .set({ name, level, slug, description, flowType, feeStructureId, applicationFee, processingFee, lateFee, startDate, endDate, lateEndDate, minAge, isActive, ninVerificationConfig })
+                .set({ name, level, slug, description, flowType, feeStructureId, applicationFee, processingFee, requireAcceptanceFee, acceptanceFee, lateFee, startDate, endDate, lateEndDate, minAge, isActive, ninVerificationConfig })
                 .where(eq(admissionFormTemplates.id, id));
             revalidatePath(`/admin/admission/forms/${id}`);
             return { success: true, id };
         } else {
             const [result] = await db.insert(admissionFormTemplates).values({
-                name, level, slug, description, flowType, feeStructureId, applicationFee, processingFee, lateFee, startDate, endDate, lateEndDate, minAge, isActive, ninVerificationConfig
+                name, level, slug, description, flowType, feeStructureId, applicationFee, processingFee, requireAcceptanceFee, acceptanceFee, lateFee, startDate, endDate, lateEndDate, minAge, isActive, ninVerificationConfig
             });
             revalidatePath("/admin/admission/forms");
             return { success: true, id: result.insertId };

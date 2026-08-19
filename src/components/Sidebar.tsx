@@ -257,6 +257,7 @@ const adminMenuItems: MenuItem[] = [
         subItems: [
             { name: "Bursar Dashboard", href: "/admin/bursary" },
             { name: "Fee Structures", href: "/admin/bursary/fees" },
+            { name: "Admission Templates & Fees", href: "/admin/admission/forms" },
             { name: "Fee Allocations", href: "/admin/bursary/allocations" },
             { name: "Discounts", href: "/admin/bursary/discounts" },
             { name: "Expenditure Requests", href: "/admin/bursary/expenditure" },
@@ -683,7 +684,7 @@ export function Sidebar({ enabledModules = {}, mobileOpen = false, onClose }: {
             return adminMenuItems;
         } else if (role === 'bursar') {
             return adminMenuItems
-                .filter(item => ["Admin Dashboard", "Finance & Accounting", "Bursary & Fees", "Accounting & Reports", "Analytics & Reports", "Inventory & Stock", "Communication"].includes(item.name))
+                .filter(item => ["Admin Dashboard", "Finance & Accounting", "Bursary & Fees", "Accounting & Reports", "Admission Management", "Analytics & Reports", "Inventory & Stock", "Communication"].includes(item.name))
                 .map(item => {
                     if (item.name === "Communication" && item.subItems) {
                         return {
