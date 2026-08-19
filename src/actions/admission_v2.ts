@@ -2018,6 +2018,7 @@ export async function getAdminV2Applications(filters?: {
     status?: string;
     paymentStatus?: string;
     templateId?: number;
+    facultyId?: number;
     departmentId?: number;
     programmeId?: number;
     level?: string;
@@ -2069,7 +2070,22 @@ export async function getAdminV2Applications(filters?: {
             if (progIds.length > 0) {
                 conditions.push(inArray(admissionApplicationsV2.programmeId, progIds));
             } else {
-                conditions.push(eq(admissionApplicationsV2.id, -1)); // No matching programmes
+                conditions.push(eq(admissionApplicationsV2.id, -1));
+            }
+        }
+        if (filters?.facultyId) {
+            const facDepts = await db.select({ id: departments.id }).from(departments).where(eq(departments.facultyId, filters.facultyId));
+            const facDeptIds = facDepts.map(d => d.id);
+            if (facDeptIds.length > 0) {
+                const facProgs = await db.select({ id: programmes.id }).from(programmes).where(inArray(programmes.deptId, facDeptIds));
+                const facProgIds = facProgs.map(p => p.id);
+                if (facProgIds.length > 0) {
+                    conditions.push(inArray(admissionApplicationsV2.programmeId, facProgIds));
+                } else {
+                    conditions.push(eq(admissionApplicationsV2.id, -1));
+                }
+            } else {
+                conditions.push(eq(admissionApplicationsV2.id, -1));
             }
         }
 
@@ -2091,38 +2107,24 @@ export async function getAdminV2Applications(filters?: {
                 applicant: true,
                 programme: {
                     with: {
-                        department: true
+                        department: {
+                            with: {
+                                faculty: true
+                            }
+                        }
                     }
                 },
                 student: true
             }
         });
 
-        // Helper function for academic & administrative levels
+        // Format Academic Level (ND 1 / HND 1 for entry applicants) and Administrative Level (Applicant)
         const formatLevels = (app: any) => {
             const progName = (app.programme?.name || app.template?.name || '').toUpperCase();
             const progType = (app.programme?.programmeType || (progName.includes('HND') ? 'HND' : 'ND')).toUpperCase();
             
-            let academicLevel = 'ND 1';
-            if (progType === 'HND') {
-                academicLevel = app.student?.currentLevel === 2 || app.student?.currentLevel === 200 ? 'HND 2' : 'HND 1';
-            } else {
-                academicLevel = app.student?.currentLevel === 2 || app.student?.currentLevel === 200 ? 'ND 2' : 'ND 1';
-            }
-
-            let administrativeLevel = 'Applicant';
-            if (app.student) {
-                const sStatus = (app.student.status || '').toLowerCase();
-                if (sStatus.includes('graduated')) {
-                    administrativeLevel = progType === 'HND' ? 'HND_GRADUATED' : 'ND_GRADUATED';
-                } else {
-                    administrativeLevel = academicLevel;
-                }
-            } else if (app.status === 'admitted') {
-                administrativeLevel = academicLevel;
-            } else {
-                administrativeLevel = 'Applicant';
-            }
+            const academicLevel = progType === 'HND' ? 'HND 1' : 'ND 1';
+            const administrativeLevel = app.status === 'admitted' ? academicLevel : 'Applicant';
 
             return { academicLevel, administrativeLevel };
         };
@@ -2143,6 +2145,7 @@ export async function getAdminV2Applications(filters?: {
                 applicantEmail: fallbackEmail || app.applicant?.email || 'N/A',
                 applicantPhone: formData.phone || formData.phone_number || app.applicant?.phone || 'N/A',
                 templateName: app.template?.name || 'N/A',
+                facultyName: app.programme?.department?.faculty?.name || 'Unassigned Faculty',
                 departmentName: app.programme?.department?.name || 'Unassigned Department',
                 programmeName: app.programme?.name || formData.programme || 'Unassigned Programme',
                 academicLevel,
@@ -2669,10 +2672,11 @@ export async function changeApplicantProgramme(appId: number, departmentId: numb
 
 export async function getAdmissionAcademicUnits() {
     try {
-        const depts = await db.select({ id: departments.id, name: departments.name, code: departments.code }).from(departments);
-        const progs = await db.select({ id: programmes.id, name: programmes.name, code: programmes.code, departmentId: programmes.departmentId }).from(programmes);
-        return { success: true, departments: depts, programmes: progs };
+        const facs = await db.select({ id: faculties.id, name: faculties.name, code: faculties.code }).from(faculties);
+        const depts = await db.select({ id: departments.id, name: departments.name, code: departments.code, facultyId: departments.facultyId }).from(departments);
+        const progs = await db.select({ id: programmes.id, name: programmes.name, code: programmes.code, departmentId: programmes.deptId }).from(programmes);
+        return { success: true, faculties: facs, departments: depts, programmes: progs };
     } catch (e: any) {
-        return { success: false, error: e.message, departments: [], programmes: [] };
+        return { success: false, error: e.message, faculties: [], departments: [], programmes: [] };
     }
 }

@@ -30,10 +30,12 @@ function AdminV2ApplicationsContent() {
     const [paymentFilter, setPaymentFilter] = useState("all");
 
     const [templateFilter, setTemplateFilter] = useState<number | undefined>(undefined);
+    const [facultyFilter, setFacultyFilter] = useState<number | undefined>(undefined);
     const [departmentFilter, setDepartmentFilter] = useState<number | undefined>(undefined);
     const [programmeFilter, setProgrammeFilter] = useState<number | undefined>(undefined);
     const [levelFilter, setLevelFilter] = useState<string>("all");
 
+    const [faculties, setFaculties] = useState<any[]>([]);
     const [departments, setDepartments] = useState<any[]>([]);
     const [programmes, setProgrammes] = useState<any[]>([]);
 
@@ -53,6 +55,7 @@ function AdminV2ApplicationsContent() {
             status: statusFilter !== 'all' ? statusFilter : undefined,
             paymentStatus: paymentFilter !== 'all' ? paymentFilter : undefined,
             templateId: templateFilter,
+            facultyId: facultyFilter,
             departmentId: departmentFilter,
             programmeId: programmeFilter,
             level: levelFilter !== 'all' ? levelFilter : undefined,
@@ -61,7 +64,7 @@ function AdminV2ApplicationsContent() {
         });
         setData(result);
         setLoading(false);
-    }, [search, statusFilter, paymentFilter, templateFilter, departmentFilter, programmeFilter, levelFilter, page]);
+    }, [search, statusFilter, paymentFilter, templateFilter, facultyFilter, departmentFilter, programmeFilter, levelFilter, page]);
 
     useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -69,14 +72,24 @@ function AdminV2ApplicationsContent() {
         getAdmissionTemplates().then(setTemplates).catch(() => {});
         getAdmissionAcademicUnits().then((res) => {
             if (res.success) {
+                setFaculties(res.faculties || []);
                 setDepartments(res.departments || []);
                 setProgrammes(res.programmes || []);
             }
         }).catch(() => {});
     }, []);
 
+    const filteredDepartments = facultyFilter
+        ? departments.filter((d: any) => d.facultyId === facultyFilter)
+        : departments;
+
     const filteredProgrammes = departmentFilter
         ? programmes.filter((p: any) => p.departmentId === departmentFilter || p.deptId === departmentFilter)
+        : facultyFilter
+        ? programmes.filter((p: any) => {
+            const d = departments.find((dept: any) => dept.id === (p.departmentId || p.deptId));
+            return d?.facultyId === facultyFilter;
+        })
         : programmes;
 
     const handleBulkAction = async (action: string) => {
@@ -294,12 +307,23 @@ function AdminV2ApplicationsContent() {
                         </select>
 
                         <select
+                            value={facultyFilter || ""}
+                            onChange={(e) => { setFacultyFilter(e.target.value ? Number(e.target.value) : undefined); setDepartmentFilter(undefined); setProgrammeFilter(undefined); setPage(1); }}
+                            className="px-4 py-4 rounded-2xl border border-slate-200 bg-white/80 text-sm font-bold shadow-sm focus:ring-2 focus:ring-indigo-500"
+                        >
+                            <option value="">All Faculties</option>
+                            {faculties.map((f: any) => (
+                                <option key={f.id} value={f.id}>{f.name}</option>
+                            ))}
+                        </select>
+
+                        <select
                             value={departmentFilter || ""}
                             onChange={(e) => { setDepartmentFilter(e.target.value ? Number(e.target.value) : undefined); setProgrammeFilter(undefined); setPage(1); }}
                             className="px-4 py-4 rounded-2xl border border-slate-200 bg-white/80 text-sm font-bold shadow-sm focus:ring-2 focus:ring-indigo-500"
                         >
                             <option value="">All Departments</option>
-                            {departments.map((d: any) => (
+                            {filteredDepartments.map((d: any) => (
                                 <option key={d.id} value={d.id}>{d.name}</option>
                             ))}
                         </select>
@@ -320,14 +344,9 @@ function AdminV2ApplicationsContent() {
                             onChange={(e) => { setLevelFilter(e.target.value); setPage(1); }}
                             className="px-4 py-4 rounded-2xl border border-slate-200 bg-white/80 text-sm font-bold shadow-sm focus:ring-2 focus:ring-indigo-500"
                         >
-                            <option value="all">All Levels</option>
-                            <option value="Applicant">Applicant</option>
+                            <option value="all">All Entry Levels</option>
                             <option value="ND 1">ND 1</option>
-                            <option value="ND 2">ND 2</option>
-                            <option value="ND_GRADUATED">ND_GRADUATED</option>
                             <option value="HND 1">HND 1</option>
-                            <option value="HND 2">HND 2</option>
-                            <option value="HND_GRADUATED">HND_GRADUATED</option>
                         </select>
 
                         <select
@@ -416,7 +435,9 @@ function AdminV2ApplicationsContent() {
                                     </th>
                                     <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest">Applicant</th>
                                     <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest">Form #</th>
-                                    <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest">Dept & Programme</th>
+                                    <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest">Faculty</th>
+                                    <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest">Department</th>
+                                    <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest">Programme</th>
                                     <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest">Level</th>
                                     <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest">Status</th>
                                     <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest">Payment</th>
@@ -427,13 +448,13 @@ function AdminV2ApplicationsContent() {
                             <tbody className="divide-y divide-slate-100 bg-white">
                                 {loading ? (
                                     <tr>
-                                        <td colSpan={8} className="px-8 py-20 text-center">
+                                        <td colSpan={10} className="px-8 py-20 text-center">
                                             <Loader2 className="w-10 h-10 animate-spin mx-auto text-indigo-500" />
                                         </td>
                                     </tr>
                                 ) : (data?.applications || []).length === 0 ? (
                                     <tr>
-                                        <td colSpan={8} className="px-8 py-20 text-center">
+                                        <td colSpan={10} className="px-8 py-20 text-center">
                                             <div className="max-w-xs mx-auto space-y-4">
                                                 <FileText className="w-12 h-12 text-slate-300 mx-auto" />
                                                 <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest italic">
@@ -475,20 +496,18 @@ function AdminV2ApplicationsContent() {
                                                 </span>
                                             </td>
                                             <td className="px-6 py-5">
-                                                <div className="flex flex-col">
-                                                    <span className="text-xs font-black text-slate-800">{app.programmeName}</span>
-                                                    <span className="text-[10px] font-bold text-slate-400">{app.departmentName}</span>
-                                                </div>
+                                                <span className="text-xs font-bold text-slate-700">{app.facultyName}</span>
                                             </td>
                                             <td className="px-6 py-5">
-                                                <div className="flex flex-col gap-1">
-                                                    <span className="px-2.5 py-1 bg-indigo-50 border border-indigo-200 text-indigo-700 rounded-lg text-[10px] font-black uppercase tracking-wider w-fit">
-                                                        Acad: {app.academicLevel}
-                                                    </span>
-                                                    <span className="px-2.5 py-1 bg-slate-100 border border-slate-200 text-slate-700 rounded-lg text-[9px] font-bold uppercase tracking-wider w-fit">
-                                                        Admin: {app.administrativeLevel}
-                                                    </span>
-                                                </div>
+                                                <span className="text-xs font-bold text-slate-700">{app.departmentName}</span>
+                                            </td>
+                                            <td className="px-6 py-5">
+                                                <span className="text-xs font-black text-indigo-600">{app.programmeName}</span>
+                                            </td>
+                                            <td className="px-6 py-5">
+                                                <span className="px-2.5 py-1 bg-indigo-50 border border-indigo-200 text-indigo-700 rounded-lg text-[10px] font-black uppercase tracking-wider inline-block">
+                                                    {app.academicLevel}
+                                                </span>
                                             </td>
                                             <td className="px-6 py-5">
                                                 <span className={cn(
