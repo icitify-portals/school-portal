@@ -178,7 +178,10 @@ export async function resetUserPassword(userId: number, newPassword?: string) {
         const passwordHash = await bcrypt.hash(passwordToSet, 10);
 
         await db.update(users).set({
-            password: passwordHash
+            password: passwordHash,
+            requiresPasswordChange: false,
+            failedLoginAttempts: 0,
+            lockoutUntil: null
         }).where(eq(users.id, userId));
 
         if (actorId) {

@@ -93,6 +93,7 @@ export async function resetPasswordWithToken(token: string, password: string) {
         // Update user
         await db.update(users).set({
             password: passwordHash,
+            requiresPasswordChange: false,
             failedLoginAttempts: 0,
             lockoutUntil: null
         }).where(eq(users.id, tokenRecord.userId));
