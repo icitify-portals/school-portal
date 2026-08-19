@@ -278,7 +278,7 @@ function AdminV2ApplicationsContent() {
                             <div className="flex items-center gap-3 mb-2">
                                 <FileText className="w-12 h-12 text-indigo-400" />
                                 <h1 className="text-4xl lg:text-5xl font-black tracking-tighter drop-shadow-md italic uppercase">
-                                    V2 APPLICATIONS
+                                    2026/2027 ADMISSION APPLICATIONS
                                 </h1>
                             </div>
                             <p className="text-slate-300 font-medium tracking-tight max-w-2xl text-lg opacity-90">
