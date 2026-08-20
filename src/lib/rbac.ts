@@ -43,6 +43,16 @@ export async function hasPermission(permission: string) {
         return true;
     }
 
+    // Record Officer automatically has access to result module, exams/records, and communication features
+    if ((baseRole === "record_officer" || baseRole === "record officer" || baseRole === "recordofficer") && (
+        permission.startsWith("result_module.") || 
+        permission.startsWith("exams_records.") || 
+        permission.startsWith("communication.") ||
+        permission === "result_module.manage"
+    )) {
+        return true;
+    }
+
     const permissions = await getSessionPermissions();
     if (permissions.includes("system.all")) return true;
     return permissions.includes(permission);
@@ -78,6 +88,7 @@ export async function hasRole(roleName: string | string[]) {
         userRoles.includes(t) ||
         (t === "bursar" && (baseRole === "bursary" || userRoles.includes("bursary") || baseRole === "accountant")) ||
         (t === "bursary" && (baseRole === "bursar" || userRoles.includes("bursar"))) ||
-        (t === "admission_officer" && (baseRole === "admission officer" || baseRole === "admission" || userRoles.includes("admission_officer")))
+        (t === "admission_officer" && (baseRole === "admission officer" || baseRole === "admission" || userRoles.includes("admission_officer"))) ||
+        (t === "record_officer" && (baseRole === "record officer" || baseRole === "recordofficer" || userRoles.includes("record_officer")))
     );
 }

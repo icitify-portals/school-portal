@@ -661,7 +661,7 @@ export function Sidebar({ enabledModules = {}, mobileOpen = false, onClose }: {
     };
 
     const rawMenuItems = (() => {
-        if (isRestrictedResultOfficer) {
+        if (role === 'record_officer' || role === 'record officer' || isRestrictedResultOfficer) {
             return [
                 { name: "Result Module", icon: LayoutDashboard, href: "/admin/result-module" },
                 {
@@ -674,6 +674,16 @@ export function Sidebar({ enabledModules = {}, mobileOpen = false, onClose }: {
                         { name: "Transcript Requests", href: "/admin/result-module/requests" },
                         { name: "Grading Scales", href: "/admin/result-module/scales" },
                         { name: "Result Module Guide", href: "/admin/result-module/guide" },
+                    ]
+                },
+                {
+                    name: "Communication",
+                    icon: Megaphone,
+                    module: "communications",
+                    subItems: [
+                        { name: "Broadcast Communications", href: "/admin/communications/broadcasts" },
+                        { name: "Broadcast Center", href: "/admin/announcements" },
+                        { name: "Direct Messages", href: "/communications" },
                     ]
                 },
                 { name: "Profile", icon: User, href: "/profile" }
