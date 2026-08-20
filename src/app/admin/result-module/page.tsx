@@ -7,11 +7,12 @@ import {
   createResultBatch,
   getGradingScales,
   getAcademicSessions,
+  toggleBatchPublication,
 } from "@/actions/result-module";
 import { seedResultDemo } from "@/actions/seed-result-demo";
 import {
   BookOpen, Plus, FileUp, CheckCircle2, Clock, ChevronRight,
-  BarChart3, Layers, AlertCircle, Loader2, Settings2, Printer, ChevronDown, X
+  BarChart3, Layers, AlertCircle, Loader2, Settings2, Printer, ChevronDown, X, Eye, EyeOff
 } from "lucide-react";
 import Link from "next/link";
 
@@ -25,6 +26,26 @@ export default function ResultModuleDashboard() {
   const [submitting, setSubmitting] = useState(false);
   const [seeding, setSeeding] = useState(false);
   const [form, setForm] = useState({ academicSessionId: "", semester: "1", gradingScaleId: "" });
+
+  const [togglingBatchId, setTogglingBatchId] = useState<number | null>(null);
+
+  async function handleToggleBatch(e: React.MouseEvent, batchId: number, currentPublished: boolean) {
+    e.preventDefault();
+    e.stopPropagation();
+    const confirmMsg = !currentPublished
+      ? "Finalize and display results to student dashboard? Students will be able to view their grades."
+      : "Hide results from student dashboard? Results will be switched off and hidden from student view.";
+    if (!confirm(confirmMsg)) return;
+
+    setTogglingBatchId(batchId);
+    const res = await toggleBatchPublication(batchId, !currentPublished);
+    setTogglingBatchId(null);
+    if (res.success) {
+      fetchAll();
+    } else {
+      alert("Error: " + res.error);
+    }
+  }
 
   useEffect(() => { fetchAll(); }, []);
 
@@ -161,10 +182,37 @@ export default function ResultModuleDashboard() {
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <span className={`px-3 py-1 rounded-full text-xs font-semibold ${batch.status === 'published' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-amber-500/20 text-amber-300'}`}>
-                    {batch.status === 'published' ? 'Published' : 'Pending'}
-                  </span>
+                <div className="flex items-center gap-4">
+                  {/* Switch Toggle Button */}
+                  <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
+                    <span className={`text-xs font-medium ${batch.status === 'published' ? 'text-emerald-400 font-semibold' : 'text-slate-400'}`}>
+                      {batch.status === 'published' ? 'Display ON' : 'Display OFF'}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={(e) => handleToggleBatch(e, batch.id, batch.status === 'published')}
+                      disabled={togglingBatchId === batch.id}
+                      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none disabled:opacity-50 ${
+                        batch.status === 'published' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]' : 'bg-slate-700 border border-white/20'
+                      }`}
+                      title={batch.status === 'published' ? 'Switch off to hide from student dashboard' : 'Switch on to display to student dashboard'}
+                    >
+                      <span className="sr-only">Toggle display to student portal</span>
+                      <span
+                        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out flex items-center justify-center ${
+                          batch.status === 'published' ? 'translate-x-5 text-emerald-600' : 'translate-x-0 text-slate-500'
+                        }`}
+                      >
+                        {togglingBatchId === batch.id ? (
+                          <Loader2 className="w-3 h-3 animate-spin text-slate-600" />
+                        ) : batch.status === 'published' ? (
+                          <Eye className="w-3 h-3 text-emerald-600" />
+                        ) : (
+                          <EyeOff className="w-3 h-3 text-slate-500" />
+                        )}
+                      </span>
+                    </button>
+                  </div>
                   <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-violet-400 transition-colors" />
                 </div>
               </Link>

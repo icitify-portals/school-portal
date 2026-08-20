@@ -20,10 +20,11 @@ import {
   deleteStudentResult,
   clearBatchResults,
   deleteResultBatch,
+  toggleBatchPublication,
 } from "@/actions/result-module";
 import {
   ArrowLeft, Upload, UserPlus, CheckCircle2, Loader2, Search,
-  Plus, FileUp, Trash2, AlertTriangle, BookOpen, X, Eye, ChevronDown, Edit3,
+  Plus, FileUp, Trash2, AlertTriangle, BookOpen, X, Eye, EyeOff, Lock, ChevronDown, Edit3,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -121,6 +122,28 @@ export default function BatchDetailPage() {
     if (res.success) {
       fetchBatch();
       alert("✓ All result entries cleared successfully!");
+    } else {
+      alert("Error: " + res.error);
+    }
+  }
+
+  const [togglingPublication, setTogglingPublication] = useState(false);
+
+  async function handleTogglePublication(targetState: boolean) {
+    if (targetState && resultsInBatch.length === 0) {
+      return alert("Cannot display empty batch to students. Please add student results first.");
+    }
+    const confirmMsg = targetState
+      ? "Finalize and display results to student dashboard? Students will be able to see their GP/CGPA and grades."
+      : "Hide results from student dashboard? Results will be switched off and hidden from student view.";
+    if (!confirm(confirmMsg)) return;
+
+    setTogglingPublication(true);
+    const res = await toggleBatchPublication(batchId, targetState);
+    setTogglingPublication(false);
+
+    if (res.success) {
+      fetchBatch();
     } else {
       alert("Error: " + res.error);
     }
@@ -421,28 +444,50 @@ export default function BatchDetailPage() {
           <div className="flex items-center gap-3">
             {resultsInBatch.length > 0 && (
               <button onClick={handleClearAllResults} disabled={clearingBatch}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/30 text-amber-300 font-semibold text-sm transition-all disabled:opacity-60">
-                {clearingBatch ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/30 text-amber-300 font-semibold text-xs transition-all disabled:opacity-60">
+                {clearingBatch ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
                 Clear All Results
               </button>
             )}
             <button onClick={handleDeleteBatch} disabled={deletingBatch}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/30 text-rose-300 font-semibold text-sm transition-all disabled:opacity-60">
-              {deletingBatch ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/30 text-rose-300 font-semibold text-xs transition-all disabled:opacity-60">
+              {deletingBatch ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
               Delete Batch
             </button>
-            {!isPublished && resultsInBatch.length > 0 && (
-              <button onClick={handlePublish} disabled={publishing}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-semibold text-sm shadow-lg disabled:opacity-60 transition-all">
-                {publishing ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-                Approve & Publish
+
+            {/* Display to Student Portal Toggle Switch */}
+            <div className="flex items-center gap-3 pl-3 border-l border-white/10">
+              <div className="text-right hidden sm:block">
+                <p className="text-xs font-semibold text-white">Student Dashboard Display</p>
+                <p className={`text-[11px] font-mono ${isPublished ? "text-emerald-400 font-bold" : "text-amber-400"}`}>
+                  {isPublished ? "ON (VISIBLE)" : "OFF (HIDDEN)"}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => handleTogglePublication(!isPublished)}
+                disabled={togglingPublication}
+                className={`relative inline-flex h-8 w-16 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-300 ease-in-out focus:outline-none disabled:opacity-50 ${
+                  isPublished ? "bg-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.5)]" : "bg-slate-700 border border-white/20"
+                }`}
+                title={isPublished ? "Turn off to hide results from student dashboard" : "Turn on to finalize and display results to student dashboard"}
+              >
+                <span className="sr-only">Display results to student portal</span>
+                <span
+                  className={`pointer-events-none inline-block h-7 w-7 transform rounded-full bg-white shadow-lg ring-0 transition duration-300 ease-in-out flex items-center justify-center ${
+                    isPublished ? "translate-x-8 text-emerald-600" : "translate-x-0 text-slate-500"
+                  }`}
+                >
+                  {togglingPublication ? (
+                    <Loader2 className="w-4 h-4 animate-spin text-slate-600" />
+                  ) : isPublished ? (
+                    <Eye className="w-4 h-4 text-emerald-600" />
+                  ) : (
+                    <EyeOff className="w-4 h-4 text-slate-500" />
+                  )}
+                </span>
               </button>
-            )}
-            {isPublished && (
-              <span className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 text-sm font-semibold">
-                <CheckCircle2 className="w-4 h-4" /> Published
-              </span>
-            )}
+            </div>
           </div>
         </div>
       </div>
@@ -892,6 +937,7 @@ export default function BatchDetailPage() {
                 <button type="submit" disabled={savingCourse}
                   className="flex-1 py-2.5 rounded-lg bg-violet-600 text-white text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-60 flex items-center justify-center gap-2">
                   {savingCourse ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />} Add Course
+                </button>
               </div>
             </form>
           </div>

@@ -8,6 +8,7 @@ import {
   gradingScales,
   resultBatches,
   studentResults,
+  studentTranscripts,
   courses,
   students,
   academicSessions,
@@ -866,4 +867,47 @@ export async function deleteResultBatch(batchId: number) {
     return { success: false, error: e.message };
   }
 }
+
+// ──────────────────────────────────────────────
+// TOGGLE BATCH PUBLICATION (Display on Student Dashboard)
+// ──────────────────────────────────────────────
+
+export async function toggleBatchPublication(batchId: number, publish: boolean) {
+  try {
+    const allowed = await hasRole("admin") || await hasRole("superadmin") || await hasRole("registrar") || await hasPermission("result_module.manage");
+    if (!allowed) return { success: false, error: "Unauthorized" };
+
+    const batch = await db.query.resultBatches.findFirst({
+      where: eq(resultBatches.id, batchId)
+    });
+
+    if (!batch) return { success: false, error: "Batch not found" };
+
+    if (publish) {
+      // Publish batch & generate/enable transcripts
+      await publishResultBatch(batchId);
+    } else {
+      // Unpublish batch & hide from student dashboard
+      await db.update(resultBatches)
+        .set({ status: "pending" })
+        .where(eq(resultBatches.id, batchId));
+
+      await db.update(studentTranscripts)
+        .set({ isPublished: false })
+        .where(
+          and(
+            eq(studentTranscripts.academicSessionId, batch.academicSessionId),
+            eq(studentTranscripts.semester, batch.semester)
+          )
+        );
+    }
+
+    revalidatePath("/admin/result-module");
+    revalidatePath(`/admin/result-module/${batchId}`);
+    return { success: true, isPublished: publish };
+  } catch (e: any) {
+    return { success: false, error: e.message };
+  }
+}
+
 
