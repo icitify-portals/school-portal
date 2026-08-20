@@ -757,3 +757,113 @@ export async function updateStudentRm(id: number, data: any) {
     return { success: false, error: "Failed to update student. " + String(e) };
   }
 }
+
+// ──────────────────────────────────────────────
+// EDIT / MODIFY RESULT RECORD
+// ──────────────────────────────────────────────
+
+export async function updateStudentResult(resultId: number, data: { score: number; creditLoad?: number; courseId?: number }) {
+  try {
+    const allowed = await hasRole("admin") || await hasRole("superadmin") || await hasRole("registrar") || await hasPermission("result_module.manage");
+    if (!allowed) return { success: false, error: "Unauthorized" };
+
+    const resultRow = await db.query.studentResults.findFirst({
+      where: eq(studentResults.id, resultId),
+      with: {
+        batch: {
+          with: { gradingScale: true }
+        }
+      }
+    });
+
+    if (!resultRow) return { success: false, error: "Result record not found" };
+
+    const gradingScaleRules = resultRow.batch?.gradingScale?.rules || "[]";
+    const { grade, gradePoint } = resolveGrade(data.score, gradingScaleRules);
+
+    const updatePayload: any = {
+      score: data.score.toString(),
+      grade,
+      gradePoint: gradePoint.toString(),
+    };
+
+    if (data.creditLoad !== undefined) {
+      updatePayload.creditLoad = data.creditLoad;
+    }
+    if (data.courseId !== undefined) {
+      updatePayload.courseId = data.courseId;
+    }
+
+    await db.update(studentResults)
+      .set(updatePayload)
+      .where(eq(studentResults.id, resultId));
+
+    revalidatePath(`/admin/result-module/${resultRow.batchId}`);
+    return { success: true, grade, gradePoint };
+  } catch (e: any) {
+    return { success: false, error: e.message };
+  }
+}
+
+// ──────────────────────────────────────────────
+// DELETE SINGLE RESULT RECORD
+// ──────────────────────────────────────────────
+
+export async function deleteStudentResult(resultId: number) {
+  try {
+    const allowed = await hasRole("admin") || await hasRole("superadmin") || await hasRole("registrar") || await hasPermission("result_module.manage");
+    if (!allowed) return { success: false, error: "Unauthorized" };
+
+    const resultRow = await db.query.studentResults.findFirst({
+      where: eq(studentResults.id, resultId)
+    });
+
+    if (!resultRow) return { success: false, error: "Result record not found" };
+
+    await db.delete(studentResults).where(eq(studentResults.id, resultId));
+
+    revalidatePath(`/admin/result-module/${resultRow.batchId}`);
+    return { success: true };
+  } catch (e: any) {
+    return { success: false, error: e.message };
+  }
+}
+
+// ──────────────────────────────────────────────
+// CLEAR ALL RESULTS IN A BATCH
+// ──────────────────────────────────────────────
+
+export async function clearBatchResults(batchId: number) {
+  try {
+    const allowed = await hasRole("admin") || await hasRole("superadmin") || await hasRole("registrar") || await hasPermission("result_module.manage");
+    if (!allowed) return { success: false, error: "Unauthorized" };
+
+    await db.delete(studentResults).where(eq(studentResults.batchId, batchId));
+
+    revalidatePath(`/admin/result-module/${batchId}`);
+    revalidatePath("/admin/result-module");
+    return { success: true };
+  } catch (e: any) {
+    return { success: false, error: e.message };
+  }
+}
+
+// ──────────────────────────────────────────────
+// DELETE ENTIRE RESULT BATCH
+// ──────────────────────────────────────────────
+
+export async function deleteResultBatch(batchId: number) {
+  try {
+    const allowed = await hasRole("admin") || await hasRole("superadmin") || await hasRole("registrar") || await hasPermission("result_module.manage");
+    if (!allowed) return { success: false, error: "Unauthorized" };
+
+    await db.delete(studentResults).where(eq(studentResults.batchId, batchId));
+    await db.delete(resultBatches).where(eq(resultBatches.id, batchId));
+
+    revalidatePath("/admin/result-module");
+    return { success: true };
+  } catch (e: any) {
+    return { success: false, error: e.message };
+  }
+}
+

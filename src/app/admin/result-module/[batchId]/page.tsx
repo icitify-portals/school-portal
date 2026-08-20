@@ -16,10 +16,14 @@ import {
   getProgrammesList,
   getDepartmentsList,
   bulkImportStudents,
+  updateStudentResult,
+  deleteStudentResult,
+  clearBatchResults,
+  deleteResultBatch,
 } from "@/actions/result-module";
 import {
   ArrowLeft, Upload, UserPlus, CheckCircle2, Loader2, Search,
-  Plus, FileUp, Trash2, AlertTriangle, BookOpen, X, Eye, ChevronDown,
+  Plus, FileUp, Trash2, AlertTriangle, BookOpen, X, Eye, ChevronDown, Edit3,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -73,6 +77,66 @@ export default function BatchDetailPage() {
   const [studentCsvFile, setStudentCsvFile] = useState<File | null>(null);
   const [importingStudents, setImportingStudents] = useState(false);
   const [studentImportResult, setStudentImportResult] = useState<any>(null);
+
+  // Edit Result record state
+  const [editingResult, setEditingResult] = useState<{ id: number; studentName: string; courseCode: string; courseName: string; score: string; creditLoad: string } | null>(null);
+  const [savingEdit, setSavingEdit] = useState(false);
+
+  // Clear / Delete Batch action states
+  const [clearingBatch, setClearingBatch] = useState(false);
+  const [deletingBatch, setDeletingBatch] = useState(false);
+
+  async function handleUpdateResultSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editingResult) return;
+    setSavingEdit(true);
+    const res = await updateStudentResult(editingResult.id, {
+      score: Number(editingResult.score),
+      creditLoad: Number(editingResult.creditLoad),
+    });
+    setSavingEdit(false);
+    if (res.success) {
+      setEditingResult(null);
+      fetchBatch();
+    } else {
+      alert("Error: " + res.error);
+    }
+  }
+
+  async function handleDeleteSingleResult(resultId: number, courseCode: string, studentName: string) {
+    if (!confirm(`Are you sure you want to delete result record for ${courseCode} (${studentName})?`)) return;
+    const res = await deleteStudentResult(resultId);
+    if (res.success) {
+      fetchBatch();
+    } else {
+      alert("Error: " + res.error);
+    }
+  }
+
+  async function handleClearAllResults() {
+    if (!confirm(`Are you sure you want to delete ALL sample / uploaded result records in this batch (${resultsInBatch.length} entries)? This action cannot be undone.`)) return;
+    setClearingBatch(true);
+    const res = await clearBatchResults(batchId);
+    setClearingBatch(false);
+    if (res.success) {
+      fetchBatch();
+      alert("✓ All result entries cleared successfully!");
+    } else {
+      alert("Error: " + res.error);
+    }
+  }
+
+  async function handleDeleteBatch() {
+    if (!confirm("Are you sure you want to delete this ENTIRE batch and all its result records? This action cannot be undone.")) return;
+    setDeletingBatch(true);
+    const res = await deleteResultBatch(batchId);
+    setDeletingBatch(false);
+    if (res.success) {
+      router.push("/admin/result-module");
+    } else {
+      alert("Error: " + res.error);
+    }
+  }
 
   useEffect(() => { fetchBatch(); }, [batchId]);
 
@@ -355,6 +419,18 @@ export default function BatchDetailPage() {
             </div>
           </div>
           <div className="flex items-center gap-3">
+            {resultsInBatch.length > 0 && (
+              <button onClick={handleClearAllResults} disabled={clearingBatch}
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/30 text-amber-300 font-semibold text-sm transition-all disabled:opacity-60">
+                {clearingBatch ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                Clear All Results
+              </button>
+            )}
+            <button onClick={handleDeleteBatch} disabled={deletingBatch}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/30 text-rose-300 font-semibold text-sm transition-all disabled:opacity-60">
+              {deletingBatch ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+              Delete Batch
+            </button>
             {!isPublished && resultsInBatch.length > 0 && (
               <button onClick={handlePublish} disabled={publishing}
                 className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-semibold text-sm shadow-lg disabled:opacity-60 transition-all">
@@ -625,6 +701,7 @@ export default function BatchDetailPage() {
                         <th className="px-5 py-2 text-center">Grade</th>
                         <th className="px-5 py-2 text-center">GP</th>
                         <th className="px-5 py-2 text-center">CU</th>
+                        <th className="px-5 py-2 text-center">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -642,6 +719,33 @@ export default function BatchDetailPage() {
                           </td>
                           <td className="px-5 py-3 text-center text-sm text-slate-300">{Number(r.gradePoint).toFixed(1)}</td>
                           <td className="px-5 py-3 text-center text-sm text-slate-300">{r.creditLoad}</td>
+                          <td className="px-5 py-3 text-center">
+                            <div className="flex items-center justify-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => setEditingResult({
+                                  id: r.id,
+                                  studentName: student.user?.name || "Student",
+                                  courseCode: r.course?.code || "COURSE",
+                                  courseName: r.course?.name || "",
+                                  score: String(r.score),
+                                  creditLoad: String(r.creditLoad)
+                                })}
+                                className="p-1.5 rounded-lg bg-violet-500/20 hover:bg-violet-500/40 text-violet-300 transition-colors"
+                                title="Edit Record"
+                              >
+                                <Edit3 className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteSingleResult(r.id, r.course?.code || "Course", student.user?.name || "Student")}
+                                className="p-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/40 text-red-300 transition-colors"
+                                title="Delete Record"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -788,6 +892,64 @@ export default function BatchDetailPage() {
                 <button type="submit" disabled={savingCourse}
                   className="flex-1 py-2.5 rounded-lg bg-violet-600 text-white text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-60 flex items-center justify-center gap-2">
                   {savingCourse ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />} Add Course
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      {/* Edit Result Record Modal */}
+      {editingResult && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-[#1e293b] border border-white/10 rounded-2xl p-8 w-full max-w-md shadow-2xl">
+            <div className="flex items-center justify-between mb-5">
+              <div>
+                <h2 className="text-lg font-bold text-white">Modify Result Record</h2>
+                <p className="text-xs text-slate-400 mt-0.5">{editingResult.studentName} &bull; <span className="font-mono text-violet-300">{editingResult.courseCode}</span></p>
+              </div>
+              <button type="button" onClick={() => setEditingResult(null)} className="text-slate-400 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <form onSubmit={handleUpdateResultSubmit} className="space-y-4">
+              <div>
+                <label className="block text-xs font-medium text-slate-300 mb-1">Score (0 - 100)</label>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.01"
+                  required
+                  value={editingResult.score}
+                  onChange={e => setEditingResult(prev => prev ? { ...prev, score: e.target.value } : null)}
+                  className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-violet-400"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-300 mb-1">Credit Load / Units</label>
+                <input
+                  type="number"
+                  min="1"
+                  max="20"
+                  required
+                  value={editingResult.creditLoad}
+                  onChange={e => setEditingResult(prev => prev ? { ...prev, creditLoad: e.target.value } : null)}
+                  className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-violet-400"
+                />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingResult(null)}
+                  className="flex-1 py-2.5 rounded-lg border border-white/20 text-slate-300 text-sm hover:bg-white/5 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingEdit}
+                  className="flex-1 py-2.5 rounded-lg bg-gradient-to-r from-violet-500 to-indigo-600 text-white text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-60 flex items-center justify-center gap-2"
+                >
+                  {savingEdit ? <Loader2 className="w-4 h-4 animate-spin" /> : "Save Changes"}
                 </button>
               </div>
             </form>
