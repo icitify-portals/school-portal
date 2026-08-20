@@ -892,8 +892,8 @@ export default function BatchDetailPage() {
                 <button type="submit" disabled={savingCourse}
                   className="flex-1 py-2.5 rounded-lg bg-violet-600 text-white text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-60 flex items-center justify-center gap-2">
                   {savingCourse ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />} Add Course
-                </button>
               </div>
+            </form>
           </div>
         </div>
       )}
