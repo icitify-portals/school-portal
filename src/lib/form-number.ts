@@ -57,9 +57,9 @@ export async function checkAndGenerateFormNumber(applicationId: number, transact
 
     if (!app) return { success: false };
 
-    // Determine if fully paid
-    const isAppFeePaid = app.template.applicationFee === '0.00' || app.paymentStatus === 'paid';
-    const isProcFeePaid = app.template.processingFee === '0.00' || app.processingFeeStatus === 'paid';
+    // Determine if fully paid - both Application Fee AND Processing Fee MUST be paid
+    const isAppFeePaid = app.template.applicationFee === '0.00' || parseFloat(app.template.applicationFee || "0") === 0 || app.paymentStatus === 'paid';
+    const isProcFeePaid = app.template.processingFee === '0.00' || parseFloat(app.template.processingFee || "0") === 0 || app.processingFeeStatus === 'paid';
 
     if (isAppFeePaid && isProcFeePaid && !app.formNumber) {
         const newFormNumber = await generateFormNumber(app.template.level || 'tertiary');

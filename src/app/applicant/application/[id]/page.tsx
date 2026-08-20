@@ -634,7 +634,7 @@ export default function StatefulApplicationPage() {
         if (applicationFeeToPay > 0 && application.paymentStatus !== 'paid') return 0;
         if (processingFeeToPay > 0 && !application.isProcessingFeePaid) return 1;
         if (!selectedProgrammeId) return 2;
-        if (application.status === 'submitted' || application.status === 'admitted' || application.status === 'rejected') return 4;
+        if ((application.status === 'submitted' || application.status === 'admitted' || application.status === 'rejected') && application.paymentStatus === 'paid' && (processingFeeToPay === 0 || application.isProcessingFeePaid)) return 4;
         return 3;
     })();
 

@@ -563,17 +563,9 @@ export async function confirmAdmissionPayment(applicationId: number, reference: 
             with: { template: true }
         });
 
-        // Determine the new workflow status:
-        // - 'draft' → 'submitted' (admin-confirmed payment implies the applicant submitted)
-        // - All other valid statuses (submitted, screened, admitted, rejected) remain unchanged
-        // - NEVER set status to 'paid' — that is not a valid workflow status value
-        const currentStatus = application?.status || 'draft';
-        const newStatus = currentStatus === 'draft' ? 'submitted' : currentStatus;
-
         await db.update(admissionApplicationsV2)
             .set({ 
                 paymentStatus: 'paid', 
-                status: newStatus,
                 paymentReference: reference 
             })
             .where(eq(admissionApplicationsV2.id, applicationId));
@@ -1497,7 +1489,8 @@ export async function getApplicantApplication(applicationId: number, applicantId
             ]);
             // @ts-expect-error
             app.template = template;
-            const isProcessingFeePaid = app.processingFeeStatus === 'paid' || hasDeveloperFee;
+            const procFeeAmount = parseFloat(template?.processingFee || "0");
+            const isProcessingFeePaid = procFeeAmount === 0 || app.processingFeeStatus === 'paid';
             // @ts-expect-error
             app.isProcessingFeePaid = isProcessingFeePaid;
             
@@ -1612,10 +1605,7 @@ export async function submitApplicationFinal(applicationId: number, applicantId:
 
         const procFee = parseFloat(template?.processingFee || "0");
         if (procFee > 0 && application.processingFeeStatus !== 'paid') {
-            const isDevFeePaid = await checkDeveloperFeeStatus(applicationId.toString(), 'admission_form');
-            if (!isDevFeePaid) {
-                return { success: false, error: "Processing fee must be paid before submission." };
-            }
+            return { success: false, error: "Processing fee must be paid before submission." };
         }
 
         // Enforce Full-Time applicants have a verified JAMB Registration Number
