@@ -1665,7 +1665,6 @@ export async function submitApplicationFinal(applicationId: number, applicantId:
         }
 
         // Server-side validation
-        const formData = typeof application.data === 'string' ? JSON.parse(application.data || '{}') : (application.data || {});
         const validationErrors: string[] = [];
 
         for (const section of template?.sections || []) {
