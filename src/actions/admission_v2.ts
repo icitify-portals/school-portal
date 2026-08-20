@@ -1517,6 +1517,20 @@ export async function getApplicantApplication(applicationId: number, applicantId
             // @ts-expect-error
             app.ninAutoFill = ninAutoFill;
 
+            // Ensure jambRegNumber is populated from form data JSON if column is empty
+            const parsedData = typeof app.data === 'string' ? JSON.parse(app.data || '{}') : (app.data || {});
+            const extractedJamb = app.jambRegNumber || 
+                parsedData.jambRegNumber || 
+                parsedData['JAMB Registration Number'] || 
+                parsedData['JAMB Reg Number'] || 
+                parsedData['JAMB REG NO'] || 
+                parsedData.jamb_reg_no || 
+                parsedData.jamb || null;
+
+            if (extractedJamb) {
+                app.jambRegNumber = extractedJamb.toString().trim().toUpperCase();
+            }
+
             // Calculate exact fee from structure
             if (app.template.feeStructureId) {
                 const items = await db.select().from(feeStructureItems).where(eq(feeStructureItems.feeStructureId, app.template.feeStructureId));
@@ -1560,11 +1574,24 @@ export async function saveApplicationDraft(applicationId: number, applicantId: n
     await requireApplicant();
     try {
         const ninValue = formData?.['NIN'] || formData?.__ninData?.nin || null;
+        const extractedJamb = formData?.['JAMB Registration Number'] || 
+            formData?.['JAMB Reg Number'] || 
+            formData?.['JAMB REG NO'] || 
+            formData?.['jambRegNumber'] || 
+            formData?.['jamb_reg_no'] || 
+            formData?.['jamb'] || null;
+
+        const updatePayload: any = {
+            data: typeof formData === 'string' ? formData : JSON.stringify(formData),
+            nin: ninValue
+        };
+
+        if (extractedJamb) {
+            updatePayload.jambRegNumber = extractedJamb.toString().trim().toUpperCase();
+        }
+
         await db.update(admissionApplicationsV2)
-            .set({ 
-                data: typeof formData === 'string' ? formData : JSON.stringify(formData),
-                nin: ninValue
-            })
+            .set(updatePayload)
             .where(
                 and(
                     eq(admissionApplicationsV2.id, applicationId),
@@ -1608,8 +1635,24 @@ export async function submitApplicationFinal(applicationId: number, applicantId:
             return { success: false, error: "Processing fee must be paid before submission." };
         }
 
+        // Extract effective JAMB registration number from column or form data JSON
+        const formData = typeof application.data === 'string' ? JSON.parse(application.data || '{}') : (application.data || {});
+        const effectiveJamb = application.jambRegNumber || 
+            formData.jambRegNumber || 
+            formData['JAMB Registration Number'] || 
+            formData['JAMB Reg Number'] || 
+            formData['JAMB REG NO'] || 
+            formData.jamb_reg_no || 
+            formData.jamb || null;
+
+        if (effectiveJamb && !application.jambRegNumber) {
+            await db.update(admissionApplicationsV2)
+                .set({ jambRegNumber: effectiveJamb.toString().trim().toUpperCase() })
+                .where(eq(admissionApplicationsV2.id, applicationId));
+        }
+
         // Enforce Full-Time applicants have a verified JAMB Registration Number
-        if (application.applicationMode === 'full_time' && !application.jambRegNumber) {
+        if (application.applicationMode === 'full_time' && !effectiveJamb) {
             return { success: false, error: "A JAMB Registration Number is required for Full-Time applications. Please go back and complete this step." };
         }
 
