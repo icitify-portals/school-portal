@@ -33,6 +33,7 @@ export default function CommunicationsPage() {
     const [isComposing, setIsComposing] = useState(false);
     const [composeData, setComposeData] = useState({ recipientId: "", subject: "", content: "" });
     const [recipientSearch, setRecipientSearch] = useState("");
+    const [query, setQuery] = useState("");
 
     const filteredRecipients = (context?.validRecipients || []).filter((r: any) =>
         (r.name || '').toLowerCase().includes(recipientSearch.toLowerCase()) ||
@@ -95,8 +96,8 @@ export default function CommunicationsPage() {
     );
 
     const filteredInbox = context?.inbox?.filter((m: any) =>
-        m.subject.toLowerCase().includes(query.toLowerCase()) ||
-        m.sender.name.toLowerCase().includes(query.toLowerCase())
+        (m.subject || '').toLowerCase().includes((query || '').toLowerCase()) ||
+        (m.sender?.name || '').toLowerCase().includes((query || '').toLowerCase())
     );
 
     return (

@@ -48,7 +48,7 @@ export class CommunicationService {
 
         const isSenderStaffOrAdmin = [
             'admin', 'superadmin', 'icitify_dev', 'bursar', 'registrar', 
-            'admission_officer', 'dvc', 'vc', 'staff', 'hod', 'dean', 'librarian'
+            'admission_officer', 'admission officer', 'record_officer', 'record officer', 'recordofficer', 'dvc', 'vc', 'staff', 'hod', 'dean', 'librarian'
         ].includes((sender.role || '').toLowerCase()) || senderRoleNames.length > 0;
 
         if (isSenderStaffOrAdmin) {

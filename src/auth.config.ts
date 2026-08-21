@@ -119,14 +119,20 @@ export const authConfig = {
 
                 const isRegistrar = userRole === 'registrar' || userRoles.includes('registrar') || userRoles.includes('Registrar');
                 const isAdmissionOfficer = userRole === 'admission_officer' || userRole === 'admission officer' || userRoles.includes('admission_officer') || userRoles.includes('Admission Officer');
+                const isRecordOfficer = userRole === 'record_officer' || userRole === 'record officer' || userRole === 'recordofficer' || userRoles.includes('record_officer') || userRoles.includes('Record Officer');
                 const isBursar = userRole === 'bursar' || userRole === 'bursary' || userRoles.includes('bursar') || userRoles.includes('Bursar');
 
                 // Permission-scoped access: checked BEFORE role rules to enforce strict path restrictions
                 const hasResultModulePermission = userPermissions.includes("result_module.manage");
-                if (hasResultModulePermission && !isRegistrar) {
-                    // Strictly restrict to result-module only — no other admin paths allowed
-                    if (nextUrl.pathname.startsWith("/admin/result-module")) return true;
-                    return Response.redirect(new URL("/dashboard", nextUrl));
+                if ((hasResultModulePermission || isRecordOfficer) && !isRegistrar) {
+                    if (
+                        nextUrl.pathname.startsWith("/admin/result-module") ||
+                        nextUrl.pathname.startsWith("/admin/exams-records") ||
+                        nextUrl.pathname.startsWith("/admin/communications") ||
+                        nextUrl.pathname.startsWith("/admin/announcements") ||
+                        nextUrl.pathname.startsWith("/admin/profile")
+                    ) return true;
+                    return Response.redirect(new URL("/admin/result-module", nextUrl));
                 }
 
                 if (nextUrl.pathname.startsWith("/admin/cms") && hasCmsAccess) return true;

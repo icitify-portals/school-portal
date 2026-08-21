@@ -38,6 +38,9 @@ export default async function DashboardRedirectPage() {
         case 'registrar':
         case 'admission_officer':
             redirect("/admin/admission"); // Task-bounded Registrar & Admission Dashboard
+        case 'record_officer':
+        case 'record officer':
+            redirect("/admin/result-module"); // Task-bounded Record Officer Dashboard
         case 'librarian':
             redirect("/admin/library"); // Task-bounded Librarian & Journal Dashboard
         case 'healthadmin':
