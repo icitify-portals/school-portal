@@ -960,6 +960,7 @@ export async function confirmAcceptancePayment(applicationId: number, reference:
             return { success: false, error: "Payment verification failed. Please try again." };
         }
 
+        // Mark acceptance payment as paid
         await db.update(admissionApplicationsV2)
             .set({ 
                 acceptancePaymentStatus: 'paid',
@@ -967,20 +968,10 @@ export async function confirmAcceptancePayment(applicationId: number, reference:
             })
             .where(eq(admissionApplicationsV2.id, applicationId));
 
-        // Mark the transaction as completed
+        // Mark transaction as completed
         await db.update(transactions)
             .set({ status: 'completed' })
             .where(eq(transactions.gatewayReference, reference));
-
-        // Auto-finalize the admission and generate the matric number immediately!
-        const finalization = await finalizeStudentAdmission(applicationId);
-        
-        if (finalization.success && finalization.studentId) {
-             // Link the transaction to the newly created student profile
-             await db.update(transactions)
-                 .set({ studentId: finalization.studentId })
-                 .where(eq(transactions.gatewayReference, reference));
-        }
 
         // Dispatch Admission Letter copy via Email
         try {
@@ -1007,13 +998,8 @@ export async function confirmAcceptancePayment(applicationId: number, reference:
                                     <p style="margin: 5px 0 0 0; font-size: 14px;"><strong>Programme:</strong> ${appData.template?.name || 'Academic Programme'}</p>
                                     <p style="margin: 5px 0 0 0; font-size: 14px;"><strong>Study Mode:</strong> ${(appData.applicationMode || 'Full-Time').replace('_', '-').toUpperCase()}</p>
                                 </div>
-                                <p>Please log into your portal to print your official Admission Letter and upload the following required documents:</p>
-                                <ul>
-                                    <li>1. Birth Certificate</li>
-                                    <li>2. O-Level Results</li>
-                                    <li>3. JAMB Result</li>
-                                </ul>
-                                <p style="margin-t: 30px; font-size: 12px; color: #64748b;">Registrar's Office, Federal School of Statistics</p>
+                                <p>Please proceed to pay your 2026/2027 Session School Fees and Processing Fee to obtain your official <strong>Matriculation Number</strong>.</p>
+                                <p style="margin-top: 30px; font-size: 12px; color: #64748b;">Registrar's Office, Federal School of Statistics</p>
                             </div>
                         `
                     });
@@ -1027,6 +1013,84 @@ export async function confirmAcceptancePayment(applicationId: number, reference:
         return { success: true };
     } catch (error) {
         console.error("Failed to confirm acceptance payment:", error);
+        return { success: false, error: "An error occurred" };
+    }
+}
+
+export async function initiateSchoolFeesCheckout(applicationId: number) {
+    try {
+        const app = await db.query.admissionApplicationsV2.findFirst({
+            where: eq(admissionApplicationsV2.id, applicationId),
+            with: { template: true }
+        });
+
+        if (!app || !app.template) return { success: false, error: "Application not found" };
+        if (app.acceptancePaymentStatus !== 'paid') return { success: false, error: "Acceptance Fee must be paid before School Fees." };
+
+        const isNd = app.template.level.toLowerCase().includes("nd") || app.template.level.toLowerCase().includes("diploma");
+        const schoolFeesAmount = isNd ? 58500 : 68500;
+        const processingFeeAmount = 2000;
+        const totalAmount = schoolFeesAmount + processingFeeAmount;
+
+        const reference = `SCH-${applicationId}-${Date.now()}`;
+        const formData = typeof app.data === 'string' ? JSON.parse(app.data || '{}') : (app.data || {});
+
+        const email = formData.email || "student@school.edu.ng";
+        const firstName = formData.firstName || "Applicant";
+        const lastName = formData.lastName || "";
+
+        await db.insert(transactions).values({
+            amount: totalAmount.toString(),
+            type: 'credit',
+            purpose: `2026/2027 Session School Fees & Processing Fee`,
+            status: 'pending',
+            gateway: 'alatpay',
+            gatewayReference: reference
+        });
+
+        return {
+            success: true,
+            reference,
+            amount: totalAmount,
+            schoolFeesAmount,
+            processingFeeAmount,
+            email,
+            firstName,
+            lastName
+        };
+    } catch (error) {
+        console.error("Failed to initiate school fees checkout:", error);
+        return { success: false, error: "An error occurred" };
+    }
+}
+
+export async function confirmSchoolFeesPayment(applicationId: number, reference: string) {
+    try {
+        const { verifyPayment } = await import('@/actions/payment-gateways');
+        const verification = await verifyPayment('alatpay', reference);
+
+        if (!verification.success || !verification.verified) {
+            return { success: false, error: "School fees payment verification failed. Please try again." };
+        }
+
+        // Mark transaction completed
+        await db.update(transactions)
+            .set({ status: 'completed' })
+            .where(eq(transactions.gatewayReference, reference));
+
+        // Generate Matriculation Number and finalize student registration!
+        const finalization = await finalizeStudentAdmission(applicationId);
+
+        if (finalization.success && finalization.studentId) {
+            await db.update(transactions)
+                .set({ studentId: finalization.studentId })
+                .where(eq(transactions.gatewayReference, reference));
+        }
+
+        revalidatePath(`/admission/status/${applicationId}`);
+        return finalization;
+    } catch (error) {
+        console.error("Failed to confirm school fees payment:", error);
         return { success: false, error: "An error occurred" };
     }
 }

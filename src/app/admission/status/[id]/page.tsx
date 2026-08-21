@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
-import { getApplicantStatusData, confirmAcceptancePayment, finalizeStudentAdmission, initiateAcceptancePaymentCheckout, uploadApplicantDocument } from "@/actions/admission_v2";
+import { getApplicantStatusData, confirmAcceptancePayment, finalizeStudentAdmission, initiateAcceptancePaymentCheckout, uploadApplicantDocument, initiateSchoolFeesCheckout, confirmSchoolFeesPayment } from "@/actions/admission_v2";
 import { AlatpayInlineCheckout } from "@/components/finance/AlatpayInlineCheckout";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -62,23 +62,46 @@ export default function ApplicantStatusPage() {
         const res = await initiateAcceptancePaymentCheckout(id);
         setLoading(false);
         if (res && res.success) {
-            setCheckoutPayload(res);
+            setCheckoutPayload({ ...res, isSchoolFees: false });
         } else {
             toast.error(res?.error || "Failed to initiate payment");
+        }
+    };
+
+    const handleSchoolFeesPayment = async () => {
+        setLoading(true);
+        const res = await initiateSchoolFeesCheckout(id);
+        setLoading(false);
+        if (res && res.success) {
+            setCheckoutPayload({ ...res, isSchoolFees: true });
+        } else {
+            toast.error(res?.error || "Failed to initiate school fees payment");
         }
     };
 
     const handleAlatpaySuccess = async () => {
         setVerifying(true);
         toast.loading("Verifying your payment, please wait...", { id: "verify-toast" });
-        const res = await confirmAcceptancePayment(id, checkoutPayload.reference);
-        setVerifying(false);
-        setCheckoutPayload(null);
-        if (res && res.success) {
-            toast.success("Acceptance fee confirmed! Welcome to the school.", { id: "verify-toast" });
-            fetchData();
+        if (checkoutPayload?.isSchoolFees) {
+            const res = await confirmSchoolFeesPayment(id, checkoutPayload.reference);
+            setVerifying(false);
+            setCheckoutPayload(null);
+            if (res && res.success) {
+                toast.success(`School fees confirmed! Matriculation Number: ${res.matricNumber}`, { id: "verify-toast" });
+                fetchData();
+            } else {
+                toast.error(res?.error || "Failed to confirm school fees payment.", { id: "verify-toast" });
+            }
         } else {
-            toast.error(res?.error || "Failed to confirm payment.", { id: "verify-toast" });
+            const res = await confirmAcceptancePayment(id, checkoutPayload.reference);
+            setVerifying(false);
+            setCheckoutPayload(null);
+            if (res && res.success) {
+                toast.success("Acceptance fee confirmed! Admission Letter is now unlocked.", { id: "verify-toast" });
+                fetchData();
+            } else {
+                toast.error(res?.error || "Failed to confirm payment.", { id: "verify-toast" });
+            }
         }
     };
 
@@ -208,15 +231,15 @@ export default function ApplicantStatusPage() {
                                                     <CheckCircle2 className="w-4 h-4" /> Acceptance Fee Paid — Status: Confirmed Admitted
                                                 </div>
                                                 <Button 
-                                                    onClick={handleAcceptAdmission}
-                                                    className="rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black px-8 py-6 flex gap-3 uppercase text-xs tracking-widest shadow-xl"
+                                                    onClick={handleSchoolFeesPayment}
+                                                    className="rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black px-8 py-6 flex gap-3 uppercase text-xs tracking-widest shadow-xl shadow-indigo-100"
                                                 >
-                                                    <CheckCircle2 className="w-5 h-5" /> Proceed to Student Portal & Pay Tuition Fees
+                                                    <CreditCard className="w-5 h-5" /> Pay School Fees & Processing Fee to Obtain Matric Number
                                                 </Button>
                                             </div>
                                         ) : (
-                                            <div className="px-6 py-4 bg-emerald-50 rounded-2xl flex items-center gap-3 text-emerald-600 font-black uppercase text-[10px] tracking-widest italic">
-                                                <CheckCircle2 className="w-4 h-4" /> Admission Confirmed & Registered — Proceed to Student Portal
+                                            <div className="px-6 py-4 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center gap-3 text-emerald-700 font-black uppercase text-[10px] tracking-widest italic shadow-sm">
+                                                <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Admission Confirmed & Registered — Matric Number Assigned
                                             </div>
                                         )}
                                     </div>
