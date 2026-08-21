@@ -623,6 +623,97 @@ export default function BursarySettingsPage() {
                     </CardContent>
                 </Card>
 
+                {/* 2.5. 2026/2027 PAYMENT ROUTING CONSOLE TABLE */}
+                <Card className="overflow-hidden border-none shadow-xl rounded-[2rem] bg-white group hover:shadow-2xl transition-all duration-300">
+                    <CardHeader className="bg-slate-900 text-white p-6 border-b border-slate-800">
+                        <div className="flex items-center justify-between">
+                            <CardTitle className="text-base font-bold flex items-center gap-2 text-white">
+                                <CreditCard className="w-5 h-5 text-indigo-400" />
+                                2026/2027 Complete Payment Routing Console
+                            </CardTitle>
+                            <Badge className="bg-emerald-500 text-white font-bold text-xs uppercase px-3 py-1 border-none">
+                                Active & Enforced
+                            </Badge>
+                        </div>
+                        <p className="text-xs text-indigo-200 mt-1">
+                            Live summary of payment gateways, settlement accounts, and active fee targets configured on the portal.
+                        </p>
+                    </CardHeader>
+                    <CardContent className="p-6">
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left text-xs border-collapse">
+                                <thead>
+                                    <tr className="border-b border-slate-200 bg-slate-50 text-slate-500 font-bold uppercase tracking-wider">
+                                        <th className="p-3">Payment Item / Category</th>
+                                        <th className="p-3">Configured Amount (₦)</th>
+                                        <th className="p-3">Settlement Target Account</th>
+                                        <th className="p-3">Designated Gateway Channel</th>
+                                        <th className="p-3 text-right">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100 font-medium">
+                                    <tr className="hover:bg-slate-50/50">
+                                        <td className="p-3 font-bold text-slate-800">2026/2027 ND 1 School Fees (Tuition)</td>
+                                        <td className="p-3 text-slate-700">₦58,500 – ₦60,500</td>
+                                        <td className="p-3 text-slate-600">School Main Account</td>
+                                        <td className="p-3"><span className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-blue-50 text-blue-700 border border-blue-200">Remita (RRR Dynamic)</span></td>
+                                        <td className="p-3 text-right"><span className="text-emerald-600 font-bold">Active</span></td>
+                                    </tr>
+                                    <tr className="hover:bg-slate-50/50">
+                                        <td className="p-3 font-bold text-slate-800">2026/2027 ND 2 School Fees (Tuition)</td>
+                                        <td className="p-3 text-slate-700">₦56,500 – ₦58,500</td>
+                                        <td className="p-3 text-slate-600">School Main Account</td>
+                                        <td className="p-3"><span className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-blue-50 text-blue-700 border border-blue-200">Remita (RRR Dynamic)</span></td>
+                                        <td className="p-3 text-right"><span className="text-emerald-600 font-bold">Active</span></td>
+                                    </tr>
+                                    <tr className="hover:bg-slate-50/50">
+                                        <td className="p-3 font-bold text-slate-800">2026/2027 HND 1 School Fees (Tuition)</td>
+                                        <td className="p-3 text-slate-700">₦68,500 – ₦70,500</td>
+                                        <td className="p-3 text-slate-600">School Main Account</td>
+                                        <td className="p-3"><span className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-blue-50 text-blue-700 border border-blue-200">Remita (RRR Dynamic)</span></td>
+                                        <td className="p-3 text-right"><span className="text-emerald-600 font-bold">Active</span></td>
+                                    </tr>
+                                    <tr className="hover:bg-slate-50/50">
+                                        <td className="p-3 font-bold text-slate-800">2026/2027 HND 2 School Fees (Tuition)</td>
+                                        <td className="p-3 text-slate-700">₦60,500 – ₦63,500</td>
+                                        <td className="p-3 text-slate-600">School Main Account</td>
+                                        <td className="p-3"><span className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-blue-50 text-blue-700 border border-blue-200">Remita (RRR Dynamic)</span></td>
+                                        <td className="p-3 text-right"><span className="text-emerald-600 font-bold">Active</span></td>
+                                    </tr>
+                                    <tr className="hover:bg-slate-50/50 bg-indigo-50/20">
+                                        <td className="p-3 font-bold text-indigo-900">ND Acceptance Fee</td>
+                                        <td className="p-3 font-bold text-indigo-900">₦35,000.00</td>
+                                        <td className="p-3 font-bold text-slate-800">FSS TECH STUDIO 1</td>
+                                        <td className="p-3"><span className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-indigo-100 text-indigo-800 border border-indigo-200">FSS TECH STUDIO 1</span></td>
+                                        <td className="p-3 text-right"><span className="text-emerald-600 font-bold">Active</span></td>
+                                    </tr>
+                                    <tr className="hover:bg-slate-50/50 bg-indigo-50/20">
+                                        <td className="p-3 font-bold text-indigo-900">HND Acceptance Fee</td>
+                                        <td className="p-3 font-bold text-indigo-900">₦45,000.00</td>
+                                        <td className="p-3 font-bold text-slate-800">FSS TECH STUDIO 1</td>
+                                        <td className="p-3"><span className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-indigo-100 text-indigo-800 border border-indigo-200">FSS TECH STUDIO 1</span></td>
+                                        <td className="p-3 text-right"><span className="text-emerald-600 font-bold">Active</span></td>
+                                    </tr>
+                                    <tr className="hover:bg-slate-50/50 bg-indigo-50/20">
+                                        <td className="p-3 font-bold text-indigo-900">Student ID Card Fee</td>
+                                        <td className="p-3 font-bold text-indigo-900">₦2,000.00</td>
+                                        <td className="p-3 font-bold text-slate-800">FSS TECH STUDIO 1</td>
+                                        <td className="p-3"><span className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-indigo-100 text-indigo-800 border border-indigo-200">FSS TECH STUDIO 1</span></td>
+                                        <td className="p-3 text-right"><span className="text-emerald-600 font-bold">Active</span></td>
+                                    </tr>
+                                    <tr className="hover:bg-slate-50/50 bg-emerald-50/20">
+                                        <td className="p-3 font-bold text-slate-800">Developer Platform Subscription Fee</td>
+                                        <td className="p-3 font-bold text-emerald-900">₦4,000.00</td>
+                                        <td className="p-3 text-slate-600">Developer Subscription Account</td>
+                                        <td className="p-3"><span className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">Paystack Engine</span></td>
+                                        <td className="p-3 text-right"><span className="text-emerald-600 font-bold">Active</span></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </CardContent>
+                </Card>
+
                 {/* 3. SETTLEMENT ACCOUNTS MANAGER */}
                 <Card className="-100 overflow-hidden border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                     <CardHeader className="bg-slate-50/50 border-b border-slate-100 flex flex-row items-center justify-between">
