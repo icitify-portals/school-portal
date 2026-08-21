@@ -920,6 +920,37 @@ export async function initiateAcceptancePaymentCheckout(applicationId: number) {
     }
 }
 
+export async function uploadApplicantDocument(applicationId: number, docType: 'birthCertificate' | 'olevelResult' | 'jambResult', fileUrl: string) {
+    try {
+        const application = await db.query.admissionApplicationsV2.findFirst({
+            where: eq(admissionApplicationsV2.id, applicationId)
+        });
+
+        if (!application) return { success: false, error: "Application not found" };
+
+        const currentData = typeof application.data === 'string' ? JSON.parse(application.data || '{}') : (application.data || {});
+        const uploadedDocs = currentData.uploadedDocuments || {};
+
+        uploadedDocs[docType] = fileUrl;
+        uploadedDocs[`${docType}_uploaded_at`] = new Date().toISOString();
+
+        currentData.uploadedDocuments = uploadedDocs;
+
+        await db.update(admissionApplicationsV2)
+            .set({ 
+                data: JSON.stringify(currentData),
+                updatedAt: new Date()
+            })
+            .where(eq(admissionApplicationsV2.id, applicationId));
+
+        revalidatePath(`/admission/status/${applicationId}`);
+        return { success: true, uploadedDocuments: uploadedDocs };
+    } catch (error: any) {
+        console.error("Failed to upload document:", error);
+        return { success: false, error: error.message || "Failed to upload document" };
+    }
+}
+
 export async function confirmAcceptancePayment(applicationId: number, reference: string) {
     try {
         const { verifyPayment } = await import('@/actions/payment-gateways');
@@ -949,6 +980,47 @@ export async function confirmAcceptancePayment(applicationId: number, reference:
              await db.update(transactions)
                  .set({ studentId: finalization.studentId })
                  .where(eq(transactions.gatewayReference, reference));
+        }
+
+        // Dispatch Admission Letter copy via Email
+        try {
+            const appData = await db.query.admissionApplicationsV2.findFirst({
+                where: eq(admissionApplicationsV2.id, applicationId),
+                with: { template: true }
+            });
+            if (appData) {
+                const formData = typeof appData.data === 'string' ? JSON.parse(appData.data || '{}') : (appData.data || {});
+                const email = formData.email;
+                const candidateName = `${formData.firstName || ''} ${formData.surname || formData.lastName || ''}`.trim() || 'Admitted Candidate';
+                if (email) {
+                    await sendEmail({
+                        to: email,
+                        subject: "OFFICIAL ADMISSION LETTER - Federal School of Statistics",
+                        html: `
+                            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; borderRadius: 12px;">
+                                <h2 style="color: #059669; text-transform: uppercase;">Provisional Admission Offer Confirmed</h2>
+                                <p>Dear <strong>${candidateName}</strong>,</p>
+                                <p>Congratulations! Your Acceptance Fee & Student ID Card payment has been successfully confirmed.</p>
+                                <p>Your official <strong>Admission Letter</strong> has been generated and unlocked on your student dashboard.</p>
+                                <div style="background-color: #f8fafc; padding: 15px; border-left: 4px solid #059669; margin: 20px 0;">
+                                    <p style="margin: 0; font-size: 14px;"><strong>Application Ref:</strong> #${applicationId.toString().padStart(6, '0')}</p>
+                                    <p style="margin: 5px 0 0 0; font-size: 14px;"><strong>Programme:</strong> ${appData.template?.name || 'Academic Programme'}</p>
+                                    <p style="margin: 5px 0 0 0; font-size: 14px;"><strong>Study Mode:</strong> ${(appData.applicationMode || 'Full-Time').replace('_', '-').toUpperCase()}</p>
+                                </div>
+                                <p>Please log into your portal to print your official Admission Letter and upload the following required documents:</p>
+                                <ul>
+                                    <li>1. Birth Certificate</li>
+                                    <li>2. O-Level Results</li>
+                                    <li>3. JAMB Result</li>
+                                </ul>
+                                <p style="margin-t: 30px; font-size: 12px; color: #64748b;">Registrar's Office, Federal School of Statistics</p>
+                            </div>
+                        `
+                    });
+                }
+            }
+        } catch (mailErr) {
+            console.error("Failed to send admission letter email:", mailErr);
         }
 
         revalidatePath(`/admission/status/${applicationId}`);

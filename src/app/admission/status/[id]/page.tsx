@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
-import { getApplicantStatusData, confirmAcceptancePayment, finalizeStudentAdmission, initiateAcceptancePaymentCheckout } from "@/actions/admission_v2";
+import { getApplicantStatusData, confirmAcceptancePayment, finalizeStudentAdmission, initiateAcceptancePaymentCheckout, uploadApplicantDocument } from "@/actions/admission_v2";
 import { AlatpayInlineCheckout } from "@/components/finance/AlatpayInlineCheckout";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -142,15 +142,34 @@ export default function ApplicantStatusPage() {
                             </div>
                             <div className="flex-1 space-y-4">
                                 <div className="space-y-1">
-                                    <h2 className="text-4xl font-black text-slate-900 italic uppercase">
-                                        {data.status === 'admitted' && data.acceptancePaymentStatus === 'paid' ? "Admission Confirmed" : 
-                                         data.status === 'admitted' ? "Provisional Admission Offered" : 
-                                         data.status === 'rejected' ? "Admission Denied" : "Application Status: Pending"}
-                                    </h2>
+                                    <div className="flex flex-wrap items-center gap-3">
+                                        <h2 className="text-4xl font-black text-slate-900 italic uppercase">
+                                            {data.status === 'admitted' && data.acceptancePaymentStatus === 'paid' ? "Admission Confirmed" : 
+                                             data.status === 'admitted' ? "Provisional Admission Offered" : 
+                                             data.status === 'rejected' ? "Admission Denied" : "Application Status: Pending"}
+                                        </h2>
+                                        <span className={cn(
+                                            "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider italic border",
+                                            data.applicationMode === 'part_time' 
+                                                ? "bg-amber-50 text-amber-600 border-amber-200" 
+                                                : "bg-indigo-50 text-indigo-600 border-indigo-200"
+                                        )}>
+                                            Mode: {data.applicationMode ? data.applicationMode.replace('_', '-').toUpperCase() : 'FULL-TIME'}
+                                        </span>
+                                    </div>
                                     <p className="text-xs font-black text-slate-400 uppercase tracking-widest italic">
                                         Ref: #{data.id.toString().padStart(6, '0')} • {data.template.name}
                                     </p>
                                 </div>
+                                
+                                {data.applicationMode === 'part_time' && (
+                                    <div className="p-4 bg-amber-50 rounded-2xl border border-amber-100 flex gap-3 items-center text-amber-700">
+                                        <Info className="w-5 h-5 shrink-0" />
+                                        <p className="text-[11px] font-bold italic">
+                                            You are currently placed on <strong>Part-Time</strong> study mode. Once all full-time entry conditions are met, your study mode can be upgraded to Full-Time by the Admission Officer.
+                                        </p>
+                                    </div>
+                                )}
                                 
                                 {data.admissionNotes && (
                                     <div className="p-6 bg-slate-50 rounded-2xl border border-slate-100 flex gap-4">
@@ -214,10 +233,13 @@ export default function ApplicantStatusPage() {
                             <div className="p-3 bg-white/10 rounded-2xl">
                                 <Trophy className="w-6 h-6 text-indigo-400" />
                             </div>
-                            <CardTitle className="text-xl font-black italic uppercase">CBT Entrance Results</CardTitle>
+                            <div>
+                                <CardTitle className="text-xl font-black italic uppercase">CBT Entrance Examination Results (August 22)</CardTitle>
+                                <p className="text-[10px] font-bold text-white/50 uppercase tracking-widest">Mathematics & English Language • Pass Mark Cut-off: 40%</p>
+                            </div>
                         </div>
                         {showResult && (
-                            <Button variant="ghost" className="text-white hover:bg-white/10 rounded-xl px-4 py-2 flex gap-2">
+                            <Button variant="ghost" className="text-white hover:bg-white/10 rounded-xl px-4 py-2 flex gap-2" onClick={() => window.print()}>
                                 <Printer className="w-4 h-4" /> Print Result
                             </Button>
                         )}
@@ -227,54 +249,146 @@ export default function ApplicantStatusPage() {
                             <div className="space-y-10">
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                                     <div className="p-8 bg-indigo-50 rounded-[2.5rem] border border-indigo-100 text-center space-y-2">
-                                        <p className="text-[10px] font-black uppercase tracking-widest text-indigo-400">Total Score</p>
-                                        <h4 className="text-5xl font-black text-indigo-900 italic">{parseFloat(result.totalScore).toFixed(1)}</h4>
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-indigo-400">Total Exam Score</p>
+                                        <h4 className="text-5xl font-black text-indigo-900 italic">{parseFloat(result.totalScore).toFixed(1)}%</h4>
                                     </div>
                                     <div className="p-8 bg-slate-50 rounded-[2.5rem] border border-slate-100 text-center space-y-2">
-                                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Completion Time</p>
-                                        <h4 className="text-2xl font-black text-slate-700 italic mt-2">
-                                            {result.endTime ? format(new Date(result.endTime), 'hh:mm a') : 'N/A'}
-                                        </h4>
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Exam Pass Cut-off</p>
+                                        <h4 className="text-xl font-black text-slate-700 italic mt-2">40.0% Minimum</h4>
                                     </div>
                                     <div className="p-8 bg-slate-50 rounded-[2.5rem] border border-slate-100 text-center space-y-2">
-                                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Status</p>
-                                        <h4 className="text-sm font-black text-emerald-600 uppercase italic mt-4 flex items-center justify-center gap-2">
-                                            <CheckCircle2 className="w-5 h-5" /> {result.status}
-                                        </h4>
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Eligibility Status</p>
+                                        {parseFloat(result.totalScore) >= 40 ? (
+                                            <h4 className="text-sm font-black text-emerald-600 uppercase italic mt-4 flex items-center justify-center gap-2 bg-emerald-50 py-2 px-4 rounded-xl border border-emerald-200">
+                                                <CheckCircle2 className="w-5 h-5" /> Eligible (Passed ≥40%)
+                                            </h4>
+                                        ) : (
+                                            <h4 className="text-sm font-black text-rose-600 uppercase italic mt-4 flex items-center justify-center gap-2 bg-rose-50 py-2 px-4 rounded-xl border border-rose-200">
+                                                <XCircle className="w-5 h-5" /> Not Eligible (&lt;40% Cutoff)
+                                            </h4>
+                                        )}
                                     </div>
                                 </div>
 
                                 <div className="space-y-4">
                                     <h5 className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-4 italic">Subject Performance Breakdown</h5>
-                                    <div className="grid grid-cols-1 gap-4">
-                                        {Object.entries(JSON.parse(result.subjectScores || "{}")).map(([subjectId, score]: [string, any]) => (
-                                            <div key={subjectId} className="bg-slate-50 rounded-2xl p-6 flex justify-between items-center group hover:bg-indigo-50 transition-colors">
-                                                <div className="flex items-center gap-4">
-                                                    <div className="w-2 h-8 bg-indigo-200 rounded-full group-hover:bg-indigo-500 transition-colors" />
-                                                    <span className="text-sm font-black text-slate-700 uppercase italic">Subject ID: {subjectId}</span>
-                                                </div>
-                                                <span className="text-lg font-black text-slate-900 italic">{parseFloat(score).toFixed(1)}</span>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className="bg-slate-50 rounded-2xl p-6 flex justify-between items-center group hover:bg-indigo-50 transition-colors">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-2 h-8 bg-indigo-500 rounded-full" />
+                                                <span className="text-sm font-black text-slate-700 uppercase italic">Mathematics</span>
                                             </div>
-                                        ))}
+                                            <span className="text-lg font-black text-slate-900 italic">
+                                                {parseFloat(JSON.parse(result.subjectScores || "{}")['math'] || JSON.parse(result.subjectScores || "{}")['1'] || (parseFloat(result.totalScore) * 0.5)).toFixed(1)} / 50
+                                            </span>
+                                        </div>
+                                        <div className="bg-slate-50 rounded-2xl p-6 flex justify-between items-center group hover:bg-indigo-50 transition-colors">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-2 h-8 bg-indigo-500 rounded-full" />
+                                                <span className="text-sm font-black text-slate-700 uppercase italic">English Language</span>
+                                            </div>
+                                            <span className="text-lg font-black text-slate-900 italic">
+                                                {parseFloat(JSON.parse(result.subjectScores || "{}")['english'] || JSON.parse(result.subjectScores || "{}")['2'] || (parseFloat(result.totalScore) * 0.5)).toFixed(1)} / 50
+                                            </span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         ) : (
-                            <div className="py-20 text-center space-y-6">
+                            <div className="py-16 text-center space-y-6">
                                 <div className="p-8 bg-slate-50 rounded-[3rem] w-fit mx-auto">
                                     <Clock className="w-16 h-16 text-slate-200" />
                                 </div>
                                 <div className="space-y-2">
-                                    <h4 className="text-2xl font-black text-slate-300 italic uppercase">Results Pending</h4>
+                                    <h4 className="text-2xl font-black text-slate-300 italic uppercase">August 22 Entrance Exam Scores Pending</h4>
                                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-relaxed">
-                                        The examination board is currently reviewing the scores. <br />
-                                        Please check back later once the results are formally released.
+                                        Examination scores for Mathematics and English Language are being compiled. <br />
+                                        Applicants scoring 40% and above will be recommended for Full-Time / Part-Time admission.
                                     </p>
                                 </div>
                             </div>
                         )}
                     </CardContent>
                 </Card>
+
+                {/* Mandatory Post-Admission Documents Upload Card */}
+                {data.status === 'admitted' && (
+                    <Card className="border-none shadow-xl rounded-[3rem] overflow-hidden bg-white">
+                        <CardHeader className="bg-emerald-950 text-white p-10 flex flex-row justify-between items-center">
+                            <div className="flex items-center gap-4">
+                                <div className="p-3 bg-emerald-500/20 rounded-2xl text-emerald-400">
+                                    <GraduationCap className="w-6 h-6" />
+                                </div>
+                                <div>
+                                    <CardTitle className="text-xl font-black italic uppercase text-emerald-400">Post-Admission Document Upload Console</CardTitle>
+                                    <p className="text-[10px] font-bold text-white/50 uppercase tracking-widest">Required Credentials Verification</p>
+                                </div>
+                            </div>
+                        </CardHeader>
+                        <CardContent className="p-10 space-y-6">
+                            <p className="text-xs font-bold text-slate-500 leading-relaxed italic">
+                                All admitted candidates are required to upload legible PDF/Image copies of the following 3 documents before final clearance:
+                            </p>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                {[
+                                    { key: 'birthCertificate', label: '1. Birth Certificate', desc: 'Official Birth Certificate or Declaration of Age' },
+                                    { key: 'olevelResult', label: '2. O-Level Results', desc: 'WAEC / NECO / NABTEB Statement of Result' },
+                                    { key: 'jambResult', label: '3. JAMB Result', desc: 'Official UTME / Direct Entry JAMB Result Slip' },
+                                ].map((doc) => {
+                                    const appDataJson = typeof data.data === 'string' ? JSON.parse(data.data || '{}') : (data.data || {});
+                                    const isUploaded = !!appDataJson.uploadedDocuments?.[doc.key];
+                                    return (
+                                        <div key={doc.key} className="p-6 bg-slate-50 rounded-3xl border border-slate-100 space-y-4 flex flex-col justify-between">
+                                            <div className="space-y-1">
+                                                <h4 className="text-sm font-black text-slate-900 uppercase italic">{doc.label}</h4>
+                                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{doc.desc}</p>
+                                            </div>
+                                            {isUploaded ? (
+                                                <div className="px-4 py-3 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center justify-between text-emerald-700 text-xs font-black uppercase tracking-wider italic">
+                                                    <span className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4" /> Uploaded</span>
+                                                    <a href={appDataJson.uploadedDocuments[doc.key]} target="_blank" rel="noreferrer" className="text-[10px] underline">View</a>
+                                                </div>
+                                            ) : (
+                                                <label className="cursor-pointer rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black py-3 px-4 flex items-center justify-center gap-2 uppercase text-[10px] tracking-widest transition-colors">
+                                                    <Download className="w-4 h-4 rotate-180" /> Upload File
+                                                    <input 
+                                                        type="file" 
+                                                        accept=".pdf,.jpg,.jpeg,.png"
+                                                        className="hidden" 
+                                                        onChange={async (e) => {
+                                                            const file = e.target.files?.[0];
+                                                            if (!file) return;
+                                                            toast.loading(`Uploading ${doc.label}...`, { id: `upload-${doc.key}` });
+                                                            try {
+                                                                const formData = new FormData();
+                                                                formData.append('file', file);
+                                                                const uploadRes = await fetch('/api/upload', { method: 'POST', body: formData });
+                                                                const uploadJson = await uploadRes.json();
+                                                                if (uploadJson.url) {
+                                                                    const saveRes = await uploadApplicantDocument(id, doc.key as any, uploadJson.url);
+                                                                    if (saveRes.success) {
+                                                                        toast.success(`${doc.label} uploaded successfully!`, { id: `upload-${doc.key}` });
+                                                                        fetchData();
+                                                                    } else {
+                                                                        toast.error(saveRes.error || "Failed to save document link", { id: `upload-${doc.key}` });
+                                                                    }
+                                                                } else {
+                                                                    toast.error("File upload failed", { id: `upload-${doc.key}` });
+                                                                }
+                                                            } catch (err: any) {
+                                                                toast.error(err.message || "Upload error", { id: `upload-${doc.key}` });
+                                                            }
+                                                        }}
+                                                    />
+                                                </label>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
 
                 {/* Secure Badge */}
                 <div className="flex justify-center items-center gap-6 opacity-40 grayscale group hover:grayscale-0 hover:opacity-100 transition-all duration-700">
