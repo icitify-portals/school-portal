@@ -7,6 +7,7 @@ import { encrypt, decrypt } from "@/lib/encryption";
 import { auth } from "@/auth";
 import { revalidatePath } from "next/cache";
 import { hasPermission, hasRole } from "@/lib/rbac";
+import { redis } from "@/lib/redis";
 
 const DEFAULT_SETTINGS: Record<string, string> = {
     "module.live_classes": "true",
@@ -142,6 +143,15 @@ export async function updateIDCardSettings(data: any) {
 }
 
 export async function getBrandingSettings() {
+    try {
+        const cached = await redis.get("cache:branding_settings");
+        if (cached) {
+            return JSON.parse(cached);
+        }
+    } catch (e) {
+        // Fallback silently if Redis is disconnected or building
+    }
+
     const portalName = await getSettingByKey('portal_name') || 'Academic Portal';
     const portalLogo = await getSettingByKey('portal_logo') || '';
     const schoolMotto = await getSettingByKey('school_motto') || '';
@@ -149,7 +159,7 @@ export async function getBrandingSettings() {
     const schoolBillNote = await getSettingByKey('school_bill_note') || '';
     const homepagePageId = await getSettingByKey('cms_homepage_page_id') || 'default';
 
-    return {
+    const result = {
         portalName,
         portalLogo,
         schoolMotto,
@@ -172,6 +182,12 @@ export async function getBrandingSettings() {
         DARK_MODE_DEFAULT: await getSettingByKey('dark_mode_default') || await getSettingByKey('d_a_r_k__m_o_d_e__d_e_f_a_u_l_t') || 'false',
         supportEmail: await getSettingByKey('support_email') || 'support@institution.edu'
     };
+
+    try {
+        await redis.set("cache:branding_settings", JSON.stringify(result), "EX", 600);
+    } catch (e) {}
+
+    return result;
 }
 
 export async function updateBrandingSettings(data: any) {
@@ -203,6 +219,11 @@ export async function updateBrandingSettings(data: any) {
 
             await updateSystemSetting(dbKey, value as string, 'branding');
         }
+        
+        try {
+            await redis.del("cache:branding_settings");
+        } catch (e) {}
+
         return { success: true };
     } catch (e: any) {
         return { success: false, error: e.message };
