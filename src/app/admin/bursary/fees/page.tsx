@@ -41,7 +41,7 @@ export default function FeesPage() {
     const userRole = (session?.user as any)?.role;
     const isBursar = userRoles.includes("bursar") || ["admin", "superadmin", "icitify_dev", "bursar"].includes(userRole);
 
-    const [activeTab, setActiveTab] = useState<'items' | 'structures'>('items');
+    const [activeTab, setActiveTab] = useState<'items' | 'structures'>('structures');
     const [feeItemsList, setFeeItemsList] = useState<any[]>([]);
     const [feeStructuresList, setFeeStructuresList] = useState<any[]>([]);
     const [sessionsList, setSessionsList] = useState<any[]>([]);
@@ -49,6 +49,10 @@ export default function FeesPage() {
     const [loading, setLoading] = useState(true);
     const [isAdding, setIsAdding] = useState(false);
     
+    // Search & Session Filter State
+    const [searchTerm, setSearchTerm] = useState("");
+    const [selectedYearFilter, setSelectedYearFilter] = useState("all");
+
     // Multi-select State
     const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
 
@@ -331,6 +335,18 @@ export default function FeesPage() {
         }
     };
 
+    const filteredItems = feeItemsList.filter(i => 
+        i.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        i.description?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    const filteredStructures = feeStructuresList.filter(s => {
+        const matchesSearch = s.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                              s.academicYear?.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesYear = selectedYearFilter === "all" || s.academicYear === selectedYearFilter;
+        return matchesSearch && matchesYear;
+    });
+
     return (
         <div className="p-8 max-w-6xl mx-auto">
             <div className="flex justify-between items-center mb-8">
@@ -354,11 +370,36 @@ export default function FeesPage() {
                 </div>
             </div>
 
-            <div className="flex justify-end mb-6">
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-6">
+                <div className="flex items-center gap-3 w-full sm:w-auto">
+                    <div className="relative flex-1 sm:w-72">
+                        <Search className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
+                        <input
+                            type="text"
+                            placeholder={activeTab === 'items' ? "Search fee items..." : "Search structures (e.g. 2026/2027, BUS)..."}
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full pl-9 pr-4 py-2 text-sm bg-white rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        />
+                    </div>
+                    {activeTab === 'structures' && (
+                        <select
+                            value={selectedYearFilter}
+                            onChange={(e) => setSelectedYearFilter(e.target.value)}
+                            className="px-3 py-2 text-sm bg-white rounded-xl border border-slate-200 font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        >
+                            <option value="all">All Session Years</option>
+                            {Array.from(new Set(feeStructuresList.map((s: any) => s.academicYear).filter(Boolean))).map((yr: any) => (
+                                <option key={yr} value={yr}>{yr}</option>
+                            ))}
+                        </select>
+                    )}
+                </div>
+
                 {!isEditing && !isApplying && (
                     <Button
                         onClick={() => { setIsAdding(!isAdding); setStructName(""); setSelectedItems([]); }}
-                        className="bg-indigo-600 hover:bg-indigo-700 h-11 px-6 rounded-xl shadow-lg shadow-indigo-500/20 gap-2"
+                        className="bg-indigo-600 hover:bg-indigo-700 h-11 px-6 rounded-xl shadow-lg shadow-indigo-500/20 gap-2 w-full sm:w-auto"
                     >
                         <Plus className="w-4 h-4" />
                         {activeTab === 'items' ? "New Fee Item" : "Create Structure"}
@@ -726,9 +767,9 @@ export default function FeesPage() {
                                 </td>
                             </tr>
                         ) : activeTab === 'items' ? (
-                            feeItemsList.length === 0 ? (
+                            filteredItems.length === 0 ? (
                                 <tr><td colSpan={6} className="px-6 py-10 text-center text-slate-500">No items found.</td></tr>
-                            ) : feeItemsList.map(item => (
+                            ) : filteredItems.map(item => (
                                 <React.Fragment key={item.id}>
                                     {editingFeeItemId === item.id ? (
                                         <tr className="bg-indigo-50/50">
@@ -785,9 +826,9 @@ export default function FeesPage() {
                                 </React.Fragment>
                             ))
                         ) : (
-                            feeStructuresList.length === 0 ? (
+                            filteredStructures.length === 0 ? (
                                 <tr><td colSpan={6} className="px-6 py-10 text-center text-slate-500">No structures found.</td></tr>
-                            ) : feeStructuresList.map(s => (
+                            ) : filteredStructures.map(s => (
                                 <React.Fragment key={s.id}>
                                 <tr className={cn("hover:bg-slate-50/50 transition-colors cursor-pointer", selectedIds.has(s.id) && "bg-indigo-50/50")} onClick={() => setExpandedStructureId(expandedStructureId === s.id ? null : s.id)}>
                                     <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
