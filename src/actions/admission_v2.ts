@@ -41,7 +41,7 @@ import { randomUUID } from "crypto";
 const ADMIN_ROLES = [
     'admin', 'superadmin', 'icitify_dev', 'dvc', 'vc',
     'registrar', 'admission_officer', 'admission officer', 'admission',
-    'bursar', 'bursary', 'accountant', 'auditor'
+    'bursar', 'bursary', 'accountant', 'auditor', 'recordofficer', 'record_officer', 'record officer', 'records'
 ];
 
 async function requireAdmin() {
@@ -1014,6 +1014,49 @@ export async function confirmAcceptancePayment(applicationId: number, reference:
     } catch (error) {
         console.error("Failed to confirm acceptance payment:", error);
         return { success: false, error: "An error occurred" };
+    }
+}
+
+export async function updateApplicantMatricNumber(applicationId: number, newMatricNumber: string) {
+    await requireAdmin();
+    try {
+        const trimmedMatric = newMatricNumber.trim();
+        if (!trimmedMatric) return { success: false, error: "Matriculation number cannot be empty." };
+
+        const application = await db.query.admissionApplicationsV2.findFirst({
+            where: eq(admissionApplicationsV2.id, applicationId)
+        });
+
+        if (!application) return { success: false, error: "Application not found" };
+
+        // Update student record if created
+        if (application.studentId) {
+            await db.update(students)
+                .set({ 
+                    matricNumber: trimmedMatric,
+                    updatedAt: new Date()
+                })
+                .where(eq(students.id, application.studentId));
+        }
+
+        // Save matriculation number into admission notes and application data
+        const currentData = typeof application.data === 'string' ? JSON.parse(application.data || '{}') : (application.data || {});
+        currentData.matricNumber = trimmedMatric;
+
+        await db.update(admissionApplicationsV2)
+            .set({
+                data: JSON.stringify(currentData),
+                admissionNotes: `Matriculation Number assigned/updated: ${trimmedMatric}`,
+                updatedAt: new Date()
+            })
+            .where(eq(admissionApplicationsV2.id, applicationId));
+
+        revalidatePath(`/admin/admission/v2/${applicationId}`);
+        revalidatePath("/admin/admission/v2");
+        return { success: true, matricNumber: trimmedMatric };
+    } catch (error: any) {
+        console.error("Failed to update matriculation number:", error);
+        return { success: false, error: error.message || "Failed to update matriculation number" };
     }
 }
 
@@ -2338,6 +2381,7 @@ export async function getAdminV2Applications(filters?: {
                 applicantName: nameFromForm || nameFromUser || fallbackEmail || 'N/A',
                 applicantEmail: fallbackEmail || app.applicant?.email || 'N/A',
                 applicantPhone: formData.phone || formData.phone_number || app.applicant?.phone || 'N/A',
+                studentMatricNumber: app.student?.matricNumber || formData.matricNumber || null,
                 templateName: app.template?.name || 'N/A',
                 facultyName: app.programme?.department?.faculty?.name || 'Unassigned Faculty',
                 departmentName: app.programme?.department?.name || 'Unassigned Department',

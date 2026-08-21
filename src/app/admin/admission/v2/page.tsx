@@ -561,11 +561,18 @@ function AdminV2ApplicationsContent() {
                                                     </div>
                                                 </div>
                                             </td>
-                                            <td className="px-6 py-5">
-                                                <span className="font-mono text-xs font-bold text-slate-600 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200">
-                                                    {app.formNumber || '—'}
-                                                </span>
-                                            </td>
+                                             <td className="px-6 py-5">
+                                                 <div className="flex flex-col gap-1">
+                                                     <span className="font-mono text-xs font-bold text-slate-600 bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-200 w-fit">
+                                                         {app.formNumber || '—'}
+                                                     </span>
+                                                     {app.studentMatricNumber || app.parsedData?.matricNumber ? (
+                                                         <span className="font-mono text-[10px] font-black text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200 w-fit italic">
+                                                             Matric: {app.studentMatricNumber || app.parsedData?.matricNumber}
+                                                         </span>
+                                                     ) : null}
+                                                 </div>
+                                             </td>
                                             <td className="px-6 py-5">
                                                 <span className="text-xs font-bold text-slate-700">{app.facultyName}</span>
                                             </td>

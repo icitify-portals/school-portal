@@ -8,7 +8,7 @@ import {
     Loader2, ArrowLeft, Printer, CreditCard, GraduationCap, BookOpen, Hash,
     Image as ImageIcon, ChevronDown, ChevronUp, Shield, ShieldAlert, ShieldCheck, Edit, Lock
 } from "lucide-react";
-import { getAdminV2ApplicationDetail, updateAdmissionStatus, confirmAdmissionPayment, confirmAcceptancePayment, reverseAdmissionPayment, confirmProcessingFeePayment, reverseProcessingFeePayment, updateApplicantData, changeApplicantProgramme, getAdmissionAcademicUnits } from "@/actions/admission_v2";
+import { getAdminV2ApplicationDetail, updateAdmissionStatus, confirmAdmissionPayment, confirmAcceptancePayment, reverseAdmissionPayment, confirmProcessingFeePayment, reverseProcessingFeePayment, updateApplicantData, changeApplicantProgramme, getAdmissionAcademicUnits, updateApplicantMatricNumber } from "@/actions/admission_v2";
 import { verifyUserEmailManually, resetUserPassword } from "@/actions/user-actions";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -42,6 +42,29 @@ export default function V2ApplicationDetailPage() {
     const [isTransferring, setIsTransferring] = useState(false);
     const [isVerifyingEmail, setIsVerifyingEmail] = useState(false);
     const [isResettingPassword, setIsResettingPassword] = useState(false);
+
+    // Matriculation Number Edit State
+    const [editMatricOpen, setEditMatricOpen] = useState(false);
+    const [newMatricInput, setNewMatricInput] = useState("");
+    const [isSavingMatric, setIsSavingMatric] = useState(false);
+
+    const handleSaveMatricNumber = async () => {
+        if (!newMatricInput.trim()) {
+            toast.error("Matriculation number cannot be empty");
+            return;
+        }
+        setIsSavingMatric(true);
+        const res = await updateApplicantMatricNumber(app.id, newMatricInput);
+        setIsSavingMatric(false);
+        if (res.success) {
+            toast.success(`Matriculation Number updated: ${res.matricNumber}`);
+            setEditMatricOpen(false);
+            const data = await getAdminV2ApplicationDetail(app.id);
+            setApp(data);
+        } else {
+            toast.error(res.error || "Failed to update matriculation number");
+        }
+    };
 
     const handleVerifyEmail = async () => {
         const targetUserId = app?.applicantId || app?.userId || app?.id;
@@ -468,8 +491,13 @@ export default function V2ApplicationDetailPage() {
                             </div>
                             <div>
                                 <h1 className="text-3xl lg:text-4xl font-black tracking-tighter uppercase italic">{app.applicantName}</h1>
-                                <div className="flex items-center gap-4 mt-2 text-slate-300 text-sm">
-                                    <span className="flex items-center gap-1.5"><FileText className="w-4 h-4" /> {app.formNumber || 'No form number'}</span>
+                                <div className="flex flex-wrap items-center gap-3 mt-2 text-slate-300 text-sm">
+                                    <span className="flex items-center gap-1.5 font-mono text-xs"><FileText className="w-4 h-4 text-indigo-400" /> Form #: {app.formNumber || 'No form number'}</span>
+                                    {(app.studentMatricNumber || app.parsedData?.matricNumber || app.admissionNotes?.includes('Matric Number')) && (
+                                        <span className="px-3 py-1 bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 rounded-xl font-mono text-xs font-black italic flex items-center gap-1.5">
+                                            <Hash className="w-3.5 h-3.5" /> Matric: {app.studentMatricNumber || app.parsedData?.matricNumber || app.admissionNotes?.split('Matric Number: ')?.[1] || 'Assigned'}
+                                        </span>
+                                    )}
                                     <span>{statusBadge(app.status)}</span>
                                 </div>
                             </div>
@@ -490,6 +518,15 @@ export default function V2ApplicationDetailPage() {
                             >
                                 {isResettingPassword ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Lock className="w-4 h-4 mr-2" />}
                                 Reset Password
+                            </Button>
+                            <Button
+                                onClick={() => {
+                                    setNewMatricInput(app.studentMatricNumber || app.parsedData?.matricNumber || app.admissionNotes?.split('Matric Number: ')?.[1] || "");
+                                    setEditMatricOpen(true);
+                                }}
+                                className="rounded-xl bg-purple-600/20 hover:bg-purple-600/40 text-purple-300 border border-purple-500/30 font-black text-[10px] uppercase tracking-widest px-5 py-3 backdrop-blur-md"
+                            >
+                                <Hash className="w-4 h-4 mr-2" /> Edit Matric #
                             </Button>
                             <Button
                                 onClick={openTransferModal}
@@ -575,6 +612,110 @@ export default function V2ApplicationDetailPage() {
                         </div>
                     </DialogContent>
                 </Dialog>
+
+                {/* Edit Matriculation Number Modal Dialog */}
+                <Dialog open={editMatricOpen} onOpenChange={setEditMatricOpen}>
+                    <DialogContent className="max-w-md bg-white rounded-3xl p-6 border border-slate-200 shadow-2xl">
+                        <DialogHeader>
+                            <DialogTitle className="text-xl font-bold flex items-center gap-2 text-slate-800">
+                                <Hash className="w-6 h-6 text-purple-600" /> Edit Matriculation Number
+                            </DialogTitle>
+                        </DialogHeader>
+                        <div className="space-y-4 my-2">
+                            <div>
+                                <Label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Matriculation Number</Label>
+                                <Input
+                                    value={newMatricInput}
+                                    onChange={(e) => setNewMatricInput(e.target.value)}
+                                    placeholder="e.g. FSS/IB/2026/FT/ND/001"
+                                    className="mt-1 p-3 rounded-xl border border-slate-200 text-sm font-mono font-bold"
+                                />
+                                <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wider">
+                                    Authorized for Registrar & Record Officers
+                                </p>
+                            </div>
+                        </div>
+                        <div className="flex justify-end gap-3 mt-4">
+                            <Button variant="outline" onClick={() => setEditMatricOpen(false)} className="rounded-xl font-bold">
+                                Cancel
+                            </Button>
+                            <Button
+                                onClick={handleSaveMatricNumber}
+                                disabled={isSavingMatric}
+                                className="rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold px-5"
+                            >
+                                {isSavingMatric ? <Loader2 className="w-4 h-4 animate-spin" /> : "Save Matric Number"}
+                            </Button>
+                        </div>
+                    </DialogContent>
+                </Dialog>
+
+                {/* Registrar Credentials & Uploaded File Download Console */}
+                <Card className="border border-indigo-100 shadow-xl bg-gradient-to-r from-slate-900 to-indigo-950 text-white rounded-[3rem] overflow-hidden no-print">
+                    <CardHeader className="p-8 border-b border-white/10 flex flex-row justify-between items-center">
+                        <div className="flex items-center gap-4">
+                            <div className="p-3 bg-indigo-500/20 rounded-2xl text-indigo-400">
+                                <Download className="w-6 h-6" />
+                            </div>
+                            <div>
+                                <CardTitle className="text-xl font-black italic uppercase text-indigo-300">Registrar File & Credential Download Console</CardTitle>
+                                <p className="text-[10px] font-bold text-white/50 uppercase tracking-widest">Passport Photo, Signature, Birth Cert, O-Level & JAMB Slips</p>
+                            </div>
+                        </div>
+                    </CardHeader>
+                    <CardContent className="p-8">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
+                            {[
+                                {
+                                    label: "Passport Photo",
+                                    url: app.applicantPhoto || app.parsedData?.["Passport Photograph"] || app.parsedData?.["Passport Photo"] || app.parsedData?.["Passport"],
+                                    type: "image"
+                                },
+                                {
+                                    label: "Applicant Signature",
+                                    url: app.parsedData?.["Signature"] || app.parsedData?.["Applicant Signature"] || app.parsedData?.["Signature Image"],
+                                    type: "image"
+                                },
+                                {
+                                    label: "Birth Certificate",
+                                    url: app.parsedData?.uploadedDocuments?.birthCertificate || app.parsedData?.["Birth Certificate"],
+                                    type: "file"
+                                },
+                                {
+                                    label: "O-Level Result",
+                                    url: app.parsedData?.uploadedDocuments?.olevelResult || app.parsedData?.["O-Level Result"] || app.parsedData?.["OLevel Result"],
+                                    type: "file"
+                                },
+                                {
+                                    label: "JAMB Result Slip",
+                                    url: app.parsedData?.uploadedDocuments?.jambResult || app.parsedData?.["JAMB Result"] || app.parsedData?.["JAMB Result Slip"],
+                                    type: "file"
+                                }
+                            ].map((doc, idx) => (
+                                <div key={idx} className="p-5 bg-white/5 rounded-2xl border border-white/10 space-y-3 flex flex-col justify-between hover:bg-white/10 transition-colors">
+                                    <div className="space-y-1">
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-indigo-300">{doc.label}</p>
+                                        <p className="text-xs font-bold text-white/60 truncate">{doc.url ? 'Available' : 'Not Uploaded'}</p>
+                                    </div>
+                                    {doc.url ? (
+                                        <a
+                                            href={doc.url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="w-full py-2.5 px-3 bg-indigo-600 hover:bg-indigo-500 text-white font-black text-[10px] uppercase tracking-widest rounded-xl flex items-center justify-center gap-2 transition-colors"
+                                        >
+                                            <Download className="w-3.5 h-3.5" /> Download / View
+                                        </a>
+                                    ) : (
+                                        <span className="w-full py-2.5 px-3 bg-white/5 text-white/30 font-bold text-[10px] uppercase tracking-widest rounded-xl text-center cursor-not-allowed">
+                                            Not Uploaded
+                                        </span>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    </CardContent>
+                </Card>
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 print-layout">
                     <div className="lg:col-span-2 space-y-6 print-col">
