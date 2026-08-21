@@ -106,13 +106,13 @@ export default function AdminApplicationPrintPage() {
                 <div className="bg-white shadow-2xl print:shadow-none print:border-none print:rounded-none overflow-hidden print:w-[210mm] print:h-[297mm] print:overflow-hidden box-border">
                     {/* School Header */}
                     <div className="border-b-[3px] border-indigo-600 px-6 py-4 flex items-center justify-between gap-4">
-                        {branding?.portalLogo ? (
-                            <img src={branding.portalLogo} alt="School Logo" className="w-16 h-16 print:w-14 print:h-14 object-contain shrink-0" style={{ WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }} />
-                        ) : (
-                            <div className="w-16 h-16 print:w-14 print:h-14 bg-indigo-50 rounded-xl flex items-center justify-center shrink-0">
-                                <span className="text-xl font-black text-indigo-300">LOGO</span>
-                            </div>
-                        )}
+                        <img 
+                            src={branding?.portalLogo && branding.portalLogo.trim() !== '' && branding.portalLogo !== 'null' ? branding.portalLogo : "/fss_logo.png"} 
+                            alt="School Logo" 
+                            className="w-16 h-16 print:w-14 print:h-14 object-contain shrink-0" 
+                            style={{ WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }} 
+                            onError={(e) => { (e.currentTarget as HTMLImageElement).src = "/fss_logo.png"; }}
+                        />
                         <div className="flex-1 text-center">
                             <h1 className="text-xl print:text-lg font-black text-slate-900 uppercase tracking-tight leading-tight">
                                 {branding?.portalName || "Federal School of Statistics, Ibadan"}

@@ -135,13 +135,13 @@ export default function ApplicationSlip() {
                     <div className="relative z-10">
                         {/* School Header */}
                         <div className="border-b-4 border-indigo-600 px-10 py-8 flex items-center gap-8 print:border-b-4 print:border-black">
-                            {branding?.portalLogo ? (
-                                <img src={branding.portalLogo} alt="School Logo" className="w-24 h-24 object-contain" />
-                            ) : (
-                                <div className="w-24 h-24 bg-indigo-50 rounded-2xl flex items-center justify-center print:bg-gray-100">
-                                    <User className="w-10 h-10 text-indigo-300 print:text-gray-400" />
-                                </div>
-                            )}
+                            <img 
+                                src={branding?.portalLogo && branding.portalLogo.trim() !== '' && branding.portalLogo !== 'null' ? branding.portalLogo : "/fss_logo.png"} 
+                                alt="School Logo" 
+                                className="w-24 h-24 object-contain shrink-0" 
+                                style={{ WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }} 
+                                onError={(e) => { (e.currentTarget as HTMLImageElement).src = "/fss_logo.png"; }}
+                            />
                             <div className="flex-1 text-center">
                                 <h1 className="text-2xl font-black text-slate-900 uppercase tracking-tight print:text-black">
                                     {branding?.portalName || "Federal School of Statistics, Ibadan"}
