@@ -43,7 +43,6 @@ export const authConfig = {
         },
         authorized({ auth, request: { nextUrl } }) {
             const isLoggedIn = !!auth?.user;
-            console.log('AUTHORIZED CHECK:', { isLoggedIn, pathname: nextUrl.pathname, session: auth?.user });
             const isLoginPage = nextUrl.pathname === "/login";
             const isRegisterPage = nextUrl.pathname === "/register";
             const isAdmissionPage = nextUrl.pathname.startsWith("/admission");
