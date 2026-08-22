@@ -8,7 +8,7 @@ import {
     XCircle, AlertCircle, Activity, Filter, ExternalLink, ChevronLeft, ChevronRight,
     CheckSquare, Square, Download, FileSpreadsheet, Printer, Trash2
 } from "lucide-react";
-import { getAdminV2Applications, bulkUpdateAdmissionStatus, getAdmissionTemplates, exportAdminV2Applications, deleteAdmissionApplication, bulkDeleteAdmissionApplications, getAdmissionAcademicUnits } from "@/actions/admission_v2";
+import { getAdminV2Applications, bulkUpdateAdmissionStatus, getAdmissionTemplates, exportAdminV2Applications, deleteAdmissionApplication, bulkDeleteAdmissionApplications, getAdmissionAcademicUnits, generateBulkApplicantFilesZip } from "@/actions/admission_v2";
 import * as xlsx from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -250,11 +250,29 @@ function AdminV2ApplicationsContent() {
                 headStyles: { fillColor: [79, 70, 229] }
             });
 
-            doc.save("bulk_applications_report.pdf");
-            toast.success("PDFs generated successfully");
-        } catch (error) {
-            toast.error("Failed to generate PDFs");
-            console.error(error);
+    const handleBulkDownloadFilesZip = async () => {
+        if (selectedIds.size === 0) {
+            toast.error("Please select at least one application to download files");
+            return;
+        }
+        setLoading(true);
+        toast.loading("Preparing ZIP archive of candidate photographs, signatures & credentials...", { id: "zip-toast" });
+        try {
+            const res = await generateBulkApplicantFilesZip(Array.from(selectedIds));
+            if (res.success && res.zipBase64) {
+                const link = document.createElement("a");
+                link.href = `data:application/zip;base64,${res.zipBase64}`;
+                link.download = res.filename || "Applicant_Files.zip";
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                toast.success("ZIP Archive downloaded successfully!", { id: "zip-toast" });
+            } else {
+                toast.error(res.error || "Failed to generate ZIP archive", { id: "zip-toast" });
+            }
+        } catch (err: any) {
+            console.error("ZIP Generation Error:", err);
+            toast.error("An error occurred while building the ZIP file", { id: "zip-toast" });
         }
         setLoading(false);
     };
@@ -474,6 +492,12 @@ function AdminV2ApplicationsContent() {
                             className="rounded-xl bg-red-600 hover:bg-red-700 text-white font-black text-[10px] uppercase tracking-widest px-5 py-3 shadow-md shadow-red-200"
                         >
                             <Trash2 className="w-3.5 h-3.5 mr-2" /> Delete Selected
+                        </Button>
+                        <Button
+                            onClick={handleBulkDownloadFilesZip}
+                            className="rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-black text-[10px] uppercase tracking-widest px-5 py-3 shadow-md shadow-purple-100"
+                        >
+                            <Download className="w-3.5 h-3.5 mr-2" /> Bulk Download Files (ZIP)
                         </Button>
                         <Button
                             onClick={handleBulkDownloadPDFs}

@@ -1017,6 +1017,114 @@ export async function confirmAcceptancePayment(applicationId: number, reference:
     }
 }
 
+export async function generateBulkApplicantFilesZip(applicationIds: number[]) {
+    await requireAdmin();
+    try {
+        if (!applicationIds || applicationIds.length === 0) {
+            return { success: false, error: "No applications selected for file download." };
+        }
+
+        const AdmZip = (await import("adm-zip")).default;
+        const zip = new AdmZip();
+
+        const applications = await db.query.admissionApplicationsV2.findMany({
+            where: inArray(admissionApplicationsV2.id, applicationIds),
+            with: {
+                template: true,
+                programme: {
+                    with: {
+                        department: true
+                    }
+                }
+            }
+        });
+
+        if (!applications || applications.length === 0) {
+            return { success: false, error: "No matching applications found." };
+        }
+
+        const helperFetchBuffer = async (urlStr: string): Promise<{ buffer: Buffer; ext: string } | null> => {
+            if (!urlStr) return null;
+            try {
+                if (urlStr.startsWith('data:image/')) {
+                    const matches = urlStr.match(/^data:image\/([a-zA-Z0-9]+);base64,(.+)$/);
+                    if (matches && matches[2]) {
+                        const ext = matches[1].toLowerCase() === 'jpeg' ? 'jpg' : matches[1].toLowerCase();
+                        return { buffer: Buffer.from(matches[2], 'base64'), ext };
+                    }
+                }
+                if (urlStr.startsWith('http://') || urlStr.startsWith('https://')) {
+                    const resp = await fetch(urlStr);
+                    if (resp.ok) {
+                        const arrayBuf = await resp.arrayBuffer();
+                        const contentType = resp.headers.get('content-type') || '';
+                        let ext = 'bin';
+                        if (contentType.includes('pdf') || urlStr.toLowerCase().includes('.pdf')) ext = 'pdf';
+                        else if (contentType.includes('jpeg') || urlStr.toLowerCase().includes('.jpg') || urlStr.toLowerCase().includes('.jpeg')) ext = 'jpg';
+                        else if (contentType.includes('png') || urlStr.toLowerCase().includes('.png')) ext = 'png';
+                        else if (contentType.includes('webp') || urlStr.toLowerCase().includes('.webp')) ext = 'webp';
+                        return { buffer: Buffer.from(arrayBuf), ext };
+                    }
+                }
+            } catch (err) {
+                console.error("Failed to fetch payload for URL:", urlStr, err);
+            }
+            return null;
+        };
+
+        for (const app of applications) {
+            const formData = typeof app.data === 'string' ? JSON.parse(app.data || '{}') : (app.data || {});
+            const nameFromForm = `${formData.firstName || formData.first_name || ''}_${formData.surname || formData.lastName || formData.last_name || ''}`.trim().replace(/[^a-zA-Z0-9_-]/g, '_') || `Applicant_${app.id}`;
+            const formNo = (app.formNumber || `APP-${app.id}`).replace(/[^a-zA-Z0-9_-]/g, '_');
+            const progName = (app.programme?.name || app.template?.name || 'General_Applications').replace(/[^a-zA-Z0-9_-]/g, '_');
+
+            const folderPath = `${progName}/${formNo}_${nameFromForm}`;
+
+            const fileTargets = [
+                {
+                    key: 'passport_photo',
+                    url: app.applicantPhoto || formData["Passport Photograph"] || formData["Passport Photo"] || formData["Passport"] || formData["Photo"]
+                },
+                {
+                    key: 'applicant_signature',
+                    url: formData["Signature"] || formData["Applicant Signature"] || formData["Signature Image"]
+                },
+                {
+                    key: 'birth_certificate',
+                    url: formData.uploadedDocuments?.birthCertificate || formData["Birth Certificate"]
+                },
+                {
+                    key: 'olevel_result',
+                    url: formData.uploadedDocuments?.olevelResult || formData["O-Level Result"] || formData["OLevel Result"]
+                },
+                {
+                    key: 'jamb_result',
+                    url: formData.uploadedDocuments?.jambResult || formData["JAMB Result"] || formData["JAMB Result Slip"]
+                }
+            ];
+
+            for (const item of fileTargets) {
+                if (item.url) {
+                    const fetched = await helperFetchBuffer(String(item.url));
+                    if (fetched) {
+                        const filename = `${folderPath}/${item.key}.${fetched.ext}`;
+                        zip.addFile(filename, fetched.buffer);
+                    }
+                }
+            }
+        }
+
+        const zipBuffer = zip.toBuffer();
+        const zipBase64 = zipBuffer.toString("base64");
+        const filename = `Applicant_Files_${new Date().toISOString().split('T')[0]}.zip`;
+
+        return { success: true, filename, zipBase64 };
+    } catch (error: any) {
+        console.error("Failed to generate bulk applicant files ZIP:", error);
+        return { success: false, error: error.message || "Failed to generate bulk ZIP archive" };
+    }
+}
+
 export async function updateApplicantMatricNumber(applicationId: number, newMatricNumber: string) {
     await requireAdmin();
     try {
