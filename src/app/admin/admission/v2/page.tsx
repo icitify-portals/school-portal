@@ -251,14 +251,19 @@ function AdminV2ApplicationsContent() {
             });
 
     const handleBulkDownloadFilesZip = async () => {
-        if (selectedIds.size === 0) {
-            toast.error("Please select at least one application to download files");
+        const targetIds = selectedIds.size > 0 
+            ? Array.from(selectedIds) 
+            : (data?.applications || []).map((a: any) => a.id);
+
+        if (!targetIds || targetIds.length === 0) {
+            toast.error("No applications available for file download.");
             return;
         }
+
         setLoading(true);
-        toast.loading("Preparing ZIP archive of candidate photographs, signatures & credentials...", { id: "zip-toast" });
+        toast.loading(`Preparing ZIP archive for ${targetIds.length} candidate credentials...`, { id: "zip-toast" });
         try {
-            const res = await generateBulkApplicantFilesZip(Array.from(selectedIds));
+            const res = await generateBulkApplicantFilesZip(targetIds);
             if (res.success && res.zipBase64) {
                 const link = document.createElement("a");
                 link.href = `data:application/zip;base64,${res.zipBase64}`;
@@ -347,6 +352,14 @@ function AdminV2ApplicationsContent() {
                                 className="px-5 py-4 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm flex items-center"
                             >
                                 <FileSpreadsheet className="w-4 h-4 mr-2" /> Export Excel
+                            </Button>
+
+                            <Button
+                                onClick={handleBulkDownloadFilesZip}
+                                className="px-5 py-4 rounded-2xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs shadow-sm flex items-center shadow-purple-100"
+                                title="Download candidate photographs, signatures, birth certs, O-level & JAMB result slips in ZIP format"
+                            >
+                                <Download className="w-4 h-4 mr-2" /> Bulk Download Files (ZIP)
                             </Button>
 
                             {(search || statusFilter !== 'all' || paymentFilter !== 'all' || facultyFilter || departmentFilter || programmeFilter || levelFilter !== 'all' || modeFilter !== 'all' || templateFilter) && (
