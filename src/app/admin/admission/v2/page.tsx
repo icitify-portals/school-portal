@@ -250,6 +250,13 @@ function AdminV2ApplicationsContent() {
                 headStyles: { fillColor: [79, 70, 229] }
             });
 
+            doc.save("Applications_Report.pdf");
+        } catch (err: any) {
+            console.error("PDF Export Error:", err);
+            toast.error("Failed to generate PDF");
+        }
+    };
+
     const handleBulkDownloadFilesZip = async () => {
         const targetIds = selectedIds.size > 0 
             ? Array.from(selectedIds) 
