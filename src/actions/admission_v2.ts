@@ -1719,6 +1719,10 @@ export async function getExaminationBodies() {
 export async function saveOLevelResultsAction(applicationId: number, applicantId: number, sittings: any[]) {
     await requireApplicant();
     try {
+        if (!Array.isArray(sittings)) {
+            return { success: true };
+        }
+
         // Clear previous entries
         const existingSittings = await db.select().from(applicantOLevelSittings)
             .where(and(eq(applicantOLevelSittings.applicationId, applicationId), eq(applicantOLevelSittings.applicantId, applicantId)));
@@ -1731,12 +1735,22 @@ export async function saveOLevelResultsAction(applicationId: number, applicantId
         // Insert new ones
         for (let i = 0; i < sittings.length; i++) {
             const sitting = sittings[i];
+            
+            // Handle examBodyId safely (prevent NaN)
+            let parsedBodyId = parseInt(sitting.examBodyId);
+            if (isNaN(parsedBodyId)) {
+                const bodyStr = String(sitting.examBodyId || '').toUpperCase();
+                if (bodyStr.includes('NECO')) parsedBodyId = 2;
+                else if (bodyStr.includes('NABTEB')) parsedBodyId = 3;
+                else parsedBodyId = 1; // Default WAEC (1)
+            }
+
             const [res] = await db.insert(applicantOLevelSittings).values({
                 applicantId,
                 applicationId,
-                examBodyId: parseInt(sitting.examBodyId),
-                examYear: sitting.examYear,
-                examNumber: sitting.examNumber,
+                examBodyId: parsedBodyId,
+                examYear: String(sitting.examYear || ''),
+                examNumber: String(sitting.examNumber || ''),
                 sittingNumber: i + 1
             });
             const sittingId = res.insertId;
@@ -1744,8 +1758,8 @@ export async function saveOLevelResultsAction(applicationId: number, applicantId
             if (sitting.subjects && sitting.subjects.length > 0) {
                 const subjectValues = sitting.subjects.filter((s: any) => s.subjectName && s.grade).map((s: any) => ({
                     sittingId,
-                    subjectName: s.subjectName,
-                    grade: s.grade
+                    subjectName: String(s.subjectName),
+                    grade: String(s.grade)
                 }));
                 if (subjectValues.length > 0) {
                     await db.insert(applicantOLevelSubjects).values(subjectValues);
@@ -1755,7 +1769,7 @@ export async function saveOLevelResultsAction(applicationId: number, applicantId
         return { success: true };
     } catch (error: any) {
         console.error("Save OLevel Error:", error);
-        return { success: false, error: error.message };
+        return { success: false, error: error.message || "Failed to save O-Level results" };
     }
 }
 
@@ -1860,7 +1874,9 @@ export async function getApplicantApplication(applicationId: number, applicantId
 export async function saveApplicationDraft(applicationId: number, applicantId: number, formData: any) {
     await requireApplicant();
     try {
-        const ninValue = formData?.['NIN'] || formData?.__ninData?.nin || null;
+        const rawNin = formData?.['NIN'] || formData?.__ninData?.nin || null;
+        const ninValue = (rawNin && typeof rawNin === 'string' && rawNin.trim().length > 0) ? rawNin.trim() : null;
+
         const extractedJamb = formData?.['JAMB Registration Number'] || 
             formData?.['JAMB Reg Number'] || 
             formData?.['JAMB REG NO'] || 
@@ -1868,13 +1884,17 @@ export async function saveApplicationDraft(applicationId: number, applicantId: n
             formData?.['jamb_reg_no'] || 
             formData?.['jamb'] || null;
 
+        const cleanJamb = (extractedJamb && typeof extractedJamb === 'string' && extractedJamb.trim().length > 0)
+            ? extractedJamb.trim().toUpperCase()
+            : null;
+
         const updatePayload: any = {
             data: typeof formData === 'string' ? formData : JSON.stringify(formData),
             nin: ninValue
         };
 
-        if (extractedJamb) {
-            updatePayload.jambRegNumber = extractedJamb.toString().trim().toUpperCase();
+        if (cleanJamb) {
+            updatePayload.jambRegNumber = cleanJamb;
         }
 
         await db.update(admissionApplicationsV2)
@@ -1887,10 +1907,14 @@ export async function saveApplicationDraft(applicationId: number, applicantId: n
             );
         return { success: true };
     } catch (error: any) {
+        console.error("saveApplicationDraft error:", error);
         if (error.code === 'ER_DUP_ENTRY') {
+            if (error.message?.includes('jamb_reg_number') || error.sqlMessage?.includes('jamb_reg_number')) {
+                return { success: false, error: "This JAMB Registration Number has already been used in another application." };
+            }
             return { success: false, error: "This NIN has already been used in another application." };
         }
-        return { success: false, error: error.message };
+        return { success: false, error: error.message || "Failed query update" };
     }
 }
 
@@ -2072,6 +2096,16 @@ export async function submitApplicationFinal(applicationId: number, applicantId:
             updatedPhoto = await uploadBase64ToWasabi(updatedPhoto, 'photo');
         }
 
+        // Sanitize applicantPhoto length to prevent MySQL varchar(255) overflow errors
+        let safeApplicantPhoto = updatedPhoto;
+        if (safeApplicantPhoto && safeApplicantPhoto.length > 250) {
+            if (safeApplicantPhoto.startsWith('data:image')) {
+                safeApplicantPhoto = null; // Do not insert raw base64 into varchar(255)
+            } else if (safeApplicantPhoto.length > 255) {
+                safeApplicantPhoto = safeApplicantPhoto.substring(0, 255);
+            }
+        }
+
         let formDataUpdated = false;
         for (const key of Object.keys(formData)) {
             if (typeof formData[key] === 'string' && formData[key].startsWith('data:image')) {
@@ -2084,7 +2118,7 @@ export async function submitApplicationFinal(applicationId: number, applicantId:
         await db.update(admissionApplicationsV2)
             .set({ 
                 status: 'submitted',
-                applicantPhoto: updatedPhoto,
+                applicantPhoto: safeApplicantPhoto,
                 data: formDataUpdated ? JSON.stringify(formData) : application.data
             })
             .where(
