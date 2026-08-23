@@ -2643,6 +2643,9 @@ export async function exportAdminV2Applications(filters?: {
                 conditions.push(sql`1=0`);
             }
         }
+        if (filters?.examAttendance && filters.examAttendance !== 'all') {
+            conditions.push(eq(admissionApplicationsV2.examAttendanceStatus, filters.examAttendance as any));
+        }
 
         const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
@@ -2664,6 +2667,13 @@ export async function exportAdminV2Applications(filters?: {
                 }
             }
         });
+
+        // Batch query CBT Exam Results to detect automatic exam attendance
+        const appIds = applications.map(a => a.id);
+        const examResults = appIds.length > 0 
+            ? await db.select({ applicationId: admissionExamResults.applicationId }).from(admissionExamResults).where(inArray(admissionExamResults.applicationId, appIds))
+            : [];
+        const cbtPresentAppIds = new Set(examResults.map(r => r.applicationId));
 
         let mapped = applications.map((app: any) => {
             let formData: any = {};
@@ -2690,6 +2700,11 @@ export async function exportAdminV2Applications(filters?: {
                 } catch (e) {}
             }
 
+            const isCbtPresent = cbtPresentAppIds.has(app.id);
+            const attendanceStatus = (app.examAttendanceStatus && app.examAttendanceStatus !== 'pending')
+                ? app.examAttendanceStatus
+                : (isCbtPresent ? 'present' : 'pending');
+
             return {
                 ...app,
                 parsedData: formData,
@@ -2701,7 +2716,8 @@ export async function exportAdminV2Applications(filters?: {
                 departmentName: deptName,
                 facultyName: facName,
                 academicLevel,
-                administrativeLevel: 'Applicant'
+                administrativeLevel: 'Applicant',
+                examAttendanceStatus: attendanceStatus
             };
         });
 
@@ -2713,6 +2729,10 @@ export async function exportAdminV2Applications(filters?: {
             );
         }
 
+        if (filters?.examAttendance && filters.examAttendance !== 'all') {
+            mapped = mapped.filter((a: any) => a.examAttendanceStatus === filters.examAttendance);
+        }
+
         return {
             success: true,
             applications: mapped
@@ -2720,6 +2740,28 @@ export async function exportAdminV2Applications(filters?: {
     } catch (error) {
         console.error("[exportAdminV2Applications] Failed:", error);
         return { success: false, applications: [], error: "Failed to export data" };
+    }
+}
+
+export async function markExamAttendanceAction(applicationIds: number[], status: 'present' | 'absent' | 'pending') {
+    await requireAdmin();
+    try {
+        if (!applicationIds || applicationIds.length === 0) {
+            return { success: false, error: "No applications selected" };
+        }
+
+        await db.update(admissionApplicationsV2)
+            .set({ 
+                examAttendanceStatus: status,
+                updatedAt: new Date()
+            })
+            .where(inArray(admissionApplicationsV2.id, applicationIds));
+
+        revalidatePath("/admin/admission/v2");
+        return { success: true, count: applicationIds.length };
+    } catch (error: any) {
+        console.error("markExamAttendanceAction error:", error);
+        return { success: false, error: error.message || "Failed to update exam attendance status" };
     }
 }
 

@@ -8,7 +8,7 @@ import {
     XCircle, AlertCircle, Activity, Filter, ExternalLink, ChevronLeft, ChevronRight,
     CheckSquare, Square, Download, FileSpreadsheet, Printer, Trash2
 } from "lucide-react";
-import { getAdminV2Applications, bulkUpdateAdmissionStatus, getAdmissionTemplates, exportAdminV2Applications, deleteAdmissionApplication, bulkDeleteAdmissionApplications, getAdmissionAcademicUnits, generateBulkApplicantFilesZip } from "@/actions/admission_v2";
+import { getAdminV2Applications, bulkUpdateAdmissionStatus, getAdmissionTemplates, exportAdminV2Applications, deleteAdmissionApplication, bulkDeleteAdmissionApplications, getAdmissionAcademicUnits, generateBulkApplicantFilesZip, markExamAttendanceAction } from "@/actions/admission_v2";
 import * as xlsx from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -40,6 +40,7 @@ function AdminV2ApplicationsContent() {
     const [programmeFilter, setProgrammeFilter] = useState<number | undefined>(urlProgParam);
     const [levelFilter, setLevelFilter] = useState<string>(urlLevelParam);
     const [modeFilter, setModeFilter] = useState<string>("all");
+    const [attendanceFilter, setAttendanceFilter] = useState<string>("all");
 
     const [faculties, setFaculties] = useState<any[]>([]);
     const [departments, setDepartments] = useState<any[]>([]);
@@ -71,12 +72,13 @@ function AdminV2ApplicationsContent() {
             programmeId: programmeFilter,
             level: levelFilter !== 'all' ? levelFilter : undefined,
             applicationMode: modeFilter !== 'all' ? modeFilter : undefined,
+            examAttendance: attendanceFilter !== 'all' ? attendanceFilter : undefined,
             page,
             pageSize: 10,
         });
         setData(result);
         setLoading(false);
-    }, [search, statusFilter, paymentFilter, templateFilter, facultyFilter, departmentFilter, programmeFilter, levelFilter, modeFilter, page]);
+    }, [search, statusFilter, paymentFilter, templateFilter, facultyFilter, departmentFilter, programmeFilter, levelFilter, modeFilter, attendanceFilter, page]);
 
     useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -103,6 +105,20 @@ function AdminV2ApplicationsContent() {
             return d?.facultyId === facultyFilter;
         })
         : programmes;
+
+    const handleMarkAttendance = async (status: 'present' | 'absent' | 'pending') => {
+        if (selectedIds.size === 0) { toast.error("No applications selected"); return; }
+        setLoading(true);
+        const res = await markExamAttendanceAction(Array.from(selectedIds), status);
+        setLoading(false);
+        if (res.success) {
+            toast.success(`Marked ${res.count} applicant(s) as ${status.toUpperCase()}`);
+            setSelectedIds(new Set());
+            fetchData();
+        } else {
+            toast.error(res.error || "Failed to update attendance status");
+        }
+    };
 
     const handleBulkAction = async (action: string) => {
         if (selectedIds.size === 0) { toast.error("No applications selected"); return; }
@@ -474,6 +490,17 @@ function AdminV2ApplicationsContent() {
                         </select>
 
                         <select
+                            value={attendanceFilter}
+                            onChange={(e) => { setAttendanceFilter(e.target.value); setPage(1); }}
+                            className="px-3 py-3.5 rounded-2xl border border-slate-200 bg-white text-xs font-bold shadow-sm focus:ring-2 focus:ring-indigo-500"
+                        >
+                            <option value="all">All Exam Attendance</option>
+                            <option value="present">🟢 Present (Sat for Exam)</option>
+                            <option value="absent">🔴 Absent (Missed Exam)</option>
+                            <option value="pending">🟡 Pending / Unmarked</option>
+                        </select>
+
+                        <select
                             value={templateFilter || ""}
                             onChange={(e) => { setTemplateFilter(e.target.value ? Number(e.target.value) : undefined); setPage(1); }}
                             className="px-3 py-3.5 rounded-2xl border border-slate-200 bg-white text-xs font-bold shadow-sm focus:ring-2 focus:ring-indigo-500"
@@ -489,6 +516,18 @@ function AdminV2ApplicationsContent() {
                 {selectedIds.size > 0 && (
                     <div className="flex flex-wrap items-center gap-4 p-4 bg-indigo-50 border border-indigo-200 rounded-2xl">
                         <span className="text-sm font-bold text-indigo-700">{selectedIds.size} selected</span>
+                        <Button
+                            onClick={() => handleMarkAttendance('present')}
+                            className="rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-black text-[10px] uppercase tracking-widest px-5 py-3 shadow-md shadow-emerald-100"
+                        >
+                            🟢 Mark Present
+                        </Button>
+                        <Button
+                            onClick={() => handleMarkAttendance('absent')}
+                            className="rounded-xl bg-rose-700 hover:bg-rose-800 text-white font-black text-[10px] uppercase tracking-widest px-5 py-3 shadow-md shadow-rose-100"
+                        >
+                            🔴 Mark Absent
+                        </Button>
                         <Button
                             onClick={() => handleBulkAction('admitted')}
                             className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] uppercase tracking-widest px-5 py-3"
@@ -554,6 +593,7 @@ function AdminV2ApplicationsContent() {
                                     <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest">Programme</th>
                                     <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest">Mode</th>
                                     <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest">Level</th>
+                                    <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest">Exam Attendance</th>
                                     <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest">Status</th>
                                     <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest">Payment</th>
                                     <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest">Date</th>
@@ -634,6 +674,21 @@ function AdminV2ApplicationsContent() {
                                             <td className="px-6 py-5">
                                                 <span className="px-2.5 py-1 bg-indigo-50 border border-indigo-200 text-indigo-700 rounded-lg text-[10px] font-black uppercase tracking-wider inline-block">
                                                     {app.academicLevel}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-5">
+                                                <span className={cn(
+                                                    "px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border inline-flex items-center gap-1.5",
+                                                    app.examAttendanceStatus === 'present' ? "bg-emerald-100 text-emerald-800 border-emerald-200" :
+                                                    app.examAttendanceStatus === 'absent' ? "bg-rose-100 text-rose-800 border-rose-200" :
+                                                    "bg-amber-100 text-amber-800 border-amber-200"
+                                                )}>
+                                                    <div className={cn(
+                                                        "w-1.5 h-1.5 rounded-full",
+                                                        app.examAttendanceStatus === 'present' ? "bg-emerald-500" :
+                                                        app.examAttendanceStatus === 'absent' ? "bg-rose-500" : "bg-amber-500"
+                                                    )} />
+                                                    {app.examAttendanceStatus === 'present' ? 'Present' : app.examAttendanceStatus === 'absent' ? 'Absent' : 'Pending'}
                                                 </span>
                                             </td>
                                             <td className="px-6 py-5">

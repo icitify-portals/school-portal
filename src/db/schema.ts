@@ -276,7 +276,7 @@ export const students = mysqlTable('students', {
   genotype: varchar('genotype', { length: 10 }),
   nationality: varchar('nationality', { length: 100 }).default('Nigerian'),
   modeOfEntry: varchar('mode_of_entry', { length: 50 }).default('UTME'),
-  studyMode: mysqlEnum('study_mode', ['full-time', 'part-time']).default('full-time'),
+  studyMode: mysqlEnum('study_mode', ['full-time', 'part-time', 'elearning']).default('full-time'),
   graduatedAt: datetime('graduated_at'),
   classOfDegree: varchar('class_of_degree', { length: 100 }),
   deletedAt: datetime('deleted_at'),
@@ -5828,6 +5828,7 @@ export const admissionApplicationsV2 = mysqlTable('admission_applications_v2', {
   acceptancePaymentStatus: mysqlEnum('acceptance_payment_status', ['pending', 'paid', 'not_applicable']).default('pending'),
   applicationMode: mysqlEnum('application_mode', ['full_time', 'part_time']),
   jambRegNumber: varchar('jamb_reg_number', { length: 20 }),
+  examAttendanceStatus: mysqlEnum('exam_attendance_status', ['pending', 'present', 'absent']).default('pending'),
   appliedAt: timestamp('applied_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
 }, (table) => ({

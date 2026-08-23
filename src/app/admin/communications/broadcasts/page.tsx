@@ -30,6 +30,7 @@ export default function CentralBroadcastCommunicationsPage() {
     const [selectedDepts, setSelectedDepts] = useState<number[]>([]);
     const [selectedProgs, setSelectedProgs] = useState<number[]>([]);
     const [admissionStatus, setAdmissionStatus] = useState<string[]>(["all"]);
+    const [examAttendance, setExamAttendance] = useState<"all" | "present" | "absent">("all");
     const [customEmails, setCustomEmails] = useState("");
     const [scheduledFor, setScheduledFor] = useState("");
 
@@ -65,12 +66,13 @@ export default function CentralBroadcastCommunicationsPage() {
             levels: selectedLevels,
             departments: selectedDepts,
             programmes: selectedProgs,
-            admissionStatus
+            admissionStatus,
+            examAttendance
         }).then(res => {
             setAudiencePreview(res.count);
             setPreviewLoading(false);
         });
-    }, [targetType, selectedLevels, selectedDepts, selectedProgs, admissionStatus]);
+    }, [targetType, selectedLevels, selectedDepts, selectedProgs, admissionStatus, examAttendance]);
 
     const fetchHistory = async () => {
         setLoadingHistory(true);
@@ -88,7 +90,7 @@ export default function CentralBroadcastCommunicationsPage() {
         }
 
         setIsDispatching(true);
-        const emailsArray = customEmails ? customEmails.split(",").map(e => e.trim()).filter(Boolean) : [];
+        const emailsArray = customEmails.split(",").map(e => e.trim()).filter(e => e.length > 0);
 
         const res = await dispatchCentralBroadcast({
             title,
@@ -99,6 +101,7 @@ export default function CentralBroadcastCommunicationsPage() {
             departments: selectedDepts,
             programmes: selectedProgs,
             admissionStatus,
+            examAttendance,
             emails: emailsArray,
             scheduledFor: scheduledFor || null
         });
@@ -295,6 +298,26 @@ export default function CentralBroadcastCommunicationsPage() {
                                                     className={`px-3 py-1.5 rounded-lg text-xs font-bold capitalize transition-all ${admissionStatus.includes(status) ? "bg-amber-500 text-white shadow-sm" : "bg-white text-slate-600 border border-slate-200"}`}
                                                 >
                                                     {status}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <div className="p-4 rounded-2xl bg-indigo-50/70 border border-indigo-100 space-y-3">
+                                        <Label className="text-xs font-bold text-indigo-800 uppercase tracking-wider block">Filter Applicants by Entrance Exam Attendance</Label>
+                                        <div className="flex flex-wrap gap-2">
+                                            {[
+                                                { id: "all", label: "All Applicants" },
+                                                { id: "present", label: "🟢 Present Only (Sat for Exam)" },
+                                                { id: "absent", label: "🔴 Absent Only (Missed Exam)" }
+                                            ].map(item => (
+                                                <button
+                                                    type="button"
+                                                    key={item.id}
+                                                    onClick={() => setExamAttendance(item.id as any)}
+                                                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${examAttendance === item.id ? "bg-indigo-600 text-white shadow-sm" : "bg-white text-slate-600 border border-slate-200"}`}
+                                                >
+                                                    {item.label}
                                                 </button>
                                             ))}
                                         </div>
