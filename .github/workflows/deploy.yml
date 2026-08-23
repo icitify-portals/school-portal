@@ -1,0 +1,77 @@
+name: CI/CD Production Build & Deploy
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: icitify-portals/school-portal
+
+jobs:
+  build-and-push:
+    name: Build & Push Docker Image (Off-Server)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract Docker Metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=latest
+            type=sha,format=short
+
+      - name: Build and Push Pre-Built Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy-to-vps:
+    name: Deploy Pre-Built Container to Hostinger VPS
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          password: ${{ secrets.SERVER_PASSWORD }}
+          script: |
+            cd /var/www/school-portal
+            echo "=== PULLING LATEST GIT CODE ==="
+            git pull origin main
+            echo "=== LOGGING INTO GHCR ==="
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            echo "=== PULLING PRE-BUILT DOCKER IMAGE FROM GHCR ==="
+            docker pull ghcr.io/${{ env.IMAGE_NAME }}:latest
+            echo "=== RESTARTING CONTAINERS WITH PRE-BUILT IMAGE ==="
+            sudo docker compose -f compose.yml up -d --no-build school-portal-app school-portal-worker
+            echo "=== CLEANING UNUSED DOCKER IMAGES ==="
+            docker image prune -f
+            echo "✓ CI/CD Zero-Build Deployment Complete!"

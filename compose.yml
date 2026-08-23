@@ -23,6 +23,7 @@ services:
       - portal_network
 
   school-portal-app:
+    image: ghcr.io/icitify-portals/school-portal:latest
     build: .
     container_name: school-portal-app
     restart: always
@@ -46,6 +47,7 @@ services:
       - portal_network
 
   school-portal-worker:
+    image: ghcr.io/icitify-portals/school-portal:latest
     build: .
     container_name: school-portal-worker
     restart: always
