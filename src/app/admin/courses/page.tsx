@@ -195,6 +195,9 @@ export default function CoursesPage() {
                 departmentSettings: [...editingCourse.departmentSettings, newSetting]
             });
             setDeptSettings({ deptId: "", semester: "1", status: "compulsory", level: 100 });
+        } else alert(res.error);
+    };
+
     const handleExportCourseRoster = async (course: any) => {
         const res = await getCourseRegisteredStudentsRosterAction(course.id);
         if (!res.success || !res.data || res.data.length === 0) {
