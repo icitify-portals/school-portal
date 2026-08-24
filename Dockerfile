@@ -17,7 +17,7 @@ ENV DATABASE_URL "mysql://portal_user:StrongPassword123!@127.0.0.1:3306/school_p
 ENV NEXTAUTH_SECRET "build-time-dummy-secret-1234567890"
 ENV AUTH_SECRET "build-time-dummy-secret-1234567890"
 ENV NEXT_PUBLIC_APP_URL "https://portal.fssibadan.edu.ng"
-RUN npm run build
+RUN npx next build
 
 FROM base AS runner
 WORKDIR /app
