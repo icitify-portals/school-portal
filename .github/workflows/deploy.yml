@@ -1,4 +1,4 @@
-# CI/CD Trigger: Off-Server Build and Instant VPS Deployment
+# CI/CD Trigger: Testing GHCR Write Permissions
 name: CI/CD Production Build & Deploy
 
 on:
