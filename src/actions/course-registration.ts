@@ -3,7 +3,7 @@
 import { CourseRegistrationService } from "@/services/CourseRegistrationService";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db/db";
-import { studentCourseRegistrations, courses, students } from "@/db/schema";
+import { studentCourseRegistrations, courses, students, users } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { hasRole, hasPermission } from "@/lib/rbac";
 import { sendInAppNotification } from "./notifications";
@@ -93,5 +93,49 @@ export async function approveStudentRegistrationAction(studentId: number, sessio
         return { success: true };
     } catch (error) {
         return { success: false, error: (error as Error).message };
+    }
+}
+
+export async function getCourseRegisteredStudentsRosterAction(courseId: number, sessionId?: number, semester?: '1' | '2') {
+    try {
+        const isAuthorized = await hasPermission("academic.registration.approve") || 
+                             await hasRole("admin") || 
+                             await hasRole("superadmin") || 
+                             await hasRole("record_officer") ||
+                             await hasRole("registrar") ||
+                             await hasRole("teacher");
+                             
+        if (!isAuthorized) throw new Error("Unauthorized: Insufficient permissions to view course roster");
+
+        let conditions = [eq(studentCourseRegistrations.courseId, courseId)];
+        if (sessionId) conditions.push(eq(studentCourseRegistrations.sessionId, sessionId));
+        if (semester) conditions.push(eq(studentCourseRegistrations.semester, semester));
+
+        const rows = await db.select({
+            registrationId: studentCourseRegistrations.id,
+            studentId: students.id,
+            matricNumber: students.matricNumber,
+            admissionNumber: students.admissionNumber,
+            studentName: users.name,
+            studentEmail: users.email,
+            level: students.level,
+            courseId: courses.id,
+            courseCode: courses.code,
+            courseName: courses.name,
+            creditUnits: courses.creditUnits,
+            status: studentCourseRegistrations.status,
+            advisorStatus: studentCourseRegistrations.advisorStatus,
+            createdAt: studentCourseRegistrations.createdAt
+        })
+        .from(studentCourseRegistrations)
+        .innerJoin(students, eq(studentCourseRegistrations.studentId, students.id))
+        .leftJoin(users, eq(students.userId, users.id))
+        .innerJoin(courses, eq(studentCourseRegistrations.courseId, courses.id))
+        .where(and(...conditions));
+
+        return { success: true, data: rows };
+    } catch (error) {
+        console.error("getCourseRegisteredStudentsRosterAction error:", error);
+        return { success: false, error: (error as Error).message, data: [] };
     }
 }

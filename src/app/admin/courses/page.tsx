@@ -3,13 +3,15 @@
 import { useState, useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileText, Plus, Trash2, Loader2, BookOpen, ChevronRight, Settings2, Link as LinkIcon, FileUp, X, UserPlus, Search } from "lucide-react";
+import { FileText, Plus, Trash2, Loader2, BookOpen, ChevronRight, Settings2, Link as LinkIcon, FileUp, X, UserPlus, Search, Download } from "lucide-react";
 import { getCourses, createCourse, updateCourse, addCourseToDepartment, updateCourseDepartmentSetting, removeCourseFromDepartment, addPrerequisite, removePrerequisite, deleteCourse, bulkImportCourses } from "@/actions/courses";
 import { UniversalImporter } from "@/components/UniversalImporter";
 import { getDepartments } from "@/actions/departments";
 import { getAllCohorts } from "@/actions/cohorts";
 import { getStudents } from "@/actions/students";
 import { enrollStudentInCourse, enrollCohortInCourse, getEnrolledStudents } from "@/actions/enrollment";
+import { getCourseRegisteredStudentsRosterAction } from "@/actions/course-registration";
+import * as xlsx from "xlsx";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { useBranch } from "@/providers/BranchProvider";
@@ -193,7 +195,32 @@ export default function CoursesPage() {
                 departmentSettings: [...editingCourse.departmentSettings, newSetting]
             });
             setDeptSettings({ deptId: "", semester: "1", status: "compulsory", level: 100 });
-        } else alert(res.error);
+    const handleExportCourseRoster = async (course: any) => {
+        const res = await getCourseRegisteredStudentsRosterAction(course.id);
+        if (!res.success || !res.data || res.data.length === 0) {
+            alert(res.error || `No registered students found for course ${course.code}.`);
+            return;
+        }
+
+        const excelData = res.data.map((r: any, idx: number) => ({
+            "S/N": idx + 1,
+            "Matriculation Number": r.matricNumber || r.admissionNumber || "N/A",
+            "Admission Number": r.admissionNumber || "N/A",
+            "Student Name": r.studentName || "N/A",
+            "Email": r.studentEmail || "N/A",
+            "Level": r.level || "N/A",
+            "Course Code": r.courseCode,
+            "Course Title": r.courseName,
+            "Credit Units": r.creditUnits,
+            "Registration Status": r.status || r.advisorStatus || "Registered",
+            "Registration Date": r.createdAt ? new Date(r.createdAt).toLocaleDateString() : "N/A"
+        }));
+
+        const worksheet = xlsx.utils.json_to_sheet(excelData);
+        const workbook = xlsx.utils.book_new();
+        xlsx.utils.book_append_sheet(workbook, worksheet, "Registered Students");
+        const safeCode = (course.code || "Course").replace(/[\/\\?%*:|"<>]/g, '_');
+        xlsx.writeFile(workbook, `${safeCode}_Registered_Students.xlsx`);
     };
 
     return (
@@ -594,6 +621,13 @@ export default function CoursesPage() {
                                     </div>
                                     
                                     <div className="flex items-center gap-2 relative z-10 bg-white/5 p-2 rounded-2xl backdrop-blur-md border border-white/10">
+                                        <button 
+                                            onClick={() => handleExportCourseRoster(course)}
+                                            title="Download Registered Students Roster"
+                                            className="px-4 py-3 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 text-[10px] font-black uppercase tracking-widest rounded-xl transition-colors flex items-center gap-2 border border-emerald-500/30"
+                                        >
+                                            <Download className="w-4 h-4 text-emerald-400" /> Export Roster
+                                        </button>
                                         <button onClick={() => setEditingCourse(course)} className="p-3 text-slate-300 hover:text-white hover:bg-white/10 rounded-xl transition-colors">
                                             <Settings2 className="w-5 h-5" />
                                         </button>
