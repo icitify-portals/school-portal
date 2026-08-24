@@ -16,6 +16,44 @@ import { eq, and, inArray, sql, exists } from "drizzle-orm";
 export class CourseRegistrationService {
 
     /**
+     * Retrieves all available courses for a student based on their Department, Level, and Semester.
+     * ND 1 students see ND 1 courses, ND 2 students see ND 2 courses + eligible carry-overs/electives.
+     */
+    static async getAvailableCourses(studentId: number, semester: '1' | '2') {
+        const studentRecord = await db.select({
+            id: students.id,
+            departmentId: students.departmentId,
+            level: students.level
+        })
+        .from(students)
+        .where(eq(students.id, studentId))
+        .limit(1);
+
+        if (!studentRecord.length) return [];
+        const student = studentRecord[0];
+        const studentLevel = student.level || 100;
+        const studentDeptId = student.departmentId;
+
+        const available = await db.select({
+            id: courses.id,
+            name: courses.name,
+            code: courses.code,
+            units: courses.creditUnits,
+            status: courseDepartmentSettings.status,
+            isUniversityRequired: courses.isUniversityRequired
+        })
+        .from(courses)
+        .innerJoin(courseDepartmentSettings, eq(courses.id, courseDepartmentSettings.courseId))
+        .where(and(
+            eq(courseDepartmentSettings.semester, semester),
+            studentDeptId ? eq(courseDepartmentSettings.deptId, studentDeptId) : sql`1=1`,
+            sql`(${courseDepartmentSettings.level} = ${studentLevel} OR ${courseDepartmentSettings.level} <= ${studentLevel})`
+        ));
+
+        return available;
+    }
+
+    /**
      * Checks if a student has met all prerequisites for a list of courses,
      * while respecting active waivers granted by HODs/Deans.
      */

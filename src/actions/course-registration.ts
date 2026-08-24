@@ -10,7 +10,6 @@ import { sendInAppNotification } from "./notifications";
 
 export async function getAvailableCoursesAction(studentId: number, semester: '1' | '2') {
     try {
-        // @ts-expect-error - TS2339: Auto-suppressed for build
         const data = await CourseRegistrationService.getAvailableCourses(studentId, semester);
         return { success: true, data };
     } catch (error) {
