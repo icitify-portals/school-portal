@@ -59,20 +59,24 @@ jobs:
     steps:
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ACTOR: ${{ github.actor }}
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           password: ${{ secrets.SERVER_PASSWORD }}
+          envs: GH_TOKEN,ACTOR
           script: |
             cd /var/www/school-portal
             echo "=== PULLING LATEST GIT CODE ==="
             git pull origin main
             echo "=== LOGGING INTO GHCR ==="
-            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            echo "$GH_TOKEN" | docker login ghcr.io -u "$ACTOR" --password-stdin
             echo "=== PULLING PRE-BUILT DOCKER IMAGE FROM GHCR ==="
-            docker pull ghcr.io/${{ env.IMAGE_NAME }}:latest
+            docker pull ghcr.io/icitify-portals/school-portal:latest
             echo "=== RESTARTING CONTAINERS WITH PRE-BUILT IMAGE ==="
-            sudo docker compose -f compose.yml up -d --no-build school-portal-app school-portal-worker
+            sudo docker compose -f compose.yml up -d school-portal-app school-portal-worker
             echo "=== CLEANING UNUSED DOCKER IMAGES ==="
             docker image prune -f
             echo "✓ CI/CD Zero-Build Deployment Complete!"

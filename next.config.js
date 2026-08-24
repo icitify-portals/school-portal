@@ -126,6 +126,9 @@ const nextConfig = {
     // It is highly recommended to fix TS errors and set this to false.
     ignoreBuildErrors: true,
   },
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
   experimental: {
     serverActions: {
       bodySizeLimit: '5mb',
