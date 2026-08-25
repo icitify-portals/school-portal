@@ -836,6 +836,40 @@ export async function bulkUploadSubjectScoresV2(rows: BulkScoreRowV2[]): Promise
     }
 }
 
+/**
+ * Bulk attendance sweep: marks every still-'pending' applicant (optionally
+ * scoped to one exercise) as present or absent. Used after an exam window
+ * closes — physical or online.
+ */
+export async function sweepPendingAttendance(templateId: number | undefined, markAs: 'present' | 'absent'): Promise<{
+    success: boolean;
+    count?: number;
+    error?: string;
+}> {
+    try {
+        const allowed = await hasPermission("admission.applications.manage") || await hasRole("admin") || await hasRole("superadmin");
+        if (!allowed) return { success: false, error: "Unauthorized" };
+
+        const conditions = [
+            ne(admissionApplicationsV2.status, 'draft'),
+            eq(admissionApplicationsV2.examAttendanceStatus, 'pending'),
+        ];
+        if (templateId) conditions.push(eq(admissionApplicationsV2.templateId, templateId));
+
+        const result = await db.update(admissionApplicationsV2)
+            .set({ examAttendanceStatus: markAs })
+            .where(and(...conditions));
+
+        const count = (result as any)?.rowsAffected ?? (result as any)?.affectedRows ?? 0;
+        revalidatePath("/admin/admission/screening");
+        revalidatePath("/admin/admission/v2");
+        return { success: true, count: Number(count) };
+    } catch (error) {
+        console.error("Error sweeping attendance:", error);
+        return { success: false, error: "Failed to update attendance" };
+    }
+}
+
 export interface RunSelectionSummary {
     processed: number;
     newlyOffered: number;

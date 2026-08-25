@@ -9,12 +9,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
     Search, Edit2, Loader2, PlayCircle, Save, X, Users,
-    TrendingUp, UserX, ShieldCheck, Ban
+    TrendingUp, UserX, ShieldCheck, Ban, UserCheck, Megaphone
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
-    updateExerciseCutoff, runSelection,
+    updateExerciseCutoff, runSelection, sweepPendingAttendance,
     type ScreeningExercise, type ScreeningApplicant, type RunSelectionSummary,
 } from "@/actions/admin-admission";
 import BulkScoreUpload from "./BulkScoreUpload";
@@ -43,6 +43,7 @@ export default function ScreeningConsole({ exercises: initialExercises, applican
     const [savingCutoff, setSavingCutoff] = useState(false);
     const [runningSelection, setRunningSelection] = useState(false);
     const [selectionSummary, setSelectionSummary] = useState<RunSelectionSummary | null>(null);
+    const [sweeping, setSweeping] = useState<'present' | 'absent' | null>(null);
 
     useEffect(() => {
         setExercises(initialExercises);
@@ -74,6 +75,8 @@ export default function ScreeningConsole({ exercises: initialExercises, applican
         scored: scopedApplicants.filter(a => a.screeningPercentage !== null).length,
         offered: scopedApplicants.filter(a => a.status === 'admitted').length,
         absent: scopedApplicants.filter(a => a.attendance === 'absent').length,
+        pendingAttendance: scopedApplicants.filter(a => a.attendance === 'pending').length,
+        present: scopedApplicants.filter(a => a.attendance === 'present').length,
     }), [scopedApplicants]);
 
     const activeExercise = activeTemplateId === 'all' ? null : exercises.find(e => e.id === activeTemplateId);
@@ -124,6 +127,21 @@ export default function ScreeningConsole({ exercises: initialExercises, applican
             router.refresh();
         } else {
             toast.error(res.error || "Failed to run selection");
+        }
+    };
+
+    // ── Attendance sweep ───────────────────────────────────────────────
+    const handleSweep = async (markAs: 'present' | 'absent') => {
+        const label = activeTemplateId === 'all' ? 'ALL exercises' : (activeExercise?.name || 'this exercise');
+        if (!window.confirm(`Mark every applicant with PENDING attendance in ${label} as ${markAs.toUpperCase()}?\n\nPending count: ${stats.pendingAttendance}\n\nTip: run Selection afterwards to revoke offers from absentees.`)) return;
+        setSweeping(markAs);
+        const res = await sweepPendingAttendance(activeTemplateId === 'all' ? undefined : activeTemplateId, markAs);
+        setSweeping(null);
+        if (res.success) {
+            toast.success(`${res.count} applicant${res.count !== 1 ? 's' : ''} marked ${markAs}`);
+            router.refresh();
+        } else {
+            toast.error(res.error || "Failed to update attendance");
         }
     };
 
@@ -207,7 +225,38 @@ export default function ScreeningConsole({ exercises: initialExercises, applican
                             </p>
                         )}
 
-                        <div className="ml-auto">
+                        <div className="ml-auto flex items-center gap-2">
+                            {/* Attendance quick actions */}
+                            <div className="flex items-center gap-1.5 mr-2 pl-3 border-l border-slate-200">
+                                <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 whitespace-nowrap">
+                                    {stats.pendingAttendance} pending
+                                </span>
+                                <Button
+                                    size="sm"
+                                    variant="outline"
+                                    disabled={sweeping !== null || stats.pendingAttendance === 0}
+                                    onClick={() => handleSweep('present')}
+                                    className="h-8 text-emerald-700 border-emerald-300 hover:bg-emerald-50 font-black text-[9px] uppercase tracking-widest"
+                                    title={activeTemplateId === 'all' ? 'Mark all pending in ALL exercises present (physical attendance register)' : 'Mark all pending in this exercise present'}
+                                >
+                                    {sweeping === 'present'
+                                        ? <Loader2 className="w-3 h-3 animate-spin" />
+                                        : <><UserCheck className="w-3 h-3 mr-1" /> All Present</>}
+                                </Button>
+                                <Button
+                                    size="sm"
+                                    variant="outline"
+                                    disabled={sweeping !== null || stats.pendingAttendance === 0}
+                                    onClick={() => handleSweep('absent')}
+                                    className="h-8 text-rose-600 border-rose-300 hover:bg-rose-50 font-black text-[9px] uppercase tracking-widest"
+                                    title="Exam closed — mark everyone still pending as absent"
+                                >
+                                    {sweeping === 'absent'
+                                        ? <Loader2 className="w-3 h-3 animate-spin" />
+                                        : <><UserX className="w-3 h-3 mr-1" /> Sweep Absents</>}
+                                </Button>
+                            </div>
+
                             <Button
                                 onClick={handleRunSelection}
                                 disabled={runningSelection}
@@ -219,6 +268,27 @@ export default function ScreeningConsole({ exercises: initialExercises, applican
                                     : <><PlayCircle className="w-4 h-4 mr-2" /> Run Selection{activeTemplateId === 'all' ? ' (All)' : ''}</>}
                             </Button>
                         </div>
+                    </div>
+
+                    {/* Group messaging shortcuts */}
+                    <div className="flex flex-wrap items-center gap-3 pt-3 pb-1">
+                        <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-1.5">
+                            <Megaphone className="w-3.5 h-3.5" /> Message a group:
+                        </span>
+                        {[
+                            { key: 'present', label: `Present (${stats.present})` },
+                            { key: 'absent', label: `Absent (${stats.absent})` },
+                            { key: 'admitted', label: `Offered (${stats.offered})`, admissionStatus: true },
+                        ].map(g => (
+                            <a
+                                key={g.key}
+                                href={`/admin/communications/broadcasts?target=applicants&${g.admissionStatus ? 'status=admitted' : `attendance=${g.key}`}${activeTemplateId === 'all' ? '' : `&template=${activeTemplateId}`}`}
+                                className="text-[10px] font-black uppercase tracking-widest text-indigo-600 hover:text-indigo-800 underline decoration-dotted underline-offset-4"
+                                title={`Compose a broadcast to ${g.label}${activeTemplateId !== 'all' ? ' in this exercise' : ''}`}
+                            >
+                                {g.label}
+                            </a>
+                        ))}
                     </div>
 
                     {/* Run selection report */}
@@ -243,12 +313,14 @@ export default function ScreeningConsole({ exercises: initialExercises, applican
             </Card>
 
             {/* Stats strip */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-4">
                 {[
                     { icon: Users, label: "Applicants", value: stats.total, cls: "bg-slate-100 text-slate-700" },
-                    { icon: Edit2, label: "Scored", value: stats.scored, cls: "bg-cyan-100 text-cyan-700" },
-                    { icon: TrendingUp, label: "Offered Admission", value: stats.offered, cls: "bg-emerald-100 text-emerald-700" },
+                    { icon: UserCheck, label: "Present", value: stats.present, cls: "bg-emerald-100 text-emerald-700" },
                     { icon: UserX, label: "Absent", value: stats.absent, cls: "bg-rose-100 text-rose-700" },
+                    { icon: Edit2, label: "Pending Attendance", value: stats.pendingAttendance, cls: "bg-amber-100 text-amber-700" },
+                    { icon: Edit2, label: "Scored", value: stats.scored, cls: "bg-cyan-100 text-cyan-700" },
+                    { icon: TrendingUp, label: "Offered Admission", value: stats.offered, cls: "bg-indigo-100 text-indigo-700" },
                 ].map(s => (
                     <Card key={s.label} className="border-none shadow-lg rounded-3xl bg-white">
                         <CardContent className="flex items-center gap-4 p-5">

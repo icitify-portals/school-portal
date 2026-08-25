@@ -124,11 +124,16 @@ export async function processBulkMessageInline(jobData: any) {
                 .where(inArray(users.role, ['staff', 'admin', 'bursar', 'registrar', 'librarian', 'hod', 'dean', 'admission_officer', 'dvc', 'superadmin']));
             studentIds = queryResult.map((r: any) => r.id);
         } else if (targetCriteria.type === 'applicants') {
-            const { inArray, and, sql } = await import('drizzle-orm');
+            const { inArray, and, sql, eq } = await import('drizzle-orm');
             const { admissionApplicationsV2, programmes } = await import('@/db/schema');
             let appConditions: any[] = [];
             if (targetCriteria.admissionStatus && targetCriteria.admissionStatus.length > 0 && !targetCriteria.admissionStatus.includes('all')) {
                 appConditions.push(inArray(admissionApplicationsV2.status, targetCriteria.admissionStatus));
+            }
+            // Attendance filter must match the audience preview (broadcasts.ts) or
+            // "present/absent only" broadcasts would silently target everyone.
+            if (targetCriteria.examAttendance && targetCriteria.examAttendance !== 'all') {
+                appConditions.push(eq(admissionApplicationsV2.examAttendanceStatus, targetCriteria.examAttendance));
             }
             if (targetCriteria.programmes && targetCriteria.programmes.length > 0) {
                 appConditions.push(inArray(admissionApplicationsV2.programmeId, targetCriteria.programmes));

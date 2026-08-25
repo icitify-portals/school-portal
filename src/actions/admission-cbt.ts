@@ -1,7 +1,7 @@
 "use server";
 
 import { db } from "@/db/db";
-import { admissionEntranceExams, admissionExamQuestions, admissionExamResults, admissionExamSubjects } from "@/db/schema";
+import { admissionEntranceExams, admissionExamQuestions, admissionExamResults, admissionExamSubjects, admissionApplicationsV2 } from "@/db/schema";
 import { eq, and, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
@@ -26,6 +26,11 @@ export async function startEntranceExam(applicationId: number, examId: number) {
                 status: 'started'
             });
         }
+
+        // Auto-mark attendance: starting the CBT proves presence
+        await db.update(admissionApplicationsV2)
+            .set({ examAttendanceStatus: 'present' })
+            .where(eq(admissionApplicationsV2.id, applicationId));
 
         // 2. Fetch questions for the exam (randomized)
         const subjects = await db.select().from(admissionExamSubjects).where(eq(admissionExamSubjects.examId, examId));

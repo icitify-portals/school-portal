@@ -44,13 +44,28 @@ export default function CentralBroadcastCommunicationsPage() {
 
     // Initial load
     useEffect(() => {
-        // Set default target type based on role
-        if (userRole === "admission_officer") {
+        // Preselect from deep links (e.g. Screening console "Message a group" shortcuts)
+        const params = new URLSearchParams(window.location.search);
+        const pTarget = params.get("target");
+        const pAttendance = params.get("attendance");
+        const pStatus = params.get("status");
+        if (pTarget === "applicants") {
             setTargetType("applicants");
-        } else if (userRole === "bursar") {
-            setTargetType("levels");
-        } else if (userRole === "hod" || userRole === "dean") {
-            setTargetType("departments");
+            if (pAttendance === "present" || pAttendance === "absent") setExamAttendance(pAttendance);
+            if (pStatus && ["applied", "screened", "admitted", "rejected"].includes(pStatus)) {
+                setAdmissionStatus([pStatus]);
+            }
+        }
+
+        // Set default target type based on role
+        if (!pTarget) {
+            if (userRole === "admission_officer") {
+                setTargetType("applicants");
+            } else if (userRole === "bursar") {
+                setTargetType("levels");
+            } else if (userRole === "hod" || userRole === "dean") {
+                setTargetType("departments");
+            }
         }
 
         getDepartments().then(res => setDepartments(res || []));

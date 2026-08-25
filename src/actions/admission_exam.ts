@@ -1,11 +1,12 @@
 "use server";
 
 import { db } from "@/db/db";
-import { 
-    admissionExamSubjects, 
-    admissionExamQuestions, 
+import {
+    admissionExamSubjects,
+    admissionExamQuestions,
     admissionExamResults,
-    admissionEntranceExams
+    admissionEntranceExams,
+    admissionApplicationsV2
 } from "@/db/schema";
 import { eq, and, desc } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
@@ -100,7 +101,13 @@ export async function startExamSession(applicationId: number, examId: number) {
             )
         });
 
-        if (existing) return { success: true, resultId: existing.id };
+        if (existing) {
+            // Session already exists — still ensure attendance is marked present
+            await db.update(admissionApplicationsV2)
+                .set({ examAttendanceStatus: 'present' })
+                .where(eq(admissionApplicationsV2.id, applicationId));
+            return { success: true, resultId: existing.id };
+        }
 
         const [result] = await db.insert(admissionExamResults).values({
             applicationId,
@@ -108,6 +115,11 @@ export async function startExamSession(applicationId: number, examId: number) {
             startTime: new Date(),
             status: 'started'
         });
+
+        // Auto-mark attendance: starting the CBT proves presence
+        await db.update(admissionApplicationsV2)
+            .set({ examAttendanceStatus: 'present' })
+            .where(eq(admissionApplicationsV2.id, applicationId));
 
         return { success: true, resultId: result.insertId };
     } catch (error) {
