@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { computeScreeningPercentage, decideFromScreening } from '@/actions/admin-admission';
+import { computeScreeningPercentage, decideFromScreening } from '@/lib/admission/screening';
 
 describe('computeScreeningPercentage', () => {
     it('converts /200 totals to percentages', () => {

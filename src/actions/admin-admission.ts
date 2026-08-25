@@ -8,6 +8,7 @@ import { AdmissionScoreCalculator } from "@/lib/admission/engine";
 import { NotificationService } from "@/services/NotificationService";
 import { hasPermission, hasRole } from "@/lib/rbac";
 import { revalidatePath } from "next/cache";
+import { computeScreeningPercentage, decideFromScreening } from "@/lib/admission/screening";
 
 export async function getApplicants(programmeId?: number) {
     try {
@@ -474,20 +475,6 @@ async function getGlobalCutoffFallback(): Promise<number> {
         .limit(1);
     const parsed = parseFloat(row?.settingValue || '40');
     return isNaN(parsed) ? 40 : parsed;
-}
-
-/** Screening % = combined Math + English total out of 200, expressed as a percentage. */
-export function computeScreeningPercentage(totalScore: number): number {
-    return parseFloat(((totalScore / 200) * 100).toFixed(2));
-}
-
-/**
- * Decision rule: offered when percentage >= cut-off AND not marked absent.
- * Absent applicants keep 'screened' regardless of score.
- */
-export function decideFromScreening(percentage: number, cutoffPercent: number, attendance: string | null | undefined): 'admitted' | 'screened' {
-    if (attendance === 'absent') return 'screened';
-    return percentage >= cutoffPercent ? 'admitted' : 'screened';
 }
 
 export interface ScreeningExercise {
