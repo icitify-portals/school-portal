@@ -228,3 +228,125 @@ export async function updateAdmissionStatus(applicationId: number, status: 'admi
         return { success: false, error: "Failed to update status" };
     }
 }
+
+export interface BulkScoreRow {
+    formNumber: number;  // admission_applications.id
+    mathScore: number;   // 0–100
+    englishScore: number; // 0–100
+}
+
+export interface BulkUploadResult {
+    formNumber: number;
+    success: boolean;
+    error?: string;
+    mathScore?: number;
+    englishScore?: number;
+    total?: number;
+}
+
+/**
+ * Bulk upload Mathematics and English Language screening scores from Excel.
+ * Each row must have: Form Number (application ID), Math Score (0-100), English Score (0-100).
+ */
+export async function bulkUploadSubjectScores(rows: BulkScoreRow[]): Promise<{
+    success: boolean;
+    results: BulkUploadResult[];
+    processed: number;
+    failed: number;
+    error?: string;
+}> {
+    try {
+        const allowed = await hasPermission("admission.applications.manage") || await hasRole("admin") || await hasRole("superadmin");
+        if (!allowed) return { success: false, results: [], processed: 0, failed: 0, error: "Unauthorized" };
+
+        if (!rows || rows.length === 0) {
+            return { success: false, results: [], processed: 0, failed: 0, error: "No rows provided" };
+        }
+
+        // Fetch all matching applications in one query
+        const formNumbers = rows.map(r => r.formNumber);
+        const existingApps = await db.select({
+            id: admissionApplications.id,
+            jambRegNo: admissionApplications.jambRegNo,
+            programmeId: admissionApplications.programmeId,
+        }).from(admissionApplications).where(inArray(admissionApplications.id, formNumbers));
+
+        const appMap = new Map(existingApps.map(a => [a.id, a]));
+
+        const results: BulkUploadResult[] = [];
+        let processed = 0;
+        let failed = 0;
+
+        for (const row of rows) {
+            const { formNumber, mathScore, englishScore } = row;
+
+            // Validation
+            if (isNaN(formNumber) || formNumber <= 0) {
+                results.push({ formNumber, success: false, error: "Invalid form number" });
+                failed++;
+                continue;
+            }
+            if (isNaN(mathScore) || mathScore < 0 || mathScore > 100) {
+                results.push({ formNumber, success: false, error: `Math score out of range (${mathScore})` });
+                failed++;
+                continue;
+            }
+            if (isNaN(englishScore) || englishScore < 0 || englishScore > 100) {
+                results.push({ formNumber, success: false, error: `English score out of range (${englishScore})` });
+                failed++;
+                continue;
+            }
+
+            const app = appMap.get(formNumber);
+            if (!app) {
+                results.push({ formNumber, success: false, error: "Application not found" });
+                failed++;
+                continue;
+            }
+
+            try {
+                const total = mathScore + englishScore;
+
+                // Save scores
+                await db.update(admissionApplications)
+                    .set({
+                        mathScore: mathScore.toString(),
+                        englishScore: englishScore.toString(),
+                        screeningScore: total.toString(),
+                        status: 'screened',
+                    })
+                    .where(eq(admissionApplications.id, formNumber));
+
+                // Recalculate aggregate
+                const [candidate, programme] = await Promise.all([
+                    db.select().from(jambCandidates).where(eq(jambCandidates.jambRegNo, app.jambRegNo)).limit(1).then(r => r[0]),
+                    db.select().from(programmes).where(eq(programmes.id, app.programmeId)).limit(1).then(r => r[0]),
+                ]);
+
+                if (candidate) {
+                    const oLevels = await db.select().from(oLevelResults).where(eq(oLevelResults.jambRegNo, candidate.jambRegNo));
+                    const aggregate = await AdmissionScoreCalculator.calculate({
+                        candidate: candidate as any,
+                        programme: programme as any,
+                        oLevelResults: oLevels as any,
+                        screeningScore: total,
+                    });
+                    await db.update(admissionApplications)
+                        .set({ aggregateScore: aggregate.toString() })
+                        .where(eq(admissionApplications.id, formNumber));
+                }
+
+                results.push({ formNumber, success: true, mathScore, englishScore, total });
+                processed++;
+            } catch (rowErr: any) {
+                results.push({ formNumber, success: false, error: rowErr.message || "Failed to save" });
+                failed++;
+            }
+        }
+
+        return { success: true, results, processed, failed };
+    } catch (error: any) {
+        console.error("Bulk upload error:", error);
+        return { success: false, results: [], processed: 0, failed: 0, error: error.message || "Bulk upload failed" };
+    }
+}
