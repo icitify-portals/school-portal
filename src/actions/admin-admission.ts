@@ -613,6 +613,74 @@ export async function getScreeningApplicants(templateId?: number): Promise<{
     }
 }
 
+// ─────────────────────────────────────────────────────────────────────
+// Phase 6: offer notifications (congratulations email + in-app + WhatsApp)
+// Fired only on TRANSITIONS into 'admitted' so Run Selection re-runs and
+// score corrections never spam applicants.
+// ─────────────────────────────────────────────────────────────────────
+
+interface OfferNotificationTarget {
+    applicationId: number;
+    applicantName: string;
+    email: string;
+    phone?: string;
+    templateName: string;
+    applicantId?: number | null;
+}
+
+function buildOfferTarget(
+    appId: number,
+    rawFormData: unknown,
+    templateName: string,
+    applicantId?: number | null,
+    userEmail?: string | null,
+): OfferNotificationTarget {
+    const form = parseApplicantData(rawFormData);
+    const name = applicantNameFrom(form, null);
+    return {
+        applicationId: appId,
+        applicantName: name !== 'N/A' ? name : String(form.firstName || form.first_name || 'Applicant'),
+        email: String(form.email || form.email_address || userEmail || ''),
+        phone: form.phone ? String(form.phone) : (form.phone_number ? String(form.phone_number) : undefined),
+        templateName,
+        applicantId,
+    };
+}
+
+async function notifyOneOffer(t: OfferNotificationTarget): Promise<void> {
+    try {
+        if (t.email) {
+            await NotificationService.sendAdmissionOfferedByEmail(t.email, {
+                applicantName: t.applicantName,
+                templateName: t.templateName,
+                userId: t.applicantId || undefined,
+            });
+        } else if (t.applicantId) {
+            // No email on the form — still create the in-app notification
+            await NotificationService.createNotification({
+                userId: t.applicantId,
+                title: "Admission Offered!",
+                message: `Congratulations! You have been offered provisional admission for ${t.templateName}.`,
+                type: "success",
+                channel: "both",
+            });
+        }
+        if (t.phone) {
+            await NotificationService.sendAdmissionUpdate(t.phone, t.applicantName, 'admitted');
+        }
+    } catch (err) {
+        console.error(`[offer-notification] Failed for application ${t.applicationId}:`, err);
+    }
+}
+
+async function dispatchOfferNotifications(targets: OfferNotificationTarget[]): Promise<void> {
+    if (targets.length === 0) return;
+    const CHUNK = 10;
+    for (let i = 0; i < targets.length; i += CHUNK) {
+        await Promise.allSettled(targets.slice(i, i + CHUNK).map(notifyOneOffer));
+    }
+}
+
 /**
  * Save Mathematics + English scores on a V2 application and auto-decide:
  * percentage >= exercise cut-off AND attendance != absent → admitted (auto).
@@ -641,8 +709,10 @@ export async function updateSubjectScoresV2(applicationId: number, mathScore: nu
             return { success: false, error: "This applicant has already paid their acceptance fee — scores are locked." };
         }
 
-        const [template] = await db.select({ cutoffPercent: admissionFormTemplates.cutoffPercent })
-            .from(admissionFormTemplates).where(eq(admissionFormTemplates.id, app.templateId)).limit(1);
+        const [template] = await db.select({
+            cutoffPercent: admissionFormTemplates.cutoffPercent,
+            name: admissionFormTemplates.name,
+        }).from(admissionFormTemplates).where(eq(admissionFormTemplates.id, app.templateId)).limit(1);
 
         const globalFallback = await getGlobalCutoffFallback();
         const cutoff = parseFloat(template?.cutoffPercent || '') || globalFallback;
@@ -650,6 +720,7 @@ export async function updateSubjectScoresV2(applicationId: number, mathScore: nu
         const total = mathScore + englishScore;
         const percentage = computeScreeningPercentage(total);
         const newStatus = decideFromScreening(percentage, cutoff, app.examAttendanceStatus);
+        const wasAdmitted = app.status === 'admitted';
 
         await db.update(admissionApplicationsV2)
             .set({
@@ -663,6 +734,16 @@ export async function updateSubjectScoresV2(applicationId: number, mathScore: nu
             .where(eq(admissionApplicationsV2.id, applicationId));
 
         revalidatePath("/admin/admission/screening");
+
+        // Congratulate on NEW offers only
+        if (newStatus === 'admitted' && !wasAdmitted) {
+            await notifyOneOffer(buildOfferTarget(
+                applicationId,
+                app.data,
+                template?.name || 'your application',
+                app.applicantId,
+            ));
+        }
 
         return {
             success: true,
@@ -752,20 +833,23 @@ export async function bulkUploadSubjectScoresV2(rows: BulkScoreRowV2[]): Promise
             status: admissionApplicationsV2.status,
             examAttendanceStatus: admissionApplicationsV2.examAttendanceStatus,
             acceptancePaymentStatus: admissionApplicationsV2.acceptancePaymentStatus,
+            applicantId: admissionApplicationsV2.applicantId,
+            data: admissionApplicationsV2.data,
         }).from(admissionApplicationsV2).where(inArray(admissionApplicationsV2.id, formNumbers));
         const appMap = new Map(existingApps.map(a => [a.id, a]));
 
         const templateIds = [...new Set(existingApps.map(a => a.templateId))];
         const templates = templateIds.length > 0
-            ? await db.select({ id: admissionFormTemplates.id, cutoffPercent: admissionFormTemplates.cutoffPercent })
+            ? await db.select({ id: admissionFormTemplates.id, cutoffPercent: admissionFormTemplates.cutoffPercent, name: admissionFormTemplates.name })
                 .from(admissionFormTemplates).where(inArray(admissionFormTemplates.id, templateIds))
             : [];
-        const templateCutoffMap = new Map(templates.map(t => [t.id, t.cutoffPercent]));
+        const templateMap = new Map(templates.map(t => [t.id, t]));
 
         const globalFallback = await getGlobalCutoffFallback();
 
         // ── Compute outcomes in memory ──
         const updates: Array<{ id: number; set: Partial<typeof admissionApplicationsV2.$inferInsert> }> = [];
+        const newOfferTargets: OfferNotificationTarget[] = [];
         let offeredCount = 0;
         let processed = 0;
 
@@ -784,11 +868,20 @@ export async function bulkUploadSubjectScoresV2(rows: BulkScoreRowV2[]): Promise
 
             const total = row.mathScore + row.englishScore;
             const percentage = computeScreeningPercentage(total);
-            const cutoff = parseFloat(templateCutoffMap.get(app.templateId) || '') || globalFallback;
+            const tmpl = templateMap.get(app.templateId);
+            const cutoff = parseFloat(tmpl?.cutoffPercent || '') || globalFallback;
             const newStatus = decideFromScreening(percentage, cutoff, app.examAttendanceStatus);
             const wasAdmitted = app.status === 'admitted';
 
-            if (newStatus === 'admitted' && !wasAdmitted) offeredCount++;
+            if (newStatus === 'admitted' && !wasAdmitted) {
+                offeredCount++;
+                newOfferTargets.push(buildOfferTarget(
+                    app.id,
+                    app.data,
+                    tmpl?.name || 'your application',
+                    app.applicantId,
+                ));
+            }
 
             updates.push({
                 id: row.formNumber,
@@ -826,6 +919,11 @@ export async function bulkUploadSubjectScoresV2(rows: BulkScoreRowV2[]): Promise
                         .where(eq(admissionApplicationsV2.id, u.id));
                 }
             });
+        }
+
+        // Congratulate all newly-offered applicants (chunked, non-fatal)
+        if (newOfferTargets.length > 0) {
+            await dispatchOfferNotifications(newOfferTargets);
         }
 
         revalidatePath("/admin/admission/screening");
@@ -910,19 +1008,22 @@ export async function runSelection(templateId?: number): Promise<{
             decisionSource: admissionApplicationsV2.decisionSource,
             examAttendanceStatus: admissionApplicationsV2.examAttendanceStatus,
             acceptancePaymentStatus: admissionApplicationsV2.acceptancePaymentStatus,
+            applicantId: admissionApplicationsV2.applicantId,
+            data: admissionApplicationsV2.data,
         }).from(admissionApplicationsV2).where(and(...conditions));
 
         const templateIds = [...new Set(apps.map(a => a.templateId))];
         const templates = templateIds.length > 0
-            ? await db.select({ id: admissionFormTemplates.id, cutoffPercent: admissionFormTemplates.cutoffPercent })
+            ? await db.select({ id: admissionFormTemplates.id, cutoffPercent: admissionFormTemplates.cutoffPercent, name: admissionFormTemplates.name })
                 .from(admissionFormTemplates).where(inArray(admissionFormTemplates.id, templateIds))
             : [];
-        const templateCutoffMap = new Map(templates.map(t => [t.id, t.cutoffPercent]));
+        const templateMap = new Map(templates.map(t => [t.id, t]));
 
         const summary: RunSelectionSummary = {
             processed: 0, newlyOffered: 0, confirmedKept: 0, revoked: 0, blockedPaid: 0, blockedAbsent: 0,
         };
         const updates: Array<{ id: number; set: Partial<typeof admissionApplicationsV2.$inferInsert> }> = [];
+        const newOfferTargets: OfferNotificationTarget[] = [];
 
         for (const app of apps) {
             summary.processed++;
@@ -932,7 +1033,8 @@ export async function runSelection(templateId?: number): Promise<{
             const percentage = parseFloat(app.screeningPercentage || '');
             if (isNaN(percentage)) continue;
 
-            const cutoff = parseFloat(templateCutoffMap.get(app.templateId) || '') || globalFallback;
+            const tmpl = templateMap.get(app.templateId);
+            const cutoff = parseFloat(tmpl?.cutoffPercent || '') || globalFallback;
             const target = decideFromScreening(percentage, cutoff, app.examAttendanceStatus);
 
             if (app.examAttendanceStatus === 'absent') summary.blockedAbsent++;
@@ -946,7 +1048,15 @@ export async function runSelection(templateId?: number): Promise<{
                 id: app.id,
                 set: { status: target, decisionSource: 'auto' },
             });
-            if (target === 'admitted') summary.newlyOffered++;
+            if (target === 'admitted') {
+                summary.newlyOffered++;
+                newOfferTargets.push(buildOfferTarget(
+                    app.id,
+                    app.data,
+                    tmpl?.name || 'your application',
+                    app.applicantId,
+                ));
+            }
             else summary.revoked++; // previously admitted, now below cut-off
         }
 
@@ -958,6 +1068,11 @@ export async function runSelection(templateId?: number): Promise<{
                         .where(eq(admissionApplicationsV2.id, u.id));
                 }
             });
+        }
+
+        // Congratulate all newly-offered applicants (chunked, non-fatal)
+        if (newOfferTargets.length > 0) {
+            await dispatchOfferNotifications(newOfferTargets);
         }
 
         revalidatePath("/admin/admission/screening");
@@ -982,8 +1097,12 @@ export async function decideApplicantManual(applicationId: number, decision: 'ad
         if (!allowed) return { success: false, error: "Unauthorized" };
 
         const [app] = await db.select({
+            status: admissionApplicationsV2.status,
             acceptancePaymentStatus: admissionApplicationsV2.acceptancePaymentStatus,
             screeningPercentage: admissionApplicationsV2.screeningPercentage,
+            applicantId: admissionApplicationsV2.applicantId,
+            templateId: admissionApplicationsV2.templateId,
+            data: admissionApplicationsV2.data,
         }).from(admissionApplicationsV2).where(eq(admissionApplicationsV2.id, applicationId)).limit(1);
 
         if (!app) return { success: false, error: "Application not found" };
@@ -1000,17 +1119,27 @@ export async function decideApplicantManual(applicationId: number, decision: 'ad
 
         revalidatePath("/admin/admission/screening");
 
-        // WhatsApp nudge consistent with legacy behaviour (email lands in Phase 6)
-        try {
-            const [full] = await db.select({ data: admissionApplicationsV2.data })
-                .from(admissionApplicationsV2).where(eq(admissionApplicationsV2.id, applicationId)).limit(1);
-            const form = parseApplicantData(full?.data);
-            const phone = form.phone || form.phone_number;
-            if (phone) {
-                await NotificationService.sendAdmissionUpdate(phone, form.firstName || "Applicant", decision);
+        // Full congratulations (email + in-app + WhatsApp) on NEW offers;
+        // rejections get the WhatsApp nudge only.
+        if (decision === 'admitted' && app.status !== 'admitted') {
+            const [tmpl] = await db.select({ name: admissionFormTemplates.name })
+                .from(admissionFormTemplates).where(eq(admissionFormTemplates.id, app.templateId)).limit(1);
+            await notifyOneOffer(buildOfferTarget(
+                applicationId,
+                app.data,
+                tmpl?.name || 'your application',
+                app.applicantId,
+            ));
+        } else if (decision === 'rejected') {
+            try {
+                const form = parseApplicantData(app.data);
+                const phone = form.phone || form.phone_number;
+                if (phone) {
+                    await NotificationService.sendAdmissionUpdate(String(phone), String(form.firstName || 'Applicant'), decision);
+                }
+            } catch (notifyErr) {
+                console.error("Rejection notification failed:", notifyErr);
             }
-        } catch (notifyErr) {
-            console.error("Admission notification failed:", notifyErr);
         }
 
         return { success: true };
