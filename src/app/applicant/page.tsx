@@ -5,10 +5,19 @@ import { eq, desc } from "drizzle-orm";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { ArrowRight, FileText, CheckCircle2, Clock, CreditCard, CheckSquare, Sparkles, Printer, GraduationCap, Globe } from "lucide-react";
+import { ArrowRight, FileText, CheckCircle2, Clock, CreditCard, CheckSquare, Sparkles, Printer, GraduationCap, Globe, PartyPopper } from "lucide-react";
 import { StartApplicationButton } from "./StartApplicationButton";
 import { ProgramSelectionModal } from "./ProgramSelectionModal";
 import { AdmissionsAnnouncement } from "@/components/AdmissionsAnnouncement";
+
+/** Raw workflow statuses mapped to what applicants should actually read. */
+function friendlyAdmissionLabel(status: string | null | undefined): { label: string; pending: boolean } {
+    switch (status) {
+        case 'admitted': return { label: 'ADMITTED', pending: false };
+        case 'rejected': return { label: 'NOT ADMITTED', pending: false };
+        default: return { label: 'PENDING', pending: true }; // draft/submitted/paid/screened
+    }
+}
 
 export default async function ApplicantDashboard() {
     const session = await auth();
@@ -44,6 +53,11 @@ export default async function ApplicantDashboard() {
         }
     }
 
+    // Admission status summary: admitted on ANY application wins; otherwise pending
+    const admittedApp = applications.find(a => a.status === 'admitted');
+    const rejectedAll = applications.length > 0 && applications.every(a => a.status === 'rejected');
+    const anyApp = appsByTemplate.size > 0;
+
     return (
         <div className="p-6 md:p-10 max-w-7xl mx-auto space-y-6">
             
@@ -76,6 +90,52 @@ export default async function ApplicantDashboard() {
 
             <AdmissionsAnnouncement />
 
+            {/* Admission Status Hero */}
+            {admittedApp ? (
+                <Link
+                    href={`/admission/status/${admittedApp.id}`}
+                    className="block bg-gradient-to-r from-emerald-600 to-emerald-500 rounded-[2.5rem] p-8 md:p-10 text-white shadow-2xl relative overflow-hidden hover:shadow-emerald-200/50 transition-all group"
+                >
+                    <div className="absolute -right-16 -top-16 opacity-10">
+                        <GraduationCap className="w-[300px] h-[300px]" />
+                    </div>
+                    <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                        <div className="flex items-center gap-5">
+                            <div className="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center shrink-0">
+                                <PartyPopper className="w-7 h-7" />
+                            </div>
+                            <div>
+                                <p className="text-[10px] font-black uppercase tracking-[0.25em] text-emerald-100">Admission Status</p>
+                                <h3 className="text-2xl md:text-3xl font-black tracking-tighter uppercase italic">Congratulations — You&apos;ve Been Offered Admission!</h3>
+                                <p className="text-emerald-50 text-xs font-bold mt-1">
+                                    Click to view your offer, pay your acceptance fee and download your admission letter.
+                                </p>
+                            </div>
+                        </div>
+                        <ArrowRight className="w-8 h-8 shrink-0 group-hover:translate-x-2 transition-transform" />
+                    </div>
+                </Link>
+            ) : anyApp ? (
+                <div className="bg-white border border-slate-200 rounded-[2.5rem] p-8 shadow-sm">
+                    <div className="flex items-center gap-5">
+                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${rejectedAll ? 'bg-rose-100 text-rose-500' : 'bg-amber-100 text-amber-600'}`}>
+                            {rejectedAll ? <CheckCircle2 className="w-6 h-6" /> : <Clock className="w-6 h-6 animate-pulse" />}
+                        </div>
+                        <div>
+                            <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400">Admission Status</p>
+                            <h3 className={`text-xl md:text-2xl font-black tracking-tight uppercase ${rejectedAll ? 'text-rose-600' : 'text-slate-800'}`}>
+                                {rejectedAll ? 'Application Not Successful This Intake' : 'Pending — Under Review'}
+                            </h3>
+                            <p className="text-slate-500 text-xs font-medium mt-0.5">
+                                {rejectedAll
+                                    ? 'Thank you for applying. Watch this space for future intake announcements.'
+                                    : 'Your application is received and awaiting the release of entrance examination results and admission decisions.'}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            ) : null}
+
 
             {/* Program Selection Modal for New Applicants */}
             {applications.length === 0 && templates.length > 0 && (
@@ -106,14 +166,18 @@ export default async function ApplicantDashboard() {
                                             <CardTitle className="text-lg font-black text-slate-900 leading-tight">{template.name}</CardTitle>
                                         </div>
                                         {hasApp ? (
-                                            <div className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest shadow-sm ${
-                                                app.status === 'admitted' ? 'bg-emerald-100 text-emerald-700' :
-                                                app.status === 'submitted' ? 'bg-blue-100 text-blue-700' :
-                                                app.status === 'rejected' ? 'bg-red-100 text-red-700' :
-                                                'bg-amber-100 text-amber-700'
-                                            }`}>
-                                                {app.status}
-                                            </div>
+                                            (() => {
+                                                const friendly = friendlyAdmissionLabel(app.status);
+                                                return (
+                                                    <div className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest shadow-sm ${
+                                                        !friendly.pending && app.status === 'admitted' ? 'bg-emerald-100 text-emerald-700' :
+                                                        !friendly.pending ? 'bg-red-100 text-red-700' :
+                                                        'bg-amber-100 text-amber-700'
+                                                    }`}>
+                                                        {friendly.label}
+                                                    </div>
+                                                );
+                                            })()
                                         ) : (
                                             <div className="px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest shadow-sm bg-slate-100 text-slate-500">
                                                 Not Started

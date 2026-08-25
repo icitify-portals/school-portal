@@ -112,6 +112,15 @@ export default function ApplicantStatusPage() {
     const result = data.results?.[0];
     const showResult = exam?.resultsReleased || (exam?.showResultsInstantly && result?.status === 'completed');
 
+    // Unified screening engine: officer-uploaded Math + English scores live on
+    // the application row itself. Shown to the applicant once results are released.
+    const cutoffPercent = parseFloat(data.template?.cutoffPercent || '') || 40;
+    const hasUploadedScores = data.mathScore !== null && data.mathScore !== undefined
+        && data.screeningPercentage !== null && data.screeningPercentage !== undefined;
+    const showScreeningScores = !!exam?.resultsReleased && hasUploadedScores;
+    const screeningPct = hasUploadedScores ? parseFloat(data.screeningPercentage) : null;
+    const total200 = hasUploadedScores ? parseFloat(data.screeningScore) : null;
+
     return (
         <div className="min-h-screen bg-slate-50 pb-20">
             {checkoutPayload && (
@@ -249,7 +258,7 @@ export default function ApplicantStatusPage() {
                     </CardContent>
                 </Card>
 
-                {/* CBT Results Section */}
+                {/* Screening / CBT Results Section */}
                 <Card className="border-none shadow-xl rounded-[3rem] overflow-hidden bg-white">
                     <CardHeader className="bg-slate-900 text-white p-10 flex flex-row justify-between items-center">
                         <div className="flex items-center gap-4">
@@ -257,8 +266,8 @@ export default function ApplicantStatusPage() {
                                 <Trophy className="w-6 h-6 text-indigo-400" />
                             </div>
                             <div>
-                                <CardTitle className="text-xl font-black italic uppercase">CBT Entrance Examination Results (August 22)</CardTitle>
-                                <p className="text-[10px] font-bold text-white/50 uppercase tracking-widest">Mathematics & English Language • Pass Mark Cut-off: 40%</p>
+                                <CardTitle className="text-xl font-black italic uppercase">Entrance Examination Results</CardTitle>
+                                <p className="text-[10px] font-bold text-white/50 uppercase tracking-widest">Mathematics & English Language • Pass Mark Cut-off: {cutoffPercent}%</p>
                             </div>
                         </div>
                         {showResult && (
@@ -268,7 +277,46 @@ export default function ApplicantStatusPage() {
                         )}
                     </CardHeader>
                     <CardContent className="p-10">
-                        {showResult ? (
+                        {showScreeningScores ? (
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                                <div className="p-8 bg-indigo-50 rounded-[2.5rem] border border-indigo-100 text-center space-y-2">
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-indigo-400">Combined Score</p>
+                                    <h4 className="text-5xl font-black text-indigo-900 italic">{total200}<span className="text-lg text-indigo-400">/200</span></h4>
+                                </div>
+                                <div className="p-8 bg-slate-50 rounded-[2.5rem] border border-slate-100 text-center space-y-2">
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Percentage</p>
+                                    <h4 className={`text-5xl font-black italic ${screeningPct !== null && screeningPct >= cutoffPercent ? 'text-emerald-600' : 'text-rose-500'}`}>{screeningPct}%</h4>
+                                </div>
+                                <div className="p-8 bg-slate-50 rounded-[2.5rem] border border-slate-100 text-center space-y-2">
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Eligibility Status</p>
+                                    {screeningPct !== null && screeningPct >= cutoffPercent ? (
+                                        <h4 className="text-sm font-black text-emerald-600 uppercase italic mt-4 flex items-center justify-center gap-2 bg-emerald-50 py-2 px-4 rounded-xl border border-emerald-200">
+                                            <CheckCircle2 className="w-5 h-5" /> Passed (≥{cutoffPercent}%)
+                                        </h4>
+                                    ) : (
+                                        <h4 className="text-sm font-black text-rose-600 uppercase italic mt-4 flex items-center justify-center gap-2 bg-rose-50 py-2 px-4 rounded-xl border border-rose-200">
+                                            <XCircle className="w-5 h-5" /> Below Cut-off (&lt;{cutoffPercent}%)
+                                        </h4>
+                                    )}
+                                </div>
+                                <div className="md:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="bg-slate-50 rounded-2xl p-6 flex justify-between items-center hover:bg-indigo-50 transition-colors">
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-2 h-8 bg-indigo-500 rounded-full" />
+                                            <span className="text-sm font-black text-slate-700 uppercase italic">Mathematics</span>
+                                        </div>
+                                        <span className="text-lg font-black text-slate-900 italic">{parseFloat(data.mathScore).toFixed(1)} / 100</span>
+                                    </div>
+                                    <div className="bg-slate-50 rounded-2xl p-6 flex justify-between items-center hover:bg-indigo-50 transition-colors">
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-2 h-8 bg-indigo-500 rounded-full" />
+                                            <span className="text-sm font-black text-slate-700 uppercase italic">English Language</span>
+                                        </div>
+                                        <span className="text-lg font-black text-slate-900 italic">{parseFloat(data.englishScore).toFixed(1)} / 100</span>
+                                    </div>
+                                </div>
+                            </div>
+                        ) : showResult ? (
                             <div className="space-y-10">
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                                     <div className="p-8 bg-indigo-50 rounded-[2.5rem] border border-indigo-100 text-center space-y-2">
@@ -277,17 +325,17 @@ export default function ApplicantStatusPage() {
                                     </div>
                                     <div className="p-8 bg-slate-50 rounded-[2.5rem] border border-slate-100 text-center space-y-2">
                                         <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Exam Pass Cut-off</p>
-                                        <h4 className="text-xl font-black text-slate-700 italic mt-2">40.0% Minimum</h4>
+                                        <h4 className="text-xl font-black text-slate-700 italic mt-2">{cutoffPercent.toFixed(1)}% Minimum</h4>
                                     </div>
                                     <div className="p-8 bg-slate-50 rounded-[2.5rem] border border-slate-100 text-center space-y-2">
                                         <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Eligibility Status</p>
-                                        {parseFloat(result.totalScore) >= 40 ? (
+                                        {parseFloat(result.totalScore) >= cutoffPercent ? (
                                             <h4 className="text-sm font-black text-emerald-600 uppercase italic mt-4 flex items-center justify-center gap-2 bg-emerald-50 py-2 px-4 rounded-xl border border-emerald-200">
-                                                <CheckCircle2 className="w-5 h-5" /> Eligible (Passed ≥40%)
+                                                <CheckCircle2 className="w-5 h-5" /> Eligible (Passed ≥{cutoffPercent}%)
                                             </h4>
                                         ) : (
                                             <h4 className="text-sm font-black text-rose-600 uppercase italic mt-4 flex items-center justify-center gap-2 bg-rose-50 py-2 px-4 rounded-xl border border-rose-200">
-                                                <XCircle className="w-5 h-5" /> Not Eligible (&lt;40% Cutoff)
+                                                <XCircle className="w-5 h-5" /> Not Eligible (&lt;{cutoffPercent}% Cutoff)
                                             </h4>
                                         )}
                                     </div>
@@ -323,10 +371,10 @@ export default function ApplicantStatusPage() {
                                     <Clock className="w-16 h-16 text-slate-200" />
                                 </div>
                                 <div className="space-y-2">
-                                    <h4 className="text-2xl font-black text-slate-300 italic uppercase">August 22 Entrance Exam Scores Pending</h4>
+                                    <h4 className="text-2xl font-black text-slate-300 italic uppercase">Entrance Examination Scores Pending</h4>
                                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-relaxed">
-                                        Examination scores for Mathematics and English Language are being compiled. <br />
-                                        Applicants scoring 40% and above will be recommended for Full-Time / Part-Time admission.
+                                        Examination scores for Mathematics and English Language are being compiled.<br />
+                                        Applicants scoring {cutoffPercent}% and above will be recommended for Full-Time / Part-Time admission.
                                     </p>
                                 </div>
                             </div>
