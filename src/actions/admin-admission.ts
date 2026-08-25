@@ -130,6 +130,66 @@ export async function updateScreeningScore(applicationId: number, score: number)
     }
 }
 
+/**
+ * Upload Mathematics and English Language entrance exam scores.
+ * The combined total (mathScore + englishScore) is stored as screeningScore for aggregate calculation.
+ */
+export async function updateSubjectScores(applicationId: number, mathScore: number, englishScore: number) {
+    try {
+        const allowed = await hasPermission("admission.applications.manage") || await hasRole("admin") || await hasRole("superadmin");
+        if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to update screening scores" };
+
+        if (mathScore < 0 || mathScore > 100 || englishScore < 0 || englishScore > 100) {
+            return { success: false, error: "Each subject score must be between 0 and 100" };
+        }
+
+        const total = mathScore + englishScore; // Out of 200
+
+        // 1. Save individual subject scores + combined screening score
+        await db.update(admissionApplications)
+            .set({
+                mathScore: mathScore.toString(),
+                englishScore: englishScore.toString(),
+                screeningScore: total.toString(),
+                status: 'screened',
+            })
+            .where(eq(admissionApplications.id, applicationId));
+
+        // 2. Fetch full application for aggregate recalculation
+        const applicationRaw = await db.select().from(admissionApplications)
+            .where(eq(admissionApplications.id, applicationId))
+            .limit(1)
+            .then(res => res[0]);
+
+        if (!applicationRaw) return { success: false, error: "Application not found" };
+
+        const [candidate, programme] = await Promise.all([
+            db.select().from(jambCandidates).where(eq(jambCandidates.jambRegNo, applicationRaw.jambRegNo)).limit(1).then(res => res[0]),
+            db.select().from(programmes).where(eq(programmes.id, applicationRaw.programmeId)).limit(1).then(res => res[0])
+        ]);
+
+        if (!candidate) return { success: false, error: "Candidate not found" };
+
+        const oLevels = await db.select().from(oLevelResults).where(eq(oLevelResults.jambRegNo, candidate.jambRegNo));
+
+        const aggregate = await AdmissionScoreCalculator.calculate({
+            candidate: candidate as any,
+            programme: programme as any,
+            oLevelResults: oLevels as any,
+            screeningScore: total
+        });
+
+        await db.update(admissionApplications)
+            .set({ aggregateScore: aggregate.toString() })
+            .where(eq(admissionApplications.id, applicationId));
+
+        return { success: true, mathScore, englishScore, total, aggregate };
+    } catch (error) {
+        console.error("Error updating subject scores:", error);
+        return { success: false, error: "Failed to update subject scores" };
+    }
+}
+
 export async function updateAdmissionStatus(applicationId: number, status: 'admitted' | 'rejected') {
     try {
         const allowed = await hasPermission("admission.applicant.admit") || await hasRole("admin") || await hasRole("superadmin");

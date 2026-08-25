@@ -1747,7 +1747,9 @@ export const admissionApplications = mysqlTable('admission_applications', {
   sessionId: int('session_id').references(() => admissionSessions.id),
   paymentStatus: mysqlEnum('payment_status', ['pending', 'paid', 'failed']).default('pending'),
   paymentReference: varchar('payment_reference', { length: 100 }),
-  screeningScore: decimal('screening_score', { precision: 5, scale: 2 }), // Post-UTME Score
+  screeningScore: decimal('screening_score', { precision: 5, scale: 2 }), // Post-UTME Score (total of Math + English)
+  mathScore: decimal('math_score', { precision: 5, scale: 2 }), // Entrance exam Mathematics score (0-100)
+  englishScore: decimal('english_score', { precision: 5, scale: 2 }), // Entrance exam English Language score (0-100)
   aggregateScore: decimal('aggregate_score', { precision: 5, scale: 2 }), // Final Calculated Score
   status: mysqlEnum('status', ['applied', 'screened', 'admitted', 'rejected']).default('applied'),
   extraData: text('extra_data'), // JSON for dynamic fields

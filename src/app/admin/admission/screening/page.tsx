@@ -61,7 +61,8 @@ export default async function AdminScreeningPage() {
                                 <TableHead className="font-bold text-slate-500 uppercase tracking-wider text-[10px] py-4">JAMB Reg No</TableHead>
                                 <TableHead className="font-bold text-slate-500 uppercase tracking-wider text-[10px] py-4">Programme</TableHead>
                                 <TableHead className="font-bold text-slate-500 uppercase tracking-wider text-[10px] py-4">JAMB Score</TableHead>
-                                <TableHead className="font-bold text-slate-500 uppercase tracking-wider text-[10px] py-4">Screening Score</TableHead>
+                                <TableHead className="font-bold text-slate-500 uppercase tracking-wider text-[10px] py-4">Maths / English</TableHead>
+                                <TableHead className="font-bold text-slate-500 uppercase tracking-wider text-[10px] py-4">Total (/200)</TableHead>
                                 <TableHead className="font-bold text-slate-500 uppercase tracking-wider text-[10px] py-4">Aggregate</TableHead>
                                 <TableHead className="font-bold text-slate-500 uppercase tracking-wider text-[10px] py-4">Status</TableHead>
                                 <TableHead className="font-bold text-slate-500 uppercase tracking-wider text-[10px] py-4 pr-8 text-right">Actions</TableHead>
@@ -76,10 +77,15 @@ export default async function AdminScreeningPage() {
                                     <TableCell className="text-slate-600 font-medium">{app.jambRegNo}</TableCell>
                                     <TableCell className="text-slate-600 font-medium">{app.programme?.name}</TableCell>
                                     <TableCell className="text-slate-600 font-bold">{app.candidate?.score}</TableCell>
-                                    <TableCell className="text-slate-600 font-bold">{app.screeningScore || "—"}</TableCell>
+                                    <TableCell className="text-slate-600 font-bold">
+                                        {(app as any).mathScore && (app as any).englishScore
+                                            ? <span className="text-xs"><span className="font-black">{(app as any).mathScore}</span><span className="text-slate-400 mx-1">/</span><span className="font-black">{(app as any).englishScore}</span></span>
+                                            : <span className="text-slate-400">—</span>
+                                        }
+                                    </TableCell>
                                     <TableCell>
                                         <span className="font-black text-teal-600">
-                                            {app.aggregateScore ? `${app.aggregateScore}%` : "—"}
+                                            {app.screeningScore ? `${app.screeningScore}` : "—"}
                                         </span>
                                     </TableCell>
                                     <TableCell>

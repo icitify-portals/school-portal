@@ -102,6 +102,8 @@ export default async function ApplicantScoringPage({ params }: { params: Promise
                             currentStatus={application.status || 'pending'}
                             scoringStrategy={programmeScoring?.scoringStrategy || 'JAMB_ONLY'}
                             cutOffMark={programmeScoring?.cutOffMark || 180}
+                            existingMathScore={application.mathScore}
+                            existingEnglishScore={application.englishScore}
                         />
 
                         {/* O-Level Preview */}
