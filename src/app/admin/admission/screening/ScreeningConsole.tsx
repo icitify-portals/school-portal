@@ -70,6 +70,20 @@ export default function ScreeningConsole({ exercises: initialExercises, applican
         );
     }, [scopedApplicants, search]);
 
+    // ── Pagination ─────────────────────────────────────────────────────
+    const [page, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState(50);
+    const totalFiltered = visibleApplicants.length;
+    const totalPages = Math.max(1, Math.ceil(totalFiltered / pageSize));
+    const safePage = Math.min(page, totalPages);
+    const pagedApplicants = useMemo(
+        () => visibleApplicants.slice((safePage - 1) * pageSize, safePage * pageSize),
+        [visibleApplicants, safePage, pageSize]
+    );
+
+    // Reset to first page whenever the filter context changes
+    useEffect(() => { setPage(1); }, [activeTemplateId, search, pageSize]);
+
     const stats = useMemo(() => ({
         total: scopedApplicants.length,
         scored: scopedApplicants.filter(a => a.screeningPercentage !== null).length,
@@ -376,7 +390,7 @@ export default function ScreeningConsole({ exercises: initialExercises, applican
                                 {visibleApplicants.length === 0 && (
                                     <tr><td colSpan={9} className="px-4 py-12 text-center text-sm text-slate-400 font-bold">No applicants found.</td></tr>
                                 )}
-                                {visibleApplicants.map((a) => (
+                                {pagedApplicants.map((a) => (
                                     <tr key={a.id} className="hover:bg-slate-50/60 transition-colors">
                                         <td className="px-4 py-3">
                                             <span className="inline-flex items-center justify-center bg-teal-100 text-teal-800 font-black text-xs rounded-lg px-2.5 py-1 min-w-[2.5rem]">
@@ -463,6 +477,37 @@ export default function ScreeningConsole({ exercises: initialExercises, applican
                             </tbody>
                         </table>
                     </div>
+
+                    {/* Pagination */}
+                    {totalFiltered > 0 && (
+                        <div className="flex flex-wrap items-center justify-between gap-4 px-6 py-4 border-t border-slate-100 bg-slate-50/40">
+                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">
+                                Showing {((safePage - 1) * pageSize) + 1}–{Math.min(safePage * pageSize, totalFiltered)} of {totalFiltered}
+                                {search.trim() && ` (filtered from ${stats.total})`}
+                            </p>
+                            <div className="flex items-center gap-3">
+                                <label className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-slate-400">
+                                    Rows
+                                    <select
+                                        value={pageSize}
+                                        onChange={(e) => setPageSize(Number(e.target.value))}
+                                        className="bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-[11px] font-bold text-slate-700 outline-none focus:ring-2 focus:ring-teal-500"
+                                    >
+                                        {[25, 50, 100, 200].map(n => <option key={n} value={n}>{n}</option>)}
+                                    </select>
+                                </label>
+                                <div className="flex items-center gap-1">
+                                    <Button size="sm" variant="outline" disabled={safePage <= 1} onClick={() => setPage(1)} className="h-8 w-8 p-0 rounded-lg" title="First page">«</Button>
+                                    <Button size="sm" variant="outline" disabled={safePage <= 1} onClick={() => setPage(p => p - 1)} className="h-8 w-8 p-0 rounded-lg" title="Previous">‹</Button>
+                                    <span className="px-3 text-xs font-black text-slate-600 whitespace-nowrap">
+                                        Page <span className="text-indigo-600">{safePage}</span> / {totalPages}
+                                    </span>
+                                    <Button size="sm" variant="outline" disabled={safePage >= totalPages} onClick={() => setPage(p => p + 1)} className="h-8 w-8 p-0 rounded-lg" title="Next">›</Button>
+                                    <Button size="sm" variant="outline" disabled={safePage >= totalPages} onClick={() => setPage(totalPages)} className="h-8 w-8 p-0 rounded-lg" title="Last page">»</Button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </CardContent>
             </Card>
         </div>
