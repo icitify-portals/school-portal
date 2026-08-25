@@ -18,17 +18,6 @@ export default async function HomePage() {
         <div className="min-h-screen bg-slate-50 selection:bg-indigo-500/30">
 
             {/* Hero Section */}
-            <section className="relative pt-24 pb-20 overflow-hidden bg-slate-950 flex flex-col items-center min-h-[70vh]">
-                {/* Exam Date Scrolling Banner - Moved inside hero after padding to clear the fixed navbar */}
-                <div className="w-full bg-amber-500 text-amber-950 font-bold overflow-hidden py-3 relative z-50 flex items-center shadow-md mb-8">
-                    <div className="w-10 h-full absolute left-0 bg-gradient-to-r from-amber-500 to-transparent z-10 pointer-events-none"></div>
-                    <div className="w-10 h-full absolute right-0 bg-gradient-to-l from-amber-500 to-transparent z-10 pointer-events-none"></div>
-                    <div className="flex whitespace-nowrap animate-marquee items-center gap-2">
-                        <span className="flex-none">🚨 <strong>IMPORTANT NOTICE:</strong> The entrance examination date is scheduled for the <strong>22nd of August 2026</strong> at <strong>9am prompt</strong> at the school premises. Please come with your printed application slip.</span>
-                        <span className="flex-none ml-20">🚨 <strong>IMPORTANT NOTICE:</strong> The entrance examination date is scheduled for the <strong>22nd of August 2026</strong> at <strong>9am prompt</strong> at the school premises. Please come with your printed application slip.</span>
-                    </div>
-                </div>
-
                 <div className="absolute inset-0 z-0">
                     <div className="absolute inset-0 bg-[linear-gradient(to_right,#4f4f4f2e_1px,transparent_1px),linear-gradient(to_bottom,#4f4f4f2e_1px,transparent_1px)] bg-[size:14px_24px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]"></div>
                     <div className="absolute top-0 right-1/4 w-96 h-96 bg-indigo-500/20 rounded-full blur-[100px]" />
