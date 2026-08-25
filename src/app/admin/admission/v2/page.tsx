@@ -123,11 +123,10 @@ function AdminV2ApplicationsContent() {
     const handleBulkAction = async (action: string) => {
         if (selectedIds.size === 0) { toast.error("No applications selected"); return; }
         const ids = Array.from(selectedIds);
-        const notes = action === 'rejected' ? prompt("Enter rejection reason:") : undefined;
-        if (action === 'rejected' && !notes) { toast.error("Rejection reason is required"); return; }
-        const res = await bulkUpdateAdmissionStatus(ids, action, notes || undefined);
+        // Workflow utilities only — admission decisions happen on the Screening page
+        const res = await bulkUpdateAdmissionStatus(ids, action, undefined);
         if (res.success) {
-            toast.success(`${res.count} application(s) ${action === 'admitted' ? 'admitted' : 'rejected'}`);
+            toast.success(`${res.count} application(s) set to ${action}`);
             setSelectedIds(new Set());
             fetchData();
         } else {
@@ -328,7 +327,7 @@ function AdminV2ApplicationsContent() {
                                 </h1>
                             </div>
                             <p className="text-slate-300 font-medium tracking-tight max-w-2xl text-lg opacity-90">
-                                Review, screen, and manage submitted admission applications
+                                Review, verify, and manage submitted admission applications
                             </p>
                         </div>
                         <div className="flex items-center gap-3 text-sm text-slate-400 bg-white/5 px-6 py-3 rounded-2xl backdrop-blur-md border border-white/10">
@@ -337,6 +336,19 @@ function AdminV2ApplicationsContent() {
                         </div>
                     </div>
                 </div>
+
+                {/* Decision flow pointer */}
+                <Link
+                    href="/admin/admission/screening"
+                    className="flex items-center gap-3 p-4 bg-teal-50 border border-teal-200 rounded-2xl hover:bg-teal-100 transition-colors group"
+                >
+                    <CheckCircle2 className="w-5 h-5 text-teal-600 shrink-0" />
+                    <p className="text-xs text-teal-800 font-bold">
+                        Admission offers are now made on the <span className="underline decoration-dotted underline-offset-4 group-hover:text-teal-950">Post-UTME Screening page</span> —
+                        upload Maths + English scores and applicants at or above the cut-off are offered automatically.
+                        This page is for application review, attendance, payments, and file exports only.
+                    </p>
+                </Link>
 
                 {/* Search & Filter Controls Block */}
                 <div className="bg-white/70 backdrop-blur-3xl rounded-[2.5rem] border border-white/50 p-6 shadow-xl space-y-5">
@@ -529,22 +541,10 @@ function AdminV2ApplicationsContent() {
                             🔴 Mark Absent
                         </Button>
                         <Button
-                            onClick={() => handleBulkAction('admitted')}
-                            className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] uppercase tracking-widest px-5 py-3"
-                        >
-                            <CheckCircle2 className="w-3.5 h-3.5 mr-2" /> Admit Selected
-                        </Button>
-                        <Button
                             onClick={() => handleBulkAction('submitted')}
                             className="rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-[10px] uppercase tracking-widest px-5 py-3"
                         >
                             Force Submit
-                        </Button>
-                        <Button
-                            onClick={() => handleBulkAction('rejected')}
-                            className="rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-black text-[10px] uppercase tracking-widest px-5 py-3"
-                        >
-                            <XCircle className="w-3.5 h-3.5 mr-2" /> Reject Selected
                         </Button>
                         <Button
                             onClick={handleBulkDelete}

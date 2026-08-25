@@ -181,9 +181,9 @@ export default function V2ApplicationDetailPage() {
 
     const handleStatusChange = async (status: string) => {
         if (!app) return;
-        const reason = status === 'rejected' ? prompt("Enter rejection reason:") : notes;
-        if (status === 'rejected' && !reason) { toast.error("Rejection reason is required"); return; }
-        const res = await updateAdmissionStatus(app.id, status, reason || "");
+        // Workflow utilities only ('submitted' / 'draft') — admission decisions
+        // happen on the Screening page and are blocked server-side anyway.
+        const res = await updateAdmissionStatus(app.id, status, "");
         if (res.success) {
             toast.success(`Application ${status}`);
             const data = await getAdminV2ApplicationDetail(app.id);
@@ -1196,30 +1196,20 @@ export default function V2ApplicationDetailPage() {
                                             Force Submit Application
                                         </Button>
                                     )}
-                                    {app.status !== 'admitted' && app.status !== 'rejected' && (
-                                        <>
-                                            <Button
-                                                onClick={() => handleStatusChange('admitted')}
-                                                className="w-full rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] uppercase tracking-widest py-4"
-                                            >
-                                                <CheckCircle2 className="w-4 h-4 mr-2" /> Admit Applicant
-                                            </Button>
-                                            <Button
-                                                onClick={() => handleStatusChange('rejected')}
-                                                className="w-full rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-black text-[10px] uppercase tracking-widest py-4"
-                                            >
-                                                <XCircle className="w-4 h-4 mr-2" /> Reject Applicant
-                                            </Button>
-                                        </>
-                                    )}
-                                    {(app.status === 'admitted' || app.status === 'rejected') && (
-                                        <Button
-                                            onClick={() => handleStatusChange('submitted')}
-                                            variant="outline"
-                                            className="w-full rounded-xl border-slate-300 text-slate-600 font-black text-[10px] uppercase tracking-widest py-4"
+                                    {(app.status === 'admitted' || app.status === 'rejected') ? (
+                                        <Link
+                                            href={`/admin/admission/screening/${app.id}`}
+                                            className="block w-full text-center rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-600 font-black text-[10px] uppercase tracking-widest py-4 transition-colors"
                                         >
-                                            <AlertCircle className="w-4 h-4 mr-2" /> Reset to Submitted
-                                        </Button>
+                                            Manage decision on Screening page →
+                                        </Link>
+                                    ) : (
+                                        <div className="p-3 bg-teal-50 border border-teal-200 rounded-xl">
+                                            <p className="text-[10px] text-teal-800 font-bold leading-relaxed">
+                                                Admission offers are made on the <Link href="/admin/admission/screening" className="underline decoration-dotted">Screening page</Link> —
+                                                upload scores and applicants at or above the cut-off are offered automatically.
+                                            </p>
+                                        </div>
                                     )}
                                     {app.status === 'submitted' && (
                                         <Button

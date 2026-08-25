@@ -807,14 +807,28 @@ export async function releaseResults(examId: number) {
 export async function updateAdmissionStatus(applicationId: number, status: any, notes: string) {
     await requireAdmin();
     try {
+        // Admission decisions are made exclusively on the Screening page
+        // (cut-off driven, audited via decision_source). This action remains
+        // only for workflow utilities like Force Submit / Reset to Draft.
+        if (status === 'admitted' || status === 'rejected') {
+            return { success: false, error: "Admission decisions must be made on the Screening page." };
+        }
+
         // Get application details before update
         const application = await db.query.admissionApplicationsV2.findFirst({
             where: eq(admissionApplicationsV2.id, applicationId),
             with: { template: true }
         });
 
+        if (!application) return { success: false, error: "Application not found" };
+
+        // Applicants who have paid their acceptance fee can never be moved out of 'admitted'
+        if (application.acceptancePaymentStatus === 'paid') {
+            return { success: false, error: "Cannot change status — acceptance fee already paid." };
+        }
+
         await db.update(admissionApplicationsV2)
-            .set({ 
+            .set({
                 status: status,
                 admissionNotes: notes,
                 updatedAt: new Date()
@@ -2905,6 +2919,11 @@ export async function bulkUpdateAdmissionStatus(ids: number[], status: string, n
     await requireAdmin();
     try {
         if (!ids.length) return { success: false, error: "No applications selected" };
+
+        // Admission decisions are made exclusively on the Screening page
+        if (status === 'admitted' || status === 'rejected') {
+            return { success: false, error: "Admission decisions must be made on the Screening page (bulk upload or Run Selection)." };
+        }
 
         await db.transaction(async (tx) => {
             for (const id of ids) {
