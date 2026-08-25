@@ -1,136 +1,161 @@
-
 import { db } from "@/db";
-import { admissionApplications, oLevelResults, jambCandidates, programmes, departments, faculties } from "@/db/schema";
+import { admissionApplicationsV2, admissionFormTemplates, admissionExamResults, programmes, departments, users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import EnhancedScoringForm from "./enhanced-scoring-form";
-import { User, ClipboardCheck, Award } from "lucide-react";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import ScoringPanelV2 from "./scoring-panel-v2";
+import { User, ClipboardCheck, ArrowLeft, CalendarX2, GraduationCap, Mail, Phone } from "lucide-react";
 
-export default async function ApplicantScoringPage({ params }: { params: Promise<{ id: string }> }) {
+export const dynamic = "force-dynamic";
+
+function parseApplicantData(raw: unknown): Record<string, unknown> {
+    try {
+        if (typeof raw === 'string') return JSON.parse(raw || '{}');
+        return (raw && typeof raw === 'object') ? raw as Record<string, unknown> : {};
+    } catch {
+        return {};
+    }
+}
+
+export default async function ApplicantScoringPageV2({ params }: { params: Promise<{ id: string }> }) {
     const { id } = await params;
     const appId = parseInt(id);
+    if (isNaN(appId)) notFound();
 
-    const appRows = await db.select({
-        application: admissionApplications,
-        candidate: jambCandidates,
-        programme: programmes,
-        department: departments,
-        faculty: faculties
+    // Explicit joins (not the relational API) for maximum DB-version portability
+    const [row] = await db.select({
+        app: admissionApplicationsV2,
+        templateName: admissionFormTemplates.name,
+        templateCutoff: admissionFormTemplates.cutoffPercent,
+        programmeName: programmes.name,
+        departmentName: departments.name,
+        userName: users.name,
+        userEmail: users.email,
+        userPhone: users.phone,
     })
-        .from(admissionApplications)
-        .leftJoin(jambCandidates, eq(admissionApplications.jambRegNo, jambCandidates.jambRegNo))
-        .leftJoin(programmes, eq(admissionApplications.programmeId, programmes.id))
-        .leftJoin(departments, eq(jambCandidates.deptId, departments.id))
-        .leftJoin(faculties, eq(jambCandidates.facultyId, faculties.id))
-        .where(eq(admissionApplications.id, appId))
+        .from(admissionApplicationsV2)
+        .leftJoin(admissionFormTemplates, eq(admissionApplicationsV2.templateId, admissionFormTemplates.id))
+        .leftJoin(programmes, eq(admissionApplicationsV2.programmeId, programmes.id))
+        .leftJoin(departments, eq(programmes.deptId, departments.id))
+        .leftJoin(users, eq(admissionApplicationsV2.applicantId, users.id))
+        .where(eq(admissionApplicationsV2.id, appId))
         .limit(1);
 
-    if (appRows.length === 0 || !appRows[0].candidate) {
-        notFound();
-    }
+    if (!row) notFound();
+    const app = row.app;
 
-    const application = {
-        ...appRows[0].application,
-        candidate: {
-            ...appRows[0].candidate,
-            department: appRows[0].department,
-            faculty: appRows[0].faculty
-        },
-        programme: appRows[0].programme
-    };
+    // Effective attendance = explicit mark OR CBT participation
+    const [examResult] = await db.select({ applicationId: admissionExamResults.applicationId })
+        .from(admissionExamResults)
+        .where(eq(admissionExamResults.applicationId, appId))
+        .limit(1);
 
-    if (!application || !application.candidate) {
-        notFound();
-    }
+    const attendance = (app.examAttendanceStatus && app.examAttendanceStatus !== 'pending')
+        ? app.examAttendanceStatus
+        : (examResult ? 'present' : 'pending');
 
-    // Fetch O-Level Results and Post-UTME Scores
-    const oLevels = await db.select().from(oLevelResults).where(eq(oLevelResults.jambRegNo, application.candidate.jambRegNo));
-    
-    // Get scoring configuration
-    const programmeScoring = await db.select().from(programmes).where(eq(programmes.id, application.programmeId)).limit(1).then(res => res[0]);
+    const form = parseApplicantData(app.data);
+    const name = `${form.firstName || form.first_name || ''} ${form.surname || form.lastName || form.last_name || ''}`.trim()
+        || row.userName
+        || 'N/A';
+    const email = row.userEmail || form.email || form.email_address || '';
+    const phone = row.userPhone || form.phone || form.phone_number || '';
+
+    const globalDefault = 40; // per-exercise value is authoritative when set
+    const cutoffPercent = parseFloat(row.templateCutoff || '') || globalDefault;
 
     return (
         <div className="p-6 max-w-[1600px] w-full mx-auto space-y-6">
-            <h1 className="text-3xl font-bold tracking-tight">Candidate Evaluation</h1>
+            <div className="flex items-center gap-4">
+                <Link href="/admin/admission/screening">
+                    <Button variant="outline" className="rounded-xl h-10">
+                        <ArrowLeft className="w-4 h-4 mr-1" /> Back to Screening
+                    </Button>
+                </Link>
+                <h1 className="text-3xl font-black tracking-tight text-slate-900 uppercase">Candidate Evaluation</h1>
+            </div>
 
             <div className="grid gap-4 md:grid-cols-3">
                 {/* Profile Overview */}
-                <Card className="md:col-span-1 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
+                <Card className="md:col-span-1 border-none shadow-xl rounded-[2rem] bg-white overflow-hidden h-fit">
                     <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-6">
                         <CardTitle className="text-lg flex items-center gap-2">
-                            <User className="h-5 w-5" /> Candidate Information
+                            <User className="h-5 w-5" /> Applicant Information
                         </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4 p-6">
                         <div className="space-y-1">
                             <p className="text-sm text-muted-foreground uppercase font-semibold">Name</p>
-                            <p className="font-medium text-lg">{application.candidate.surname}, {application.candidate.firstname} {application.candidate.middlename}</p>
+                            <p className="font-bold text-lg">{name}</p>
                         </div>
                         <div className="space-y-1">
-                            <p className="text-sm text-muted-foreground uppercase font-semibold">Reg NO</p>
-                            <p className="font-mono">{application.candidate.jambRegNo}</p>
+                            <p className="text-sm text-muted-foreground uppercase font-semibold">Form Number</p>
+                            <span className="inline-flex items-center justify-center bg-teal-100 text-teal-800 font-black text-xs rounded-lg px-2.5 py-1">
+                                {app.formNumber || `#${app.id}`}
+                            </span>
                         </div>
-                        <div className="space-y-1">
-                            <p className="text-sm text-muted-foreground uppercase font-semibold">Department</p>
-                            <p>{application.candidate.department?.name || "N/A"}</p>
-                        </div>
-                        <div className="space-y-1 pt-4 border-t">
-                            <p className="text-sm text-muted-foreground uppercase font-semibold">UTME Performance</p>
-                            <p className="text-2xl font-bold text-primary">{application.candidate.score}</p>
-                            <div className="text-xs text-muted-foreground mt-1">
-                                Subjects: {application.candidate.utmeSubjects || "Not Provided"}
+                        {(email || phone) && (
+                            <div className="space-y-1.5 pt-2">
+                                {email && (
+                                    <p className="flex items-center gap-2 text-sm text-slate-600">
+                                        <Mail className="w-3.5 h-3.5 text-slate-400" /> {String(email)}
+                                    </p>
+                                )}
+                                {phone && (
+                                    <p className="flex items-center gap-2 text-sm text-slate-600">
+                                        <Phone className="w-3.5 h-3.5 text-slate-400" /> {String(phone)}
+                                    </p>
+                                )}
                             </div>
+                        )}
+                        <div className="space-y-1 pt-4 border-t">
+                            <p className="text-sm text-muted-foreground uppercase font-semibold flex items-center gap-1.5">
+                                <GraduationCap className="w-4 h-4" /> Exercise & Programme
+                            </p>
+                            <p className="text-sm font-bold">{row.templateName}</p>
+                            <p className="text-sm text-slate-600">{row.programmeName || 'Pending Course Selection'}</p>
+                            {row.departmentName && (
+                                <p className="text-xs text-slate-400">{row.departmentName}</p>
+                            )}
+                        </div>
+                        <div className="pt-4 border-t space-y-2">
+                            <p className="text-sm text-muted-foreground uppercase font-semibold flex items-center gap-1.5">
+                                <CalendarX2 className="w-4 h-4" /> Exam Attendance
+                            </p>
+                            <p className={`text-sm font-black uppercase tracking-widest ${
+                                attendance === 'present' ? 'text-emerald-600' :
+                                attendance === 'absent' ? 'text-rose-600' : 'text-slate-400'
+                            }`}>
+                                {attendance === 'absent' && '⚠ '}{attendance}
+                            </p>
+                            {attendance === 'absent' && (
+                                <p className="text-xs text-rose-500 font-medium">Absent applicants are never offered admission regardless of score.</p>
+                            )}
                         </div>
                     </CardContent>
                 </Card>
 
-                {/* Evaluation Form / Scoring */}
-                <Card className="md:col-span-2 border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
+                {/* Scoring Panel */}
+                <Card className="md:col-span-2 border-none shadow-xl rounded-[2rem] bg-white overflow-hidden">
                     <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-6">
                         <CardTitle className="text-lg flex items-center gap-2">
-                            <ClipboardCheck className="h-5 w-5" /> Screening Scores
+                            <ClipboardCheck className="h-5 w-5" /> Screening Scores & Decision
                         </CardTitle>
                     </CardHeader>
-                    <CardContent className=" p-6">
-                        <EnhancedScoringForm
-                            applicationId={application.id}
-                            jambRegNo={application.candidate.jambRegNo}
-                            programmeId={application.programmeId}
-                            utmeScore={application.candidate.score || 0}
-                            currentStatus={application.status || 'pending'}
-                            scoringStrategy={programmeScoring?.scoringStrategy || 'JAMB_ONLY'}
-                            cutOffMark={programmeScoring?.cutOffMark || 180}
-                            existingMathScore={application.mathScore}
-                            existingEnglishScore={application.englishScore}
+                    <CardContent className="p-6">
+                        <ScoringPanelV2
+                            applicationId={app.id}
+                            applicantName={name}
+                            cutoffPercent={cutoffPercent}
+                            currentStatus={app.status || 'submitted'}
+                            decisionSource={app.decisionSource ?? null}
+                            attendance={attendance}
+                            acceptancePaymentStatus={app.acceptancePaymentStatus || 'pending'}
+                            existingMathScore={app.mathScore ?? null}
+                            existingEnglishScore={app.englishScore ?? null}
                         />
-
-                        {/* O-Level Preview */}
-                        <div className="mt-8 pt-6 border-t space-y-4">
-                            <div className="flex items-center gap-2 font-semibold">
-                                <Award className="h-5 w-5 text-amber-500" /> O-Level Results
-                            </div>
-                            {oLevels.length === 0 ? (
-                                <p className="text-sm text-muted-foreground italic">No O-Level results uploaded/matched.</p>
-                            ) : (
-                                <div className="grid gap-4 sm:grid-cols-2">
-                                    {oLevels.map(ol => (
-                                        <div key={ol.id} className="p-3 bg-slate-50 rounded-lg border">
-                                            <p className="text-xs font-bold uppercase text-slate-500">{ol.examType} {ol.examYear}</p>
-                                            <div className="mt-2 text-sm space-y-1">
-                                                {Object.entries(JSON.parse(ol.subjects || '{}')).map(([sub, grade]) => (
-                                                    <div key={sub} className="flex justify-between">
-                                                        <span>{sub}</span>
-                                                        <span className="font-bold">{grade as string}</span>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
                     </CardContent>
                 </Card>
             </div>

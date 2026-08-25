@@ -5752,6 +5752,8 @@ export const admissionFormTemplates = mysqlTable('admission_form_templates', {
   lateFee: decimal('late_fee', { precision: 12, scale: 2 }).default('0.00'),
   requireAcceptanceFee: boolean('require_acceptance_fee').default(false),
   acceptanceFee: decimal('acceptance_fee', { precision: 12, scale: 2 }).default('0.00'),
+  idCardFee: decimal('id_card_fee', { precision: 12, scale: 2 }).default('0.00'),
+  cutoffPercent: decimal('cutoff_percent', { precision: 5, scale: 2 }).default('40.00'), // Post-UTME screening cut-off (% of /200)
   admissionLetterTemplate: text('admission_letter_template'),
   startDate: datetime('start_date').notNull(),
   endDate: datetime('end_date').notNull(),
@@ -5831,6 +5833,11 @@ export const admissionApplicationsV2 = mysqlTable('admission_applications_v2', {
   applicationMode: mysqlEnum('application_mode', ['full_time', 'part_time']),
   jambRegNumber: varchar('jamb_reg_number', { length: 20 }),
   examAttendanceStatus: mysqlEnum('exam_attendance_status', ['pending', 'present', 'absent']).default('pending'),
+  mathScore: decimal('math_score', { precision: 5, scale: 2 }), // Screening Mathematics score (0-100)
+  englishScore: decimal('english_score', { precision: 5, scale: 2 }), // Screening English Language score (0-100)
+  screeningScore: decimal('screening_score', { precision: 5, scale: 2 }), // Combined Math + English total (/200)
+  screeningPercentage: decimal('screening_percentage', { precision: 5, scale: 2 }), // (screeningScore / 200) * 100
+  decisionSource: mysqlEnum('decision_source', ['auto', 'manual']), // How the admitted/rejected status was set
   appliedAt: timestamp('applied_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
 }, (table) => ({
@@ -6888,7 +6895,7 @@ export const generalMaintenanceRequestsRelations = relations(generalMaintenanceR
 
 export const maintenanceRepairQuotes = mysqlTable('maintenance_repair_quotes', {
   id: int('id').autoincrement().primaryKey(),
-  requestId: int('r_id').notNull(),
+  requestId: int('request_id').notNull(),
   technicianId: int('technician_id').references(() => users.id).notNull(),
   itemDescription: varchar('item_description', { length: 255 }).notNull(),
   estimatedCost: decimal('estimated_cost', { precision: 12, scale: 2 }).notNull(),
@@ -6897,7 +6904,7 @@ export const maintenanceRepairQuotes = mysqlTable('maintenance_repair_quotes', {
   reviewedBy: int('reviewed_by').references(() => users.id),
   reviewedAt: datetime('reviewed_at'),
   rejectionNotes: text('rejection_notes'),
-  expenditureRequestId: int('exp_req_id').references(() => expenditureRequests.id),
+  expenditureRequestId: int('expenditure_request_id').references(() => expenditureRequests.id),
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
 }, (table) => ({

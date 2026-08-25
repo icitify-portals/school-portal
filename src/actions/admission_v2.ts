@@ -176,19 +176,27 @@ export async function linkProgrammesToTemplate(templateId: number, programmeIds:
 }
 
 export async function saveFormTemplate(data: any) {
+    // Hoisted so the catch block can build friendly duplicate-slug/name messages
+    const { id, name, level, slug, description, flowType, feeStructureId, applicationFee, processingFee, requireAcceptanceFee, acceptanceFee, idCardFee, cutoffPercent, lateFee, startDate, endDate, lateEndDate, minAge, isActive, ninVerificationConfig } = data;
     try {
         await requireAdmin();
-        const { id, name, level, slug, description, flowType, feeStructureId, applicationFee, processingFee, requireAcceptanceFee, acceptanceFee, lateFee, startDate, endDate, lateEndDate, minAge, isActive, ninVerificationConfig } = data;
-        
+
+        // Fall back to the global default cut-off for newly created exercises
+        let effectiveCutoff = cutoffPercent;
+        if (!id && (effectiveCutoff === undefined || effectiveCutoff === null || effectiveCutoff === '')) {
+            const [settingRow] = await db.select().from(systemSettings).where(eq(systemSettings.settingKey, 'post_utme_cutoff_percent')).limit(1);
+            effectiveCutoff = parseFloat(settingRow?.settingValue || '40') || 40;
+        }
+
         if (id) {
             await db.update(admissionFormTemplates)
-                .set({ name, level, slug, description, flowType, feeStructureId, applicationFee, processingFee, requireAcceptanceFee, acceptanceFee, lateFee, startDate, endDate, lateEndDate, minAge, isActive, ninVerificationConfig })
+                .set({ name, level, slug, description, flowType, feeStructureId, applicationFee, processingFee, requireAcceptanceFee, acceptanceFee, idCardFee, cutoffPercent: effectiveCutoff, lateFee, startDate, endDate, lateEndDate, minAge, isActive, ninVerificationConfig })
                 .where(eq(admissionFormTemplates.id, id));
             revalidatePath(`/admin/admission/forms/${id}`);
             return { success: true, id };
         } else {
             const [result] = await db.insert(admissionFormTemplates).values({
-                name, level, slug, description, flowType, feeStructureId, applicationFee, processingFee, requireAcceptanceFee, acceptanceFee, lateFee, startDate, endDate, lateEndDate, minAge, isActive, ninVerificationConfig
+                name, level, slug, description, flowType, feeStructureId, applicationFee, processingFee, requireAcceptanceFee, acceptanceFee, idCardFee, cutoffPercent: effectiveCutoff, lateFee, startDate, endDate, lateEndDate, minAge, isActive, ninVerificationConfig
             });
             revalidatePath("/admin/admission/forms");
             return { success: true, id: result.insertId };
@@ -880,6 +888,7 @@ export async function initiateAcceptancePaymentCheckout(applicationId: number) {
         if (!app || !app.template) return { success: false, error: "Application or Template not found" };
 
         let acceptanceFee = parseFloat(app.template.acceptanceFee || "0");
+        const idCardFee = parseFloat((app.template as any).idCardFee || "0");
         let processingFee = 0;
 
         // Fetch processing fee specifically for acceptance fee using service type 'ACCEPTANCE_FEE'
@@ -888,7 +897,7 @@ export async function initiateAcceptancePaymentCheckout(applicationId: number) {
             processingFee = parseFloat(pRule[0].amount);
         }
 
-        const totalAmount = acceptanceFee + processingFee;
+        const totalAmount = acceptanceFee + idCardFee + processingFee;
         const reference = `ACC-${applicationId}-${Date.now()}`;
         const formData = typeof app.data === 'string' ? JSON.parse(app.data || '{}') : (app.data || {});
 

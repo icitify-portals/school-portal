@@ -10,10 +10,11 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
-import { bulkUploadSubjectScores, type BulkScoreRow, type BulkUploadResult } from "@/actions/admin-admission";
+import { bulkUploadSubjectScoresV2, type BulkScoreRowV2, type BulkUploadResultV2 } from "@/actions/admin-admission";
 import { useRouter } from "next/navigation";
 
 interface PreviewRow {
+    rowNumber: number;
     formNumber: number;
     mathScore: number;
     englishScore: number;
@@ -22,21 +23,42 @@ interface PreviewRow {
     errors: string[];
 }
 
-function validateRow(raw: any): PreviewRow {
-    const errors: string[] = [];
-    const formNumber = Number(raw["Form Number"] ?? raw["form_number"] ?? raw["FormNumber"] ?? raw["ID"] ?? raw["id"] ?? 0);
-    const mathScore = Number(raw["Mathematics"] ?? raw["Maths"] ?? raw["Math"] ?? raw["math_score"] ?? raw["MathScore"] ?? 0);
-    const englishScore = Number(raw["English"] ?? raw["English Language"] ?? raw["english_score"] ?? raw["EnglishScore"] ?? 0);
+/**
+ * Strict cell extraction: a blank/absent cell is an ERROR, never a silent 0.
+ */
+function readNumber(raw: Record<string, unknown>, keys: string[]): { value?: number; error?: string } {
+    for (const key of keys) {
+        const v = raw[key];
+        if (v !== undefined && v !== null && String(v).trim() !== "") {
+            const n = Number(v);
+            return isNaN(n) ? { error: `"${key}" is not a number (got "${v}")` } : { value: n };
+        }
+    }
+    return { error: `Missing value (need one of: ${keys.join(" / ")})` };
+}
 
-    if (!formNumber || isNaN(formNumber) || formNumber <= 0) errors.push("Missing/invalid Form Number");
-    if (isNaN(mathScore) || mathScore < 0 || mathScore > 100) errors.push(`Math score must be 0–100 (got ${mathScore})`);
-    if (isNaN(englishScore) || englishScore < 0 || englishScore > 100) errors.push(`English score must be 0–100 (got ${englishScore})`);
+function validateRow(rowNumber: number, raw: Record<string, unknown>): PreviewRow {
+    const errors: string[] = [];
+    const formNumberRes = readNumber(raw, ["Form Number", "form_number", "FormNumber", "ID", "id"]);
+    const mathRes = readNumber(raw, ["Mathematics", "Maths", "Math", "math_score", "MathScore"]);
+    const englishRes = readNumber(raw, ["English Language", "English", "english_score", "EnglishScore"]);
+
+    if (formNumberRes.error || (formNumberRes.value !== undefined && (!Number.isInteger(formNumberRes.value) || formNumberRes.value <= 0))) {
+        errors.push(formNumberRes.error || `Form Number must be a positive whole number (got ${formNumberRes.value})`);
+    }
+    if (mathRes.error || (mathRes.value !== undefined && (mathRes.value < 0 || mathRes.value > 100))) {
+        errors.push(mathRes.error || `Math score must be 0–100 (got ${mathRes.value})`);
+    }
+    if (englishRes.error || (englishRes.value !== undefined && (englishRes.value < 0 || englishRes.value > 100))) {
+        errors.push(englishRes.error || `English score must be 0–100 (got ${englishRes.value})`);
+    }
 
     return {
-        formNumber,
-        mathScore,
-        englishScore,
-        total: mathScore + englishScore,
+        rowNumber,
+        formNumber: formNumberRes.value ?? 0,
+        mathScore: mathRes.value ?? 0,
+        englishScore: englishRes.value ?? 0,
+        total: (mathRes.value ?? 0) + (englishRes.value ?? 0),
         isValid: errors.length === 0,
         errors,
     };
@@ -47,8 +69,8 @@ export default function BulkScoreUpload() {
     const [preview, setPreview] = useState<PreviewRow[]>([]);
     const [fileName, setFileName] = useState<string | null>(null);
     const [uploading, setUploading] = useState(false);
-    const [results, setResults] = useState<BulkUploadResult[] | null>(null);
-    const [summary, setSummary] = useState<{ processed: number; failed: number } | null>(null);
+    const [results, setResults] = useState<BulkUploadResultV2[] | null>(null);
+    const [summary, setSummary] = useState<{ processed: number; failed: number; offeredCount: number } | null>(null);
     const fileRef = useRef<HTMLInputElement>(null);
     const router = useRouter();
 
@@ -79,16 +101,21 @@ export default function BulkScoreUpload() {
 
         const reader = new FileReader();
         reader.onload = (evt) => {
-            const data = evt.target?.result;
-            const wb = XLSX.read(data, { type: "binary" });
-            const sheet = wb.Sheets[wb.SheetNames[0]];
-            const rows: any[] = XLSX.utils.sheet_to_json(sheet);
-            const parsed = rows.map(validateRow);
-            setPreview(parsed);
-            if (parsed.length === 0) {
-                toast.error("No data rows found in the spreadsheet.");
-            } else {
+            try {
+                const data = evt.target?.result;
+                const wb = XLSX.read(data, { type: "binary" });
+                const sheet = wb.Sheets[wb.SheetNames[0]];
+                const rows: Record<string, unknown>[] = XLSX.utils.sheet_to_json(sheet);
+                if (rows.length === 0) {
+                    setPreview([]);
+                    toast.error("No data rows found in the spreadsheet.");
+                    return;
+                }
+                const parsed = rows.map((r, i) => validateRow(i + 2, r)); // +2 = Excel header offset
+                setPreview(parsed);
                 toast.success(`Parsed ${parsed.length} row${parsed.length !== 1 ? 's' : ''} — ${parsed.filter(r => r.isValid).length} valid`);
+            } catch {
+                toast.error("Could not read the file. Ensure it is a valid .xlsx/.xls spreadsheet.");
             }
         };
         reader.readAsBinaryString(file);
@@ -101,22 +128,22 @@ export default function BulkScoreUpload() {
             return;
         }
         setUploading(true);
-        const payload: BulkScoreRow[] = validRows.map(r => ({
+        const payload: BulkScoreRowV2[] = validRows.map(r => ({
             formNumber: r.formNumber,
             mathScore: r.mathScore,
             englishScore: r.englishScore,
         }));
 
-        const res = await bulkUploadSubjectScores(payload);
+        const res = await bulkUploadSubjectScoresV2(payload);
         setUploading(false);
 
         if (res.success) {
             setResults(res.results);
-            setSummary({ processed: res.processed, failed: res.failed });
+            setSummary({ processed: res.processed, failed: res.failed, offeredCount: res.offeredCount });
             if (res.failed === 0) {
-                toast.success(`✅ All ${res.processed} records uploaded successfully`);
+                toast.success(`All ${res.processed} records uploaded — ${res.offeredCount} admission offer${res.offeredCount !== 1 ? 's' : ''} issued`);
             } else {
-                toast.warning(`${res.processed} uploaded, ${res.failed} failed`);
+                toast.warning(`${res.processed} uploaded (${res.offeredCount} offered), ${res.failed} failed`);
             }
             router.refresh();
         } else {
@@ -147,7 +174,7 @@ export default function BulkScoreUpload() {
                         <div>
                             <CardTitle className="text-white font-black text-lg tracking-tight">Bulk Score Upload</CardTitle>
                             <p className="text-teal-100 text-xs font-bold uppercase tracking-widest mt-0.5">
-                                Upload exam results via Excel spreadsheet
+                                Upload entrance exam results via Excel spreadsheet
                             </p>
                         </div>
                     </div>
@@ -171,8 +198,9 @@ export default function BulkScoreUpload() {
                                 <p className="text-sm font-bold text-slate-700">Prepare your Excel file using the official template</p>
                                 <p className="text-xs text-slate-500">
                                     The template has 3 columns: <strong>Form Number</strong>, <strong>Mathematics</strong>, <strong>English Language</strong>.
-                                    Each score must be between <strong>0 – 100</strong>.
-                                    The Form Number is the applicant's portal form ID (visible on the applicants table below).
+                                    Each score must be between <strong>0 – 100</strong>; leave no cells blank.
+                                    Form Numbers are listed in the applicants table below.
+                                    Applicants at or above their exercise&apos;s cut-off are <strong>automatically offered admission</strong> on upload.
                                 </p>
                             </div>
                             <Button
@@ -202,7 +230,7 @@ export default function BulkScoreUpload() {
                                 {fileName ? (
                                     <span className="text-teal-700">{fileName}</span>
                                 ) : (
-                                    <>Click to select or drag & drop your Excel file</>
+                                    <>Click to select your Excel file</>
                                 )}
                             </p>
                             <p className="text-xs text-slate-400 mt-1">.xlsx or .xls only</p>
@@ -250,6 +278,7 @@ export default function BulkScoreUpload() {
                                 <table className="w-full text-sm">
                                     <thead className="bg-slate-50 sticky top-0">
                                         <tr>
+                                            <th className="text-left text-[10px] font-black uppercase tracking-widest text-slate-500 px-4 py-3">Excel Row</th>
                                             <th className="text-left text-[10px] font-black uppercase tracking-widest text-slate-500 px-4 py-3">Form No.</th>
                                             <th className="text-left text-[10px] font-black uppercase tracking-widest text-slate-500 px-4 py-3">Maths</th>
                                             <th className="text-left text-[10px] font-black uppercase tracking-widest text-slate-500 px-4 py-3">English</th>
@@ -258,12 +287,13 @@ export default function BulkScoreUpload() {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-100">
-                                        {preview.map((row, i) => (
-                                            <tr key={i} className={row.isValid ? "bg-white" : "bg-rose-50"}>
+                                        {preview.map((row) => (
+                                            <tr key={row.rowNumber} className={row.isValid ? "bg-white" : "bg-rose-50"}>
+                                                <td className="px-4 py-2.5 text-slate-400 text-xs">{row.rowNumber}</td>
                                                 <td className="px-4 py-2.5 font-black text-slate-800">{row.formNumber || "—"}</td>
-                                                <td className="px-4 py-2.5 font-bold text-slate-700">{row.mathScore}</td>
-                                                <td className="px-4 py-2.5 font-bold text-slate-700">{row.englishScore}</td>
-                                                <td className="px-4 py-2.5 font-black text-teal-700">{row.total}</td>
+                                                <td className="px-4 py-2.5 font-bold text-slate-700">{isValidScore(row.mathScore) ? row.mathScore : "—"}</td>
+                                                <td className="px-4 py-2.5 font-bold text-slate-700">{isValidScore(row.englishScore) ? row.englishScore : "—"}</td>
+                                                <td className="px-4 py-2.5 font-black text-teal-700">{row.isValid ? row.total : "—"}</td>
                                                 <td className="px-4 py-2.5">
                                                     {row.isValid ? (
                                                         <Badge className="bg-emerald-100 text-emerald-700 text-[9px] font-black">Valid</Badge>
@@ -316,9 +346,10 @@ export default function BulkScoreUpload() {
                                 <div>
                                     <p className="font-black text-slate-800">
                                         {summary.processed} record{summary.processed !== 1 ? 's' : ''} saved
+                                        {summary.offeredCount > 0 && ` · ${summary.offeredCount} admission offer${summary.offeredCount !== 1 ? 's' : ''} issued`}
                                         {summary.failed > 0 && `, ${summary.failed} failed`}
                                     </p>
-                                    <p className="text-xs text-slate-500 mt-0.5">The applicants table below has been refreshed with the new scores.</p>
+                                    <p className="text-xs text-slate-500 mt-0.5">The applicants table has been refreshed with the new scores.</p>
                                 </div>
                             </div>
 
@@ -335,6 +366,19 @@ export default function BulkScoreUpload() {
                                 </div>
                             )}
 
+                            {/* Absent notes */}
+                            {results.some(r => r.note) && (
+                                <div className="border border-amber-200 rounded-2xl overflow-hidden">
+                                    <div className="bg-amber-50 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-amber-600">Absent Applicants (scored, not offered)</div>
+                                    {results.filter(r => r.note).map((r, i) => (
+                                        <div key={i} className="flex items-center justify-between px-4 py-2.5 border-t border-amber-100 bg-white">
+                                            <span className="font-black text-slate-800 text-sm">Form #{r.formNumber}</span>
+                                            <span className="text-xs text-amber-600 font-bold">{r.note}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
                             <Button onClick={reset} variant="outline" className="w-full rounded-xl font-bold text-xs uppercase tracking-widest">
                                 Upload Another File
                             </Button>
@@ -344,4 +388,8 @@ export default function BulkScoreUpload() {
             )}
         </Card>
     );
+}
+
+function isValidScore(n: number): boolean {
+    return Number.isFinite(n) && n >= 0 && n <= 100;
 }
