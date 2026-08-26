@@ -864,21 +864,33 @@ export async function updateAdmissionStatus(applicationId: number, status: any, 
 
 export async function getApplicantStatusData(applicationId: number) {
     try {
-        return await db.query.admissionApplicationsV2.findFirst({
-            where: eq(admissionApplicationsV2.id, applicationId),
-            with: {
-                template: {
-                    with: {
-                        exams: true
-                    }
-                },
-                // @ts-expect-error - TS2353: Auto-suppressed for build
-                results: {
-                    // @ts-expect-error - TS7006: Auto-suppressed for build
-                    where: (results, { eq }) => eq(results.applicationId, applicationId)
-                }
-            }
+        const app = await db.query.admissionApplicationsV2.findFirst({
+            where: eq(admissionApplicationsV2.id, applicationId)
         });
+
+        if (!app) return null;
+
+        const template = await db.query.admissionFormTemplates.findFirst({
+            where: eq(admissionFormTemplates.id, app.templateId)
+        });
+
+        const exams = template ? await db.query.admissionEntranceExams.findMany({
+            where: eq(admissionEntranceExams.templateId, template.id)
+        }) : [];
+
+        if (template) {
+            (template as any).exams = exams;
+        }
+
+        const results = await db.query.admissionExamResults.findMany({
+            where: eq(admissionExamResults.applicationId, applicationId)
+        });
+
+        return {
+            ...app,
+            template,
+            results
+        };
     } catch (error) {
         console.error("Failed to fetch applicant status data:", error);
         return null;
