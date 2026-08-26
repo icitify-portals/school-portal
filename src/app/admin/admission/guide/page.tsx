@@ -161,12 +161,29 @@ export default function AdmissionGuidePage() {
                                 </div>
                             </div>
                             <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl flex gap-3">
-                                <AlertTriangleIcon />
+                                <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
                                 <p className="text-amber-200/80 text-xs font-medium leading-relaxed">
                                     <strong className="text-amber-300">Order matters:</strong> candidates whose attendance is still
                                     &quot;pending&quot; when scores are uploaded WILL be offered admission if they pass. Settle attendance first.
                                     If you get it wrong anyway, correct it and press Run Selection — offers re-evaluate automatically.
                                 </p>
+                            </div>
+
+                            <div className="p-4 bg-indigo-500/10 border border-indigo-500/20 rounded-xl space-y-2">
+                                <div className="flex items-center gap-2 text-indigo-300 font-bold text-sm">
+                                    <PlayCircle className="w-4 h-4" /> Multiple exam sittings
+                                </div>
+                                <p className="text-indigo-200/80 text-xs font-medium leading-relaxed">
+                                    The entrance examination holds more than once. Being absent from one sitting is
+                                    <strong className="text-white"> never a final disqualification</strong> — a candidate may attend a later date.
+                                    For each new exam date:
+                                </p>
+                                <ol className="text-indigo-200/70 text-xs space-y-1 font-medium list-decimal list-inside">
+                                    <li>Press <strong>New Exam Date</strong> on the Screening console — every non-admitted applicant returns to &quot;pending&quot; so a fresh register can be taken (admitted applicants are untouched, existing scores are kept).</li>
+                                    <li>Mark attendance for that sitting (register → All Present / selective marking / Sweep Absents).</li>
+                                    <li>Upload scores for candidates who wrote — new uploads overwrite previous attempts.</li>
+                                    <li>Offers fire automatically for everyone above the cut-off who attended any sitting.</li>
+                                </ol>
                             </div>
                         </Step>
 
@@ -308,6 +325,3 @@ export default function AdmissionGuidePage() {
     );
 }
 
-function AlertTriangleIcon() {
-    return <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />;
-}

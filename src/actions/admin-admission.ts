@@ -623,6 +623,45 @@ export async function sweepPendingAttendance(templateId: number | undefined, mar
     }
 }
 
+/**
+ * Start a new examination round: resets every NON-ADMITTED applicant's
+ * attendance back to 'pending' so a fresh register can be taken for the
+ * next exam date. Being absent from one sitting is never a final
+ * disqualification — candidates may attend a later date.
+ *
+ * - Admitted applicants (and therefore fee-payers) are untouched.
+ * - Existing scores are KEPT: they remain valid until overwritten by a
+ *   better/newer attempt at the next sitting.
+ */
+export async function startNewExamRound(templateId?: number): Promise<{
+    success: boolean;
+    count?: number;
+    error?: string;
+}> {
+    try {
+        const allowed = await hasPermission("admission.applications.manage") || await hasRole("admin") || await hasRole("superadmin");
+        if (!allowed) return { success: false, error: "Unauthorized" };
+
+        const conditions = [
+            ne(admissionApplicationsV2.status, 'draft'),
+            ne(admissionApplicationsV2.status, 'admitted'),
+        ];
+        if (templateId) conditions.push(eq(admissionApplicationsV2.templateId, templateId));
+
+        const result = await db.update(admissionApplicationsV2)
+            .set({ examAttendanceStatus: 'pending' })
+            .where(and(...conditions));
+
+        const count = (result as any)?.rowsAffected ?? (result as any)?.affectedRows ?? 0;
+        revalidatePath("/admin/admission/screening");
+        revalidatePath("/admin/admission/v2");
+        return { success: true, count: Number(count) };
+    } catch (error) {
+        console.error("Error starting new exam round:", error);
+        return { success: false, error: "Failed to reset attendance" };
+    }
+}
+
 export interface RunSelectionSummary {
     processed: number;
     newlyOffered: number;

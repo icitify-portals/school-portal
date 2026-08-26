@@ -14,7 +14,7 @@ import {
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
-    updateExerciseCutoff, runSelection, sweepPendingAttendance,
+    updateExerciseCutoff, runSelection, sweepPendingAttendance, startNewExamRound,
     type ScreeningExercise, type ScreeningApplicant, type RunSelectionSummary,
 } from "@/actions/admin-admission";
 import BulkScoreUpload from "./BulkScoreUpload";
@@ -159,6 +159,22 @@ export default function ScreeningConsole({ exercises: initialExercises, applican
         }
     };
 
+    // ── New exam round reset ───────────────────────────────────────────
+    const [resettingRound, setResettingRound] = useState(false);
+    const handleNewExamRound = async () => {
+        const label = activeTemplateId === 'all' ? 'ALL exercises' : (activeExercise?.name || 'this exercise');
+        if (!window.confirm(`Start a NEW EXAMINATION ROUND for ${label}?\n\n• Every NON-ADMITTED applicant returns to "pending" so a fresh register can be taken.\n• Existing scores are KEPT until a candidate writes again and is re-uploaded.\n• Admitted applicants are not affected.\n\nBeing absent from one sitting never disqualifies — candidates can attend the next date.`)) return;
+        setResettingRound(true);
+        const res = await startNewExamRound(activeTemplateId === 'all' ? undefined : activeTemplateId);
+        setResettingRound(false);
+        if (res.success) {
+            toast.success(`New exam round started — ${res.count} applicant${res.count !== 1 ? 's' : ''} reset to pending attendance`);
+            router.refresh();
+        } else {
+            toast.error(res.error || "Failed to reset attendance");
+        }
+    };
+
     return (
         <div className="space-y-6">
 
@@ -263,11 +279,23 @@ export default function ScreeningConsole({ exercises: initialExercises, applican
                                     disabled={sweeping !== null || stats.pendingAttendance === 0}
                                     onClick={() => handleSweep('absent')}
                                     className="h-8 text-rose-600 border-rose-300 hover:bg-rose-50 font-black text-[9px] uppercase tracking-widest"
-                                    title="Exam closed — mark everyone still pending as absent"
+                                    title="Exam closed — mark everyone still pending as absent for THIS sitting (they may attend a later date)"
                                 >
                                     {sweeping === 'absent'
                                         ? <Loader2 className="w-3 h-3 animate-spin" />
                                         : <><UserX className="w-3 h-3 mr-1" /> Sweep Absents</>}
+                                </Button>
+                                <Button
+                                    size="sm"
+                                    variant="outline"
+                                    disabled={resettingRound}
+                                    onClick={handleNewExamRound}
+                                    className="h-8 text-indigo-600 border-indigo-300 hover:bg-indigo-50 font-black text-[9px] uppercase tracking-widest"
+                                    title="A new exam date is scheduled — reset all non-admitted applicants to pending attendance so a fresh register can be taken. Scores are kept until overwritten."
+                                >
+                                    {resettingRound
+                                        ? <Loader2 className="w-3 h-3 animate-spin" />
+                                        : <><PlayCircle className="w-3 h-3 mr-1" /> New Exam Date</>}
                                 </Button>
                             </div>
 
