@@ -22,9 +22,10 @@ import {
     departments,
     transactions,
     academicSessions,
-    processingFeeRules
+    processingFeeRules,
+    admissionExamResults
 } from "@/db/schema";
-import { eq, and, desc, asc, sql, inArray, like, or } from "drizzle-orm";
+import { eq, and, desc, asc, sql, inArray, like, or, isNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import crypto from "crypto";
@@ -49,7 +50,7 @@ async function requireAdmin() {
     const session = await auth();
     if (!session?.user) throw new Error("Unauthorized: Please log in");
     
-    const role = ((session.user.role as string) || '').toLowerCase();
+    const role = (((session.user as any).role as string) || '').toLowerCase();
     const roles = (((session.user as any).roles as string[]) || []).map(r => String(r).toLowerCase());
 
     const hasAccess = ADMIN_ROLES.some(r => role === r || roles.includes(r));
@@ -63,7 +64,7 @@ async function requireApplicant() {
     const session = await auth();
     if (!session?.user) throw new Error("Unauthorized: Please log in");
     
-    if (session.user.role === 'applicant' || session.user.role === 'student') {
+    if ((session.user as any).role === 'applicant' || (session.user as any).role === 'student') {
         return session;
     }
     
@@ -232,14 +233,12 @@ export async function cloneFormTemplate(templateId: number) {
             duplicateCounter++;
         }
 
+        const { id: _tid, createdAt: _tca, ...templateFields } = originalTemplate;
         const [insertRes] = await db.insert(admissionFormTemplates).values({
-            ...originalTemplate,
-            id: undefined,
+            ...templateFields,
             name: newName,
             slug: newSlug,
             isActive: false, // Default copied template to inactive
-            createdAt: new Date(),
-            updatedAt: new Date()
         });
         const newTemplateId = insertRes.insertId;
 
@@ -247,12 +246,10 @@ export async function cloneFormTemplate(templateId: number) {
         const sectionIdMap = new Map<number, number>();
 
         for (const section of sections) {
+            const { id: _sid, ...sectionFields } = section;
             const [secInsert] = await db.insert(admissionFormSections).values({
-                ...section,
-                id: undefined,
+                ...sectionFields,
                 templateId: newTemplateId,
-                createdAt: new Date(),
-                updatedAt: new Date()
             });
             sectionIdMap.set(section.id, secInsert.insertId);
         }
@@ -264,12 +261,10 @@ export async function cloneFormTemplate(templateId: number) {
             for (const field of fields) {
                 const newSectionId = sectionIdMap.get(field.sectionId);
                 if (newSectionId) {
+                    const { id: _fid, ...fieldProps } = field;
                     await db.insert(admissionFormFields).values({
-                        ...field,
-                        id: undefined,
+                        ...fieldProps,
                         sectionId: newSectionId,
-                        createdAt: new Date(),
-                        updatedAt: new Date()
                     });
                 }
             }
@@ -505,11 +500,11 @@ export async function submitAdmissionApplication(data: any) {
             const template = await db.query.admissionFormTemplates.findFirst({
                 where: eq(admissionFormTemplates.id, templateId)
             });
-            NotificationService.sendApplicationSubmittedByEmail(applicantEmail, {
-                applicantName,
-                formNumber,
-                templateName: template?.name || "Admission Application"
-            }).catch((err) => console.error("Failed to send submission email:", err));
+            sendEmail(
+                applicantEmail,
+                `Application Submitted – ${template?.name || "Admission Application"}`,
+                `<p>Dear ${applicantName},</p><p>Your application (Form No: <strong>${formNumber}</strong>) has been successfully submitted. You will be notified of the next steps.</p>`
+            ).catch((err: any) => console.error("Failed to send submission email:", err));
         }
 
         return { success: true, applicationId: result.insertId, formNumber };
@@ -584,13 +579,11 @@ export async function confirmAdmissionPayment(applicationId: number, reference: 
             const applicantEmail = formData.email || "";
             const applicantName = `${formData.firstName || ""} ${formData.lastName || ""}`.trim() || "Applicant";
             if (applicantEmail) {
-                NotificationService.sendPaymentConfirmed(applicantEmail, {
-                    applicantName,
-                    formNumber: application.formNumber || undefined,
-                    paymentType: "Application Fee",
-                    templateName: application.template?.name || "Admission Application",
-                    reference
-                }).catch((err) => console.error("Failed to send payment email:", err));
+                sendEmail(
+                    applicantEmail,
+                    `Payment Confirmed – ${application.template?.name || "Admission Application"}`,
+                    `<p>Dear ${applicantName},</p><p>Your <strong>Application Fee</strong> payment has been confirmed (Ref: <code>${reference}</code>, Form No: <strong>${application.formNumber || 'N/A'}</strong>).</p><p>You may now proceed with your application.</p>`
+                ).catch((err: any) => console.error("Failed to send payment email:", err));
             }
         }
 
@@ -741,11 +734,11 @@ export async function confirmEditFinePayment(applicationId: number, reference: s
             const applicantEmail = formData.email || "";
             const applicantName = `${formData.firstName || ""} ${formData.lastName || ""}`.trim() || "Applicant";
             if (applicantEmail) {
-                NotificationService.sendEditWindowOpened(applicantEmail, {
-                    applicantName,
-                    templateName: application.template?.name || "Admission Application",
-                    expiresAt
-                }).catch((err) => console.error("Failed to send edit window email:", err));
+                sendEmail(
+                    applicantEmail,
+                    `Edit Window Opened – ${application.template?.name || "Admission Application"}`,
+                    `<p>Dear ${applicantName},</p><p>Your application edit window has been opened. You may now make changes until <strong>${expiresAt.toLocaleString()}</strong>.</p>`
+                ).catch((err: any) => console.error("Failed to send edit window email:", err));
             }
         }
 
@@ -847,18 +840,17 @@ export async function updateAdmissionStatus(applicationId: number, status: any, 
                 : `${formData.firstName || ''} ${formData.lastName || ''}`.trim() || 'Applicant';
             
             if (status === 'rejected' && applicantEmail) {
-                NotificationService.sendAdmissionRejectedByEmail(applicantEmail, {
-                    applicantName,
-                    templateName: application.template.name,
-                    reason: notes || undefined,
-                    userId: application.applicantId || undefined
-                }).catch((err) => console.error("Failed to send rejection email:", err));
+                sendEmail(
+                    applicantEmail,
+                    `Application Update – ${application.template.name}`,
+                    `<p>Dear ${applicantName},</p><p>We regret to inform you that your application to <strong>${application.template.name}</strong> was not successful${notes ? `: ${notes}` : '.'}</p>`
+                ).catch((err: any) => console.error("Failed to send rejection email:", err));
             } else if (status === 'admitted' && applicantEmail) {
-                NotificationService.sendAdmissionOfferedByEmail(applicantEmail, {
-                    applicantName,
-                    templateName: application.template.name,
-                    userId: application.applicantId || undefined
-                }).catch((err) => console.error("Failed to send admitted notification:", err));
+                sendEmail(
+                    applicantEmail,
+                    `Congratulations – Admission Offer – ${application.template.name}`,
+                    `<p>Dear ${applicantName},</p><p>Congratulations! You have been offered provisional admission to <strong>${application.template.name}</strong>. Please log in to your portal to proceed.</p>`
+                ).catch((err: any) => console.error("Failed to send admitted notification:", err));
             }
         }
         
@@ -1008,14 +1000,14 @@ export async function confirmAcceptancePayment(applicationId: number, reference:
                 const email = formData.email;
                 const candidateName = `${formData.firstName || ''} ${formData.surname || formData.lastName || ''}`.trim() || 'Admitted Candidate';
                 if (email) {
-                    await sendEmail({
-                        to: email,
-                        subject: "OFFICIAL ADMISSION LETTER - Federal School of Statistics",
-                        html: `
+                    await sendEmail(
+                        email,
+                        "OFFICIAL ADMISSION LETTER - Federal School of Statistics",
+                        `
                             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; borderRadius: 12px;">
                                 <h2 style="color: #059669; text-transform: uppercase;">Provisional Admission Offer Confirmed</h2>
                                 <p>Dear <strong>${candidateName}</strong>,</p>
-                                <p>Congratulations! Your Acceptance Fee & Student ID Card payment has been successfully confirmed.</p>
+                                <p>Congratulations! Your Acceptance Fee &amp; Student ID Card payment has been successfully confirmed.</p>
                                 <p>Your official <strong>Admission Letter</strong> has been generated and unlocked on your student dashboard.</p>
                                 <div style="background-color: #f8fafc; padding: 15px; border-left: 4px solid #059669; margin: 20px 0;">
                                     <p style="margin: 0; font-size: 14px;"><strong>Application Ref:</strong> #${applicationId.toString().padStart(6, '0')}</p>
@@ -1026,7 +1018,7 @@ export async function confirmAcceptancePayment(applicationId: number, reference:
                                 <p style="margin-top: 30px; font-size: 12px; color: #64748b;">Registrar's Office, Federal School of Statistics</p>
                             </div>
                         `
-                    });
+                    );
                 }
             }
         } catch (mailErr) {
@@ -1230,7 +1222,6 @@ export async function updateApplicantMatricNumber(applicationId: number, newMatr
             await db.update(students)
                 .set({ 
                     matricNumber: trimmedMatric,
-                    updatedAt: new Date()
                 })
                 .where(eq(students.id, application.studentId));
         }
@@ -1390,7 +1381,7 @@ export async function finalizeStudentAdmission(applicationId: number) {
         if (selectedProgrammeId) {
             const [prog] = await db.select().from(programmes).where(eq(programmes.id, selectedProgrammeId)).limit(1);
             if (prog) {
-                deptId = prog.departmentId || null;
+                deptId = prog.deptId || null;
             }
         }
 
@@ -1555,7 +1546,6 @@ export async function finalizeStudentAdmission(applicationId: number) {
             finalStudentId = existingStudent.id;
         } else {
             // Create Student with extended mapping including Study Mode
-            // @ts-expect-error - TS2769: Auto-suppressed for build
             const [studentResult] = await db.insert(students).values({
                 userId: userId,
                 firstName: formData.firstName || formData.fullName?.split(' ')[0],
@@ -1613,12 +1603,11 @@ export async function finalizeStudentAdmission(applicationId: number) {
         
         const applicantEmail = formData.email || "";
         if (applicantEmail) {
-            NotificationService.sendAdmissionAcceptedByEmail(applicantEmail, {
-                applicantName,
-                matricNumber,
-                templateName: template.name,
-                userId
-            }).catch((err) => console.error("Failed to send accepted email:", err));
+            sendEmail(
+                applicantEmail,
+                `Admission Accepted – Welcome to ${template.name}`,
+                `<p>Dear ${applicantName},</p><p>Your admission to <strong>${template.name}</strong> has been finalized. Your Matriculation Number is: <strong>${matricNumber}</strong>.</p><p>Please log in to your student portal to proceed.</p>`
+            ).catch((err: any) => console.error("Failed to send accepted email:", err));
         }
         
         await sendInAppNotification({
@@ -1887,11 +1876,11 @@ export async function getApplicantApplication(applicationId: number, applicantId
             let ninVerificationMode = 'disabled';
             let ninRequired = true;
             let ninAutoFill = true;
-            if (app.template?.ninVerificationConfig) {
+            if ((app as any).template?.ninVerificationConfig) {
                 try {
-                    const ninConfig = typeof app.template.ninVerificationConfig === 'string' 
-                        ? JSON.parse(app.template.ninVerificationConfig) 
-                        : app.template.ninVerificationConfig;
+                    const ninConfig = typeof (app as any).template.ninVerificationConfig === 'string' 
+                        ? JSON.parse((app as any).template.ninVerificationConfig) 
+                        : (app as any).template.ninVerificationConfig;
                     ninVerificationMode = ninConfig.enabled ? ninConfig.provider || 'simulator' : 'disabled';
                     ninRequired = ninConfig.enabled ? (ninConfig.required !== false) : true;
                     ninAutoFill = ninConfig.enabled ? (ninConfig.autoFill !== false) : true;
@@ -1921,8 +1910,8 @@ export async function getApplicantApplication(applicationId: number, applicantId
             }
 
             // Calculate exact fee from structure
-            if (app.template.feeStructureId) {
-                const items = await db.select().from(feeStructureItems).where(eq(feeStructureItems.feeStructureId, app.template.feeStructureId));
+            if ((app as any).template.feeStructureId) {
+                const items = await db.select().from(feeStructureItems).where(eq(feeStructureItems.feeStructureId, (app as any).template.feeStructureId));
                 const total = items.reduce((acc, curr) => acc + parseFloat(curr.amount as string), 0);
                 // @ts-expect-error
                 app.template.calculatedFee = total;
@@ -2021,7 +2010,7 @@ export async function submitApplicationFinal(applicationId: number, applicantId:
 
         // Server-side payment verification
         const appFee = template?.feeStructureId ? await (async () => {
-            const items = await db.select().from(feeStructureItems).where(eq(feeStructureItems.feeStructureId, template.feeStructureId));
+            const items = await db.select().from(feeStructureItems).where(eq(feeStructureItems.feeStructureId, template!.feeStructureId!));
             return items.reduce((acc, curr) => acc + parseFloat(curr.amount as string), 0);
         })() : parseFloat(template?.applicationFee || "0");
         
@@ -2151,13 +2140,11 @@ export async function submitApplicationFinal(applicationId: number, applicantId:
             
             const applicantEmail = formData.email || "";
             if (applicantEmail) {
-                NotificationService.sendApplicationSubmittedByEmail(applicantEmail, {
-                    applicantName,
-                    formNumber: application.formNumber || undefined,
-                    applicationNumber: application.applicationNumber || undefined,
-                    templateName: template.name,
-                    userId: applicantId
-                }).catch((err) => console.error("Failed to send submission email:", err));
+                sendEmail(
+                    applicantEmail,
+                    `Application Submitted – ${template.name}`,
+                    `<p>Dear ${applicantName},</p><p>Your application (Form No: <strong>${application.formNumber || 'N/A'}</strong>, Ref: <strong>${application.applicationNumber || 'N/A'}</strong>) to <strong>${template.name}</strong> has been successfully submitted.</p>`
+                ).catch((err: any) => console.error("Failed to send submission email:", err));
             }
         }
 
@@ -2471,6 +2458,7 @@ export async function getAdminV2Applications(filters?: {
     programmeId?: number;
     level?: string;
     applicationMode?: string;
+    examAttendance?: string;
     page?: number;
     pageSize?: number;
 }) {
@@ -2523,6 +2511,9 @@ export async function getAdminV2Applications(filters?: {
         }
         if (filters?.applicationMode && filters.applicationMode !== 'all') {
             conditions.push(eq(admissionApplicationsV2.applicationMode, filters.applicationMode as any));
+        }
+        if (filters?.examAttendance && filters.examAttendance !== 'all') {
+            conditions.push(eq(admissionApplicationsV2.examAttendanceStatus, filters.examAttendance as any));
         }
         if (filters?.programmeId) {
             if (filters.programmeId === -1) {
@@ -2653,6 +2644,7 @@ export async function exportAdminV2Applications(filters?: {
     programmeId?: number;
     level?: string;
     applicationMode?: string;
+    examAttendance?: string;
 }) {
     await requireAdmin();
     try {
@@ -3022,18 +3014,17 @@ export async function bulkUpdateAdmissionStatus(ids: number[], status: string, n
                     : `${formData.firstName || ''} ${formData.lastName || ''}`.trim() || 'Applicant';
                 
                 if (status === 'admitted') {
-                    NotificationService.sendAdmissionOfferedByEmail(applicantEmail, {
-                        applicantName,
-                        templateName: app.template.name,
-                        userId: app.applicantId || undefined
-                    }).catch(err => console.error("Failed to send admitted notification:", err));
+                    sendEmail(
+                        applicantEmail,
+                        `Congratulations – Admission Offer – ${app.template.name}`,
+                        `<p>Dear ${applicantName},</p><p>Congratulations! You have been offered provisional admission to <strong>${app.template.name}</strong>. Please log in to your portal to proceed.</p>`
+                    ).catch((err: any) => console.error("Failed to send admitted notification:", err));
                 } else if (status === 'rejected') {
-                    NotificationService.sendAdmissionRejectedByEmail(applicantEmail, {
-                        applicantName,
-                        templateName: app.template.name,
-                        reason: notes || undefined,
-                        userId: app.applicantId || undefined
-                    }).catch(err => console.error("Failed to send rejection notification:", err));
+                    sendEmail(
+                        applicantEmail,
+                        `Application Update – ${app.template.name}`,
+                        `<p>Dear ${applicantName},</p><p>We regret to inform you that your application to <strong>${app.template.name}</strong> was not successful${notes ? `: ${notes}` : '.'}</p>`
+                    ).catch((err: any) => console.error("Failed to send rejection notification:", err));
                 }
             }
         }
@@ -3119,7 +3110,7 @@ export async function updateApplicantData(appId: number, updatePayload: any) {
             })
             .where(eq(admissionApplicationsV2.id, appId));
 
-        const targetUserId = app.applicantId || app.userId;
+        const targetUserId = app.applicantId;
         if (targetUserId) {
             const updates: any = {};
             // Extract the canonical names dynamically from merged data for the users table
@@ -3270,7 +3261,7 @@ export async function changeApplicantProgramme(appId: number, departmentId: numb
 
         const applicantEmail = parsedData.email || "";
         if (applicantEmail && prog) {
-            NotificationService.sendGenericEmail(
+            sendEmail(
                 applicantEmail,
                 "Admission Course Recommendation Update",
                 `<div style="font-family:sans-serif;padding:20px;line-height:1.6;">
@@ -3280,7 +3271,7 @@ export async function changeApplicantProgramme(appId: number, departmentId: numb
                     <p><strong>Note/Reason:</strong> ${reason || 'Transferred based on entry requirements.'}</p>
                     <p>Please log in to your admission portal to track your application status.</p>
                 </div>`
-            ).catch(err => console.error("Failed to send course change email:", err));
+            ).catch((err: any) => console.error("Failed to send course change email:", err));
         }
 
         revalidatePath(`/admin/admission/v2/${appId}`);
