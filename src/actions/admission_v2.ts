@@ -923,9 +923,13 @@ export async function initiateAcceptancePaymentCheckout(applicationId: number) {
         let processingFee = 0;
 
         // Fetch processing fee specifically for acceptance fee using service type 'ACCEPTANCE_FEE'
-        const pRule = await db.select().from(processingFeeRules).where(eq(processingFeeRules.serviceType, 'ACCEPTANCE_FEE')).limit(1);
-        if (pRule.length > 0 && pRule[0].isActive) {
-            processingFee = parseFloat(pRule[0].amount);
+        try {
+            const pRule = await db.select().from(processingFeeRules).where(eq(processingFeeRules.serviceType, 'ACCEPTANCE_FEE')).limit(1);
+            if (pRule.length > 0 && pRule[0].isActive) {
+                processingFee = parseFloat(pRule[0].amount);
+            }
+        } catch (e) {
+            console.warn("processingFeeRules table might not exist yet, skipping processing fee.");
         }
 
         const totalAmount = acceptanceFee + idCardFee + processingFee;

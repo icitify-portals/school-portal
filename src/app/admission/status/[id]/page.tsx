@@ -117,7 +117,7 @@ export default function ApplicantStatusPage() {
     const cutoffPercent = parseFloat(data.template?.cutoffPercent || '') || 40;
     const hasUploadedScores = data.mathScore !== null && data.mathScore !== undefined
         && data.screeningPercentage !== null && data.screeningPercentage !== undefined;
-    const showScreeningScores = !!exam?.resultsReleased && hasUploadedScores;
+    const showScreeningScores = (!!exam?.resultsReleased || data.status === 'admitted' || data.status === 'rejected') && hasUploadedScores;
     const screeningPct = hasUploadedScores ? parseFloat(data.screeningPercentage) : null;
     const total200 = hasUploadedScores ? parseFloat(data.screeningScore) : null;
 
