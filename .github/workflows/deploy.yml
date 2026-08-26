@@ -5,6 +5,11 @@ on:
     branches:
       - main
 
+# Never let two deployments race each other; the newest push always wins.
+concurrency:
+  group: production-deploy
+  cancel-in-progress: true
+
 jobs:
   deploy-to-vps:
     name: Deploy Live Application to Hostinger VPS
@@ -16,12 +21,38 @@ jobs:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           password: ${{ secrets.SERVER_PASSWORD }}
+          # Next.js Docker builds regularly exceed the 10-minute default
+          command_timeout: 60m
+          # Stop on the first failing command (belt-and-braces alongside set -e)
+          script_stop: true
           script: |
+            set -e
             cd /var/www/school-portal
+
             echo "=== PULLING LATEST CODE FROM MAIN ==="
             git pull origin main
-            echo "=== RESTARTING DOCKER CONTAINERS ==="
+
+            echo "=== BUILDING & RESTARTING CONTAINERS ==="
             sudo docker compose -f compose.yml up -d --build school-portal-app school-portal-worker
+
+            echo "=== HEALTH CHECK (waiting for app to boot) ==="
+            ok=0
+            for i in $(seq 1 18); do
+              code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 http://localhost:3005/ || true)
+              if [ "$code" = "200" ]; then
+                echo "✓ App healthy (HTTP 200) after attempt $i"
+                ok=1
+                break
+              fi
+              echo "attempt $i: HTTP $code — retrying in 10s..."
+              sleep 10
+            done
+            if [ "$ok" != "1" ]; then
+              echo "✗ FATAL: app did not become healthy after deployment"
+              sudo docker logs school-portal-app --tail 40 2>/dev/null || true
+              exit 1
+            fi
+
             echo "=== CLEANING UNUSED DOCKER IMAGES ==="
             docker image prune -f
             echo "✓ Automated Direct SSH Production Deployment Complete!"
