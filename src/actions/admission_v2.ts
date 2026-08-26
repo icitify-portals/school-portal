@@ -563,8 +563,7 @@ export async function confirmAdmissionPayment(applicationId: number, reference: 
     await requireAdmin();
     try {
         const application = await db.query.admissionApplicationsV2.findFirst({
-            where: eq(admissionApplicationsV2.id, applicationId),
-            with: { template: true }
+            where: eq(admissionApplicationsV2.id, applicationId)
         });
 
         await db.update(admissionApplicationsV2)
@@ -575,13 +574,16 @@ export async function confirmAdmissionPayment(applicationId: number, reference: 
             .where(eq(admissionApplicationsV2.id, applicationId));
         
         if (application) {
+            const template = await db.query.admissionFormTemplates.findFirst({
+                where: eq(admissionFormTemplates.id, application.templateId)
+            });
             const formData = typeof application.data === 'string' ? JSON.parse(application.data || '{}') : (application.data || {});
             const applicantEmail = formData.email || "";
             const applicantName = `${formData.firstName || ""} ${formData.lastName || ""}`.trim() || "Applicant";
             if (applicantEmail) {
                 sendEmail(
                     applicantEmail,
-                    `Payment Confirmed – ${application.template?.name || "Admission Application"}`,
+                    `Payment Confirmed – ${template?.name || "Admission Application"}`,
                     `<p>Dear ${applicantName},</p><p>Your <strong>Application Fee</strong> payment has been confirmed (Ref: <code>${reference}</code>, Form No: <strong>${application.formNumber || 'N/A'}</strong>).</p><p>You may now proceed with your application.</p>`
                 ).catch((err: any) => console.error("Failed to send payment email:", err));
             }
@@ -717,8 +719,7 @@ export async function confirmEditFinePayment(applicationId: number, reference: s
         expiresAt.setHours(expiresAt.getHours() + 24); // 24 hour window
 
         const application = await db.query.admissionApplicationsV2.findFirst({
-            where: eq(admissionApplicationsV2.id, applicationId),
-            with: { template: true }
+            where: eq(admissionApplicationsV2.id, applicationId)
         });
 
         await db.update(admissionApplicationsV2)
@@ -730,13 +731,16 @@ export async function confirmEditFinePayment(applicationId: number, reference: s
             .where(eq(admissionApplicationsV2.id, applicationId));
 
         if (application) {
+            const template = await db.query.admissionFormTemplates.findFirst({
+                where: eq(admissionFormTemplates.id, application.templateId)
+            });
             const formData = typeof application.data === 'string' ? JSON.parse(application.data || '{}') : (application.data || {});
             const applicantEmail = formData.email || "";
             const applicantName = `${formData.firstName || ""} ${formData.lastName || ""}`.trim() || "Applicant";
             if (applicantEmail) {
                 sendEmail(
                     applicantEmail,
-                    `Edit Window Opened – ${application.template?.name || "Admission Application"}`,
+                    `Edit Window Opened – ${template?.name || "Admission Application"}`,
                     `<p>Dear ${applicantName},</p><p>Your application edit window has been opened. You may now make changes until <strong>${expiresAt.toLocaleString()}</strong>.</p>`
                 ).catch((err: any) => console.error("Failed to send edit window email:", err));
             }
@@ -810,11 +814,14 @@ export async function updateAdmissionStatus(applicationId: number, status: any, 
 
         // Get application details before update
         const application = await db.query.admissionApplicationsV2.findFirst({
-            where: eq(admissionApplicationsV2.id, applicationId),
-            with: { template: true }
+            where: eq(admissionApplicationsV2.id, applicationId)
         });
 
         if (!application) return { success: false, error: "Application not found" };
+
+        const template = await db.query.admissionFormTemplates.findFirst({
+            where: eq(admissionFormTemplates.id, application.templateId)
+        });
 
         // Applicants who have paid their acceptance fee can never be moved out of 'admitted'
         if (application.acceptancePaymentStatus === 'paid') {
@@ -830,7 +837,7 @@ export async function updateAdmissionStatus(applicationId: number, status: any, 
             .where(eq(admissionApplicationsV2.id, applicationId));
         
         // Send email notification based on status
-        if (application?.template) {
+        if (template) {
             const formData = typeof application.data === 'string' ? JSON.parse(application.data || '{}') : (application.data || {});
             const applicantEmail = formData.email || "";
             const applicantName = formData.surname 
@@ -842,14 +849,14 @@ export async function updateAdmissionStatus(applicationId: number, status: any, 
             if (status === 'rejected' && applicantEmail) {
                 sendEmail(
                     applicantEmail,
-                    `Application Update – ${application.template.name}`,
-                    `<p>Dear ${applicantName},</p><p>We regret to inform you that your application to <strong>${application.template.name}</strong> was not successful${notes ? `: ${notes}` : '.'}</p>`
+                    `Application Update – ${template.name}`,
+                    `<p>Dear ${applicantName},</p><p>We regret to inform you that your application to <strong>${template.name}</strong> was not successful${notes ? `: ${notes}` : '.'}</p>`
                 ).catch((err: any) => console.error("Failed to send rejection email:", err));
             } else if (status === 'admitted' && applicantEmail) {
                 sendEmail(
                     applicantEmail,
-                    `Congratulations – Admission Offer – ${application.template.name}`,
-                    `<p>Dear ${applicantName},</p><p>Congratulations! You have been offered provisional admission to <strong>${application.template.name}</strong>. Please log in to your portal to proceed.</p>`
+                    `Congratulations – Admission Offer – ${template.name}`,
+                    `<p>Dear ${applicantName},</p><p>Congratulations! You have been offered provisional admission to <strong>${template.name}</strong>. Please log in to your portal to proceed.</p>`
                 ).catch((err: any) => console.error("Failed to send admitted notification:", err));
             }
         }
@@ -900,14 +907,19 @@ export async function getApplicantStatusData(applicationId: number) {
 export async function initiateAcceptancePaymentCheckout(applicationId: number) {
     try {
         const app = await db.query.admissionApplicationsV2.findFirst({
-            where: eq(admissionApplicationsV2.id, applicationId),
-            with: { template: true }
+            where: eq(admissionApplicationsV2.id, applicationId)
         });
 
-        if (!app || !app.template) return { success: false, error: "Application or Template not found" };
+        if (!app) return { success: false, error: "Application not found" };
 
-        let acceptanceFee = parseFloat(app.template.acceptanceFee || "0");
-        const idCardFee = parseFloat((app.template as any).idCardFee || "0");
+        const template = await db.query.admissionFormTemplates.findFirst({
+            where: eq(admissionFormTemplates.id, app.templateId)
+        });
+
+        if (!template) return { success: false, error: "Template not found" };
+
+        let acceptanceFee = parseFloat(template.acceptanceFee || "0");
+        const idCardFee = parseFloat(template.idCardFee || "0");
         let processingFee = 0;
 
         // Fetch processing fee specifically for acceptance fee using service type 'ACCEPTANCE_FEE'
@@ -1004,10 +1016,15 @@ export async function confirmAcceptancePayment(applicationId: number, reference:
         // Dispatch Admission Letter copy via Email
         try {
             const appData = await db.query.admissionApplicationsV2.findFirst({
-                where: eq(admissionApplicationsV2.id, applicationId),
-                with: { template: true }
+                where: eq(admissionApplicationsV2.id, applicationId)
             });
             if (appData) {
+                const template = await db.query.admissionFormTemplates.findFirst({
+                    where: eq(admissionFormTemplates.id, appData.templateId)
+                });
+                if (template) {
+                    (appData as any).template = template;
+                }
                 const formData = typeof appData.data === 'string' ? JSON.parse(appData.data || '{}') : (appData.data || {});
                 const email = formData.email;
                 const candidateName = `${formData.firstName || ''} ${formData.surname || formData.lastName || ''}`.trim() || 'Admitted Candidate';
@@ -1262,14 +1279,20 @@ export async function updateApplicantMatricNumber(applicationId: number, newMatr
 export async function initiateSchoolFeesCheckout(applicationId: number) {
     try {
         const app = await db.query.admissionApplicationsV2.findFirst({
-            where: eq(admissionApplicationsV2.id, applicationId),
-            with: { template: true }
+            where: eq(admissionApplicationsV2.id, applicationId)
         });
 
-        if (!app || !app.template) return { success: false, error: "Application not found" };
+        if (!app) return { success: false, error: "Application not found" };
+
+        const template = await db.query.admissionFormTemplates.findFirst({
+            where: eq(admissionFormTemplates.id, app.templateId)
+        });
+
+        if (!template) return { success: false, error: "Template not found" };
+
         if (app.acceptancePaymentStatus !== 'paid') return { success: false, error: "Acceptance Fee must be paid before School Fees." };
 
-        const isNd = app.template.level.toLowerCase().includes("nd") || app.template.level.toLowerCase().includes("diploma");
+        const isNd = template.level.toLowerCase().includes("nd") || template.level.toLowerCase().includes("diploma");
         const schoolFeesAmount = isNd ? 58500 : 68500;
         const processingFeeAmount = 2000;
         const totalAmount = schoolFeesAmount + processingFeeAmount;
@@ -1340,17 +1363,20 @@ export async function confirmSchoolFeesPayment(applicationId: number, reference:
 export async function finalizeStudentAdmission(applicationId: number) {
     try {
         const application = await db.query.admissionApplicationsV2.findFirst({
-            where: eq(admissionApplicationsV2.id, applicationId),
-            with: {
-                template: true
-            }
+            where: eq(admissionApplicationsV2.id, applicationId)
         });
 
         if (!application || application.status !== 'admitted') {
             return { success: false, error: "Application not eligible for registration." };
         }
 
-        const template = application.template;
+        const template = await db.query.admissionFormTemplates.findFirst({
+            where: eq(admissionFormTemplates.id, application.templateId)
+        });
+
+        if (!template) {
+            return { success: false, error: "Template not found." };
+        }
 
         // Check if acceptance fee is required and paid
         if (template.requireAcceptanceFee && application.acceptancePaymentStatus !== 'paid') {
