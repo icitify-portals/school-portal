@@ -1370,12 +1370,15 @@ export async function finalizeStudentAdmission(applicationId: number) {
         const year = new Date().getFullYear();
         const programmeType = (template.level.toLowerCase().includes("nd") || template.level.toLowerCase().includes("diploma")) ? "ND" : "HND";
         
-        // Look up programme from template's linked programmes
-        const templateProgs = await db.select({ programmeId: admissionTemplateProgrammes.programmeId })
-            .from(admissionTemplateProgrammes)
-            .where(eq(admissionTemplateProgrammes.templateId, template.id))
-            .limit(1);
-        const selectedProgrammeId = templateProgs[0]?.programmeId || null;
+        // Look up programme from application, fallback to template's linked programmes
+        let selectedProgrammeId = application.programmeId;
+        if (!selectedProgrammeId) {
+            const templateProgs = await db.select({ programmeId: admissionTemplateProgrammes.programmeId })
+                .from(admissionTemplateProgrammes)
+                .where(eq(admissionTemplateProgrammes.templateId, template.id))
+                .limit(1);
+            selectedProgrammeId = templateProgs[0]?.programmeId || null;
+        }
 
         let deptId: number | null = null;
         if (selectedProgrammeId) {
@@ -3254,6 +3257,7 @@ export async function changeApplicantProgramme(appId: number, departmentId: numb
         await db.update(admissionApplicationsV2)
             .set({ 
                 data: JSON.stringify(parsedData),
+                programmeId: programmeId,
                 admissionNotes: updatedNotes,
                 updatedAt: new Date()
             })

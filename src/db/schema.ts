@@ -5887,7 +5887,7 @@ export const admissionFormFieldsRelations = relations(admissionFormFields, ({ on
     }),
 }));
 
-export const admissionApplicationsV2Relations = relations(admissionApplicationsV2, ({ one }) => ({
+export const admissionApplicationsV2Relations = relations(admissionApplicationsV2, ({ one, many }) => ({
     template: one(admissionFormTemplates, {
         fields: [admissionApplicationsV2.templateId],
         references: [admissionFormTemplates.id],
@@ -5904,6 +5904,7 @@ export const admissionApplicationsV2Relations = relations(admissionApplicationsV
         fields: [admissionApplicationsV2.programmeId],
         references: [programmes.id],
     }),
+    results: many(admissionExamResults)
 }));
 
 export const admissionTemplateProgrammesRelations = relations(admissionTemplateProgrammes, ({ one }) => ({
