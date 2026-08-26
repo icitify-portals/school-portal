@@ -227,17 +227,19 @@ export default function ApplicantStatusPage() {
                                                 <Download className="w-5 h-5 text-slate-300" /> Letter Locked (Pay Acceptance Fee to Unlock)
                                             </Button>
                                         )}
-                                        {data.template.requireAcceptanceFee && data.acceptancePaymentStatus !== 'paid' ? (
+                                        {data.template.requireAcceptanceFee && data.acceptancePaymentStatus !== 'paid' && (
                                             <Button 
                                                 onClick={handleAcceptancePayment}
                                                 className="rounded-2xl bg-slate-900 hover:bg-indigo-600 text-white font-black px-8 py-6 flex gap-3 uppercase text-xs tracking-widest shadow-xl"
                                             >
                                                 <CreditCard className="w-5 h-5 text-emerald-400" /> Pay Acceptance Fee (₦{parseFloat(data.template.acceptanceFee).toLocaleString()})
                                             </Button>
-                                        ) : data.template.requireAcceptanceFee && data.acceptancePaymentStatus === 'paid' && !data.admissionNotes?.includes('Matric Number') ? (
+                                        )}
+
+                                        {(!data.template.requireAcceptanceFee || data.acceptancePaymentStatus === 'paid') && !data.admissionNotes?.includes('Matric Number') && (
                                             <div className="flex flex-col gap-4">
                                                 <div className="px-6 py-4 bg-emerald-50 rounded-2xl flex items-center gap-3 text-emerald-600 font-black uppercase text-[10px] tracking-widest italic">
-                                                    <CheckCircle2 className="w-4 h-4" /> Acceptance Fee Paid — Status: Confirmed Admitted
+                                                    <CheckCircle2 className="w-4 h-4" /> {data.template.requireAcceptanceFee ? 'Acceptance Fee Paid — Status: Confirmed Admitted' : 'Admitted — Acceptance Fee Not Required'}
                                                 </div>
                                                 <Button 
                                                     onClick={handleSchoolFeesPayment}
@@ -246,7 +248,9 @@ export default function ApplicantStatusPage() {
                                                     <CreditCard className="w-5 h-5" /> Pay School Fees & Processing Fee to Obtain Matric Number
                                                 </Button>
                                             </div>
-                                        ) : (
+                                        )}
+
+                                        {data.admissionNotes?.includes('Matric Number') && (
                                             <div className="px-6 py-4 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center gap-3 text-emerald-700 font-black uppercase text-[10px] tracking-widest italic shadow-sm">
                                                 <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Admission Confirmed & Registered — Matric Number Assigned
                                             </div>
