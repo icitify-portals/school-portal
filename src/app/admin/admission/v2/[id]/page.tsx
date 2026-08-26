@@ -1079,7 +1079,7 @@ export default function V2ApplicationDetailPage() {
                                             onClick={handleConfirmAcceptance}
                                             className="w-full rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-[10px] uppercase tracking-widest py-4"
                                         >
-                                            <CheckCircle2 className="w-4 h-4 mr-2" /> Confirm Acceptance Fee
+                                            <CheckCircle2 className="w-4 h-4 mr-2" /> Confirm Acceptance & ID Card Fee
                                         </Button>
                                     )}
                                 </div>

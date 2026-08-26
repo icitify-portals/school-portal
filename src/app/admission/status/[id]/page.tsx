@@ -224,7 +224,7 @@ export default function ApplicantStatusPage() {
                                                 disabled
                                                 className="rounded-2xl bg-slate-200 text-slate-400 font-black px-8 py-6 flex gap-3 uppercase text-xs tracking-widest cursor-not-allowed opacity-60"
                                             >
-                                                <Download className="w-5 h-5 text-slate-300" /> Letter Locked (Pay Acceptance Fee to Unlock)
+                                                <Download className="w-5 h-5 text-slate-300" /> Letter Locked (Pay Acceptance & ID Card Fee to Unlock)
                                             </Button>
                                         )}
                                         {data.template.requireAcceptanceFee && data.acceptancePaymentStatus !== 'paid' && (
@@ -232,14 +232,15 @@ export default function ApplicantStatusPage() {
                                                 onClick={handleAcceptancePayment}
                                                 className="rounded-2xl bg-slate-900 hover:bg-indigo-600 text-white font-black px-8 py-6 flex gap-3 uppercase text-xs tracking-widest shadow-xl"
                                             >
-                                                <CreditCard className="w-5 h-5 text-emerald-400" /> Pay Acceptance Fee (₦{parseFloat(data.template.acceptanceFee).toLocaleString()})
+                                                <CreditCard className="w-5 h-5 text-emerald-400" /> Pay Acceptance & ID Card Fee (₦{(parseFloat(data.template.acceptanceFee) + parseFloat(data.template.idCardFee || "0")).toLocaleString()})
                                             </Button>
                                         )}
 
                                         {(!data.template.requireAcceptanceFee || data.acceptancePaymentStatus === 'paid') && !data.admissionNotes?.includes('Matric Number') && (
                                             <div className="flex flex-col gap-4">
                                                 <div className="px-6 py-4 bg-emerald-50 rounded-2xl flex items-center gap-3 text-emerald-600 font-black uppercase text-[10px] tracking-widest italic">
-                                                    <CheckCircle2 className="w-4 h-4" /> {data.template.requireAcceptanceFee ? 'Acceptance Fee Paid — Status: Confirmed Admitted' : 'Admitted — Acceptance Fee Not Required'}
+                                                    <CheckCircle2 className="w-4 h-4" /> {data.template.requireAcceptanceFee ? 'Acceptance & ID Card Fee Paid — Status: Confirmed Admitted' : 'Admitted — Acceptance Fee Not Required'}
+
                                                 </div>
                                                 <Button 
                                                     onClick={handleSchoolFeesPayment}
