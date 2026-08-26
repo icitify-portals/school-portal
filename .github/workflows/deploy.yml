@@ -33,7 +33,9 @@ jobs:
             git pull origin main
 
             echo "=== BUILDING & RESTARTING CONTAINERS ==="
-            sudo docker compose -f compose.yml up -d --build school-portal-app school-portal-worker
+            # NOTE: no sudo — 'deploy' is in the docker group; sudo cannot prompt
+            # for a password inside GitHub Actions' non-interactive shell.
+            docker compose -f compose.yml up -d --build school-portal-app school-portal-worker
 
             echo "=== HEALTH CHECK (waiting for app to boot) ==="
             ok=0
