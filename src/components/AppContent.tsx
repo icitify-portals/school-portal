@@ -111,16 +111,21 @@ export function AppContent({ children, enabledModules }: { children: React.React
         );
     }
 
-    // Applicant pages have their own layout with embedded sidebar
-    if (pathname.startsWith("/applicant")) {
-        return <>{children}</>;
-    }
+    const userStatus = (session?.user as any)?.status;
+    const userRole = (session?.user as any)?.role;
 
-    if (pathname.startsWith("/guide/applicants")) {
+    // Applicant Portal unification: Ensure ALL applicant pages use the ApplicantSidebar
+    const isApplicantFlow = pathname.startsWith("/applicant") || 
+                            pathname.startsWith("/guide/applicants") ||
+                            (userRole === 'applicant' && !pathname.startsWith("/admin") && !pathname.startsWith("/staff"));
+
+    if (isApplicantFlow) {
         return (
-            <div className="min-h-screen bg-slate-950 flex flex-col md:flex-row">
-                <ApplicantSidebar />
-                <main className="flex-1 bg-slate-50 text-slate-900 min-w-0">
+            <div className="min-h-screen bg-slate-950 flex flex-col md:flex-row print:bg-white">
+                <div className="print:hidden z-50">
+                    <ApplicantSidebar />
+                </div>
+                <main className="flex-1 h-screen overflow-y-auto bg-slate-50 text-slate-900 min-w-0 print:p-0 print:overflow-visible print:bg-white">
                     {children}
                 </main>
             </div>
@@ -129,10 +134,6 @@ export function AppContent({ children, enabledModules }: { children: React.React
 
     const isAdminArea = pathname.startsWith("/admin");
     const isStaffArea = pathname.startsWith("/staff");
-
-    // Check if user has a restricted status
-    const userStatus = (session?.user as any)?.status;
-    const userRole = (session?.user as any)?.role;
     const isRestricted = userRole === 'student' && userStatus && userStatus !== 'active' && statusConfig[userStatus];
     const statusInfo = isRestricted ? statusConfig[userStatus] : null;
     const isBlocked = isRestricted && !isPathAllowed(pathname) && !isAdminArea && !isStaffArea;
