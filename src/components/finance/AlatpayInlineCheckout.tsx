@@ -156,27 +156,49 @@ export function AlatpayInlineCheckout({
         }
     };
 
+    useEffect(() => {
+        if (isScriptLoaded) {
+            // Auto-trigger payment modal to save an extra click
+            makePayment();
+        }
+    }, [isScriptLoaded]);
+
     return (
-        <button
-            onClick={makePayment}
-            disabled={!isScriptLoaded}
-            className={`w-full py-4 rounded-xl font-black text-lg transition-all shadow-xl flex items-center justify-center gap-2 ${
-                isScriptLoaded 
-                ? "bg-[#8A2132] hover:bg-[#6c1a27] text-white shadow-[#8A2132]/30" 
-                : "bg-slate-200 text-slate-400 cursor-not-allowed shadow-none"
-            }`}
-        >
-            {isScriptLoaded ? (
-                <>
-                    <span className="font-extrabold tracking-widest text-white mr-1">ALATPay</span>
-                    Pay ₦{amount.toLocaleString()}
-                </>
-            ) : (
-                <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    Loading...
-                </>
-            )}
-        </button>
+        <div className="fixed inset-0 z-[99999] bg-slate-900/80 backdrop-blur-md flex items-center justify-center p-4">
+            <div className="bg-white rounded-3xl p-8 max-w-sm w-full shadow-2xl flex flex-col items-center text-center space-y-6">
+                <div className="w-16 h-16 bg-rose-100 rounded-full flex items-center justify-center text-rose-600">
+                    <Loader2 className="w-8 h-8 animate-spin" />
+                </div>
+                <div>
+                    <h3 className="text-xl font-black text-slate-900">Connecting to ALATPay</h3>
+                    <p className="text-sm text-slate-500 mt-2 font-medium">Please complete your payment of ₦{amount.toLocaleString()} in the secure ALATPay window.</p>
+                </div>
+                
+                <button
+                    onClick={makePayment}
+                    disabled={!isScriptLoaded}
+                    className={`w-full py-4 rounded-xl font-black text-lg transition-all shadow-xl flex items-center justify-center gap-2 ${
+                        isScriptLoaded 
+                        ? "bg-[#8A2132] hover:bg-[#6c1a27] text-white shadow-[#8A2132]/30" 
+                        : "bg-slate-200 text-slate-400 cursor-not-allowed shadow-none"
+                    }`}
+                >
+                    {isScriptLoaded ? (
+                        <>
+                            <span className="font-extrabold tracking-widest text-white mr-1">ALATPay</span>
+                            Pay ₦{amount.toLocaleString()}
+                        </>
+                    ) : (
+                        <>
+                            <Loader2 className="w-5 h-5 animate-spin" />
+                            Loading...
+                        </>
+                    )}
+                </button>
+                <button onClick={onClose} className="text-slate-400 font-bold text-sm hover:text-slate-600">
+                    Cancel Payment
+                </button>
+            </div>
+        </div>
     );
 }
