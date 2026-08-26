@@ -34,9 +34,10 @@ import { sendEmail } from "@/lib/mail";
 import { generateFormNumber, generateFormHash } from "@/lib/form-number";
 import { storage } from "@/lib/storage";
 import { hash, compare } from "bcryptjs";
-import { writeFile, mkdir } from "fs/promises";
+import { writeFile, mkdir, readFile } from "fs/promises";
 import path from "path";
 import { randomUUID } from "crypto";
+import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
 
 const ADMIN_ROLES = [
     'admin', 'superadmin', 'icitify_dev', 'dvc', 'vc',
@@ -1066,34 +1067,88 @@ export async function generateBulkApplicantFilesZip(applicationIds: number[]) {
             return { success: false, error: "No matching applications found." };
         }
 
+        // Lazy S3 client — private Wasabi bucket requires authenticated GetObject;
+        // raw fetch() returns 403 which silently produced empty archives.
+        let _s3: S3Client | null = null;
+        const getS3 = (): S3Client => {
+            if (!_s3) {
+                _s3 = new S3Client({
+                    region: process.env.WASABI_REGION || "eu-west-1",
+                    endpoint: process.env.WASABI_ENDPOINT || `https://s3.${process.env.WASABI_REGION || "eu-west-1"}.wasabisys.com`,
+                    credentials: {
+                        accessKeyId: process.env.WASABI_ACCESS_KEY_ID || "",
+                        // Production historically used WASABI_SECRET; support both spellings.
+                        secretAccessKey: process.env.WASABI_SECRET_ACCESS_KEY || process.env.WASABI_SECRET || "",
+                    },
+                    forcePathStyle: true,
+                });
+            }
+            return _s3;
+        };
+
+        const S3_BUCKET = process.env.WASABI_BUCKET_NAME || "fssbucket";
+
+        const extFromUrlOrType = (urlStr: string, contentType?: string | null): string => {
+            const u = urlStr.toLowerCase().split('?')[0];
+            if (contentType?.includes('pdf') || u.endsWith('.pdf')) return 'pdf';
+            if (contentType?.includes('png') || u.endsWith('.png')) return 'png';
+            if (contentType?.includes('webp') || u.endsWith('.webp')) return 'webp';
+            return 'jpg';
+        };
+
         const helperFetchBuffer = async (urlStr: string): Promise<{ buffer: Buffer; ext: string } | null> => {
             if (!urlStr) return null;
             try {
-                if (urlStr.startsWith('data:image/')) {
-                    const matches = urlStr.match(/^data:image\/([a-zA-Z0-9]+);base64,(.+)$/);
-                    if (matches && matches[2]) {
-                        const ext = matches[1].toLowerCase() === 'jpeg' ? 'jpg' : matches[1].toLowerCase();
-                        return { buffer: Buffer.from(matches[2], 'base64'), ext };
+                // 1. Inline base64 payloads
+                if (urlStr.startsWith('data:image/') || urlStr.startsWith('data:application/')) {
+                    const matches = urlStr.match(/^data:[^;]+;base64,(.+)$/);
+                    if (matches && matches[1]) {
+                        const isPdf = urlStr.startsWith('data:application/pdf');
+                        return { buffer: Buffer.from(matches[1], 'base64'), ext: isPdf ? 'pdf' : 'jpg' };
                     }
                 }
+
+                // 2. Local uploads served from /public
+                if (urlStr.startsWith('/uploads/') || urlStr.startsWith('/signatures/')) {
+                    const filePath = path.join(process.cwd(), 'public', urlStr);
+                    const buffer = await readFile(filePath);
+                    return { buffer, ext: extFromUrlOrType(urlStr) };
+                }
+
                 if (urlStr.startsWith('http://') || urlStr.startsWith('https://')) {
-                    const resp = await fetch(urlStr);
+                    // 3. Private Wasabi/S3 objects — authenticated GetObject
+                    if (urlStr.includes('wasabisys.com') || urlStr.includes('amazonaws.com')) {
+                        const marker = `/${S3_BUCKET}/`;
+                        const idx = urlStr.indexOf(marker);
+                        if (idx !== -1) {
+                            const key = decodeURIComponent(urlStr.slice(idx + marker.length).split('?')[0]);
+                            const response = await getS3().send(new GetObjectCommand({
+                                Bucket: S3_BUCKET,
+                                Key: key,
+                            }));
+                            const bytes = await response.Body?.transformToByteArray?.();
+                            if (bytes) {
+                                const contentType = (response as { ContentType?: string }).ContentType;
+                                return { buffer: Buffer.from(bytes), ext: extFromUrlOrType(key, contentType) };
+                            }
+                        }
+                    }
+                    // 4. Any other public URL
+                    const resp = await fetch(urlStr, { signal: AbortSignal.timeout(20000) });
                     if (resp.ok) {
                         const arrayBuf = await resp.arrayBuffer();
                         const contentType = resp.headers.get('content-type') || '';
-                        let ext = 'bin';
-                        if (contentType.includes('pdf') || urlStr.toLowerCase().includes('.pdf')) ext = 'pdf';
-                        else if (contentType.includes('jpeg') || urlStr.toLowerCase().includes('.jpg') || urlStr.toLowerCase().includes('.jpeg')) ext = 'jpg';
-                        else if (contentType.includes('png') || urlStr.toLowerCase().includes('.png')) ext = 'png';
-                        else if (contentType.includes('webp') || urlStr.toLowerCase().includes('.webp')) ext = 'webp';
-                        return { buffer: Buffer.from(arrayBuf), ext };
+                        return { buffer: Buffer.from(arrayBuf), ext: extFromUrlOrType(urlStr, contentType) };
                     }
+                    console.warn(`[bulk-zip] Skipped ${urlStr.slice(0, 90)} — HTTP ${resp.status}`);
                 }
-            } catch (err) {
-                console.error("Failed to fetch payload for URL:", urlStr, err);
+            } catch (err: any) {
+                console.error(`[bulk-zip] Failed to fetch payload: ${urlStr.slice(0, 90)} —`, err?.message || err);
             }
             return null;
         };
+
+        let addedFiles = 0;
 
         for (const app of applications) {
             const formData = typeof app.data === 'string' ? JSON.parse(app.data || '{}') : (app.data || {});
@@ -1106,11 +1161,12 @@ export async function generateBulkApplicantFilesZip(applicationIds: number[]) {
             const fileTargets = [
                 {
                     key: 'passport_photo',
-                    url: app.applicantPhoto || formData["Passport Photograph"] || formData["Passport Photo"] || formData["Passport"] || formData["Photo"]
+                    // Real submissions store the camera capture under "Photograph/camera"
+                    url: app.applicantPhoto || formData["Photograph/camera"] || formData["Passport Photograph"] || formData["Passport Photo"] || formData["Passport"] || formData["Photo"]
                 },
                 {
                     key: 'applicant_signature',
-                    url: formData["Signature"] || formData["Applicant Signature"] || formData["Signature Image"]
+                    url: formData["Signature"] || formData["Applicant Signature"] || formData["Signature Image"] || formData.signature
                 },
                 {
                     key: 'birth_certificate',
@@ -1132,16 +1188,25 @@ export async function generateBulkApplicantFilesZip(applicationIds: number[]) {
                     if (fetched) {
                         const filename = `${folderPath}/${item.key}.${fetched.ext}`;
                         zip.addFile(filename, fetched.buffer);
+                        addedFiles++;
                     }
                 }
             }
         }
 
+        if (addedFiles === 0) {
+            return {
+                success: false,
+                error: "No downloadable files found for the selected applicants (no photos, signatures or documents on record).",
+            };
+        }
+
+        // Guard against runaway archive sizes for very large selections
         const zipBuffer = zip.toBuffer();
         const zipBase64 = zipBuffer.toString("base64");
         const filename = `Applicant_Files_${new Date().toISOString().split('T')[0]}.zip`;
 
-        return { success: true, filename, zipBase64 };
+        return { success: true, filename, zipBase64, addedFiles };
     } catch (error: any) {
         console.error("Failed to generate bulk applicant files ZIP:", error);
         return { success: false, error: error.message || "Failed to generate bulk ZIP archive" };

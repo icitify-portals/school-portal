@@ -293,7 +293,7 @@ function AdminV2ApplicationsContent() {
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
-                toast.success("ZIP Archive downloaded successfully!", { id: "zip-toast" });
+                toast.success(`ZIP downloaded — ${res.addedFiles ?? '?'} file(s) from ${targetIds.length} applicant(s)`, { id: "zip-toast" });
             } else {
                 toast.error(res.error || "Failed to generate ZIP archive", { id: "zip-toast" });
             }
