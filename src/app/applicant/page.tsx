@@ -59,29 +59,29 @@ export default async function ApplicantDashboard() {
     const anyApp = appsByTemplate.size > 0;
 
     return (
-        <div className="p-6 md:p-10 max-w-7xl mx-auto space-y-6">
+        <div className="p-4 md:p-6 lg:p-10 max-w-7xl mx-auto space-y-4 md:space-y-6">
             
             {/* Bento Identity Header */}
-            <div className="bg-slate-900 rounded-[2.5rem] p-8 md:p-12 text-white shadow-2xl relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-8">
+            <div className="bg-slate-900 rounded-[2rem] md:rounded-[2.5rem] p-5 md:p-8 lg:p-12 text-white shadow-2xl relative overflow-hidden flex flex-col md:flex-row items-start md:items-center justify-between gap-4 md:gap-8">
                 <div className="absolute -right-20 -bottom-20 opacity-5 blur-2xl">
                     <Sparkles className="w-[400px] h-[400px]" />
                 </div>
-                <div className="relative z-10 text-center md:text-left">
-                    <div className="inline-flex items-center justify-center px-4 py-1.5 rounded-full bg-white/10 border border-white/20 text-xs font-black uppercase tracking-widest text-slate-300 mb-4">
+                <div className="relative z-10 text-left md:text-left">
+                    <div className="inline-flex items-center justify-center px-3 py-1 rounded-full bg-white/10 border border-white/20 text-[10px] font-black uppercase tracking-widest text-slate-300 mb-3">
                         Applicant Portal
                     </div>
-                    <h2 className="text-4xl md:text-5xl font-black tracking-tighter mb-2">Welcome, {session?.user?.name}</h2>
-                    <p className="text-slate-400 font-medium">Track your admission applications and requirements here.</p>
+                    <h2 className="text-2xl md:text-4xl lg:text-5xl font-black tracking-tighter mb-1 leading-tight">Welcome, {session?.user?.name}</h2>
+                    <p className="text-slate-400 text-sm font-medium">Track your admission applications and requirements here.</p>
                 </div>
-                <div className="relative z-10 flex flex-col sm:flex-row items-center gap-3">
-                    <Link href="/guide/applicants">
-                        <Button className="bg-indigo-600 hover:bg-indigo-500 text-white border-none font-bold rounded-xl px-4 py-3 text-xs uppercase tracking-widest flex items-center gap-2 w-full sm:w-auto">
-                            <FileText className="w-4 h-4" /> Application Guide
+                <div className="relative z-10 flex flex-row sm:flex-row items-center gap-2 w-full md:w-auto">
+                    <Link href="/guide/applicants" className="flex-1 md:flex-none">
+                        <Button className="bg-indigo-600 hover:bg-indigo-500 text-white border-none font-bold rounded-xl px-3 py-2 text-[10px] uppercase tracking-widest flex items-center gap-1.5 w-full">
+                            <FileText className="w-3.5 h-3.5 shrink-0" /> Application Guide
                         </Button>
                     </Link>
-                    <Link href="https://fssibadan.edu.ng" target="_blank">
-                        <Button variant="outline" className="border-white/20 text-white hover:bg-white/10 font-bold rounded-xl px-4 py-3 text-xs uppercase tracking-widest flex items-center gap-2 w-full sm:w-auto">
-                            <Globe className="w-4 h-4" /> Main Website
+                    <Link href="https://fssibadan.edu.ng" target="_blank" className="flex-1 md:flex-none">
+                        <Button variant="outline" className="border-white/20 text-white hover:bg-white/10 font-bold rounded-xl px-3 py-2 text-[10px] uppercase tracking-widest flex items-center gap-1.5 w-full">
+                            <Globe className="w-3.5 h-3.5 shrink-0" /> Main Website
                         </Button>
                     </Link>
                 </div>
@@ -91,25 +91,27 @@ export default async function ApplicantDashboard() {
             {admittedApp ? (
                 <Link
                     href={`/admission/status/${admittedApp.id}`}
-                    className="block bg-gradient-to-r from-emerald-600 to-emerald-500 rounded-[2.5rem] p-8 md:p-10 text-white shadow-2xl relative overflow-hidden hover:shadow-emerald-200/50 transition-all group"
+                    className="block bg-gradient-to-r from-emerald-600 to-emerald-500 rounded-[2rem] md:rounded-[2.5rem] p-5 md:p-8 lg:p-10 text-white shadow-2xl relative overflow-hidden hover:shadow-emerald-200/50 transition-all group"
                 >
                     <div className="absolute -right-16 -top-16 opacity-10">
-                        <GraduationCap className="w-[300px] h-[300px]" />
+                        <GraduationCap className="w-[200px] md:w-[300px] h-[200px] md:h-[300px]" />
                     </div>
-                    <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-                        <div className="flex items-center gap-5">
-                            <div className="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center shrink-0">
-                                <PartyPopper className="w-7 h-7" />
+                    <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div className="flex items-start md:items-center gap-4">
+                            <div className="w-11 h-11 md:w-14 md:h-14 bg-white/20 rounded-xl md:rounded-2xl flex items-center justify-center shrink-0">
+                                <PartyPopper className="w-5 h-5 md:w-7 md:h-7" />
                             </div>
-                            <div>
-                                <p className="text-[10px] font-black uppercase tracking-[0.25em] text-emerald-100">Admission Status</p>
-                                <h3 className="text-2xl md:text-3xl font-black tracking-tighter uppercase italic">Congratulations — You&apos;ve Been Offered Admission!</h3>
-                                <p className="text-emerald-50 text-xs font-bold mt-1">
+                            <div className="min-w-0">
+                                <p className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.2em] text-emerald-100">Admission Status</p>
+                                <h3 className="text-lg md:text-2xl lg:text-3xl font-black tracking-tight uppercase italic leading-tight">
+                                    Congratulations — You&apos;ve Been Offered Admission!
+                                </h3>
+                                <p className="text-emerald-50 text-xs font-bold mt-1 leading-snug">
                                     Click to view your offer, pay your acceptance fee and download your admission letter.
                                 </p>
                             </div>
                         </div>
-                        <ArrowRight className="w-8 h-8 shrink-0 group-hover:translate-x-2 transition-transform" />
+                        <ArrowRight className="w-6 h-6 md:w-8 md:h-8 shrink-0 group-hover:translate-x-2 transition-transform self-end md:self-auto" />
                     </div>
                 </Link>
             ) : anyApp ? (

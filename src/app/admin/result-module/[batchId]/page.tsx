@@ -235,18 +235,21 @@ export default function BatchDetailPage() {
     Papa.parse(file, {
       header: true,
       skipEmptyLines: true,
-      transformHeader: (h) => (h ?? "").replace(/^\uFEFF/, "").trim(),
+      // Strip BOM, surrounding quotes, and extra whitespace Google Sheets may add
+      transformHeader: (h) => (h ?? "").replace(/^\uFEFF/, "").replace(/^["']|["']$/g, "").trim(),
       complete: (res) => {
         const meta = res.meta as any;
         const headers = (meta.fields || []) as string[];
         const errors: string[] = [];
         const rawRows = res.data as any[];
 
-        // Locate the student identifier column by alias (BOM/whitespace already stripped via transformHeader)
+        // Locate the student identifier column by alias (BOM/whitespace/quotes already stripped)
         const ID_ALIASES = new Set([
           "matric_number", "matric no", "matric_no", "matricnumber", "matric no.",
           "matric", "mat number", "mat_number", "admission_number", "admission no",
-          "admissionno", "student_number", "student no",
+          "admissionno", "student_number", "student no", "matric number",
+          "matriculation number", "matriculation no", "matric.no", "mat.no",
+          "reg number", "reg_number", "regno", "reg no",
         ]);
         const idHeader = headers.find(h => ID_ALIASES.has(h.toLowerCase()));
 
@@ -365,7 +368,9 @@ export default function BatchDetailPage() {
       }),
     });
 
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    // Prepend BOM so Excel / Google Sheets opens the file with correct UTF-8 encoding
+    const BOM = "\uFEFF";
+    const blob = new Blob([BOM + csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
