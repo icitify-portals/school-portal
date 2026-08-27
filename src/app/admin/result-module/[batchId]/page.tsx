@@ -15,6 +15,8 @@ import {
   createStudent,
   getProgrammesList,
   getDepartmentsList,
+  getFacultiesList,
+  getResultTemplateStudents,
   bulkImportStudents,
   updateStudentResult,
   deleteStudentResult,
@@ -78,6 +80,23 @@ export default function BatchDetailPage() {
   const [studentCsvFile, setStudentCsvFile] = useState<File | null>(null);
   const [importingStudents, setImportingStudents] = useState(false);
   const [studentImportResult, setStudentImportResult] = useState<any>(null);
+
+  // Result template download modal
+  const [showTemplateModal, setShowTemplateModal] = useState(false);
+  const [templateScope, setTemplateScope] = useState<"all" | "faculty" | "department" | "programme">("all");
+  const [templateFacultyId, setTemplateFacultyId] = useState("");
+  const [templateDeptId, setTemplateDeptId] = useState("");
+  const [templateProgrammeId, setTemplateProgrammeId] = useState("");
+  const [templateFaculties, setTemplateFaculties] = useState<any[]>([]);
+  const [templateDepartments, setTemplateDepartments] = useState<any[]>([]);
+  const [templateProgrammes, setTemplateProgrammes] = useState<any[]>([]);
+  const [templateCount, setTemplateCount] = useState<number | null>(null);
+  const [templateTruncated, setTemplateTruncated] = useState(false);
+  const [templateLoading, setTemplateLoading] = useState(false);
+  const [templateDownloading, setTemplateDownloading] = useState(false);
+  const [templateIncludeName, setTemplateIncludeName] = useState(true);
+  const [templateCourseCodes, setTemplateCourseCodes] = useState<string[]>([]);
+  const [templateCoursePick, setTemplateCoursePick] = useState("");
 
   // Edit Result record state
   const [editingResult, setEditingResult] = useState<{ id: number; studentName: string; courseCode: string; courseName: string; score: string; creditLoad: string } | null>(null);
@@ -231,7 +250,8 @@ export default function BatchDetailPage() {
           return;
         }
 
-        const courseColumns = headers.slice(1).filter(Boolean);
+        const NON_COURSE_COLUMNS = new Set(["name", "student_name", "full_name", "surname", "programme"]);
+        const courseColumns = headers.slice(1).filter(h => h && !NON_COURSE_COLUMNS.has(h.toLowerCase().trim()));
         if (courseColumns.length === 0) {
           errors.push("No course code columns found (add columns after 'matric_number')");
         }
@@ -255,6 +275,82 @@ export default function BatchDetailPage() {
         setBulkErrors(errors);
       },
     });
+  }
+
+  const templateFilters = useCallback(() => {
+    const f: any = {};
+    if (templateScope === "faculty" && templateFacultyId) f.facultyId = Number(templateFacultyId);
+    else if (templateScope === "department" && templateDeptId) f.departmentId = Number(templateDeptId);
+    else if (templateScope === "programme" && templateProgrammeId) f.programmeId = Number(templateProgrammeId);
+    return f;
+  }, [templateScope, templateFacultyId, templateDeptId, templateProgrammeId]);
+
+  useEffect(() => {
+    if (!showTemplateModal) return;
+    let cancelled = false;
+    const t = setTimeout(async () => {
+      setTemplateLoading(true);
+      const res = await getResultTemplateStudents(templateFilters());
+      if (cancelled) return;
+      setTemplateCount(res.total ?? null);
+      setTemplateTruncated(res.truncated ?? false);
+      setTemplateLoading(false);
+    }, 300);
+    return () => { cancelled = true; clearTimeout(t); };
+  }, [showTemplateModal, templateFilters]);
+
+  function openTemplateModal() {
+    setShowTemplateModal(true);
+    setTemplateCount(null);
+    setTemplateTruncated(false);
+    Promise.all([getFacultiesList(), getDepartmentsList(), getProgrammesList()]).then(([f, d, p]) => {
+      setTemplateFaculties(f.data || []);
+      setTemplateDepartments(d.data || []);
+      setTemplateProgrammes(p.data || []);
+    });
+  }
+
+  function closeTemplateModal() {
+    setShowTemplateModal(false);
+    setTemplateCourseCodes([]);
+    setTemplateCoursePick("");
+    setTemplateScope("all");
+    setTemplateFacultyId("");
+    setTemplateDeptId("");
+    setTemplateProgrammeId("");
+    setTemplateCount(null);
+  }
+
+  async function handleDownloadTemplate() {
+    setTemplateDownloading(true);
+    const res = await getResultTemplateStudents(templateFilters());
+    setTemplateDownloading(false);
+    if (!res.success) return alert("Error: " + res.error);
+    const studentRows = (res.data || []) as any[];
+    if (!studentRows.length) return alert("No students found for the selected scope.");
+
+    const headers = ["matric_number"];
+    if (templateIncludeName) headers.push("name");
+    if (templateCourseCodes.length > 0) headers.push(...templateCourseCodes);
+
+    const csv = Papa.unparse({
+      fields: headers,
+      data: studentRows.map(s => {
+        const r: any = { matric_number: s.matricNumber };
+        if (templateIncludeName) r.name = s.name;
+        for (const cc of templateCourseCodes) r[cc] = "";
+        return r;
+      }),
+    });
+
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "results_template.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+    setShowTemplateModal(false);
   }
 
   async function handleBulkUpload() {
@@ -608,12 +704,10 @@ export default function BatchDetailPage() {
                     <p className="text-xs text-blue-300 font-semibold mb-1">CSV Format (Pivot)</p>
                     <p className="text-xs text-slate-400 font-mono">matric_number, COURSE_CODE_1, COURSE_CODE_2, ...</p>
                     <p className="text-xs text-slate-500 mt-1">First column = matric number, subsequent columns = course codes with scores as cell values</p>
-                    <a
-                      href="data:text/csv;charset=utf-8,matric_number,CSC101,MTH101,GST101%0A180404022,75,82,68%0A180404023,60,71,74%0A180404024,88,,70"
-                      download="results_template.csv"
+                    <button type="button" onClick={openTemplateModal}
                       className="inline-block mt-2 text-xs text-blue-400 hover:text-blue-300 underline">
                       Download Template
-                    </a>
+                    </button>
                   </div>
 
                   {/* File Upload */}
@@ -698,6 +792,115 @@ export default function BatchDetailPage() {
                     {uploadingBulk ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
                     Upload CSV Results
                   </button>
+
+                  {/* Template Download Modal */}
+                  {showTemplateModal && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={closeTemplateModal}>
+                      <div className="bg-slate-900 border border-white/10 rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl" onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
+                          <div>
+                            <h3 className="text-white font-bold flex items-center gap-2"><FileUp className="w-4 h-4 text-blue-400" /> Download Result Template</h3>
+                            <p className="text-xs text-slate-400 mt-0.5">Pre-filled with registered students for this scope</p>
+                          </div>
+                          <button type="button" onClick={closeTemplateModal} className="text-slate-400 hover:text-white"><X className="w-5 h-5" /></button>
+                        </div>
+
+                        <div className="p-5 space-y-4">
+                          <div className="grid grid-cols-2 gap-2">
+                            {(["all", "faculty", "department", "programme"] as const).map(scope => (
+                              <button key={scope} type="button"
+                                onClick={() => setTemplateScope(scope)}
+                                className={`py-2 rounded-lg text-xs font-semibold border transition-colors ${templateScope === scope ? "bg-blue-600/30 border-blue-500/40 text-blue-300" : "bg-white/5 border-white/10 text-slate-400 hover:border-white/20"}`}>
+                                {scope === "all" ? "All Students" : scope[0].toUpperCase() + scope.slice(1)}
+                              </button>
+                            ))}
+                          </div>
+
+                          {templateScope === "faculty" && (
+                            <div>
+                              <label className="text-xs font-bold text-slate-500 uppercase">Faculty</label>
+                              <select value={templateFacultyId} onChange={e => setTemplateFacultyId(e.target.value)}
+                                className="mt-1 w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-400">
+                                <option value="">Select faculty...</option>
+                                {templateFaculties.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
+                              </select>
+                            </div>
+                          )}
+
+                          {templateScope === "department" && (
+                            <div>
+                              <label className="text-xs font-bold text-slate-500 uppercase">Department</label>
+                              <select value={templateDeptId} onChange={e => setTemplateDeptId(e.target.value)}
+                                className="mt-1 w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-400">
+                                <option value="">Select department...</option>
+                                {templateDepartments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                              </select>
+                            </div>
+                          )}
+
+                          {templateScope === "programme" && (
+                            <div>
+                              <label className="text-xs font-bold text-slate-500 uppercase">Programme</label>
+                              <select value={templateProgrammeId} onChange={e => setTemplateProgrammeId(e.target.value)}
+                                className="mt-1 w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-400">
+                                <option value="">Select programme...</option>
+                                {templateProgrammes.map(p => <option key={p.id} value={p.id}>{p.name}{p.department?.name ? ` (${p.department.name})` : ""}</option>)}
+                              </select>
+                            </div>
+                          )}
+
+                          <div className="bg-white/5 border border-white/10 rounded-lg px-4 py-3 flex items-center justify-between">
+                            <span className="text-xs text-slate-400 font-semibold uppercase tracking-wide">Students in template</span>
+                            <span className="text-sm font-bold text-white">
+                              {templateLoading ? <Loader2 className="w-4 h-4 animate-spin text-blue-400" /> : templateCount === null ? "—" : templateCount.toLocaleString()}
+                            </span>
+                          </div>
+                          {templateTruncated && (
+                            <p className="text-xs text-amber-400/90 border border-amber-500/20 bg-amber-500/10 rounded-lg px-3 py-2">
+                              Large selection — capped at 5,000 rows. Narrow the scope to include everyone.
+                            </p>
+                          )}
+
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" checked={templateIncludeName} onChange={e => setTemplateIncludeName(e.target.checked)} className="rounded bg-white/10 border-white/20 accent-blue-500" />
+                            <span className="text-xs text-slate-300">Include student name column (ignored on upload)</span>
+                          </label>
+
+                          <div>
+                            <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Course columns (optional)</label>
+                            <select value={templateCoursePick} onChange={e => {
+                              const v = e.target.value;
+                              if (v && !templateCourseCodes.includes(v)) setTemplateCourseCodes([...templateCourseCodes, v]);
+                              setTemplateCoursePick("");
+                            }}
+                              className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-400">
+                              <option value="">Add course code...</option>
+                              {courses.filter((c: any) => !templateCourseCodes.includes(c.code)).map((c: any) => (
+                                <option key={c.id} value={c.code}>{c.code} — {c.name}</option>
+                              ))}
+                            </select>
+                            {templateCourseCodes.length > 0 && (
+                              <div className="flex flex-wrap gap-1.5 mt-2">
+                                {templateCourseCodes.map(cc => (
+                                  <span key={cc} className="inline-flex items-center gap-1 bg-blue-600/20 border border-blue-500/30 text-blue-300 text-xs font-mono rounded-full px-2.5 py-1">
+                                    {cc}
+                                    <button type="button" onClick={() => setTemplateCourseCodes(templateCourseCodes.filter(x => x !== cc))} className="hover:text-white"><X className="w-3 h-3" /></button>
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+
+                          <button type="button" onClick={handleDownloadTemplate} disabled={templateLoading || (templateCount !== null && templateCount === 0)}
+                            className="w-full py-2.5 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-sm font-semibold disabled:opacity-60 flex items-center justify-center gap-2 hover:opacity-90 transition-opacity">
+                            {templateDownloading ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileUp className="w-4 h-4" />}
+                            Download Template ({templateCount === null ? "…" : templateCount.toLocaleString()} students)
+                          </button>
+                          <p className="text-[11px] text-slate-500 text-center">Fill course score columns, remove the name column if unused, then upload the CSV above.</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

@@ -5,8 +5,9 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Users, Plus, Trash2, Edit } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import Papa from "papaparse";
 import { getStudents } from "@/actions/students";
-import { deleteStudentRm, createStudentRm, updateStudentRm } from "@/actions/result-module";
+import { getResultTemplateStudents, deleteStudentRm, createStudentRm, updateStudentRm } from "@/actions/result-module";
 
 export default function ResultModuleStudentsPage() {
     const [studentsList, setStudentsList] = useState<any[]>([]);
@@ -18,6 +19,27 @@ export default function ResultModuleStudentsPage() {
         name: "",
         matricNumber: "",
     });
+    const [downloadingList, setDownloadingList] = useState(false);
+
+    const handleDownloadList = async () => {
+        setDownloadingList(true);
+        const res = await getResultTemplateStudents({});
+        setDownloadingList(false);
+        if (!res.success) return alert("Error: " + res.error);
+        const rows = (res.data || []) as any[];
+        if (!rows.length) return alert("No students found in the system.");
+        const csv = Papa.unparse({
+            fields: ["matric_number", "name", "programme"],
+            data: rows.map(s => ({ matric_number: s.matricNumber, name: s.name, programme: s.programme })),
+        });
+        const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "student_list.csv";
+        a.click();
+        URL.revokeObjectURL(url);
+    };
 
     useEffect(() => {
         fetchStudents();
@@ -67,16 +89,26 @@ export default function ResultModuleStudentsPage() {
                         </h1>
                         <p className="text-slate-400 mt-2">Manage student accounts and matriculation numbers.</p>
                     </div>
-                    <Button 
-                        onClick={() => {
-                            setFormData({ name: "", matricNumber: "" });
-                            setIsAdding(!isAdding);
-                            setEditingStudent(null);
-                        }}
-                        className="bg-indigo-600 hover:bg-indigo-700"
-                    >
-                        {isAdding ? "Cancel" : <><Plus className="w-4 h-4 mr-2" /> Add Student</>}
-                    </Button>
+                    <div className="flex items-center gap-3">
+                        <Button
+                            onClick={handleDownloadList}
+                            disabled={downloadingList}
+                            variant="outline"
+                            className="border-white/20 text-white hover:bg-white/10 hover:text-white"
+                        >
+                            {downloadingList ? "Downloading..." : "Download Student List"}
+                        </Button>
+                        <Button 
+                            onClick={() => {
+                                setFormData({ name: "", matricNumber: "" });
+                                setIsAdding(!isAdding);
+                                setEditingStudent(null);
+                            }}
+                            className="bg-indigo-600 hover:bg-indigo-700"
+                        >
+                            {isAdding ? "Cancel" : <><Plus className="w-4 h-4 mr-2" /> Add Student</>}
+                        </Button>
+                    </div>
                 </div>
 
                 {(isAdding || editingStudent) && (

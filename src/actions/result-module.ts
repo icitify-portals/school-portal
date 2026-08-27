@@ -16,7 +16,7 @@ import {
   programmes,
   departments,
 } from "@/db/schema";
-import { eq, inArray, and, like, or, sql } from "drizzle-orm";
+import { eq, inArray, and, like, or, sql, isNotNull } from "drizzle-orm";
 import {
   resolveGrade,
   publishResultBatch,
@@ -632,6 +632,76 @@ export async function getDepartmentsList() {
   try {
     const d = await db.query.departments.findMany();
     return { success: true, data: d };
+  } catch (e: any) {
+    return { success: false, error: e.message };
+  }
+}
+
+export async function getFacultiesList() {
+  try {
+    const f = await db.query.faculties.findMany();
+    return { success: true, data: f };
+  } catch (e: any) {
+    return { success: false, error: e.message };
+  }
+}
+
+// ──────────────────────────────────────────────
+// RESULT UPLOAD TEMPLATE (downloadable roster)
+// ──────────────────────────────────────────────
+
+export async function getResultTemplateStudents(filters: {
+  programmeId?: number;
+  departmentId?: number;
+  facultyId?: number;
+  all?: boolean;
+}) {
+  try {
+    const allowed = await hasRole("admin") || await hasRole("superadmin") || await hasRole("registrar") || await hasRole("record_officer") || await hasPermission("result_module.manage");
+    if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to download result template" };
+
+    const queryConditions: any[] = [];
+
+    if (filters.programmeId) {
+      queryConditions.push(eq(students.programmeId, filters.programmeId));
+    } else if (filters.departmentId) {
+      queryConditions.push(eq(students.deptId, filters.departmentId));
+    } else if (filters.facultyId) {
+      const depts = await db.query.departments.findMany({
+        where: eq(departments.facultyId, filters.facultyId),
+        columns: { id: true },
+      });
+      const deptIds = depts.map(d => d.id);
+      queryConditions.push(deptIds.length > 0 ? inArray(students.deptId, deptIds) : eq(students.id, 0));
+    }
+
+    // Only students with a matric/admission number can be matched on upload
+    queryConditions.push(or(isNotNull(students.matricNumber), isNotNull(students.admissionNumber)));
+
+    const matchingStudents = await db.query.students.findMany({
+      where: queryConditions.length > 0 ? and(...queryConditions) : undefined,
+      with: {
+        user: true,
+        programme: true,
+      },
+      orderBy: (s, { asc }) => [asc(s.matricNumber)],
+    });
+
+    const rows = matchingStudents.map(s => ({
+      matricNumber: s.matricNumber || s.admissionNumber || "",
+      name: s.user?.name || `${s.firstName || ""} ${s.lastName || ""}`.trim() || "",
+      programme: s.programme?.name || "",
+    }));
+
+    const MAX_ROWS = 5000;
+    const truncated = rows.length > MAX_ROWS;
+
+    return {
+      success: true,
+      data: truncated ? rows.slice(0, MAX_ROWS) : rows,
+      total: rows.length,
+      truncated,
+    };
   } catch (e: any) {
     return { success: false, error: e.message };
   }
