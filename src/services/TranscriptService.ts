@@ -111,7 +111,7 @@ export class TranscriptService {
                 .from(enrollments)
                 .innerJoin(students, eq(enrollments.studentId, students.id))
                 .innerJoin(courses, eq(enrollments.courseId, courses.id))
-                .innerJoin(academicSessions, eq(enrollments.academicYear, academicSessions.name))
+                .innerJoin(academicSessions, eq(enrollments.sessionId, academicSessions.id))
                 .leftJoin(results, eq(enrollments.id, results.enrollmentId))
                 .leftJoin(courseDepartmentSettings, and(
                     eq(courses.id, courseDepartmentSettings.courseId),
