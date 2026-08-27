@@ -1,7 +1,7 @@
 "use server";
 
 import { db } from "@/db/db";
-import { results, students, courses } from "@/db/schema";
+import { results, students, courses, enrollments, users } from "@/db/schema";
 import { auth } from "@/auth";
 import { eq, and } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
@@ -15,8 +15,14 @@ export async function bulkUploadResults(data: any[], courseId: number, sessionId
         let errorCount = 0;
 
         for (const row of data) {
+            const matricNumber = row.matricNumber || row.matricNo || row.MatricNumber || row['Matric No'];
+            if (!matricNumber) {
+                errorCount++;
+                continue;
+            }
+
             // Find student by matric number
-            const studentRecord = await db.select().from(students).where(eq(students.matricNumber, row.matricNumber || row.matricNo));
+            const studentRecord = await db.select().from(students).where(eq(students.matricNumber, matricNumber));
             
             if (studentRecord.length === 0) {
                 errorCount++;
@@ -24,21 +30,28 @@ export async function bulkUploadResults(data: any[], courseId: number, sessionId
             }
 
             const studentId = studentRecord[0].id;
-            const caScore = parseFloat(row.caScore || row.ca_score || 0);
-            const examScore = parseFloat(row.examScore || row.exam_score || 0);
+            const caScore = parseFloat(row.caScore || row.ca_score || row['CA Score'] || row.CA || 0);
+            const examScore = parseFloat(row.examScore || row.exam_score || row['Exam Score'] || row.Exam || 0);
             const totalScore = caScore + examScore;
 
-            // Check if result already exists for this student, course, and session
-            const existing = await db.select().from(results).where(
+            // Find the enrollment for this student, course, and session
+            const enrollmentRecord = await db.select().from(enrollments).where(
                 and(
-                    // @ts-expect-error - TS2339: Auto-suppressed for build
-                    eq(results.studentId, studentId),
-                    // @ts-expect-error - TS2339: Auto-suppressed for build
-                    eq(results.courseId, courseId),
-                    // @ts-expect-error - TS2339: Auto-suppressed for build
-                    eq(results.sessionId, sessionId)
+                    eq(enrollments.studentId, studentId),
+                    eq(enrollments.courseId, courseId),
+                    eq(enrollments.sessionId, sessionId)
                 )
             );
+
+            if (enrollmentRecord.length === 0) {
+                errorCount++;
+                continue; // Student not enrolled in this course for this session
+            }
+
+            const enrollmentId = enrollmentRecord[0].id;
+
+            // Check if result already exists for this enrollment
+            const existing = await db.select().from(results).where(eq(results.enrollmentId, enrollmentId));
 
             if (existing.length > 0) {
                 // Update existing
@@ -46,22 +59,19 @@ export async function bulkUploadResults(data: any[], courseId: number, sessionId
                     caScore: caScore.toString(),
                     examScore: examScore.toString(),
                     totalScore: totalScore.toString(),
-                    // @ts-expect-error - TS2322: Auto-suppressed for build
-                    status: 'draft',
+                    status: 'pending',
+                    lastEditedBy: parseInt(session.user.id),
                     updatedAt: new Date()
                 }).where(eq(results.id, existing[0].id));
             } else {
                 // Insert new
-                // @ts-expect-error - TS2769: Auto-suppressed for build
                 await db.insert(results).values({
-                    studentId,
-                    courseId,
-                    sessionId,
+                    enrollmentId,
                     caScore: caScore.toString(),
                     examScore: examScore.toString(),
                     totalScore: totalScore.toString(),
-                    status: 'draft',
-                    uploadedBy: session.user.id
+                    status: 'pending',
+                    lastEditedBy: parseInt(session.user.id)
                 });
             }
             successCount++;
@@ -70,9 +80,50 @@ export async function bulkUploadResults(data: any[], courseId: number, sessionId
         revalidatePath("/admin/exams-records/upload");
         revalidatePath("/admin/exams-records/broadsheet");
         
-        return { success: true, message: `Successfully processed ${successCount} records. ${errorCount > 0 ? `Failed to find ${errorCount} matric numbers.` : ''}` };
+        return { success: true, message: `Successfully processed ${successCount} records. ${errorCount > 0 ? \`Failed to find or match ${errorCount} records.\` : ''}` };
     } catch (error: any) {
         console.error("Bulk upload error:", error);
         return { success: false, error: error.message || "Failed to upload results" };
+    }
+}
+
+export async function fetchCourseEnrollmentTemplate(courseId: number, sessionId: number) {
+    try {
+        const session = await auth();
+        if (!session?.user?.id) return { success: false, error: "Unauthorized" };
+
+        const enrolledStudents = await db.select({
+            matricNumber: students.matricNumber,
+            firstName: users.firstName,
+            lastName: users.lastName,
+            middleName: users.middleName
+        })
+        .from(enrollments)
+        .innerJoin(students, eq(enrollments.studentId, students.id))
+        .innerJoin(users, eq(students.userId, users.id))
+        .where(
+            and(
+                eq(enrollments.courseId, courseId),
+                eq(enrollments.sessionId, sessionId),
+                eq(enrollments.status, 'approved')
+            )
+        );
+
+        if (enrolledStudents.length === 0) {
+            return { success: false, error: "No approved enrollments found for this course and session." };
+        }
+
+        // Format data for CSV
+        const templateData = enrolledStudents.map(s => ({
+            'Matric No': s.matricNumber,
+            'Name': `${s.lastName || ''} ${s.firstName || ''} ${s.middleName || ''}`.trim(),
+            'CA Score': '',
+            'Exam Score': ''
+        }));
+
+        return { success: true, data: templateData };
+    } catch (error: any) {
+        console.error("Template generation error:", error);
+        return { success: false, error: error.message || "Failed to generate template" };
     }
 }

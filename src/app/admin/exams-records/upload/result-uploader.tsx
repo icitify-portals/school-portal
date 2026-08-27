@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { UniversalImporter } from "@/components/UniversalImporter";
-import { bulkUploadResults } from "@/actions/results_bulk";
+import { bulkUploadResults, fetchCourseEnrollmentTemplate } from "@/actions/results_bulk";
+import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 
@@ -47,17 +48,48 @@ export function ResultUploader({ courses, sessions }: { courses: any[], sessions
             </Card>
 
             <div className={!courseId || !sessionId ? "opacity-50 pointer-events-none transition-opacity" : "transition-opacity"}>
+                <div className="flex justify-end mb-4">
+                    <Button 
+                        onClick={async () => {
+                            if (!courseId || !sessionId) return;
+                            const res = await fetchCourseEnrollmentTemplate(parseInt(courseId), parseInt(sessionId));
+                            if (!res.success || !res.data) {
+                                alert(res.error || "Failed to generate template");
+                                return;
+                            }
+                            
+                            // Simple CSV generator
+                            const headers = Object.keys(res.data[0]);
+                            const csvContent = [
+                                headers.join(","),
+                                ...res.data.map((row: any) => headers.map(h => `"${row[h] || ''}"`).join(","))
+                            ].join("\n");
+                            
+                            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                            const link = document.createElement("a");
+                            link.href = URL.createObjectURL(blob);
+                            link.setAttribute("download", `Result_Template_Course_${courseId}_Session_${sessionId}.csv`);
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+                        }}
+                        disabled={!courseId || !sessionId}
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-md font-bold"
+                    >
+                        ⬇️ Download Pre-filled Template
+                    </Button>
+                </div>
                 <UniversalImporter
                     title="Upload Results Data"
-                    description="Drag and drop your CA and Exam scores CSV file. We will match students by Matric Number."
-                    templateColumns={['matricNo', 'caScore', 'examScore']}
+                    description="Drag and drop your completed CA and Exam scores CSV file."
+                    templateColumns={['Matric No', 'Name', 'CA Score', 'Exam Score']}
                     onImport={handleImport}
                 />
             </div>
             
             {!courseId || !sessionId ? (
                 <p className="text-center text-sm font-bold text-slate-400 mt-4">
-                    ⚠️ Select a Course and Session to enable upload.
+                    ⚠️ Select a Course and Session to enable template download and result upload.
                 </p>
             ) : null}
         </div>
