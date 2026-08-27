@@ -379,7 +379,7 @@ export default function ScreeningConsole({ exercises: initialExercises, applican
             </div>
 
             {/* Bulk upload */}
-            <BulkScoreUpload />
+            <BulkScoreUpload applicants={scopedApplicants} />
 
             {/* Applicants table */}
             <Card className="border border-white/40 shadow-xl shadow-slate-200/50 bg-white/60 backdrop-blur-3xl rounded-[3rem] overflow-hidden">

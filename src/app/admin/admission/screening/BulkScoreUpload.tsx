@@ -64,7 +64,11 @@ function validateRow(rowNumber: number, raw: Record<string, unknown>): PreviewRo
     };
 }
 
-export default function BulkScoreUpload() {
+interface BulkScoreUploadProps {
+    applicants?: { formNumber: string | null; name: string }[];
+}
+
+export default function BulkScoreUpload({ applicants = [] }: BulkScoreUploadProps) {
     const [expanded, setExpanded] = useState(false);
     const [preview, setPreview] = useState<PreviewRow[]>([]);
     const [fileName, setFileName] = useState<string | null>(null);
@@ -79,13 +83,21 @@ export default function BulkScoreUpload() {
 
     // ── Download template ──────────────────────────────────────────────
     const downloadTemplate = () => {
-        const ws = XLSX.utils.aoa_to_sheet([
-            ["Form Number", "Mathematics", "English Language"],
-            [101, 75, 68],
-            [102, 82, 55],
-            [103, 90, 78],
-        ]);
-        ws["!cols"] = [{ wch: 16 }, { wch: 14 }, { wch: 18 }];
+        const headers = ["Form Number", "Applicant Name", "Mathematics", "English Language"];
+        let rows: any[] = [];
+        
+        if (applicants && applicants.length > 0) {
+            rows = applicants.map(a => [a.formNumber || '', a.name || '', '', '']);
+        } else {
+            rows = [
+                [101, "Jane Doe", 75, 68],
+                [102, "John Smith", 82, 55],
+                [103, "Alice Johnson", 90, 78],
+            ];
+        }
+
+        const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+        ws["!cols"] = [{ wch: 16 }, { wch: 30 }, { wch: 14 }, { wch: 18 }];
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "Screening Results");
         XLSX.writeFile(wb, "FSS_Screening_Results_Template.xlsx");
@@ -197,9 +209,9 @@ export default function BulkScoreUpload() {
                             <div className="flex-1 space-y-1">
                                 <p className="text-sm font-bold text-slate-700">Prepare your Excel file using the official template</p>
                                 <p className="text-xs text-slate-500">
-                                    The template has 3 columns: <strong>Form Number</strong>, <strong>Mathematics</strong>, <strong>English Language</strong>.
+                                    The template has 4 columns: <strong>Form Number</strong>, <strong>Applicant Name</strong>, <strong>Mathematics</strong>, <strong>English Language</strong>.
                                     Each score must be between <strong>0 – 100</strong>; leave no cells blank.
-                                    Form Numbers are listed in the applicants table below.
+                                    Form Numbers and Names are already pre-filled for your current active filter.
                                     Applicants at or above their exercise&apos;s cut-off are <strong>automatically offered admission</strong> on upload.
                                 </p>
                             </div>
