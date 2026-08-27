@@ -87,9 +87,6 @@ export default async function ApplicantDashboard() {
                 </div>
             </div>
 
-
-            <AdmissionsAnnouncement />
-
             {/* Admission Status Hero */}
             {admittedApp ? (
                 <Link
@@ -136,6 +133,7 @@ export default async function ApplicantDashboard() {
                 </div>
             ) : null}
 
+            <AdmissionsAnnouncement />
 
             {/* Program Selection Modal for New Applicants */}
             {applications.length === 0 && templates.length > 0 && (

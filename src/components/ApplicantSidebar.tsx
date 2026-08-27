@@ -46,6 +46,10 @@ export function ApplicantSidebar() {
                     <Home className={`w-4 h-4 ${isActive("/applicant") && pathname === "/applicant" ? "text-emerald-400" : ""}`} />
                     Dashboard
                 </Link>
+                <Link href="/applicant/status" className={`flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm transition-colors ${isActive("/applicant/status") || pathname?.startsWith("/admission/status") ? "bg-slate-800/50 text-white" : "text-slate-400 hover:bg-slate-800 hover:text-white"}`}>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`w-4 h-4 ${isActive("/applicant/status") || pathname?.startsWith("/admission/status") ? "text-emerald-400" : ""}`}><path d="M21.42 10.922a2 2 0 0 1-.019 3.022l-7.1 7.1a2 2 0 0 1-2.827 0l-7.1-7.1a2 2 0 0 1-.018-3.022l2.2-2.188a2 2 0 0 1 2.828.03L12 11.6l2.618-2.836a2 2 0 0 1 2.828-.03l2.2 2.188z"/><path d="M9 3h.01"/><path d="M15 3h.01"/><path d="M12 8v3"/><path d="M12 17h.01"/></svg>
+                    Admission Status
+                </Link>
                 <Link href="/applicant/receipts" className={`flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm transition-colors ${isActive("/applicant/receipts") ? "bg-slate-800/50 text-white" : "text-slate-400 hover:bg-slate-800 hover:text-white"}`}>
                     <Receipt className="w-4 h-4" />
                     Receipts
