@@ -14,7 +14,7 @@ import {
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
-    updateExerciseCutoff, updateGlobalCutoffDefault, runSelection, sweepPendingAttendance, startNewExamRound,
+    updateExerciseCutoff, saveGlobalCutoffDefault, runSelection, sweepPendingAttendance, startNewExamRound,
     type ScreeningExercise, type ScreeningApplicant, type RunSelectionSummary,
 } from "@/actions/admin-admission";
 import BulkScoreUpload from "./BulkScoreUpload";
@@ -117,7 +117,7 @@ export default function ScreeningConsole({ exercises: initialExercises, applican
 
         setSavingCutoff(true);
         const res = editingCutoffFor === 'global'
-            ? await updateGlobalCutoffDefault(val)
+            ? await saveGlobalCutoffDefault(val)
             : await updateExerciseCutoff(editingCutoffFor as number, val);
         setSavingCutoff(false);
 
