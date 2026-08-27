@@ -125,6 +125,7 @@ export default function ApplicantStatusPage() {
         <div className="min-h-screen bg-slate-50 pb-20">
             {checkoutPayload && (
                 <AlatpayInlineCheckout
+                    targetBusinessId={process.env.NEXT_PUBLIC_ALATPAY_BUSINESS_ID_1}
                     reference={checkoutPayload.reference}
                     amount={checkoutPayload.amount}
                     email={checkoutPayload.email}
