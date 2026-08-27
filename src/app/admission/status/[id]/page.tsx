@@ -142,7 +142,8 @@ export default function ApplicantStatusPage() {
             )}
             {checkoutPayload && !checkoutPayload.isSchoolFees && (
                 <AlatpayInlineCheckout
-                    targetBusinessId={process.env.NEXT_PUBLIC_ALATPAY_BUSINESS_ID_1}
+                    targetBusinessId={checkoutPayload.targetBusinessId}
+                    publicKey={checkoutPayload.publicKey}
                     reference={checkoutPayload.reference}
                     amount={checkoutPayload.amount}
                     email={checkoutPayload.email}

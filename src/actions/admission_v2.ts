@@ -950,13 +950,40 @@ export async function initiateAcceptancePaymentCheckout(applicationId: number) {
             gatewayReference: reference
         });
 
+        // Resolve ALATPAY dynamic credentials via Bursary Settings (Fee Item -> Settlement Account -> Gateway Mapping)
+        const { like, and } = await import('drizzle-orm');
+        const { feeItems, gatewaySubaccounts } = await import('@/db/schema');
+        
+        let targetBusinessId: string | undefined;
+        let publicKey: string | undefined;
+
+        try {
+            const [feeItem] = await db.select().from(feeItems).where(like(feeItems.name, '%Acceptance%')).limit(1);
+            if (feeItem && feeItem.settlementAccountId) {
+                const [gatewaySub] = await db.select().from(gatewaySubaccounts)
+                    .where(and(
+                        eq(gatewaySubaccounts.settlementAccountId, feeItem.settlementAccountId),
+                        eq(gatewaySubaccounts.gatewayName, 'alatpay')
+                    )).limit(1);
+                
+                if (gatewaySub) {
+                    targetBusinessId = gatewaySub.gatewaySubaccountCode;
+                    publicKey = gatewaySub.publicKey || undefined;
+                }
+            }
+        } catch (e) {
+            console.warn("Failed to resolve dynamic settlement account for Acceptance Fee", e);
+        }
+
         return {
             success: true,
             reference,
             amount: totalAmount,
             email,
             firstName,
-            lastName
+            lastName,
+            targetBusinessId,
+            publicKey
         };
     } catch (error) {
         console.error("Failed to initiate acceptance payment:", error);
@@ -997,8 +1024,31 @@ export async function uploadApplicantDocument(applicationId: number, docType: 'b
 
 export async function confirmAcceptancePayment(applicationId: number, reference: string) {
     try {
+        // Resolve dynamic secret key
+        const { like, and } = await import('drizzle-orm');
+        const { feeItems, gatewaySubaccounts } = await import('@/db/schema');
+        
+        let targetSecretKey: string | undefined = undefined;
+
+        try {
+            const [feeItem] = await db.select().from(feeItems).where(like(feeItems.name, '%Acceptance%')).limit(1);
+            if (feeItem && feeItem.settlementAccountId) {
+                const [gatewaySub] = await db.select().from(gatewaySubaccounts)
+                    .where(and(
+                        eq(gatewaySubaccounts.settlementAccountId, feeItem.settlementAccountId),
+                        eq(gatewaySubaccounts.gatewayName, 'alatpay')
+                    )).limit(1);
+                
+                if (gatewaySub && gatewaySub.secretKey) {
+                    targetSecretKey = gatewaySub.secretKey;
+                }
+            }
+        } catch (e) {
+            console.warn("Failed to resolve dynamic secret key for Acceptance Fee verification", e);
+        }
+
         const { verifyPayment } = await import('@/actions/payment-gateways');
-        const verification = await verifyPayment('alatpay', reference, undefined, process.env.ALATPAY_SECRET_KEY_1);
+        const verification = await verifyPayment('alatpay', reference, undefined, targetSecretKey);
 
         if (!verification.success || !verification.verified) {
             return { success: false, error: "Payment verification failed. Please try again." };
