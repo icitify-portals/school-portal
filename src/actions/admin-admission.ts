@@ -2,7 +2,7 @@
 
 import { db } from "@/db";
 import { programmes, admissionFormTemplates, systemSettings, admissionApplicationsV2, admissionExamResults, users as authUsers } from "@/db/schema";
-import { eq, and, desc, inArray, isNotNull, ne } from "drizzle-orm";
+import { eq, and, desc, inArray, isNotNull, ne, sql } from "drizzle-orm";
 import { NotificationService } from "@/services/NotificationService";
 import { hasPermission, hasRole } from "@/lib/rbac";
 import { revalidatePath } from "next/cache";
@@ -416,13 +416,13 @@ export async function updateSubjectScoresV2(applicationId: number, mathScore: nu
 }
 
 export interface BulkScoreRowV2 {
-    formNumber: number;   // admission_applications_v2.id (or numeric formNumber)
+    formNumber: string | number; // readable form number (e.g. FSS/2026/00123) OR numeric application id
     mathScore: number;    // 0–100
     englishScore: number; // 0–100
 }
 
 export interface BulkUploadResultV2 {
-    formNumber: number;
+    formNumber: string | number;
     success: boolean;
     error?: string;
     note?: string;
@@ -455,46 +455,84 @@ export async function bulkUploadSubjectScoresV2(rows: BulkScoreRowV2[]): Promise
         }
 
         // ── Up-front validation ──
-        const seen = new Set<number>();
-        type ValidRow = { formNumber: number; mathScore: number; englishScore: number };
+        const seen = new Set<string>();
+        type ValidRow = { formNumber: string; mathScore: number; englishScore: number };
         const validRows: ValidRow[] = [];
         const results: BulkUploadResultV2[] = [];
         let failed = 0;
 
         for (const row of rows) {
-            const { formNumber } = row;
+            const rawFn = String(row.formNumber ?? "").trim();
             const pushFail = (error: string) => {
-                results.push({ formNumber, success: false, error });
+                results.push({ formNumber: row.formNumber ?? rawFn, success: false, error });
                 failed++;
             };
 
-            if (isNaN(formNumber) || formNumber <= 0) { pushFail("Invalid form number"); continue; }
-            if (seen.has(formNumber)) { pushFail("Duplicate form number in this file"); continue; }
-            seen.add(formNumber);
+            if (!rawFn) { pushFail("Invalid form number"); continue; }
             if (isNaN(row.mathScore) || row.mathScore < 0 || row.mathScore > 100) { pushFail(`Math score out of range (${row.mathScore})`); continue; }
             if (isNaN(row.englishScore) || row.englishScore < 0 || row.englishScore > 100) { pushFail(`English score out of range (${row.englishScore})`); continue; }
 
-            validRows.push({ formNumber, mathScore: row.mathScore, englishScore: row.englishScore });
+            const dedupeKey = rawFn.toLowerCase();
+            if (seen.has(dedupeKey)) { pushFail("Duplicate form number in this file"); continue; }
+            seen.add(dedupeKey);
+
+            validRows.push({ formNumber: rawFn, mathScore: row.mathScore, englishScore: row.englishScore });
         }
 
         if (validRows.length === 0) {
             return { success: true, results, processed: 0, failed, offeredCount: 0 };
         }
 
-        // ── Pre-fetch applications + template cut-offs (2 queries) ──
-        const formNumbers = validRows.map(r => r.formNumber);
-        const existingApps = await db.select({
+        // ── Split identifiers: numeric = application id, else readable form number ──
+        const numericKeys = new Map<number, ValidRow>();
+        const formStrings = new Set<string>();
+        for (const r of validRows) {
+            if (/^\d+$/.test(r.formNumber)) numericKeys.set(Number(r.formNumber), r);
+            else formStrings.add(r.formNumber);
+        }
+
+        type AppRow = {
+            id: number;
+            formNumber: string | null;
+            templateId: number | null;
+            status: string | null;
+            examAttendanceStatus: string | null;
+            acceptancePaymentStatus: string | null;
+            applicantId: number | null;
+            data: string | null;
+        };
+
+        const selectApp = {
             id: admissionApplicationsV2.id,
+            formNumber: admissionApplicationsV2.formNumber,
             templateId: admissionApplicationsV2.templateId,
             status: admissionApplicationsV2.status,
             examAttendanceStatus: admissionApplicationsV2.examAttendanceStatus,
             acceptancePaymentStatus: admissionApplicationsV2.acceptancePaymentStatus,
             applicantId: admissionApplicationsV2.applicantId,
             data: admissionApplicationsV2.data,
-        }).from(admissionApplicationsV2).where(inArray(admissionApplicationsV2.id, formNumbers));
-        const appMap = new Map(existingApps.map(a => [a.id, a]));
+        };
 
-        const templateIds = [...new Set(existingApps.map(a => a.templateId))];
+        // ── Pre-fetch applications + template cut-offs (2 queries) ──
+        const [numericApps, stringApps] = await Promise.all([
+            numericKeys.size > 0
+                ? db.select(selectApp).from(admissionApplicationsV2).where(inArray(admissionApplicationsV2.id, [...numericKeys.keys()]))
+                : Promise.resolve([] as AppRow[]),
+            formStrings.size > 0
+                ? db.select(selectApp).from(admissionApplicationsV2).where(inArray(
+                    sql`lower(${admissionApplicationsV2.formNumber})`,
+                    [...formStrings].map(s => s.toLowerCase())
+                ))
+                : Promise.resolve([] as AppRow[]),
+        ]);
+
+        const idMap = new Map<number, AppRow>(numericApps.map(a => [a.id, a]));
+        const formMap = new Map<string, AppRow>();
+        for (const a of stringApps) {
+            if (a.formNumber) formMap.set(a.formNumber.trim().toLowerCase(), a);
+        }
+
+        const templateIds = [...new Set([...numericApps, ...stringApps].map(a => a.templateId))].filter((id): id is number => id !== null);
         const templates = templateIds.length > 0
             ? await db.select({ id: admissionFormTemplates.id, cutoffPercent: admissionFormTemplates.cutoffPercent, name: admissionFormTemplates.name })
                 .from(admissionFormTemplates).where(inArray(admissionFormTemplates.id, templateIds))
@@ -510,7 +548,9 @@ export async function bulkUploadSubjectScoresV2(rows: BulkScoreRowV2[]): Promise
         let processed = 0;
 
         for (const row of validRows) {
-            const app = appMap.get(row.formNumber);
+            const app = /^\d+$/.test(row.formNumber)
+                ? idMap.get(Number(row.formNumber))
+                : formMap.get(row.formNumber.toLowerCase());
             if (!app) {
                 results.push({ formNumber: row.formNumber, success: false, error: "Application not found" });
                 failed++;
@@ -524,7 +564,7 @@ export async function bulkUploadSubjectScoresV2(rows: BulkScoreRowV2[]): Promise
 
             const total = row.mathScore + row.englishScore;
             const percentage = computeScreeningPercentage(total);
-            const tmpl = templateMap.get(app.templateId);
+            const tmpl = templateMap.get(app.templateId || 0);
             const cutoff = parseFloat(tmpl?.cutoffPercent || '') || globalFallback;
             const newStatus = decideFromScreening(percentage, cutoff, app.examAttendanceStatus);
             const wasAdmitted = app.status === 'admitted';
@@ -540,7 +580,7 @@ export async function bulkUploadSubjectScoresV2(rows: BulkScoreRowV2[]): Promise
             }
 
             updates.push({
-                id: row.formNumber,
+                id: app.id,
                 set: {
                     mathScore: row.mathScore.toString(),
                     englishScore: row.englishScore.toString(),

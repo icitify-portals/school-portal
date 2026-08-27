@@ -15,7 +15,7 @@ import { useRouter } from "next/navigation";
 
 interface PreviewRow {
     rowNumber: number;
-    formNumber: number;
+    formNumber: string;
     mathScore: number;
     englishScore: number;
     total: number;
@@ -37,14 +37,28 @@ function readNumber(raw: Record<string, unknown>, keys: string[]): { value?: num
     return { error: `Missing value (need one of: ${keys.join(" / ")})` };
 }
 
+/**
+ * Form Number may be a readable string (e.g. FSS/2026/00123) or a numeric
+ * application ID. Either is accepted as long as the cell is not blank.
+ */
+function readFormNumber(raw: Record<string, unknown>, keys: string[]): { value?: string; error?: string } {
+    for (const key of keys) {
+        const v = raw[key];
+        if (v !== undefined && v !== null && String(v).trim() !== "") {
+            return { value: String(v).trim() };
+        }
+    }
+    return { error: `Missing Form Number (need one of: ${keys.join(" / ")})` };
+}
+
 function validateRow(rowNumber: number, raw: Record<string, unknown>): PreviewRow {
     const errors: string[] = [];
-    const formNumberRes = readNumber(raw, ["Form Number", "form_number", "FormNumber", "ID", "id"]);
+    const formNumberRes = readFormNumber(raw, ["Form Number", "form_number", "FormNumber", "Form No.", "ID", "id"]);
     const mathRes = readNumber(raw, ["Mathematics", "Maths", "Math", "math_score", "MathScore"]);
     const englishRes = readNumber(raw, ["English Language", "English", "english_score", "EnglishScore"]);
 
-    if (formNumberRes.error || (formNumberRes.value !== undefined && (!Number.isInteger(formNumberRes.value) || formNumberRes.value <= 0))) {
-        errors.push(formNumberRes.error || `Form Number must be a positive whole number (got ${formNumberRes.value})`);
+    if (formNumberRes.error) {
+        errors.push(formNumberRes.error);
     }
     if (mathRes.error || (mathRes.value !== undefined && (mathRes.value < 0 || mathRes.value > 100))) {
         errors.push(mathRes.error || `Math score must be 0–100 (got ${mathRes.value})`);
@@ -55,7 +69,7 @@ function validateRow(rowNumber: number, raw: Record<string, unknown>): PreviewRo
 
     return {
         rowNumber,
-        formNumber: formNumberRes.value ?? 0,
+        formNumber: formNumberRes.value || "",
         mathScore: mathRes.value ?? 0,
         englishScore: englishRes.value ?? 0,
         total: (mathRes.value ?? 0) + (englishRes.value ?? 0),
@@ -65,7 +79,7 @@ function validateRow(rowNumber: number, raw: Record<string, unknown>): PreviewRo
 }
 
 interface BulkScoreUploadProps {
-    applicants?: { formNumber: string | null; name: string }[];
+    applicants?: { id: number; formNumber: string | null; name: string; email?: string }[];
 }
 
 export default function BulkScoreUpload({ applicants = [] }: BulkScoreUploadProps) {
@@ -87,7 +101,7 @@ export default function BulkScoreUpload({ applicants = [] }: BulkScoreUploadProp
         let rows: any[] = [];
         
         if (applicants && applicants.length > 0) {
-            rows = applicants.map(a => [a.id, a.name || '', '', '']);
+            rows = applicants.map(a => [a.formNumber || String(a.id), a.name || a.email || '', '', '']);
         } else {
             rows = [
                 [101, "Jane Doe", 75, 68],
@@ -211,7 +225,8 @@ export default function BulkScoreUpload({ applicants = [] }: BulkScoreUploadProp
                                 <p className="text-xs text-slate-500">
                                     The template has 4 columns: <strong>Form Number</strong>, <strong>Applicant Name</strong>, <strong>Mathematics</strong>, <strong>English Language</strong>.
                                     Each score must be between <strong>0 – 100</strong>; leave no cells blank.
-                                    Form Numbers and Names are already pre-filled for your current active filter.
+                                    Readable form numbers (and applicant names) are pre-filled for your current active filter —
+                                    don&apos;t edit the <strong>Form Number</strong> column. Applicants without a form number use their application ID.
                                     Applicants at or above their exercise&apos;s cut-off are <strong>automatically offered admission</strong> on upload.
                                 </p>
                             </div>

@@ -58,6 +58,20 @@ body {
   overflow-x: hidden;
 }
 
+/* Ensure native <select> dropdown list items stay readable on dark panels.
+   Translucent select backgrounds (e.g. bg-white/5) composite to grey inside
+   the native popup and make the inherited light text illegible, so give the
+   list items an opaque near-black background with light text. */
+select option {
+  background-color: #0d1117;
+  color: #f1f5f9;
+}
+
+select option:checked {
+  background-color: #1f2937;
+  color: #ffffff;
+}
+
 /* Glassmorphism Styles */
 .glass-panel {
   background: rgba(255, 255, 255, 0.45);

@@ -391,7 +391,7 @@ export default function ScreeningConsole({ exercises: initialExercises, applican
                                 {activeExercise ? activeExercise.name : "All Exercises"} ({visibleApplicants.length})
                             </CardTitle>
                             <p className="text-xs text-slate-500 font-bold mt-1 uppercase tracking-widest">
-                                Use the Form No. column as the ID in your Excel upload sheet
+                                Use the Download Template button to pull the Form No. &amp; name roster for your current filter
                             </p>
                         </div>
                         <div className="relative w-full sm:w-72">
