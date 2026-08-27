@@ -289,21 +289,26 @@ export async function approveAndPublishBatch(batchId: number) {
 export async function searchStudents(query: string) {
   try {
     const term = `%${query}%`;
+    const isNumeric = /^\d+$/.test(query.trim());
 
-    // Match students by matric number, admission number, or name via user join
+    // Match students by matric number, admission number
     const rows = await db.query.students.findMany({
       where: or(
         like(students.matricNumber, term),
         like(students.admissionNumber, term),
+        isNumeric ? eq(students.id, Number(query.trim())) : undefined,
       ),
-      with: { user: true, programme: true },
+      with: { user: true, programme: true, department: true },
       limit: 20,
     });
 
-    // Also search by name via users table
+    // Also search by name or email via users table
     const byName = await db.query.users.findMany({
       where: and(
-        like(users.name, term),
+        or(
+          like(users.name, term),
+          like(users.email, term),
+        ),
         eq(users.role, "student")
       ),
       limit: 10,
@@ -312,9 +317,10 @@ export async function searchStudents(query: string) {
     // Merge results, de-duplicate by student id
     const seen = new Set(rows.map(r => r.id));
     for (const u of byName) {
+      if (seen.has(u.id)) continue;
       const stu = await db.query.students.findFirst({
         where: eq(students.userId, u.id),
-        with: { user: true, programme: true },
+        with: { user: true, programme: true, department: true },
       });
       if (stu && !seen.has(stu.id)) {
         rows.push(stu);
@@ -322,7 +328,27 @@ export async function searchStudents(query: string) {
       }
     }
 
-    return { success: true, data: rows };
+    // Also search by programme name (e.g. typing "ND Computer Science")
+    const byProg = await db.query.programmes.findMany({
+      where: like(programmes.name, term),
+      limit: 5,
+    });
+    if (byProg.length > 0) {
+      const progIds = byProg.map(p => p.id);
+      const progStudents = await db.query.students.findMany({
+        where: inArray(students.programmeId, progIds),
+        with: { user: true, programme: true, department: true },
+        limit: 20,
+      });
+      for (const s of progStudents) {
+        if (!seen.has(s.id)) {
+          rows.push(s);
+          seen.add(s.id);
+        }
+      }
+    }
+
+    return { success: true, data: rows.slice(0, 20) };
   } catch (e: any) {
     return { success: false, error: e.message };
   }
@@ -393,7 +419,7 @@ export async function getBulkTranscripts(filters: { programmeId?: number, depart
 
     const matchingStudents = await db.query.students.findMany({
       where: queryConditions.length > 0 ? and(...queryConditions) : undefined,
-      with: { user: true }
+      with: { user: true, programme: true, department: true }
     });
     
     // Process in batches so we don't overload the DB
