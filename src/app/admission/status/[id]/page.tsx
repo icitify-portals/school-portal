@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { getApplicantStatusData, confirmAcceptancePayment, finalizeStudentAdmission, initiateAcceptancePaymentCheckout, uploadApplicantDocument, initiateSchoolFeesCheckout, confirmSchoolFeesPayment } from "@/actions/admission_v2";
 import { AlatpayInlineCheckout } from "@/components/finance/AlatpayInlineCheckout";
+import { RemitaInlineCheckout } from "@/components/finance/RemitaInlineCheckout";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { 
@@ -79,11 +80,11 @@ export default function ApplicantStatusPage() {
         }
     };
 
-    const handleAlatpaySuccess = async () => {
+    const handlePaymentSuccess = async () => {
         setVerifying(true);
         toast.loading("Verifying your payment, please wait...", { id: "verify-toast" });
         if (checkoutPayload?.isSchoolFees) {
-            const res = await confirmSchoolFeesPayment(id, checkoutPayload.reference);
+            const res = await confirmSchoolFeesPayment(id, checkoutPayload.reference, checkoutPayload.rrr);
             setVerifying(false);
             setCheckoutPayload(null);
             if (res && res.success) {
@@ -123,7 +124,23 @@ export default function ApplicantStatusPage() {
 
     return (
         <div className="min-h-screen bg-slate-50 pb-20">
-            {checkoutPayload && (
+            {checkoutPayload && checkoutPayload.isSchoolFees && (
+                <RemitaInlineCheckout
+                    rrr={checkoutPayload.rrr}
+                    amount={checkoutPayload.amount}
+                    email={checkoutPayload.email}
+                    firstName={checkoutPayload.firstName}
+                    lastName={checkoutPayload.lastName}
+                    onSuccess={handlePaymentSuccess}
+                    onClose={() => setCheckoutPayload(null)}
+                    onError={(err) => {
+                        console.error(err);
+                        toast.error("Payment failed or was cancelled.");
+                        setCheckoutPayload(null);
+                    }}
+                />
+            )}
+            {checkoutPayload && !checkoutPayload.isSchoolFees && (
                 <AlatpayInlineCheckout
                     targetBusinessId={process.env.NEXT_PUBLIC_ALATPAY_BUSINESS_ID_1}
                     reference={checkoutPayload.reference}
@@ -131,7 +148,7 @@ export default function ApplicantStatusPage() {
                     email={checkoutPayload.email}
                     firstName={checkoutPayload.firstName}
                     lastName={checkoutPayload.lastName}
-                    onSuccess={handleAlatpaySuccess}
+                    onSuccess={handlePaymentSuccess}
                     onClose={() => setCheckoutPayload(null)}
                     onError={(err) => {
                         console.error(err);

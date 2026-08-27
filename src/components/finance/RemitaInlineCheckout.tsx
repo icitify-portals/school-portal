@@ -129,25 +129,41 @@ export function RemitaInlineCheckout({
         document.body.appendChild(script);
     }, []);
 
+    useEffect(() => {
+        if (isScriptLoaded && !isPaying) {
+            makePayment();
+        }
+    }, [isScriptLoaded]);
+
     return (
-        <>
-            <Button
-                onClick={makePayment}
-                disabled={isPaying}
-                className="w-full py-6 font-semibold flex items-center justify-center gap-2 text-white bg-indigo-600 hover:bg-indigo-500 border border-indigo-500/35"
-            >
-                {isPaying ? (
-                    <>
-                        <Loader2 className="w-5 h-5 animate-spin" />
-                        Initializing Remita...
-                    </>
-                ) : (
-                    <>
-                        <CreditCard className="w-5 h-5" />
-                        Pay with Remita
-                    </>
-                )}
-            </Button>
-        </>
+        <div className="fixed inset-0 z-[99999] bg-slate-900/80 backdrop-blur-md flex items-center justify-center p-4">
+            <div className="bg-white rounded-3xl p-8 max-w-sm w-full shadow-2xl flex flex-col items-center text-center space-y-6">
+                <div className="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600">
+                    <Loader2 className="w-8 h-8 animate-spin" />
+                </div>
+                <div>
+                    <h3 className="text-xl font-black text-slate-900">Connecting to Remita</h3>
+                    <p className="text-sm text-slate-500 mt-2 font-medium">Please complete your payment of ₦{amount.toLocaleString()} in the secure Remita window.</p>
+                </div>
+                
+                <button
+                    onClick={makePayment}
+                    disabled={isPaying || !isScriptLoaded}
+                    className={`w-full py-4 rounded-xl font-black text-lg transition-all shadow-xl flex items-center justify-center gap-2 ${
+                        isPaying || !isScriptLoaded
+                            ? 'bg-slate-100 text-slate-400 cursor-not-allowed shadow-none'
+                            : 'bg-indigo-600 text-white hover:bg-indigo-500 hover:-translate-y-0.5 hover:shadow-indigo-500/25'
+                    }`}
+                >
+                    {isPaying ? "Processing..." : "Open Gateway"}
+                </button>
+                <button
+                    onClick={onClose}
+                    className="text-sm font-bold text-slate-400 hover:text-slate-600"
+                >
+                    Cancel
+                </button>
+            </div>
+        </div>
     );
 }

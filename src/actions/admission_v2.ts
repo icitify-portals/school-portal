@@ -1308,18 +1308,52 @@ export async function initiateSchoolFeesCheckout(applicationId: number) {
         const firstName = formData.firstName || "Applicant";
         const lastName = formData.lastName || "";
 
+        const isLive = process.env.REMITA_ENV !== 'demo';
+        const merchantId = isLive ? "19201597339" : (process.env.REMITA_MERCHANT_ID || "19201597339");
+        const serviceTypeId = isLive ? "8817651539" : (process.env.REMITA_SERVICE_TYPE_ID || "8817651539");
+        const apiKey = isLive ? "6NYU4646" : (process.env.REMITA_API_KEY || "6NYU4646");
+        const crypto = require('crypto');
+        const hash = crypto.createHash('sha512').update(`${merchantId}${serviceTypeId}${reference}${totalAmount}${apiKey}`).digest('hex');
+        
+        const baseUrl = isLive ? 'https://login.remita.net' : 'https://demo.remita.net';
+        
+        const res = await fetch(`${baseUrl}/remita/exapp/api/v1/send/api/echannelsvc/merchant/api/paymentinit`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `remitaConsumerKey=${merchantId},remitaConsumerToken=${hash}`
+            },
+            body: JSON.stringify({
+                merchantId,
+                serviceTypeId,
+                amount: totalAmount.toString(),
+                orderId: reference,
+                payerName: `${firstName || ''} ${lastName || ''}`.trim() || email.split('@')[0],
+                payerEmail: email,
+                payerPhone: "08000000000"
+            })
+        });
+        const data = await res.json();
+        let rrr = '';
+        if (data.statuscode === '025' && data.rrr) {
+            rrr = data.rrr;
+        } else {
+            return { success: false, error: data.message || "Failed to generate Remita RRR." };
+        }
+
         await db.insert(transactions).values({
             amount: totalAmount.toString(),
             type: 'credit',
             purpose: `2026/2027 Session School Fees & Processing Fee`,
             status: 'pending',
-            gateway: 'alatpay',
+            gateway: 'remita',
             gatewayReference: reference
         });
 
         return {
             success: true,
             reference,
+            rrr,
             amount: totalAmount,
             schoolFeesAmount,
             processingFeeAmount,
@@ -1333,10 +1367,10 @@ export async function initiateSchoolFeesCheckout(applicationId: number) {
     }
 }
 
-export async function confirmSchoolFeesPayment(applicationId: number, reference: string) {
+export async function confirmSchoolFeesPayment(applicationId: number, reference: string, rrr?: string) {
     try {
         const { verifyPayment } = await import('@/actions/payment-gateways');
-        const verification = await verifyPayment('alatpay', reference, undefined, process.env.ALATPAY_SECRET_KEY_1);
+        const verification = await verifyPayment('remita', reference, rrr);
 
         if (!verification.success || !verification.verified) {
             return { success: false, error: "School fees payment verification failed. Please try again." };
