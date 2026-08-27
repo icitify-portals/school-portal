@@ -164,7 +164,7 @@ export async function initiatePayment(gateway: string, amount: number, reference
     }
 }
 
-export async function verifyPayment(gateway: string, reference: string, rrr?: string) {
+export async function verifyPayment(gateway: string, reference: string, rrr?: string, targetSecretKey?: string) {
     try {
         const def = GATEWAY_DEFS[gateway];
         if (!def) return { error: "Unknown gateway" };
@@ -173,7 +173,7 @@ export async function verifyPayment(gateway: string, reference: string, rrr?: st
         const settings = await getBursarySettings();
 
         const dbSecretKey = settings[`gateway_${gateway}_key`];
-        let secretKey = dbSecretKey || process.env[`${def.envPrefix}_SECRET_KEY`] || process.env[`${def.envPrefix}_API_KEY`];
+        let secretKey = targetSecretKey || dbSecretKey || process.env[`${def.envPrefix}_SECRET_KEY`] || process.env[`${def.envPrefix}_API_KEY`];
         
         if (!secretKey && gateway === 'alatpay') {
             secretKey = process.env.ALATPAY_SECRET_KEY_MAIN;

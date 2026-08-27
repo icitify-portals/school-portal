@@ -998,7 +998,7 @@ export async function uploadApplicantDocument(applicationId: number, docType: 'b
 export async function confirmAcceptancePayment(applicationId: number, reference: string) {
     try {
         const { verifyPayment } = await import('@/actions/payment-gateways');
-        const verification = await verifyPayment('alatpay', reference);
+        const verification = await verifyPayment('alatpay', reference, undefined, process.env.ALATPAY_SECRET_KEY_1);
 
         if (!verification.success || !verification.verified) {
             return { success: false, error: "Payment verification failed. Please try again." };
@@ -1336,7 +1336,7 @@ export async function initiateSchoolFeesCheckout(applicationId: number) {
 export async function confirmSchoolFeesPayment(applicationId: number, reference: string) {
     try {
         const { verifyPayment } = await import('@/actions/payment-gateways');
-        const verification = await verifyPayment('alatpay', reference);
+        const verification = await verifyPayment('alatpay', reference, undefined, process.env.ALATPAY_SECRET_KEY_1);
 
         if (!verification.success || !verification.verified) {
             return { success: false, error: "School fees payment verification failed. Please try again." };
