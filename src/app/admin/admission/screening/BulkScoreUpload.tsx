@@ -87,7 +87,7 @@ export default function BulkScoreUpload({ applicants = [] }: BulkScoreUploadProp
         let rows: any[] = [];
         
         if (applicants && applicants.length > 0) {
-            rows = applicants.map(a => [a.formNumber || '', a.name || '', '', '']);
+            rows = applicants.map(a => [a.id, a.name || '', '', '']);
         } else {
             rows = [
                 [101, "Jane Doe", 75, 68],
