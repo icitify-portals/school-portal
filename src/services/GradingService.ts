@@ -14,7 +14,7 @@ export class GradingService {
         context: string = "exam", 
         branchId?: number, 
         sessionId?: number
-    ): Promise<{ grade: string, remark: string }> {
+    ): Promise<{ grade: string, remark: string, gradePoint: number }> {
         
         let gradingSystemIdToUse: number | null = null;
 
@@ -51,24 +51,28 @@ export class GradingService {
             if (score >= pt.minMark && score <= pt.maxMark) {
                 return {
                     grade: pt.letterGrade,
-                    remark: pt.description || "Satisfactory" // description acts as the context-aware Remark
+                    remark: pt.description || "Satisfactory", // description acts as the context-aware Remark
+                    gradePoint: parseFloat(pt.points?.toString() || '0')
                 };
             }
         }
 
         // If score is somehow out of bounds (e.g. over 100 or negative)
-        return { grade: "N/A", remark: "Invalid Score Range" };
+        return { grade: "N/A", remark: "Invalid Score Range", gradePoint: 0 };
     }
 
     /**
      * Mathematical fallback if the database grading systems are not fully seeded yet.
      */
-    private static getFallbackGrade(score: number): { grade: string, remark: string } {
-        if (score >= 70) return { grade: "A", remark: "Excellent" };
-        if (score >= 60) return { grade: "B", remark: "Very Good" };
-        if (score >= 50) return { grade: "C", remark: "Good" };
-        if (score >= 45) return { grade: "D", remark: "Pass" };
-        if (score >= 40) return { grade: "E", remark: "Poor" };
-        return { grade: "F", remark: "Fail" };
+    private static getFallbackGrade(score: number): { grade: string, remark: string, gradePoint: number } {
+        if (score >= 75) return { grade: "A", remark: "Excellent", gradePoint: 4.0 };
+        if (score >= 70) return { grade: "AB", remark: "Very Good", gradePoint: 3.5 };
+        if (score >= 65) return { grade: "B", remark: "Good", gradePoint: 3.25 };
+        if (score >= 60) return { grade: "BC", remark: "Above Average", gradePoint: 3.0 };
+        if (score >= 55) return { grade: "C", remark: "Average", gradePoint: 2.75 };
+        if (score >= 50) return { grade: "CD", remark: "Below Average", gradePoint: 2.5 };
+        if (score >= 45) return { grade: "D", remark: "Pass", gradePoint: 2.25 };
+        if (score >= 40) return { grade: "E", remark: "Poor", gradePoint: 2.0 };
+        return { grade: "F", remark: "Fail", gradePoint: 0.0 };
     }
 }

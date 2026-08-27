@@ -5,6 +5,7 @@ import { results, students, courses, enrollments, users } from "@/db/schema";
 import { auth } from "@/auth";
 import { eq, and } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { GradingService } from "@/services/GradingService";
 
 export async function bulkUploadResults(data: any[], courseId: number, sessionId: number) {
     try {
@@ -75,12 +76,18 @@ export async function bulkUploadResults(data: any[], courseId: number, sessionId
             // Check if result already exists for this enrollment
             const existing = await db.select().from(results).where(eq(results.enrollmentId, enrollmentId));
 
+            // Calculate Grade and Grade Point using GradingService
+            const { grade, remark, gradePoint } = await GradingService.getGradeAndRemark(totalScore, undefined, 'exam', undefined, sessionId);
+
             if (existing.length > 0) {
                 // Update existing
                 await db.update(results).set({
                     caScore: caScore.toString(),
                     examScore: examScore.toString(),
                     totalScore: totalScore.toString(),
+                    grade,
+                    gradePoint: gradePoint.toString(),
+                    teacherRemark: remark,
                     status: 'pending',
                     lastEditedBy: parseInt(session.user.id),
                     updatedAt: new Date()
@@ -92,6 +99,9 @@ export async function bulkUploadResults(data: any[], courseId: number, sessionId
                     caScore: caScore.toString(),
                     examScore: examScore.toString(),
                     totalScore: totalScore.toString(),
+                    grade,
+                    gradePoint: gradePoint.toString(),
+                    teacherRemark: remark,
                     status: 'pending',
                     lastEditedBy: parseInt(session.user.id)
                 });
