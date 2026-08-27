@@ -9,6 +9,9 @@ import {
   students,
   courses,
   academicSessions,
+  enrollments,
+  results,
+  semesterSummaries,
 } from "@/db/schema";
 
 export type GradeRule = { min: number; max: number; grade: string; point: number };
@@ -81,7 +84,7 @@ export function calculateSemesterGPA(
 export async function publishResultBatch(batchId: number) {
   const batch = await db.query.resultBatches.findFirst({
     where: eq(resultBatches.id, batchId),
-    with: { gradingScale: true },
+    with: { gradingScale: true, academicSession: true },
   });
   if (!batch) throw new Error("Batch not found");
 
@@ -96,6 +99,7 @@ export async function publishResultBatch(batchId: number) {
     .where(eq(studentResults.batchId, batchId));
 
   const uniqueStudentIds = Array.from(new Set(batchResults.map((r) => r.studentId)));
+  const semesterNum = parseInt(batch.semester) as 1 | 2 | 3;
 
   for (const sId of uniqueStudentIds) {
     const studentBatchResults = batchResults.filter((r) => r.studentId === sId);
@@ -132,6 +136,105 @@ export async function publishResultBatch(batchId: number) {
         semester: batch.semester,
         ...data,
       });
+    }
+
+    // Bridge: create enrollments + results so the student transcript page
+    // (which reads from the LMS pipeline) also picks up these results.
+    const academicYear = batch.academicSession?.name || "Unknown";
+
+    for (const r of studentBatchResults) {
+      try {
+        // Find or create enrollment for this student+course+session+semester
+        let [enrollment] = await db
+          .select({ id: enrollments.id })
+          .from(enrollments)
+          .where(
+            and(
+              eq(enrollments.studentId, sId),
+              eq(enrollments.courseId, r.courseId),
+              eq(enrollments.sessionId, batch.academicSessionId),
+              eq(enrollments.semester, semesterNum)
+            )
+          )
+          .limit(1);
+
+        if (!enrollment) {
+          const [newEnrollment] = await db.insert(enrollments).values({
+            studentId: sId,
+            courseId: r.courseId,
+            sessionId: batch.academicSessionId,
+            academicYear,
+            semester: semesterNum,
+            status: "approved",
+          });
+          enrollment = { id: (newEnrollment as any).insertId ?? (newEnrollment as any)[0]?.insertId };
+        }
+
+        // Create result record if none exists for this enrollment
+        const [existingResult] = await db
+          .select({ id: results.id })
+          .from(results)
+          .where(eq(results.enrollmentId, enrollment.id))
+          .limit(1);
+
+        if (!existingResult) {
+          await db.insert(results).values({
+            enrollmentId: enrollment.id,
+            totalScore: r.score,
+            score: parseInt(r.score) || 0,
+            grade: r.grade,
+            gradePoint: r.gradePoint,
+            status: "published",
+          });
+        }
+      } catch (e) {
+        // Non-fatal: enrollment/result bridge is supplemental
+        console.error("publishResultBatch: enrollment bridge error", e);
+      }
+    }
+
+    // Upsert semester summary so the transcript page shows GPA/CGPA
+    // (semesterSummaries only accepts '1' or '2' — skip for semester '3')
+    if (batch.semester === "1" || batch.semester === "2") {
+      try {
+        const totalWGP = (gpa * credits).toFixed(2);
+        const [existingSummary] = await db
+          .select({ id: semesterSummaries.id })
+          .from(semesterSummaries)
+          .where(
+            and(
+              eq(semesterSummaries.studentId, sId),
+              eq(semesterSummaries.sessionId, batch.academicSessionId),
+              eq(semesterSummaries.semester, batch.semester as "1" | "2")
+            )
+          )
+          .limit(1);
+
+        const summaryData = {
+          tcr: credits,
+          tce: credits,
+          twgp: totalWGP,
+          gpa: gpa.toFixed(2),
+          cgpa: cgpa.toFixed(2),
+          approvalStatus: "published" as const,
+        };
+
+        if (existingSummary) {
+          await db
+            .update(semesterSummaries)
+            .set(summaryData)
+            .where(eq(semesterSummaries.id, existingSummary.id));
+        } else {
+          await db.insert(semesterSummaries).values({
+            studentId: sId,
+            sessionId: batch.academicSessionId,
+            semester: batch.semester as "1" | "2",
+            ...summaryData,
+          });
+        }
+      } catch (e) {
+        console.error("publishResultBatch: semester summary error", e);
+      }
     }
   }
   return { published: uniqueStudentIds.length };
