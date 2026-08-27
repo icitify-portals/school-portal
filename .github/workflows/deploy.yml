@@ -32,29 +32,17 @@ jobs:
             echo "=== PULLING LATEST CODE FROM MAIN ==="
             git pull origin main
 
-            echo "=== BUILDING & RESTARTING CONTAINERS ==="
-            # NOTE: no sudo — 'deploy' is in the docker group; sudo cannot prompt
-            # for a password inside GitHub Actions' non-interactive shell.
-            docker compose -f compose.yml up -d --build school-portal-app school-portal-worker
+            echo "=== BUILDING NEW APP IMAGE ==="
+            docker compose build --no-cache school-portal-app
 
-            echo "=== HEALTH CHECK (waiting for app to boot) ==="
-            ok=0
-            for i in $(seq 1 18); do
-              code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 http://localhost:3005/ || true)
-              if [ "$code" = "200" ]; then
-                echo "✓ App healthy (HTTP 200) after attempt $i"
-                ok=1
-                break
-              fi
-              echo "attempt $i: HTTP $code — retrying in 10s..."
-              sleep 10
-            done
-            if [ "$ok" != "1" ]; then
-              echo "✗ FATAL: app did not become healthy after deployment"
-              sudo docker logs school-portal-app --tail 40 2>/dev/null || true
-              exit 1
-            fi
+            echo "=== RESTARTING APP CONTAINER ==="
+            docker compose up -d --force-recreate school-portal-app
 
-            echo "=== CLEANING UNUSED DOCKER IMAGES ==="
+            echo "=== RESTARTING WORKER CONTAINER ==="
+            docker compose up -d --force-recreate school-portal-worker
+
+            echo "=== CLEANING UP OLD DOCKER IMAGES ==="
             docker image prune -f
-            echo "✓ Automated Direct SSH Production Deployment Complete!"
+
+            echo "=== DEPLOYMENT COMPLETE ==="
+            docker compose ps
