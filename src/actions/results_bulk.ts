@@ -80,7 +80,7 @@ export async function bulkUploadResults(data: any[], courseId: number, sessionId
         revalidatePath("/admin/exams-records/upload");
         revalidatePath("/admin/exams-records/broadsheet");
         
-        return { success: true, message: `Successfully processed ${successCount} records. ${errorCount > 0 ? \`Failed to find or match ${errorCount} records.\` : ''}` };
+        return { success: true, message: `Successfully processed ${successCount} records. ${errorCount > 0 ? 'Failed to find or match ' + errorCount + ' records.' : ''}` };
     } catch (error: any) {
         console.error("Bulk upload error:", error);
         return { success: false, error: error.message || "Failed to upload results" };
