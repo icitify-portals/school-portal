@@ -235,35 +235,57 @@ export default function BatchDetailPage() {
     Papa.parse(file, {
       header: true,
       skipEmptyLines: true,
+      transformHeader: (h) => (h ?? "").replace(/^\uFEFF/, "").trim(),
       complete: (res) => {
         const meta = res.meta as any;
         const headers = (meta.fields || []) as string[];
         const errors: string[] = [];
-        const rows = res.data as any[];
+        const rawRows = res.data as any[];
 
-        // First header must be matric_number
-        if (!headers.length || headers[0] !== "matric_number") {
-          errors.push("First column must be 'matric_number'");
+        // Locate the student identifier column by alias (BOM/whitespace already stripped via transformHeader)
+        const ID_ALIASES = new Set([
+          "matric_number", "matric no", "matric_no", "matricnumber", "matric no.",
+          "matric", "mat number", "mat_number", "admission_number", "admission no",
+          "admissionno", "student_number", "student no",
+        ]);
+        const idHeader = headers.find(h => ID_ALIASES.has(h.toLowerCase()));
+
+        if (!idHeader) {
+          errors.push("Could not find a student ID column. Expected the first column to be named 'matric_number'.");
           setCsvCourseColumns([]);
           setCsvData([]);
           setBulkErrors(errors);
           return;
         }
 
-        const NON_COURSE_COLUMNS = new Set(["name", "student_name", "full_name", "surname", "programme"]);
-        const courseColumns = headers.slice(1).filter(h => h && !NON_COURSE_COLUMNS.has(h.toLowerCase().trim()));
+        // Normalize rows so the identifier is always exposed as 'matric_number'
+        const rows = rawRows.map(r => {
+          const cleaned: any = {};
+          for (const h of headers) {
+            if (h === idHeader) cleaned["matric_number"] = r[idHeader];
+            else if (h) cleaned[h] = r[h];
+          }
+          return cleaned;
+        });
+
+        const NON_COURSE_COLUMNS = new Set([
+          "name", "student_name", "student name", "full_name", "full name",
+          "surname", "last name", "first name", "programme", "programme name",
+          "program", "s/n", "sn", "serial", "serial no", "no",
+        ]);
+        const courseColumns = headers.filter(h => h && h !== idHeader && !NON_COURSE_COLUMNS.has(h.toLowerCase()));
         if (courseColumns.length === 0) {
-          errors.push("No course code columns found (add columns after 'matric_number')");
+          errors.push("No course code columns found (add course columns after 'matric_number')");
         }
 
         // Validate each row
         rows.forEach((r, i) => {
-          if (!r.matric_number) {
+          if (!r.matric_number || String(r.matric_number).trim() === "") {
             errors.push(`Row ${i + 2}: missing matric_number`);
           } else {
             for (const cc of courseColumns) {
               const val = r[cc];
-              if (val !== undefined && val !== null && val !== "" && isNaN(Number(val))) {
+              if (val !== undefined && val !== null && String(val).trim() !== "" && isNaN(Number(val))) {
                 errors.push(`Row ${i + 2}: '${cc}' has non-numeric value '${val}'`);
               }
             }
@@ -437,6 +459,7 @@ export default function BatchDetailPage() {
     Papa.parse(file, {
       header: true,
       skipEmptyLines: true,
+      transformHeader: (h) => (h ?? "").replace(/^\uFEFF/, "").trim(),
       complete: (res) => {
         setStudentCsvData(res.data as any[]);
       },

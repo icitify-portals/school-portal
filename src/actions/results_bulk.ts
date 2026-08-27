@@ -15,24 +15,46 @@ export async function bulkUploadResults(data: any[], courseId: number, sessionId
         let errorCount = 0;
 
         for (const row of data) {
-            const matricNumber = row.matricNumber || row.matricNo || row.MatricNumber || row['Matric No'];
+            // Normalise all keys: strip BOM (\uFEFF), trim whitespace, lower-case for matching
+            const normRow: Record<string, any> = {};
+            for (const [k, v] of Object.entries(row)) {
+                const cleanKey = k.replace(/^\uFEFF/, '').trim();
+                normRow[cleanKey] = v;
+            }
+
+            // Accept any sensible spelling of the matric-number column
+            const matricNumber =
+                normRow['Matric No'] ||
+                normRow['matric_number'] ||
+                normRow['matricNumber'] ||
+                normRow['MatricNumber'] ||
+                normRow['matric no'] ||
+                normRow['MATRIC NO'] ||
+                normRow['Matric Number'] ||
+                normRow['matric number'] ||
+                normRow['Matric_No'] ||
+                normRow['matricNo'];
+
             if (!matricNumber) {
                 errorCount++;
                 continue;
             }
 
             // Find student by matric number
-            const studentRecord = await db.select().from(students).where(eq(students.matricNumber, matricNumber));
-            
+            const studentRecord = await db.select().from(students).where(eq(students.matricNumber, String(matricNumber).trim()));
+
             if (studentRecord.length === 0) {
                 errorCount++;
                 continue;
             }
 
             const studentId = studentRecord[0].id;
-            const caScore = parseFloat(row.caScore || row.ca_score || row['CA Score'] || row.CA || 0);
-            const examScore = parseFloat(row.examScore || row.exam_score || row['Exam Score'] || row.Exam || 0);
+
+            // Accept any sensible spelling of the score columns
+            const caScore  = parseFloat(normRow['CA Score']  || normRow['ca_score']  || normRow['caScore']  || normRow['CA']   || normRow['ca']   || '0');
+            const examScore = parseFloat(normRow['Exam Score'] || normRow['exam_score'] || normRow['examScore'] || normRow['Exam'] || normRow['exam'] || '0');
             const totalScore = caScore + examScore;
+
 
             // Find the enrollment for this student, course, and session
             const enrollmentRecord = await db.select().from(enrollments).where(

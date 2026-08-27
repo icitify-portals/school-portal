@@ -32,25 +32,42 @@ export function UniversalImporter({ title, description, onImport, templateColumn
 
         if (file.name.endsWith(".csv")) {
             reader.onload = (e) => {
-                const text = e.target?.result as string;
+                let text = e.target?.result as string;
+
+                // ── Strip UTF-8 BOM that Google Sheets inserts ──────────────
+                // The BOM (\uFEFF) attaches itself to the very first header key,
+                // turning "Matric No" into "﻿Matric No" so nothing matches.
+                if (text.charCodeAt(0) === 0xFEFF) {
+                    text = text.slice(1);
+                }
+
                 Papa.parse(text, {
                     header: true,
                     skipEmptyLines: true,
+                    transformHeader: (h: string) => h.trim(), // strip leading/trailing whitespace from headers
                     complete: (results) => {
                         setData(results.data);
                         setStep(2);
                     }
                 });
             };
-            reader.readAsText(file);
+            // readAsText with explicit UTF-8 so accented characters survive
+            reader.readAsText(file, "UTF-8");
         } else {
             reader.onload = (e) => {
                 const bstr = e.target?.result;
                 const workbook = XLSX.read(bstr, { type: 'binary' });
                 const firstSheetName = workbook.SheetNames[0];
                 const worksheet = workbook.Sheets[firstSheetName];
-                const json = XLSX.utils.sheet_to_json(worksheet);
-                setData(json);
+                // defval: '' avoids undefined cells; raw: false keeps formatted strings
+                const json = XLSX.utils.sheet_to_json(worksheet, { defval: '', raw: false });
+                // Trim whitespace from all header keys (XLSX doesn't have transformHeader)
+                const normalized = (json as Record<string, unknown>[]).map(row =>
+                    Object.fromEntries(
+                        Object.entries(row).map(([k, v]) => [k.trim(), v])
+                    )
+                );
+                setData(normalized);
                 setStep(2);
             };
             reader.readAsBinaryString(file);
