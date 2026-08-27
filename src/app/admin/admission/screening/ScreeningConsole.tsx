@@ -14,7 +14,7 @@ import {
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
-    updateExerciseCutoff, runSelection, sweepPendingAttendance, startNewExamRound,
+    updateExerciseCutoff, updateGlobalCutoffDefault, runSelection, sweepPendingAttendance, startNewExamRound,
     type ScreeningExercise, type ScreeningApplicant, type RunSelectionSummary,
 } from "@/actions/admin-admission";
 import BulkScoreUpload from "./BulkScoreUpload";
@@ -22,6 +22,7 @@ import BulkScoreUpload from "./BulkScoreUpload";
 interface Props {
     exercises: ScreeningExercise[];
     applicants: ScreeningApplicant[];
+    globalCutoff: number;
 }
 
 function pctColour(app: ScreeningApplicant): string {
@@ -33,12 +34,12 @@ function pctColour(app: ScreeningApplicant): string {
     return "text-rose-600";
 }
 
-export default function ScreeningConsole({ exercises: initialExercises, applicants }: Props) {
+export default function ScreeningConsole({ exercises: initialExercises, applicants, globalCutoff }: Props) {
     const router = useRouter();
     const [exercises, setExercises] = useState(initialExercises);
     const [activeTemplateId, setActiveTemplateId] = useState<number | 'all'>('all');
     const [search, setSearch] = useState("");
-    const [editingCutoffFor, setEditingCutoffFor] = useState<number | null>(null);
+    const [editingCutoffFor, setEditingCutoffFor] = useState<number | 'global' | null>(null);
     const [cutoffDraft, setCutoffDraft] = useState("");
     const [savingCutoff, setSavingCutoff] = useState(false);
     const [runningSelection, setRunningSelection] = useState(false);
@@ -96,26 +97,32 @@ export default function ScreeningConsole({ exercises: initialExercises, applican
     const activeExercise = activeTemplateId === 'all' ? null : exercises.find(e => e.id === activeTemplateId);
 
     // ── Cut-off editing ────────────────────────────────────────────────
-    const startEditCutoff = (exercise: ScreeningExercise) => {
-        setEditingCutoffFor(exercise.id);
-        setCutoffDraft(String(exercise.cutoffPercent));
+    const startEditCutoff = (exercise: ScreeningExercise | null) => {
+        if (exercise) {
+            setEditingCutoffFor(exercise.id);
+            setCutoffDraft(exercise.cutoffPercent.toString());
+        } else {
+            setEditingCutoffFor('global');
+            setCutoffDraft(globalCutoff.toString());
+        }
     };
 
     const saveCutoff = async () => {
-        if (!editingCutoffFor) return;
-        const value = parseFloat(cutoffDraft);
-        if (isNaN(value) || value < 0 || value > 100) {
-            toast.error("Cut-off must be between 0 and 100");
+        if (editingCutoffFor === null) return;
+        const val = parseFloat(cutoffDraft);
+        if (isNaN(val) || val < 0 || val > 100) {
+            toast.error("Invalid cut-off percentage");
             return;
         }
+
         setSavingCutoff(true);
-        const res = await updateExerciseCutoff(editingCutoffFor, value);
+        const res = editingCutoffFor === 'global'
+            ? await updateGlobalCutoffDefault(val)
+            : await updateExerciseCutoff(editingCutoffFor as number, val);
         setSavingCutoff(false);
+
         if (res.success) {
-            setExercises(prev => prev.map(e =>
-                e.id === editingCutoffFor ? { ...e, cutoffPercent: value } : e
-            ));
-            toast.success(`Cut-off updated to ${value}% — use Run Selection to re-evaluate scored applicants`);
+            toast.success("Cut-off updated. Re-run selection to apply changes.");
             setEditingCutoffFor(null);
             router.refresh();
         } else {
@@ -212,48 +219,42 @@ export default function ScreeningConsole({ exercises: initialExercises, applican
 
                     {/* Per-exercise controls */}
                     <div className="flex flex-wrap items-center gap-4 pt-3 border-t border-slate-100">
-                        {activeExercise ? (
-                            <div className="flex items-center gap-3">
-                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">
-                                    Cut-off for this exercise:
-                                </span>
-                                {editingCutoffFor === activeExercise.id ? (
-                                    <div className="flex items-center gap-2">
-                                        <Input
-                                            type="number" min={0} max={100} step={0.5}
-                                            className="w-24 h-9 rounded-lg font-black"
-                                            value={cutoffDraft}
-                                            onChange={(e) => setCutoffDraft(e.target.value)}
-                                            autoFocus
-                                        />
-                                        <span className="text-xs font-bold text-slate-500">%</span>
-                                        <Button size="sm" onClick={saveCutoff} disabled={savingCutoff}
-                                            className="h-9 bg-teal-600 hover:bg-teal-700 text-white font-black text-[10px] uppercase tracking-widest">
-                                            {savingCutoff ? <Loader2 className="w-3 h-3 animate-spin" /> : <><Save className="w-3 h-3 mr-1" /> Save</>}
-                                        </Button>
-                                        <Button size="sm" variant="ghost" onClick={() => setEditingCutoffFor(null)}
-                                            className="h-9 text-slate-500">
-                                            <X className="w-4 h-4" />
-                                        </Button>
-                                    </div>
-                                ) : (
-                                    <>
-                                        <button
-                                            onClick={() => startEditCutoff(activeExercise)}
-                                            className="text-lg font-black text-indigo-600 hover:text-indigo-800 underline decoration-dotted underline-offset-4"
-                                            title="Click to change this exercise's cut-off"
-                                        >
-                                            {activeExercise.cutoffPercent}%
-                                        </button>
-                                        <span className="text-[10px] text-slate-400 font-bold">click to change up or down</span>
-                                    </>
-                                )}
-                            </div>
-                        ) : (
-                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
-                                Select an exercise tab to edit its cut-off · each exercise keeps its own cut-off (ND and HND can differ)
-                            </p>
-                        )}
+                        <div className="flex items-center gap-3">
+                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">
+                                {activeExercise ? 'Cut-off for this exercise:' : 'Global Fallback Cut-off (ND/Defaults):'}
+                            </span>
+                            {editingCutoffFor === (activeExercise ? activeExercise.id : 'global') ? (
+                                <div className="flex items-center gap-2">
+                                    <Input
+                                        type="number" min={0} max={100} step={0.5}
+                                        className="w-24 h-9 rounded-lg font-black"
+                                        value={cutoffDraft}
+                                        onChange={(e) => setCutoffDraft(e.target.value)}
+                                        autoFocus
+                                    />
+                                    <span className="text-xs font-bold text-slate-500">%</span>
+                                    <Button size="sm" onClick={saveCutoff} disabled={savingCutoff}
+                                        className="h-9 bg-teal-600 hover:bg-teal-700 text-white font-black text-[10px] uppercase tracking-widest">
+                                        {savingCutoff ? <Loader2 className="w-3 h-3 animate-spin" /> : <><Save className="w-3 h-3 mr-1" /> Save</>}
+                                    </Button>
+                                    <Button size="sm" variant="ghost" onClick={() => setEditingCutoffFor(null)}
+                                        className="h-9 text-slate-500">
+                                        <X className="w-4 h-4" />
+                                    </Button>
+                                </div>
+                            ) : (
+                                <>
+                                    <button
+                                        onClick={() => startEditCutoff(activeExercise)}
+                                        className="text-lg font-black text-indigo-600 hover:text-indigo-800 underline decoration-dotted underline-offset-4"
+                                        title={activeExercise ? "Click to change this exercise's cut-off" : "Click to change the global fallback cut-off"}
+                                    >
+                                        {activeExercise ? activeExercise.cutoffPercent : globalCutoff}%
+                                    </button>
+                                    <span className="text-[10px] text-slate-400 font-bold">click to change up or down</span>
+                                </>
+                            )}
+                        </div>
 
                         <div className="ml-auto flex items-center gap-2">
                             {/* Attendance quick actions */}

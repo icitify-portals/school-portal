@@ -171,6 +171,7 @@ export async function getScreeningApplicants(templateId?: number): Promise<{
     success: boolean;
     exercises?: ScreeningExercise[];
     applicants?: ScreeningApplicant[];
+    globalCutoff?: number;
     error?: string;
 }> {
     try {
@@ -261,7 +262,7 @@ export async function getScreeningApplicants(templateId?: number): Promise<{
             }))
             .sort((a, b) => a.name.localeCompare(b.name));
 
-        return { success: true, exercises, applicants };
+        return { success: true, exercises, applicants, globalCutoff: globalFallback };
     } catch (error) {
         console.error("Error fetching screening applicants:", error);
         return { success: false, error: "Failed to fetch screening applicants" };

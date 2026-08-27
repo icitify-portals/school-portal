@@ -5,7 +5,7 @@ import ScreeningConsole from "./ScreeningConsole";
 export const dynamic = "force-dynamic";
 
 export default async function AdminScreeningPage() {
-    const { success, exercises, applicants, error } = await getScreeningApplicants();
+    const { success, exercises, applicants, error, globalCutoff } = await getScreeningApplicants();
 
     return (
         <div className="p-4 sm:p-6 lg:p-8 min-h-screen">
@@ -31,7 +31,7 @@ export default async function AdminScreeningPage() {
                 </div>
 
                 {success && exercises && applicants ? (
-                    <ScreeningConsole exercises={exercises} applicants={applicants} />
+                    <ScreeningConsole exercises={exercises} applicants={applicants} globalCutoff={globalCutoff || 40} />
                 ) : (
                     <div className="p-6 bg-rose-50 border border-rose-200 rounded-2xl text-rose-700 font-bold">
                         Error: {error || "Failed to load screening data"}
