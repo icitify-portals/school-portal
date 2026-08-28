@@ -97,6 +97,25 @@ export async function createResultBatch(data: {
   gradingScaleId: number;
 }) {
   try {
+    // Enforce: only one result batch per semester+session
+    const existingBatch = await db.query.resultBatches.findFirst({
+      where: and(
+        eq(resultBatches.academicSessionId, data.academicSessionId),
+        eq(resultBatches.semester, data.semester),
+      ),
+      with: { academicSession: true },
+    });
+
+    if (existingBatch) {
+      const sessionName = existingBatch.academicSession?.name || `Session #${existingBatch.academicSessionId}`;
+      const semLabel = data.semester === "1" ? "First" : data.semester === "2" ? "Second" : "Summer";
+      return {
+        success: false,
+        error: `A result batch already exists for ${semLabel} Semester, ${sessionName}. You can update the existing batch instead of creating a new one.`,
+        existingBatchId: existingBatch.id,
+      };
+    }
+
     const result = await db.insert(resultBatches).values({
       adminId: data.adminId,
       academicSessionId: data.academicSessionId,
@@ -390,7 +409,7 @@ export async function getMyTranscript(studentId: number) {
   }
 }
 
-export async function getBulkTranscripts(filters: { programmeId?: number, departmentId?: number, facultyId?: number, studentIds?: number[], all?: boolean }) {
+export async function getBulkTranscripts(filters: { programmeId?: number, departmentId?: number, facultyId?: number, studentIds?: number[], all?: boolean, level?: string }) {
   try {
     let queryConditions = [];
     
@@ -402,7 +421,6 @@ export async function getBulkTranscripts(filters: { programmeId?: number, depart
       } else if (filters.departmentId) {
         queryConditions.push(eq(students.deptId, filters.departmentId));
       } else if (filters.facultyId) {
-        // Find all departments in this faculty
         const depts = await db.query.departments.findMany({
           where: eq(departments.facultyId, filters.facultyId),
           columns: { id: true }
@@ -411,9 +429,23 @@ export async function getBulkTranscripts(filters: { programmeId?: number, depart
         if (deptIds.length > 0) {
           queryConditions.push(inArray(students.deptId, deptIds));
         } else {
-          // Empty faculty
           queryConditions.push(eq(students.id, 0)); 
         }
+      }
+    }
+
+    // Level filter: ND1, ND2, HND1, HND2
+    if (filters.level && filters.level !== "all") {
+      const levelMap: Record<string, { programmeType: string; currentLevel: number }> = {
+        "ND1": { programmeType: "ND", currentLevel: 1 },
+        "ND2": { programmeType: "ND", currentLevel: 2 },
+        "HND1": { programmeType: "HND", currentLevel: 1 },
+        "HND2": { programmeType: "HND", currentLevel: 2 },
+      };
+      const lvl = levelMap[filters.level];
+      if (lvl) {
+        queryConditions.push(eq(students.programmeType, lvl.programmeType as any));
+        queryConditions.push(eq(students.currentLevel, lvl.currentLevel));
       }
     }
 
@@ -681,6 +713,7 @@ export async function getResultTemplateStudents(filters: {
   departmentId?: number;
   facultyId?: number;
   all?: boolean;
+  level?: string;
 }) {
   try {
     const allowed = await hasRole("admin") || await hasRole("superadmin") || await hasRole("registrar") || await hasRole("record_officer") || await hasPermission("result_module.manage");
@@ -699,6 +732,21 @@ export async function getResultTemplateStudents(filters: {
       });
       const deptIds = depts.map(d => d.id);
       queryConditions.push(deptIds.length > 0 ? inArray(students.deptId, deptIds) : eq(students.id, 0));
+    }
+
+    // Level filter: ND1, ND2, HND1, HND2
+    if (filters.level && filters.level !== "all") {
+      const levelMap: Record<string, { programmeType: string; currentLevel: number }> = {
+        "ND1": { programmeType: "ND", currentLevel: 1 },
+        "ND2": { programmeType: "ND", currentLevel: 2 },
+        "HND1": { programmeType: "HND", currentLevel: 1 },
+        "HND2": { programmeType: "HND", currentLevel: 2 },
+      };
+      const lvl = levelMap[filters.level];
+      if (lvl) {
+        queryConditions.push(eq(students.programmeType, lvl.programmeType as any));
+        queryConditions.push(eq(students.currentLevel, lvl.currentLevel));
+      }
     }
 
     // Only students with a matric/admission number can be matched on upload

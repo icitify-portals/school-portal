@@ -545,6 +545,7 @@ export default function PrintTranscriptPage() {
   const [selectedStudent, setSelectedStudent] = useState<any>(null);
   
   const [bulkMode, setBulkMode] = useState<"programme" | "department" | "faculty" | "all">("programme");
+  const [selectedLevel, setSelectedLevel] = useState("all");
   const [programmes, setProgrammes] = useState<any[]>([]);
   const [selectedProgramme, setSelectedProgramme] = useState("");
   
@@ -626,6 +627,9 @@ export default function PrintTranscriptPage() {
       filters.facultyId = Number(selectedFaculty);
     } else if (bulkMode === "all") {
       filters.all = true;
+    }
+    if (selectedLevel && selectedLevel !== "all") {
+      filters.level = selectedLevel;
     }
     
     setLoading(true);
@@ -779,6 +783,18 @@ export default function PrintTranscriptPage() {
                   <option value="department">By Department</option>
                   <option value="faculty">By Faculty</option>
                   <option value="all">Entire School</option>
+                </select>
+
+                <select
+                  value={selectedLevel}
+                  onChange={e => setSelectedLevel(e.target.value)}
+                  style={{ width: 130, background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 8, padding: "8px 12px", fontSize: 13, outline: "none" }}
+                >
+                  <option value="all">All Levels</option>
+                  <option value="ND1">ND 1</option>
+                  <option value="ND2">ND 2</option>
+                  <option value="HND1">HND 1</option>
+                  <option value="HND2">HND 2</option>
                 </select>
 
                 {bulkMode === "programme" && (
