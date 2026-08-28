@@ -15,6 +15,9 @@ import {
   users,
   programmes,
   departments,
+  enrollments,
+  results,
+  semesterSummaries,
 } from "@/db/schema";
 import { eq, inArray, and, like, or, sql, isNotNull } from "drizzle-orm";
 import {
@@ -1044,6 +1047,33 @@ export async function toggleBatchPublication(batchId: number, publish: boolean) 
             eq(studentTranscripts.semester, batch.semester)
           )
         );
+
+      // Clean up LMS bridge data so students can't see results
+      // Delete enrollments for this batch's session+semester
+      const batchEnrollments = await db.select({ id: enrollments.id })
+        .from(enrollments)
+        .where(
+          and(
+            eq(enrollments.sessionId, batch.academicSessionId),
+            eq(enrollments.semester, parseInt(batch.semester))
+          )
+        );
+
+      if (batchEnrollments.length > 0) {
+        const enrollIds = batchEnrollments.map(e => e.id);
+        // Delete results linked to these enrollments
+        await db.delete(results).where(inArray(results.enrollmentId, enrollIds));
+        // Delete the enrollments themselves
+        await db.delete(enrollments).where(inArray(enrollments.id, enrollIds));
+      }
+
+      // Delete semester summaries for this session+semester
+      await db.delete(semesterSummaries).where(
+        and(
+          eq(semesterSummaries.sessionId, batch.academicSessionId),
+          eq(semesterSummaries.semester, batch.semester as "1" | "2")
+        )
+      );
     }
 
     revalidatePath("/admin/result-module");

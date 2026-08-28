@@ -26,7 +26,7 @@ import {
 } from "@/actions/result-module";
 import {
   ArrowLeft, Upload, UserPlus, CheckCircle2, Loader2, Search,
-  Plus, FileUp, Trash2, AlertTriangle, BookOpen, X, Eye, EyeOff, Lock, ChevronDown, Edit3,
+  Plus, FileUp, Trash2, AlertTriangle, BookOpen, X, Eye, EyeOff, Lock, ChevronDown, Edit3, Printer,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -97,6 +97,8 @@ export default function BatchDetailPage() {
   const [templateIncludeName, setTemplateIncludeName] = useState(true);
   const [templateCourseCodes, setTemplateCourseCodes] = useState<string[]>([]);
   const [templateCoursePick, setTemplateCoursePick] = useState("");
+  const [templateCourseSearch, setTemplateCourseSearch] = useState("");
+  const [templateCourseOpen, setTemplateCourseOpen] = useState(false);
 
   // Edit Result record state
   const [editingResult, setEditingResult] = useState<{ id: number; studentName: string; courseCode: string; courseName: string; score: string; creditLoad: string } | null>(null);
@@ -339,6 +341,8 @@ export default function BatchDetailPage() {
     setShowTemplateModal(false);
     setTemplateCourseCodes([]);
     setTemplateCoursePick("");
+    setTemplateCourseSearch("");
+    setTemplateCourseOpen(false);
     setTemplateScope("all");
     setTemplateFacultyId("");
     setTemplateDeptId("");
@@ -581,6 +585,10 @@ export default function BatchDetailPage() {
 
             {/* Display to Student Portal Toggle Switch */}
             <div className="flex items-center gap-3 pl-3 border-l border-white/10">
+              <Link href="/admin/result-module/print"
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/10 hover:bg-white/15 border border-white/20 text-white font-semibold text-xs transition-all">
+                <Printer className="w-3.5 h-3.5" /> Print Transcripts
+              </Link>
               <div className="text-right hidden sm:block">
                 <p className="text-xs font-semibold text-white">Student Dashboard Display</p>
                 <p className={`text-[11px] font-mono ${isPublished ? "text-emerald-400 font-bold" : "text-amber-400"}`}>
@@ -896,17 +904,47 @@ export default function BatchDetailPage() {
 
                           <div>
                             <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Course columns (optional)</label>
-                            <select value={templateCoursePick} onChange={e => {
-                              const v = e.target.value;
-                              if (v && !templateCourseCodes.includes(v)) setTemplateCourseCodes([...templateCourseCodes, v]);
-                              setTemplateCoursePick("");
-                            }}
-                              className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-400">
-                              <option value="">Add course code...</option>
-                              {courses.filter((c: any) => !templateCourseCodes.includes(c.code)).map((c: any) => (
-                                <option key={c.id} value={c.code}>{c.code} — {c.name}</option>
-                              ))}
-                            </select>
+                            <div className="relative">
+                              <div className="flex items-center bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm focus-within:border-blue-400 transition-colors">
+                                <Search className="w-3.5 h-3.5 text-slate-400 shrink-0 mr-2" />
+                                <input
+                                  type="text"
+                                  value={templateCourseSearch}
+                                  onChange={e => { setTemplateCourseSearch(e.target.value); setTemplateCourseOpen(true); }}
+                                  onFocus={() => setTemplateCourseOpen(true)}
+                                  placeholder="Search course code or name..."
+                                  className="bg-transparent border-none outline-none text-white w-full text-sm placeholder:text-slate-500"
+                                />
+                              </div>
+                              {templateCourseOpen && templateCourseSearch.trim() && (
+                                <>
+                                  <div className="fixed inset-0 z-40" onClick={() => setTemplateCourseOpen(false)} />
+                                  <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-slate-800 border border-white/20 rounded-lg max-h-48 overflow-y-auto shadow-xl">
+                                    {courses.filter((c: any) => !templateCourseCodes.includes(c.code)).filter((c: any) =>
+                                      c.code?.toLowerCase().includes(templateCourseSearch.toLowerCase()) ||
+                                      c.name?.toLowerCase().includes(templateCourseSearch.toLowerCase())
+                                    ).length === 0 ? (
+                                      <div className="p-3 text-xs text-slate-400 text-center">No courses found</div>
+                                    ) : (
+                                      courses.filter((c: any) => !templateCourseCodes.includes(c.code)).filter((c: any) =>
+                                        c.code?.toLowerCase().includes(templateCourseSearch.toLowerCase()) ||
+                                        c.name?.toLowerCase().includes(templateCourseSearch.toLowerCase())
+                                      ).map((c: any) => (
+                                        <button key={c.id} type="button" onClick={() => {
+                                          setTemplateCourseCodes([...templateCourseCodes, c.code]);
+                                          setTemplateCourseSearch("");
+                                          setTemplateCourseOpen(false);
+                                        }}
+                                          className="w-full text-left px-3 py-2 text-sm text-white hover:bg-white/10 transition-colors border-b border-white/5 last:border-0">
+                                          <span className="font-mono text-blue-300 mr-2">{c.code}</span>
+                                          {c.name}
+                                        </button>
+                                      ))
+                                    )}
+                                  </div>
+                                </>
+                              )}
+                            </div>
                             {templateCourseCodes.length > 0 && (
                               <div className="flex flex-wrap gap-1.5 mt-2">
                                 {templateCourseCodes.map(cc => (

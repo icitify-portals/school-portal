@@ -153,7 +153,7 @@ function TranscriptCardDetailed({ transcriptData, qrDataUrl }: { transcriptData:
               <div>P.O. Box 29751, U.I. IBADAN</div>
               <div>Telegram: STATIBADAN</div>
               <div>Telephone: 08023108427</div>
-              <div>Email: info@fssibadan.edu.ng</div>
+              <div>Email: Registrar@fssibadan.edu.ng</div>
             </div>
             {/* Logo */}
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
@@ -351,7 +351,7 @@ function TranscriptCardOriginal({ transcriptData, qrDataUrl }: { transcriptData:
               <div>P. O. Box 29751, U. I. IBADAN</div>
               <div>Telegram: STATIBADAN</div>
               <div>Telephone: 08023108427</div>
-              <div>Email: <span style={{textDecoration: 'underline'}}>info@fssibadan.edu.ng</span></div>
+              <div>Email: <span style={{textDecoration: 'underline'}}>Registrar@fssibadan.edu.ng</span></div>
             </div>
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
               <img src="/fss_logo.png" alt="FSS Logo" style={{ width: 80, height: 80, objectFit: "contain" }} onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
