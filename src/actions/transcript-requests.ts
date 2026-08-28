@@ -171,11 +171,12 @@ export async function verifyTranscriptPaystack(reference: string) {
             return { success: false, error: verify.error };
         }
 
+        const fees = await getTranscriptFees();
         await db.update(transcriptRequests)
             .set({ 
                 paystackStatus: 'paid', 
                 paymentStatus: 'paid',
-                feePaid: (TRANSCRIPT_FEE + PROCESSING_FEE).toString()
+                feePaid: (fees.transcriptFee + fees.processingFee).toString()
             })
             .where(eq(transcriptRequests.id, req.id));
 
@@ -205,12 +206,20 @@ export async function dispatchTranscript(requestId: number, dispatchedByUserId: 
         const [req] = await db.select().from(transcriptRequests).where(eq(transcriptRequests.id, requestId)).limit(1);
         if (!req) return { success: false, error: "Request not found" };
 
+        // Resolve dispatcher from auth if not provided (0 means use auth)
+        let dispatcherId = dispatchedByUserId;
+        if (!dispatcherId) {
+            const { auth } = await import("@/auth");
+            const session = await auth();
+            dispatcherId = session?.user ? parseInt((session.user as any).id) : 0;
+        }
+
         // 1. Update status
         await db.update(transcriptRequests)
             .set({ 
                 approvalStatus: 'dispatched', 
                 dispatchedAt: new Date(),
-                dispatchedBy: dispatchedByUserId
+                dispatchedBy: dispatcherId || undefined
             })
             .where(eq(transcriptRequests.id, requestId));
 

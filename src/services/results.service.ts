@@ -12,6 +12,7 @@ import {
   enrollments,
   results,
   semesterSummaries,
+  resultMarks,
 } from "@/db/schema";
 
 export type GradeRule = { min: number; max: number; grade: string; point: number };
@@ -186,6 +187,37 @@ export async function publishResultBatch(batchId: number) {
             gradePoint: r.gradePoint,
             status: "published",
           });
+        }
+
+        // Also write to resultMarks for graduate-documents / TeacherService compatibility
+        try {
+          const [existingMark] = await db
+            .select({ id: resultMarks.id })
+            .from(resultMarks)
+            .where(
+              and(
+                eq(resultMarks.studentId, sId),
+                eq(resultMarks.courseId, r.courseId),
+                eq(resultMarks.sessionId, batch.academicSessionId),
+                eq(resultMarks.semester, batch.semester as "1" | "2")
+              )
+            )
+            .limit(1);
+
+          if (!existingMark) {
+            await db.insert(resultMarks).values({
+              studentId: sId,
+              courseId: r.courseId,
+              sessionId: batch.academicSessionId,
+              semester: batch.semester as "1" | "2",
+              totalScore: r.score,
+              grade: r.grade,
+              gradePoint: r.gradePoint,
+              isVerified: true,
+            });
+          }
+        } catch (e) {
+          console.error("publishResultBatch: resultMarks write error", e);
         }
       } catch (e) {
         // Non-fatal: enrollment/result bridge is supplemental

@@ -18,6 +18,7 @@ import {
   enrollments,
   results,
   semesterSummaries,
+  resultMarks,
 } from "@/db/schema";
 import { eq, inArray, and, like, or, sql, isNotNull } from "drizzle-orm";
 import {
@@ -1074,6 +1075,26 @@ export async function toggleBatchPublication(batchId: number, publish: boolean) 
           eq(semesterSummaries.semester, batch.semester as "1" | "2")
         )
       );
+
+      // Clean up resultMarks for this batch's students+session+semester
+      const batchStudentIds = batchResults.map(r => r.studentId);
+      if (batchStudentIds.length > 0) {
+        // Find batch results to get course IDs
+        const batchResultsList = await db.select({ studentId: studentResults.studentId, courseId: studentResults.courseId })
+          .from(studentResults)
+          .where(eq(studentResults.batchId, batchId));
+
+        for (const br of batchResultsList) {
+          await db.delete(resultMarks).where(
+            and(
+              eq(resultMarks.studentId, br.studentId),
+              eq(resultMarks.courseId, br.courseId),
+              eq(resultMarks.sessionId, batch.academicSessionId),
+              eq(resultMarks.semester, batch.semester as "1" | "2")
+            )
+          );
+        }
+      }
     }
 
     revalidatePath("/admin/result-module");

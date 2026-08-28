@@ -1,15 +1,17 @@
 import { db } from "@/db/db";
-import { transcriptRequests, officialResultDownloads, transactions, students, users } from "@/db/schema";
-import { eq, and } from "drizzle-orm";
+import { transcriptRequests, officialResultDownloads, students, users } from "@/db/schema";
+import { eq } from "drizzle-orm";
 
 export class AcademicDocumentService {
 
     /**
-     * Initializes a transcript request.
-     * Status starts as 'unpaid'.
+     * Initializes a transcript request from a student.
      */
     static async requestTranscript(data: {
         studentId: number,
+        applicantName: string,
+        applicantEmail: string,
+        matricNumber: string,
         destinationName: string,
         destinationAddress: string,
         deliveryMethod: 'email' | 'courier' | 'pickup',
@@ -17,39 +19,16 @@ export class AcademicDocumentService {
     }) {
         return await db.insert(transcriptRequests).values({
             studentId: data.studentId,
+            applicantName: data.applicantName,
+            applicantEmail: data.applicantEmail,
+            matricNumber: data.matricNumber,
             destinationName: data.destinationName,
             destinationAddress: data.destinationAddress,
             deliveryMethod: data.deliveryMethod,
             feePaid: data.fee.toFixed(2),
-            paymentStatus: 'unpaid',
+            paymentStatus: data.fee > 0 ? 'unpaid' : 'paid',
             approvalStatus: 'pending'
         });
-    }
-
-    /**
-     * Confirms payment for a transcript and moves it to 'processing'.
-     */
-    static async confirmTranscriptPayment(requestId: number, transactionId: number) {
-        return await db.update(transcriptRequests)
-            .set({
-                paymentStatus: 'paid',
-                approvalStatus: 'processing',
-                transactionId: transactionId
-            })
-            .where(eq(transcriptRequests.id, requestId));
-    }
-
-    /**
-     * Finalizes and dispatches a transcript.
-     */
-    static async dispatchTranscript(requestId: number, dispatcherId: number) {
-        return await db.update(transcriptRequests)
-            .set({
-                approvalStatus: 'dispatched',
-                dispatchedBy: dispatcherId,
-                dispatchedAt: new Date()
-            })
-            .where(eq(transcriptRequests.id, requestId));
     }
 
     /**

@@ -4,12 +4,43 @@ import { AcademicDocumentService } from "@/services/AcademicDocumentService";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db/db";
 import { transcriptRequests, users, students } from "@/db/schema";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and } from "drizzle-orm";
 import { hasRole, hasPermission } from "@/lib/rbac";
+import { auth } from "@/auth";
 
-export async function submitTranscriptRequestAction(data: any) {
+async function getCurrentStudentId(): Promise<number | null> {
+    const session = await auth();
+    if (!session?.user) return null;
+    const userId = parseInt((session.user as any).id);
+    if (isNaN(userId)) return null;
+    const [student] = await db.select({ id: students.id }).from(students).where(eq(students.userId, userId)).limit(1);
+    return student?.id ?? null;
+}
+
+export async function submitTranscriptRequestAction(data: {
+    destinationName: string;
+    destinationAddress: string;
+    deliveryMethod: 'email' | 'courier' | 'pickup';
+}) {
     try {
-        const result = await AcademicDocumentService.requestTranscript(data);
+        const studentId = await getCurrentStudentId();
+        if (!studentId) throw new Error("You must be logged in as a student to request a transcript");
+
+        const [student] = await db.select().from(students).where(eq(students.id, studentId)).limit(1);
+        if (!student) throw new Error("Student record not found");
+
+        const [user] = await db.select().from(users).where(eq(users.id, student.userId!)).limit(1);
+
+        const result = await AcademicDocumentService.requestTranscript({
+            studentId,
+            applicantName: user?.name || "Student",
+            applicantEmail: user?.email || "",
+            matricNumber: student.matricNumber || "",
+            destinationName: data.destinationName,
+            destinationAddress: data.destinationAddress,
+            deliveryMethod: data.deliveryMethod,
+            fee: 0
+        });
         revalidatePath("/student/transcripts");
         return { success: true, data: result };
     } catch (error) {
@@ -19,6 +50,9 @@ export async function submitTranscriptRequestAction(data: any) {
 
 export async function getTranscriptRequestsAction() {
     try {
+        const studentId = await getCurrentStudentId();
+        if (!studentId) return { success: true, data: [] };
+
         const requests = await db.select({
             id: transcriptRequests.id,
             studentName: users.name,
@@ -30,23 +64,10 @@ export async function getTranscriptRequestsAction() {
         .from(transcriptRequests)
         .innerJoin(students, eq(transcriptRequests.studentId, students.id))
         .innerJoin(users, eq(students.userId, users.id))
+        .where(eq(transcriptRequests.studentId, studentId))
         .orderBy(desc(transcriptRequests.requestedAt));
 
         return { success: true, data: requests };
-    } catch (error) {
-        return { success: false, error: (error as Error).message };
-    }
-}
-
-export async function approveAndDispatchTranscriptAction(requestId: number) {
-    try {
-        const isRegistrar = await hasPermission("academic.sign_transcript") || await hasRole("registrar") || await hasRole("admin") || await hasRole("superadmin");
-        if (!isRegistrar) throw new Error("Unauthorized: Registrar access required");
-        
-        const userId = 1; // Current User
-        await AcademicDocumentService.dispatchTranscript(requestId, userId);
-        revalidatePath("/admin/academic/transcripts");
-        return { success: true };
     } catch (error) {
         return { success: false, error: (error as Error).message };
     }
@@ -58,13 +79,13 @@ export async function generateOfficialResultPdfAction(data: {
     semester?: '1' | '2'
 }) {
     try {
-        const userId = 1; // Current User
+        const session = await auth();
+        const userId = session?.user ? parseInt((session.user as any).id) : 0;
         await AcademicDocumentService.logOfficialDownload({
             ...data,
             downloadedBy: userId
         });
         
-        // In a real app, this would return a PDF buffer or URL
         return { success: true, message: "Official PDF Generated and Logged" };
     } catch (error) {
         return { success: false, error: (error as Error).message };

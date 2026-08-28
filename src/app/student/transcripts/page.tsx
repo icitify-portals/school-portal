@@ -46,11 +46,9 @@ export default function StudentTranscriptPortal() {
   const handleRequest = async () => {
     setSubmitting(true);
     const res = await submitTranscriptRequestAction({
-        studentId: 1, // Placeholder
         destinationName,
         destinationAddress,
         deliveryMethod,
-        fee: 5000 // Fixed fee
     });
     setSubmitting(false);
     if (res.success) {

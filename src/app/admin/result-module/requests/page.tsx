@@ -6,7 +6,6 @@ import { getMyTranscript } from "@/actions/result-module";
 import { Loader2, Send, CheckCircle2, FileText, Search } from "lucide-react";
 import Link from "next/link";
 
-// We need jsPDF and html2canvas for client-side PDF generation
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 
@@ -31,32 +30,79 @@ export default function AdminTranscriptRequestsPage() {
         setDispatchingId(req.id);
         
         try {
-            // Instead of fully rendering the complex UI, we generate a simple placeholder PDF for the student copy
-            // In a full implementation, you would render the TranscriptCardDetailed to a hidden div and capture it.
-            // For stability, we generate a basic textual PDF summary.
-            
-            const pdf = new jsPDF();
-            pdf.setFont("helvetica", "bold");
-            pdf.setFontSize(20);
-            pdf.text("FEDERAL SCHOOL OF STATISTICS", 105, 20, { align: "center" });
-            
-            pdf.setFont("helvetica", "normal");
-            pdf.setFontSize(14);
-            pdf.text("STUDENT COPY - ACADEMIC TRANSCRIPT", 105, 30, { align: "center" });
-            
-            pdf.setFontSize(12);
-            pdf.text(`Name: ${req.applicantName}`, 20, 50);
-            pdf.text(`Matriculation No: ${req.matricNumber}`, 20, 60);
-            pdf.text(`Date Requested: ${new Date(req.requestedAt).toLocaleDateString()}`, 20, 70);
-            
-            pdf.text("NOTE: This is a student copy for personal records.", 20, 90);
-            pdf.text(`The official copy has been dispatched to: ${req.destinationName}`, 20, 100);
-            
-            const pdfBase64 = pdf.output('datauristring').split(',')[1];
+            let pdfBase64 = "";
 
-            // In reality we should pass the logged in admin user ID. 
-            // We pass 1 as placeholder, the server action uses auth() ideally.
-            const res = await dispatchTranscript(req.id, 1, pdfBase64);
+            // Try to generate a real transcript PDF if we can find the student
+            if (req.studentId) {
+                try {
+                    const transcriptRes = await getMyTranscript(req.studentId);
+                    if (transcriptRes?.success && transcriptRes.data?.transcripts?.length > 0) {
+                        // Render transcript data into a simple PDF
+                        const pdf = new jsPDF();
+                        let y = 20;
+
+                        pdf.setFont("helvetica", "bold");
+                        pdf.setFontSize(18);
+                        pdf.text("FEDERAL SCHOOL OF STATISTICS", 105, y, { align: "center" });
+                        y += 8;
+                        pdf.setFontSize(12);
+                        pdf.text("(National Bureau of Statistics)", 105, y, { align: "center" });
+                        y += 10;
+
+                        pdf.setFontSize(14);
+                        pdf.text("ACADEMIC TRANSCRIPT", 105, y, { align: "center" });
+                        y += 12;
+
+                        pdf.setFont("helvetica", "normal");
+                        pdf.setFontSize(11);
+                        pdf.text(`Student: ${req.applicantName}`, 20, y); y += 7;
+                        pdf.text(`Matric No: ${req.matricNumber || "N/A"}`, 20, y); y += 7;
+                        pdf.text(`Destination: ${req.destinationName}`, 20, y); y += 12;
+
+                        const txData = transcriptRes.data;
+                        for (const tx of txData.transcripts || []) {
+                            if (y > 260) { pdf.addPage(); y = 20; }
+                            const semLabel = tx.semester === "1" ? "First Semester" : tx.semester === "2" ? "Second Semester" : `Semester ${tx.semester}`;
+                            const sessionName = tx.academicSession?.name || "Unknown Session";
+                            pdf.setFont("helvetica", "bold");
+                            pdf.text(`${sessionName} - ${semLabel}`, 20, y); y += 7;
+
+                            pdf.setFont("helvetica", "normal");
+                            for (const r of tx.results || []) {
+                                if (y > 270) { pdf.addPage(); y = 20; }
+                                pdf.text(`${r.courseCode} - ${r.courseTitle} | Score: ${r.score} | Grade: ${r.grade}`, 24, y);
+                                y += 6;
+                            }
+                            pdf.setFont("helvetica", "bold");
+                            pdf.text(`GPA: ${tx.gpa}  CGPA: ${tx.cgpa}`, 24, y);
+                            y += 10;
+                        }
+
+                        pdf.text(`Date Dispatched: ${new Date().toLocaleDateString()}`, 20, y);
+                        pdfBase64 = pdf.output("datauristring").split(",")[1];
+                    }
+                } catch (e) {
+                    console.error("Failed to generate real transcript PDF:", e);
+                }
+            }
+
+            // Fallback: basic placeholder PDF
+            if (!pdfBase64) {
+                const pdf = new jsPDF();
+                pdf.setFont("helvetica", "bold");
+                pdf.setFontSize(18);
+                pdf.text("FEDERAL SCHOOL OF STATISTICS", 105, 20, { align: "center" });
+                pdf.setFont("helvetica", "normal");
+                pdf.setFontSize(12);
+                pdf.text("STUDENT COPY - ACADEMIC TRANSCRIPT", 105, 30, { align: "center" });
+                pdf.text(`Name: ${req.applicantName}`, 20, 50);
+                pdf.text(`Matriculation No: ${req.matricNumber || "N/A"}`, 20, 60);
+                pdf.text(`Date Requested: ${new Date(req.requestedAt).toLocaleDateString()}`, 20, 70);
+                pdf.text(`Official copy dispatched to: ${req.destinationName}`, 20, 90);
+                pdfBase64 = pdf.output("datauristring").split(",")[1];
+            }
+
+            const res = await dispatchTranscript(req.id, 0, pdfBase64);
             if (res.success) {
                 alert("Transcript dispatched and email sent!");
                 loadRequests();
