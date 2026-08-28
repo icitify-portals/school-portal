@@ -31,7 +31,7 @@ export default function StudentTranscriptPage() {
       return;
     }
 
-    const res = await getMyTranscript(studentId);
+    const res = await getMyTranscript(studentId, { viewForStudent: true });
     if (res.success) {
       setTranscriptData(res.data);
     } else {

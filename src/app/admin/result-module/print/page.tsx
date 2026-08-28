@@ -34,7 +34,7 @@ class ErrorBoundary extends Component<
   }
 }
 
-import { searchStudents, getMyTranscript, getBulkTranscripts, sendStudentTranscriptEmail } from "@/actions/result-module";
+import { searchStudents, getMyTranscript, getBulkTranscripts, sendStudentTranscriptEmail, getAcademicSessions } from "@/actions/result-module";
 import { getProgrammes } from "@/actions/programmes";
 import { getFaculties } from "@/actions/faculties";
 import { getDepartments } from "@/actions/departments";
@@ -467,10 +467,50 @@ function TranscriptCardOriginal({ transcriptData, qrDataUrl }: { transcriptData:
   }
 }
 
-/* ─── Grading Key Sheet (attached directly, no page break) ──────── */
-function GradingKeySheet() {
+/* ─── Grading Key Sheet (dynamic height) ─────────────────────── */
+function GradingKeySheet({ compact }: { compact?: boolean }) {
+  if (compact) {
+    // Compact: inline summary that fits on the same page as the transcript
+    return (
+      <div style={{ width: "210mm", margin: "0 auto", background: "#fff", color: "#000", fontFamily: "'Times New Roman', Times, serif", padding: "4mm 16mm", borderTop: "2px solid #000" }}>
+        <div style={{ display: "flex", gap: 24, justifyContent: "center", alignItems: "flex-start" }}>
+          {/* Grade table */}
+          <div>
+            <div style={{ fontWeight: 900, textTransform: "uppercase", textDecoration: "underline", textAlign: "center", fontSize: 9, marginBottom: 6, letterSpacing: 0.3 }}>GRADE POINTS</div>
+            <table style={{ borderCollapse: "collapse", fontSize: 8 }}>
+              <tbody>
+                {FSS_GRADE_TABLE.map((row) => (
+                  <tr key={row.grade}>
+                    <td style={{ paddingRight: 10, paddingBottom: 1 }}>{row.range}</td>
+                    <td style={{ paddingRight: 8, fontWeight: 700, paddingBottom: 1 }}>{row.grade}</td>
+                    <td style={{ paddingBottom: 1 }}>{row.point}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {/* Class table */}
+          <div>
+            <div style={{ fontWeight: 700, textDecoration: "underline", marginBottom: 6, fontSize: 8 }}>CLASS</div>
+            <table style={{ borderCollapse: "collapse", fontSize: 8 }}>
+              <tbody>
+                {FSS_CLASS_TABLE.map((row) => (
+                  <tr key={row.cls}>
+                    <td style={{ paddingRight: 8, paddingBottom: 1 }}>{row.cls}</td>
+                    <td style={{ paddingBottom: 1 }}>&mdash; {row.range}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Full page: standalone grading key sheet
   return (
-    <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", width: "210mm", padding: "10mm 16mm", margin: "0 auto", background: "#fff", color: "#000", fontFamily: "'Times New Roman', Times, serif" }}>
+    <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", width: "210mm", minHeight: "297mm", padding: "24mm 16mm", margin: "0 auto", background: "#fff", color: "#000", fontFamily: "'Times New Roman', Times, serif", boxShadow: "0 2px 16px rgba(0,0,0,0.15)" }}>
       <div style={{ width: "80%", maxWidth: 420 }}>
         <div style={{ fontWeight: 900, textTransform: "uppercase", textDecoration: "underline", textAlign: "center", fontSize: 12, marginBottom: 16, letterSpacing: 0.5 }}>
           GRADE POINT FOR EACH SUBJECT
@@ -554,6 +594,9 @@ export default function PrintTranscriptPage() {
   
   const [departments, setDepartments] = useState<any[]>([]);
   const [selectedDepartment, setSelectedDepartment] = useState("");
+  const [academicSessions, setAcademicSessions] = useState<any[]>([]);
+  const [selectedSession, setSelectedSession] = useState("all");
+  const [selectedSemester, setSelectedSemester] = useState("all");
   const [transcriptsToRender, setTranscriptsToRender] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -566,6 +609,7 @@ export default function PrintTranscriptPage() {
     getProgrammes().then(res => { if (Array.isArray(res)) setProgrammes(res); });
     getFaculties().then(res => { if (Array.isArray(res)) setFaculties(res); });
     getDepartments().then(res => { if (Array.isArray(res)) setDepartments(res); });
+    getAcademicSessions().then(res => { if (res?.success && Array.isArray(res.data)) setAcademicSessions(res.data); });
   }, []);
 
   const searchStudentsFn = useCallback(async (q: string) => {
@@ -630,6 +674,12 @@ export default function PrintTranscriptPage() {
     }
     if (selectedLevel && selectedLevel !== "all") {
       filters.level = selectedLevel;
+    }
+    if (selectedSession && selectedSession !== "all") {
+      filters.sessionId = Number(selectedSession);
+    }
+    if (selectedSemester && selectedSemester !== "all") {
+      filters.semester = selectedSemester;
     }
     
     setLoading(true);
@@ -797,6 +847,25 @@ export default function PrintTranscriptPage() {
                   <option value="HND2">HND 2</option>
                 </select>
 
+                <select
+                  value={selectedSession}
+                  onChange={e => setSelectedSession(e.target.value)}
+                  style={{ width: 160, background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 8, padding: "8px 12px", fontSize: 13, outline: "none" }}
+                >
+                  <option value="all">All Sessions</option>
+                  {academicSessions.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                </select>
+
+                <select
+                  value={selectedSemester}
+                  onChange={e => setSelectedSemester(e.target.value)}
+                  style={{ width: 130, background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 8, padding: "8px 12px", fontSize: 13, outline: "none" }}
+                >
+                  <option value="all">All Semesters</option>
+                  <option value="1">First Semester</option>
+                  <option value="2">Second Semester</option>
+                </select>
+
                 {bulkMode === "programme" && (
                   <select value={selectedProgramme} onChange={e => setSelectedProgramme(e.target.value)} style={{ width: 200, background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 8, padding: "8px 12px", fontSize: 13, outline: "none" }}>
                     <option value="">Select Programme...</option>
@@ -881,10 +950,14 @@ export default function PrintTranscriptPage() {
                     qrDataUrl={qrCodes[transcriptData?.student?.id]}
                   />
                 )}
-                {/* Grading Key printed for EVERY student so it can be back page */}
-                <GradingKeySheet />
               </div>
             ))}
+            {/* Grading Key: compact if few results, full page if many */}
+            {(() => {
+              const totalResults = transcriptsToRender.reduce((sum, td) => sum + (td.transcripts?.length || 0), 0);
+              const isCompact = totalResults <= 4;
+              return <GradingKeySheet compact={isCompact} />;
+            })()}
           </div>
         )}
       </div>

@@ -7336,6 +7336,7 @@ export const studentTranscripts = mysqlTable('student_transcripts', {
   totalCreditsEarned: int('total_credits_earned').notNull(),
   totalCreditsAttempted: int('total_credits_attempted').notNull(),
   isPublished: boolean('is_published').default(false),
+  isViewable: boolean('is_viewable').default(false),
   publishedAt: datetime('published_at'),
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow().onUpdateNow()

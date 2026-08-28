@@ -275,12 +275,24 @@ export async function publishResultBatch(batchId: number) {
 /**
  * Fetch complete transcript data for a student including signatures
  */
-export async function getStudentTranscriptData(studentId: number) {
+export async function getStudentTranscriptData(studentId: number, options?: { sessionId?: number, semester?: string, viewForStudent?: boolean }) {
+  const conditions = [
+    eq(studentTranscripts.studentId, studentId),
+    // Admin print: isPublished; Student dashboard: isViewable
+    options?.viewForStudent
+      ? eq(studentTranscripts.isViewable, true)
+      : eq(studentTranscripts.isPublished, true),
+  ];
+
+  if (options?.sessionId !== undefined) {
+    conditions.push(eq(studentTranscripts.academicSessionId, options.sessionId));
+  }
+  if (options?.semester !== undefined) {
+    conditions.push(eq(studentTranscripts.semester, options.semester));
+  }
+
   const transcriptRows = await db.query.studentTranscripts.findMany({
-    where: and(
-      eq(studentTranscripts.studentId, studentId),
-      eq(studentTranscripts.isPublished, true)
-    ),
+    where: and(...conditions),
     with: { academicSession: true },
     orderBy: (t, { asc }) => [asc(t.academicSessionId), asc(t.semester)],
   });

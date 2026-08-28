@@ -23,6 +23,7 @@ import {
   clearBatchResults,
   deleteResultBatch,
   toggleBatchPublication,
+  toggleStudentView,
 } from "@/actions/result-module";
 import {
   ArrowLeft, Upload, UserPlus, CheckCircle2, Loader2, Search,
@@ -149,6 +150,7 @@ export default function BatchDetailPage() {
   }
 
   const [togglingPublication, setTogglingPublication] = useState(false);
+  const [togglingStudentView, setTogglingStudentView] = useState(false);
 
   async function handleTogglePublication(targetState: boolean) {
     if (targetState && resultsInBatch.length === 0) {
@@ -162,6 +164,26 @@ export default function BatchDetailPage() {
     setTogglingPublication(true);
     const res = await toggleBatchPublication(batchId, targetState);
     setTogglingPublication(false);
+
+    if (res.success) {
+      fetchBatch();
+    } else {
+      alert("Error: " + res.error);
+    }
+  }
+
+  async function handleToggleStudentView(targetState: boolean) {
+    if (targetState && !isPublished) {
+      return alert("Please publish the batch first before enabling student view.");
+    }
+    const confirmMsg = targetState
+      ? "Allow students to view these results on their dashboard?"
+      : "Hide these results from student dashboard?";
+    if (!confirm(confirmMsg)) return;
+
+    setTogglingStudentView(true);
+    const res = await toggleStudentView(batchId, targetState);
+    setTogglingStudentView(false);
 
     if (res.success) {
       fetchBatch();
@@ -541,6 +563,7 @@ export default function BatchDetailPage() {
 
   const resultsInBatch = batch?.studentResults || [];
   const isPublished = batch?.status === "published";
+  const isStudentViewable = batch?.isStudentViewable || false;
 
   // Group results by student
   const studentMap = new Map<number, { student: any; results: any[] }>();
@@ -589,10 +612,12 @@ export default function BatchDetailPage() {
                 className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/10 hover:bg-white/15 border border-white/20 text-white font-semibold text-xs transition-all">
                 <Printer className="w-3.5 h-3.5" /> Print Transcripts
               </Link>
+
+              {/* Publish Toggle (Admin Print) */}
               <div className="text-right hidden sm:block">
-                <p className="text-xs font-semibold text-white">Student Dashboard Display</p>
+                <p className="text-xs font-semibold text-white">Publish (Admin Print)</p>
                 <p className={`text-[11px] font-mono ${isPublished ? "text-emerald-400 font-bold" : "text-amber-400"}`}>
-                  {isPublished ? "ON (VISIBLE)" : "OFF (HIDDEN)"}
+                  {isPublished ? "ON" : "OFF"}
                 </p>
               </div>
               <button
@@ -602,9 +627,9 @@ export default function BatchDetailPage() {
                 className={`relative inline-flex h-8 w-16 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-300 ease-in-out focus:outline-none disabled:opacity-50 ${
                   isPublished ? "bg-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.5)]" : "bg-slate-700 border border-white/20"
                 }`}
-                title={isPublished ? "Turn off to hide results from student dashboard" : "Turn on to finalize and display results to student dashboard"}
+                title={isPublished ? "Turn off to unpublish" : "Turn on to publish for admin print"}
               >
-                <span className="sr-only">Display results to student portal</span>
+                <span className="sr-only">Publish for admin print</span>
                 <span
                   className={`pointer-events-none inline-block h-7 w-7 transform rounded-full bg-white shadow-lg ring-0 transition duration-300 ease-in-out flex items-center justify-center ${
                     isPublished ? "translate-x-8 text-emerald-600" : "translate-x-0 text-slate-500"
@@ -614,6 +639,38 @@ export default function BatchDetailPage() {
                     <Loader2 className="w-4 h-4 animate-spin text-slate-600" />
                   ) : isPublished ? (
                     <Eye className="w-4 h-4 text-emerald-600" />
+                  ) : (
+                    <EyeOff className="w-4 h-4 text-slate-500" />
+                  )}
+                </span>
+              </button>
+
+              {/* Student View Toggle */}
+              <div className="text-right hidden sm:block">
+                <p className="text-xs font-semibold text-white">Student Dashboard</p>
+                <p className={`text-[11px] font-mono ${isStudentViewable ? "text-blue-400 font-bold" : "text-amber-400"}`}>
+                  {isStudentViewable ? "ON (VISIBLE)" : "OFF (HIDDEN)"}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => handleToggleStudentView(!isStudentViewable)}
+                disabled={togglingStudentView || !isPublished}
+                className={`relative inline-flex h-8 w-16 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-300 ease-in-out focus:outline-none disabled:opacity-50 ${
+                  isStudentViewable ? "bg-blue-500 shadow-[0_0_12px_rgba(59,130,246,0.5)]" : "bg-slate-700 border border-white/20"
+                }`}
+                title={!isPublished ? "Publish batch first" : isStudentViewable ? "Turn off to hide from students" : "Turn on to show students their results"}
+              >
+                <span className="sr-only">Display results to student dashboard</span>
+                <span
+                  className={`pointer-events-none inline-block h-7 w-7 transform rounded-full bg-white shadow-lg ring-0 transition duration-300 ease-in-out flex items-center justify-center ${
+                    isStudentViewable ? "translate-x-8 text-blue-600" : "translate-x-0 text-slate-500"
+                  }`}
+                >
+                  {togglingStudentView ? (
+                    <Loader2 className="w-4 h-4 animate-spin text-slate-600" />
+                  ) : isStudentViewable ? (
+                    <Eye className="w-4 h-4 text-blue-600" />
                   ) : (
                     <EyeOff className="w-4 h-4 text-slate-500" />
                   )}

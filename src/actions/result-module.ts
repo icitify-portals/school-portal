@@ -153,6 +153,20 @@ export async function getBatchDetails(batchId: number) {
         },
       },
     });
+
+    // Check if student view is enabled for this batch's session+semester
+    if (batch) {
+      const viewableTranscript = await db.query.studentTranscripts.findFirst({
+        where: and(
+          eq(studentTranscripts.academicSessionId, batch.academicSessionId),
+          eq(studentTranscripts.semester, batch.semester),
+          eq(studentTranscripts.isViewable, true)
+        ),
+        columns: { id: true }
+      });
+      (batch as any).isStudentViewable = !!viewableTranscript;
+    }
+
     return { success: true, data: batch };
   } catch (e: any) {
     return { success: false, error: e.message };
@@ -404,16 +418,16 @@ export async function getCoursesList() {
 // STUDENT: Get own transcript
 // ──────────────────────────────────────────────
 
-export async function getMyTranscript(studentId: number) {
+export async function getMyTranscript(studentId: number, options?: { viewForStudent?: boolean }) {
   try {
-    const data = await getStudentTranscriptData(studentId);
+    const data = await getStudentTranscriptData(studentId, options);
     return { success: true, data };
   } catch (e: any) {
     return { success: false, error: e.message };
   }
 }
 
-export async function getBulkTranscripts(filters: { programmeId?: number, departmentId?: number, facultyId?: number, studentIds?: number[], all?: boolean, level?: string }) {
+export async function getBulkTranscripts(filters: { programmeId?: number, departmentId?: number, facultyId?: number, studentIds?: number[], all?: boolean, level?: string, sessionId?: number, semester?: string }) {
   try {
     let queryConditions = [];
     
@@ -462,7 +476,7 @@ export async function getBulkTranscripts(filters: { programmeId?: number, depart
     const results = [];
     for (const student of matchingStudents) {
       try {
-        const tData = await getStudentTranscriptData(student.id);
+        const tData = await getStudentTranscriptData(student.id, { sessionId: filters.sessionId, semester: filters.semester });
         if (tData.transcripts && tData.transcripts.length > 0) {
           results.push(tData);
         }
@@ -1041,7 +1055,7 @@ export async function toggleBatchPublication(batchId: number, publish: boolean) 
         .where(eq(resultBatches.id, batchId));
 
       await db.update(studentTranscripts)
-        .set({ isPublished: false })
+        .set({ isPublished: false, isViewable: false })
         .where(
           and(
             eq(studentTranscripts.academicSessionId, batch.academicSessionId),
@@ -1096,6 +1110,38 @@ export async function toggleBatchPublication(batchId: number, publish: boolean) 
     revalidatePath("/admin/result-module");
     revalidatePath(`/admin/result-module/${batchId}`);
     return { success: true, isPublished: publish };
+  } catch (e: any) {
+    return { success: false, error: e.message };
+  }
+}
+
+// ──────────────────────────────────────────────
+// TOGGLE STUDENT VIEW (separate from publish)
+// ──────────────────────────────────────────────
+
+export async function toggleStudentView(batchId: number, viewable: boolean) {
+  try {
+    const allowed = await hasRole("admin") || await hasRole("superadmin") || await hasRole("registrar") || await hasPermission("result_module.manage");
+    if (!allowed) return { success: false, error: "Unauthorized" };
+
+    const batch = await db.query.resultBatches.findFirst({
+      where: eq(resultBatches.id, batchId)
+    });
+    if (!batch) return { success: false, error: "Batch not found" };
+
+    // Update student_transcripts isViewable for this batch's session+semester
+    await db.update(studentTranscripts)
+      .set({ isViewable: viewable, updatedAt: new Date() })
+      .where(
+        and(
+          eq(studentTranscripts.academicSessionId, batch.academicSessionId),
+          eq(studentTranscripts.semester, batch.semester)
+        )
+      );
+
+    revalidatePath("/admin/result-module");
+    revalidatePath(`/admin/result-module/${batchId}`);
+    return { success: true, isViewable: viewable };
   } catch (e: any) {
     return { success: false, error: e.message };
   }
