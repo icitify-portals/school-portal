@@ -150,20 +150,20 @@ export async function generateMatricNumber(options: {
             if (!previewOnly) {
                 const [insertRes] = await db.insert(matriculationSettings).values({
                     nomenclature: "Matriculation Number",
-                    format: "{DEPT_CODE}/{YEAR}/{SERIAL}",
+                    format: "{DEPT_CODE}/FSS/IB/{YEAR}/{SERIAL}",
                     serialStart: 1,
                     serialPadding: 3,
                 });
                 bestSetting = {
                     id: insertRes.insertId,
-                    format: "{DEPT_CODE}/{YEAR}/{SERIAL}",
+                    format: "{DEPT_CODE}/FSS/IB/{YEAR}/{SERIAL}",
                     serialStart: 1,
                     serialPadding: 3,
                 } as any;
             } else {
                 bestSetting = {
                     id: -1,
-                    format: "{DEPT_CODE}/{YEAR}/{SERIAL}",
+                    format: "{DEPT_CODE}/FSS/IB/{YEAR}/{SERIAL}",
                     serialStart: 1,
                     serialPadding: 3,
                 } as any;
@@ -212,7 +212,8 @@ export async function generateMatricNumber(options: {
             });
         }
 
-        const paddedSerial = String(serialNumberToIssue).padStart(bestSetting.serialPadding || 3, "0");
+        const serialPadding = bestSetting.serialPadding ?? 3;
+        const paddedSerial = serialPadding > 0 ? String(serialNumberToIssue).padStart(serialPadding, "0") : String(serialNumberToIssue);
 
         let generatedNumber = bestSetting.format || "{YEAR}/{SERIAL}";
         generatedNumber = generatedNumber.replace(/{YEAR}/g, year.toString());

@@ -1489,7 +1489,6 @@ export async function finalizeStudentAdmission(applicationId: number) {
             ? application.applicationMode === 'full_time'
             : (!!jambRegNo && !jambRegNo.toLowerCase().includes("temp") && !jambRegNo.toLowerCase().includes("direct"));
         const studyMode = isJambCandidate ? "full-time" : "part-time";
-        const studyModeCode = isJambCandidate ? "FT" : "PT";
         const modeOfEntry = isJambCandidate ? "JAMB" : "Direct";
 
         // Generate FSS standard matriculation number
@@ -1530,11 +1529,6 @@ export async function finalizeStudentAdmission(applicationId: number) {
             targetSession = activeSession;
         }
 
-        // Query total student count for the year to generate a unique sequence number (Legacy fallback)
-        const countRes = await db.select({ count: sql<number>`count(*)` })
-            .from(students)
-            .where(eq(students.admissionYear, year));
-        
         let matricNumber = "";
         
         // Use the centralized Matriculation Engine
@@ -1549,10 +1543,8 @@ export async function finalizeStudentAdmission(applicationId: number) {
         if (matricRes.success && matricRes.matricNumber) {
             matricNumber = matricRes.matricNumber;
         } else {
-            // Fallback to legacy sequence if setting is somehow totally broken
-            const sequence = (countRes[0]?.count || 0) + 1;
-            const formattedSeq = sequence.toString().padStart(4, '0');
-            matricNumber = `FSS/IB/${year}/${studyModeCode}/${programmeType}/${formattedSeq}`;
+            console.error(`[Admission] Matric generation failed for application ${applicationId}:`, matricRes.error);
+            throw new Error(`Failed to generate matriculation number: ${matricRes.error || 'Unknown error'}`);
         }
 
         // Process Base64 images to physical files

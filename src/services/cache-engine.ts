@@ -52,18 +52,18 @@ export class CacheEngine {
 
         const prefix = branchId ? `branch_${branchId}:` : `global:`;
 
-        // Cache grouped by student
+        // Batch Redis writes using pipeline (1 round-trip instead of N)
+        const pipeline = redis.pipeline();
         let count = 0;
         const total = studentMap.size;
         for (const [studentId, data] of studentMap.entries()) {
             const key = `${prefix}session_${sessionId}:term_${term}:student_${studentId}:results`;
-            await redis.set(key, JSON.stringify(data), "EX", 60 * 60 * 24); // 24 hours
+            pipeline.set(key, JSON.stringify(data), "EX", 60 * 60 * 24); // 24 hours
             count++;
-            if (taskId && count % 50 === 0) {
-                const progress = 40 + Math.floor((count / total) * 40);
-                await TaskTracker.updateProgress(taskId, progress);
-            }
         }
+        await pipeline.exec();
+
+        if (taskId) await TaskTracker.updateProgress(taskId, 80);
 
         // Cache all results list
         const bulkKey = `${prefix}session_${sessionId}:term_${term}:bulk_results`;
@@ -81,8 +81,7 @@ export class CacheEngine {
      * Gets flat list of subjects for a class/level
      */
     static async getSubjectsByClass(level: number, sessionId: number) {
-        // Mocking logic - usually you'd query course_department_settings or enrollments to see active subjects
-        const activeCourses = await db.select().from(courses);
+        const activeCourses = await db.select().from(courses).limit(500);
         return activeCourses;
     }
 
@@ -90,7 +89,7 @@ export class CacheEngine {
      * Gets grouped subjects (Core, Electives) for a class/level
      */
     static async getGroupedSubjectsByClass(level: number, sessionId: number) {
-        const allCourses = await db.select().from(courses);
+        const allCourses = await db.select().from(courses).limit(1000);
         
         const grouped = allCourses.filter(c => !c.parentCourseId);
         const children = allCourses.filter(c => c.parentCourseId);

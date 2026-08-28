@@ -1,4 +1,4 @@
-import { eq, sql, inArray, and } from "drizzle-orm";
+import { eq, inArray, and } from "drizzle-orm";
 import {
     students,
     programmes,
@@ -9,11 +9,17 @@ import {
     feeItems
 } from "@/db/schema";
 
+/**
+ * Fee-triggered matriculation number generator.
+ * Called from bursary.ts when a bill status changes to 'paid'.
+ * Checks 60% payment threshold + required fee items, then delegates
+ * to the primary generateMatricNumber() engine.
+ */
 export async function checkAndGenerateMatricNumber(studentId: number, tx: any) {
     try {
         // 1. Check if the student already has a matric number
         const [student] = await tx.select().from(students).where(eq(students.id, studentId)).limit(1);
-        
+
         if (!student) {
             console.error(`[Matric Generation] Student ${studentId} not found.`);
             return false;
@@ -21,7 +27,7 @@ export async function checkAndGenerateMatricNumber(studentId: number, tx: any) {
 
         if (student.matricNumber) {
             console.log(`[Matric Generation] Student ${studentId} already has matric number: ${student.matricNumber}`);
-            return false; // Already generated
+            return false;
         }
 
         // 2. Check global setting for trigger fees (e.g. JSON array of FeeItem IDs)
@@ -38,7 +44,6 @@ export async function checkAndGenerateMatricNumber(studentId: number, tx: any) {
 
         // If no global setting found, let's use a fallback by name: "Acceptance" and "ID Card"
         if (!requiredFeeItemIds || requiredFeeItemIds.length === 0) {
-            // Find fee items with "Acceptance" or "ID Card" in their name
             const fees = await tx.select().from(feeItems);
             for (const f of fees) {
                 if (f.name.toLowerCase().includes('acceptance') || f.name.toLowerCase().includes('id card')) {
@@ -47,12 +52,11 @@ export async function checkAndGenerateMatricNumber(studentId: number, tx: any) {
             }
             if (requiredFeeItemIds.length === 0) {
                 console.log("[Matric Generation] No trigger fee items found in DB.");
-                return false; 
+                return false;
             }
         }
 
         // 3. Verify if student has paid all required fee items
-        // We look for paid bills that contain these fee items
         const paidItems = await tx.select({
             feeItemId: studentBillItems.feeItemId,
         })
@@ -61,13 +65,12 @@ export async function checkAndGenerateMatricNumber(studentId: number, tx: any) {
         .where(
             and(
                 eq(studentBills.studentId, studentId),
-                eq(studentBills.status, 'paid'), // Must be fully paid
+                eq(studentBills.status, 'paid'),
                 inArray(studentBillItems.feeItemId, requiredFeeItemIds)
             )
         );
 
         const paidFeeItemIds = new Set(paidItems.map((item: any) => item.feeItemId));
-        
         const hasPaidAll = requiredFeeItemIds.every(id => paidFeeItemIds.has(id));
 
         // Calculate 60% total fees requirement
@@ -75,7 +78,7 @@ export async function checkAndGenerateMatricNumber(studentId: number, tx: any) {
             amount: studentBills.amount,
             amountPaid: studentBills.amountPaid
         }).from(studentBills).where(eq(studentBills.studentId, studentId));
-        
+
         let totalBilled = 0;
         let totalPaid = 0;
         for (const bill of allBills) {
@@ -89,87 +92,46 @@ export async function checkAndGenerateMatricNumber(studentId: number, tx: any) {
             return false;
         }
 
-        // 4. Generate the Matric Number
-        let prefix = "";
-
-        // Check if Part-time (DPP)
-        const isDPP = student.studyMode === 'part-time' || student.studyMode === 'dpp';
-        if (isDPP) {
-            prefix += "DPP/";
-        }
-
-        let isHND = false;
-        let deptCode = "GEN";
+        // 4. Resolve programme and department info for the primary generator
+        let deptId: number | undefined = undefined;
+        let studyMode: string | undefined = undefined;
+        let programmeType: string | undefined = undefined;
 
         if (student.programmeId) {
             const [prog] = await tx.select().from(programmes).where(eq(programmes.id, student.programmeId)).limit(1);
             if (prog) {
-                if (prog.name.toUpperCase().includes('HND') || student.programmeType === 'HND') {
-                    isHND = true;
-                }
-                
-                if (prog.departmentId) {
-                    const [dept] = await tx.select().from(departments).where(eq(departments.id, prog.departmentId)).limit(1);
-                    if (dept && dept.code) {
-                        deptCode = dept.code.toUpperCase();
-                    }
-                }
+                deptId = prog.departmentId || undefined;
             }
         } else {
-             if (student.programmeType === 'HND') {
-                 isHND = true;
-             }
+            deptId = student.deptId || undefined;
         }
 
-        if (isHND) {
-            prefix += `HND/${deptCode}/FSS/IB/`;
-        } else {
-            prefix += `${deptCode}/FSS/IB/`;
-        }
+        studyMode = student.studyMode || undefined;
+        programmeType = student.programmeType || undefined;
 
+        // 5. Delegate to the primary matriculation engine
+        const { generateMatricNumber } = await import('@/actions/matriculation');
         const year = new Date().getFullYear();
-        prefix += `${year}/`;
 
-        // 5. Get the next sequence
-        // We'll query students for the highest matric number in the category (ND vs HND) for the year
-        const yearStr = `${year}`;
-        const searchPattern = `%/${yearStr}/%`;
+        const result = await generateMatricNumber({
+            year,
+            deptId,
+            studyMode,
+            programmeType,
+        });
 
-        const [lastStudent] = await tx.select({ matricNumber: students.matricNumber })
-            .from(students)
-            .where(
-                and(
-                    sql`${students.matricNumber} IS NOT NULL`,
-                    sql`${students.matricNumber} != ''`,
-                    sql`${students.matricNumber} LIKE ${searchPattern}`,
-                    isHND 
-                        ? sql`${students.matricNumber} LIKE '%HND%'` 
-                        : sql`${students.matricNumber} NOT LIKE '%HND%'`
-                )
-            )
-            .orderBy(sql`CAST(SUBSTRING_INDEX(${students.matricNumber}, '/', -1) AS UNSIGNED) DESC`)
-            .limit(1);
+        if (result.success && result.matricNumber) {
+            // 6. Save the generated matric number
+            await tx.update(students)
+                .set({ matricNumber: result.matricNumber })
+                .where(eq(students.id, studentId));
 
-        let nextSeq = isHND ? 4103 : 120552;
-        
-        if (lastStudent && lastStudent.matricNumber) {
-            const parts = lastStudent.matricNumber.split('/');
-            const lastSeqStr = parts[parts.length - 1];
-            const lastSeq = parseInt(lastSeqStr);
-            if (!isNaN(lastSeq) && lastSeq >= nextSeq) {
-                nextSeq = lastSeq + 1;
-            }
+            console.log(`[Matric Generation] Successfully generated ${result.matricNumber} for student ${studentId}`);
+            return result.matricNumber;
+        } else {
+            console.error(`[Matric Generation] Primary generator failed for student ${studentId}:`, result.error);
+            return false;
         }
-
-        const matricNumber = `${prefix}${nextSeq}`;
-
-        // 6. Save the new matric number
-        await tx.update(students)
-            .set({ matricNumber: matricNumber })
-            .where(eq(students.id, studentId));
-            
-        console.log(`[Matric Generation] Successfully generated ${matricNumber} for student ${studentId}`);
-        return matricNumber;
 
     } catch (error) {
         console.error(`[Matric Generation] Error generating matric for student ${studentId}:`, error);

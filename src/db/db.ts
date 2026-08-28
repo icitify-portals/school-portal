@@ -27,26 +27,48 @@ export function getPoolForDb(dbName: string): mysql.Pool {
         globalCache.pools[dbName] = mysql.createPool({
             uri: parsedUrl.toString(),
             waitForConnections: true,
-            connectionLimit: 100,
-            queueLimit: 0
+            connectionLimit: 20,           // Reduced from 100; 20 per tenant is sufficient
+            queueLimit: 50,                // Max 50 waiting requests before rejecting
+            connectTimeout: 10000,         // 10s connect timeout
+            idleTimeout: 60000,            // 60s idle timeout (release unused connections)
+            enableKeepAlive: true,         // Keep connections alive
+            keepAliveInitialDelay: 10000,  // 10s keepalive delay
         });
     }
     return globalCache.pools[dbName];
 }
 
 /**
- * Resolves the active database name asynchronously from request headers
+ * Resolves the active database name asynchronously from request headers.
+ * Fast path: reads x-tenant-db header set by middleware (no Redis/SQL lookup).
+ * Slow path: falls back to Redis cache + SQL lookup (for direct API calls).
  */
 export async function getActiveDbName(): Promise<string> {
     if (process.env.CLI_DB_OVERRIDE) {
         return process.env.CLI_DB_OVERRIDE;
     }
+
+    // Fast path: read from middleware-set header (avoids Redis + SQL lookup)
+    try {
+        const headersList = await headers();
+        const headerDb = headersList.get("x-tenant-db");
+        if (headerDb && headerDb !== "school_portal") {
+            return headerDb;
+        }
+        // Also check if middleware set it as "school_portal" explicitly
+        if (headerDb) {
+            return headerDb;
+        }
+    } catch (e) {
+        // Outside request context (seeding, CLI, background job)
+    }
+
     let hostname = "";
     try {
         const headersList = await headers();
         hostname = headersList.get("host") || "";
     } catch (e) {
-        // Outside request context (e.g., seeding, CLI, background job)
+        // Outside request context
     }
 
     if (!hostname) {

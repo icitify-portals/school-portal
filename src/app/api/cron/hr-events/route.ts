@@ -8,6 +8,15 @@ import { sendWhatsAppMessage } from '@/lib/twilio';
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
+    // Authenticate cron request
+    const authHeader = request.headers.get("authorization")?.replace("Bearer ", "");
+    const url = new URL(request.url);
+    const secret = url.searchParams.get("secret") || authHeader;
+    
+    if (secret !== process.env.CRON_SECRET && secret !== process.env.CRON_SECRET_KEY) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     try {
         const today = new Date();
         const currentMonth = today.getMonth() + 1; // 1-12

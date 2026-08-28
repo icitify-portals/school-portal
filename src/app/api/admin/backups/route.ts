@@ -3,10 +3,18 @@ import { db } from "@/db/db";
 import { system_backups } from "@/db/schema";
 import { desc } from "drizzle-orm";
 import { BackupService } from "@/services/backup.service";
+import { auth } from "@/auth";
+
+const ADMIN_ROLES = ['admin', 'superadmin', 'icitify_dev'];
 
 // GET /api/admin/backups - Fetch history
 export async function GET(req: NextRequest) {
   try {
+    const session = await auth();
+    if (!session?.user || !ADMIN_ROLES.includes(session.user.role as string)) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const history = await db.query.system_backups.findMany({
       orderBy: [desc(system_backups.createdAt)],
       limit: 50
@@ -21,10 +29,10 @@ export async function GET(req: NextRequest) {
 // POST /api/admin/backups - Trigger manual backup
 export async function POST(req: NextRequest) {
   try {
-    // Ideally check auth to ensure it's an admin/superadmin here
-    
-    // In a real production system, you might offload this to a queue instead of blocking the request
-    // Since it's a VPS, we'll try to run it synchronously and return
+    const session = await auth();
+    if (!session?.user || !ADMIN_ROLES.includes(session.user.role as string)) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     
     const { filepath, filename, sizeBytes } = await BackupService.runDatabaseBackup();
     const wasabiUrl = await BackupService.uploadBackupToWasabi(filepath, filename, sizeBytes, "database");
@@ -38,7 +46,6 @@ export async function POST(req: NextRequest) {
   } catch (error: any) {
     console.error("Backup failed:", error);
     
-    // Log the failure to the DB
     await db.insert(system_backups).values({
         filename: `manual-fail-${Date.now()}`,
         status: 'failed',

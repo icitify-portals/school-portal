@@ -19,9 +19,9 @@ export default function MatriculationSettingsPage() {
     const [formData, setFormData] = useState({
         id: undefined as number | undefined,
         nomenclature: "Matriculation Number",
-        format: "{DEPT_CODE}/{YEAR}/{SERIAL}",
+        format: "{DEPT_CODE}/FSS/IB/{YEAR}/{SERIAL}",
         serialStart: 1,
-        serialPadding: 3,
+        serialPadding: 0,
         facultyId: "",
         deptId: "",
     });
@@ -65,9 +65,9 @@ export default function MatriculationSettingsPage() {
             setFormData({
                 id: undefined,
                 nomenclature: "Matriculation Number",
-                format: "{DEPT_CODE}/{YEAR}/{SERIAL}",
+                format: "{DEPT_CODE}/FSS/IB/{YEAR}/{SERIAL}",
                 serialStart: 1,
-                serialPadding: 3,
+                serialPadding: 0,
                 facultyId: "",
                 deptId: "",
             });
@@ -115,10 +115,10 @@ export default function MatriculationSettingsPage() {
                                     <Input 
                                         value={formData.format}
                                         onChange={e => setFormData({...formData, format: e.target.value})}
-                                        placeholder="{DEPT_CODE}/{YEAR}/{SERIAL}"
+                                        placeholder="{DEPT_CODE}/FSS/IB/{YEAR}/{SERIAL}"
                                         required
                                     />
-                                    <p className="text-[10px] text-slate-400">Available Tags: {'{YEAR}, {DEPT_CODE}, {FACULTY_CODE}, {UNIT_CODE}, {SERIAL}'}</p>
+                                    <p className="text-[10px] text-slate-400">Available Tags: {'{YEAR}, {DEPT_CODE}, {FACULTY_CODE}, {UNIT_CODE}, {SERIAL}'}. Example: {'{DEPT_CODE}/FSS/IB/{YEAR}/{SERIAL}'}</p>
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-xs font-bold uppercase tracking-widest text-slate-500">Serial Start Number</label>
@@ -137,7 +137,7 @@ export default function MatriculationSettingsPage() {
                                         onChange={e => setFormData({...formData, serialPadding: parseInt(e.target.value)})}
                                         required
                                     />
-                                    <p className="text-[10px] text-slate-400">E.g., 3 creates "001", 4 creates "0001"</p>
+                                    <p className="text-[10px] text-slate-400">E.g., 0 for no padding (120552), 3 for "001", 4 for "0001"</p>
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-xs font-bold uppercase tracking-widest text-slate-500">Specific Faculty Override (Optional)</label>
@@ -186,9 +186,9 @@ export default function MatriculationSettingsPage() {
                                 setFormData({
                                     id: undefined,
                                     nomenclature: "Matriculation Number",
-                                    format: "{DEPT_CODE}/{YEAR}/{SERIAL}",
+                                    format: "{DEPT_CODE}/FSS/IB/{YEAR}/{SERIAL}",
                                     serialStart: 1,
-                                    serialPadding: 3,
+                                    serialPadding: 0,
                                     facultyId: "",
                                     deptId: "",
                                 });

@@ -50,6 +50,9 @@ export class RankingService {
         const rankData = [];
         let currentRank = 1;
 
+        // Batch Redis writes using pipeline (1 round-trip instead of N)
+        const pipeline = redis.pipeline();
+
         for (let i = 0; i < sorted.length; i++) {
             if (i > 0 && sorted[i].score !== sorted[i-1].score) {
                 currentRank = i + 1;
@@ -60,10 +63,10 @@ export class RankingService {
                 position: posString
             });
 
-            // Cache immediately to Redis for single-queries
             const cacheKey = `rank:session_${sessionId}:term_${semester}:context_${context.replace(/\s/g, '_')}:course_${courseId}:student_${sorted[i].studentId}`;
-            await redis.set(cacheKey, JSON.stringify({ position: posString }), "EX", 60 * 60 * 24 * 7); // Cache for 7 days
+            pipeline.set(cacheKey, JSON.stringify({ position: posString }), "EX", 60 * 60 * 24 * 7);
         }
+        await pipeline.exec();
         
         return rankData;
     }
@@ -160,14 +163,23 @@ export class RankingService {
             }
         }
 
-        // 3. Batch Update Results
-        for (const item of updateBatch) {
-            await db.update(results)
-                .set({ 
-                    rankClass: item.rankClass, 
-                    rankLevel: item.rankLevel 
-                })
-                .where(eq(results.id, item.id));
+        // 3. Batch Update Results using a single transaction
+        if (updateBatch.length > 0) {
+            // Process in chunks of 100 to avoid overly large transactions
+            const CHUNK_SIZE = 100;
+            for (let i = 0; i < updateBatch.length; i += CHUNK_SIZE) {
+                const chunk = updateBatch.slice(i, i + CHUNK_SIZE);
+                await db.transaction(async (tx) => {
+                    for (const item of chunk) {
+                        await tx.update(results)
+                            .set({ 
+                                rankClass: item.rankClass, 
+                                rankLevel: item.rankLevel 
+                            })
+                            .where(eq(results.id, item.id));
+                    }
+                });
+            }
         }
     }
 
@@ -196,7 +208,7 @@ export class RankingService {
             eq(results.isApproved, true)
         ));
 
-        // 2. Aggregate per student
+        // 2. Aggregate per student and batch upsert annual summaries
         const studentMap = new Map<number, { scores: number[] }>();
         allStudentEnrollments.forEach(e => {
             const sid = e.studentId as number;
@@ -206,56 +218,73 @@ export class RankingService {
 
         const studentsData: { studentId: number, average: number }[] = [];
 
-        for (const [sid, data] of studentMap.entries()) {
-            if (data.scores.length === 0) continue;
-            const sum = data.scores.reduce((a, b) => a + b, 0);
-            
-            // If proration is OFF, we use a fixed divisor (3 terms)
-            // If proration is ON, we use the actual number of terms present
-            const divisor = isProrationDefault ? data.scores.length : 3;
-            const average = sum / divisor;
-            
-            studentsData.push({ studentId: sid, average });
-
-            // Generate automated comment
-            const automatedComment = await CommentService.generateComment(average);
-
-            // Upsert Annual Summary
-            const [existing] = await db.select().from(annualSummaries).where(and(
-                eq(annualSummaries.studentId, sid),
+        // Batch-fetch existing annual summaries for all students at once
+        const allStudentIds = Array.from(studentMap.keys());
+        const existingSummaries = allStudentIds.length > 0 ? await db.select()
+            .from(annualSummaries)
+            .where(and(
+                inArray(annualSummaries.studentId, allStudentIds),
                 eq(annualSummaries.sessionId, sessionId)
-            )).limit(1);
+            )) : [];
+        
+        const existingMap = new Map<number, typeof existingSummaries[0]>();
+        existingSummaries.forEach(s => existingMap.set(s.studentId, s));
 
-            if (existing) {
-                await db.update(annualSummaries)
-                    .set({ 
-                        totalScore: sum.toString(), 
+        // Process all students in a single transaction
+        await db.transaction(async (tx) => {
+            for (const [sid, data] of studentMap.entries()) {
+                if (data.scores.length === 0) continue;
+                const sum = data.scores.reduce((a, b) => a + b, 0);
+                const divisor = isProrationDefault ? data.scores.length : 3;
+                const average = sum / divisor;
+                
+                studentsData.push({ studentId: sid, average });
+
+                const automatedComment = await CommentService.generateComment(average);
+                const existing = existingMap.get(sid);
+
+                if (existing) {
+                    await tx.update(annualSummaries)
+                        .set({ 
+                            totalScore: sum.toString(), 
+                            averageScore: average.toString(),
+                            principalComment: existing.principalComment || automatedComment
+                        })
+                        .where(eq(annualSummaries.id, existing.id));
+                } else {
+                    await tx.insert(annualSummaries).values({
+                        studentId: sid,
+                        sessionId: sessionId,
+                        totalScore: sum.toString(),
                         averageScore: average.toString(),
-                        // Only overwrite if it's currently empty (allows principal manual override)
-                        principalComment: existing.principalComment || automatedComment
-                    })
-                    .where(eq(annualSummaries.id, existing.id));
-            } else {
-                await db.insert(annualSummaries).values({
-                    studentId: sid,
-                    sessionId: sessionId,
-                    totalScore: sum.toString(),
-                    averageScore: average.toString(),
-                    principalComment: automatedComment
+                        principalComment: automatedComment
+                    });
+                }
+            }
+        });
+
+        // 3. Rank Annual Results within the Level (batch update)
+        const sorted = [...studentsData].sort((a, b) => b.average - a.average);
+        if (sorted.length > 0) {
+            const rankBatch = sorted.map((s, i) => ({
+                studentId: s.studentId,
+                rank: `${i + 1}/${sorted.length}`
+            }));
+
+            const CHUNK_SIZE = 100;
+            for (let i = 0; i < rankBatch.length; i += CHUNK_SIZE) {
+                const chunk = rankBatch.slice(i, i + CHUNK_SIZE);
+                await db.transaction(async (tx) => {
+                    for (const item of chunk) {
+                        await tx.update(annualSummaries)
+                            .set({ rankLevel: item.rank })
+                            .where(and(
+                                eq(annualSummaries.studentId, item.studentId),
+                                eq(annualSummaries.sessionId, sessionId)
+                            ));
+                    }
                 });
             }
-        }
-
-        // 3. Rank Annual Results within the Level
-        const sorted = [...studentsData].sort((a, b) => b.average - a.average);
-        for (let i = 0; i < sorted.length; i++) {
-            const rank = `${i + 1}/${sorted.length}`;
-            await db.update(annualSummaries)
-                .set({ rankLevel: rank })
-                .where(and(
-                    eq(annualSummaries.studentId, sorted[i].studentId),
-                    eq(annualSummaries.sessionId, sessionId)
-                ));
         }
     }
 }

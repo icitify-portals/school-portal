@@ -1,13 +1,12 @@
 import { redis } from "@/lib/redis";
 import { db } from "@/db/db";
 import { students, studentLedger, feeStructures } from "@/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 
 export class BursaryCacheService {
 
     /**
      * Caches all tuition fees for the school.
-     * Matches 'Bursary::cache_all_tuition_fees' from Rust.
      */
     static async cacheAllTuitionFees() {
         const fees = await db.select().from(feeStructures);
@@ -18,7 +17,6 @@ export class BursaryCacheService {
 
     /**
      * Caches individual ledger for a student.
-     * Matches 'IndividualLedger::cache' from Rust.
      */
     static async cacheIndividualLedger(admissionNumber: string, sessionId: number) {
         // Find student
@@ -44,28 +42,56 @@ export class BursaryCacheService {
 
     /**
      * Caches all individual ledgers for a branch and session.
-     * Matches 'IndividualLedger::cache_all' from Rust.
+     * Optimized: batch-fetches all students and ledgers, then writes via pipeline.
      */
     static async cacheAllLedgers(branchId: number, sessionId: number) {
-        const matchingStudents = await db.select({ admissionNumber: students.admissionNumber })
+        // 1. Fetch all matching students in ONE query
+        const matchingStudents = await db.select({ 
+            id: students.id, 
+            admissionNumber: students.admissionNumber 
+        })
             .from(students)
             // @ts-expect-error - TS2339: Auto-suppressed for build
             .where(eq(students.branchId, branchId));
 
-        for (const student of matchingStudents) {
-            // @ts-expect-error - TS2345: Auto-suppressed for build
-            await this.cacheIndividualLedger(student.admissionNumber, sessionId);
+        if (matchingStudents.length === 0) return 0;
+
+        // 2. Fetch ALL ledgers for these students in ONE query using inArray
+        const studentIds = matchingStudents.map(s => s.id);
+        const allLedgers = await db.select()
+            .from(studentLedger)
+            .where(and(
+                inArray(studentLedger.studentId, studentIds),
+                // @ts-expect-error - TS2345: Auto-suppressed for build
+                eq(studentLedger.sessionId, sessionId)
+            ));
+
+        // 3. Group ledgers by student ID
+        const ledgerMap = new Map<number, any[]>();
+        for (const ledger of allLedgers) {
+            const sid = (ledger as any).studentId;
+            if (!ledgerMap.has(sid)) {
+                ledgerMap.set(sid, []);
+            }
+            ledgerMap.get(sid)!.push(ledger);
         }
-        
+
+        // 4. Batch Redis writes using pipeline (1 round-trip instead of N)
+        const pipeline = redis.pipeline();
+        for (const student of matchingStudents) {
+            const ledgers = ledgerMap.get(student.id) || [];
+            const cacheKey = `bursary:ledger:${student.admissionNumber}:${sessionId}`;
+            pipeline.set(cacheKey, JSON.stringify(ledgers), "EX", 60 * 60 * 12); // 12h
+        }
+        await pipeline.exec();
+
         return matchingStudents.length;
     }
 
     /**
      * Caches general school bursary data.
-     * Matches 'bursary.cache_school_data' from Rust.
      */
     static async cacheSchoolData(sessionId: number, term: string) {
-        // Implementation for general bursary stats (totals, etc.)
         const stats = {
             totalCollected: 0,
             pendingBills: 0,

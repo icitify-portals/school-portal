@@ -7,8 +7,8 @@ export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
     try {
-        const allFaculties = await db.select().from(faculties);
-        const allDepartments = await db.select().from(departments);
+        const allFaculties = await db.select().from(faculties).limit(100);
+        const allDepartments = await db.select().from(departments).limit(500);
 
         // Map departments into their respective faculties
         const facultiesWithDepts = allFaculties.map(faculty => ({

@@ -61,7 +61,7 @@ const securityHeaders = [
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'standalone',
-  reactStrictMode: false,
+  reactStrictMode: true,
   async headers() {
     return [
       {
@@ -85,7 +85,11 @@ const nextConfig = {
     ];
   },
   images: {
-    unoptimized: true,
+    unoptimized: false,
+    formats: ['image/avif', 'image/webp'],
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048],
+    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
+    minimumCacheTTL: 60 * 60 * 24 * 30, // 30 days
     remotePatterns: [
       {
         protocol: 'https',
@@ -126,9 +130,7 @@ const nextConfig = {
     // It is highly recommended to fix TS errors and set this to false.
     ignoreBuildErrors: true,
   },
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
+
   experimental: {
     serverActions: {
       bodySizeLimit: '5mb',
