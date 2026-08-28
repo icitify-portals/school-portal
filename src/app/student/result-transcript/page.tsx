@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { getMyTranscript } from "@/actions/result-module";
+import { getMyTranscript, logTranscriptActivity } from "@/actions/result-module";
 import { StandardTranscript } from "@/components/results/Transcript";
 import { useSession } from "next-auth/react";
 import {
@@ -34,6 +34,12 @@ export default function StudentTranscriptPage() {
     const res = await getMyTranscript(studentId, { viewForStudent: true });
     if (res.success) {
       setTranscriptData(res.data);
+      logTranscriptActivity({
+        action: "student_view",
+        targetType: "transcript",
+        targetId: studentId,
+        targetLabel: res.data?.student?.matricNumber || `Student #${studentId}`,
+      });
     } else {
       setError(res.error || "Failed to load transcript");
     }

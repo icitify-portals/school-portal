@@ -4,6 +4,7 @@ import { hasRole, hasPermission } from "@/lib/rbac";
 import { revalidatePath } from "next/cache";
 import { sendEmail } from "@/lib/mail";
 import { db } from "@/db";
+import { auth } from "@/auth";
 import {
   gradingScales,
   resultBatches,
@@ -19,6 +20,7 @@ import {
   results,
   semesterSummaries,
   resultMarks,
+  transcriptAuditLogs,
 } from "@/db/schema";
 import { eq, inArray, and, like, or, sql, isNotNull } from "drizzle-orm";
 import {
@@ -97,10 +99,13 @@ export async function getResultBatches() {
 export async function createResultBatch(data: {
   adminId: number;
   academicSessionId: number;
-  semester: "1" | "2" | "3";
+  semester: "1" | "2";
   gradingScaleId: number;
 }) {
   try {
+    if (!data.academicSessionId) return { success: false, error: "Academic session is required." };
+    if (!data.gradingScaleId) return { success: false, error: "Grading scale is required. Grades will not reflect without a grading scale." };
+
     // Enforce: only one result batch per semester+session
     const existingBatch = await db.query.resultBatches.findFirst({
       where: and(
@@ -112,7 +117,7 @@ export async function createResultBatch(data: {
 
     if (existingBatch) {
       const sessionName = existingBatch.academicSession?.name || `Session #${existingBatch.academicSessionId}`;
-      const semLabel = data.semester === "1" ? "First" : data.semester === "2" ? "Second" : "Summer";
+      const semLabel = data.semester === "1" ? "First" : "Second";
       return {
         success: false,
         error: `A result batch already exists for ${semLabel} Semester, ${sessionName}. You can update the existing batch instead of creating a new one.`,
@@ -1109,6 +1114,15 @@ export async function toggleBatchPublication(batchId: number, publish: boolean) 
 
     revalidatePath("/admin/result-module");
     revalidatePath(`/admin/result-module/${batchId}`);
+
+    await logTranscriptActivity({
+      action: publish ? "publish" : "unpublish",
+      targetType: "batch",
+      targetId: batchId,
+      targetLabel: `Batch #${batchId} (${batch.academicSessionId}/Sem ${batch.semester})`,
+      details: { semester: batch.semester, sessionId: batch.academicSessionId },
+    });
+
     return { success: true, isPublished: publish };
   } catch (e: any) {
     return { success: false, error: e.message };
@@ -1141,7 +1155,104 @@ export async function toggleStudentView(batchId: number, viewable: boolean) {
 
     revalidatePath("/admin/result-module");
     revalidatePath(`/admin/result-module/${batchId}`);
+
+    await logTranscriptActivity({
+      action: viewable ? "toggle_student_view_on" : "toggle_student_view_off",
+      targetType: "batch",
+      targetId: batchId,
+      targetLabel: `Batch #${batchId} (${batch.academicSessionId}/Sem ${batch.semester})`,
+      details: { semester: batch.semester, sessionId: batch.academicSessionId, viewable },
+    });
+
     return { success: true, isViewable: viewable };
+  } catch (e: any) {
+    return { success: false, error: e.message };
+  }
+}
+
+// ──────────────────────────────────────────────
+// AUDIT LOGGING
+// ──────────────────────────────────────────────
+
+export async function logTranscriptActivity(data: {
+  action: string;
+  targetType: string;
+  targetId?: number;
+  targetLabel?: string;
+  details?: Record<string, any>;
+}) {
+  try {
+    const session = await auth() as any;
+    const actorId = session?.user?.id;
+    const actorName = session?.user?.name || session?.user?.email || "Unknown";
+    const actorRole = session?.user?.role || "user";
+
+    await db.insert(transcriptAuditLogs).values({
+      actorId: actorId || 0,
+      actorName,
+      actorRole,
+      action: data.action,
+      targetType: data.targetType,
+      targetId: data.targetId || null,
+      targetLabel: data.targetLabel || null,
+      details: data.details ? JSON.stringify(data.details) : null,
+    });
+
+    return { success: true };
+  } catch (e: any) {
+    console.error("Audit log error:", e);
+    return { success: false, error: e.message };
+  }
+}
+
+export async function getTranscriptAuditLogs(filters?: {
+  action?: string;
+  targetType?: string;
+  actorId?: number;
+  startDate?: string;
+  endDate?: string;
+  page?: number;
+  limit?: number;
+}) {
+  try {
+    const allowed = await hasRole("admin") || await hasRole("superadmin") || await hasRole("registrar");
+    if (!allowed) return { success: false, error: "Unauthorized" };
+
+    const page = filters?.page || 1;
+    const limit = Math.min(filters?.limit || 50, 100);
+    const offset = (page - 1) * limit;
+
+    const conditions: any[] = [];
+    if (filters?.action) conditions.push(eq(transcriptAuditLogs.action, filters.action));
+    if (filters?.targetType) conditions.push(eq(transcriptAuditLogs.targetType, filters.targetType));
+    if (filters?.actorId) conditions.push(eq(transcriptAuditLogs.actorId, filters.actorId));
+
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+    const [logs, countResult] = await Promise.all([
+      db.query.transcriptAuditLogs.findMany({
+        where: whereClause,
+        orderBy: (l, { desc }) => [desc(l.createdAt)],
+        limit,
+        offset,
+      }),
+      db.select({ count: sql<number>`count(*)` })
+        .from(transcriptAuditLogs)
+        .where(whereClause),
+    ]);
+
+    const total = countResult[0]?.count || 0;
+
+    return {
+      success: true,
+      data: logs,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
   } catch (e: any) {
     return { success: false, error: e.message };
   }

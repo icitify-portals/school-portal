@@ -12,7 +12,7 @@ import {
 import { seedResultDemo } from "@/actions/seed-result-demo";
 import {
   BookOpen, Plus, FileUp, CheckCircle2, Clock, ChevronRight,
-  BarChart3, Layers, AlertCircle, Loader2, Settings2, Printer, ChevronDown, X, Eye, EyeOff
+  BarChart3, Layers, AlertCircle, Loader2, Settings2, Printer, ChevronDown, X, Eye, EyeOff, Shield
 } from "lucide-react";
 import Link from "next/link";
 
@@ -25,7 +25,7 @@ export default function ResultModuleDashboard() {
   const [showNew, setShowNew] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [seeding, setSeeding] = useState(false);
-  const [form, setForm] = useState({ academicSessionId: "", semester: "1", gradingScaleId: "" });
+  const [form, setForm] = useState({ academicSessionId: "", semester: "1" as "1" | "2", gradingScaleId: "" });
 
   const [togglingBatchId, setTogglingBatchId] = useState<number | null>(null);
 
@@ -73,12 +73,13 @@ export default function ResultModuleDashboard() {
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
+    if (!form.academicSessionId) return alert("Please select an academic session.");
+    if (!form.gradingScaleId) return alert("Please select a grading scale. Grades will not reflect without a grading scale.");
     setSubmitting(true);
-    // We'd normally get adminId from session, using 1 as placeholder
     const res = await createResultBatch({
       adminId: 1,
       academicSessionId: Number(form.academicSessionId),
-      semester: form.semester as "1" | "2" | "3",
+      semester: form.semester as "1" | "2",
       gradingScaleId: Number(form.gradingScaleId),
     });
     setSubmitting(false);
@@ -114,6 +115,9 @@ export default function ResultModuleDashboard() {
             </Link>
             <Link href="/admin/result-module/scales" className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/10 hover:bg-white/15 transition-colors text-sm font-medium text-slate-300">
               <Settings2 className="w-4 h-4" /> Grading Scales
+            </Link>
+            <Link href="/admin/result-module/audit" className="flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 transition-colors text-sm font-medium text-amber-400">
+              <Shield className="w-4 h-4" /> Audit Trail
             </Link>
             <button onClick={handleSeedDemo} disabled={seeding}
               className="flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 transition-colors text-sm font-medium text-amber-400 disabled:opacity-50">
@@ -241,7 +245,6 @@ export default function ResultModuleDashboard() {
                 options={[
                   { value: "1", label: "First Semester" },
                   { value: "2", label: "Second Semester" },
-                  { value: "3", label: "Third / Summer" },
                 ]}
               />
               <DarkSelect

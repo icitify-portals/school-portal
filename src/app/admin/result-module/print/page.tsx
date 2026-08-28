@@ -34,7 +34,7 @@ class ErrorBoundary extends Component<
   }
 }
 
-import { searchStudents, getMyTranscript, getBulkTranscripts, sendStudentTranscriptEmail, getAcademicSessions } from "@/actions/result-module";
+import { searchStudents, getMyTranscript, getBulkTranscripts, sendStudentTranscriptEmail, getAcademicSessions, logTranscriptActivity } from "@/actions/result-module";
 import { getProgrammes } from "@/actions/programmes";
 import { getFaculties } from "@/actions/faculties";
 import { getDepartments } from "@/actions/departments";
@@ -648,6 +648,12 @@ export default function PrintTranscriptPage() {
       const res = await getMyTranscript(student?.id);
       if (res?.success) {
         setTranscriptsToRender([res.data]);
+        logTranscriptActivity({
+          action: "view",
+          targetType: "transcript",
+          targetId: student?.id,
+          targetLabel: student?.matricNumber || student?.admissionNumber || student?.firstName,
+        });
       } else {
         alert(res?.error || "Failed to load transcript");
       }
@@ -687,6 +693,12 @@ export default function PrintTranscriptPage() {
     const res = await getBulkTranscripts(filters);
     if (res.success) {
       setTranscriptsToRender(res.data || []);
+      logTranscriptActivity({
+        action: "bulk_view",
+        targetType: "transcript",
+        targetLabel: `Bulk: ${bulkMode} (${(res.data || []).length} students)`,
+        details: { ...filters, count: (res.data || []).length },
+      });
     } else {
       alert(res.error);
     }
@@ -694,6 +706,17 @@ export default function PrintTranscriptPage() {
   }
 
   function handlePrint() {
+    const count = transcriptsToRender.length;
+    const label = selectedStudent
+      ? selectedStudent.matricNumber || selectedStudent.admissionNumber
+      : `Bulk (${count} students)`;
+    logTranscriptActivity({
+      action: "print",
+      targetType: "transcript",
+      targetId: selectedStudent?.id,
+      targetLabel: label,
+      details: { count, mode: selectedStudent ? "single" : "bulk" },
+    });
     window.print();
   }
 
@@ -711,6 +734,13 @@ export default function PrintTranscriptPage() {
       pdf.addImage(imgData, "JPEG", 0, 0, w, h);
       const name = selectedStudent ? selectedStudent.matricNumber || selectedStudent.admissionNumber : "Bulk_Transcripts";
       pdf.save(`Transcript_${name}.pdf`);
+      logTranscriptActivity({
+        action: "export_pdf",
+        targetType: "transcript",
+        targetId: selectedStudent?.id,
+        targetLabel: name,
+        details: { filename: `Transcript_${name}.pdf` },
+      });
     } catch (e) {
       alert("Error exporting PDF. Please try the Print button instead.");
     }
@@ -728,6 +758,13 @@ export default function PrintTranscriptPage() {
       link.download = `Transcript_${name}.png`;
       link.href = canvas.toDataURL("image/png");
       link.click();
+      logTranscriptActivity({
+        action: "export_image",
+        targetType: "transcript",
+        targetId: selectedStudent?.id,
+        targetLabel: name,
+        details: { filename: `Transcript_${name}.png` },
+      });
     } catch (e) {
       alert("Error exporting image");
     }
@@ -756,6 +793,13 @@ export default function PrintTranscriptPage() {
       const res = await sendStudentTranscriptEmail(transcriptData.student.user.email, pdfBase64, studentName);
       if (res.success) {
         setEmailSuccess(true);
+        logTranscriptActivity({
+          action: "email",
+          targetType: "transcript",
+          targetId: transcriptData.student?.id,
+          targetLabel: transcriptData.student?.matricNumber || name,
+          details: { email: transcriptData.student.user.email, studentName },
+        });
         setTimeout(() => setEmailSuccess(false), 3000);
       } else {
         alert("Failed to send email: " + (res.error?.message || res.error || "Unknown error"));

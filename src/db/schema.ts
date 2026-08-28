@@ -7430,3 +7430,17 @@ export const automatedMessageSchedules = mysqlTable('automated_message_schedules
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow().onUpdateNow()
 });
+
+export const transcriptAuditLogs = mysqlTable('transcript_audit_logs', {
+  id: int('id').autoincrement().primaryKey(),
+  actorId: int('actor_id').references(() => users.id).notNull(),
+  actorName: varchar('actor_name', { length: 255 }).notNull(),
+  actorRole: varchar('actor_role', { length: 100 }),
+  action: varchar('action', { length: 100 }).notNull(),
+  targetType: varchar('target_type', { length: 50 }).notNull(),
+  targetId: int('target_id'),
+  targetLabel: varchar('target_label', { length: 255 }),
+  details: text('details'),
+  ipAddress: varchar('ip_address', { length: 100 }),
+  createdAt: timestamp('created_at').defaultNow(),
+});
