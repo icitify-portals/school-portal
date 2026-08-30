@@ -7444,3 +7444,245 @@ export const transcriptAuditLogs = mysqlTable('transcript_audit_logs', {
   ipAddress: varchar('ip_address', { length: 100 }),
   createdAt: timestamp('created_at').defaultNow(),
 });
+
+// ═══════════════════════════════════════════════════════════════════
+// UNIFIED EXAM ENGINE
+// ═══════════════════════════════════════════════════════════════════
+
+export const globalQuestionBanks = mysqlTable('global_question_banks', {
+  id: int('id').autoincrement().primaryKey(),
+  name: varchar('name', { length: 255 }).notNull(),
+  description: text('description'),
+  tags: text('tags'), // JSON array: ["math","nd1","statistics"]
+  createdById: int('created_by_id').references(() => users.id),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const bankQuestions = mysqlTable('bank_questions', {
+  id: int('id').autoincrement().primaryKey(),
+  bankId: int('bank_id').references(() => globalQuestionBanks.id).notNull(),
+  questionText: mediumtext('question_text').notNull(),
+  questionType: mysqlEnum('question_type', [
+    'multiple_choice', 'true_false', 'short_answer', 'essay',
+    'matching', 'numerical', 'ordering', 'hotspot'
+  ]).default('multiple_choice'),
+  options: mediumtext('options'),
+  correctAnswer: text('correct_answer').notNull(),
+  points: decimal('points', { precision: 5, scale: 2 }).default('1.00'),
+  explanation: text('explanation'),
+  containsLatex: boolean('contains_latex').default(false),
+  difficultyLevel: mysqlEnum('difficulty_level', ['easy', 'medium', 'hard']).default('medium'),
+  tags: text('tags'), // JSON array of topic tags
+  imagePath: varchar('image_path', { length: 255 }),
+  rubric: text('rubric'),
+  aiGradingEnabled: boolean('ai_grading_enabled').default(false),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const unifiedExams = mysqlTable('unified_exams', {
+  id: int('id').autoincrement().primaryKey(),
+  title: varchar('title', { length: 255 }).notNull(),
+  description: text('description'),
+  durationMinutes: int('duration_minutes').default(60),
+  totalMarks: decimal('total_marks', { precision: 8, scale: 2 }).default('100.00'),
+  passingScore: decimal('passing_score', { precision: 8, scale: 2 }).default('50.00'),
+
+  // Context
+  contextType: mysqlEnum('context_type', ['course', 'admission', 'external', 'standalone']).default('standalone'),
+
+  // Context FKs
+  courseId: int('course_id').references(() => courses.id),
+  moduleId: int('module_id').references(() => courseModules.id),
+  lessonId: int('lesson_id').references(() => courseLessons.id),
+  admissionTemplateId: int('admission_template_id'),
+  programmeId: int('programme_id'),
+
+  // Behavior
+  randomizeQuestions: boolean('randomize_questions').default(true),
+  randomizeOptions: boolean('randomize_options').default(false),
+  isActive: boolean('is_active').default(true),
+  requireAssignment: boolean('require_assignment').default(false),
+  allowBacktrack: boolean('allow_backtrack').default(true),
+  isPooled: boolean('is_pooled').default(false),
+  drawCount: int('draw_count'),
+  gradingStrategy: mysqlEnum('grading_strategy', ['absolute', 'weighted']).default('absolute'),
+  maxPoints: int('max_points'),
+
+  // Scheduling
+  examSlotId: int('exam_slot_id').references(() => examSlots.id),
+  availableFrom: datetime('available_from'),
+  availableUntil: datetime('available_until'),
+  visibilityRule: mysqlEnum('visibility_rule', ['always', 'scheduled']).default('always'),
+  gracePeriodMinutes: int('grace_period_minutes').default(0),
+
+  // CA Integration
+  includeInCa: boolean('include_in_ca').default(false),
+  caWeight: decimal('ca_weight', { precision: 5, scale: 2 }),
+  caAveragingMethod: mysqlEnum('ca_averaging_method', ['simple', 'weighted']).default('simple'),
+
+  // Proctoring
+  proctoringEnabled: boolean('proctoring_enabled').default(false),
+  maxAttempts: int('max_attempts').default(1),
+
+  // Admission-specific
+  showResultsInstantly: boolean('show_results_instantly').default(false),
+  resultsReleased: boolean('results_released').default(false),
+  attendanceAutoMark: boolean('attendance_auto_mark').default(true),
+
+  // External-specific
+  externalAccessCode: varchar('external_access_code', { length: 50 }),
+  externalAccessPin: varchar('external_access_pin', { length: 100 }),
+
+  // Metadata
+  createdById: int('created_by_id').references(() => users.id),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
+});
+
+export const unifiedExamQuestions = mysqlTable('unified_exam_questions', {
+  id: int('id').autoincrement().primaryKey(),
+  examId: int('exam_id').references(() => unifiedExams.id).notNull(),
+  bankQuestionId: int('bank_question_id').references(() => bankQuestions.id),
+
+  // Inline question data
+  questionText: mediumtext('question_text'),
+  questionType: mysqlEnum('question_type', [
+    'multiple_choice', 'true_false', 'short_answer', 'essay',
+    'matching', 'numerical', 'ordering', 'hotspot'
+  ]).default('multiple_choice'),
+  options: mediumtext('options'),
+  correctAnswer: text('correct_answer'),
+  points: decimal('points', { precision: 5, scale: 2 }).default('1.00'),
+  explanation: text('explanation'),
+  containsLatex: boolean('contains_latex').default(false),
+  imagePath: varchar('image_path', { length: 255 }),
+  rubric: text('rubric'),
+  aiGradingEnabled: boolean('ai_grading_enabled').default(false),
+
+  // Ordering and pool
+  displayOrder: int('display_order').default(0),
+  isFromPool: boolean('is_from_pool').default(false),
+  poolTags: text('pool_tags'),
+  poolDifficulty: mysqlEnum('pool_difficulty', ['easy', 'medium', 'hard']),
+
+  // Subject grouping (admission exams)
+  subjectName: varchar('subject_name', { length: 100 }),
+  subjectOrder: int('subject_order').default(0),
+
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const unifiedExamAttempts = mysqlTable('unified_exam_attempts', {
+  id: int('id').autoincrement().primaryKey(),
+  examId: int('exam_id').references(() => unifiedExams.id).notNull(),
+
+  // Taker identification
+  userId: int('user_id').references(() => users.id),
+  applicantId: int('applicant_id').references(() => admissionApplicationsV2.id),
+  externalCandidateId: varchar('external_candidate_id', { length: 100 }),
+
+  // Attempt data
+  startTime: datetime('start_time').defaultNow(),
+  endTime: datetime('end_time'),
+  status: mysqlEnum('status', ['in_progress', 'completed', 'auto_submitted', 'flagged', 'timed_out']).default('in_progress'),
+  score: decimal('score', { precision: 8, scale: 2 }).default('0.00'),
+  maxScore: decimal('max_score', { precision: 8, scale: 2 }).default('0.00'),
+  passed: boolean('passed').default(false),
+  tabSwitches: int('tab_switches').default(0),
+  mode: mysqlEnum('mode', ['exam', 'practice']).default('exam'),
+  submissionType: mysqlEnum('submission_type', ['manual', 'auto_timer', 'auto_global']).default('manual'),
+
+  // Accommodation
+  extraTimeMinutes: int('extra_time_minutes').default(0),
+  aiGradingStatus: mysqlEnum('ai_grading_status', ['none', 'pending', 'completed', 'failed']).default('none'),
+  manualFeedback: text('manual_feedback'),
+
+  // Context-specific
+  caWeightApplied: decimal('ca_weight_applied', { precision: 5, scale: 2 }),
+  subjectScores: text('subject_scores'), // JSON: {subjectName: score}
+
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const unifiedExamResponses = mysqlTable('unified_exam_responses', {
+  id: int('id').autoincrement().primaryKey(),
+  attemptId: int('attempt_id').references(() => unifiedExamAttempts.id).notNull(),
+  questionId: int('question_id').references(() => unifiedExamQuestions.id).notNull(),
+  selectedAnswer: mediumtext('selected_answer'),
+  isCorrect: boolean('is_correct').default(false),
+  marksAwarded: decimal('marks_awarded', { precision: 8, scale: 2 }).default('0.00'),
+
+  // Essay grading
+  aiScore: int('ai_score'),
+  aiFeedback: text('ai_feedback'),
+  manualScore: int('manual_score'),
+  manualFeedback: text('manual_feedback'),
+
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const unifiedExamIncidents = mysqlTable('unified_exam_incidents', {
+  id: int('id').autoincrement().primaryKey(),
+  attemptId: int('attempt_id').references(() => unifiedExamAttempts.id).notNull(),
+  type: mysqlEnum('type', ['tab_blur', 'window_resize', 'fullscreen_exit', 'hardware_change']).notNull(),
+  timestamp: timestamp('timestamp').defaultNow(),
+  metadata: text('metadata'),
+});
+
+export const unifiedExamAssignments = mysqlTable('unified_exam_assignments', {
+  id: int('id').autoincrement().primaryKey(),
+  examId: int('exam_id').references(() => unifiedExams.id).notNull(),
+  userId: int('user_id').references(() => users.id),
+  applicantId: int('applicant_id').references(() => admissionApplicationsV2.id),
+  externalCandidateId: varchar('external_candidate_id', { length: 100 }),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// UNIFIED EXAM RELATIONS
+// ═══════════════════════════════════════════════════════════════════
+
+export const globalQuestionBanksRelations = relations(globalQuestionBanks, ({ one, many }) => ({
+  creator: one(users, { fields: [globalQuestionBanks.createdById], references: [users.id] }),
+  questions: many(bankQuestions),
+}));
+
+export const bankQuestionsRelations = relations(bankQuestions, ({ one }) => ({
+  bank: one(globalQuestionBanks, { fields: [bankQuestions.bankId], references: [globalQuestionBanks.id] }),
+}));
+
+export const unifiedExamsRelations = relations(unifiedExams, ({ one, many }) => ({
+  course: one(courses, { fields: [unifiedExams.courseId], references: [courses.id] }),
+  slot: one(examSlots, { fields: [unifiedExams.examSlotId], references: [examSlots.id] }),
+  creator: one(users, { fields: [unifiedExams.createdById], references: [users.id] }),
+  questions: many(unifiedExamQuestions),
+  attempts: many(unifiedExamAttempts),
+  assignments: many(unifiedExamAssignments),
+}));
+
+export const unifiedExamQuestionsRelations = relations(unifiedExamQuestions, ({ one, many }) => ({
+  exam: one(unifiedExams, { fields: [unifiedExamQuestions.examId], references: [unifiedExams.id] }),
+  bankQuestion: one(bankQuestions, { fields: [unifiedExamQuestions.bankQuestionId], references: [bankQuestions.id] }),
+  responses: many(unifiedExamResponses),
+}));
+
+export const unifiedExamAttemptsRelations = relations(unifiedExamAttempts, ({ one, many }) => ({
+  exam: one(unifiedExams, { fields: [unifiedExamAttempts.examId], references: [unifiedExams.id] }),
+  user: one(users, { fields: [unifiedExamAttempts.userId], references: [users.id] }),
+  responses: many(unifiedExamResponses),
+  incidents: many(unifiedExamIncidents),
+}));
+
+export const unifiedExamResponsesRelations = relations(unifiedExamResponses, ({ one }) => ({
+  attempt: one(unifiedExamAttempts, { fields: [unifiedExamResponses.attemptId], references: [unifiedExamAttempts.id] }),
+  question: one(unifiedExamQuestions, { fields: [unifiedExamResponses.questionId], references: [unifiedExamQuestions.id] }),
+}));
+
+export const unifiedExamIncidentsRelations = relations(unifiedExamIncidents, ({ one }) => ({
+  attempt: one(unifiedExamAttempts, { fields: [unifiedExamIncidents.attemptId], references: [unifiedExamAttempts.id] }),
+}));
+
+export const unifiedExamAssignmentsRelations = relations(unifiedExamAssignments, ({ one }) => ({
+  exam: one(unifiedExams, { fields: [unifiedExamAssignments.examId], references: [unifiedExams.id] }),
+  user: one(users, { fields: [unifiedExamAssignments.userId], references: [users.id] }),
+}));
