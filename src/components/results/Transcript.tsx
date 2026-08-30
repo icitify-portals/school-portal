@@ -62,6 +62,78 @@ function semesterLabel(s: string) {
   return s === "1" ? "First Semester" : s === "2" ? "Second Semester" : "Third/Summer Semester";
 }
 
+const GRADE_TABLE = [
+  { range: "75 and above", grade: "AA", point: "4.00" },
+  { range: "70 – 74", grade: "A", point: "3.50" },
+  { range: "65 – 69", grade: "AB", point: "3.25" },
+  { range: "60 – 64", grade: "B", point: "3.00" },
+  { range: "55 – 59", grade: "BC", point: "2.75" },
+  { range: "50 – 54", grade: "C", point: "2.50" },
+  { range: "45 – 49", grade: "CD", point: "2.25" },
+  { range: "40 – 44", grade: "D", point: "2.00" },
+  { range: "Below 40", grade: "F", point: "0.00" },
+];
+
+const CLASS_TABLE = [
+  { label: "Distinction", range: "3.50 and above" },
+  { label: "Upper Credit", range: "3.00 to 3.49" },
+  { label: "Lower Credit", range: "2.50 to 2.99" },
+  { label: "Pass", range: "2.00 to 2.49" },
+];
+
+function GradingAndClassBlock({ compact }: { compact?: boolean }) {
+  return (
+    <div style={{ display: "flex", gap: 16, marginBottom: 20 }}>
+      {/* Grade Point for Each Subject */}
+      <div style={{ flex: 2, border: "1px solid #ddd", borderRadius: 4, fontSize: compact ? 9 : 10, overflow: "hidden" }}>
+        <div style={{ background: "#1a1a1a", color: "#fff", padding: "5px 10px", fontWeight: 700, fontSize: compact ? 9 : 10, textTransform: "uppercase", letterSpacing: 0.5 }}>
+          GRADE POINT FOR EACH SUBJECT
+        </div>
+        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <thead>
+            <tr style={{ background: "#f0f0f0" }}>
+              <th style={{ border: "1px solid #ccc", padding: "3px 8px", textAlign: "left", fontWeight: 700 }}>Score Range</th>
+              <th style={{ border: "1px solid #ccc", padding: "3px 8px", textAlign: "center", fontWeight: 700 }}>Grade</th>
+              <th style={{ border: "1px solid #ccc", padding: "3px 8px", textAlign: "center", fontWeight: 700 }}>Grade Point</th>
+            </tr>
+          </thead>
+          <tbody>
+            {GRADE_TABLE.map((r) => (
+              <tr key={r.grade}>
+                <td style={{ border: "1px solid #ddd", padding: "2px 8px" }}>{r.range}</td>
+                <td style={{ border: "1px solid #ddd", padding: "2px 8px", textAlign: "center", fontWeight: 700, color: gradeColor(r.grade) }}>{r.grade}</td>
+                <td style={{ border: "1px solid #ddd", padding: "2px 8px", textAlign: "center" }}>{r.point}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {/* Class */}
+      <div style={{ flex: 1, border: "1px solid #ddd", borderRadius: 4, fontSize: compact ? 9 : 10, overflow: "hidden" }}>
+        <div style={{ background: "#1a1a1a", color: "#fff", padding: "5px 10px", fontWeight: 700, fontSize: compact ? 9 : 10, textTransform: "uppercase", letterSpacing: 0.5 }}>
+          CLASS
+        </div>
+        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <thead>
+            <tr style={{ background: "#f0f0f0" }}>
+              <th style={{ border: "1px solid #ccc", padding: "3px 8px", textAlign: "left", fontWeight: 700 }}>Class</th>
+              <th style={{ border: "1px solid #ccc", padding: "3px 8px", textAlign: "left", fontWeight: 700 }}>CGPA Range</th>
+            </tr>
+          </thead>
+          <tbody>
+            {CLASS_TABLE.map((r) => (
+              <tr key={r.label}>
+                <td style={{ border: "1px solid #ddd", padding: "2px 8px", fontWeight: 700 }}>{r.label}</td>
+                <td style={{ border: "1px solid #ddd", padding: "2px 8px" }}>{r.range}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 export function StandardTranscript({
   student,
   transcripts,
@@ -71,7 +143,9 @@ export function StandardTranscript({
   institutionLogoUrl,
   template = "standard",
 }: TranscriptProps) {
-  const finalCGPA = transcripts.length > 0 ? transcripts[transcripts.length - 1].cgpa : "N/A";
+  // Filter out semesters with no results
+  const validTranscripts = transcripts.filter(tr => tr.results && tr.results.length > 0);
+  const finalCGPA = validTranscripts.length > 0 ? validTranscripts[validTranscripts.length - 1].cgpa : "N/A";
   const fullName = student
     ? `${student.lastName || ""} ${student.firstName || ""} ${student.otherNames || ""}`.trim()
     : "N/A";
@@ -134,7 +208,7 @@ export function StandardTranscript({
           </div>
 
           {/* Semester Tables */}
-          {transcripts.map((tr) => (
+          {validTranscripts.map((tr) => (
             <div key={tr.id} style={{ marginBottom: 24 }}>
               <div style={{
                 background: "#1a1a1a", color: "#fff", padding: "6px 12px",
@@ -175,68 +249,11 @@ export function StandardTranscript({
                   </tr>
                 </tfoot>
               </table>
-              {/* Semester Grade Point Summary */}
-              <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 4, padding: "6px 12px", marginTop: 6, fontSize: 11, display: "flex", justifyContent: "space-between", fontWeight: 700 }}>
-                <span>Total Credits: {tr.totalCreditsAttempted}</span>
-                <span>Semester GPA: {tr.gpa}</span>
-                <span>Cumulative CGPA: <strong style={{ color: "#059669" }}>{tr.cgpa}</strong></span>
-              </div>
             </div>
           ))}
 
-          {/* Final Grade Point Summary */}
-          <div style={{ border: "2px solid #1a1a1a", borderRadius: 4, padding: "12px 16px", marginBottom: 20, background: "#f9f9f9" }}>
-            <p style={{ fontWeight: 900, textAlign: "center", fontSize: 12, marginBottom: 8, textTransform: "uppercase", letterSpacing: 1 }}>
-              Grade Point Summary
-            </p>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 8, fontSize: 11, textAlign: "center" }}>
-              {(() => {
-                const allResults = transcripts.flatMap(tr => tr.results || []);
-                let totalCU = 0, totalQP = 0;
-                for (const r of allResults) {
-                  totalCU += r.creditLoad || 0;
-                  totalQP += (r.creditLoad || 0) * Number(r.gradePoint || 0);
-                }
-                const lastGpa = transcripts.length > 0 ? transcripts[transcripts.length - 1].gpa : "N/A";
-                return (
-                  <>
-                    <div>
-                      <div style={{ fontSize: 9, color: "#666", fontWeight: 700 }}>Total Credits</div>
-                      <div style={{ fontWeight: 900, fontSize: 14 }}>{totalCU}</div>
-                    </div>
-                    <div>
-                      <div style={{ fontSize: 9, color: "#666", fontWeight: 700 }}>Total Quality Points</div>
-                      <div style={{ fontWeight: 900, fontSize: 14 }}>{totalQP.toFixed(2)}</div>
-                    </div>
-                    <div>
-                      <div style={{ fontSize: 9, color: "#666", fontWeight: 700 }}>Final GPA</div>
-                      <div style={{ fontWeight: 900, fontSize: 14 }}>{lastGpa}</div>
-                    </div>
-                    <div>
-                      <div style={{ fontSize: 9, color: "#666", fontWeight: 700 }}>Cumulative CGPA</div>
-                      <div style={{ fontWeight: 900, fontSize: 14, color: "#059669" }}>{finalCGPA}</div>
-                    </div>
-                  </>
-                );
-              })()}
-            </div>
-            {transcripts.map((tr) => (
-              <div key={tr.id} style={{ display: "flex", justifyContent: "space-between", fontSize: 10, padding: "3px 0", borderTop: "1px solid #eee" }}>
-                <span style={{ fontWeight: 700 }}>{tr.academicSession?.name} — {semesterLabel(tr.semester)}</span>
-                <span>GPA: {tr.gpa} | CGPA: {tr.cgpa}</span>
-              </div>
-            ))}
-          </div>
-
-          {/* Grading Key */}
-          <div style={{ border: "1px solid #ddd", borderRadius: 4, padding: "10px 14px", marginBottom: 24, fontSize: 10 }}>
-            <p style={{ fontWeight: 700, marginBottom: 4 }}>GRADING KEY:</p>
-            <div style={{ display: "flex", gap: 24 }}>
-              {[["A", "70–100", "Excellent"], ["B", "60–69", "Good"], ["C", "50–59", "Average"], ["D/E", "40–49", "Pass"], ["F", "0–39", "Fail"]].map(([g, r, l]) => (
-                <span key={g}><strong style={{ color: gradeColor(g) }}>{g}</strong>: {r} ({l})</span>
-              ))}
-            </div>
-          </div>
+          {/* Grading + Class Tables */}
+          <GradingAndClassBlock />
 
           {/* Signatures */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 32, marginTop: 32 }}>
@@ -261,7 +278,7 @@ export function StandardTranscript({
           {/* Footer */}
           <div style={{ marginTop: 24, textAlign: "center", fontSize: 9, color: "#888", borderTop: "1px solid #eee", paddingTop: 10 }}>
             <p>This transcript is only valid with the official seal of {institutionName}. Issued on {new Date().toLocaleDateString("en-GB")}.</p>
-            <p>For verification, contact the Registrar's Office | Unauthorized reproduction or alteration is a criminal offence.</p>
+            <p>For verification, contact the Registrar&apos;s Office | Unauthorized reproduction or alteration is a criminal offence.</p>
           </div>
         </div>
       </div>
@@ -343,7 +360,7 @@ export function StandardTranscript({
         </div>
 
         {/* Semester Tables */}
-        {transcripts.map((tr) => (
+        {validTranscripts.map((tr) => (
           <div key={tr.id} style={{ marginBottom: 28 }}>
             <div style={{
               background: "linear-gradient(90deg, #1e3a5f, #2563eb)",
@@ -385,68 +402,11 @@ export function StandardTranscript({
                 </tr>
               </tfoot>
             </table>
-            {/* Semester Grade Point Summary */}
-            <div style={{ background: "linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%)", border: "1px solid #86efac", borderRadius: 4, padding: "6px 14px", marginTop: 6, fontSize: 11, display: "flex", justifyContent: "space-between", fontWeight: 700 }}>
-              <span>Total Credits: {tr.totalCreditsAttempted}</span>
-              <span>Semester GPA: {tr.gpa}</span>
-              <span>Cumulative CGPA: <strong style={{ color: "#059669", fontSize: 13 }}>{tr.cgpa}</strong></span>
-            </div>
           </div>
         ))}
 
-        {/* Final Grade Point Summary */}
-        <div style={{ border: "2px solid #1e3a5f", borderRadius: 6, padding: "14px 18px", marginBottom: 28, background: "linear-gradient(135deg, #f0f4ff 0%, #e8f4fd 100%)" }}>
-          <p style={{ fontWeight: 900, textAlign: "center", fontSize: 13, marginBottom: 10, textTransform: "uppercase", letterSpacing: 1, color: "#1e3a5f" }}>
-            Grade Point Summary
-          </p>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 12, fontSize: 12, textAlign: "center", marginBottom: 10 }}>
-            {(() => {
-              const allResults = transcripts.flatMap(tr => tr.results || []);
-              let totalCU = 0, totalQP = 0;
-              for (const r of allResults) {
-                totalCU += r.creditLoad || 0;
-                totalQP += (r.creditLoad || 0) * Number(r.gradePoint || 0);
-              }
-              const lastGpa = transcripts.length > 0 ? transcripts[transcripts.length - 1].gpa : "N/A";
-              return (
-                <>
-                  <div>
-                    <div style={{ fontSize: 9, color: "#1e3a5f", fontWeight: 700 }}>Total Credits</div>
-                    <div style={{ fontWeight: 900, fontSize: 16 }}>{totalCU}</div>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: 9, color: "#1e3a5f", fontWeight: 700 }}>Total Quality Points</div>
-                    <div style={{ fontWeight: 900, fontSize: 16 }}>{totalQP.toFixed(2)}</div>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: 9, color: "#1e3a5f", fontWeight: 700 }}>Final GPA</div>
-                    <div style={{ fontWeight: 900, fontSize: 16 }}>{lastGpa}</div>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: 9, color: "#1e3a5f", fontWeight: 700 }}>Cumulative CGPA</div>
-                    <div style={{ fontWeight: 900, fontSize: 16, color: "#059669" }}>{finalCGPA}</div>
-                  </div>
-                </>
-              );
-            })()}
-          </div>
-          {transcripts.map((tr) => (
-            <div key={tr.id} style={{ display: "flex", justifyContent: "space-between", fontSize: 11, padding: "4px 0", borderTop: "1px solid #b0c8e8", color: "#1e3a5f" }}>
-              <span style={{ fontWeight: 700 }}>{tr.academicSession?.name} — {semesterLabel(tr.semester)}</span>
-              <span>GPA: {tr.gpa} | CGPA: {tr.cgpa}</span>
-            </div>
-          ))}
-        </div>
-
-        {/* Grading Key */}
-        <div style={{ border: "1px solid #b0c8e8", borderRadius: 4, padding: "10px 14px", marginBottom: 28, fontSize: 10, background: "#f0f7ff" }}>
-          <p style={{ fontWeight: 700, marginBottom: 4, color: "#1e3a5f" }}>GRADING KEY:</p>
-          <div style={{ display: "flex", gap: 24 }}>
-            {[["A", "70–100", "Excellent"], ["B", "60–69", "Good"], ["C", "50–59", "Average"], ["D/E", "40–49", "Pass"], ["F", "0–39", "Fail"]].map(([g, r, l]) => (
-              <span key={g}><strong style={{ color: gradeColor(g) }}>{g}</strong>: {r} ({l})</span>
-            ))}
-          </div>
-        </div>
+        {/* Grading + Class Tables */}
+        <GradingAndClassBlock />
 
         {/* Signatures */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 48, marginTop: 36 }}>

@@ -126,8 +126,9 @@ function TranscriptCardDetailed({ transcriptData, qrDataUrl }: { transcriptData:
     }
 
     // Group transcript rows by session name, then by semester
+    // Filter out semesters with no results
     const bySession = new Map<string, Map<string, any>>();
-    const txList: any[] = transcriptData.transcripts || [];
+    const txList: any[] = (transcriptData.transcripts || []).filter((t: any) => t.results && t.results.length > 0);
     for (const t of txList) {
       const sName = t.academicSession?.name || "Unknown Session";
       const sem = t.semester || "1";
@@ -254,14 +255,15 @@ function TranscriptCardDetailed({ transcriptData, qrDataUrl }: { transcriptData:
 
         {/* ── FINAL GRADE POINT SUMMARY ── */}
         <div style={{ borderTop: "2px solid #000", marginTop: 10, paddingTop: 8 }}>
-          <div style={{ textAlign: "center", marginBottom: 6 }}>
+          {/* Grade Point Summary Stats */}
+          <div style={{ textAlign: "center", marginBottom: 8 }}>
             <div style={{ display: "inline-block", border: "2px solid #000", padding: "6px 24px" }}>
               <span style={{ fontWeight: 900, fontSize: 12, textTransform: "uppercase" }}>
                 GRADUATING GPA: {cumulCgpa} &mdash; {getDegreeClass(cumulCgpaNum)}
               </span>
             </div>
           </div>
-          <div style={{ border: "1.5px solid #000", padding: "6px 16px", fontSize: 9, fontWeight: 700 }}>
+          <div style={{ border: "1.5px solid #000", padding: "6px 16px", fontSize: 9, fontWeight: 700, marginBottom: 10 }}>
             <div style={{ textAlign: "center", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4, fontSize: 10 }}>
               GRADE POINT SUMMARY
             </div>
@@ -283,6 +285,49 @@ function TranscriptCardDetailed({ transcriptData, qrDataUrl }: { transcriptData:
                   </>
                 );
               })()}
+            </div>
+          </div>
+          {/* Grade Point + Class Tables */}
+          <div style={{ display: "flex", gap: 12, marginBottom: 6 }}>
+            <div style={{ flex: 2, border: "1.5px solid #000", fontSize: 8.5, overflow: "hidden" }}>
+              <div style={{ background: "#000", color: "#fff", padding: "3px 8px", fontWeight: 900, fontSize: 8, textTransform: "uppercase", letterSpacing: 0.3 }}>GRADE POINT FOR EACH SUBJECT</div>
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ borderBottom: "1px solid #000" }}>
+                    <th style={{ padding: "2px 6px", textAlign: "left", fontWeight: 700 }}>Score Range</th>
+                    <th style={{ padding: "2px 6px", textAlign: "center", fontWeight: 700 }}>Grade</th>
+                    <th style={{ padding: "2px 6px", textAlign: "center", fontWeight: 700 }}>Grade Point</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {FSS_GRADE_TABLE.map((row) => (
+                    <tr key={row.grade} style={{ borderBottom: "0.5px solid #ccc" }}>
+                      <td style={{ padding: "1px 6px" }}>{row.range}</td>
+                      <td style={{ padding: "1px 6px", textAlign: "center", fontWeight: 700 }}>{row.grade}</td>
+                      <td style={{ padding: "1px 6px", textAlign: "center" }}>{row.point}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div style={{ flex: 1, border: "1.5px solid #000", fontSize: 8.5, overflow: "hidden" }}>
+              <div style={{ background: "#000", color: "#fff", padding: "3px 8px", fontWeight: 900, fontSize: 8, textTransform: "uppercase", letterSpacing: 0.3 }}>CLASS</div>
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ borderBottom: "1px solid #000" }}>
+                    <th style={{ padding: "2px 6px", textAlign: "left", fontWeight: 700 }}>Class</th>
+                    <th style={{ padding: "2px 6px", textAlign: "left", fontWeight: 700 }}>CGPA Range</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {FSS_CLASS_TABLE.map((row) => (
+                    <tr key={row.cls} style={{ borderBottom: "0.5px solid #ccc" }}>
+                      <td style={{ padding: "2px 6px", fontWeight: 700 }}>{row.cls}</td>
+                      <td style={{ padding: "2px 6px" }}>&mdash; {row.range}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
@@ -344,8 +389,9 @@ function TranscriptCardOriginal({ transcriptData, qrDataUrl }: { transcriptData:
     const student = transcriptData?.student;
     if (!student) return <div className="transcript-sheet" style={sheetStyle}><p style={{ color: "#94a3b8", textAlign: "center", marginTop: 80 }}>Student data not available</p></div>;
 
+    // Filter out semesters with no results
     const bySession = new Map<string, Map<string, any>>();
-    const txList: any[] = transcriptData.transcripts || [];
+    const txList: any[] = (transcriptData.transcripts || []).filter((t: any) => t.results && t.results.length > 0);
     for (const t of txList) {
       const sName = t.academicSession?.name || "Unknown Session";
       const sem = t.semester || "1";
@@ -464,11 +510,15 @@ function TranscriptCardOriginal({ transcriptData, qrDataUrl }: { transcriptData:
         })}
 
         {/* ── FINAL GRADE POINT SUMMARY ── */}
-        <div style={{ marginTop: 16, border: "2px solid #000", padding: "8px 16px", textAlign: "center" }}>
-          <div style={{ fontWeight: 900, fontSize: 10, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 }}>
-            GRADE POINT SUMMARY
+        <div style={{ marginTop: 16, border: "2px solid #000", padding: "8px 16px" }}>
+          <div style={{ textAlign: "center", marginBottom: 6 }}>
+            <div style={{ display: "inline-block", border: "2px solid #000", padding: "4px 20px" }}>
+              <span style={{ fontWeight: 900, fontSize: 10, textTransform: "uppercase" }}>
+                GRADUATING CGPA: {cumulCgpa} ({getDegreeClass(cumulCgpaNum)})
+              </span>
+            </div>
           </div>
-          <div style={{ display: "flex", justifyContent: "center", gap: 24, fontSize: 9, fontWeight: 700 }}>
+          <div style={{ display: "flex", justifyContent: "center", gap: 16, fontSize: 8.5, fontWeight: 700, marginBottom: 6 }}>
             {(() => {
               const allResults = txList.flatMap((t: any) => t.results || []);
               let totalCU = 0, totalQP = 0;
@@ -479,7 +529,7 @@ function TranscriptCardOriginal({ transcriptData, qrDataUrl }: { transcriptData:
               return (
                 <>
                   <span>TOTAL CREDITS: {totalCU}</span>
-                  <span>TOTAL QUALITY POINTS: {totalQP.toFixed(2)}</span>
+                  <span>TQP: {totalQP.toFixed(2)}</span>
                   <span>GPA: {txList.length > 0 ? Number(txList[txList.length - 1].gpa).toFixed(3) : "-"}</span>
                   <span>CGPA: {cumulCgpa}</span>
                   <span>CLASS: {getDegreeClass(cumulCgpaNum)}</span>
@@ -487,12 +537,36 @@ function TranscriptCardOriginal({ transcriptData, qrDataUrl }: { transcriptData:
               );
             })()}
           </div>
-        </div>
-
-        <div style={{ marginTop: 16, textAlign: "center" }}>
-          <span style={{ fontWeight: 900, fontSize: 10, textTransform: "uppercase" }}>
-            GRADUATING GRADE POINT AVERAGE (CGPA): {cumulCgpa} ({getDegreeClass(cumulCgpaNum)})
-          </span>
+          {/* Grade Point + Class Tables */}
+          <div style={{ display: "flex", gap: 12, borderTop: "1.5px solid #000", paddingTop: 6 }}>
+            <div style={{ flex: 2, fontSize: 8.5 }}>
+              <div style={{ fontWeight: 900, textDecoration: "underline", marginBottom: 3, fontSize: 8, textTransform: "uppercase", letterSpacing: 0.3 }}>GRADE POINT FOR EACH SUBJECT</div>
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <tbody>
+                  {FSS_GRADE_TABLE.map((row) => (
+                    <tr key={row.grade} style={{ borderBottom: "0.5px solid #ccc" }}>
+                      <td style={{ padding: "1px 6px" }}>{row.range}</td>
+                      <td style={{ padding: "1px 6px", textAlign: "center", fontWeight: 700 }}>{row.grade}</td>
+                      <td style={{ padding: "1px 6px", textAlign: "center" }}>{row.point}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div style={{ flex: 1, fontSize: 8.5 }}>
+              <div style={{ fontWeight: 900, textDecoration: "underline", marginBottom: 3, fontSize: 8, textTransform: "uppercase", letterSpacing: 0.3 }}>CLASS</div>
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <tbody>
+                  {FSS_CLASS_TABLE.map((row) => (
+                    <tr key={row.cls} style={{ borderBottom: "0.5px solid #ccc" }}>
+                      <td style={{ padding: "1px 6px", fontWeight: 700 }}>{row.cls}</td>
+                      <td style={{ padding: "1px 6px" }}>&mdash; {row.range}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
 
         {/* ── SIGNATURES ── */}
@@ -1063,12 +1137,6 @@ export default function PrintTranscriptPage() {
                 )}
               </div>
             ))}
-            {/* Grading Key: compact if few results, full page if many */}
-            {(() => {
-              const totalResults = transcriptsToRender.reduce((sum, td) => sum + (td.transcripts?.length || 0), 0);
-              const isCompact = totalResults <= 4;
-              return <GradingKeySheet compact={isCompact} />;
-            })()}
           </div>
         )}
       </div>
