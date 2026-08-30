@@ -241,7 +241,8 @@ function TranscriptCardDetailed({ transcriptData, qrDataUrl }: { transcriptData:
                       <div style={{ borderTop: "1.5px solid #000", marginTop: 1, paddingTop: 2, fontSize: 9, fontWeight: 700, textAlign: "right" }}>
                         TOTAL CREDIT REGISTERED (TCR): {totals.totalCU} &nbsp;|&nbsp;
                         TOTAL QUALITY POINT (TQP): {totals.totalQP.toFixed(2)} &nbsp;|&nbsp;
-                        GPA: {totals.gpa.toFixed(3)}
+                        GPA: {totals.gpa.toFixed(3)} &nbsp;|&nbsp;
+                        CGPA: {sem.cgpa ? Number(sem.cgpa).toFixed(3) : "-"}
                       </div>
                     </div>
                   );
@@ -251,12 +252,38 @@ function TranscriptCardDetailed({ transcriptData, qrDataUrl }: { transcriptData:
           );
         })}
 
-        {/* ── CUMULATIVE GPA ── */}
-        <div style={{ borderTop: "2px solid #000", marginTop: 10, paddingTop: 8, textAlign: "center" }}>
-          <div style={{ display: "inline-block", border: "2px solid #000", padding: "6px 24px" }}>
-            <span style={{ fontWeight: 900, fontSize: 12, textTransform: "uppercase" }}>
-              GRADUATING GPA: {cumulCgpa} &mdash; {getDegreeClass(cumulCgpaNum)}
-            </span>
+        {/* ── FINAL GRADE POINT SUMMARY ── */}
+        <div style={{ borderTop: "2px solid #000", marginTop: 10, paddingTop: 8 }}>
+          <div style={{ textAlign: "center", marginBottom: 6 }}>
+            <div style={{ display: "inline-block", border: "2px solid #000", padding: "6px 24px" }}>
+              <span style={{ fontWeight: 900, fontSize: 12, textTransform: "uppercase" }}>
+                GRADUATING GPA: {cumulCgpa} &mdash; {getDegreeClass(cumulCgpaNum)}
+              </span>
+            </div>
+          </div>
+          <div style={{ border: "1.5px solid #000", padding: "6px 16px", fontSize: 9, fontWeight: 700 }}>
+            <div style={{ textAlign: "center", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4, fontSize: 10 }}>
+              GRADE POINT SUMMARY
+            </div>
+            <div style={{ display: "flex", justifyContent: "center", gap: 20 }}>
+              {(() => {
+                const allResults = txList.flatMap((t: any) => t.results || []);
+                let totalCU = 0, totalQP = 0;
+                for (const r of allResults) {
+                  totalCU += r.creditLoad || 0;
+                  totalQP += (r.creditLoad || 0) * Number(r.gradePoint || 0);
+                }
+                return (
+                  <>
+                    <span>TOTAL CREDITS: {totalCU}</span>
+                    <span>TOTAL QUALITY POINTS: {totalQP.toFixed(2)}</span>
+                    <span>GPA: {txList.length > 0 ? Number(txList[txList.length - 1].gpa).toFixed(3) : "-"}</span>
+                    <span>CGPA: {cumulCgpa}</span>
+                    <span>CLASS: {getDegreeClass(cumulCgpaNum)}</span>
+                  </>
+                );
+              })()}
+            </div>
           </div>
         </div>
 
@@ -393,25 +420,40 @@ function TranscriptCardOriginal({ transcriptData, qrDataUrl }: { transcriptData:
                       <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 8.5 }}>
                         <thead>
                           <tr style={{ borderBottom: "1px solid #000" }}>
-                            <th style={{...thNoBorder, textAlign: 'left', width: '15%'}}>CODE</th>
-                            <th style={{...thNoBorder, textAlign: 'left', width: '55%'}}>SUBJECT TITLE</th>
-                            <th style={{...thNoBorder, textAlign: 'center', width: '15%'}}>CREDIT<br/>UNITS</th>
-                            <th style={{...thNoBorder, textAlign: 'center', width: '15%'}}>SCORE/100</th>
+                            <th style={{...thNoBorder, textAlign: 'left', width: '13%'}}>CODE</th>
+                            <th style={{...thNoBorder, textAlign: 'left', width: '35%'}}>SUBJECT TITLE</th>
+                            <th style={{...thNoBorder, textAlign: 'center', width: '9%'}}>CR<br/>UNIT</th>
+                            <th style={{...thNoBorder, textAlign: 'center', width: '10%'}}>SCORE</th>
+                            <th style={{...thNoBorder, textAlign: 'center', width: '9%'}}>GRADE</th>
+                            <th style={{...thNoBorder, textAlign: 'center', width: '10%'}}>GP</th>
+                            <th style={{...thNoBorder, textAlign: 'center', width: '12%'}}>QP</th>
                           </tr>
                         </thead>
                         <tbody>
-                          {(sem.results || []).map((r: any, i: number) => (
-                            <tr key={i}>
-                              <td style={{ ...tdNoBorder, textAlign: 'left', fontWeight: 600 }}>{r.courseCode}</td>
-                              <td style={{ ...tdNoBorder, textAlign: 'left', maxWidth: 110, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={r.courseTitle}>{r.courseTitle}</td>
-                              <td style={{ ...tdNoBorder, textAlign: 'center' }}>{r.creditLoad}</td>
-                              <td style={{ ...tdNoBorder, textAlign: 'center' }}>{r.score}</td>
-                            </tr>
-                          ))}
+                          {(sem.results || []).map((r: any, i: number) => {
+                            const qp = (r.creditLoad || 0) * Number(r.gradePoint || 0);
+                            return (
+                              <tr key={i}>
+                                <td style={{ ...tdNoBorder, textAlign: 'left', fontWeight: 600 }}>{r.courseCode}</td>
+                                <td style={{ ...tdNoBorder, textAlign: 'left', maxWidth: 110, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={r.courseTitle}>{r.courseTitle}</td>
+                                <td style={{ ...tdNoBorder, textAlign: 'center' }}>{r.creditLoad}</td>
+                                <td style={{ ...tdNoBorder, textAlign: 'center' }}>{r.score}</td>
+                                <td style={{ ...tdNoBorder, textAlign: 'center', fontWeight: 700 }}>{r.grade}</td>
+                                <td style={{ ...tdNoBorder, textAlign: 'center' }}>{Number(r.gradePoint).toFixed(2)}</td>
+                                <td style={{ ...tdNoBorder, textAlign: 'center' }}>{qp.toFixed(2)}</td>
+                              </tr>
+                            );
+                          })}
                         </tbody>
                       </table>
-                      <div style={{ marginTop: 6, fontSize: 9, fontWeight: 900, textAlign: "center" }}>
-                        GRADE POINT AVERAGE (GPA): <span style={{textDecoration: "underline"}}>{totals.gpa.toFixed(3)}</span>
+                      {/* Semester Grade Point Summary */}
+                      <div style={{ borderTop: "1.5px solid #000", marginTop: 2, paddingTop: 3, fontSize: 8.5 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 700 }}>
+                          <span>TCR: {totals.totalCU}</span>
+                          <span>TQP: {totals.totalQP.toFixed(2)}</span>
+                          <span>GPA: {totals.gpa.toFixed(3)}</span>
+                          <span>CGPA: {sem.cgpa ? Number(sem.cgpa).toFixed(3) : "-"}</span>
+                        </div>
                       </div>
                     </div>
                   );
@@ -421,7 +463,32 @@ function TranscriptCardOriginal({ transcriptData, qrDataUrl }: { transcriptData:
           );
         })}
 
-        {/* ── CUMULATIVE GPA ── */}
+        {/* ── FINAL GRADE POINT SUMMARY ── */}
+        <div style={{ marginTop: 16, border: "2px solid #000", padding: "8px 16px", textAlign: "center" }}>
+          <div style={{ fontWeight: 900, fontSize: 10, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 }}>
+            GRADE POINT SUMMARY
+          </div>
+          <div style={{ display: "flex", justifyContent: "center", gap: 24, fontSize: 9, fontWeight: 700 }}>
+            {(() => {
+              const allResults = txList.flatMap((t: any) => t.results || []);
+              let totalCU = 0, totalQP = 0;
+              for (const r of allResults) {
+                totalCU += r.creditLoad || 0;
+                totalQP += (r.creditLoad || 0) * Number(r.gradePoint || 0);
+              }
+              return (
+                <>
+                  <span>TOTAL CREDITS: {totalCU}</span>
+                  <span>TOTAL QUALITY POINTS: {totalQP.toFixed(2)}</span>
+                  <span>GPA: {txList.length > 0 ? Number(txList[txList.length - 1].gpa).toFixed(3) : "-"}</span>
+                  <span>CGPA: {cumulCgpa}</span>
+                  <span>CLASS: {getDegreeClass(cumulCgpaNum)}</span>
+                </>
+              );
+            })()}
+          </div>
+        </div>
+
         <div style={{ marginTop: 16, textAlign: "center" }}>
           <span style={{ fontWeight: 900, fontSize: 10, textTransform: "uppercase" }}>
             GRADUATING GRADE POINT AVERAGE (CGPA): {cumulCgpa} ({getDegreeClass(cumulCgpaNum)})
