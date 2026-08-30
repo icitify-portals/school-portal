@@ -12,14 +12,28 @@ import {
     AlertCircle,
     BarChart3,
     Settings2,
-    FileEdit
+    FileEdit,
+    Loader2
 } from "lucide-react";
 import Link from "next/link";
-import { getCourses } from "@/actions/courses";
+import { getCBTStats } from "@/actions/cbt";
 import { cn } from "@/lib/utils";
 
 export default function CBTDashboard() {
-    const [stats, setStats] = useState({ totalQuizzes: 0, pendingGrading: 0, banks: 0 });
+    const [stats, setStats] = useState<any>(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        getCBTStats().then(s => { setStats(s); setLoading(false); });
+    }, []);
+
+    if (loading) {
+        return (
+            <div className="p-8 max-w-[1600px] w-full mx-auto flex items-center justify-center min-h-[60vh]">
+                <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
+            </div>
+        );
+    }
 
     return (
         <div className="p-8 max-w-[1600px] w-full mx-auto space-y-8">
@@ -52,7 +66,8 @@ export default function CBTDashboard() {
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm font-bold uppercase tracking-widest text-indigo-100">Active Exams</p>
-                                <h3 className="text-5xl font-black mt-2 tracking-tight">24</h3>
+                                <h3 className="text-5xl font-black mt-2 tracking-tight">{stats?.activeQuizzes || 0}</h3>
+                                <p className="text-[10px] text-indigo-200 mt-1 uppercase tracking-wider">{stats?.totalQuizzes || 0} total assessments</p>
                             </div>
                             <Clock className="w-16 h-16 text-indigo-400 opacity-50 group-hover:scale-110 transition-transform group-hover:opacity-80" />
                         </div>
@@ -64,7 +79,8 @@ export default function CBTDashboard() {
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-xs font-bold uppercase tracking-widest text-amber-100">Manual Grading</p>
-                                <h3 className="text-4xl font-black mt-2 tracking-tight">12</h3>
+                                <h3 className="text-4xl font-black mt-2 tracking-tight">{stats?.pendingGrading || 0}</h3>
+                                <p className="text-[10px] text-amber-200 mt-1 uppercase tracking-wider">Flagged / auto-submitted</p>
                             </div>
                             <FileEdit className="w-12 h-12 text-amber-300 opacity-50 group-hover:scale-110 transition-transform group-hover:opacity-80" />
                         </div>
@@ -76,7 +92,8 @@ export default function CBTDashboard() {
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm font-bold uppercase tracking-widest text-emerald-100">Avg. Pass Rate</p>
-                                <h3 className="text-4xl font-black mt-2 tracking-tight">78%</h3>
+                                <h3 className="text-4xl font-black mt-2 tracking-tight">{stats?.passRate || 0}%</h3>
+                                <p className="text-[10px] text-emerald-200 mt-1 uppercase tracking-wider">{stats?.totalAttempts || 0} total attempts</p>
                             </div>
                             <BarChart3 className="w-12 h-12 text-emerald-400 opacity-50 group-hover:scale-110 transition-transform group-hover:opacity-80" />
                         </div>
@@ -87,24 +104,30 @@ export default function CBTDashboard() {
                 <Card className=" border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
                     <CardHeader className="border-b border-slate-50 flex flex-row items-center justify-between">
                         <CardTitle className="text-sm font-black uppercase tracking-widest text-slate-400">Recent Assessments</CardTitle>
-                        <Settings2 className="w-4 h-4 text-slate-300" />
+                        <Link href="/admin/cbt/editor">
+                            <Button size="sm" variant="ghost" className="text-[10px] font-black uppercase text-indigo-600">View All</Button>
+                        </Link>
                     </CardHeader>
                     <CardContent className="p-0">
                         <div className="divide-y divide-slate-50">
-                            {[1, 2, 3].map(i => (
-                                <div key={i} className="p-4 hover:bg-slate-50 transition-colors flex items-center justify-between">
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-500 font-bold text-xs uppercase">
-                                            QUIZ
+                            {stats?.recentQuizzes?.length > 0 ? stats.recentQuizzes.map((quiz: any) => (
+                                <Link key={quiz.id} href={`/admin/cbt/results/${quiz.id}`}>
+                                    <div className="p-4 hover:bg-slate-50 transition-colors flex items-center justify-between cursor-pointer">
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-10 h-10 rounded-xl bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold text-xs uppercase">
+                                                Q
+                                            </div>
+                                            <div>
+                                                <p className="text-sm font-bold text-slate-900">{quiz.title}</p>
+                                                <p className="text-[10px] text-slate-500 uppercase font-black">{quiz.questionCount} Questions • {quiz.durationMinutes} Minutes</p>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <p className="text-sm font-bold text-slate-900">Introduction to Computer Science {i}</p>
-                                            <p className="text-[10px] text-slate-500 uppercase font-black">20 Questions • 60 Minutes</p>
-                                        </div>
+                                        <Button size="sm" variant="ghost" className="text-[10px] font-black uppercase text-indigo-600">Results</Button>
                                     </div>
-                                    <Button size="sm" variant="ghost" className="text-[10px] font-black uppercase text-indigo-600">Edit</Button>
-                                </div>
-                            ))}
+                                </Link>
+                            )) : (
+                                <div className="p-8 text-center text-slate-400 text-sm">No assessments yet. Create one to get started.</div>
+                            )}
                         </div>
                     </CardContent>
                 </Card>

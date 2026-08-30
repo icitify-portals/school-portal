@@ -20,21 +20,31 @@ export function ActivityMonitor({ attemptId, enabled, onLock }: Props) {
         if (!enabled || isLocked) return;
 
         const res = await recordTabSwitch(attemptId);
-        if (res.success && res.tabSwitches !== undefined) {
-            setViolations(res.tabSwitches);
-
-            if (res.tabSwitches >= threshold) {
+        if (res.success) {
+            if (res.autoSubmitted) {
                 setIsLocked(true);
-                toast.error("EXAM LOCKED: Multiple proctoring violations detected.", {
+                toast.error("EXAM AUTO-SUBMITTED: You left the exam window.", {
                     duration: Infinity,
                 });
                 if (onLock) onLock();
-            } else {
-      // @ts-expect-error - Auto-suppressed by script
-                toast.warning(`Warning: Proctoring violation detected (${res.incidentCount}/${threshold}). Stay on this page!`, {
-                    description: `Activity logged: ${type.replace('_', ' ')}`,
-                    duration: 5000,
-                });
+                return;
+            }
+            
+            if (res.tabSwitches !== undefined) {
+                setViolations(res.tabSwitches);
+
+                if (res.tabSwitches >= threshold) {
+                    setIsLocked(true);
+                    toast.error("EXAM LOCKED: Multiple proctoring violations detected.", {
+                        duration: Infinity,
+                    });
+                    if (onLock) onLock();
+                } else {
+                    toast.warning(`Warning: Proctoring violation detected (${res.tabSwitches}/${threshold}). Stay on this page!`, {
+                        description: `Activity logged: ${type.replace('_', ' ')}`,
+                        duration: 5000,
+                    });
+                }
             }
         }
     };

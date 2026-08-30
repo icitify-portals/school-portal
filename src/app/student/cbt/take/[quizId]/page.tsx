@@ -23,6 +23,7 @@ import { RichTextEditor } from "@/components/RichTextEditor";
 import { ActivityMonitor } from "@/components/cbt/ActivityMonitor";
 import { CertificateGenerator } from "@/components/cbt/CertificateGenerator";
 import { getQuizWithQuestions, submitResponse, finalizeAttempt, startAttempt, getAttemptWithTime } from "@/actions/cbt";
+import { getExamSecuritySettingsForStudents } from "@/actions/exam-security";
 import { toast } from "sonner";
 import { useSession } from "next-auth/react";
 
@@ -42,9 +43,15 @@ export default function StudentExamPage({ params }: Props) {
     const [isLoading, setIsLoading] = useState(true);
     const [hasEnteredFullscreen, setHasEnteredFullscreen] = useState(false);
     const [accessDenied, setAccessDenied] = useState(false);
+    const [securitySettings, setSecuritySettings] = useState<any>(null);
+    const [finalScore, setFinalScore] = useState(0);
 
     const [mode, setMode] = useState<'exam' | 'practice' | null>(null);
     const { data: session } = useSession();
+
+    useEffect(() => {
+        getExamSecuritySettingsForStudents().then(s => setSecuritySettings(s));
+    }, []);
 
     useEffect(() => {
         if (!mode || !session?.user?.id) return;
@@ -67,43 +74,21 @@ export default function StudentExamPage({ params }: Props) {
                     const attMode = mode;
                     setMode(attMode as any);
 
-                    // 2. Fetch quiz data with the specific attempt ID
-                    // @ts-expect-error - TS2554: Auto-suppressed for build
-                    const attemptSpecificData = await getQuizWithQuestions(parseInt(quizId), (attempt as any).attemptId);
-                    if (attemptSpecificData) {
-                        setQuiz(attemptSpecificData);
+                    // 2. Fetch quiz data
+                    const quizData = await getQuizWithQuestions(parseInt(quizId));
+                    if (quizData) {
+                        setQuiz(quizData);
                         
                         if (attMode === 'practice') {
                             setTimeLeft(3600 * 24); // 24 hours for practice
                         } else {
-                            // @ts-expect-error - TS2339: Auto-suppressed for build
-                            setTimeLeft((attemptSpecificData.timeLimitMinutes || 60) * 60);
-
-                            // Calculate Time Left with Extra Time
-                            const now = new Date();
-                            const startedAt = new Date((attempt as any).startedAt || now);
-                            // @ts-expect-error - TS2339: Auto-suppressed for build
-                            const baseTimeSeconds = (attemptSpecificData.timeLimitMinutes || 60) * 60;
-
-      // @ts-expect-error - Auto-suppressed by script
-                            const attemptData = await getAttemptWithTime(parseInt(quizId), parseInt(session!.user!.id as string));
-      // @ts-expect-error - Auto-suppressed by script
-                            const extraSeconds = (attemptData?.extraTimeMinutes || 0) * 60;
-
-                            const totalAllowedSeconds = baseTimeSeconds + extraSeconds;
-                            const elapsedSeconds = Math.floor((now.getTime() - startedAt.getTime()) / 1000);
-                            let finalTimeLeft = Math.max(0, totalAllowedSeconds - elapsedSeconds);
-
-                            // @ts-expect-error - TS2339: Auto-suppressed for build
-                            if (attemptSpecificData.availableUntil) {
-                                // @ts-expect-error - TS2339: Auto-suppressed for build
-                                const closeTime = new Date(attemptSpecificData.availableUntil);
-                                const secondsUntilClose = Math.floor((closeTime.getTime() - now.getTime()) / 1000);
-                                if (secondsUntilClose < finalTimeLeft) {
-                                    finalTimeLeft = Math.max(0, secondsUntilClose);
-                                }
+                            // Get remaining time from server
+                            const attemptData = await getAttemptWithTime((attempt as any).attemptId);
+                            if (attemptData?.remainingMs !== undefined) {
+                                setTimeLeft(Math.floor(attemptData.remainingMs / 1000));
+                            } else {
+                                setTimeLeft((quizData.durationMinutes || 60) * 60);
                             }
-                            setTimeLeft(finalTimeLeft);
                         }
                     }
                 }
@@ -146,6 +131,7 @@ export default function StudentExamPage({ params }: Props) {
 
         const res = await finalizeAttempt(attemptId);
         if (res.success) {
+            setFinalScore(parseFloat(res.score || '0'));
             setIsSubmitted(true);
             toast.success("Examination submitted successfully!");
             if (document.fullscreenElement) document.exitFullscreen();
@@ -193,7 +179,7 @@ export default function StudentExamPage({ params }: Props) {
         );
     }
 
-    if (quiz?.proctoringEnabled && !hasEnteredFullscreen && !isSubmitted) {
+    if (quiz && securitySettings?.fullScreenRequired && !hasEnteredFullscreen && !isSubmitted && mode === 'exam') {
         return (
             <div className="min-h-screen bg-slate-900 flex items-center justify-center p-6 text-center">
                 <Card className="max-w-md w-full rounded-[2.5rem] border-none shadow-2xl p-8 space-y-6">
@@ -235,10 +221,10 @@ export default function StudentExamPage({ params }: Props) {
                     {hasPassed && (
                         <div className="pt-8 border-t border-slate-100">
                             <CertificateGenerator
-                                studentName="Jane Doe"
-                                courseName="Intro to Computer Science"
+                                studentName={session?.user?.name || "Student"}
+                                courseName={quiz?.title || "Course"}
                                 quizTitle={quiz?.title || "Main Semester Examination"}
-                                score={85}
+                                score={finalScore}
                                 date={new Date().toLocaleDateString()}
                             />
                         </div>
@@ -264,9 +250,16 @@ export default function StudentExamPage({ params }: Props) {
             {attemptId && (
                 <ActivityMonitor
                     attemptId={attemptId}
-                    enabled={quiz.proctoringEnabled}
+                    enabled={mode === 'exam'}
                     onLock={() => setIsSubmitted(true)}
                 />
+            )}
+
+            {mode === 'exam' && securitySettings?.disableCopyPaste && (
+                <style>{`
+                    * { user-select: none !important; -webkit-user-select: none !important; }
+                    input, textarea { user-select: text !important; -webkit-user-select: text !important; }
+                `}</style>
             )}
 
             <header className={cn("text-white p-4 md:px-8 flex justify-between items-center shadow-xl transition-colors", mode === 'practice' ? "bg-indigo-600" : "bg-slate-900")}>

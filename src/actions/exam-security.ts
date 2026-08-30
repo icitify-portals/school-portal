@@ -41,6 +41,42 @@ export async function getExamSecuritySettings() {
     }
 }
 
+export async function getExamSecuritySettingsForStudents() {
+    try {
+        const [settings] = await db.select().from(examSecuritySettings)
+            .orderBy(desc(examSecuritySettings.id))
+            .limit(1);
+
+        return {
+            disableCopyPaste: settings?.disableCopyPaste ?? true,
+            fullScreenRequired: settings?.fullScreenRequired ?? true,
+            autoSubmitOnTabSwitch: settings?.autoSubmitOnTabSwitch ?? false,
+            randomizeQuestions: settings?.randomizeQuestions ?? true,
+            randomizeOptions: settings?.randomizeOptions ?? true,
+            maxAttempts: settings?.maxAttempts ?? 1,
+            showResultsImmediately: settings?.showResultsImmediately ?? false,
+            browserLockdown: settings?.browserLockdown ?? false,
+            webcamProctoring: settings?.webcamProctoring ?? false,
+            screenshotInterval: settings?.screenshotInterval ?? null,
+            maxIdleTime: settings?.maxIdleTime ?? 300,
+        };
+    } catch (error) {
+        return {
+            disableCopyPaste: true,
+            fullScreenRequired: true,
+            autoSubmitOnTabSwitch: false,
+            randomizeQuestions: true,
+            randomizeOptions: true,
+            maxAttempts: 1,
+            showResultsImmediately: false,
+            browserLockdown: false,
+            webcamProctoring: false,
+            screenshotInterval: null,
+            maxIdleTime: 300,
+        };
+    }
+}
+
 export async function saveExamSecuritySettings(data: {
     disableCopyPaste: boolean;
     fullScreenRequired: boolean;
