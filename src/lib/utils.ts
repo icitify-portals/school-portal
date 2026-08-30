@@ -36,5 +36,5 @@ export function formatLevelWithType(level: number | string | undefined | null, p
 }
 
 export function isGraduatedStatus(status: string | undefined | null): boolean {
-    return status === 'nd_graduated' || status === 'hnd_graduated';
+    return status === 'nd_graduant' || status === 'hnd_graduant';
 }

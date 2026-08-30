@@ -103,7 +103,7 @@ interface StudentEvaluation {
     maxLevel: number;
     cgpa: number;
     creditsEarned: number;
-    decision: 'promoted' | 'withdrawn' | 'nd_graduated' | 'hnd_graduated' | 'repeat' | 'concession';
+    decision: 'promoted' | 'withdrawn' | 'nd_graduant' | 'hnd_graduant' | 'repeat' | 'concession';
     reasons: string[];
     newLevel: number;
 }
@@ -160,7 +160,7 @@ async function evaluateStudents(sessionId: number): Promise<StudentEvaluation[]>
 
         // Decision Logic
         const reasons: string[] = [];
-        let decision: 'promoted' | 'withdrawn' | 'nd_graduated' | 'hnd_graduated' | 'repeat' = 'promoted';
+        let decision: 'promoted' | 'withdrawn' | 'nd_graduant' | 'hnd_graduant' | 'repeat' = 'promoted';
 
         if (!student.programmeId) {
             // K-12 Logic
@@ -223,7 +223,7 @@ async function evaluateStudents(sessionId: number): Promise<StudentEvaluation[]>
 
         if (decision === 'promoted') {
             if (currentLevel >= maxLevel) {
-                decision = student.programmeType === 'HND' ? 'hnd_graduated' : 'nd_graduated';
+                decision = student.programmeType === 'HND' ? 'hnd_graduant' : 'nd_graduant';
                 reasons.push(`Completed max level (${maxLevel}) — eligible for graduation`);
                 newLevel = currentLevel;
             } else {
@@ -267,7 +267,7 @@ export async function getPromotionPreview(sessionId: number) {
         const summary = {
             total: evaluations.length,
             promoted: evaluations.filter(e => e.decision === 'promoted').length,
-            graduated: evaluations.filter(e => e.decision === 'nd_graduated' || e.decision === 'hnd_graduated').length,
+            graduated: evaluations.filter(e => e.decision === 'nd_graduant' || e.decision === 'hnd_graduant').length,
             withdrawn: evaluations.filter(e => e.decision === 'withdrawn').length,
             repeat: evaluations.filter(e => e.decision === 'repeat').length,
         };
@@ -336,8 +336,8 @@ export async function runPromotion(sessionId: number, targetSessionId: number, o
                     if (finalDecision === 'promoted') promoted++; else concessional++;
                     break;
 
-                case 'nd_graduated':
-                case 'hnd_graduated':
+                case 'nd_graduant':
+                case 'hnd_graduant':
                     const [pendingCarryOver] = await db.select().from(academicCarryOvers).where(and(
                         eq(academicCarryOvers.studentId, evaluation.studentId),
                         eq(academicCarryOvers.status, 'pending')
@@ -354,7 +354,7 @@ export async function runPromotion(sessionId: number, targetSessionId: number, o
                             .where(eq(students.id, evaluation.studentId));
                         repeated++; // treat as retained/repeated logically for counts
                     } else {
-                        const gradStatus = evaluation.studentProgrammeType === 'HND' ? 'hnd_graduated' : 'nd_graduated';
+                        const gradStatus = evaluation.studentProgrammeType === 'HND' ? 'hnd_graduant' : 'nd_graduant';
                         await db.update(students)
                             .set({
                                 status: gradStatus,

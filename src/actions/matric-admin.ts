@@ -501,3 +501,47 @@ export async function getStudentMatricHistory(studentId: number) {
         return null;
     }
 }
+
+export async function getLastMatricNumbers() {
+    try {
+        const currentYear = new Date().getFullYear();
+
+        // Get all students with matric numbers
+        const matriculated = await db.select({
+            matricNumber: students.matricNumber,
+            programmeType: students.programmeType,
+        }).from(students)
+          .where(and(
+              isNotNull(students.matricNumber),
+              sql`YEAR(${students.createdAt}) >= ${currentYear - 1}`
+          ));
+
+        // Separate ND and HND
+        const ndStudents = matriculated.filter(s => {
+            const m = s.matricNumber || '';
+            return m.includes('/ND/') || m.startsWith('ND') || m.includes('DPP/');
+        });
+
+        const hndStudents = matriculated.filter(s => {
+            const m = s.matricNumber || '';
+            return m.includes('/HND/') || m.startsWith('HND') || m.includes('DPP/HND');
+        });
+
+        // Sort by matric number descending to get the latest
+        const sortMatric = (a: any, b: any) => (b.matricNumber || '').localeCompare(a.matricNumber || '');
+
+        const lastND = ndStudents.sort(sortMatric)[0] || null;
+        const lastHND = hndStudents.sort(sortMatric)[0] || null;
+
+        // Also get total counts
+        const totalND = ndStudents.length;
+        const totalHND = hndStudents.length;
+
+        return {
+            nd: lastND ? { matricNumber: lastND.matricNumber, count: totalND } : { matricNumber: null, count: totalND },
+            hnd: lastHND ? { matricNumber: lastHND.matricNumber, count: totalHND } : { matricNumber: null, count: totalHND },
+        };
+    } catch (error) {
+        return { nd: { matricNumber: null, count: 0 }, hnd: { matricNumber: null, count: 0 } };
+    }
+}

@@ -421,7 +421,7 @@ export default function BursaryBillsPage() {
                                                         {[
                                                             {v: "1", l: "ND 1"}, {v: "2", l: "ND 2"},
                                                             {v: "3", l: "HND 1"}, {v: "4", l: "HND 2"},
-                                                            {v: "nd_graduated", l: "ND Graduated"}, {v: "hnd_graduated", l: "HND Graduated"}
+                                                            {v: "nd_graduant", l: "ND Graduated"}, {v: "hnd_graduant", l: "HND Graduated"}
                                                         ].map(opt => (
                                                             <option key={opt.v} value={opt.v}>{opt.l}</option>
                                                         ))}
@@ -557,7 +557,7 @@ export default function BursaryBillsPage() {
                                 {[
                                     {v: "1", l: "ND 1"}, {v: "2", l: "ND 2"},
                                     {v: "3", l: "HND 1"}, {v: "4", l: "HND 2"},
-                                    {v: "nd_graduated", l: "ND Graduated"}, {v: "hnd_graduated", l: "HND Graduated"}
+                                    {v: "nd_graduant", l: "ND Graduated"}, {v: "hnd_graduant", l: "HND Graduated"}
                                 ].map(opt => (
                                     <option key={opt.v} value={opt.v}>{opt.l}</option>
                                 ))}

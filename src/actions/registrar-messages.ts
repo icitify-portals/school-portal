@@ -171,8 +171,8 @@ export async function processBulkMessageInline(jobData: any) {
             } else {
                 const { and } = await import('drizzle-orm');
                 let conditions: any[] = [];
-                if (levelStr === 'ND_graduated') conditions.push(eq(students.status, 'nd_graduated'));
-                else if (levelStr === 'HND_graduated') conditions.push(eq(students.status, 'hnd_graduated'));
+                if (levelStr === 'ND_graduated') conditions.push(eq(students.status, 'nd_graduant'));
+                else if (levelStr === 'HND_graduated') conditions.push(eq(students.status, 'hnd_graduant'));
                 else if (levelStr === 'ND 1') { conditions.push(eq(students.status, 'active'), eq(students.currentLevel, 100), eq(students.programmeType, 'ND')); }
                 else if (levelStr === 'ND 2') { conditions.push(eq(students.status, 'active'), eq(students.currentLevel, 200), eq(students.programmeType, 'ND')); }
                 else if (levelStr === 'HND 1') { conditions.push(eq(students.status, 'active'), eq(students.currentLevel, 100), eq(students.programmeType, 'HND')); }

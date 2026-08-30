@@ -163,8 +163,8 @@ function GraduatesPageContent() {
                             onChange={(e) => updateFilter('status', e.target.value)}
                         >
                             <option value="all">All Grad Statuses</option>
-                            <option value="nd_graduated">ND Graduated</option>
-                            <option value="hnd_graduated">HND Graduated</option>
+                            <option value="nd_graduant">ND Graduated</option>
+                            <option value="hnd_graduant">HND Graduated</option>
                             <option value="active">Active (Pending Grad)</option>
                         </select>
                         <select 
@@ -377,8 +377,8 @@ function GraduatesPageContent() {
                                 onChange={(e) => setEditStatus(e.target.value)}
                             >
                                 <option value="active">Active</option>
-                                <option value="nd_graduated">ND Graduated</option>
-                                <option value="hnd_graduated">HND Graduated</option>
+                                <option value="nd_graduant">ND Graduated</option>
+                                <option value="hnd_graduant">HND Graduated</option>
                                 <option value="withdrawn">Withdrawn</option>
                                 <option value="suspended">Suspended</option>
                             </select>

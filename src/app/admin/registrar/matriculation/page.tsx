@@ -11,7 +11,7 @@ import {
 import {
     getMatricStudents, previewNextMatricNumber, assignMatricNumber,
     changeMatricNumber, restoreMatricNumber, getMatricAuditLog, getStudentMatricHistory,
-    batchAssignMatricNumbers
+    batchAssignMatricNumbers, getLastMatricNumbers
 } from "@/actions/matric-admin";
 import { getDepartments } from "@/actions/departments";
 import { getAcademicSessions } from "@/actions/portal";
@@ -30,6 +30,9 @@ export default function MatricAdminPage() {
     const [showBatchAssign, setShowBatchAssign] = useState(false);
     const [batchYear, setBatchYear] = useState<number>(new Date().getFullYear());
     const [batchLoading, setBatchLoading] = useState(false);
+
+    // Last matric numbers
+    const [lastMatric, setLastMatric] = useState<{ nd: { matricNumber: string | null; count: number }; hnd: { matricNumber: string | null; count: number } } | null>(null);
 
     // List tab state
     const [students, setStudents] = useState<any[]>([]);
@@ -105,6 +108,7 @@ export default function MatricAdminPage() {
     useEffect(() => {
         setLoading(true);
         fetchStudents().finally(() => setLoading(false));
+        getLastMatricNumbers().then(setLastMatric).catch(() => {});
     }, []);
 
     useEffect(() => {
@@ -311,6 +315,38 @@ export default function MatricAdminPage() {
                         <h1 className="text-3xl font-black tracking-tight text-slate-900">Matriculation Administration</h1>
                         <p className="text-slate-500 mt-1">Manage student matriculation numbers, assignments, and revision history.</p>
                     </div>
+                </div>
+
+                {/* Last Matric Numbers Summary */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <Card className="border border-slate-200 rounded-2xl shadow-sm bg-gradient-to-br from-blue-50 to-white">
+                        <CardContent className="p-5">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-blue-400">Last ND Matric Number</p>
+                                    <p className="text-2xl font-black text-blue-700 mt-1">{lastMatric?.nd.matricNumber || "—"}</p>
+                                    <p className="text-[10px] text-slate-500 mt-1">{lastMatric?.nd.count || 0} ND students registered</p>
+                                </div>
+                                <div className="w-12 h-12 rounded-2xl bg-blue-100 flex items-center justify-center">
+                                    <Hash className="w-6 h-6 text-blue-600" />
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+                    <Card className="border border-slate-200 rounded-2xl shadow-sm bg-gradient-to-br from-emerald-50 to-white">
+                        <CardContent className="p-5">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-emerald-400">Last HND Matric Number</p>
+                                    <p className="text-2xl font-black text-emerald-700 mt-1">{lastMatric?.hnd.matricNumber || "—"}</p>
+                                    <p className="text-[10px] text-slate-500 mt-1">{lastMatric?.hnd.count || 0} HND students registered</p>
+                                </div>
+                                <div className="w-12 h-12 rounded-2xl bg-emerald-100 flex items-center justify-center">
+                                    <Hash className="w-6 h-6 text-emerald-600" />
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
                 </div>
 
                 {/* Tabs */}

@@ -14,7 +14,7 @@ export const users = mysqlTable('users', {
   password: varchar('password', { length: 255 }).notNull(),
   requiresPasswordChange: boolean('requires_password_change').default(false),
   role: mysqlEnum('role', ['admin', 'staff', 'student', 'dvc', 'healthadmin', 'applicant', 'fresher', 'superadmin', 'parent', 'icitify_dev', 'bursar', 'registrar', 'librarian', 'hod', 'dean', 'admission_officer', 'record_officer']).default('student'),
-  status: mysqlEnum('status', ['active', 'suspended', 'withdrawn', 'nd_graduated', 'hnd_graduated', 'rusticated']).default('active'),
+  status: mysqlEnum('status', ['active', 'suspended', 'withdrawn', 'nd_graduant', 'hnd_graduant', 'rusticated']).default('active'),
   phone: varchar('phone', { length: 20 }),
   imageUrl: varchar('image_url', { length: 255 }),
   failedLoginAttempts: int('failed_login_attempts').default(0),
@@ -242,7 +242,7 @@ export const students = mysqlTable('students', {
   isFinanciallyLocked: boolean('is_financially_locked').default(false),
   nin: varchar('nin', { length: 11 }),
   ninVerified: boolean('nin_verified').default(false),
-  status: mysqlEnum('status', ['active', 'nd_graduated', 'hnd_graduated', 'withdrawn', 'suspended', 'rusticated']).default('active'),
+  status: mysqlEnum('status', ['active', 'nd_graduant', 'hnd_graduant', 'withdrawn', 'suspended', 'rusticated']).default('active'),
   subscriptionLockOverride: mysqlEnum('subscription_lock_override', ['default', 'enforce', 'exempt']).default('default'),
 
   // Guardian Details
@@ -896,7 +896,7 @@ export const feeStructures = mysqlTable('fee_structures', {
   name: varchar('name', { length: 255 }).notNull(),
   academicYear: varchar('academic_year', { length: 20 }).notNull(),
   level: int('level').notNull(), // Level this fee structure applies to (Legacy single level)
-  targetGroups: varchar('target_groups', { length: 255 }), // Comma separated list (e.g., '100,200,nd_graduated,all')
+  targetGroups: varchar('target_groups', { length: 255 }), // Comma separated list (e.g., '100,200,nd_graduant,all')
   programmeId: int('programme_id').references(() => programmes.id),
   status: mysqlEnum('status', ['draft', 'pending_approval', 'approved', 'archived']).default('draft'),
   approvedBy: int('approved_by').references(() => users.id),
@@ -1531,7 +1531,7 @@ export const promotionLogs = mysqlTable('promotion_logs', {
   toLevel: int('to_level').notNull(),
   fromSessionId: int('from_session_id').references(() => academicSessions.id).notNull(),
   toSessionId: int('to_session_id').references(() => academicSessions.id),
-  decision: mysqlEnum('decision', ['promoted', 'withdrawn', 'nd_graduated', 'hnd_graduated', 'repeat', 'rusticated', 'concession']).notNull(),
+  decision: mysqlEnum('decision', ['promoted', 'withdrawn', 'nd_graduant', 'hnd_graduant', 'repeat', 'rusticated', 'concession']).notNull(),
   cgpa: decimal('cgpa', { precision: 4, scale: 2 }),
   creditsEarned: int('credits_earned'),
   reason: text('reason'),

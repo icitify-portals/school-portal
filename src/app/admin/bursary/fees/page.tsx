@@ -480,8 +480,8 @@ export default function FeesPage() {
                                     <div className="flex flex-wrap gap-2 pt-1">
                                         {[
                                             {v: "0", l: "Applicant"}, {v: "1", l: "ND 1"}, {v: "2", l: "ND 2"},
-                                            {v: "3", l: "HND 1"}, {v: "4", l: "HND 2"}, {v: "nd_graduated", l: "ND Graduated"},
-                                            {v: "hnd_graduated", l: "HND Graduated"}, {v: "all", l: "All Levels"}
+                                            {v: "3", l: "HND 1"}, {v: "4", l: "HND 2"}, {v: "nd_graduant", l: "ND Graduated"},
+                                            {v: "hnd_graduant", l: "HND Graduated"}, {v: "all", l: "All Levels"}
                                         ].map(opt => (
                                             <label key={opt.v} className="flex items-center gap-1.5 bg-slate-50 px-3 py-1.5 rounded border border-slate-200 text-sm cursor-pointer hover:bg-slate-100">
                                                 <input 
@@ -581,8 +581,8 @@ export default function FeesPage() {
                                     <div className="flex flex-wrap gap-2 pt-1">
                                         {[
                                             {v: "0", l: "Applicant"}, {v: "1", l: "ND 1"}, {v: "2", l: "ND 2"},
-                                            {v: "3", l: "HND 1"}, {v: "4", l: "HND 2"}, {v: "nd_graduated", l: "ND Graduated"},
-                                            {v: "hnd_graduated", l: "HND Graduated"}, {v: "all", l: "All Levels"}
+                                            {v: "3", l: "HND 1"}, {v: "4", l: "HND 2"}, {v: "nd_graduant", l: "ND Graduated"},
+                                            {v: "hnd_graduant", l: "HND Graduated"}, {v: "all", l: "All Levels"}
                                         ].map(opt => (
                                             <label key={opt.v} className="flex items-center gap-1.5 bg-slate-50 px-3 py-1.5 rounded border border-slate-200 text-sm cursor-pointer hover:bg-slate-100">
                                                 <input 

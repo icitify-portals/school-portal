@@ -15,7 +15,7 @@ export async function transitionToAlumni(studentId: number) {
         const [student] = await db.select({ programmeType: students.programmeType })
             .from(students).where(eq(students.id, studentId)).limit(1);
         
-        const gradStatus = student?.programmeType === 'HND' ? 'hnd_graduated' : 'nd_graduated';
+        const gradStatus = student?.programmeType === 'HND' ? 'hnd_graduant' : 'nd_graduant';
 
         await db.update(students)
             .set({ 

@@ -11,7 +11,7 @@ export async function getGraduates(options: {
     pageSize?: number;
     search?: string;
     programmeType?: 'ND' | 'HND' | 'all';
-    status?: 'nd_graduated' | 'hnd_graduated' | 'all';
+    status?: 'nd_graduant' | 'hnd_graduant' | 'all';
     deptId?: number;
 }) {
     try {
@@ -29,7 +29,7 @@ export async function getGraduates(options: {
             conditions.push(eq(students.status, options.status));
         } else {
             // Default: Both ND and HND graduated
-            conditions.push(inArray(students.status, ['nd_graduated', 'hnd_graduated']));
+            conditions.push(inArray(students.status, ['nd_graduant', 'hnd_graduant']));
         }
 
         if (options.programmeType && options.programmeType !== 'all') {

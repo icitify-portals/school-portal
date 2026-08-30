@@ -9,8 +9,8 @@ export async function hasPermission(permission: string) {
     const session = await auth();
     const baseRole = ((session?.user as any)?.role || "").toString().toLowerCase();
     
-    // Absolute power for developer, superadmin, and admin
-    if (baseRole === "icitify_dev" || baseRole === "superadmin" || baseRole === "admin") return true;
+    // Absolute power for developer, superadmin, admin, and registrar (full access except dev-only)
+    if (baseRole === "icitify_dev" || baseRole === "superadmin" || baseRole === "admin" || baseRole === "registrar") return true;
 
     // Registrar automatically has access to all academic, admission, student, registry, and communication features
     if (baseRole === "registrar" && (
@@ -62,7 +62,7 @@ export async function hasAnyPermission(requiredPermissions: string[]) {
     const session = await auth();
     const baseRole = ((session?.user as any)?.role || "").toString().toLowerCase();
     
-    if (baseRole === "icitify_dev" || baseRole === "superadmin" || baseRole === "admin") return true;
+    if (baseRole === "icitify_dev" || baseRole === "superadmin" || baseRole === "admin" || baseRole === "registrar") return true;
 
     for (const p of requiredPermissions) {
         if (await hasPermission(p)) return true;
@@ -75,13 +75,10 @@ export async function hasRole(roleName: string | string[]) {
     const baseRole = ((session?.user as any)?.role || "").toString().toLowerCase();
     const userRoles = (((session?.user as any)?.roles || []) as string[]).map(r => r.toLowerCase());
 
-    // Absolute power for developer and superadmin
-    if (baseRole === "icitify_dev" || baseRole === "superadmin") return true;
+    // Absolute power for developer, superadmin, admin, and registrar
+    if (baseRole === "icitify_dev" || baseRole === "superadmin" || baseRole === "admin" || baseRole === "registrar") return true;
 
     const targets = (Array.isArray(roleName) ? roleName : [roleName]).map(r => r.toLowerCase());
-
-    // System admin has access to all admin checks
-    if (baseRole === "admin") return true;
 
     return targets.some(t => 
         baseRole === t || 

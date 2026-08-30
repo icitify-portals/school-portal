@@ -49,7 +49,7 @@ export default async function SuperAdminDashboardPage() {
             db.select({ value: count() }).from(courses),
             db.select({ value: count() }).from(admissionSessions).where(eq(admissionSessions.isActive, true)),
             db.select({ value: count() }).from(students).where(eq(students.status, 'active')),
-            db.select({ value: count() }).from(students).where(inArray(students.status, ['nd_graduated', 'hnd_graduated'])),
+            db.select({ value: count() }).from(students).where(inArray(students.status, ['nd_graduant', 'hnd_graduant'])),
         ]);
 
         const unitBreakdown = await db.execute(sql`

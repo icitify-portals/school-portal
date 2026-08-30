@@ -88,7 +88,7 @@ export default function BursaryGuidePage() {
                                     </div>
                                     <div className="flex items-start gap-3 mt-2">
                                         <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
-                                        <p className="text-sm font-medium text-slate-600"><strong>Targeting:</strong> You can target multiple levels (e.g., ND 1, HND 2), specific statuses (e.g., <code>nd_graduated</code>), or simply select <code>all</code> to blanket-apply it.</p>
+                                        <p className="text-sm font-medium text-slate-600"><strong>Targeting:</strong> You can target multiple levels (e.g., ND 1, HND 2), specific statuses (e.g., <code>nd_graduant</code>), or simply select <code>all</code> to blanket-apply it.</p>
                                     </div>
                                 </div>
                             </div>

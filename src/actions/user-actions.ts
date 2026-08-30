@@ -102,7 +102,7 @@ export async function getAllUsers(options: { search?: string, page?: number, pag
                     conditions.push(and(eq(students.programmeType, 'ND'), eq(students.currentLevel, 2)));
                     break;
                 case "ND_GRADUATED":
-                    conditions.push(eq(students.status, 'nd_graduated'));
+                    conditions.push(eq(students.status, 'nd_graduant'));
                     break;
                 case "HND_1":
                     conditions.push(and(eq(students.programmeType, 'HND'), eq(students.currentLevel, 1)));
@@ -111,7 +111,7 @@ export async function getAllUsers(options: { search?: string, page?: number, pag
                     conditions.push(and(eq(students.programmeType, 'HND'), eq(students.currentLevel, 2)));
                     break;
                 case "HND_GRADUATED":
-                    conditions.push(eq(students.status, 'hnd_graduated'));
+                    conditions.push(eq(students.status, 'hnd_graduant'));
                     break;
             }
         }

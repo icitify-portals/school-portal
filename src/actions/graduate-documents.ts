@@ -246,7 +246,7 @@ export async function promoteStudentToGraduate(studentId: number, classOfDegree:
     }
 
     // E. Update student status to graduated
-    const gradStatus = student.programmeType === 'HND' ? 'hnd_graduated' : 'nd_graduated';
+    const gradStatus = student.programmeType === 'HND' ? 'hnd_graduant' : 'nd_graduant';
     await db.update(students)
       .set({ 
         status: gradStatus,

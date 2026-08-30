@@ -78,9 +78,9 @@ if (!connection) {
                     } else {
                         let conditions: any[] = [];
                         if (levelStr === 'ND_graduated') {
-                            conditions.push(eq(students.status, 'nd_graduated'));
+                            conditions.push(eq(students.status, 'nd_graduant'));
                         } else if (levelStr === 'HND_graduated') {
-                            conditions.push(eq(students.status, 'hnd_graduated'));
+                            conditions.push(eq(students.status, 'hnd_graduant'));
                         } else if (levelStr === 'ND 1') {
                             conditions.push(eq(students.status, 'active'));
                             conditions.push(eq(students.currentLevel, 100));
