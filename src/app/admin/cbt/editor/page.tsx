@@ -1,10 +1,9 @@
 import { db } from "@/db/db";
-import { cbtQuizzes } from "@/db/schema";
+import { unifiedExams } from "@/db/schema";
 import QuizEditor from "./QuizEditor";
 
 export default async function CBTEditorPage() {
-    // For demo purposes, we fetch all quizzes or allow creating a new one
-    const quizzes = await db.select().from(cbtQuizzes);
+    const exams = await db.select().from(unifiedExams);
 
     return (
         <div className="p-8">
@@ -13,7 +12,7 @@ export default async function CBTEditorPage() {
                 <p className="text-slate-500 mt-1">Build assessments with native LaTeX support</p>
             </div>
 
-            <QuizEditor existingQuizzes={quizzes} />
+            <QuizEditor existingQuizzes={exams} />
         </div>
     );
 }

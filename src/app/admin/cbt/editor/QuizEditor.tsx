@@ -7,7 +7,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import LatexRenderer from "@/components/cbt/LatexRenderer";
-import { createQuiz, addQuestion, toggleRequireAssignment, searchUsersForAssignment, assignStudentToQuiz, removeStudentFromQuiz, getAssignedStudents } from "@/actions/cbt";
+import { createExam, addExamQuestion, updateExam, assignToExam, removeFromExam, getExamAssignments } from "@/actions/unified-exam";
+import { searchUsersForAssignment } from "@/actions/cbt";
 import { Loader2, Search, Trash2 } from "lucide-react";
 
 export default function QuizEditor({ existingQuizzes }: { existingQuizzes: any[] }) {
@@ -33,14 +34,14 @@ export default function QuizEditor({ existingQuizzes }: { existingQuizzes: any[]
 
     async function loadAssigned() {
         if (!quizId) return;
-        const res = await getAssignedStudents(quizId);
-        if (res.success) setAssignedStudents(res.data);
+        const res = await getExamAssignments(quizId);
+        if (res) setAssignedStudents(res);
     }
 
     async function handleToggleRequire(checked: boolean) {
         if (!quizId) return;
         setRequireAssignment(checked);
-        const res = await toggleRequireAssignment(quizId, checked);
+        const res = await updateExam(quizId, { requireAssignment: checked });
         if (res.success) toast.success("Access control updated");
     }
 
@@ -58,7 +59,7 @@ export default function QuizEditor({ existingQuizzes }: { existingQuizzes: any[]
 
     async function handleAssign(userId: number) {
         if (!quizId) return;
-        const res = await assignStudentToQuiz(quizId, userId);
+        const res = await assignToExam(quizId, { userId });
         if (res.success) {
             toast.success("Student assigned");
             setSearchQuery("");
@@ -71,7 +72,7 @@ export default function QuizEditor({ existingQuizzes }: { existingQuizzes: any[]
 
     async function handleRemoveAssignment(userId: number) {
         if (!quizId) return;
-        const res = await removeStudentFromQuiz(quizId, userId);
+        const res = await removeFromExam(quizId, { userId });
         if (res.success) {
             toast.success("Student removed");
             loadAssigned();
@@ -79,10 +80,10 @@ export default function QuizEditor({ existingQuizzes }: { existingQuizzes: any[]
     }
 
     async function handleCreateQuiz() {
-        const res = await createQuiz({ title: quizTitle, description: quizDesc, durationMinutes: 60, randomizeQuestions: true, totalMarks: '100.00' });
+        const res = await createExam({ title: quizTitle, description: quizDesc, durationMinutes: 60, randomizeQuestions: true, totalMarks: 100, contextType: 'standalone' });
         if (res.success) {
             toast.success("Quiz created!");
-            setQuizId(res.quizId);
+            setQuizId(res.examId);
         } else {
             toast.error(res.error);
         }
@@ -90,14 +91,15 @@ export default function QuizEditor({ existingQuizzes }: { existingQuizzes: any[]
 
     async function handleAddQuestion() {
         if (!quizId) return;
-        const options = { A: optionA, B: optionB, C: optionC, D: optionD };
-        const res = await addQuestion(quizId, {
+        const options = JSON.stringify([optionA, optionB, optionC, optionD].filter(Boolean));
+        const correctText = correctAnswer === 'A' ? optionA : correctAnswer === 'B' ? optionB : correctAnswer === 'C' ? optionC : optionD;
+        const res = await addExamQuestion(quizId, {
             questionText: qText,
             containsLatex,
             questionType: 'multiple_choice',
             options,
-            correctAnswer,
-            marks: '1.00',
+            correctAnswer: correctText,
+            points: 1,
             explanation: '',
         });
         if (res.success) {

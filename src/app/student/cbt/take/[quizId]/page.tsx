@@ -22,7 +22,7 @@ import { cn } from "@/lib/utils";
 import { RichTextEditor } from "@/components/RichTextEditor";
 import { ActivityMonitor } from "@/components/cbt/ActivityMonitor";
 import { CertificateGenerator } from "@/components/cbt/CertificateGenerator";
-import { getQuizWithQuestions, submitResponse, finalizeAttempt, startAttempt, getAttemptWithTime } from "@/actions/cbt";
+import { getExamWithQuestions, submitExamResponse, finalizeExamAttempt, startExamAttempt, getAttemptWithRemainingTime } from "@/actions/unified-exam";
 import { getExamSecuritySettingsForStudents } from "@/actions/exam-security";
 import { toast } from "sonner";
 import { useSession } from "next-auth/react";
@@ -60,7 +60,7 @@ export default function StudentExamPage({ params }: Props) {
             try {
                 // 1. Start Attempt
                 const userId = parseInt(session!.user!.id as string);
-                const attempt = await startAttempt(parseInt(quizId), userId);
+                const attempt = await startExamAttempt(parseInt(quizId), { userId }, mode as any);
                 
                 if (!attempt.success) {
                     toast.error(attempt.error);
@@ -75,7 +75,7 @@ export default function StudentExamPage({ params }: Props) {
                     setMode(attMode as any);
 
                     // 2. Fetch quiz data
-                    const quizData = await getQuizWithQuestions(parseInt(quizId));
+                    const quizData = await getExamWithQuestions(parseInt(quizId));
                     if (quizData) {
                         setQuiz(quizData);
                         
@@ -83,7 +83,7 @@ export default function StudentExamPage({ params }: Props) {
                             setTimeLeft(3600 * 24); // 24 hours for practice
                         } else {
                             // Get remaining time from server
-                            const attemptData = await getAttemptWithTime((attempt as any).attemptId);
+                            const attemptData = await getAttemptWithRemainingTime((attempt as any).attemptId);
                             if (attemptData?.remainingMs !== undefined) {
                                 setTimeLeft(Math.floor(attemptData.remainingMs / 1000));
                             } else {
@@ -120,7 +120,7 @@ export default function StudentExamPage({ params }: Props) {
     const handleAnswer = async (questionId: number, answer: any) => {
         if (!attemptId) return;
         setAnswers(prev => ({ ...prev, [questionId]: answer }));
-        await submitResponse(attemptId, questionId, typeof answer === 'string' ? answer : JSON.stringify(answer));
+        await submitExamResponse(attemptId, questionId, typeof answer === 'string' ? answer : JSON.stringify(answer));
     };
 
     const handleSubmit = async () => {
@@ -129,7 +129,7 @@ export default function StudentExamPage({ params }: Props) {
         const ok = confirm("Are you sure you want to submit your examination?");
         if (!ok) return;
 
-        const res = await finalizeAttempt(attemptId);
+        const res = await finalizeExamAttempt(attemptId);
         if (res.success) {
             setFinalScore(parseFloat(res.score || '0'));
             setIsSubmitted(true);
@@ -342,7 +342,7 @@ export default function StudentExamPage({ params }: Props) {
                         </div>
 
                         <div className="space-y-4">
-                            {currentQ.type === 'multiple_choice' && (
+                            {currentQ.questionType === 'multiple_choice' && (
                                 <div className="grid grid-cols-1 gap-3">
                                     {JSON.parse(currentQ.options || '[]').map((opt: string, i: number) => (
                                         <button
@@ -377,7 +377,7 @@ export default function StudentExamPage({ params }: Props) {
                                 </div>
                             )}
 
-                            {currentQ.type === 'true_false' && (
+                            {currentQ.questionType === 'true_false' && (
                                 <div className="grid grid-cols-2 gap-4">
                                     {['True', 'False'].map((opt) => (
                                         <button
@@ -394,7 +394,7 @@ export default function StudentExamPage({ params }: Props) {
                                 </div>
                             )}
 
-                            {currentQ.type === 'ordering' && (
+                            {currentQ.questionType === 'ordering' && (
                                 <div className="space-y-3">
                                     <p className="text-[10px] font-black uppercase text-slate-400">Reorder these items correctly:</p>
                                     <div className="space-y-2">
@@ -438,7 +438,7 @@ export default function StudentExamPage({ params }: Props) {
                                 </div>
                             )}
 
-                            {currentQ.type === 'hotspot' && (
+                            {currentQ.questionType === 'hotspot' && (
                                 <div className="space-y-4">
                                     <p className="text-[10px] font-black uppercase text-slate-400">Click on the correct area in the image below:</p>
                                     <div className="relative inline-block border-4 border-white shadow-2xl rounded-[2.5rem] overflow-hidden group cursor-crosshair">
@@ -465,7 +465,7 @@ export default function StudentExamPage({ params }: Props) {
                                 </div>
                             )}
 
-                            {currentQ.type === 'essay' && (
+                            {currentQ.questionType === 'essay' && (
                                 <div className="space-y-3">
                                     <label className="text-xs font-black uppercase tracking-widest text-slate-400">Your Detailed Response</label>
                                     <RichTextEditor

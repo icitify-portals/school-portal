@@ -1,4 +1,3 @@
-// @ts-nocheck
 "use client";
 
 export const dynamic = "force-dynamic";
@@ -9,9 +8,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { BrainCircuit, CheckCircle2, ChevronRight, Filter, MoreHorizontal, User, Clock } from "lucide-react";
-      // @ts-expect-error - Auto-suppressed by script
-// @ts-expect-error - TS2305: Auto-suppressed for build
-import { finalizeAttempt, grantExtraTime, getQuizResults, getQuizAnalyticsData } from "@/actions/cbt";
+import { finalizeExamAttempt, grantExamExtraTime, getExamResults, getExamAnalytics } from "@/actions/unified-exam";
 import { bulkGradeAttempt, AIProvider } from "@/actions/grading";
 import {
     Select,
@@ -46,14 +43,12 @@ export default function QuizResultsPage({ params }: Props) {
             try {
                 const quizIdNum = parseInt(quizId);
                 const [results, analytics] = await Promise.all([
-                    getQuizResults(quizIdNum),
-                    getQuizAnalyticsData(quizIdNum)
+                    getExamResults(quizIdNum),
+                    getExamAnalytics(quizIdNum)
                 ]);
                 setAttempts(results);
-      // @ts-expect-error - Auto-suppressed by script
-                setQuestions(analytics.questions);
-      // @ts-expect-error - Auto-suppressed by script
-                setResponses(analytics.responses);
+                setQuestions(analytics?.questionStats || []);
+                setResponses([]);
             } catch (error) {
                 toast.error("Failed to load results");
             } finally {
@@ -71,7 +66,7 @@ export default function QuizResultsPage({ params }: Props) {
         const res = await bulkGradeAttempt(parseInt(quizId), aiProvider);
         if (res.success) {
             toast.success("AI Grading completed", { id: tid });
-            const results = await getQuizResults(parseInt(quizId));
+            const results = await getExamResults(parseInt(quizId));
             setAttempts(results);
         } else {
             toast.error(res.error || "Bulk grading failed", { id: tid });
@@ -79,14 +74,14 @@ export default function QuizResultsPage({ params }: Props) {
     };
 
     const avgScore = attempts.length > 0
-        ? Math.round(attempts.reduce((acc, a) => acc + (a.rawScore || 0), 0) / attempts.reduce((acc, a) => acc + (a.maxRaw || 1), 0) * 100)
+        ? Math.round(attempts.reduce((acc: number, a: any) => acc + parseFloat(a.score || '0'), 0) / attempts.length)
         : 0;
 
     const completionRate = attempts.length > 0
-        ? Math.round((attempts.filter(a => a.status === 'graded' || a.status === 'submitted').length / attempts.length) * 100)
+        ? Math.round((attempts.filter((a: any) => a.status === 'completed' || a.status === 'auto_submitted').length / attempts.length) * 100)
         : 100;
 
-    const pendingCount = attempts.filter(a => a.status === 'submitted' || a.aiStatus === 'pending').length;
+    const pendingCount = attempts.filter((a: any) => a.status === 'in_progress' || a.status === 'flagged').length;
 
     if (loading) return <div className="p-8 text-center text-slate-500 font-bold">Loading assessment results...</div>;
 
@@ -184,36 +179,36 @@ export default function QuizResultsPage({ params }: Props) {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {attempts.map((a) => (
-                                    <TableRow key={a.id} className="group hover:bg-slate-50/50 transition-colors">
+                                {attempts.map((a: any) => (
+                                    <TableRow key={a.attemptId} className="group hover:bg-slate-50/50 transition-colors">
                                         <TableCell className="pl-8 py-5">
                                             <div className="flex items-center gap-3">
                                                 <div className="w-10 h-10 rounded-2xl bg-slate-100 flex items-center justify-center">
                                                     <User className="w-5 h-5 text-slate-400" />
                                                 </div>
                                                 <div>
-                                                    <p className="font-bold text-slate-900">{a.student}</p>
+                                                    <p className="font-bold text-slate-900">{a.userName || 'Student'}</p>
                                                     <p className="text-[10px] text-slate-400 font-medium lowercase">
-                                                        {a.date ? `Submitted ${new Date(a.date).toLocaleDateString()}` : 'In Progress'}
+                                                        {a.endTime ? `Submitted ${new Date(a.endTime).toLocaleDateString()}` : 'In Progress'}
                                                     </p>
                                                 </div>
                                             </div>
                                         </TableCell>
                                         <TableCell className="font-mono text-sm font-bold text-slate-600">
-                                            {a.rawScore || 0}/{a.maxRaw}
+                                            {parseFloat(a.score || '0').toFixed(1)}/{parseFloat(a.maxScore || '100').toFixed(1)}
                                         </TableCell>
                                         <TableCell>
-                                            <span className="text-lg font-black text-indigo-600">{a.weighted || "0.00"}</span>
+                                            <span className="text-lg font-black text-indigo-600">{parseFloat(a.score || '0').toFixed(2)}</span>
                                         </TableCell>
                                         <TableCell>
-                                            <Badge variant={a.status === 'graded' ? 'default' : 'secondary'} className="rounded-lg h-6 px-2 text-[9px] font-black uppercase tracking-tighter">
+                                            <Badge variant={a.status === 'completed' ? 'default' : 'secondary'} className="rounded-lg h-6 px-2 text-[9px] font-black uppercase tracking-tighter">
                                                 {a.status}
                                             </Badge>
                                         </TableCell>
                                         <TableCell>
                                             <div className="flex items-center gap-2">
-                                                <div className={`w-2 h-2 rounded-full ${a.aiStatus === 'pending' ? 'bg-amber-400 animate-pulse' : a.aiStatus === 'completed' ? 'bg-emerald-400' : 'bg-slate-200'}`} />
-                                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">{a.aiStatus || 'none'}</span>
+                                                <div className={`w-2 h-2 rounded-full ${a.passed ? 'bg-emerald-400' : 'bg-amber-400'}`} />
+                                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">{a.passed ? 'Passed' : 'Failed'}</span>
                                             </div>
                                         </TableCell>
                                         <TableCell className="pr-8 text-right">
@@ -223,10 +218,10 @@ export default function QuizResultsPage({ params }: Props) {
                                                     size="icon"
                                                     title="Grant Extra Time"
                                                     onClick={async () => {
-                                                        const mins = window.prompt(`Enter extra minutes to add to ${a.student}'s attempt:`);
+                                                        const mins = window.prompt(`Enter extra minutes to add to ${a.userName}'s attempt:`);
                                                         if (mins) {
-                                                            const res = await grantExtraTime(a.id, parseInt(mins));
-                                                            if (res.success) toast.success(`Added ${mins} mins to ${a.student}'s attempt`);
+                                                            const res = await grantExamExtraTime(a.attemptId, parseInt(mins));
+                                                            if (res.success) toast.success(`Added ${mins} mins to ${a.userName}'s attempt`);
                                                             else toast.error("Failed to grant extra time");
                                                         }
                                                     }}

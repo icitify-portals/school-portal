@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { recordTabSwitch } from "@/actions/cbt";
+import { recordExamIncident } from "@/actions/unified-exam";
 import { AlertTriangle, Lock } from "lucide-react";
 import { toast } from "sonner";
 
@@ -19,7 +19,7 @@ export function ActivityMonitor({ attemptId, enabled, onLock }: Props) {
     const logIncident = async (type: 'tab_blur' | 'window_resize' | 'fullscreen_exit' | 'hardware_change', metadata?: string) => {
         if (!enabled || isLocked) return;
 
-        const res = await recordTabSwitch(attemptId);
+        const res = await recordExamIncident(attemptId, type, metadata);
         if (res.success) {
             if (res.autoSubmitted) {
                 setIsLocked(true);

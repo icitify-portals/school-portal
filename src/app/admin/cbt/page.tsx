@@ -16,7 +16,7 @@ import {
     Loader2
 } from "lucide-react";
 import Link from "next/link";
-import { getCBTStats } from "@/actions/cbt";
+import { getCBTStats } from "@/actions/unified-exam";
 import { cn } from "@/lib/utils";
 
 export default function CBTDashboard() {
@@ -66,8 +66,8 @@ export default function CBTDashboard() {
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm font-bold uppercase tracking-widest text-indigo-100">Active Exams</p>
-                                <h3 className="text-5xl font-black mt-2 tracking-tight">{stats?.activeQuizzes || 0}</h3>
-                                <p className="text-[10px] text-indigo-200 mt-1 uppercase tracking-wider">{stats?.totalQuizzes || 0} total assessments</p>
+                                <h3 className="text-5xl font-black mt-2 tracking-tight">{stats?.activeExams || 0}</h3>
+                                <p className="text-[10px] text-indigo-200 mt-1 uppercase tracking-wider">{stats?.totalExams || 0} total assessments</p>
                             </div>
                             <Clock className="w-16 h-16 text-indigo-400 opacity-50 group-hover:scale-110 transition-transform group-hover:opacity-80" />
                         </div>
@@ -110,7 +110,7 @@ export default function CBTDashboard() {
                     </CardHeader>
                     <CardContent className="p-0">
                         <div className="divide-y divide-slate-50">
-                            {stats?.recentQuizzes?.length > 0 ? stats.recentQuizzes.map((quiz: any) => (
+                            {stats?.recentExams?.length > 0 ? stats.recentExams.map((quiz: any) => (
                                 <Link key={quiz.id} href={`/admin/cbt/results/${quiz.id}`}>
                                     <div className="p-4 hover:bg-slate-50 transition-colors flex items-center justify-between cursor-pointer">
                                         <div className="flex items-center gap-4">
@@ -119,7 +119,7 @@ export default function CBTDashboard() {
                                             </div>
                                             <div>
                                                 <p className="text-sm font-bold text-slate-900">{quiz.title}</p>
-                                                <p className="text-[10px] text-slate-500 uppercase font-black">{quiz.questionCount} Questions • {quiz.durationMinutes} Minutes</p>
+                                                <p className="text-[10px] text-slate-500 uppercase font-black">{quiz.contextType} • {quiz.durationMinutes} Minutes</p>
                                             </div>
                                         </div>
                                         <Button size="sm" variant="ghost" className="text-[10px] font-black uppercase text-indigo-600">Results</Button>

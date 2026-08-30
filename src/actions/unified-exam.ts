@@ -759,3 +759,24 @@ export async function grantExamExtraTime(attemptId: number, mins: number) {
     return { success: false, error: error.message };
   }
 }
+
+export async function removeFromExam(examId: number, taker: {
+  userId?: number;
+  applicantId?: number;
+  externalCandidateId?: string;
+}) {
+  try {
+    const allowed = await hasPermission("cbt.manage") || await hasRole("admin") || await hasRole("superadmin");
+    if (!allowed) return { success: false, error: "Unauthorized" };
+
+    const conditions = [eq(unifiedExamAssignments.examId, examId)];
+    if (taker.userId) conditions.push(eq(unifiedExamAssignments.userId, taker.userId));
+    if (taker.applicantId) conditions.push(eq(unifiedExamAssignments.applicantId, taker.applicantId));
+    if (taker.externalCandidateId) conditions.push(eq(unifiedExamAssignments.externalCandidateId, taker.externalCandidateId));
+
+    await db.delete(unifiedExamAssignments).where(and(...conditions));
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
