@@ -160,7 +160,7 @@ export default function ApplicantStatusPage() {
             )}
             {/* Header */}
             <div className={cn(
-                "py-20 px-8 text-white transition-colors duration-1000",
+                "py-10 sm:py-20 px-4 sm:px-8 text-white transition-colors duration-1000",
                 data.status === 'admitted' ? "bg-emerald-600" : 
                 data.status === 'rejected' ? "bg-rose-600" : "bg-slate-900"
             )}>
@@ -168,7 +168,7 @@ export default function ApplicantStatusPage() {
                     <span className="px-4 py-1.5 bg-white/10 rounded-full text-[10px] font-black uppercase tracking-[0.2em] italic">
                         Admission Status Portal
                     </span>
-                    <h1 className="text-6xl font-black italic uppercase leading-tight">
+                    <h1 className="text-3xl sm:text-5xl md:text-6xl font-black italic uppercase leading-tight">
                         {data.status === 'admitted' ? "Congratulations!" : 
                          data.status === 'rejected' ? "Intake Decision" : "Application Status"}
                     </h1>
@@ -178,23 +178,23 @@ export default function ApplicantStatusPage() {
                 </div>
             </div>
 
-            <div className="max-w-4xl mx-auto -mt-10 px-8 space-y-8">
+            <div className="max-w-4xl mx-auto -mt-6 sm:-mt-10 px-4 sm:px-8 space-y-8">
                 {/* Decision Card */}
-                <Card className="border-none shadow-2xl rounded-[3rem] overflow-hidden bg-white">
-                    <CardContent className="p-12">
-                        <div className="flex flex-col md:flex-row gap-10 items-center text-center md:text-left">
+                <Card className="border-none shadow-2xl rounded-3xl sm:rounded-[3rem] overflow-hidden bg-white">
+                    <CardContent className="p-6 sm:p-8 md:p-12">
+                        <div className="flex flex-col md:flex-row gap-6 md:gap-10 items-center text-center md:text-left">
                             <div className={cn(
-                                "w-32 h-32 rounded-[2.5rem] flex items-center justify-center shrink-0 shadow-2xl",
+                                "w-20 h-20 sm:w-32 sm:h-32 rounded-[2.5rem] flex items-center justify-center shrink-0 shadow-2xl",
                                 data.status === 'admitted' ? "bg-emerald-100 text-emerald-600" : 
                                 data.status === 'rejected' ? "bg-rose-100 text-rose-600" : "bg-slate-100 text-slate-400"
                             )}>
-                                {data.status === 'admitted' ? <GraduationCap className="w-16 h-16" /> : 
-                                 data.status === 'rejected' ? <XCircle className="w-16 h-16" /> : <Clock className="w-16 h-16" />}
+                                {data.status === 'admitted' ? <GraduationCap className="w-10 h-10 sm:w-16 sm:h-16" /> : 
+                                 data.status === 'rejected' ? <XCircle className="w-10 h-10 sm:w-16 sm:h-16" /> : <Clock className="w-10 h-10 sm:w-16 sm:h-16" />}
                             </div>
                             <div className="flex-1 space-y-4">
                                 <div className="space-y-1">
-                                    <div className="flex flex-wrap items-center gap-3">
-                                        <h2 className="text-4xl font-black text-slate-900 italic uppercase">
+                                    <div className="flex flex-wrap items-center gap-3 justify-center md:justify-start">
+                                        <h2 className="text-xl sm:text-2xl md:text-4xl font-black text-slate-900 italic uppercase">
                                             {data.status === 'admitted' && data.acceptancePaymentStatus === 'paid' ? "Admission Confirmed" : 
                                              data.status === 'admitted' ? "Provisional Admission Offered" : 
                                              data.status === 'rejected' ? "Admission Denied" : "Application Status: Pending"}
@@ -230,18 +230,18 @@ export default function ApplicantStatusPage() {
                                 )}
 
                                 {data.status === 'admitted' && (
-                                    <div className="flex flex-wrap gap-4 pt-4">
+                                    <div className="flex flex-col sm:flex-wrap gap-3 sm:gap-4 pt-4">
                                         {(!data.template.requireAcceptanceFee || data.acceptancePaymentStatus === 'paid') ? (
                                             <Button 
                                                 onClick={() => window.open(`/admission/letter/${id}`, '_blank')}
-                                                className="rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-black px-8 py-6 flex gap-3 uppercase text-xs tracking-widest shadow-xl shadow-emerald-100"
+                                                className="rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-black px-5 sm:px-8 py-4 sm:py-6 flex gap-3 uppercase text-xs tracking-widest shadow-xl shadow-emerald-100"
                                             >
                                                 <Download className="w-5 h-5" /> Download Official Admission Letter
                                             </Button>
                                         ) : (
                                             <Button 
                                                 disabled
-                                                className="rounded-2xl bg-slate-200 text-slate-400 font-black px-8 py-6 flex gap-3 uppercase text-xs tracking-widest cursor-not-allowed opacity-60"
+                                                className="rounded-2xl bg-slate-200 text-slate-400 font-black px-5 sm:px-8 py-4 sm:py-6 flex gap-3 uppercase text-xs tracking-widest cursor-not-allowed opacity-60"
                                             >
                                                 <Download className="w-5 h-5 text-slate-300" /> Letter Locked (Pay Acceptance & ID Card Fee to Unlock)
                                             </Button>
@@ -249,7 +249,7 @@ export default function ApplicantStatusPage() {
                                         {data.template.requireAcceptanceFee && data.acceptancePaymentStatus !== 'paid' && (
                                             <Button 
                                                 onClick={handleAcceptancePayment}
-                                                className="rounded-2xl bg-slate-900 hover:bg-indigo-600 text-white font-black px-8 py-6 flex gap-3 uppercase text-xs tracking-widest shadow-xl"
+                                                className="rounded-2xl bg-slate-900 hover:bg-indigo-600 text-white font-black px-5 sm:px-8 py-4 sm:py-6 flex gap-3 uppercase text-xs tracking-widest shadow-xl"
                                             >
                                                 <CreditCard className="w-5 h-5 text-emerald-400" /> Pay Acceptance & ID Card Fee (₦{(parseFloat(data.template.acceptanceFee) + parseFloat(data.template.idCardFee || "0")).toLocaleString()})
                                             </Button>
@@ -263,7 +263,7 @@ export default function ApplicantStatusPage() {
                                                 </div>
                                                 <Button 
                                                     onClick={handleSchoolFeesPayment}
-                                                    className="rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black px-8 py-6 flex gap-3 uppercase text-xs tracking-widest shadow-xl shadow-indigo-100"
+                                                    className="rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black px-5 sm:px-8 py-4 sm:py-6 flex gap-3 uppercase text-xs tracking-widest shadow-xl shadow-indigo-100"
                                                 >
                                                     <CreditCard className="w-5 h-5" /> Pay School Fees & Processing Fee to Obtain Matric Number
                                                 </Button>

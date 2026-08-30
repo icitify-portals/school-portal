@@ -418,9 +418,7 @@ export function StandardTranscript({
               {sig.url ? (
                 <img src={sig.url} alt={sig.label} style={{ height: 60, objectFit: "contain", marginBottom: 6, display: "block", margin: "0 auto 6px" }} />
               ) : (
-                <div style={{ height: 60, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
-                  <span style={{ color: "#aaa", fontSize: 10, fontStyle: "italic" }}>Authorized Signature</span>
-                </div>
+                <div style={{ borderBottom: "1px dotted #000", height: 60, marginBottom: 6 }} />
               )}
               <div style={{ borderTop: "2px solid #1e3a5f", paddingTop: 6 }}>
                 <p style={{ margin: 0, fontWeight: 700, fontSize: 12, color: "#1e3a5f" }}>{sig.name}</p>

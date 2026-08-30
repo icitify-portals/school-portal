@@ -9,7 +9,7 @@ import {
     Image as ImageIcon, ChevronDown, ChevronUp, Shield, ShieldAlert, ShieldCheck, Edit, Lock,
     Download
 } from "lucide-react";
-import { getAdminV2ApplicationDetail, updateAdmissionStatus, confirmAdmissionPayment, confirmAcceptancePayment, reverseAdmissionPayment, confirmProcessingFeePayment, reverseProcessingFeePayment, updateApplicantData, changeApplicantProgramme, getAdmissionAcademicUnits, updateApplicantMatricNumber } from "@/actions/admission_v2";
+import { getAdminV2ApplicationDetail, updateAdmissionStatus, confirmAdmissionPayment, confirmAcceptancePayment, reverseAdmissionPayment, confirmProcessingFeePayment, reverseProcessingFeePayment, adminConfirmAcceptancePayment, reverseAcceptancePayment, updateApplicantData, changeApplicantProgramme, getAdmissionAcademicUnits, updateApplicantMatricNumber } from "@/actions/admission_v2";
 import { verifyUserEmailManually, resetUserPassword } from "@/actions/user-actions";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -252,15 +252,29 @@ export default function V2ApplicationDetailPage() {
 
     const handleConfirmAcceptance = async () => {
         if (!app) return;
-        const ref = prompt("Enter acceptance fee transaction reference:");
-        if (!ref) return;
-        const res = await confirmAcceptancePayment(app.id, ref);
+        const confirm = window.confirm("Confirm acceptance fee payment for this applicant?");
+        if (!confirm) return;
+        const res = await adminConfirmAcceptancePayment(app.id);
         if (res.success) {
             toast.success("Acceptance fee confirmed");
             const data = await getAdminV2ApplicationDetail(app.id);
             setApp(data);
         } else {
-            toast.error(res.error);
+            toast.error(res.error || "Action failed");
+        }
+    };
+
+    const handleReverseAcceptance = async () => {
+        if (!app) return;
+        const confirm = window.confirm("Are you sure you want to reverse this acceptance fee payment?");
+        if (!confirm) return;
+        const res = await reverseAcceptancePayment(app.id);
+        if (res.success) {
+            toast.success("Acceptance fee reversed");
+            const data = await getAdminV2ApplicationDetail(app.id);
+            setApp(data);
+        } else {
+            toast.error(res.error || "Action failed");
         }
     };
 
@@ -1080,6 +1094,15 @@ export default function V2ApplicationDetailPage() {
                                             className="w-full rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-[10px] uppercase tracking-widest py-4"
                                         >
                                             <CheckCircle2 className="w-4 h-4 mr-2" /> Confirm Acceptance & ID Card Fee
+                                        </Button>
+                                    )}
+                                    {app.acceptancePaymentStatus === 'paid' && (
+                                        <Button
+                                            onClick={handleReverseAcceptance}
+                                            variant="outline"
+                                            className="w-full rounded-xl text-rose-600 border-rose-200 hover:bg-rose-50 hover:text-rose-700 font-black text-[10px] uppercase tracking-widest py-4"
+                                        >
+                                            <XCircle className="w-4 h-4 mr-2" /> Reverse Acceptance Fee
                                         </Button>
                                     )}
                                 </div>

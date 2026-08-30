@@ -638,6 +638,57 @@ export async function reverseProcessingFeePayment(applicationId: number) {
     }
 }
 
+export async function adminConfirmAcceptancePayment(applicationId: number) {
+    await requireAdmin();
+    try {
+        await db.update(admissionApplicationsV2)
+            .set({ acceptancePaymentStatus: 'paid', updatedAt: new Date() })
+            .where(eq(admissionApplicationsV2.id, applicationId));
+
+        const appData = await db.query.admissionApplicationsV2.findFirst({
+            where: eq(admissionApplicationsV2.id, applicationId)
+        });
+        if (appData) {
+            const template = await db.query.admissionFormTemplates.findFirst({
+                where: eq(admissionFormTemplates.id, appData.templateId)
+            });
+            const formData = typeof appData.data === 'string' ? JSON.parse(appData.data || '{}') : (appData.data || {});
+            const email = formData.email;
+            const candidateName = `${formData.firstName || ''} ${formData.surname || formData.lastName || ''}`.trim() || 'Admitted Candidate';
+            if (email) {
+                sendEmail(
+                    email,
+                    "Acceptance Fee Confirmed – Federal School of Statistics",
+                    `<p>Dear <strong>${candidateName}</strong>,</p><p>Your Acceptance Fee &amp; Student ID Card payment has been confirmed by the admin. Your official <strong>Admission Letter</strong> is now unlocked.</p><p>Please proceed to pay your School Fees and Processing Fee to obtain your official Matriculation Number.</p>`
+                ).catch((err: any) => console.error("Failed to send acceptance confirmation email:", err));
+            }
+        }
+
+        revalidatePath(`/admin/admission/v2/${applicationId}`);
+        revalidatePath(`/admission/status/${applicationId}`);
+        return { success: true };
+    } catch (error) {
+        console.error("Failed to confirm acceptance payment:", error);
+        return { success: false, error: "Failed to confirm acceptance payment" };
+    }
+}
+
+export async function reverseAcceptancePayment(applicationId: number) {
+    await requireAdmin();
+    try {
+        await db.update(admissionApplicationsV2)
+            .set({ acceptancePaymentStatus: 'pending', updatedAt: new Date() })
+            .where(eq(admissionApplicationsV2.id, applicationId));
+
+        revalidatePath(`/admin/admission/v2/${applicationId}`);
+        revalidatePath(`/admission/status/${applicationId}`);
+        return { success: true };
+    } catch (error) {
+        console.error("Failed to reverse acceptance payment:", error);
+        return { success: false, error: "Failed to reverse payment" };
+    }
+}
+
 export async function getAdmissionSummary() {
     await requireAdmin();
     try {
