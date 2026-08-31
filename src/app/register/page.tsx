@@ -221,7 +221,7 @@ export default function RegisterPage() {
                                 className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-slate-900 bg-white"
                                 placeholder="john@example.com"
                                 value={formData.email}
-                                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                onChange={(e) => setFormData({ ...formData, email: e.target.value.replace(/[\s\u200B-\u200D\uFEFF]+/g, "") })}
                             />
                         </div>
 

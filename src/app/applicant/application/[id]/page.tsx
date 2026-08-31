@@ -25,6 +25,7 @@ import SignatureCapture from "@/components/forms/SignatureCapture";
 // @ts-expect-error - TS7016: Auto-suppressed for build
 import naija from 'naija-state-local-government';
 import { COUNTRY_NAMES } from "@/lib/countries";
+import { normalizeEmail, isValidEmailFormat } from "@/lib/email";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -324,8 +325,9 @@ export default function StatefulApplicationPage() {
             }
         }
 
-        // Email validation
-        if (field.type === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(strValue)) {
+        // Email validation — normalize first to strip invisible whitespace
+        // (trailing spaces, NBSP, zero-width) that mobile paste often injects.
+        if (field.type === 'email' && !isValidEmailFormat(normalizeEmail(strValue))) {
             return `${field.label} must be a valid email address`;
         }
 
@@ -990,7 +992,7 @@ export default function StatefulApplicationPage() {
                                                             validationErrors[field.id] && "border-rose-300 focus:ring-rose-500"
                                                         )}
                                                         placeholder={field.placeholder} required={field.isRequired && !isSystemLocked}
-                                                        value={displayValue} onChange={(e) => handleInputChange(field.label, e.target.value, field.systemKey)}
+                                                        value={displayValue} onChange={(e) => handleInputChange(field.label, field.type === 'email' ? e.target.value.replace(/[\s\u200B-\u200D\uFEFF]+/g, "") : e.target.value, field.systemKey)}
                                                     />
                                                     <FieldError error={validationErrors[field.id]} />
                                                 </>

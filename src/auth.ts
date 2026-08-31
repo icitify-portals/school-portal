@@ -20,6 +20,7 @@ import { users, roles, permissions, rolePermissions, userRoles, students, staffP
 import { eq, and } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { authConfig } from "./auth.config";
+import { normalizeEmail } from "@/lib/email";
 import { cookies } from "next/headers";
 
 // Helper to fetch roles and permissions for a user
@@ -106,7 +107,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                     throw new InvalidCredentialsError();
                 }
 
-                const loginId = (credentials.email as string).trim().toLowerCase();
+                // Normalize login id — strips invisible whitespace (NBSP, zero-width, etc.)
+                const loginEmail = normalizeEmail(credentials.email as string);
+                const loginId = loginEmail;
                 let user: any = null;
                 let studentRecord: any = null;
                 let staffRecord: any = null;
@@ -116,7 +119,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                     .from(users)
                     .where(eq(users.email, loginId))
                     .limit(1);
-                    
+
                 user = userByEmail;
 
                 if (!user) {
@@ -125,7 +128,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                         .select({ user: users, student: students })
                         .from(students)
                         .innerJoin(users, eq(students.userId, users.id))
-                        .where(eq(students.matricNumber, loginId.toUpperCase()))
+                        .where(eq(students.matricNumber, (credentials.email as string).trim().toUpperCase()))
                         .limit(1);
                         
                     if (studentRec) {

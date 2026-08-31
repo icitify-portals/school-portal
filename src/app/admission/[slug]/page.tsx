@@ -300,7 +300,7 @@ export default function PublicAdmissionPage() {
                                     type="email" required
                                     className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-6 py-4 font-bold outline-none focus:ring-2 focus:ring-emerald-500"
                                     placeholder="john@example.com"
-                                    value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})}
+                                    value={formData.email} onChange={e => setFormData({...formData, email: e.target.value.replace(/[\s\u200B-\u200D\uFEFF]+/g, "")})}
                                 />
                             </div>
 

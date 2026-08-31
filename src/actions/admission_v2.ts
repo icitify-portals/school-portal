@@ -32,6 +32,7 @@ import crypto from "crypto";
 import { sendInAppNotification } from "./notifications";
 import { checkDeveloperFeeStatus } from "./paystack-developer-subscription";
 import { sendEmail } from "@/lib/mail";
+import { normalizeEmail, isValidEmailFormat } from "@/lib/email";
 import { generateFormNumber, generateFormHash } from "@/lib/form-number";
 import { storage } from "@/lib/storage";
 import { hash, compare } from "bcryptjs";
@@ -1852,9 +1853,17 @@ export async function registerApplicant(data: any) {
     try {
         const { templateId, surname, firstName, middleName, email, phone, password } = data;
 
+        // Normalize email — strip invisible whitespace (NBSP, zero-width, trailing spaces)
+        const cleanEmail = normalizeEmail(email);
+
         // Validate required fields
-        if (!templateId || !surname || !firstName || !email || !phone || !password) {
+        if (!templateId || !surname || !firstName || !cleanEmail || !phone || !password) {
             return { success: false, error: "All required fields must be filled." };
+        }
+
+        // Validate email format
+        if (!isValidEmailFormat(cleanEmail)) {
+            return { success: false, error: "Please enter a valid email address." };
         }
 
         // Validate password strength
@@ -1864,7 +1873,7 @@ export async function registerApplicant(data: any) {
 
         // 1. Check if user exists
         const existingUser = await db.query.users.findFirst({
-            where: eq(users.email, email.toLowerCase())
+            where: eq(users.email, cleanEmail)
         });
 
         let userId;
@@ -1896,7 +1905,7 @@ export async function registerApplicant(data: any) {
                 surname: surname.trim(),
                 firstName: firstName.trim(),
                 middleName: middleName?.trim() || null,
-                email: email.toLowerCase(),
+                email: cleanEmail,
                 phone: phone,
                 password: hashedPassword,
                 role: 'applicant',
@@ -1926,7 +1935,7 @@ export async function registerApplicant(data: any) {
             `;
             
             try {
-                await sendEmail(email.toLowerCase(), 'Verify your Email - FSS Ibadan Admission', emailHtml);
+                await sendEmail(cleanEmail, 'Verify your Email - FSS Ibadan Admission', emailHtml);
             } catch (emailErr) {
                 console.error("Failed to send verification email:", emailErr);
             }
@@ -2281,8 +2290,9 @@ export async function submitApplicationFinal(applicationId: number, applicantId:
                     } catch { /* invalid regex, skip */ }
                 }
 
-                // Email validation
-                if (field.type === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(strValue)) {
+                // Email validation — normalize first to strip invisible whitespace
+                // (trailing spaces, NBSP, zero-width) that mobile paste often injects.
+                if (field.type === 'email' && !isValidEmailFormat(normalizeEmail(strValue))) {
                     validationErrors.push(`${field.label} must be a valid email address`);
                 }
 

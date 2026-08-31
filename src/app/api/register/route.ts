@@ -7,6 +7,7 @@ import { checkRateLimit } from "@/lib/api-auth";
 import crypto from "crypto";
 import { sendEmail } from "@/lib/mail";
 import { emailVerificationTokens } from "@/db/schema";
+import { normalizeEmail, isValidEmailFormat } from "@/lib/email";
 
 export async function POST(req: Request) {
     try {
@@ -35,8 +36,10 @@ export async function POST(req: Request) {
         }
 
         // SECURITY FIX H-1c: Validate email format server-side.
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(email)) {
+        // Normalize FIRST — copy-pasted emails often carry invisible
+        // trailing spaces / NBSP that would otherwise fail validation.
+        const emailNorm = normalizeEmail(email);
+        if (!isValidEmailFormat(emailNorm)) {
             return NextResponse.json(
                 { message: "Invalid email address" },
                 { status: 400 }
@@ -51,7 +54,7 @@ export async function POST(req: Request) {
             );
         }
 
-        const normalizedEmail = email.trim().toLowerCase();
+        const normalizedEmail = emailNorm;
 
         // Check if user already exists
         const [existingUser] = await db
