@@ -8,6 +8,7 @@ import {
   addSingleStudentResult,
   addBulkResultsViaIdentifier,
   addMultiCourseBulkResults,
+  previewBulkImport,
   approveAndPublishBatch,
   searchStudents,
   getCoursesList,
@@ -30,6 +31,7 @@ import {
   Plus, FileUp, Trash2, AlertTriangle, BookOpen, X, Eye, EyeOff, Lock, ChevronDown, Edit3, Printer,
 } from "lucide-react";
 import Link from "next/link";
+import { ImportPreviewModal } from "@/components/result-module/ImportPreviewModal";
 
 type Tab = "single" | "bulk";
 
@@ -108,6 +110,12 @@ export default function BatchDetailPage() {
   // Clear / Delete Batch action states
   const [clearingBatch, setClearingBatch] = useState(false);
   const [deletingBatch, setDeletingBatch] = useState(false);
+
+  // Smart import preview state
+  const [showPreview, setShowPreview] = useState(false);
+  const [previewData, setPreviewData] = useState<any>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewRows, setPreviewRows] = useState<{ identifier: string; courseCode: string; score: number }[]>([]);
 
   async function handleUpdateResultSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -406,12 +414,13 @@ export default function BatchDetailPage() {
     setShowTemplateModal(false);
   }
 
-  async function handleBulkUpload() {
+  async function handleBulkUpload(mode: 'all' | 'valid_only' | 'skip_duplicates' = 'all') {
     if (bulkErrors.length > 0) return alert("Fix CSV format errors before uploading.");
     if (!csvData.length) return alert("No data to upload.");
 
     setUploadingBulk(true);
     setSkippedRows([]);
+    setShowPreview(false);
 
     // Transform pivot format into row-per-result
     const rows: { identifier: string; courseCode: string; score: number }[] = [];
@@ -428,14 +437,28 @@ export default function BatchDetailPage() {
       }
     });
 
-    if (!rows.length) {
+    // Filter rows based on mode
+    let filteredRows = rows;
+    if (mode === 'valid_only' && previewData?.preview) {
+      const validIds = new Set(
+        previewData.preview
+          .filter((r: any) => r.status === 'ready')
+          .map((r: any) => `${r.rowIndex}:${r.courseCode}`)
+      );
+      filteredRows = rows.filter((r, i) => validIds.has(`${i + 2}:${r.courseCode}`));
+    } else if (mode === 'skip_duplicates' && previewData?.anomalies) {
+      // For now, just import all (duplicate filtering happens server-side)
+      filteredRows = rows;
+    }
+
+    if (!filteredRows.length) {
       setUploadingBulk(false);
       return alert("No valid score data found in the CSV.");
     }
 
     const res = await addMultiCourseBulkResults(
       batchId,
-      rows,
+      filteredRows,
       batch?.gradingScale?.rules || "[]",
       autoCreateCourses
     );
@@ -447,7 +470,7 @@ export default function BatchDetailPage() {
       setCsvCourseColumns([]);
       setCsvFile(null);
       fetchBatch();
-      let msg = `✓ Uploaded ${res.count} results successfully (${csvData.length} students, ${csvCourseColumns.length} courses)`;
+      let msg = `✓ Uploaded ${res.count} results successfully (${filteredRows.length} scores)`;
       if (res.createdCourses?.length) {
         msg += `\nCreated ${res.createdCourses.length} new course(s): ${res.createdCourses.map((c: any) => c.code).join(", ")}`;
       }
@@ -460,6 +483,34 @@ export default function BatchDetailPage() {
     } else {
       alert("Error: " + res.error);
     }
+  }
+
+  async function handlePreviewImport() {
+    if (!csvData.length || !csvCourseColumns.length) return;
+
+    setPreviewLoading(true);
+    setShowPreview(true);
+
+    // Transform pivot format into row-per-result
+    const rows: { identifier: string; courseCode: string; score: number }[] = [];
+    csvData.forEach(r => {
+      for (const cc of csvCourseColumns) {
+        const val = r[cc];
+        if (val !== undefined && val !== null && val !== "") {
+          rows.push({
+            identifier: r.matric_number,
+            courseCode: cc,
+            score: Number(val),
+          });
+        }
+      }
+    });
+
+    setPreviewRows(rows);
+
+    const res = await previewBulkImport(batchId, rows);
+    setPreviewData(res);
+    setPreviewLoading(false);
   }
 
   async function handleAddStudent(e: React.FormEvent) {
@@ -880,11 +931,19 @@ export default function BatchDetailPage() {
                     </div>
                   )}
 
-                  <button onClick={handleBulkUpload} disabled={uploadingBulk || !csvData.length || bulkErrors.length > 0}
+                  <button onClick={handlePreviewImport} disabled={uploadingBulk || !csvData.length || bulkErrors.length > 0}
                     className="w-full py-2.5 rounded-xl bg-gradient-to-r from-violet-500 to-indigo-600 text-white text-sm font-semibold disabled:opacity-60 flex items-center justify-center gap-2 hover:opacity-90 transition-opacity">
-                    {uploadingBulk ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-                    Upload CSV Results
+                    {uploadingBulk ? <Loader2 className="w-4 h-4 animate-spin" /> : <Eye className="w-4 h-4" />}
+                    Preview & Import CSV Results
                   </button>
+
+                  <ImportPreviewModal
+                    open={showPreview}
+                    onClose={() => setShowPreview(false)}
+                    onConfirm={(mode) => handleBulkUpload(mode)}
+                    previewData={previewData}
+                    loading={previewLoading}
+                  />
 
                   {/* Template Download Modal */}
                   {showTemplateModal && (

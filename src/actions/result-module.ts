@@ -560,6 +560,121 @@ export async function sendStudentTranscriptEmail(email: string, pdfBase64: strin
 }
 
 // ──────────────────────────────────────────────
+// CSV IMPORT PREVIEW (Smart Validation)
+// ──────────────────────────────────────────────
+
+export async function previewBulkImport(
+  batchId: number,
+  rows: { identifier: string; courseCode: string; score: number }[]
+) {
+  try {
+    const allStudents = await db.query.students.findMany({
+      columns: { id: true, matricNumber: true, admissionNumber: true, name: true, firstName: true, lastName: true, programmeType: true, deptId: true, level: true },
+    });
+
+    const batch = await db.query.resultBatches.findFirst({ where: eq(resultBatches.id, batchId) });
+    const gradingRules = batch?.gradingScale?.rules || '[]';
+    const rules: { min: number; max: number; grade: string; point: number }[] = JSON.parse(gradingRules);
+
+    function gradeScore(score: number) {
+      const match = rules.find(r => score >= r.min && score <= r.max);
+      return match ? { grade: match.grade, gradePoint: match.point } : { grade: 'F', gradePoint: 0 };
+    }
+
+    // Import the smart matching modules
+    const { parseMatric, validateScore: validateScoreFn, extractSerial } = await import('@/lib/matric-parser');
+    const { matchStudent } = await import('@/lib/student-matcher');
+
+    const previewRows: any[] = [];
+    const errors: string[] = [];
+    const warnings: string[] = [];
+    const anomalies: string[] = [];
+
+    // Track CSV-level duplicates
+    const seenIdentifiers = new Map<string, number[]>();
+    rows.forEach((row, i) => {
+      const id = (row.identifier || '').trim().toLowerCase();
+      if (!id) return;
+      if (!seenIdentifiers.has(id)) seenIdentifiers.set(id, []);
+      seenIdentifiers.get(id)!.push(i);
+    });
+
+    // Report duplicates
+    for (const [id, indices] of seenIdentifiers) {
+      if (indices.length > 1) {
+        anomalies.push(`Duplicate in CSV: '${rows[indices[0]].identifier}' appears ${indices.length} times (rows ${indices.map(x => x + 2).join(', ')})`);
+      }
+    }
+
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      const id = (row.identifier || '').trim();
+
+      if (!id) {
+        errors.push(`Row ${i + 2}: Missing identifier`);
+        continue;
+      }
+
+      // Smart student matching
+      const match = matchStudent(id, allStudents);
+
+      // Validate score
+      const scoreValidation = validateScoreFn(row.score, 100);
+      const { grade, gradePoint } = gradeScore(row.score);
+
+      previewRows.push({
+        rowIndex: i + 2,
+        identifier: id,
+        matchedStudent: match.student ? {
+          id: match.student.id,
+          name: match.student.name || `${match.student.firstName} ${match.student.lastName}`,
+          matricNumber: match.student.matricNumber,
+        } : null,
+        matchConfidence: match.confidence,
+        matchStrategy: match.strategy,
+        courseCode: row.courseCode,
+        score: row.score,
+        grade,
+        gradePoint,
+        isValid: scoreValidation.isValid && !!match.student,
+        warning: scoreValidation.warning,
+        status: !match.student ? 'error' : match.confidence < 0.8 ? 'review' : 'ready',
+      });
+
+      if (!match.student) {
+        const serial = extractSerial(id, 5);
+        errors.push(`Row ${i + 2}: Student not found for '${id}'${serial ? ` (serial: ${serial})` : ''}`);
+      } else if (match.confidence < 0.8) {
+        warnings.push(`Row ${i + 2}: Low confidence match for '${id}' → ${match.student.name} (${match.strategy}, ${Math.round(match.confidence * 100)}%)`);
+      }
+
+      if (scoreValidation.warning) {
+        warnings.push(`Row ${i + 2}: ${scoreValidation.warning} for ${row.courseCode}`);
+      }
+    }
+
+    const summary = {
+      totalRows: rows.length,
+      autoImport: previewRows.filter(r => r.status === 'ready').length,
+      needsReview: previewRows.filter(r => r.status === 'review').length,
+      willFail: previewRows.filter(r => r.status === 'error').length,
+      duplicateCount: anomalies.length,
+    };
+
+    return {
+      success: true,
+      preview: previewRows,
+      errors,
+      warnings,
+      anomalies,
+      summary,
+    };
+  } catch (e: any) {
+    return { success: false, error: e.message, preview: [], errors: [], warnings: [], anomalies: [], summary: null };
+  }
+}
+
+// ──────────────────────────────────────────────
 // ADDING RESULTS (Multi-Course Bulk CSV)
 // ──────────────────────────────────────────────
 
