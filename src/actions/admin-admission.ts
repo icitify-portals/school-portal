@@ -7,6 +7,7 @@ import { NotificationService } from "@/services/NotificationService";
 import { hasPermission, hasRole } from "@/lib/rbac";
 import { revalidatePath } from "next/cache";
 import { computeScreeningPercentage, decideFromScreening } from "@/lib/admission/screening";
+import { extractNameParts, buildFullName } from "@/lib/applicant-names";
 
 // ─────────────────────────────────────────────────────────────────────
 // Post-UTME Screening Unification (Phase 1): cut-off management
@@ -117,7 +118,8 @@ function parseApplicantData(raw: unknown): Record<string, any> {
 }
 
 function applicantNameFrom(form: Record<string, any>, user?: { name?: string | null; firstName?: string | null; surname?: string | null } | null): string {
-    const fromForm = `${form.firstName || form.first_name || ''} ${form.surname || form.lastName || form.last_name || ''}`.trim();
+    const parts = extractNameParts(form);
+    const fromForm = buildFullName(parts) || `${parts.firstName} ${parts.lastName}`.trim();
     if (fromForm) return fromForm;
     if (user) return (user.name || `${user.firstName || ''} ${user.surname || ''}`.trim() || 'N/A');
     return 'N/A';

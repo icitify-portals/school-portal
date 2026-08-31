@@ -33,6 +33,7 @@ import { sendInAppNotification } from "./notifications";
 import { checkDeveloperFeeStatus } from "./paystack-developer-subscription";
 import { sendEmail } from "@/lib/mail";
 import { normalizeEmail, isValidEmailFormat } from "@/lib/email";
+import { extractNameParts, buildFullName } from "@/lib/applicant-names";
 import { generateFormNumber, generateFormHash } from "@/lib/form-number";
 import { storage } from "@/lib/storage";
 import { hash, compare } from "bcryptjs";
@@ -2612,7 +2613,10 @@ export async function verifyApplicationByFormNumber(formNumber: string) {
             applicantPhoto: app.applicantPhoto,
             templateName: template?.name || "Admission Application",
             templateLevel: template?.level || "tertiary",
-            applicantName: `${formData.firstName || ""} ${formData.lastName || ""}`.trim() || "N/A",
+            applicantName: (() => {
+                const parts = extractNameParts(formData);
+                return buildFullName(parts) || `${parts.firstName} ${parts.lastName}`.trim() || "N/A";
+            })(),
             applicantEmail: formData.email || "N/A",
             applicantPhone: formData.phone || "N/A",
             programmeChoice: formData.programmeChoice || formData.programme || "N/A",
@@ -2772,7 +2776,8 @@ export async function getAdminV2Applications(filters?: {
         let mapped = applications.map((app: any) => {
             let formData: any = {};
             try { formData = typeof app.data === 'string' ? JSON.parse(app.data) : app.data || {}; } catch {}
-            const nameFromForm = `${formData.firstName || formData.first_name || ''} ${formData.surname || formData.lastName || formData.last_name || ''}`.trim();
+            const formParts = extractNameParts(formData);
+            const nameFromForm = buildFullName(formParts) || `${formParts.firstName} ${formParts.lastName}`.trim();
             const nameFromUser = app.applicant ? (app.applicant.name || `${app.applicant.firstName || ''} ${app.applicant.surname || ''}`.trim()) : '';
             const fallbackEmail = formData.email || formData.applicantEmail || app.applicant?.email || '';
 
@@ -2940,7 +2945,8 @@ export async function exportAdminV2Applications(filters?: {
         let mapped = applications.map((app: any) => {
             let formData: any = {};
             try { formData = typeof app.data === 'string' ? JSON.parse(app.data) : app.data || {}; } catch {}
-            const nameFromForm = `${formData.firstName || formData.first_name || ''} ${formData.surname || formData.lastName || formData.last_name || ''}`.trim();
+            const screenParts = extractNameParts(formData);
+            const nameFromForm = buildFullName(screenParts) || `${screenParts.firstName} ${screenParts.lastName}`.trim();
             const nameFromUser = app.applicant ? (app.applicant.name || `${app.applicant.firstName || ''} ${app.applicant.surname || ''}`.trim()) : '';
             
             const progName = app.programme?.name || 'Pending Course Selection';
@@ -3119,10 +3125,8 @@ export async function getAdminV2ApplicationDetail(applicationId: number) {
             }
         }
 
-        const surname = formData.surname || formData.last_name || formData.lastName || formData['Last Name'] || formData.LastName || '';
-        const firstName = formData.firstName || formData.first_name || formData['First Name'] || formData.FirstName || formData['FirstName'] || '';
-        const middleName = formData.middleName || formData.middle_name || formData['Middle Name'] || formData.MiddleName || '';
-        const nameFallback = `${surname} ${firstName} ${middleName}`.trim() || `${firstName} ${surname}`.trim() || 'N/A';
+        const detailParts = extractNameParts(formData);
+        const nameFallback = buildFullName(detailParts) || `${detailParts.firstName} ${detailParts.lastName}`.trim() || 'N/A';
         const photo = formData.passport_photo || formData.passport || formData.photo || formData.applicantPhoto || formData.image || formData['Photograph/camera'] || formData.Photograph || '';
 
         return {
@@ -3295,21 +3299,30 @@ export async function updateApplicantData(appId: number, updatePayload: any) {
         const targetUserId = app.applicantId;
         if (targetUserId) {
             const updates: any = {};
-            // Extract the canonical names dynamically from merged data for the users table
-            let newFirstName = mergedData.firstName || mergedData.first_name || mergedData['First Name'] || '';
-            let newLastName = mergedData.lastName || mergedData.last_name || mergedData.surname || mergedData['Surname'] || '';
-            let newMiddleName = mergedData.middleName || mergedData.middle_name || mergedData['Middle Name'] || '';
+            // Extract the canonical names dynamically from merged data for the users table.
+            // Uses a case-insensitive extractor because templates label the same field
+            // inconsistently ("FirstName", "First Name", "Surname", "Last Name", ...).
+            const nameParts = extractNameParts(mergedData);
 
             // We update users name if any of the name components changed in the payload
             const nameChanged = Object.keys(updatePayload).some(k => 
                 k.toLowerCase().includes('name') || k.toLowerCase().includes('surname')
             );
 
-            if (nameChanged && (newFirstName || newLastName || newMiddleName)) {
-                updates.name = `${newFirstName} ${newMiddleName} ${newLastName}`.replace(/\s+/g, ' ').trim();
-                updates.firstName = newFirstName;
-                updates.surname = newLastName;
-                updates.middleName = newMiddleName;
+            if (nameChanged && (nameParts.firstName || nameParts.lastName || nameParts.middleName)) {
+                // Fetch current user values so components absent from the form data
+                // are preserved instead of wiped to empty strings.
+                const [currentUser] = await db.select({ name: users.name, surname: users.surname, firstName: users.firstName, middleName: users.middleName }).from(users).where(eq(users.id, targetUserId)).limit(1);
+
+                const finalFirst = nameParts.firstName || currentUser?.firstName || '';
+                const finalLast = nameParts.lastName || currentUser?.surname || '';
+                const finalMiddle = nameParts.middleName || currentUser?.middleName || '';
+
+                const fullName = buildFullName({ firstName: finalFirst, middleName: finalMiddle, lastName: finalLast });
+                if (fullName) updates.name = fullName;
+                if (finalFirst) updates.firstName = finalFirst;
+                if (finalLast) updates.surname = finalLast;
+                updates.middleName = finalMiddle;
             }
             
             // Check for email/phone changes
