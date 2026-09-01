@@ -248,7 +248,6 @@ export async function getCBTStats() {
         return { activeQuizzes: 0, totalQuizzes: 0, pendingGrading: 0, passRate: 0, recentQuizzes: [], totalAttempts: 0 };
     }
 }
-}
 
 
 export async function finalizeAttempt(attemptId: number) {
