@@ -22,6 +22,7 @@ ENV DATABASE_URL="mysql://portal_user:StrongPassword123!@127.0.0.1:3306/school_p
 ENV NEXTAUTH_SECRET="build-time-dummy-secret-1234567890"
 ENV AUTH_SECRET="build-time-dummy-secret-1234567890"
 ENV NEXT_PUBLIC_APP_URL="https://portal.fssibadan.edu.ng"
+ENV NEXT_TURBOPACK=0
 # Use BuildKit cache mount for Next.js compilation cache.
 # This persists the .next/cache directory between builds so
 # unchanged pages are not recompiled — the single biggest win.
