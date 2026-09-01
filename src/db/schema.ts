@@ -7583,7 +7583,7 @@ export const unifiedExamAttempts = mysqlTable('unified_exam_attempts', {
   externalCandidateId: varchar('external_candidate_id', { length: 100 }),
 
   // Attempt data
-  startTime: datetime('start_time').defaultNow(),
+  startTime: timestamp('start_time').defaultNow(),
   endTime: datetime('end_time'),
   status: mysqlEnum('status', ['in_progress', 'completed', 'auto_submitted', 'flagged', 'timed_out']).default('in_progress'),
   score: decimal('score', { precision: 8, scale: 2 }).default('0.00'),
