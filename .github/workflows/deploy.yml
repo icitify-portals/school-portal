@@ -28,6 +28,9 @@ jobs:
             cd /var/www/school-portal
             COMPOSE_FILE="/var/www/school-portal/compose.yml"
             export COMPOSE_FILE
+            # Enable BuildKit for layer caching & cache-mount support
+            export DOCKER_BUILDKIT=1
+            export COMPOSE_DOCKER_CLI_BUILD=1
 
             echo "=== REMOVING LEGACY DOCKER-COMPOSE.YML ==="
             rm -f docker-compose.yml || true
@@ -35,8 +38,8 @@ jobs:
             echo "=== PULLING LATEST CODE FROM MAIN ==="
             git pull origin main
 
-            echo "=== BUILDING NEW APP IMAGE ==="
-            docker compose -f "$COMPOSE_FILE" build school-portal-app
+            echo "=== BUILDING NEW APP IMAGE (with layer cache) ==="
+            docker compose -f "$COMPOSE_FILE" build school-portal-app school-portal-worker
 
             echo "=== RESTARTING APP CONTAINER ==="
             docker compose -f "$COMPOSE_FILE" up -d --force-recreate school-portal-app
