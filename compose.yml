@@ -23,11 +23,7 @@ services:
       - portal_network
 
   school-portal-app:
-    build:
-      context: .
-      cache_from:
-        - school-portal-app:latest
-    image: school-portal-app:latest
+    image: school-portal-school-portal-app:latest
     container_name: school-portal-app
     restart: always
     depends_on:
@@ -50,11 +46,7 @@ services:
       - portal_network
 
   school-portal-worker:
-    build:
-      context: .
-      cache_from:
-        - school-portal-app:latest
-    image: school-portal-worker:latest
+    image: school-portal-school-portal-worker:latest
     container_name: school-portal-worker
     restart: always
     command: npm run worker

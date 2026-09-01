@@ -1,4 +1,4 @@
-name: Automated Production Deployment (Direct SSH Pipeline)
+name: Build & Deploy to Production
 
 on:
   push:
@@ -9,44 +9,109 @@ concurrency:
   group: production-deploy
   cancel-in-progress: true
 
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}/school-portal-app
+  WORKER_IMAGE_NAME: ${{ github.repository }}/school-portal-worker
+
 jobs:
-  deploy-to-vps:
-    name: Deploy Live Application to Hostinger VPS
+  build:
+    name: Build Docker Images
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      app_image: ${{ steps.meta.outputs.tags }}
+      app_digest: ${{ steps.build.outputs.digest }}
+      worker_image: ${{ steps.worker_meta.outputs.tags }}
+      worker_digest: ${{ steps.worker_build.outputs.digest }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract app image metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=sha,prefix=
+            type=raw,value=latest
+
+      - name: Build and push app image
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Extract worker image metadata
+        id: worker_meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.WORKER_IMAGE_NAME }}
+          tags: |
+            type=sha,prefix=
+            type=raw,value=latest
+
+      - name: Build and push worker image
+        id: worker_build
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.worker_meta.outputs.tags }}
+          labels: ${{ steps.worker_meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    name: Deploy to VPS
+    needs: build
     runs-on: ubuntu-latest
     steps:
-      - name: SSH into Hostinger VPS & Update Production
+      - name: Deploy to Hostinger VPS
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           password: ${{ secrets.SERVER_PASSWORD }}
-          command_timeout: 30m
+          command_timeout: 10m
           script_stop: false
           script: |
             cd /var/www/school-portal
-            COMPOSE_FILE="/var/www/school-portal/compose.yml"
-            export COMPOSE_FILE
-            # Enable BuildKit for layer caching & cache-mount support
-            export DOCKER_BUILDKIT=1
-            export COMPOSE_DOCKER_CLI_BUILD=1
 
-            echo "=== REMOVING LEGACY DOCKER-COMPOSE.YML ==="
-            rm -f docker-compose.yml || true
-
-            echo "=== PULLING LATEST CODE FROM MAIN ==="
+            echo "=== PULLING LATEST CODE ==="
             git pull origin main
 
-            echo "=== BUILDING NEW APP IMAGE (with layer cache) ==="
-            docker compose -f "$COMPOSE_FILE" build school-portal-app school-portal-worker
+            echo "=== LOGGING INTO GITHUB CONTAINER REGISTRY ==="
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
-            echo "=== RESTARTING APP CONTAINER ==="
-            docker compose -f "$COMPOSE_FILE" up -d --force-recreate school-portal-app
+            echo "=== PULLING LATEST IMAGES ==="
+            docker pull ghcr.io/${{ github.repository }}/school-portal-app:latest
+            docker pull ghcr.io/${{ github.repository }}/school-portal-worker:latest
 
-            echo "=== RESTARTING WORKER CONTAINER ==="
-            docker compose -f "$COMPOSE_FILE" up -d --force-recreate school-portal-worker
+            echo "=== TAGGING IMAGES FOR COMPOSE ==="
+            docker tag ghcr.io/${{ github.repository }}/school-portal-app:latest school-portal-school-portal-app:latest
+            docker tag ghcr.io/${{ github.repository }}/school-portal-worker:latest school-portal-school-portal-worker:latest
 
-            echo "=== CLEANING UP OLD DOCKER IMAGES ==="
+            echo "=== RESTARTING CONTAINERS ==="
+            docker compose -f compose.yml up -d --force-recreate school-portal-app school-portal-worker
+
+            echo "=== CLEANING UP ==="
             docker image prune -f || true
 
             echo "=== DEPLOYMENT COMPLETE ==="
-            docker compose -f "$COMPOSE_FILE" ps || true
+            docker compose -f compose.yml ps || true
