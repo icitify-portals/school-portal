@@ -33,7 +33,7 @@ jobs:
             git pull origin main
 
             echo "=== BUILDING NEW APP IMAGE ==="
-            docker compose build --no-cache school-portal-app
+            docker compose build school-portal-app
 
             echo "=== RESTARTING APP CONTAINER ==="
             docker compose up -d --force-recreate school-portal-app
