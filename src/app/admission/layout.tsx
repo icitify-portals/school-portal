@@ -1,5 +1,6 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 
 export default async function AdmissionLayout({
     children,
@@ -7,10 +8,15 @@ export default async function AdmissionLayout({
     children: React.ReactNode;
 }) {
     const session = await auth();
+    const headersList = await headers();
+    const pathname = headersList.get("x-next-url") || headersList.get("x-pathname") || "";
 
-    // Prevent active students from accessing admission/applicant flows
+    // Allow students to access /admission/status/* routes (acceptance fee payment, admission letter, etc.)
+    const isStatusRoute = pathname.startsWith("/admission/status");
+
+    // Prevent active students from accessing admission/applicant flows (but allow status routes for HND payments)
     // @ts-expect-error - TS18048: Auto-suppressed for build
-    if (session?.user?.role === 'student') {
+    if (session?.user?.role === 'student' && !isStatusRoute) {
         return (
             <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
                 <div className="max-w-md w-full bg-white rounded-2xl shadow-xl border border-slate-100 p-8 text-center space-y-4">

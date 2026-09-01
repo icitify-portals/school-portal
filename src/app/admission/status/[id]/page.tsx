@@ -149,6 +149,8 @@ export default function ApplicantStatusPage() {
                     email={checkoutPayload.email}
                     firstName={checkoutPayload.firstName}
                     lastName={checkoutPayload.lastName}
+                    phone={checkoutPayload.phone}
+                    description={checkoutPayload.description}
                     onSuccess={handlePaymentSuccess}
                     onClose={() => setCheckoutPayload(null)}
                     onError={(err) => {

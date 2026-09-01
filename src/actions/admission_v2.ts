@@ -992,6 +992,7 @@ export async function initiateAcceptancePaymentCheckout(applicationId: number) {
         const email = formData.email || "student@school.edu.ng";
         const firstName = formData.firstName || "Applicant";
         const lastName = formData.lastName || "";
+        const phone = formData.phone || formData.phoneNumber || "";
 
         // Record pending transaction
         await db.insert(transactions).values({
@@ -1035,6 +1036,8 @@ export async function initiateAcceptancePaymentCheckout(applicationId: number) {
             email,
             firstName,
             lastName,
+            phone,
+            description: "Acceptance Fee Payment",
             targetBusinessId,
             publicKey
         };
