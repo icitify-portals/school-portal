@@ -252,9 +252,9 @@ export default function V2ApplicationDetailPage() {
 
     const handleConfirmAcceptance = async () => {
         if (!app) return;
-        const confirm = window.confirm("Confirm acceptance fee payment for this applicant?");
-        if (!confirm) return;
-        const res = await adminConfirmAcceptancePayment(app.id);
+        const ref = prompt("Enter payment transaction reference (from Alatpay):");
+        if (!ref) return;
+        const res = await adminConfirmAcceptancePayment(app.id, ref);
         if (res.success) {
             toast.success("Acceptance fee confirmed");
             const data = await getAdminV2ApplicationDetail(app.id);
@@ -276,6 +276,89 @@ export default function V2ApplicationDetailPage() {
         } else {
             toast.error(res.error || "Action failed");
         }
+    };
+
+    const handlePrintAcceptanceReceipt = () => {
+        if (!app) return;
+        const printWindow = window.open('', '_blank');
+        if (!printWindow) return;
+
+        const templateData = app.template || {};
+        const formData = app.parsedData || {};
+        const amount = parseFloat(templateData.acceptanceFee || '0') + parseFloat(templateData.idCardFee || '0');
+
+        const content = `
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Acceptance Fee Receipt - ${app.formNumber || app.id}</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 40px; max-width: 800px; margin: 0 auto; }
+        .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 20px; margin-bottom: 20px; }
+        .header h1 { margin: 0; font-size: 24px; }
+        .header p { margin: 5px 0; color: #666; }
+        .receipt-id { background: #f5f5f5; padding: 15px; margin: 20px 0; border-radius: 8px; }
+        .row { display: flex; justify-content: space-between; margin: 10px 0; padding: 10px 0; border-bottom: 1px solid #eee; }
+        .label { color: #666; font-weight: bold; }
+        .value { text-align: right; }
+        .amount { font-size: 28px; font-weight: bold; color: #059669; text-align: right; margin: 20px 0; }
+        .footer { text-align: center; margin-top: 40px; color: #666; font-size: 12px; }
+        @media print { body { padding: 20px; } }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>FEDERAL SCHOOL OF STATISTICS</h1>
+        <p>Km 4, Ikpaja Road, Ibadan, Oyo State</p>
+        <p>Email: info@fss.edu.ng | Tel: 080XXXXXXXX</p>
+    </div>
+
+    <div class="receipt-id">
+        <strong>ACCEPTANCE FEE RECEIPT</strong><br/>
+        Receipt No: ${app.acceptancePaymentReference || 'N/A'}<br/>
+        Application ID: ${app.id}
+    </div>
+
+    <div class="row">
+        <span class="label">Applicant Name:</span>
+        <span class="value">${app.applicantName || 'N/A'}</span>
+    </div>
+    <div class="row">
+        <span class="label">Form Number:</span>
+        <span class="value">${app.formNumber || 'N/A'}</span>
+    </div>
+    <div class="row">
+        <span class="label">Programme:</span>
+        <span class="value">${app.programme?.name || app.parsedData?.programme || 'N/A'}</span>
+    </div>
+    <div class="row">
+        <span class="label">Department:</span>
+        <span class="value">${app.programme?.department?.name || 'N/A'}</span>
+    </div>
+    <div class="row">
+        <span class="label">Level:</span>
+        <span class="value">${app.academicLevel || 'N/A'}</span>
+    </div>
+    <div class="row">
+        <span class="label">Payment Date:</span>
+        <span class="value">${app.updatedAt ? format(new Date(app.updatedAt), 'dd MMMM yyyy, HH:mm') : 'N/A'}</span>
+    </div>
+
+    <div class="amount">
+        Amount Paid: ₦${amount.toLocaleString('en-NG', { minimumFractionDigits: 2 })}
+    </div>
+
+    <div class="footer">
+        <p>This is an official receipt for acceptance fee payment.</p>
+        <p>Federal School of Statistics Bursary Department</p>
+        <p>Printed on: ${format(new Date(), 'dd MMMM yyyy, HH:mm')}</p>
+    </div>
+</body>
+</html>
+`;
+        printWindow.document.write(content);
+        printWindow.document.close();
+        printWindow.print();
     };
 
     const toggleSection = (title: string) => {
@@ -1052,6 +1135,12 @@ export default function V2ApplicationDetailPage() {
                                         {app.acceptancePaymentStatus?.replace('_', ' ') || 'pending'}
                                     </span>
                                 </div>
+                                {app.acceptancePaymentReference && (
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Acceptance Ref</span>
+                                        <span className="font-mono text-xs font-bold text-slate-600">{app.acceptancePaymentReference}</span>
+                                    </div>
+                                )}
 
                                 <div className="pt-4 border-t border-slate-200 space-y-3">
                                     {app.paymentStatus !== 'paid' && (
@@ -1097,13 +1186,21 @@ export default function V2ApplicationDetailPage() {
                                         </Button>
                                     )}
                                     {app.acceptancePaymentStatus === 'paid' && (
-                                        <Button
-                                            onClick={handleReverseAcceptance}
-                                            variant="outline"
-                                            className="w-full rounded-xl text-rose-600 border-rose-200 hover:bg-rose-50 hover:text-rose-700 font-black text-[10px] uppercase tracking-widest py-4"
-                                        >
-                                            <XCircle className="w-4 h-4 mr-2" /> Reverse Acceptance Fee
-                                        </Button>
+                                        <>
+                                            <Button
+                                                onClick={handlePrintAcceptanceReceipt}
+                                                className="w-full rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] uppercase tracking-widest py-4"
+                                            >
+                                                <Printer className="w-4 h-4 mr-2" /> Print Acceptance Receipt
+                                            </Button>
+                                            <Button
+                                                onClick={handleReverseAcceptance}
+                                                variant="outline"
+                                                className="w-full rounded-xl text-rose-600 border-rose-200 hover:bg-rose-50 hover:text-rose-700 font-black text-[10px] uppercase tracking-widest py-4"
+                                            >
+                                                <XCircle className="w-4 h-4 mr-2" /> Reverse Acceptance Fee
+                                            </Button>
+                                        </>
                                     )}
                                 </div>
                             </CardContent>

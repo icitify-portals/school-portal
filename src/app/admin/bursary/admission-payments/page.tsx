@@ -7,7 +7,7 @@ import {
     CreditCard, Search, Loader2, User, Calendar, CheckCircle2, XCircle,
     Filter, FileText, Download, ExternalLink, Trash2, ChevronLeft, ChevronRight
 } from "lucide-react";
-import { getAdminV2Applications, confirmAdmissionPayment, deleteAdmissionApplication, getAdmissionAcademicUnits } from "@/actions/admission_v2";
+import { getAdminV2Applications, confirmAdmissionPayment, deleteAdmissionApplication, getAdmissionAcademicUnits, adminConfirmAcceptancePayment, reverseAcceptancePayment } from "@/actions/admission_v2";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -64,6 +64,29 @@ export default function BursaryAdmissionPaymentsPage() {
         const res = await confirmAdmissionPayment(id, ref);
         if (res.success) {
             toast.success("Payment confirmed!");
+            fetchData();
+        } else {
+            toast.error(res.error);
+        }
+    };
+
+    const handleConfirmAcceptance = async (id: number) => {
+        const ref = prompt("Enter payment transaction reference (from Alatpay):");
+        if (!ref) return;
+        const res = await adminConfirmAcceptancePayment(id, ref);
+        if (res.success) {
+            toast.success("Acceptance payment confirmed!");
+            fetchData();
+        } else {
+            toast.error(res.error);
+        }
+    };
+
+    const handleReverseAcceptance = async (id: number) => {
+        if (!confirm("Are you sure you want to reverse this acceptance payment? This will mark the acceptance fee as unpaid.")) return;
+        const res = await reverseAcceptancePayment(id);
+        if (res.success) {
+            toast.success("Acceptance payment reversed!");
             fetchData();
         } else {
             toast.error(res.error);
@@ -313,6 +336,9 @@ export default function BursaryAdmissionPaymentsPage() {
                                                 )}>
                                                     {app.acceptancePaymentStatus?.replace('_', ' ') || 'pending'}
                                                 </span>
+                                                {app.acceptancePaymentReference && (
+                                                    <p className="text-[8px] font-bold text-slate-400 mt-1">Ref: {app.acceptancePaymentReference}</p>
+                                                )}
                                             </td>
                                             <td className="px-8 py-6 text-xs font-bold text-slate-500">
                                                 {app.appliedAt ? format(new Date(app.appliedAt), 'MMM dd, yyyy') : '—'}
@@ -329,7 +355,23 @@ export default function BursaryAdmissionPaymentsPage() {
                                                             onClick={() => handleConfirm(app.id)}
                                                             className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[9px] uppercase tracking-widest px-3 py-2 shadow-lg shadow-emerald-100"
                                                         >
-                                                            Confirm
+                                                            Confirm App Fee
+                                                        </Button>
+                                                    )}
+                                                    {app.acceptancePaymentStatus === 'pending' && (
+                                                        <Button
+                                                            onClick={() => handleConfirmAcceptance(app.id)}
+                                                            className="rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-black text-[9px] uppercase tracking-widest px-3 py-2 shadow-lg shadow-amber-100"
+                                                        >
+                                                            Confirm Acceptance
+                                                        </Button>
+                                                    )}
+                                                    {app.acceptancePaymentStatus === 'paid' && (
+                                                        <Button
+                                                            onClick={() => handleReverseAcceptance(app.id)}
+                                                            className="rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-black text-[9px] uppercase tracking-widest px-3 py-2 shadow-lg shadow-rose-100"
+                                                        >
+                                                            Reverse Acceptance
                                                         </Button>
                                                     )}
                                                     <Button 

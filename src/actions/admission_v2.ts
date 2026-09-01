@@ -640,12 +640,27 @@ export async function reverseProcessingFeePayment(applicationId: number) {
     }
 }
 
-export async function adminConfirmAcceptancePayment(applicationId: number) {
+export async function adminConfirmAcceptancePayment(applicationId: number, reference?: string) {
     await requireAdmin();
     try {
+        const updateData: any = { acceptancePaymentStatus: 'paid', updatedAt: new Date() };
+        if (reference) {
+            updateData.acceptancePaymentReference = reference;
+        }
+
         await db.update(admissionApplicationsV2)
-            .set({ acceptancePaymentStatus: 'paid', updatedAt: new Date() })
+            .set(updateData)
             .where(eq(admissionApplicationsV2.id, applicationId));
+
+        // Also update the transaction record if reference is provided
+        if (reference) {
+            await db.update(transactions)
+                .set({ status: 'completed', gatewayReference: reference })
+                .where(and(
+                    like(transactions.purpose, `Acceptance Fee Payment%`),
+                    like(transactions.gatewayReference, `%${applicationId}%`)
+                ));
+        }
 
         const appData = await db.query.admissionApplicationsV2.findFirst({
             where: eq(admissionApplicationsV2.id, applicationId)
@@ -667,6 +682,9 @@ export async function adminConfirmAcceptancePayment(applicationId: number) {
         }
 
         revalidatePath(`/admin/admission/v2/${applicationId}`);
+        revalidatePath(`/admin/admission/v2`);
+        revalidatePath(`/admin/bursary/admission-payments`);
+        revalidatePath(`/admin/bursary/acceptance-payments`);
         revalidatePath(`/admission/status/${applicationId}`);
         return { success: true };
     } catch (error) {
@@ -679,15 +697,183 @@ export async function reverseAcceptancePayment(applicationId: number) {
     await requireAdmin();
     try {
         await db.update(admissionApplicationsV2)
-            .set({ acceptancePaymentStatus: 'pending', updatedAt: new Date() })
+            .set({ acceptancePaymentStatus: 'pending', acceptancePaymentReference: null, updatedAt: new Date() })
             .where(eq(admissionApplicationsV2.id, applicationId));
 
+        // Also revert the transaction status
+        await db.update(transactions)
+            .set({ status: 'pending' })
+            .where(and(
+                like(transactions.purpose, `Acceptance Fee Payment%`),
+                like(transactions.gatewayReference, `%${applicationId}%`)
+            ));
+
         revalidatePath(`/admin/admission/v2/${applicationId}`);
+        revalidatePath(`/admin/admission/v2`);
+        revalidatePath(`/admin/bursary/admission-payments`);
+        revalidatePath(`/admin/bursary/acceptance-payments`);
         revalidatePath(`/admission/status/${applicationId}`);
         return { success: true };
     } catch (error) {
         console.error("Failed to reverse acceptance payment:", error);
         return { success: false, error: "Failed to reverse payment" };
+    }
+}
+
+export async function getSuccessfulAcceptancePayments(filters?: {
+    search?: string;
+    departmentId?: number;
+    programmeId?: number;
+    level?: string;
+    startDate?: string;
+    endDate?: string;
+    page?: number;
+    pageSize?: number;
+}) {
+    await requireAdmin();
+    try {
+        const page = filters?.page || 1;
+        const pageSize = filters?.pageSize || 50;
+        const offset = (page - 1) * pageSize;
+
+        const conditions = [
+            eq(admissionApplicationsV2.acceptancePaymentStatus, 'paid')
+        ];
+
+        if (filters?.departmentId) {
+            const deptProgs = await db.select({ id: programmes.id }).from(programmes).where(eq(programmes.deptId, filters.departmentId));
+            const progIds = deptProgs.map(p => p.id);
+            if (progIds.length > 0) {
+                conditions.push(inArray(admissionApplicationsV2.programmeId, progIds));
+            }
+        }
+
+        if (filters?.programmeId) {
+            conditions.push(eq(admissionApplicationsV2.programmeId, filters.programmeId));
+        }
+
+        if (filters?.search) {
+            const q = `%${filters.search}%`;
+            const matchingUsers = await db.select({ id: users.id })
+                .from(users)
+                .where(like(users.name, q));
+            const userIds = matchingUsers.map(u => u.id);
+
+            const searchOr = [
+                like(admissionApplicationsV2.formNumber, q),
+                like(admissionApplicationsV2.data, q)
+            ];
+
+            if (userIds.length > 0) {
+                searchOr.push(inArray(admissionApplicationsV2.applicantId, userIds));
+            }
+
+            conditions.push(or(...searchOr));
+        }
+
+        const whereClause = and(...conditions);
+
+        const [countResult] = await db.select({ count: sql<number>`count(*)` })
+            .from(admissionApplicationsV2)
+            .where(whereClause);
+
+        const total = countResult?.count || 0;
+
+        const applications = await db.query.admissionApplicationsV2.findMany({
+            where: whereClause,
+            orderBy: [desc(admissionApplicationsV2.updatedAt)],
+            limit: pageSize,
+            offset: offset,
+            with: {
+                template: true,
+                applicant: true,
+                programme: {
+                    with: {
+                        department: {
+                            with: {
+                                faculty: true
+                            }
+                        }
+                    }
+                },
+                student: true
+            }
+        });
+
+        const transactionsData = await db.select({
+            id: transactions.id,
+            gatewayReference: transactions.gatewayReference,
+            amount: transactions.amount,
+            createdAt: transactions.createdAt
+        })
+        .from(transactions)
+        .where(and(
+            like(transactions.purpose, 'Acceptance Fee Payment%'),
+            eq(transactions.status, 'completed')
+        ));
+
+        const txMap = new Map<string, any>();
+        transactionsData.forEach(tx => {
+            const match = tx.gatewayReference?.match(/ACC-(\d+)-/);
+            if (match && match[1]) {
+                txMap.set(parseInt(match[1]), tx);
+            }
+        });
+
+        const mapped = applications.map((app: any) => {
+            let formData: any = {};
+            try { formData = typeof app.data === 'string' ? JSON.parse(app.data) : app.data || {}; } catch {}
+
+            const formParts = extractNameParts(formData);
+            const nameFromForm = buildFullName(formParts) || `${formParts.firstName} ${formParts.lastName}`.trim();
+            const nameFromUser = app.applicant ? (app.applicant.name || `${app.applicant.firstName || ''} ${app.applicant.surname || ''}`.trim()) : '';
+            const tx = txMap.get(app.id);
+
+            const progName = (app.programme?.name || app.template?.name || '').toUpperCase();
+            const progType = (app.programme?.programmeType || (progName.includes('HND') ? 'HND' : 'ND')).toUpperCase();
+            const academicLevel = progType === 'HND' ? 'HND 1' : 'ND 1';
+
+            return {
+                id: app.id,
+                formNumber: app.formNumber,
+                applicantName: nameFromForm || nameFromUser || 'N/A',
+                applicantEmail: formData.email || app.applicant?.email || 'N/A',
+                applicantPhone: formData.phone || formData.phone_number || app.applicant?.phone || 'N/A',
+                studentMatricNumber: app.student?.matricNumber || null,
+                programmeName: app.programme?.name || 'N/A',
+                departmentName: app.programme?.department?.name || 'N/A',
+                facultyName: app.programme?.department?.faculty?.name || 'N/A',
+                academicLevel,
+                amount: tx?.amount || null,
+                transactionRef: tx?.gatewayReference || null,
+                transactionId: tx?.id || null,
+                paidAt: tx?.createdAt || app.updatedAt,
+                acceptancePaymentStatus: app.acceptancePaymentStatus
+            };
+        });
+
+        if (filters?.level && filters.level !== 'all') {
+            const targetLevel = filters.level.toUpperCase();
+            const filtered = mapped.filter((a: any) => a.academicLevel.toUpperCase() === targetLevel);
+            return {
+                payments: filtered,
+                total: filtered.length,
+                page,
+                pageSize,
+                totalPages: Math.ceil(filtered.length / pageSize)
+            };
+        }
+
+        return {
+            payments: mapped,
+            total,
+            page,
+            pageSize,
+            totalPages: Math.ceil(total / pageSize)
+        };
+    } catch (error) {
+        console.error("Failed to fetch acceptance payments:", error);
+        return { payments: [], total: 0, page: 1, pageSize: 50, totalPages: 0 };
     }
 }
 
@@ -998,7 +1184,7 @@ export async function initiateAcceptancePaymentCheckout(applicationId: number) {
         await db.insert(transactions).values({
             amount: totalAmount.toString(),
             type: 'credit',
-            purpose: `Acceptance Fee Payment`,
+            purpose: `Acceptance Fee Payment - Application ID: ${applicationId}`,
             status: 'pending',
             gateway: 'alatpay',
             gatewayReference: reference
@@ -1112,8 +1298,9 @@ export async function confirmAcceptancePayment(applicationId: number, reference:
 
         // Mark acceptance payment as paid
         await db.update(admissionApplicationsV2)
-            .set({ 
+            .set({
                 acceptancePaymentStatus: 'paid',
+                acceptancePaymentReference: reference,
                 updatedAt: new Date()
             })
             .where(eq(admissionApplicationsV2.id, applicationId));
@@ -1164,6 +1351,11 @@ export async function confirmAcceptancePayment(applicationId: number, reference:
             console.error("Failed to send admission letter email:", mailErr);
         }
 
+        revalidatePath(`/admission/status/${applicationId}`);
+        revalidatePath(`/admin/admission/v2/${applicationId}`);
+        revalidatePath(`/admin/admission/v2`);
+        revalidatePath(`/admin/bursary/admission-payments`);
+        revalidatePath(`/admin/bursary/acceptance-payments`);
         revalidatePath(`/admission/status/${applicationId}`);
         return { success: true };
     } catch (error) {

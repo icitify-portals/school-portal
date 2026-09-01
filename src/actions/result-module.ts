@@ -474,7 +474,8 @@ export async function getBulkTranscripts(filters: { programmeId?: number, depart
 
     const matchingStudents = await db.query.students.findMany({
       where: queryConditions.length > 0 ? and(...queryConditions) : undefined,
-      with: { user: true, programme: true, department: true }
+      with: { user: true, programme: true, department: true },
+      orderBy: (s, { asc }) => [asc(sql`RIGHT(${s.matricNumber}, 3)`)],
     });
     
     // Process in batches so we don't overload the DB
@@ -568,6 +569,18 @@ export async function previewBulkImport(
   rows: { identifier: string; courseCode: string; score: number }[]
 ) {
   try {
+    const MAX_BATCH_SIZE = 300;
+    if (rows.length > MAX_BATCH_SIZE) {
+      return {
+        success: false,
+        error: `Batch size exceeds limit of ${MAX_BATCH_SIZE} records. Please split your data into smaller batches.`,
+        preview: [],
+        errors: [],
+        warnings: [],
+        anomalies: [],
+        summary: null,
+      };
+    }
     const allStudents = await db.query.students.findMany({
       columns: { id: true, matricNumber: true, admissionNumber: true, name: true, firstName: true, lastName: true, programmeType: true, deptId: true, level: true },
     });
@@ -685,6 +698,17 @@ export async function addMultiCourseBulkResults(
   autoCreateCourses: boolean = false
 ) {
   try {
+    const MAX_BATCH_SIZE = 300;
+    if (rows.length > MAX_BATCH_SIZE) {
+      return {
+        success: false,
+        error: `Batch size exceeds limit of ${MAX_BATCH_SIZE} records. Please split your data into smaller batches.`,
+        count: 0,
+        errors: [],
+        createdCourses: [],
+      };
+    }
+
     const allStudents = await db.query.students.findMany();
     const allCourses = await db.query.courses.findMany();
 
@@ -896,7 +920,7 @@ export async function getResultTemplateStudents(filters: {
         user: true,
         programme: true,
       },
-      orderBy: (s, { asc }) => [asc(s.matricNumber)],
+      orderBy: (s, { asc }) => [asc(sql`RIGHT(${s.matricNumber}, 3)`)],
     });
 
     const rows = matchingStudents.map(s => ({

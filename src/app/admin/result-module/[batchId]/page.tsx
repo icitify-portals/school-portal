@@ -102,6 +102,7 @@ export default function BatchDetailPage() {
   const [templateCoursePick, setTemplateCoursePick] = useState("");
   const [templateCourseSearch, setTemplateCourseSearch] = useState("");
   const [templateCourseOpen, setTemplateCourseOpen] = useState(false);
+  const [templateLevel, setTemplateLevel] = useState<string>("");
 
   // Edit Result record state
   const [editingResult, setEditingResult] = useState<{ id: number; studentName: string; courseCode: string; courseName: string; score: string; creditLoad: string } | null>(null);
@@ -339,8 +340,9 @@ export default function BatchDetailPage() {
     if (templateScope === "faculty" && templateFacultyId) f.facultyId = Number(templateFacultyId);
     else if (templateScope === "department" && templateDeptId) f.departmentId = Number(templateDeptId);
     else if (templateScope === "programme" && templateProgrammeId) f.programmeId = Number(templateProgrammeId);
+    if (templateLevel) f.level = templateLevel;
     return f;
-  }, [templateScope, templateFacultyId, templateDeptId, templateProgrammeId]);
+  }, [templateScope, templateFacultyId, templateDeptId, templateProgrammeId, templateLevel]);
 
   useEffect(() => {
     if (!showTemplateModal) return;
@@ -377,6 +379,7 @@ export default function BatchDetailPage() {
     setTemplateFacultyId("");
     setTemplateDeptId("");
     setTemplateProgrammeId("");
+    setTemplateLevel("");
     setTemplateCount(null);
   }
 
@@ -966,6 +969,18 @@ export default function BatchDetailPage() {
                                 {scope === "all" ? "All Students" : scope[0].toUpperCase() + scope.slice(1)}
                               </button>
                             ))}
+                          </div>
+
+                          <div>
+                            <label className="text-xs font-bold text-slate-500 uppercase">Level Filter</label>
+                            <select value={templateLevel} onChange={e => setTemplateLevel(e.target.value)}
+                              className="mt-1 w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-400">
+                              <option value="">All Levels</option>
+                              <option value="ND1">ND 1</option>
+                              <option value="ND2">ND 2</option>
+                              <option value="HND1">HND 1</option>
+                              <option value="HND2">HND 2</option>
+                            </select>
                           </div>
 
                           {templateScope === "faculty" && (
