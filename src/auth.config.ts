@@ -112,14 +112,13 @@ export const authConfig = {
             const userPermissions = (auth?.user as any)?.permissions || [];
             const userRoles = (auth?.user as any)?.roles || [];
             const hasCmsAccess = userPermissions.some((p: string) => p.startsWith("cms.")) || userRoles.includes("CMS Manager");
+            const isRegistrar = userRole === 'registrar' || userRoles.includes('registrar') || userRoles.includes('Registrar');
+            const isAdmissionOfficer = userRole === 'admission_officer' || userRole === 'admission officer' || userRoles.includes('admission_officer') || userRoles.includes('Admission Officer');
+            const isRecordOfficer = userRole === 'record_officer' || userRole === 'record officer' || userRole === 'recordofficer' || userRoles.includes('record_officer') || userRoles.includes('Record Officer');
+            const isBursar = userRole === 'bursar' || userRole === 'bursary' || userRoles.includes('bursar') || userRoles.includes('Bursar');
 
             if (isAdminPage) {
                 if (userRole === 'admin' || userRole === 'superadmin' || userRole === 'dvc' || userRole === 'icitify_dev' || isRegistrar) return true;
-
-                const isRegistrar = userRole === 'registrar' || userRoles.includes('registrar') || userRoles.includes('Registrar');
-                const isAdmissionOfficer = userRole === 'admission_officer' || userRole === 'admission officer' || userRoles.includes('admission_officer') || userRoles.includes('Admission Officer');
-                const isRecordOfficer = userRole === 'record_officer' || userRole === 'record officer' || userRole === 'recordofficer' || userRoles.includes('record_officer') || userRoles.includes('Record Officer');
-                const isBursar = userRole === 'bursar' || userRole === 'bursary' || userRoles.includes('bursar') || userRoles.includes('Bursar');
 
                 // Permission-scoped access: checked BEFORE role rules to enforce strict path restrictions
                 const hasResultModulePermission = userPermissions.includes("result_module.manage");
