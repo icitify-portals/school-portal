@@ -22,8 +22,6 @@ jobs:
           password: ${{ secrets.SERVER_PASSWORD }}
           command_timeout: 30m
           script_stop: false
-          envs:
-            - COMPOSE_FILE
           script: |
             cd /var/www/school-portal
             COMPOSE_FILE="/var/www/school-portal/compose.yml"
