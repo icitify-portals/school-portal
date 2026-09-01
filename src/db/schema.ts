@@ -5828,6 +5828,7 @@ export const admissionApplicationsV2 = mysqlTable('admission_applications_v2', {
   editFineReference: varchar('edit_fine_reference', { length: 100 }),
   editWindowExpiresAt: datetime('edit_window_expires_at'),
   admissionNotes: text('admission_notes'),
+  pendingReason: varchar('pending_reason', { length: 255 }),
   pin: varchar('pin', { length: 255 }), // Hashed or plaintext PIN for candidate portal access
   acceptancePaymentStatus: mysqlEnum('acceptance_payment_status', ['pending', 'paid', 'not_applicable']).default('pending'),
   applicationMode: mysqlEnum('application_mode', ['full_time', 'part_time']),

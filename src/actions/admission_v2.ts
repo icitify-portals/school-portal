@@ -3268,6 +3268,255 @@ export async function bulkDeleteAdmissionApplications(ids: number[]) {
     }
 }
 
+// ─────────────────────────────────────────────────────────────────────
+// ADMITTED STUDENTS REGISTER
+// Shows admitted candidates (sorted top) and pending candidates (below),
+// with pending reason displayed. Allows admitting / rejecting directly.
+// ─────────────────────────────────────────────────────────────────────
+
+interface RegisterFilters {
+    templateId?: number;
+    programmeId?: number;
+    level?: string;
+    applicationMode?: string;
+    search?: string;
+}
+
+export async function getAdmittedRegister(filters?: RegisterFilters) {
+    await requireAdmin();
+    try {
+        const conds = [];
+        if (filters?.templateId) conds.push(eq(admissionApplicationsV2.templateId, filters.templateId));
+        if (filters?.programmeId) conds.push(eq(admissionApplicationsV2.programmeId, filters.programmeId));
+        if (filters?.applicationMode) conds.push(eq(admissionApplicationsV2.applicationMode, filters.applicationMode as any));
+
+        const apps = await db.query.admissionApplicationsV2.findMany({
+            where: conds.length > 0 ? and(...conds) : undefined,
+            with: {
+                template: true,
+                programme: {
+                    with: {
+                        department: {
+                            with: { faculty: true }
+                        }
+                    }
+                },
+                applicant: true,
+            },
+            orderBy: [desc(admissionApplicationsV2.updatedAt)],
+        });
+
+        // Also fetch programmes table for programmes not linked to an application yet (for the filter dropdown)
+        const allProgrammes = await db.query.programmes.findMany({
+            with: { department: { with: { faculty: true } } }
+        });
+
+        const templates = await db.query.admissionFormTemplates.findMany({
+            where: eq(admissionFormTemplates.isActive, 1)
+        });
+
+        const mapped = apps.map((app: any) => {
+            let formData: any = {};
+            try { formData = typeof app.data === 'string' ? JSON.parse(app.data) : (app.data || {}); } catch {}
+            const parts = extractNameParts(formData);
+            const fullName = buildFullName(parts) || `${parts.firstName} ${parts.lastName}`.trim() || 'Applicant';
+
+            const progName = app.programme?.name || formData.programme || 'N/A';
+            const deptName = app.programme?.department?.name || 'N/A';
+            const facName = app.programme?.department?.faculty?.name || 'N/A';
+
+            const progType = (progName.toUpperCase().includes('HND') ? 'HND' : 'ND');
+            const progLevel = (app.programme?.programmeType?.toUpperCase() || progType);
+
+            // Determine pending reason
+            let pendingReason = app.pendingReason || '';
+            if (!pendingReason && app.status === 'submitted') {
+                pendingReason = 'Awaiting screening decision';
+            } else if (!pendingReason && app.status === 'paid') {
+                pendingReason = 'Processing fee paid — awaiting screening';
+            } else if (!pendingReason && app.status === 'screened') {
+                pendingReason = 'Screened — awaiting admission offer';
+            }
+
+            return {
+                id: app.id,
+                formNumber: app.formNumber || '—',
+                applicationNumber: app.applicationNumber || '—', // admission number — filled on tuition payment
+                fullName,
+                surname: parts.lastName,
+                firstName: parts.firstName,
+                middleName: parts.middleName,
+                email: formData.email || app.applicant?.email || 'N/A',
+                phone: formData.phone || formData.phone_number || app.applicant?.phone || 'N/A',
+                faculty: facName,
+                department: deptName,
+                programme: progName,
+                programmeType: progLevel,
+                applicationMode: app.applicationMode === 'part_time' ? 'Part-Time' : 'Full-Time',
+                level: progLevel === 'HND' ? 'HND 1' : 'ND 1',
+                status: app.status,
+                pendingReason,
+                acceptancePaymentStatus: app.acceptancePaymentStatus,
+                processingFeeStatus: app.processingFeeStatus,
+                examAttendanceStatus: app.examAttendanceStatus,
+                templateName: app.template?.name || 'N/A',
+                appliedAt: app.appliedAt,
+                updatedAt: app.updatedAt,
+                applicantId: app.applicantId,
+                programmeId: app.programmeId,
+                templateId: app.templateId,
+            };
+        });
+
+        // Apply search
+        let filtered = mapped;
+        if (filters?.search) {
+            const q = filters.search.toLowerCase();
+            filtered = filtered.filter(r =>
+                r.fullName.toLowerCase().includes(q) ||
+                (r.formNumber || '').toLowerCase().includes(q) ||
+                (r.applicationNumber || '').toLowerCase().includes(q) ||
+                r.email.toLowerCase().includes(q) ||
+                r.phone.includes(q) ||
+                r.surname.toLowerCase().includes(q)
+            );
+        }
+
+        // Apply level filter
+        if (filters?.level && filters.level !== 'all') {
+            filtered = filtered.filter(r => r.level.toUpperCase().includes(filters.level!.toUpperCase()));
+        }
+
+        const admitted = filtered.filter(r => r.status === 'admitted');
+        const pending = filtered.filter(r => r.status !== 'admitted');
+
+        return {
+            success: true,
+            admitted,
+            pending,
+            totalAdmitted: admitted.length,
+            totalPending: pending.length,
+            programmes: allProgrammes,
+            templates,
+        };
+    } catch (error) {
+        console.error("[getAdmittedRegister] Failed:", error);
+        return { success: false, error: "Failed to fetch register", admitted: [], pending: [], totalAdmitted: 0, totalPending: 0, programmes: [], templates: [] };
+    }
+}
+
+export async function admitFromRegister(applicationId: number, notes?: string) {
+    await requireAdmin();
+    try {
+        const [app] = await db.select().from(admissionApplicationsV2).where(eq(admissionApplicationsV2.id, applicationId)).limit(1);
+        if (!app) return { success: false, error: "Application not found" };
+
+        let formData: any = {};
+        try { formData = typeof app.data === 'string' ? JSON.parse(app.data) : (app.data || {}); } catch {}
+        const parts = extractNameParts(formData);
+        const fullName = buildFullName(parts) || `${parts.firstName} ${parts.lastName}`.trim() || 'Applicant';
+        const email = formData.email || '';
+
+        await db.update(admissionApplicationsV2)
+            .set({
+                status: 'admitted',
+                pendingReason: null,
+                admissionNotes: notes || null,
+                decisionSource: 'manual',
+                updatedAt: new Date(),
+            })
+            .where(eq(admissionApplicationsV2.id, applicationId));
+
+        // Send admission offer email
+        if (email) {
+            const template = app.templateId
+                ? await db.query.admissionFormTemplates.findFirst({ where: eq(admissionFormTemplates.id, app.templateId) })
+                : null;
+            const progName = app.programmeId
+                ? await db.query.programmes.findFirst({ where: eq(programmes.id, app.programmeId) })
+                : null;
+            try {
+                await sendEmail(email, 'Admission Offer - Federal School of Statistics, Ibadan', `
+                    <p>Dear ${fullName},</p>
+                    <p>Congratulations! You have been offered provisional admission to <strong>${template?.name || 'our programme'}</strong> — <strong>${progName?.name || 'N/A'}</strong>.</p>
+                    <p>You will receive further instructions regarding your acceptance fee and matriculation process.</p>
+                    <p>Best regards,<br/>FSS Ibadan Admissions</p>
+                `);
+            } catch (e) { /* non-blocking */ }
+        }
+
+        revalidatePath("/admin/admission/register");
+        revalidatePath("/admin/admission/v2");
+        return { success: true };
+    } catch (error) {
+        console.error("[admitFromRegister] Failed:", error);
+        return { success: false, error: "Failed to admit candidate" };
+    }
+}
+
+export async function rejectFromRegister(applicationId: number, reason: string) {
+    await requireAdmin();
+    try {
+        const [app] = await db.select().from(admissionApplicationsV2).where(eq(admissionApplicationsV2.id, applicationId)).limit(1);
+        if (!app) return { success: false, error: "Application not found" };
+
+        let formData: any = {};
+        try { formData = typeof app.data === 'string' ? JSON.parse(app.data) : (app.data || {}); } catch {}
+        const parts = extractNameParts(formData);
+        const fullName = buildFullName(parts) || `${parts.firstName} ${parts.lastName}`.trim() || 'Applicant';
+        const email = formData.email || '';
+
+        await db.update(admissionApplicationsV2)
+            .set({
+                status: 'rejected',
+                pendingReason: reason || null,
+                decisionSource: 'manual',
+                updatedAt: new Date(),
+            })
+            .where(eq(admissionApplicationsV2.id, applicationId));
+
+        if (email) {
+            const template = app.templateId
+                ? await db.query.admissionFormTemplates.findFirst({ where: eq(admissionFormTemplates.id, app.templateId) })
+                : null;
+            try {
+                await sendEmail(email, 'Application Update - Federal School of Statistics, Ibadan', `
+                    <p>Dear ${fullName},</p>
+                    <p>Thank you for your application to <strong>${template?.name || 'Federal School of Statistics, Ibadan'}</strong>.</p>
+                    <p>After careful review, we regret to inform you that we are unable to offer you admission at this time${reason ? `: ${reason}` : '.'}</p>
+                    <p>We encourage you to apply for future exercises.</p>
+                    <p>Best regards,<br/>FSS Ibadan Admissions</p>
+                `);
+            } catch (e) { /* non-blocking */ }
+        }
+
+        revalidatePath("/admin/admission/register");
+        revalidatePath("/admin/admission/v2");
+        return { success: true };
+    } catch (error) {
+        console.error("[rejectFromRegister] Failed:", error);
+        return { success: false, error: "Failed to reject candidate" };
+    }
+}
+
+export async function updatePendingReason(applicationId: number, reason: string) {
+    await requireAdmin();
+    try {
+        await db.update(admissionApplicationsV2)
+            .set({
+                pendingReason: reason || null,
+                updatedAt: new Date(),
+            })
+            .where(eq(admissionApplicationsV2.id, applicationId));
+
+        revalidatePath("/admin/admission/register");
+        return { success: true };
+    } catch (error) {
+        console.error("[updatePendingReason] Failed:", error);
+        return { success: false, error: "Failed to update pending reason" };
+    }
+}
+
 export async function updateApplicantData(appId: number, updatePayload: any) {
     try {
         await requireAdmin();
