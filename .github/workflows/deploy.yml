@@ -5,7 +5,6 @@ on:
     branches:
       - main
 
-# Never let two deployments race each other; the newest push always wins.
 concurrency:
   group: production-deploy
   cancel-in-progress: true
@@ -21,28 +20,30 @@ jobs:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           password: ${{ secrets.SERVER_PASSWORD }}
-          # Next.js Docker builds regularly exceed the 10-minute default
           command_timeout: 60m
-          # Stop on the first failing command (belt-and-braces alongside set -e)
-          script_stop: true
+          script_stop: false
+          envs:
+            - COMPOSE_FILE
           script: |
             set -e
+            COMPOSE_FILE="/var/www/school-portal/compose.yml"
+            export COMPOSE_FILE
             cd /var/www/school-portal
 
             echo "=== PULLING LATEST CODE FROM MAIN ==="
             git pull origin main
 
             echo "=== BUILDING NEW APP IMAGE ==="
-            docker compose build school-portal-app
+            docker compose -f "$COMPOSE_FILE" build school-portal-app
 
             echo "=== RESTARTING APP CONTAINER ==="
-            docker compose up -d --force-recreate school-portal-app
+            docker compose -f "$COMPOSE_FILE" up -d --force-recreate school-portal-app
 
             echo "=== RESTARTING WORKER CONTAINER ==="
-            docker compose up -d --force-recreate school-portal-worker
+            docker compose -f "$COMPOSE_FILE" up -d --force-recreate school-portal-worker
 
             echo "=== CLEANING UP OLD DOCKER IMAGES ==="
-            docker image prune -f
+            docker image prune -f || true
 
             echo "=== DEPLOYMENT COMPLETE ==="
-            docker compose ps
+            docker compose -f "$COMPOSE_FILE" ps
