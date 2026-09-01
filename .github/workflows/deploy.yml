@@ -20,15 +20,17 @@ jobs:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           password: ${{ secrets.SERVER_PASSWORD }}
-          command_timeout: 60m
+          command_timeout: 30m
           script_stop: false
           envs:
             - COMPOSE_FILE
           script: |
-            set -e
+            cd /var/www/school-portal
             COMPOSE_FILE="/var/www/school-portal/compose.yml"
             export COMPOSE_FILE
-            cd /var/www/school-portal
+
+            echo "=== REMOVING LEGACY DOCKER-COMPOSE.YML ==="
+            rm -f docker-compose.yml || true
 
             echo "=== PULLING LATEST CODE FROM MAIN ==="
             git pull origin main
