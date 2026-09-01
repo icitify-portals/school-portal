@@ -332,6 +332,7 @@ const adminMenuItems: MenuItem[] = [
             { name: "Scoring Models", href: "/admin/admission/scoring" },
             { name: "Interviews", href: "/admin/admission/interviews" },
             { name: "Waitlist", href: "/admin/admission/waitlist" },
+            { name: "Admission Register", href: "/admin/admission/register" },
             { name: "Candidate Validation", href: "/admin/admission/validation" },
             { name: "Programme Requirements", href: "/admin/admission/validation/requirements" },
             { name: "Admission Payments", href: "/admin/admission/payments" },
