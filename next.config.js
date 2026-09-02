@@ -62,9 +62,6 @@ const securityHeaders = [
 const nextConfig = {
   output: 'standalone',
   reactStrictMode: true,
-  // Force webpack bundler — Turbopack generates chunk names with colons (:)
-  // which are illegal path characters and crash the standalone output copy step.
-  bundler: 'webpack',
   async headers() {
     return [
       {
@@ -122,6 +119,19 @@ const nextConfig = {
     ],
   },
   serverExternalPackages: ['mysql2'],
+  // Exclude heavy native binaries from standalone trace to prevent bloated bundles
+  outputFileTracingExcludes: {
+    '*': [
+      './node_modules/@swc/**',
+      './node_modules/esbuild/**',
+      './node_modules/webpack/**',
+      './node_modules/rollup/**',
+      './node_modules/terser/**',
+      './node_modules/typescript/**',
+      './node_modules/ts-node/**',
+      './node_modules/drizzle-kit/**',
+    ],
+  },
   allowedDevOrigins: [
     '127.0.0.1:3000', 
     'localhost:3000', 
@@ -129,28 +139,11 @@ const nextConfig = {
     'citadeluniversity.local:3000'
   ],
   typescript: {
-    // WARNING: ignoring build errors can mask security vulnerabilities and logic bugs. 
-    // It is highly recommended to fix TS errors and set this to false.
     ignoreBuildErrors: true,
   },
-
   experimental: {
     serverActions: {
       bodySizeLimit: '5mb',
-    },
-    // Exclude heavy native binaries from standalone trace to prevent bloated bundles
-    // and the "matches 11690 files" warning caused by dynamic path joins in storage.ts
-    outputFileTracingExcludes: {
-      '*': [
-        './node_modules/@swc/**',
-        './node_modules/esbuild/**',
-        './node_modules/webpack/**',
-        './node_modules/rollup/**',
-        './node_modules/terser/**',
-        './node_modules/typescript/**',
-        './node_modules/ts-node/**',
-        './node_modules/drizzle-kit/**',
-      ],
     },
   },
 };
