@@ -54,7 +54,8 @@ export async function getPortalSettings() {
             ...s,
             value: s.isEncrypted ? decrypt(s.value) : s.value
         }));
-    } catch (error) {
+    } catch (error: any) {
+        if (error?.digest?.includes("DYNAMIC_SERVER_USAGE") || error?.name === "DynamicServerError") throw error;
         console.error("Failed to fetch settings:", error);
         return [];
     }
@@ -76,7 +77,8 @@ export async function getSettingByKey(key: string) {
 
         // 3. Fallback to hardcoded defaults
         return DEFAULT_SETTINGS[key] || null;
-    } catch (error) {
+    } catch (error: any) {
+        if (error?.digest?.includes("DYNAMIC_SERVER_USAGE") || error?.name === "DynamicServerError") throw error;
         console.error(`Failed to fetch setting ${key}:`, error);
         return DEFAULT_SETTINGS[key] || null;
     }
@@ -327,7 +329,8 @@ export async function getEnabledModules() {
         registeredModules.forEach(m => {
             modules[m.key] = m.isEnabled || false;
         });
-    } catch (error) {
+    } catch (error: any) {
+        if (error?.digest?.includes("DYNAMIC_SERVER_USAGE") || error?.name === "DynamicServerError") throw error;
         console.error("Failed to fetch enabled modules:", error);
     }
 
