@@ -59,7 +59,8 @@ export async function getActiveDbName(): Promise<string> {
         if (headerDb) {
             return headerDb;
         }
-    } catch (e) {
+    } catch (e: any) {
+        if (e?.digest?.includes("DYNAMIC_SERVER_USAGE") || e?.name === "DynamicServerError") throw e;
         // Outside request context (seeding, CLI, background job)
     }
 
@@ -67,7 +68,8 @@ export async function getActiveDbName(): Promise<string> {
     try {
         const headersList = await headers();
         hostname = headersList.get("host") || "";
-    } catch (e) {
+    } catch (e: any) {
+        if (e?.digest?.includes("DYNAMIC_SERVER_USAGE") || e?.name === "DynamicServerError") throw e;
         // Outside request context
     }
 

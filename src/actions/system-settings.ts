@@ -46,7 +46,8 @@ const internalGetSystemSettings = unstable_cache(
                 }
             });
             return Array.from(settingsMap.entries()).map(([key, value]) => ({ key, value }));
-        } catch (error) {
+        } catch (error: any) {
+            if (error?.digest?.includes("DYNAMIC_SERVER_USAGE") || error?.name === "DynamicServerError") throw error;
             console.error("Failed to fetch system settings:", error);
             return Object.entries(DEFAULT_SETTINGS).map(([key, value]) => ({ key, value }));
         }
@@ -82,7 +83,8 @@ const internalGetEnabledModules = unstable_cache(
             registeredModules.forEach(m => {
                 modules[m.key] = m.isEnabled || false;
             });
-        } catch (error) {
+        } catch (error: any) {
+            if (error?.digest?.includes("DYNAMIC_SERVER_USAGE") || error?.name === "DynamicServerError") throw error;
             console.error("Failed to fetch enabled modules:", error);
         }
 

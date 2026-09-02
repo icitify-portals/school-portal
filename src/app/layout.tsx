@@ -94,17 +94,23 @@ export default async function RootLayout({
 
   try {
     enabledModules = await getEnabledModules();
-  } catch { /* use empty defaults at build time */ }
+  } catch (e: any) { 
+    if (e?.digest?.includes("DYNAMIC_SERVER_USAGE") || e?.name === "DynamicServerError") throw e;
+  }
 
   try {
     session = await auth();
-  } catch { /* use null session at build time */ }
+  } catch (e: any) { 
+    if (e?.digest?.includes("DYNAMIC_SERVER_USAGE") || e?.name === "DynamicServerError") throw e;
+  }
 
   try {
     const cookieStore = await cookies();
     initialLang = cookieStore.get("portal-language")?.value || "en";
     initialUnitId = cookieStore.get("activeUnitId")?.value;
-  } catch { /* use defaults at build time */ }
+  } catch (e: any) {
+    if (e?.digest?.includes("DYNAMIC_SERVER_USAGE") || e?.name === "DynamicServerError") throw e;
+  }
 
   return (
     <html lang={initialLang} suppressHydrationWarning>
