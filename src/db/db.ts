@@ -27,7 +27,7 @@ export function getPoolForDb(dbName: string): mysql.Pool {
         globalCache.pools[dbName] = mysql.createPool({
             uri: parsedUrl.toString(),
             waitForConnections: true,
-            connectionLimit: 20,           // Reduced from 100; 20 per tenant is sufficient
+            connectionLimit: 100,          // Reverted to 100 for better concurrent performance
             queueLimit: 50,                // Max 50 waiting requests before rejecting
             connectTimeout: 10000,         // 10s connect timeout
             idleTimeout: 60000,            // 60s idle timeout (release unused connections)
