@@ -140,11 +140,6 @@ const nextConfig = {
       logLevel: 'error',
     },
   },
-
-  // Skip ESLint during production builds — run it in a separate CI step if needed
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
 };
 
 export default nextConfig;
