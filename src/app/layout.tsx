@@ -85,11 +85,26 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const enabledModules = await getEnabledModules();
-  const session = await auth();
-  const cookieStore = await cookies();
-  const initialLang = cookieStore.get("portal-language")?.value || "en";
-  const initialUnitId = cookieStore.get("activeUnitId")?.value;
+  // Wrap in try/catch — during `next build` the DB is not available
+  // (/_not-found and other static pages must render without a live DB).
+  let enabledModules: Record<string, boolean> = {};
+  let session: any = null;
+  let initialLang = 'en';
+  let initialUnitId: string | undefined;
+
+  try {
+    enabledModules = await getEnabledModules();
+  } catch { /* use empty defaults at build time */ }
+
+  try {
+    session = await auth();
+  } catch { /* use null session at build time */ }
+
+  try {
+    const cookieStore = await cookies();
+    initialLang = cookieStore.get("portal-language")?.value || "en";
+    initialUnitId = cookieStore.get("activeUnitId")?.value;
+  } catch { /* use defaults at build time */ }
 
   return (
     <html lang={initialLang} suppressHydrationWarning>
