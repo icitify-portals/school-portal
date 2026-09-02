@@ -27,7 +27,7 @@ ENV NEXT_TURBOPACK=0
 # This persists the .next/cache directory between builds so
 # unchanged pages are not recompiled — the single biggest win.
 RUN --mount=type=cache,id=nextjs-build-cache,target=/app/.next/cache \
-    npx next build
+    npx next build --no-turbopack
 
 # ── runner: minimal production image ─────────────────────────────────────────
 FROM base AS runner

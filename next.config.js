@@ -135,10 +135,6 @@ const nextConfig = {
     serverActions: {
       bodySizeLimit: '5mb',
     },
-    // Use Rust-based turbotrace for faster file tracing in standalone builds
-    turbotrace: {
-      logLevel: 'error',
-    },
   },
 };
 
