@@ -300,33 +300,26 @@ export async function getStudentTranscriptData(studentId: number, options?: { se
   // For each transcript, fetch the detailed course results
   const enriched = await Promise.all(
     transcriptRows.map(async (tr) => {
-      const batch = await db.query.resultBatches.findFirst({
-        where: and(
-          eq(resultBatches.academicSessionId, tr.academicSessionId),
-          eq(resultBatches.semester, tr.semester),
-          eq(resultBatches.status, "published")
-        ),
-      });
-
-      const results = batch
-        ? await db
-            .select({
-              courseCode: courses.code,
-              courseTitle: courses.name,
-              creditLoad: studentResults.creditLoad,
-              score: studentResults.score,
-              grade: studentResults.grade,
-              gradePoint: studentResults.gradePoint,
-            })
-            .from(studentResults)
-            .innerJoin(courses, eq(studentResults.courseId, courses.id))
-            .where(
-              and(
-                eq(studentResults.studentId, studentId),
-                eq(studentResults.batchId, batch.id)
-              )
-            )
-        : [];
+      const results = await db
+        .select({
+          courseCode: courses.code,
+          courseTitle: courses.name,
+          creditLoad: studentResults.creditLoad,
+          score: studentResults.score,
+          grade: studentResults.grade,
+          gradePoint: studentResults.gradePoint,
+        })
+        .from(studentResults)
+        .innerJoin(courses, eq(studentResults.courseId, courses.id))
+        .innerJoin(resultBatches, eq(studentResults.batchId, resultBatches.id))
+        .where(
+          and(
+            eq(studentResults.studentId, studentId),
+            eq(resultBatches.academicSessionId, tr.academicSessionId),
+            eq(resultBatches.semester, tr.semester),
+            eq(resultBatches.status, "published")
+          )
+        );
 
       return { ...tr, results };
     })

@@ -460,10 +460,10 @@ export async function getBulkTranscripts(filters: { programmeId?: number, depart
     // Level filter: ND1, ND2, HND1, HND2
     if (filters.level && filters.level !== "all") {
       const levelMap: Record<string, { programmeType: string; currentLevel: number }> = {
-        "ND1": { programmeType: "ND", currentLevel: 1 },
-        "ND2": { programmeType: "ND", currentLevel: 2 },
-        "HND1": { programmeType: "HND", currentLevel: 1 },
-        "HND2": { programmeType: "HND", currentLevel: 2 },
+        "ND1": { programmeType: "ND", currentLevel: 100 },
+        "ND2": { programmeType: "ND", currentLevel: 200 },
+        "HND1": { programmeType: "HND", currentLevel: 300 },
+        "HND2": { programmeType: "HND", currentLevel: 400 },
       };
       const lvl = levelMap[filters.level];
       if (lvl) {
