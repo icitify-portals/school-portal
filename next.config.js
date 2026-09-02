@@ -62,6 +62,9 @@ const securityHeaders = [
 const nextConfig = {
   output: 'standalone',
   reactStrictMode: true,
+  // Force webpack bundler — Turbopack generates chunk names with colons (:)
+  // which are illegal path characters and crash the standalone output copy step.
+  bundler: 'webpack',
   async headers() {
     return [
       {
@@ -134,6 +137,20 @@ const nextConfig = {
   experimental: {
     serverActions: {
       bodySizeLimit: '5mb',
+    },
+    // Exclude heavy native binaries from standalone trace to prevent bloated bundles
+    // and the "matches 11690 files" warning caused by dynamic path joins in storage.ts
+    outputFileTracingExcludes: {
+      '*': [
+        './node_modules/@swc/**',
+        './node_modules/esbuild/**',
+        './node_modules/webpack/**',
+        './node_modules/rollup/**',
+        './node_modules/terser/**',
+        './node_modules/typescript/**',
+        './node_modules/ts-node/**',
+        './node_modules/drizzle-kit/**',
+      ],
     },
   },
 };
