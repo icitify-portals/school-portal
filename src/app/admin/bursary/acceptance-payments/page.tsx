@@ -7,7 +7,8 @@ import {
     Filter, FileText, Download, ExternalLink, ChevronLeft, ChevronRight, Printer, Receipt
 } from "lucide-react";
 import { getSuccessfulAcceptancePayments } from "@/actions/admission_v2";
-import { getDepartments, getProgrammes } from "@/actions/programmes";
+import { getDepartments } from "@/actions/departments";
+import { getProgrammes } from "@/actions/programmes";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { toast } from "sonner";
