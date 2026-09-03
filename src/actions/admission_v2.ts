@@ -1768,8 +1768,6 @@ export async function initiateSchoolFeesCheckout(applicationId: number) {
             reference,
             rrr,
             amount: totalAmount,
-            schoolFeesAmount,
-            processingFeeAmount,
             email,
             firstName,
             lastName
@@ -1824,9 +1822,9 @@ export async function initiateProcessingFeeCheckout(applicationId: number) {
         const email = app.applicant?.email || formData.email || "student@school.edu.ng";
 
         await db.insert(transactions).values({
-            userId: app.applicantId,
             studentId: app.studentId,
             amount: processingFeeAmount.toString(),
+            type: 'credit',
             gateway: 'paystack',
             gatewayReference: reference,
             purpose: `Processing Fee Payment - App ${applicationId}`,
