@@ -233,7 +233,7 @@ export default function ApplicantStatusPage() {
 
                                 {data.status === 'admitted' && (
                                     <div className="flex flex-col sm:flex-wrap gap-3 sm:gap-4 pt-4">
-                                        {(!data.template.requireAcceptanceFee || data.acceptancePaymentStatus === 'paid') ? (
+                                        {data.admissionNotes?.includes('Matric Number') ? (
                                             <Button 
                                                 onClick={() => window.open(`/admission/letter/${id}`, '_blank')}
                                                 className="rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-black px-5 sm:px-8 py-4 sm:py-6 flex gap-3 uppercase text-xs tracking-widest shadow-xl shadow-emerald-100"
@@ -245,7 +245,7 @@ export default function ApplicantStatusPage() {
                                                 disabled
                                                 className="rounded-2xl bg-slate-200 text-slate-400 font-black px-5 sm:px-8 py-4 sm:py-6 flex gap-3 uppercase text-xs tracking-widest cursor-not-allowed opacity-60"
                                             >
-                                                <Download className="w-5 h-5 text-slate-300" /> Letter Locked (Pay Acceptance & ID Card Fee to Unlock)
+                                                <Download className="w-5 h-5 text-slate-300" /> Letter Locked (Pay School Fees to Unlock)
                                             </Button>
                                         )}
                                         {data.template.requireAcceptanceFee && data.acceptancePaymentStatus !== 'paid' && (

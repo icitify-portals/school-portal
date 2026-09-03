@@ -26,17 +26,17 @@ export default function AdmissionLetterPage() {
             setData(statusRes);
 
             if (statusRes && statusRes.status === 'admitted') {
-                // @ts-expect-error - TS2551: Auto-suppressed for build
-                const requireAcceptanceFee = statusRes.template?.requireAcceptanceFee;
-                const acceptancePaid = statusRes.acceptancePaymentStatus === 'paid';
+                const isFullyRegistered = statusRes.admissionNotes?.includes('Matric Number');
                 
-                if (!requireAcceptanceFee || acceptancePaid) {
+                if (isFullyRegistered) {
                     const letterRes = await generateAdmissionLetterAction(id);
                     if (letterRes.success) {
                         setLetter(letterRes.data);
                     } else {
                         setError(letterRes.error || "Failed to generate admission letter.");
                     }
+                } else {
+                    setError("Admission Letter locked. Please pay your School Fees to generate your Matriculation Number first.");
                 }
             }
         } catch (e: any) {
@@ -48,19 +48,18 @@ export default function AdmissionLetterPage() {
     if (loading) return <div className="min-h-screen flex justify-center items-center bg-slate-50"><Loader2 className="w-10 h-10 animate-spin text-indigo-500" /></div>;
     if (!data || data.status !== 'admitted') return <div className="min-h-screen flex justify-center items-center font-black text-2xl uppercase text-slate-300">Letter Not Available</div>;
 
-    const requireAcceptanceFee = data.template?.requireAcceptanceFee;
-    const acceptancePaid = data.acceptancePaymentStatus === 'paid';
+    const isFullyRegistered = data.admissionNotes?.includes('Matric Number');
     
-    if (requireAcceptanceFee && !acceptancePaid) {
+    if (!isFullyRegistered) {
         return (
             <div className="min-h-screen flex flex-col justify-center items-center bg-slate-50 p-8 text-center space-y-6">
-                <div className="p-8 bg-rose-50 rounded-[3rem] text-rose-500 shadow-xl">
-                    <ShieldCheck className="w-16 h-16 animate-pulse" />
-                </div>
-                <div className="space-y-2 max-w-md">
+                <div className="bg-white rounded-3xl shadow-xl p-12 text-center max-w-md mx-auto space-y-6">
+                    <div className="w-20 h-20 bg-rose-50 rounded-full flex items-center justify-center mx-auto">
+                        <ShieldCheck className="w-10 h-10 text-rose-500" />
+                    </div>
                     <h4 className="text-3xl font-black text-slate-900 italic uppercase">Admission Letter Locked</h4>
-                    <p className="text-sm font-bold text-slate-500 leading-relaxed uppercase tracking-wider">
-                        You must pay the non-refundable acceptance fee before you can view or print your official admission letter.
+                    <p className="text-sm font-bold text-slate-500 leading-relaxed uppercase tracking-widest">
+                        You must pay your School Fees to generate your Matriculation Number before you can view or print your official admission letter.
                     </p>
                 </div>
                 <Button onClick={() => window.history.back()} className="rounded-2xl bg-slate-900 text-white font-black px-8 py-4 uppercase text-xs tracking-widest hover:bg-slate-800">
