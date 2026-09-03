@@ -1200,13 +1200,32 @@ export async function getAllUnifiedTransactions(filters?: { status?: string, cat
                 const apps = await db.select({
                     id: admissionApplicationsV2.id,
                     name: users.name,
-                    email: users.email
+                    email: users.email,
+                    data: admissionApplicationsV2.data,
+                    formNumber: admissionApplicationsV2.formNumber
                 })
                 .from(admissionApplicationsV2)
                 .leftJoin(users, eq(admissionApplicationsV2.applicantId, users.id))
                 .where(inArray(admissionApplicationsV2.id, Array.from(appIdsToFetch)));
 
-                apps.forEach(app => applicantMap.set(app.id, app));
+                apps.forEach(app => {
+                    // Parse form data to extract name/email if user record is missing/empty
+                    let formData: any = {};
+                    try {
+                        formData = typeof app.data === 'string' ? JSON.parse(app.data || '{}') : (app.data || {});
+                    } catch {}
+
+                    const nameFromForm = formData.surname
+                        ? `${formData.firstName || ''} ${formData.surname}`.trim()
+                        : `${formData.firstName || ''} ${formData.lastName || ''}`.trim();
+
+                    applicantMap.set(app.id, {
+                        id: app.id,
+                        name: app.name || nameFromForm || 'Unknown Applicant',
+                        email: app.email || formData.email || formData.applicantEmail || '',
+                        formNumber: app.formNumber
+                    });
+                });
             }
 
             for (const f of fees) {
@@ -1237,7 +1256,7 @@ export async function getAllUnifiedTransactions(filters?: { status?: string, cat
                                 id: 0,
                                 firstName: names[0],
                                 lastName: names.slice(1).join(" ") || "",
-                                matricNumber: `APP-${appId}`,
+                                matricNumber: applicant.formNumber || `APP-${appId}`,
                                 contactEmail: applicant.email
                             };
                         }

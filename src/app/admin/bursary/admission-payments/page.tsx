@@ -7,7 +7,7 @@ import {
     CreditCard, Search, Loader2, User, Calendar, CheckCircle2, XCircle,
     Filter, FileText, Download, ExternalLink, Trash2, ChevronLeft, ChevronRight
 } from "lucide-react";
-import { getAdminV2Applications, confirmAdmissionPayment, deleteAdmissionApplication, getAdmissionAcademicUnits, adminConfirmAcceptancePayment, reverseAcceptancePayment } from "@/actions/admission_v2";
+import { getAdminV2Applications, confirmAdmissionPayment, deleteAdmissionApplication, getAdmissionAcademicUnits, adminConfirmAcceptancePayment, reverseAcceptancePayment, syncAcceptancePaymentsFromTransactions } from "@/actions/admission_v2";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -27,6 +27,7 @@ export default function BursaryAdmissionPaymentsPage() {
     const [programmes, setProgrammes] = useState<any[]>([]);
 
     const [currentPage, setCurrentPage] = useState(1);
+    const [syncing, setSyncing] = useState(false);
     const itemsPerPage = 10;
 
     useEffect(() => { 
@@ -93,6 +94,23 @@ export default function BursaryAdmissionPaymentsPage() {
         }
     };
 
+    const handleSyncAcceptancePayments = async () => {
+        setSyncing(true);
+        try {
+            const res = await syncAcceptancePaymentsFromTransactions();
+            if (res.success) {
+                toast.success(`Synced ${res.synced} acceptance payment(s) from transactions`);
+                fetchData();
+            } else {
+                toast.error(res.error || "Sync failed");
+            }
+        } catch (err: any) {
+            toast.error(err?.message || "Sync failed");
+        } finally {
+            setSyncing(false);
+        }
+    };
+
     const filteredProgrammes = departmentFilter
         ? programmes.filter((p: any) => p.departmentId === departmentFilter || p.deptId === departmentFilter)
         : programmes;
@@ -151,6 +169,21 @@ export default function BursaryAdmissionPaymentsPage() {
                             <p className="text-slate-300 font-medium tracking-tight max-w-2xl text-lg opacity-90">
                                 Admission fee collection overview for bursary reconciliation
                             </p>
+                        </div>
+                        <div className="flex gap-3">
+                            <Button
+                                onClick={handleSyncAcceptancePayments}
+                                disabled={syncing}
+                                className="rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-black text-[10px] uppercase tracking-widest px-4 py-3 shadow-lg shadow-amber-100"
+                            >
+                                {syncing ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <CheckCircle2 className="w-4 h-4 mr-2" />}
+                                Sync Acceptance Fees
+                            </Button>
+                            <Link href="/admin/bursary/acceptance-payments">
+                                <Button className="rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-[10px] uppercase tracking-widest px-4 py-3 shadow-lg shadow-indigo-100">
+                                    View Acceptance Payments
+                                </Button>
+                            </Link>
                         </div>
                     </div>
                 </div>

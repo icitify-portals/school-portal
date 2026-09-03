@@ -720,6 +720,83 @@ export async function reverseAcceptancePayment(applicationId: number) {
     }
 }
 
+export async function syncAcceptancePaymentsFromTransactions() {
+    await requireAdmin();
+    try {
+        // Find all completed acceptance fee transactions
+        const completedTxs = await db.select({
+            id: transactions.id,
+            purpose: transactions.purpose,
+            gatewayReference: transactions.gatewayReference,
+            amount: transactions.amount,
+            createdAt: transactions.createdAt
+        })
+        .from(transactions)
+        .where(and(
+            like(transactions.purpose, 'Acceptance Fee Payment%'),
+            eq(transactions.status, 'completed')
+        ));
+
+        const appIdsToUpdate: number[] = [];
+        const refMap = new Map<number, string>();
+
+        for (const tx of completedTxs) {
+            const match = tx.purpose?.match(/Application ID:\s*(\d+)/);
+            if (match && match[1]) {
+                const appId = parseInt(match[1]);
+                appIdsToUpdate.push(appId);
+                if (tx.gatewayReference && !refMap.has(appId)) {
+                    refMap.set(appId, tx.gatewayReference);
+                }
+            }
+        }
+
+        if (appIdsToUpdate.length === 0) {
+            return { success: true, synced: 0 };
+        }
+
+        // Get applications that are still pending/not paid
+        const pendingApps = await db.select({
+            id: admissionApplicationsV2.id,
+            acceptancePaymentStatus: admissionApplicationsV2.acceptancePaymentStatus,
+            acceptancePaymentReference: admissionApplicationsV2.acceptancePaymentReference
+        })
+        .from(admissionApplicationsV2)
+        .where(and(
+            inArray(admissionApplicationsV2.id, appIdsToUpdate),
+            or(
+                eq(admissionApplicationsV2.acceptancePaymentStatus, 'pending'),
+                isNull(admissionApplicationsV2.acceptancePaymentStatus)
+            )
+        ));
+
+        let synced = 0;
+        for (const app of pendingApps) {
+            try {
+                await db.update(admissionApplicationsV2)
+                    .set({
+                        acceptancePaymentStatus: 'paid',
+                        acceptancePaymentReference: refMap.get(app.id) || app.acceptancePaymentReference,
+                        updatedAt: new Date()
+                    })
+                    .where(eq(admissionApplicationsV2.id, app.id));
+                synced++;
+            } catch (e) {
+                console.error(`Failed to sync acceptance payment for application ${app.id}:`, e);
+            }
+        }
+
+        revalidatePath('/admin/bursary/admission-payments');
+        revalidatePath('/admin/bursary/acceptance-payments');
+        revalidatePath('/admin/admission/v2');
+
+        return { success: true, synced };
+    } catch (error) {
+        console.error("Failed to sync acceptance payments:", error);
+        return { success: false, error: "Failed to sync acceptance payments" };
+    }
+}
+
 export async function getSuccessfulAcceptancePayments(filters?: {
     search?: string;
     departmentId?: number;
