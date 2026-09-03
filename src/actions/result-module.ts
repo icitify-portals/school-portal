@@ -486,7 +486,7 @@ export async function getBulkTranscripts(filters: { programmeId?: number, depart
     const matchingStudents = await db.query.students.findMany({
       where: queryConditions.length > 0 ? and(...queryConditions) : undefined,
       with: { user: true, programme: true, department: true },
-      orderBy: (s, { asc }) => [asc(sql`RIGHT(${s.matricNumber}, 3)`)],
+      orderBy: (s, { asc }) => [asc(sql`CAST(SUBSTRING_INDEX(${s.matricNumber}, '/', -1) AS UNSIGNED)`), asc(s.matricNumber)],
     });
     
     // Process in batches so we don't overload the DB
@@ -931,7 +931,7 @@ export async function getResultTemplateStudents(filters: {
         user: true,
         programme: true,
       },
-      orderBy: (s, { asc }) => [asc(sql`RIGHT(${s.matricNumber}, 3)`)],
+      orderBy: (s, { asc }) => [asc(sql`CAST(SUBSTRING_INDEX(${s.matricNumber}, '/', -1) AS UNSIGNED)`), asc(s.matricNumber)],
     });
 
     const rows = matchingStudents.map(s => ({
