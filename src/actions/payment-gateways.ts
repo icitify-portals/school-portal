@@ -140,12 +140,25 @@ export async function initiatePayment(gateway: string, amount: number, reference
                     payerPhone: "08000000000"
                 })
             });
-            const data = await res.json();
-            if (data.statuscode === '025' && data.rrr) {
+            const textResponse = await res.text();
+            let data;
+            try {
+                data = JSON.parse(textResponse);
+            } catch (e) {
+                const match = textResponse.match(/jsonp\s*\(\s*(.*)\s*\)/s);
+                if (match) {
+                    data = JSON.parse(match[1]);
+                } else {
+                    return { error: "Invalid response from Remita" };
+                }
+            }
+            
+            const rrr = data.RRR || data.rrr;
+            if (data.statuscode === '025' && rrr) {
                 // Return a simulated checkout URL that handles Remita inline JS using the RRR
-                paymentUrl = `/finance/checkout/simulate?gateway=remita&reference=${reference}&amount=${amount}&rrr=${data.rrr}`;
+                paymentUrl = `/finance/checkout/simulate?gateway=remita&reference=${reference}&amount=${amount}&rrr=${rrr}`;
             } else {
-                return { error: data.message || "Remita initialization failed" };
+                return { error: data.message || data.status || "Remita initialization failed" };
             }
         } else if (gateway === 'alatpay') {
             // Return a simulated checkout URL that handles ALATPay inline JS

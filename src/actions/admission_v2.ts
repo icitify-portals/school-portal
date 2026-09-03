@@ -1755,12 +1755,25 @@ export async function initiateSchoolFeesCheckout(applicationId: number) {
                 payerPhone: "08000000000"
             })
         });
-        const data = await res.json();
+        const textResponse = await res.text();
+        let data;
+        try {
+            data = JSON.parse(textResponse);
+        } catch (e) {
+            const match = textResponse.match(/jsonp\s*\(\s*(.*)\s*\)/s);
+            if (match) {
+                data = JSON.parse(match[1]);
+            } else {
+                return { success: false, error: "Invalid response from Remita." };
+            }
+        }
+        
         let rrr = '';
-        if (data.statuscode === '025' && data.rrr) {
-            rrr = data.rrr;
+        const extractedRrr = data.RRR || data.rrr;
+        if (data.statuscode === '025' && extractedRrr) {
+            rrr = extractedRrr;
         } else {
-            return { success: false, error: data.message || "Failed to generate Remita RRR." };
+            return { success: false, error: data.message || data.status || "Failed to generate Remita RRR." };
         }
 
         await db.insert(transactions).values({
