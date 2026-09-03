@@ -39,7 +39,7 @@ import { storage } from "@/lib/storage";
 import { hash, compare } from "bcryptjs";
 import { writeFile, mkdir, readFile } from "fs/promises";
 
-export function getCalculatedTuition(template: any, programme: any) {
+function getCalculatedTuition(template: any, programme: any) {
     if (!template) return 68500;
     
     const level = (template.level || '').toLowerCase();
