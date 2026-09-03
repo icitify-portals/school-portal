@@ -9,6 +9,7 @@ import {
 import { getSuccessfulAcceptancePayments } from "@/actions/admission_v2";
 import { getDepartments } from "@/actions/departments";
 import { getProgrammes } from "@/actions/programmes";
+import { getBrandingSettings } from "@/actions/settings";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -16,6 +17,7 @@ import Link from "next/link";
 
 export default function AcceptancePaymentsPage() {
     const [data, setData] = useState<any>({ payments: [], total: 0 });
+    const [branding, setBranding] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState("");
     const [departmentFilter, setDepartmentFilter] = useState<number | undefined>(undefined);
@@ -34,10 +36,12 @@ export default function AcceptancePaymentsPage() {
         fetchData();
         Promise.all([
             getDepartments(),
-            getProgrammes()
-        ]).then(([deptRes, progRes]) => {
+            getProgrammes(),
+            getBrandingSettings()
+        ]).then(([deptRes, progRes, brandingData]) => {
             if (deptRes.success) setDepartments(deptRes.data || []);
             if (progRes.success) setProgrammes(progRes.data || []);
+            setBranding(brandingData);
         }).catch(() => {});
     }, []);
 
@@ -109,7 +113,7 @@ export default function AcceptancePaymentsPage() {
     <style>
         body { font-family: Arial, sans-serif; padding: 40px; max-width: 800px; margin: 0 auto; }
         .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 20px; margin-bottom: 20px; }
-        .header h1 { margin: 0; font-size: 24px; }
+        .header h1 { margin: 0; font-size: 24px; text-transform: uppercase; }
         .header p { margin: 5px 0; color: #666; }
         .receipt-id { background: #f5f5f5; padding: 15px; margin: 20px 0; border-radius: 8px; }
         .row { display: flex; justify-content: space-between; margin: 10px 0; padding: 10px 0; border-bottom: 1px solid #eee; }
@@ -122,9 +126,14 @@ export default function AcceptancePaymentsPage() {
 </head>
 <body>
     <div class="header">
-        <h1>FEDERAL SCHOOL OF STATISTICS</h1>
-        <p>Km 4, Ikpaja Road, Ibadan, Oyo State</p>
-        <p>Email: info@fss.edu.ng | Tel: 080XXXXXXXX</p>
+        <div style="display: flex; align-items: center; justify-content: center; gap: 15px; margin-bottom: 10px;">
+            <img src="${branding?.portalLogo && branding.portalLogo.trim() !== '' && branding.portalLogo !== 'null' ? branding.portalLogo : '/fss_logo.png'}" alt="School Logo" style="width: 60px; height: 60px; object-fit: contain;" onerror="this.src='/fss_logo.png'" />
+            <div>
+                <h1>${branding?.portalName || 'Federal School of Statistics, Ibadan'}</h1>
+                ${branding?.schoolMotto ? `<p style="font-size: 12px; font-style: italic; margin-top: 5px;">${branding.schoolMotto}</p>` : ''}
+            </div>
+        </div>
+        ${branding?.schoolAddress ? `<p style="font-size: 14px;">${branding.schoolAddress}</p>` : ''}
     </div>
 
     <div class="receipt-id">
@@ -143,15 +152,15 @@ export default function AcceptancePaymentsPage() {
     </div>
     <div class="row">
         <span class="label">Programme:</span>
-        <span class="value">${payment.programmeName}</span>
+        <span class="value">${payment.programmeName || 'N/A'}</span>
     </div>
     <div class="row">
         <span class="label">Department:</span>
-        <span class="value">${payment.departmentName}</span>
+        <span class="value">${payment.departmentName || 'N/A'}</span>
     </div>
     <div class="row">
         <span class="label">Level:</span>
-        <span class="value">${payment.academicLevel}</span>
+        <span class="value">Applicant</span>
     </div>
     <div class="row">
         <span class="label">Payment Date:</span>
