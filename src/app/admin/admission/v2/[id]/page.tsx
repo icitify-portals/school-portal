@@ -9,7 +9,7 @@ import {
     Image as ImageIcon, ChevronDown, ChevronUp, Shield, ShieldAlert, ShieldCheck, Edit, Lock,
     Download
 } from "lucide-react";
-import { getAdminV2ApplicationDetail, updateAdmissionStatus, confirmAdmissionPayment, confirmAcceptancePayment, reverseAdmissionPayment, confirmProcessingFeePayment, reverseProcessingFeePayment, adminConfirmAcceptancePayment, reverseAcceptancePayment, updateApplicantData, changeApplicantProgramme, getAdmissionAcademicUnits, updateApplicantMatricNumber } from "@/actions/admission_v2";
+import { getAdminV2ApplicationDetail, updateAdmissionStatus, confirmAdmissionPayment, confirmAcceptancePayment, reverseAdmissionPayment, adminConfirmProcessingFeePayment, reverseProcessingFeePayment, adminConfirmAcceptancePayment, reverseAcceptancePayment, updateApplicantData, changeApplicantProgramme, getAdmissionAcademicUnits, updateApplicantMatricNumber } from "@/actions/admission_v2";
 import { getBrandingSettings } from "@/actions/settings";
 import { verifyUserEmailManually, resetUserPassword } from "@/actions/user-actions";
 import { cn } from "@/lib/utils";
@@ -230,15 +230,17 @@ export default function V2ApplicationDetailPage() {
 
     const handleConfirmProcessingFee = async () => {
         if (!app) return;
-        const confirm = window.confirm("Are you sure you want to manually mark this processing fee as paid?");
-        if (!confirm) return;
-        const res = await confirmProcessingFeePayment(app.id);
-        if (res.success) {
-            toast.success("Processing fee confirmed");
+        if (!confirm("Confirm processing fee payment manually?")) return;
+        
+        const toastId = toast.loading("Confirming...");
+        const res = await adminConfirmProcessingFeePayment(app.id);
+        
+        if (res?.success) {
+            toast.success("Processing fee confirmed manually.", { id: toastId });
             const data = await getAdminV2ApplicationDetail(app.id);
             setApp(data);
         } else {
-            toast.error(res.error || "Action failed");
+            toast.error(res.error || "Action failed", { id: toastId });
         }
     };
 
