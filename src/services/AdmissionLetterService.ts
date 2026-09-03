@@ -18,17 +18,17 @@ export class AdmissionLetterService {
         // 1. Fetch Candidate, Student, Form Template and Unit Data
         const application = await db.select()
             .from(admissionApplicationsV2)
-            .innerJoin(students, eq(admissionApplicationsV2.studentId, students.id))
-            .innerJoin(users, eq(students.userId, users.id))
+            .innerJoin(users, eq(admissionApplicationsV2.applicantId, users.id))
             .innerJoin(admissionFormTemplates, eq(admissionApplicationsV2.templateId, admissionFormTemplates.id))
+            .leftJoin(students, eq(admissionApplicationsV2.studentId, students.id))
             .leftJoin(institutionalUnits, eq(students.unitId, institutionalUnits.id))
             .where(eq(admissionApplicationsV2.id, applicationId))
             .limit(1);
 
-        if (!application[0]) throw new Error("Matriculated candidate not found.");
+        if (!application[0]) throw new Error("Admitted candidate not found.");
 
         const candidate = application[0].users;
-        const student = application[0].students;
+        const student = application[0].students || {} as any;
         const formTemplate = application[0].admission_form_templates;
         let unit = application[0].institutional_units;
 
@@ -38,7 +38,8 @@ export class AdmissionLetterService {
         }
 
         // 2. Fetch the correct Admission Letter template
-        const isPartTime = formTemplate.studyMode?.toLowerCase().includes('part-time') || student.studyMode?.toLowerCase().includes('part-time');
+        const appMode = application[0].admission_applications_v2.applicationMode;
+        const isPartTime = formTemplate.studyMode?.toLowerCase().includes('part-time') || student.studyMode?.toLowerCase().includes('part-time') || appMode?.toLowerCase().includes('part-time');
         const isHND = formTemplate.name?.toUpperCase().includes('HND');
         
         let targetTemplateName = 'Admission Letter - Full-Time ND';
