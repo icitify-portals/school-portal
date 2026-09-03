@@ -1712,7 +1712,7 @@ export async function initiateSchoolFeesCheckout(applicationId: number) {
 
         if (app.acceptancePaymentStatus !== 'paid') return { success: false, error: "Acceptance Fee must be paid before School Fees." };
 
-        const isNd = template.level.toLowerCase().includes("nd") || template.level.toLowerCase().includes("diploma");
+        const isNd = template.level.toLowerCase().includes("nd") || template.level.toLowerCase().includes("diploma") || template.name.toLowerCase().includes("nd") || template.name.toLowerCase().includes("diploma");
         const totalAmount = isNd ? 58500 : 68500;
 
         const reference = `SCH-${applicationId}-${Date.now()}`;
