@@ -1222,10 +1222,19 @@ export async function getApplicantStatusData(applicationId: number) {
             where: eq(admissionExamResults.applicationId, applicationId)
         });
 
+        // Check if school fees have been paid (gatewayReference starts with SCH-{applicationId}-)
+        const schoolFeesTx = await db.query.transactions.findFirst({
+            where: and(
+                like(transactions.gatewayReference, `SCH-${applicationId}-%`),
+                eq(transactions.status, 'completed')
+            )
+        });
+
         return {
             ...app,
             template,
-            results
+            results,
+            hasPaidSchoolFees: !!schoolFeesTx
         };
     } catch (error) {
         console.error("Failed to fetch applicant status data:", error);
@@ -1792,11 +1801,6 @@ export async function confirmSchoolFeesPayment(applicationId: number, reference:
             .set({ status: 'completed' })
             .where(eq(transactions.gatewayReference, reference));
 
-        // Mark application school fees as paid
-        await db.update(admissionApplicationsV2)
-            .set({ paymentStatus: 'paid', paymentReference: reference })
-            .where(eq(admissionApplicationsV2.id, applicationId));
-
         revalidatePath(`/admission/status/${applicationId}`);
         return { success: true };
     } catch (error) {
@@ -1813,7 +1817,17 @@ export async function initiateProcessingFeeCheckout(applicationId: number) {
         });
 
         if (!app) return { success: false, error: "Application not found" };
-        if (app.paymentStatus !== 'paid') return { success: false, error: "School Fees must be paid first." };
+
+        const schoolFeesTx = await db.query.transactions.findFirst({
+            where: and(
+                like(transactions.gatewayReference, `SCH-${applicationId}-%`),
+                eq(transactions.status, 'completed')
+            )
+        });
+
+        if (!schoolFeesTx) {
+            return { success: false, error: "School Fees must be paid first." };
+        }
 
         const processingFeeAmount = 4000;
         const reference = `PROC-${applicationId}-${Date.now()}`;

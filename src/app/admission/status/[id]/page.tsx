@@ -296,7 +296,7 @@ export default function ApplicantStatusPage() {
                                                     <CheckCircle2 className="w-4 h-4" /> {data.template.requireAcceptanceFee ? 'Acceptance & ID Card Fee Paid — Status: Confirmed Admitted' : 'Admitted — Acceptance Fee Not Required'}
                                                 </div>
                                                 
-                                                {data.paymentStatus !== 'paid' ? (
+                                                {!data.hasPaidSchoolFees ? (
                                                     <Button 
                                                         onClick={handleSchoolFeesPayment}
                                                         className="rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black px-5 sm:px-8 py-4 sm:py-6 flex gap-3 uppercase text-xs tracking-widest shadow-xl shadow-indigo-100"
