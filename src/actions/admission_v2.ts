@@ -38,6 +38,34 @@ import { generateFormNumber, generateFormHash } from "@/lib/form-number";
 import { storage } from "@/lib/storage";
 import { hash, compare } from "bcryptjs";
 import { writeFile, mkdir, readFile } from "fs/promises";
+
+export function getCalculatedTuition(template: any, programme: any) {
+    if (!template) return 68500;
+    
+    const level = (template.level || '').toLowerCase();
+    const tName = (template.name || '').toLowerCase();
+    const progName = (programme?.name || '').toLowerCase();
+    
+    const isHnd = level.includes('hnd') || tName.includes('hnd');
+    const isNd = !isHnd && (level.includes('nd') || level.includes('diploma') || tName.includes('nd') || tName.includes('diploma'));
+    
+    let amount = isNd ? 58500 : 68500;
+    
+    if (isNd) {
+        if (progName.includes('accountancy')) amount = 58500;
+        else if (progName.includes('statistics')) amount = 60500;
+        else if (progName.includes('business administration')) amount = 58500;
+        else if (progName.includes('computer science')) amount = 60500;
+    } else {
+        if (progName.includes('accountancy')) amount = 68500;
+        else if (progName.includes('statistics')) amount = 70500;
+        else if (progName.includes('business administration')) amount = 68500;
+        else if (progName.includes('artificial intelligence')) amount = 70500;
+        else if (progName.includes('networking')) amount = 70500;
+    }
+    
+    return amount;
+}
 import path from "path";
 import { randomUUID } from "crypto";
 import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
@@ -1202,7 +1230,7 @@ export async function getApplicantStatusData(applicationId: number) {
     try {
         const app = await db.query.admissionApplicationsV2.findFirst({
             where: eq(admissionApplicationsV2.id, applicationId),
-            with: { applicant: true }
+            with: { applicant: true, programme: true }
         });
 
         if (!app) return null;
@@ -1231,8 +1259,7 @@ export async function getApplicantStatusData(applicationId: number) {
             )
         });
 
-        const isNd = template?.level.toLowerCase().includes("nd") || template?.level.toLowerCase().includes("diploma") || template?.name.toLowerCase().includes("nd") || template?.name.toLowerCase().includes("diploma");
-        const schoolFeesAmount = isNd ? 58500 : 68500;
+        const schoolFeesAmount = getCalculatedTuition(template, app.programme);
         
         return {
             ...app,
@@ -1699,7 +1726,7 @@ export async function initiateSchoolFeesCheckout(applicationId: number) {
     try {
         const app = await db.query.admissionApplicationsV2.findFirst({
             where: eq(admissionApplicationsV2.id, applicationId),
-            with: { applicant: true }
+            with: { applicant: true, programme: true }
         });
 
         if (!app) return { success: false, error: "Application not found" };
@@ -1712,8 +1739,7 @@ export async function initiateSchoolFeesCheckout(applicationId: number) {
 
         if (app.acceptancePaymentStatus !== 'paid') return { success: false, error: "Acceptance Fee must be paid before School Fees." };
 
-        const isNd = template.level.toLowerCase().includes("nd") || template.level.toLowerCase().includes("diploma") || template.name.toLowerCase().includes("nd") || template.name.toLowerCase().includes("diploma");
-        const totalAmount = isNd ? 58500 : 68500;
+        const totalAmount = getCalculatedTuition(template, app.programme);
 
         const reference = `SCH-${applicationId}-${Date.now()}`;
         const formData = typeof app.data === 'string' ? JSON.parse(app.data || '{}') : (app.data || {});
