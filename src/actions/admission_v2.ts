@@ -1236,7 +1236,8 @@ export async function getApplicantStatusData(applicationId: number) {
 export async function initiateAcceptancePaymentCheckout(applicationId: number) {
     try {
         const app = await db.query.admissionApplicationsV2.findFirst({
-            where: eq(admissionApplicationsV2.id, applicationId)
+            where: eq(admissionApplicationsV2.id, applicationId),
+            with: { applicant: true }
         });
 
         if (!app) return { success: false, error: "Application not found" };
@@ -1265,10 +1266,22 @@ export async function initiateAcceptancePaymentCheckout(applicationId: number) {
         const reference = `ACC-${applicationId}-${Date.now()}`;
         const formData = typeof app.data === 'string' ? JSON.parse(app.data || '{}') : (app.data || {});
 
-        const email = formData.email || "student@school.edu.ng";
-        const firstName = formData.firstName || "Applicant";
-        const lastName = formData.lastName || "";
-        const phone = formData.phone || formData.phoneNumber || "";
+        const email = app.applicant?.email || formData.email || "student@school.edu.ng";
+        
+        let firstName = formData.firstName || "Applicant";
+        let lastName = formData.lastName || "";
+        
+        if (app.applicant && app.applicant.name) {
+            const parts = app.applicant.name.split(/\s+/);
+            firstName = parts[0] || "Applicant";
+            lastName = parts.slice(1).join(" ") || parts[0] || "Applicant";
+        } else if (formData.fullName) {
+            const parts = formData.fullName.split(/\s+/);
+            firstName = parts[0] || "Applicant";
+            lastName = parts.slice(1).join(" ") || parts[0] || "Applicant";
+        }
+
+        const phone = app.applicant?.phone || formData.phone || formData.phoneNumber || "";
 
         // Record pending transaction
         await db.insert(transactions).values({
@@ -1671,7 +1684,8 @@ export async function updateApplicantMatricNumber(applicationId: number, newMatr
 export async function initiateSchoolFeesCheckout(applicationId: number) {
     try {
         const app = await db.query.admissionApplicationsV2.findFirst({
-            where: eq(admissionApplicationsV2.id, applicationId)
+            where: eq(admissionApplicationsV2.id, applicationId),
+            with: { applicant: true }
         });
 
         if (!app) return { success: false, error: "Application not found" };
@@ -1692,9 +1706,22 @@ export async function initiateSchoolFeesCheckout(applicationId: number) {
         const reference = `SCH-${applicationId}-${Date.now()}`;
         const formData = typeof app.data === 'string' ? JSON.parse(app.data || '{}') : (app.data || {});
 
-        const email = formData.email || "student@school.edu.ng";
-        const firstName = formData.firstName || "Applicant";
-        const lastName = formData.lastName || "";
+        const email = app.applicant?.email || formData.email || "student@school.edu.ng";
+        
+        let firstName = formData.firstName || "Applicant";
+        let lastName = formData.lastName || "";
+        
+        if (app.applicant && app.applicant.name) {
+            const parts = app.applicant.name.split(/\s+/);
+            firstName = parts[0] || "Applicant";
+            lastName = parts.slice(1).join(" ") || parts[0] || "Applicant";
+        } else if (formData.fullName) {
+            const parts = formData.fullName.split(/\s+/);
+            firstName = parts[0] || "Applicant";
+            lastName = parts.slice(1).join(" ") || parts[0] || "Applicant";
+        }
+
+        const phone = app.applicant?.phone || formData.phone || formData.phoneNumber || "";
 
         const isLive = process.env.REMITA_ENV !== 'demo';
         const merchantId = isLive ? "19201597339" : (process.env.REMITA_MERCHANT_ID || "19201597339");
