@@ -1201,7 +1201,8 @@ export async function updateAdmissionStatus(applicationId: number, status: any, 
 export async function getApplicantStatusData(applicationId: number) {
     try {
         const app = await db.query.admissionApplicationsV2.findFirst({
-            where: eq(admissionApplicationsV2.id, applicationId)
+            where: eq(admissionApplicationsV2.id, applicationId),
+            with: { applicant: true }
         });
 
         if (!app) return null;
@@ -1281,15 +1282,15 @@ export async function initiateAcceptancePaymentCheckout(applicationId: number) {
 
         const email = app.applicant?.email || formData.email || "student@school.edu.ng";
         
-        let firstName = formData.firstName || "Applicant";
-        let lastName = formData.lastName || "";
+        let firstName = formData.firstName || formData.first_name || "Applicant";
+        let lastName = formData.lastName || formData.last_name || formData.surname || "";
         
         if (app.applicant && app.applicant.name) {
             const parts = app.applicant.name.split(/\s+/);
             firstName = parts[0] || "Applicant";
             lastName = parts.slice(1).join(" ") || parts[0] || "Applicant";
-        } else if (formData.fullName) {
-            const parts = formData.fullName.split(/\s+/);
+        } else if (formData.fullName || formData.name) {
+            const parts = (formData.fullName || formData.name).split(/\s+/);
             firstName = parts[0] || "Applicant";
             lastName = parts.slice(1).join(" ") || parts[0] || "Applicant";
         }
@@ -1719,15 +1720,15 @@ export async function initiateSchoolFeesCheckout(applicationId: number) {
 
         const email = app.applicant?.email || formData.email || "student@school.edu.ng";
         
-        let firstName = formData.firstName || "Applicant";
-        let lastName = formData.lastName || "";
+        let firstName = formData.firstName || formData.first_name || "Applicant";
+        let lastName = formData.lastName || formData.last_name || formData.surname || "";
         
         if (app.applicant && app.applicant.name) {
             const parts = app.applicant.name.split(/\s+/);
             firstName = parts[0] || "Applicant";
             lastName = parts.slice(1).join(" ") || parts[0] || "Applicant";
-        } else if (formData.fullName) {
-            const parts = formData.fullName.split(/\s+/);
+        } else if (formData.fullName || formData.name) {
+            const parts = (formData.fullName || formData.name).split(/\s+/);
             firstName = parts[0] || "Applicant";
             lastName = parts.slice(1).join(" ") || parts[0] || "Applicant";
         }

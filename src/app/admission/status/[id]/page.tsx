@@ -183,11 +183,16 @@ export default function ApplicantStatusPage() {
                             </div>
                             <div className="flex justify-between items-center text-sm">
                                 <span className="font-bold text-slate-500">Student Name</span>
-                                <span className="font-black text-slate-900">{data.applicant?.name || 'Applicant'}</span>
+                                <span className="font-black text-slate-900">
+                                    {(() => {
+                                        const d = typeof data.data === 'string' ? JSON.parse(data.data || '{}') : (data.data || {});
+                                        return data.applicant?.name || d.fullName || d.name || `${d.firstName || d.first_name || ''} ${d.lastName || d.last_name || d.surname || ''}`.trim() || 'Applicant';
+                                    })()}
+                                </span>
                             </div>
                             <div className="flex justify-between items-center text-sm">
                                 <span className="font-bold text-slate-500">Fee Category</span>
-                                <span className="font-black text-slate-900">Tuition & Development</span>
+                                <span className="font-black text-slate-900">Tuition</span>
                             </div>
                             <div className="pt-4 border-t flex justify-between items-center">
                                 <span className="font-black text-slate-900 uppercase">Total Amount</span>
