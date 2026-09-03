@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
-import { getApplicantStatusData, confirmAcceptancePayment, finalizeStudentAdmission, initiateAcceptancePaymentCheckout, uploadApplicantDocument, initiateSchoolFeesCheckout, confirmSchoolFeesPayment } from "@/actions/admission_v2";
+import { getApplicantStatusData, confirmAcceptancePayment, finalizeStudentAdmission, initiateAcceptancePaymentCheckout, uploadApplicantDocument, initiateSchoolFeesCheckout, confirmSchoolFeesPayment, initiateProcessingFeeCheckout, confirmProcessingFeePayment } from "@/actions/admission_v2";
 import { AlatpayInlineCheckout } from "@/components/finance/AlatpayInlineCheckout";
 import { RemitaInlineCheckout } from "@/components/finance/RemitaInlineCheckout";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -35,7 +35,29 @@ export default function ApplicantStatusPage() {
     const [verifying, setVerifying] = useState(false);
 
     useEffect(() => {
-        fetchData();
+        const verifyCallback = async () => {
+            if (typeof window === 'undefined') return;
+            const ref = new URLSearchParams(window.location.search).get('reference');
+            if (ref && ref.startsWith('PROC-')) {
+                setVerifying(true);
+                toast.loading("Verifying your processing fee payment...", { id: "verify-proc" });
+                const confirmRes = await confirmProcessingFeePayment(id, ref);
+                if (confirmRes && confirmRes.success) {
+                    toast.success(`Processing fee confirmed! Matriculation Number: ${confirmRes.matricNumber}`, { id: "verify-proc" });
+                    // Remove reference from URL so it doesn't trigger again
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                } else {
+                    toast.error(confirmRes?.error || "Failed to confirm processing fee payment.", { id: "verify-proc" });
+                }
+                setVerifying(false);
+            }
+        };
+
+        const load = async () => {
+            await verifyCallback();
+            await fetchData();
+        };
+        load();
     }, [id]);
 
     const fetchData = async () => {
@@ -43,6 +65,17 @@ export default function ApplicantStatusPage() {
         const res = await getApplicantStatusData(id);
         setData(res);
         setLoading(false);
+    };
+
+    const handleProcessingFeePayment = async () => {
+        setLoading(true);
+        const res = await initiateProcessingFeeCheckout(id);
+        setLoading(false);
+        if (res && res.success && res.authorizationUrl) {
+            window.location.href = res.authorizationUrl;
+        } else {
+            toast.error(res?.error || "Failed to initiate processing fee payment");
+        }
     };
 
     const handleAcceptAdmission = async () => {
@@ -88,7 +121,7 @@ export default function ApplicantStatusPage() {
             setVerifying(false);
             setCheckoutPayload(null);
             if (res && res.success) {
-                toast.success(`School fees confirmed! Matriculation Number: ${res.matricNumber}`, { id: "verify-toast" });
+                toast.success(`School fees confirmed! Please proceed to pay your processing fee.`, { id: "verify-toast" });
                 fetchData();
             } else {
                 toast.error(res?.error || "Failed to confirm school fees payment.", { id: "verify-toast" });
@@ -261,14 +294,23 @@ export default function ApplicantStatusPage() {
                                             <div className="flex flex-col gap-4">
                                                 <div className="px-6 py-4 bg-emerald-50 rounded-2xl flex items-center gap-3 text-emerald-600 font-black uppercase text-[10px] tracking-widest italic">
                                                     <CheckCircle2 className="w-4 h-4" /> {data.template.requireAcceptanceFee ? 'Acceptance & ID Card Fee Paid — Status: Confirmed Admitted' : 'Admitted — Acceptance Fee Not Required'}
-
                                                 </div>
-                                                <Button 
-                                                    onClick={handleSchoolFeesPayment}
-                                                    className="rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black px-5 sm:px-8 py-4 sm:py-6 flex gap-3 uppercase text-xs tracking-widest shadow-xl shadow-indigo-100"
-                                                >
-                                                    <CreditCard className="w-5 h-5" /> Pay School Fees & Processing Fee to Obtain Matric Number
-                                                </Button>
+                                                
+                                                {data.paymentStatus !== 'paid' ? (
+                                                    <Button 
+                                                        onClick={handleSchoolFeesPayment}
+                                                        className="rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black px-5 sm:px-8 py-4 sm:py-6 flex gap-3 uppercase text-xs tracking-widest shadow-xl shadow-indigo-100"
+                                                    >
+                                                        <CreditCard className="w-5 h-5" /> Pay School Fees (Remita)
+                                                    </Button>
+                                                ) : (
+                                                    <Button 
+                                                        onClick={handleProcessingFeePayment}
+                                                        className="rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-black px-5 sm:px-8 py-4 sm:py-6 flex gap-3 uppercase text-xs tracking-widest shadow-xl"
+                                                    >
+                                                        <CreditCard className="w-5 h-5 text-emerald-400" /> Pay Processing Fee (Paystack) to Obtain Matric Number
+                                                    </Button>
+                                                )}
                                             </div>
                                         )}
 

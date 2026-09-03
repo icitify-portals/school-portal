@@ -1699,9 +1699,7 @@ export async function initiateSchoolFeesCheckout(applicationId: number) {
         if (app.acceptancePaymentStatus !== 'paid') return { success: false, error: "Acceptance Fee must be paid before School Fees." };
 
         const isNd = template.level.toLowerCase().includes("nd") || template.level.toLowerCase().includes("diploma");
-        const schoolFeesAmount = isNd ? 58500 : 68500;
-        const processingFeeAmount = 2000;
-        const totalAmount = schoolFeesAmount + processingFeeAmount;
+        const totalAmount = isNd ? 58500 : 68500;
 
         const reference = `SCH-${applicationId}-${Date.now()}`;
         const formData = typeof app.data === 'string' ? JSON.parse(app.data || '{}') : (app.data || {});
@@ -1796,7 +1794,92 @@ export async function confirmSchoolFeesPayment(applicationId: number, reference:
             .set({ status: 'completed' })
             .where(eq(transactions.gatewayReference, reference));
 
-        // Generate Matriculation Number and finalize student registration!
+        // Mark application school fees as paid
+        await db.update(admissionApplicationsV2)
+            .set({ paymentStatus: 'paid', paymentReference: reference })
+            .where(eq(admissionApplicationsV2.id, applicationId));
+
+        revalidatePath(`/admission/status/${applicationId}`);
+        return { success: true };
+    } catch (error) {
+        console.error("Failed to confirm school fees payment:", error);
+        return { success: false, error: "An error occurred" };
+    }
+}
+
+export async function initiateProcessingFeeCheckout(applicationId: number) {
+    try {
+        const app = await db.query.admissionApplicationsV2.findFirst({
+            where: eq(admissionApplicationsV2.id, applicationId),
+            with: { applicant: true }
+        });
+
+        if (!app) return { success: false, error: "Application not found" };
+        if (app.paymentStatus !== 'paid') return { success: false, error: "School Fees must be paid first." };
+
+        const processingFeeAmount = 4000;
+        const reference = `PROC-${applicationId}-${Date.now()}`;
+        
+        const formData = typeof app.data === 'string' ? JSON.parse(app.data || '{}') : (app.data || {});
+        const email = app.applicant?.email || formData.email || "student@school.edu.ng";
+
+        await db.insert(transactions).values({
+            userId: app.applicantId,
+            studentId: app.studentId,
+            amount: processingFeeAmount.toString(),
+            gateway: 'paystack',
+            gatewayReference: reference,
+            purpose: `Processing Fee Payment - App ${applicationId}`,
+            status: 'pending'
+        });
+
+        const isLive = process.env.PAYSTACK_ENV !== 'demo';
+        const secretKey = isLive ? process.env.PAYSTACK_SECRET_KEY : process.env.PAYSTACK_SECRET_KEY_TEST;
+        
+        const res = await fetch('https://api.paystack.co/transaction/initialize', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${secretKey}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                email,
+                amount: processingFeeAmount * 100, // Paystack uses kobo
+                reference,
+                callback_url: `${process.env.NEXT_PUBLIC_APP_URL}/admission/status/${applicationId}`
+            })
+        });
+
+        const data = await res.json();
+        if (data.status) {
+            return { success: true, authorizationUrl: data.data.authorization_url, reference };
+        } else {
+            return { success: false, error: data.message || "Failed to initialize Paystack checkout" };
+        }
+    } catch (error) {
+        console.error("Failed to initiate processing fee checkout:", error);
+        return { success: false, error: "An error occurred" };
+    }
+}
+
+export async function confirmProcessingFeePayment(applicationId: number, reference: string) {
+    try {
+        const { verifyPayment } = await import('@/actions/payment-gateways');
+        const verification = await verifyPayment('paystack', reference);
+
+        if (!verification.success || !verification.verified) {
+            return { success: false, error: "Processing fee payment verification failed." };
+        }
+
+        await db.update(transactions)
+            .set({ status: 'completed' })
+            .where(eq(transactions.gatewayReference, reference));
+
+        await db.update(admissionApplicationsV2)
+            .set({ processingFeeStatus: 'paid', processingFeeReference: reference })
+            .where(eq(admissionApplicationsV2.id, applicationId));
+
+        // Generate Matriculation Number and finalize student registration since both are now paid
         const finalization = await finalizeStudentAdmission(applicationId);
 
         if (finalization.success && finalization.studentId) {
@@ -1808,7 +1891,7 @@ export async function confirmSchoolFeesPayment(applicationId: number, reference:
         revalidatePath(`/admission/status/${applicationId}`);
         return finalization;
     } catch (error) {
-        console.error("Failed to confirm school fees payment:", error);
+        console.error("Failed to confirm processing fee payment:", error);
         return { success: false, error: "An error occurred" };
     }
 }
