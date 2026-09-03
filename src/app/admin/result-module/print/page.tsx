@@ -753,6 +753,19 @@ export default function PrintTranscriptPage() {
     getAcademicSessions().then(res => { if (res?.success && Array.isArray(res.data)) setAcademicSessions(res.data); });
   }, []);
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const bId = params.get("batchId");
+    if (bId) {
+      setLoading(true);
+      getBulkTranscripts({ batchId: Number(bId) }).then(res => {
+        if (res.success) setTranscriptsToRender(res.data || []);
+        else alert(res.error || "Failed to load batch");
+        setLoading(false);
+      });
+    }
+  }, []);
+
   const searchStudentsFn = useCallback(async (q: string) => {
     if (!q.trim()) { setStudentResults([]); return; }
     const res = await searchStudents(q);

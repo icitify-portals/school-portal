@@ -432,11 +432,22 @@ export async function getMyTranscript(studentId: number, options?: { viewForStud
   }
 }
 
-export async function getBulkTranscripts(filters: { programmeId?: number, departmentId?: number, facultyId?: number, studentIds?: number[], all?: boolean, level?: string, sessionId?: number, semester?: string }) {
+export async function getBulkTranscripts(filters: { programmeId?: number, departmentId?: number, facultyId?: number, studentIds?: number[], all?: boolean, level?: string, sessionId?: number, semester?: string, batchId?: number }) {
   try {
     let queryConditions = [];
     
-    if (filters.studentIds && filters.studentIds.length > 0) {
+    if (filters.batchId) {
+      const entries = await db.query.studentResults.findMany({
+        where: eq(studentResults.batchId, filters.batchId),
+        columns: { studentId: true }
+      });
+      const uniqueStudentIds = Array.from(new Set(entries.map(e => e.studentId)));
+      if (uniqueStudentIds.length > 0) {
+        queryConditions.push(inArray(students.id, uniqueStudentIds));
+      } else {
+        queryConditions.push(eq(students.id, 0)); // No students found
+      }
+    } else if (filters.studentIds && filters.studentIds.length > 0) {
       queryConditions.push(inArray(students.id, filters.studentIds));
     } else if (!filters.all) {
       if (filters.programmeId) {
@@ -1146,6 +1157,26 @@ export async function clearBatchResults(batchId: number) {
     if (!allowed) return { success: false, error: "Unauthorized" };
 
     await db.delete(studentResults).where(eq(studentResults.batchId, batchId));
+
+    revalidatePath(`/admin/result-module/${batchId}`);
+    revalidatePath("/admin/result-module");
+    return { success: true };
+  } catch (e: any) {
+    return { success: false, error: e.message };
+  }
+}
+
+export async function clearBatchResultsByCourse(batchId: number, courseId: number) {
+  try {
+    const allowed = await hasRole("admin") || await hasRole("superadmin") || await hasRole("registrar") || await hasPermission("result_module.manage");
+    if (!allowed) return { success: false, error: "Unauthorized" };
+
+    await db.delete(studentResults).where(
+      and(
+        eq(studentResults.batchId, batchId),
+        eq(studentResults.courseId, courseId)
+      )
+    );
 
     revalidatePath(`/admin/result-module/${batchId}`);
     revalidatePath("/admin/result-module");
