@@ -51,118 +51,7 @@ export default function BatchDetailPage() {
   const [studentQuery, setStudentQuery] = useState("");
   const [studentResults, setStudentResults] = useState<any[]>([]);
   const [selectedStudent, setSelectedStudent] = useState<any>(null);
-
-  const [availableCourses, setAvailableCourses] = useState<any[]>([]);
-  const [selectedCourseId, setSelectedCourseId] = useState("");
-  const [score, setScore] = useState("");
-  const [isSubmittingSingle, setIsSubmittingSingle] = useState(false);
-  const [deletingBatch, setDeletingBatch] = useState(false);
-  const [clearingBatch, setClearingBatch] = useState(false);
-  const [clearingByCourse, setClearingByCourse] = useState(false);
-
-  async function fetchBatch() {
-    try {
-      const res = await getBatchDetails(batchId);
-      if (res?.success) setBatch(res.data);
-      else router.push("/admin/result-module");
-    } catch {
-      router.push("/admin/result-module");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => { fetchBatch(); }, [batchId]);
-
-  useEffect(() => {
-    async function loadCourses() {
-      const res = await getCoursesList();
-      if (res?.success) setAvailableCourses(res.data || []);
-    }
-    loadCourses();
-  }, []);
-
-  const searchStudentsFn = useCallback(async (q: string) => {
-    if (!q.trim()) {
-      setStudentResults([]);
-      return;
-    }
-    const res = await searchStudents(q);
-    setStudentResults(res.data || []);
-  }, []);
-
-  useEffect(() => {
-    const t = setTimeout(() => searchStudentsFn(studentQuery), 400);
-    return () => clearTimeout(t);
-  }, [studentQuery, searchStudentsFn]);
-
-  async function handleSingleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!selectedStudent || !selectedCourseId || !score) return;
-
-    setIsSubmittingSingle(true);
-    const res = await addSingleStudentResult(batchId, selectedStudent.id, Number(selectedCourseId), score);
-    setIsSubmittingSingle(false);
-
-    if (res.success) {
-      alert("✓ Result added successfully!");
-      setScore("");
-      setSelectedCourseId("");
-      fetchBatch();
-    } else {
-      alert("Error: " + res.error);
-    }
-  }
-
-  async function handleDeleteSingleResult(resultId: number, courseCode: string, studentName: string) {
-    if (!confirm(`Are you sure you want to delete result record for ${courseCode} (${studentName})?`)) return;
-    const res = await deleteStudentResult(resultId);
-    if (res.success) {
-      fetchBatch();
-    } else {
-      alert("Error: " + res.error);
-    }
-  }
-
-  async function handleClearAllResults() {
-    if (!confirm(`Are you sure you want to delete ALL sample / uploaded result records in this batch (${resultsInBatch.length} entries)? This action cannot be undone.`)) return;
-    setClearingBatch(true);
-    const res = await clearBatchResults(batchId);
-    setClearingBatch(false);
-    if (res.success) {
-      fetchBatch();
-      alert("✓ All result entries cleared successfully!");
-    } else {
-      alert("Error: " + res.error);
-    }
-  }
-
-  async function handleClearResultsByCourse() {
-    if (resultsInBatch.length === 0) return;
-    const coursesInBatch = Array.from(new Set(resultsInBatch.map((r: any) => JSON.stringify({ id: r.courseId, code: r.course?.code }))));
-    if (coursesInBatch.length === 0) return;
-    
-    const parsedCourses = coursesInBatch.map((c: any) => JSON.parse(c));
-    const courseCodeStr = parsedCourses.map((c: any) => `${c.code} (ID: ${c.id})`).join("\n");
-    const input = prompt(`Enter the Course ID you want to delete for ALL students in this batch.\n\nAvailable courses in batch:\n${courseCodeStr}`);
-    
-    if (!input || isNaN(Number(input))) return;
-    
-    const courseIdToClear = Number(input);
-    if (!confirm(`Are you sure you want to delete ALL results for Course ID: ${courseIdToClear} in this batch? This action cannot be undone.`)) return;
-    
-    setClearingByCourse(true);
-    const res = await clearBatchResultsByCourse(batchId, courseIdToClear);
-    setClearingByCourse(false);
-    if (res.success) {
-      fetchBatch();
-      alert(`✓ All results for Course ID: ${courseIdToClear} cleared successfully!`);
-    } else {
-      alert("Error: " + res.error);
-    }
-  }
-
-  const [togglingPublication, setTogglingPublication] = useState(false);
+  const [courses, setCourses] = useState<any[]>([]);
   const [entries, setEntries] = useState<{ courseId: string; score: string; creditLoad: string }[]>([
     { courseId: "", score: "", creditLoad: "" }
   ]);
@@ -222,6 +111,7 @@ export default function BatchDetailPage() {
 
   // Clear / Delete Batch action states
   const [clearingBatch, setClearingBatch] = useState(false);
+  const [clearingByCourse, setClearingByCourse] = useState(false);
   const [deletingBatch, setDeletingBatch] = useState(false);
 
   // Smart import preview state
@@ -265,6 +155,31 @@ export default function BatchDetailPage() {
     if (res.success) {
       fetchBatch();
       alert("✓ All result entries cleared successfully!");
+    } else {
+      alert("Error: " + res.error);
+    }
+  }
+
+  async function handleClearResultsByCourse() {
+    if (resultsInBatch.length === 0) return;
+    const coursesInBatch = Array.from(new Set(resultsInBatch.map((r: any) => JSON.stringify({ id: r.courseId, code: r.course?.code }))));
+    if (coursesInBatch.length === 0) return;
+    
+    const parsedCourses = coursesInBatch.map((c: any) => JSON.parse(c));
+    const courseCodeStr = parsedCourses.map((c: any) => `${c.code} (ID: ${c.id})`).join("\n");
+    const input = prompt(`Enter the Course ID you want to delete for ALL students in this batch.\n\nAvailable courses in batch:\n${courseCodeStr}`);
+    
+    if (!input || isNaN(Number(input))) return;
+    
+    const courseIdToClear = Number(input);
+    if (!confirm(`Are you sure you want to delete ALL results for Course ID: ${courseIdToClear} in this batch? This action cannot be undone.`)) return;
+    
+    setClearingByCourse(true);
+    const res = await clearBatchResultsByCourse(batchId, courseIdToClear);
+    setClearingByCourse(false);
+    if (res.success) {
+      fetchBatch();
+      alert(`✓ All results for Course ID: ${courseIdToClear} cleared successfully!`);
     } else {
       alert("Error: " + res.error);
     }
@@ -781,7 +696,7 @@ export default function BatchDetailPage() {
 
             {/* Display to Student Portal Toggle Switch */}
             <div className="flex items-center gap-3 pl-3 border-l border-white/10">
-              <Link href={`/admin/result-module/print?batchId=${batchId}`}
+              <Link href="/admin/result-module/print"
                 className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/10 hover:bg-white/15 border border-white/20 text-white font-semibold text-xs transition-all">
                 <Printer className="w-3.5 h-3.5" /> Print Transcripts
               </Link>
