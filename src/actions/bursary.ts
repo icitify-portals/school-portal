@@ -1187,10 +1187,15 @@ export async function getAllUnifiedTransactions(filters?: { status?: string, cat
             const fees = await feeQuery;
 
             // Pre-fetch applicant details for admission-related transactions
+            // Try Application ID from purpose first, then fall back to gatewayReference (ACC-{appId}-{timestamp})
             const appIdsToFetch = new Set<number>();
             for (const f of fees) {
-                if (!f.student?.id && f.purpose && f.purpose.includes("Application ID:")) {
+                if (f.student?.id) continue;
+                if (f.purpose && f.purpose.includes("Application ID:")) {
                     const match = f.purpose.match(/Application ID:\s*(\d+)/);
+                    if (match && match[1]) appIdsToFetch.add(parseInt(match[1]));
+                } else if (f.gatewayReference && f.gatewayReference.startsWith("ACC-")) {
+                    const match = f.gatewayReference.match(/^ACC-(\d+)-/);
                     if (match && match[1]) appIdsToFetch.add(parseInt(match[1]));
                 }
             }
@@ -1228,6 +1233,18 @@ export async function getAllUnifiedTransactions(filters?: { status?: string, cat
                 });
             }
 
+            function resolveAppIdFromTx(tx: any): number | null {
+                if (tx.purpose && tx.purpose.includes("Application ID:")) {
+                    const match = tx.purpose.match(/Application ID:\s*(\d+)/);
+                    if (match && match[1]) return parseInt(match[1]);
+                }
+                if (tx.gatewayReference && tx.gatewayReference.startsWith("ACC-")) {
+                    const match = tx.gatewayReference.match(/^ACC-(\d+)-/);
+                    if (match && match[1]) return parseInt(match[1]);
+                }
+                return null;
+            }
+
             for (const f of fees) {
                 if (fStatus && f.status !== fStatus) continue;
                 
@@ -1245,10 +1262,9 @@ export async function getAllUnifiedTransactions(filters?: { status?: string, cat
                     student: f.student
                 };
 
-                if (!txEntry.student?.id && txEntry.purpose && txEntry.purpose.includes("Application ID:")) {
-                    const match = txEntry.purpose.match(/Application ID:\s*(\d+)/);
-                    if (match && match[1]) {
-                        const appId = parseInt(match[1]);
+                if (!txEntry.student?.id) {
+                    const appId = resolveAppIdFromTx(txEntry);
+                    if (appId) {
                         const applicant = applicantMap.get(appId);
                         if (applicant) {
                             const names = (applicant.name || "Unknown Applicant").split(" ");

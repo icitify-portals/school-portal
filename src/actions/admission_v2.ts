@@ -741,9 +741,22 @@ export async function syncAcceptancePaymentsFromTransactions() {
         const refMap = new Map<number, string>();
 
         for (const tx of completedTxs) {
-            const match = tx.purpose?.match(/Application ID:\s*(\d+)/);
-            if (match && match[1]) {
-                const appId = parseInt(match[1]);
+            let appId: number | null = null;
+
+            // New format: purpose contains Application ID
+            const purposeMatch = tx.purpose?.match(/Application ID:\s*(\d+)/);
+            if (purposeMatch && purposeMatch[1]) {
+                appId = parseInt(purposeMatch[1]);
+            }
+            // Old format: gatewayReference is ACC-{appId}-{timestamp}
+            else if (tx.gatewayReference && tx.gatewayReference.startsWith('ACC-')) {
+                const refMatch = tx.gatewayReference.match(/^ACC-(\d+)-/);
+                if (refMatch && refMatch[1]) {
+                    appId = parseInt(refMatch[1]);
+                }
+            }
+
+            if (appId) {
                 appIdsToUpdate.push(appId);
                 if (tx.gatewayReference && !refMap.has(appId)) {
                     refMap.set(appId, tx.gatewayReference);
