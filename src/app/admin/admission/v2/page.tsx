@@ -596,6 +596,7 @@ function AdminV2ApplicationsContent() {
                                     <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest">Exam Attendance</th>
                                     <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest">Status</th>
                                     <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest">Payment</th>
+                                    <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest">Acceptance</th>
                                     <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest">Date</th>
                                     <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-right">Actions</th>
                                 </tr>
@@ -720,6 +721,25 @@ function AdminV2ApplicationsContent() {
                                                     )} />
                                                     {app.paymentStatus}
                                                 </span>
+                                            </td>
+                                            <td className="px-6 py-5">
+                                                {app.template?.requireAcceptanceFee ? (
+                                                    <div className="flex flex-col gap-1">
+                                                        <span className="text-[10px] font-black text-slate-800">
+                                                            ₦{app.template?.acceptanceFee?.toLocaleString() || '0'}
+                                                        </span>
+                                                        <span className={cn(
+                                                            "px-2 py-1 rounded text-[8px] font-black uppercase tracking-widest border inline-block w-fit",
+                                                            app.acceptancePaymentStatus === 'paid' ? "bg-emerald-50 text-emerald-600 border-emerald-200" :
+                                                            app.acceptancePaymentStatus === 'not_applicable' ? "bg-slate-50 text-slate-500 border-slate-200" :
+                                                            "bg-amber-50 text-amber-600 border-amber-200"
+                                                        )}>
+                                                            {app.acceptancePaymentStatus?.replace('_', ' ') || 'pending'}
+                                                        </span>
+                                                    </div>
+                                                ) : (
+                                                    <span className="text-xs text-slate-400 italic">N/A</span>
+                                                )}
                                             </td>
                                             <td className="px-6 py-5 text-xs font-bold text-slate-500">
                                                 {app.appliedAt ? format(new Date(app.appliedAt), 'MMM dd, yyyy') : '—'}

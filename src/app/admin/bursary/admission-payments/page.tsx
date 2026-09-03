@@ -305,7 +305,7 @@ export default function BursaryAdmissionPaymentsPage() {
                                     <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest">Applicant</th>
                                     <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest">Form #</th>
                                     <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest">Template</th>
-                                    <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest">Amount</th>
+                                    <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest">Fees</th>
                                     <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest">Payment</th>
                                     <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest">Acceptance</th>
                                     <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest">Date</th>
@@ -345,8 +345,19 @@ export default function BursaryAdmissionPaymentsPage() {
                                             <td className="px-8 py-6">
                                                 <span className="text-xs font-bold text-indigo-600">{app.templateName}</span>
                                             </td>
-                                            <td className="px-8 py-6 font-black text-slate-900">
-                                                ₦{app.template?.applicationFee?.toLocaleString() || '0'}
+                                            <td className="px-8 py-6">
+                                                <div className="flex flex-col gap-1 w-24">
+                                                    <div className="flex items-center justify-between text-xs font-black text-slate-900">
+                                                        <span className="text-[9px] text-slate-400 uppercase tracking-widest">App:</span>
+                                                        <span>₦{app.template?.applicationFee?.toLocaleString() || '0'}</span>
+                                                    </div>
+                                                    {app.template?.requireAcceptanceFee && (
+                                                        <div className="flex items-center justify-between text-xs font-black text-emerald-700">
+                                                            <span className="text-[9px] text-emerald-600/70 uppercase tracking-widest">Acc:</span>
+                                                            <span>₦{app.template?.acceptanceFee?.toLocaleString() || '0'}</span>
+                                                        </div>
+                                                    )}
+                                                </div>
                                             </td>
                                             <td className="px-8 py-6">
                                                 <span className={cn(

@@ -1220,9 +1220,9 @@ export async function getAllUnifiedTransactions(filters?: { status?: string, cat
                         formData = typeof app.data === 'string' ? JSON.parse(app.data || '{}') : (app.data || {});
                     } catch {}
 
-                    const nameFromForm = formData.surname
-                        ? `${formData.firstName || ''} ${formData.surname}`.trim()
-                        : `${formData.firstName || ''} ${formData.lastName || ''}`.trim();
+                    const nameFromForm = formData.surname || formData.Surname || formData['Last Name']
+                        ? `${formData.firstName || formData.FirstName || ''} ${formData.surname || formData.Surname || formData['Last Name']}`.trim()
+                        : `${formData.firstName || formData.FirstName || ''} ${formData.lastName || formData['Last Name'] || ''}`.trim();
 
                     applicantMap.set(app.id, {
                         id: app.id,
