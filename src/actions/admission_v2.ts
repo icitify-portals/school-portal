@@ -1230,11 +1230,15 @@ export async function getApplicantStatusData(applicationId: number) {
             )
         });
 
+        const isNd = template?.level.toLowerCase().includes("nd") || template?.level.toLowerCase().includes("diploma") || template?.name.toLowerCase().includes("nd") || template?.name.toLowerCase().includes("diploma");
+        const schoolFeesAmount = isNd ? 58500 : 68500;
+        
         return {
             ...app,
             template,
             results,
-            hasPaidSchoolFees: !!schoolFeesTx
+            hasPaidSchoolFees: !!schoolFeesTx,
+            schoolFeesAmount
         };
     } catch (error) {
         console.error("Failed to fetch applicant status data:", error);
@@ -1752,7 +1756,7 @@ export async function initiateSchoolFeesCheckout(applicationId: number) {
                 orderId: reference,
                 payerName: `${firstName || ''} ${lastName || ''}`.trim() || email.split('@')[0],
                 payerEmail: email,
-                payerPhone: "08000000000"
+                payerPhone: phone || "08000000000"
             })
         });
         const textResponse = await res.text();
@@ -1792,7 +1796,9 @@ export async function initiateSchoolFeesCheckout(applicationId: number) {
             amount: totalAmount,
             email,
             firstName,
-            lastName
+            lastName,
+            phone,
+            description: "School Fees Payment"
         };
     } catch (error) {
         console.error("Failed to initiate school fees checkout:", error);

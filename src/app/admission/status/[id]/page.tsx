@@ -32,6 +32,7 @@ export default function ApplicantStatusPage() {
     const [data, setData] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [checkoutPayload, setCheckoutPayload] = useState<any>(null);
+    const [showInvoiceModal, setShowInvoiceModal] = useState(false);
     const [verifying, setVerifying] = useState(false);
 
     useEffect(() => {
@@ -102,7 +103,12 @@ export default function ApplicantStatusPage() {
         }
     };
 
-    const handleSchoolFeesPayment = async () => {
+    const handleSchoolFeesPayment = () => {
+        setShowInvoiceModal(true);
+    };
+
+    const handleProceedToPaySchoolFees = async () => {
+        setShowInvoiceModal(false);
         setLoading(true);
         const res = await initiateSchoolFeesCheckout(id);
         setLoading(false);
@@ -157,6 +163,55 @@ export default function ApplicantStatusPage() {
 
     return (
         <div className="min-h-screen bg-slate-50 pb-20">
+            {showInvoiceModal && (
+                <div className="fixed inset-0 z-[99999] bg-slate-900/80 backdrop-blur-md flex items-center justify-center p-4">
+                    <div className="bg-white rounded-3xl p-8 max-w-sm w-full shadow-2xl flex flex-col space-y-6">
+                        <div className="flex items-center gap-3 border-b pb-4">
+                            <div className="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600">
+                                <CreditCard className="w-6 h-6" />
+                            </div>
+                            <div>
+                                <h3 className="text-xl font-black text-slate-900">Payment Invoice</h3>
+                                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">School Fees</p>
+                            </div>
+                        </div>
+                        
+                        <div className="space-y-4 py-2">
+                            <div className="flex justify-between items-center text-sm">
+                                <span className="font-bold text-slate-500">Academic Session</span>
+                                <span className="font-black text-slate-900">2026/2027</span>
+                            </div>
+                            <div className="flex justify-between items-center text-sm">
+                                <span className="font-bold text-slate-500">Student Name</span>
+                                <span className="font-black text-slate-900">{data.applicant?.name || 'Applicant'}</span>
+                            </div>
+                            <div className="flex justify-between items-center text-sm">
+                                <span className="font-bold text-slate-500">Fee Category</span>
+                                <span className="font-black text-slate-900">Tuition & Development</span>
+                            </div>
+                            <div className="pt-4 border-t flex justify-between items-center">
+                                <span className="font-black text-slate-900 uppercase">Total Amount</span>
+                                <span className="text-2xl font-black text-indigo-600">₦{(data.schoolFeesAmount || 68500).toLocaleString()}</span>
+                            </div>
+                        </div>
+                        
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => setShowInvoiceModal(false)}
+                                className="w-full py-4 rounded-xl font-bold text-sm bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleProceedToPaySchoolFees}
+                                className="w-full py-4 rounded-xl font-black text-sm bg-indigo-600 text-white shadow-xl hover:-translate-y-0.5 hover:shadow-indigo-500/25 transition-all flex justify-center items-center gap-2"
+                            >
+                                Proceed
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
             {checkoutPayload && checkoutPayload.isSchoolFees && (
                 <RemitaInlineCheckout
                     rrr={checkoutPayload.rrr}
