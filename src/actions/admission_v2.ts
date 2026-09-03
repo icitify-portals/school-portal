@@ -610,7 +610,7 @@ export async function deleteAdmissionApplication(applicationId: number) {
     }
 }
 
-export async function confirmProcessingFeePayment(applicationId: number) {
+export async function adminConfirmProcessingFeePayment(applicationId: number) {
     await requireAdmin();
     try {
         await db.update(admissionApplicationsV2)
@@ -621,7 +621,7 @@ export async function confirmProcessingFeePayment(applicationId: number) {
         return { success: true };
     } catch (error) {
         console.error("Failed to confirm processing fee:", error);
-        return { success: false, error: "Failed to confirm payment" };
+        return { success: false, error: "Failed to confirm fee" };
     }
 }
 
