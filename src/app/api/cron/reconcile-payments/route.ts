@@ -44,6 +44,8 @@ export async function GET(request: Request) {
 
         for (const tx of pendingTxs) {
             if (!tx.paymentGateway || !tx.transactionReference) continue;
+            // Strict rule: Only re-query Remita transactions, never ALATPay
+            if (tx.paymentGateway.toLowerCase() !== 'remita') continue;
 
             console.log(`[CRON] Reconciling TX: ${tx.transactionReference} via ${tx.paymentGateway}`);
             
@@ -117,6 +119,9 @@ export async function GET(request: Request) {
 
         for (const tx of pendingAdmissionTxs) {
             if (!tx.gateway || !tx.gatewayReference) continue;
+            // Strict rule: Only re-query Remita transactions, never ALATPay
+            if (tx.gateway.toLowerCase() !== 'remita') continue;
+            
             console.log(`[CRON] Reconciling Admission TX: ${tx.gatewayReference} via ${tx.gateway}`);
             
             const match = tx.gatewayReference.match(/^(SCH|ACC|PROC|FORM)-(\d+)-/);
