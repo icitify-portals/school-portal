@@ -3,8 +3,15 @@ import { confirmAcceptancePayment, confirmSchoolFeesPayment, confirmProcessingFe
 import { db } from "@/db/db";
 import { transactions } from "@/db/schema";
 import { eq } from "drizzle-orm";
-import { requireAdmin } from "./admin";
+import { auth } from "@/auth";
 import { revalidatePath } from "next/cache";
+
+async function requireAdmin() { 
+    const session = await auth(); 
+    if (!session?.user || (session.user.role !== "admin" && session.user.role !== "superadmin")) {
+        throw new Error("Unauthorized"); 
+    }
+}
 
 export async function processManualAdmissionPayment(reference: string) {
     try {
@@ -81,3 +88,5 @@ export async function forceUpdateAdmissionPayment(reference: string, action: 'pa
         return { success: false, error: e.message };
     }
 }
+
+
