@@ -28,7 +28,9 @@ export async function getPaystackDbTransactions() {
                 let fallback = 'Applicant';
                 try { 
                     const d = JSON.parse(app.data as string || '{}');
-                    fallback = d.fullName || d.name || ${d.firstName || d.first_name || ''} .trim() || 'Applicant';
+                    const first = d.firstName || d.first_name || '';
+                    const last = d.lastName || d.last_name || d.surname || '';
+                    fallback = d.fullName || d.name || (first + " " + last).trim() || 'Applicant';
                 } catch(e) {}
                 appMap.set(app.id, app.name || fallback);
             });
