@@ -17,9 +17,22 @@ export async function processManualAdmissionPayment(reference: string) {
     try {
         if (!reference) return { success: false, error: "Reference is required" };
 
-        const match = reference.match(/^(SCH|ACC|PROC|FORM)-(\d+)-/);
+        let gatewayRef = reference.trim();
+        let match = gatewayRef.match(/^(SCH|ACC|PROC|FORM)-(\d+)-/);
+
         if (!match) {
-            return { success: false, error: "Invalid transaction reference format. Must start with SCH-, ACC-, PROC-, or FORM-" };
+            const { or } = await import('drizzle-orm');
+            const tx = await db.query.transactions.findFirst({
+                where: or(eq(transactions.rrr, gatewayRef), eq(transactions.gatewayReference, gatewayRef))
+            });
+            if (tx && tx.gatewayReference) {
+                gatewayRef = tx.gatewayReference;
+                match = gatewayRef.match(/^(SCH|ACC|PROC|FORM)-(\d+)-/);
+            }
+        }
+
+        if (!match) {
+            return { success: false, error: "Invalid transaction reference format. Could not match reference or RRR." };
         }
 
         const type = match[1];
@@ -27,13 +40,13 @@ export async function processManualAdmissionPayment(reference: string) {
 
         let result;
         if (type === 'ACC') {
-            result = await confirmAcceptancePayment(appId, reference);
+            result = await confirmAcceptancePayment(appId, gatewayRef);
         } else if (type === 'SCH') {
-            result = await confirmSchoolFeesPayment(appId, reference);
+            result = await confirmSchoolFeesPayment(appId, gatewayRef);
         } else if (type === 'PROC') {
-            result = await confirmProcessingFeePayment(appId, reference);
+            result = await confirmProcessingFeePayment(appId, gatewayRef);
         } else if (type === 'FORM') {
-            result = await confirmAdmissionPayment(appId, reference);
+            result = await confirmAdmissionPayment(appId, gatewayRef);
         }
 
         if (result?.success) {
@@ -47,13 +60,26 @@ export async function processManualAdmissionPayment(reference: string) {
 }
 
 export async function forceUpdateAdmissionPayment(reference: string, action: 'paid' | 'reverse') {
-    await requireAdmin();
     try {
+        await requireAdmin();
         if (!reference) return { success: false, error: "Reference is required" };
 
-        const match = reference.match(/^(SCH|ACC|PROC|FORM)-(\d+)-/);
+        let gatewayRef = reference.trim();
+        let match = gatewayRef.match(/^(SCH|ACC|PROC|FORM)-(\d+)-/);
+
         if (!match) {
-            return { success: false, error: "Invalid transaction reference format." };
+            const { or } = await import('drizzle-orm');
+            const tx = await db.query.transactions.findFirst({
+                where: or(eq(transactions.rrr, gatewayRef), eq(transactions.gatewayReference, gatewayRef))
+            });
+            if (tx && tx.gatewayReference) {
+                gatewayRef = tx.gatewayReference;
+                match = gatewayRef.match(/^(SCH|ACC|PROC|FORM)-(\d+)-/);
+            }
+        }
+
+        if (!match) {
+            return { success: false, error: "Invalid transaction reference format. Could not match reference or RRR." };
         }
         
         const type = match[1];
@@ -63,19 +89,19 @@ export async function forceUpdateAdmissionPayment(reference: string, action: 'pa
         const adminActions = await import("./admission_v2");
 
         if (action === 'paid') {
-            if (type === 'ACC') await adminActions.adminConfirmAcceptancePayment(appId, reference);
-            else if (type === 'PROC') await adminActions.adminConfirmProcessingFeePayment(appId, reference);
-            else if (type === 'FORM') await adminActions.confirmAdmissionPayment(appId, reference);
+            if (type === 'ACC') await adminActions.adminConfirmAcceptancePayment(appId, gatewayRef);
+            else if (type === 'PROC') await adminActions.adminConfirmProcessingFeePayment(appId, gatewayRef);
+            else if (type === 'FORM') await adminActions.confirmAdmissionPayment(appId, gatewayRef);
             else {
                 // School fees only relies on the transaction table
-                await db.update(transactions).set({ status: 'completed' }).where(eq(transactions.gatewayReference, reference));
+                await db.update(transactions).set({ status: 'completed' }).where(eq(transactions.gatewayReference, gatewayRef));
             }
         } else {
             if (type === 'ACC') await adminActions.reverseAcceptancePayment(appId);
             else if (type === 'PROC') await adminActions.reverseProcessingFeePayment(appId);
             else if (type === 'FORM') await adminActions.reverseAdmissionPayment(appId);
             else {
-                await db.update(transactions).set({ status: 'pending' }).where(eq(transactions.gatewayReference, reference));
+                await db.update(transactions).set({ status: 'pending' }).where(eq(transactions.gatewayReference, gatewayRef));
             }
         }
 
