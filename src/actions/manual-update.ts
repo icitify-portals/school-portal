@@ -3,6 +3,8 @@ import { confirmAcceptancePayment, confirmSchoolFeesPayment, confirmProcessingFe
 import { db } from "@/db/db";
 import { transactions } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import { requireAdmin } from "./admin";
+import { revalidatePath } from "next/cache";
 
 export async function processManualAdmissionPayment(reference: string) {
     try {
@@ -32,6 +34,49 @@ export async function processManualAdmissionPayment(reference: string) {
         } else {
             return { success: false, error: result?.error || "Verification failed" };
         }
+    } catch (e: any) {
+        return { success: false, error: e.message };
+    }
+}
+
+export async function forceUpdateAdmissionPayment(reference: string, action: 'paid' | 'reverse') {
+    await requireAdmin();
+    try {
+        if (!reference) return { success: false, error: "Reference is required" };
+
+        const match = reference.match(/^(SCH|ACC|PROC|FORM)-(\d+)-/);
+        if (!match) {
+            return { success: false, error: "Invalid transaction reference format." };
+        }
+        
+        const type = match[1];
+        const appId = parseInt(match[2]);
+        
+        // Dynamically import the native admin overrides
+        const adminActions = await import("./admission_v2");
+
+        if (action === 'paid') {
+            if (type === 'ACC') await adminActions.adminConfirmAcceptancePayment(appId, reference);
+            else if (type === 'PROC') await adminActions.adminConfirmProcessingFeePayment(appId, reference);
+            else if (type === 'FORM') await adminActions.confirmAdmissionPayment(appId, reference);
+            else {
+                // School fees only relies on the transaction table
+                await db.update(transactions).set({ status: 'completed' }).where(eq(transactions.gatewayReference, reference));
+            }
+        } else {
+            if (type === 'ACC') await adminActions.reverseAcceptancePayment(appId);
+            else if (type === 'PROC') await adminActions.reverseProcessingFeePayment(appId);
+            else if (type === 'FORM') await adminActions.reverseAdmissionPayment(appId);
+            else {
+                await db.update(transactions).set({ status: 'pending' }).where(eq(transactions.gatewayReference, reference));
+            }
+        }
+
+        revalidatePath(`/admission/status/${appId}`);
+        revalidatePath(`/admin/admission/v2/${appId}`);
+        revalidatePath(`/super-admin/remita-manual-update`);
+
+        return { success: true, message: `Transaction artificially marked as ${action === 'paid' ? 'Successful' : 'Reversed'}.` };
     } catch (e: any) {
         return { success: false, error: e.message };
     }
