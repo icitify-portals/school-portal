@@ -200,7 +200,8 @@ export class BursaryService {
                             eq(feeStructures.level, student.currentLevel || 1),
                             sql`FIND_IN_SET(${student.currentLevel?.toString() || '1'}, ${feeStructures.targetGroups}) > 0`,
                             sql`FIND_IN_SET(${student.status}, ${feeStructures.targetGroups}) > 0`,
-                            sql`FIND_IN_SET('all', ${feeStructures.targetGroups}) > 0`
+                            sql`FIND_IN_SET('all', ${feeStructures.targetGroups}) > 0`,
+                              sql`FIND_IN_SET(${student.studyMode}, ${feeStructures.targetGroups}) > 0`
                         )
                     ))
                     .limit(1);
@@ -234,7 +235,8 @@ export class BursaryService {
                             eq(feeStructures.level, student.currentLevel || 1),
                             sql`FIND_IN_SET(${student.currentLevel?.toString() || '1'}, ${feeStructures.targetGroups}) > 0`,
                             sql`FIND_IN_SET(${student.status}, ${feeStructures.targetGroups}) > 0`,
-                            sql`FIND_IN_SET('all', ${feeStructures.targetGroups}) > 0`
+                            sql`FIND_IN_SET('all', ${feeStructures.targetGroups}) > 0`,
+                              sql`FIND_IN_SET(${student.studyMode}, ${feeStructures.targetGroups}) > 0`
                         )
                     ))
                     .limit(1);
@@ -254,7 +256,8 @@ export class BursaryService {
                             eq(feeStructures.level, student.currentLevel || 1),
                             sql`FIND_IN_SET(${student.currentLevel?.toString() || '1'}, ${feeStructures.targetGroups}) > 0`,
                             sql`FIND_IN_SET(${student.status}, ${feeStructures.targetGroups}) > 0`,
-                            sql`FIND_IN_SET('all', ${feeStructures.targetGroups}) > 0`
+                            sql`FIND_IN_SET('all', ${feeStructures.targetGroups}) > 0`,
+                              sql`FIND_IN_SET(${student.studyMode}, ${feeStructures.targetGroups}) > 0`
                         )
                     ))
                     .limit(1);
@@ -277,7 +280,8 @@ export class BursaryService {
                             eq(feeStructures.level, student.currentLevel || 1),
                             sql`FIND_IN_SET(${student.currentLevel?.toString() || '1'}, ${feeStructures.targetGroups}) > 0`,
                             sql`FIND_IN_SET(${student.status}, ${feeStructures.targetGroups}) > 0`,
-                            sql`FIND_IN_SET('all', ${feeStructures.targetGroups}) > 0`
+                            sql`FIND_IN_SET('all', ${feeStructures.targetGroups}) > 0`,
+                              sql`FIND_IN_SET(${student.studyMode}, ${feeStructures.targetGroups}) > 0`
                         )
                     ))
                     .limit(1);
@@ -619,3 +623,4 @@ export class BursaryService {
         };
     }
 }
+

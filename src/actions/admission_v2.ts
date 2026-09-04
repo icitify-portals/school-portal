@@ -1994,7 +1994,12 @@ export async function finalizeStudentAdmission(applicationId: number) {
         const isJambCandidate = application.applicationMode
             ? application.applicationMode === 'full_time'
             : (!!jambRegNo && !jambRegNo.toLowerCase().includes("temp") && !jambRegNo.toLowerCase().includes("direct"));
-        const studyMode = isJambCandidate ? "full-time" : "part-time";
+        let studyMode = formData.studyMode || (isJambCandidate ? "full_time" : "part_time");
+        // ensure enum match
+        if (studyMode === 'full-time') studyMode = 'full_time';
+        if (studyMode === 'part-time') studyMode = 'part_time';
+        if (studyMode === 'e-learning' || studyMode === 'e_learning') studyMode = 'e_learning';
+        
         const modeOfEntry = isJambCandidate ? "JAMB" : "Direct";
 
         // Generate FSS standard matriculation number
