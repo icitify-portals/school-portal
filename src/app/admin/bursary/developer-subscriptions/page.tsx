@@ -1,5 +1,6 @@
 import { getUnpaidSubscriptions } from "@/actions/developer-subscriptions";
 import BursarSubscriptionTable from "./BursarSubscriptionTable";
+import PaystackDbTable from "./PaystackDbTable";
 import { db } from "@/db/db";
 import { paystackDeveloperFees, admissionApplicationsV2, users } from "@/db/schema";
 import { desc, eq, inArray, like } from "drizzle-orm";
@@ -94,12 +95,15 @@ export default async function DeveloperSubscriptionsBursaryPage() {
             </div>
 
             <Tabs defaultValue="unpaid" className="space-y-6">
-                <TabsList className="bg-slate-100/50 p-1 rounded-xl">
+                <TabsList className="bg-slate-100/50 p-1 rounded-xl flex-wrap">
                     <TabsTrigger value="unpaid" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">
                         Outstanding (Bulk Settlement)
                     </TabsTrigger>
                     <TabsTrigger value="paid" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">
-                        All Successful Paystack Payments
+                        Paystack API History
+                    </TabsTrigger>
+                    <TabsTrigger value="db-paystack" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                        Paystack Local DB Transactions
                     </TabsTrigger>
                 </TabsList>
 
@@ -111,6 +115,14 @@ export default async function DeveloperSubscriptionsBursaryPage() {
                     <Card className="border-none shadow-xl rounded-[2rem] bg-white overflow-hidden">
                         <CardContent className="p-0">
                             <TransactionsTable transactions={enrichedFees} />
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+
+                <TabsContent value="db-paystack" className="space-y-4">
+                    <Card className="border-none shadow-xl rounded-[2rem] bg-white overflow-hidden">
+                        <CardContent className="p-0">
+                            <PaystackDbTable />
                         </CardContent>
                     </Card>
                 </TabsContent>

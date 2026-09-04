@@ -98,11 +98,58 @@ export async function GET(request: Request) {
             }
         }
 
+        // SWEEP 2: Admission portal `transactions` table (Remita, Alatpay, Paystack)
+        const { transactions } = await import('@/db/schema');
+        const pendingAdmissionTxs = await db.select()
+            .from(transactions)
+            .where(
+                and(
+                    eq(transactions.status, 'pending'),
+                    sql`${transactions.createdAt} < NOW() - INTERVAL 15 MINUTE`
+                )
+            );
+
+        console.log(`[CRON] Found ${pendingAdmissionTxs.length} pending ADMISSION transactions to reconcile.`);
+
+        let admSuccessCount = 0;
+        let admFailCount = 0;
+        const { confirmAcceptancePayment, confirmSchoolFeesPayment, confirmProcessingFeePayment, confirmAdmissionPayment } = await import('@/actions/admission_v2');
+
+        for (const tx of pendingAdmissionTxs) {
+            if (!tx.gateway || !tx.gatewayReference) continue;
+            console.log(`[CRON] Reconciling Admission TX: ${tx.gatewayReference} via ${tx.gateway}`);
+            
+            const match = tx.gatewayReference.match(/^(SCH|ACC|PROC|FORM)-(\d+)-/);
+            if (!match) continue;
+
+            const type = match[1];
+            const appId = parseInt(match[2]);
+
+            let result;
+            if (type === 'ACC') result = await confirmAcceptancePayment(appId, tx.gatewayReference);
+            else if (type === 'SCH') result = await confirmSchoolFeesPayment(appId, tx.gatewayReference);
+            else if (type === 'PROC') result = await confirmProcessingFeePayment(appId, tx.gatewayReference);
+            else if (type === 'FORM') result = await confirmAdmissionPayment(appId, tx.gatewayReference);
+
+            if (result?.success) {
+                admSuccessCount++;
+            } else {
+                const hoursOld = (new Date().getTime() - new Date(tx.createdAt || new Date()).getTime()) / (1000 * 60 * 60);
+                if (hoursOld > 24) {
+                    await db.update(transactions)
+                        .set({ status: 'failed' })
+                        .where(eq(transactions.id, tx.id));
+                    admFailCount++;
+                }
+            }
+        }
+
         return NextResponse.json({
             message: "Cron job completed successfully",
-            swept: pendingTxs.length,
-            markedPaid: successCount,
-            markedFailed: failCount
+            sweptBursary: pendingTxs.length,
+            markedPaidBursary: successCount,
+            sweptAdmission: pendingAdmissionTxs.length,
+            markedPaidAdmission: admSuccessCount
         }, { status: 200 });
 
     } catch (error: any) {

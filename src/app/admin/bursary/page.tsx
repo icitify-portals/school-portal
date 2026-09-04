@@ -113,6 +113,15 @@ const bursaryModules = [
         permission: "finance.view_detailed"
     },
     {
+        name: "Successful Payments",
+        description: "View all completed transactions and their breakdowns across all gateways",
+        href: "/admin/bursary/successful-payments",
+        icon: Wallet,
+        color: "text-emerald-600",
+        bg: "bg-emerald-50",
+        permission: "finance.view_detailed"
+    },
+    {
         name: "Bulk Messaging",
         description: "Send emails and in-app notifications to students and staff",
         href: "/admin/bursary/messages",
