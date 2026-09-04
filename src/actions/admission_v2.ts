@@ -1994,11 +1994,11 @@ export async function finalizeStudentAdmission(applicationId: number) {
         const isJambCandidate = application.applicationMode
             ? application.applicationMode === 'full_time'
             : (!!jambRegNo && !jambRegNo.toLowerCase().includes("temp") && !jambRegNo.toLowerCase().includes("direct"));
-        let studyMode = formData.studyMode || (isJambCandidate ? "full_time" : "part_time");
+        let studyMode = formData.studyMode || (isJambCandidate ? "full-time" : "part-time");
         // ensure enum match
-        if (studyMode === 'full-time') studyMode = 'full_time';
-        if (studyMode === 'part-time') studyMode = 'part_time';
-        if (studyMode === 'e-learning' || studyMode === 'e_learning') studyMode = 'e_learning';
+        if (studyMode === 'full_time') studyMode = 'full-time';
+        if (studyMode === 'part_time') studyMode = 'part-time';
+        if (studyMode === 'e-learning' || studyMode === 'e_learning') studyMode = 'elearning';
         
         const modeOfEntry = isJambCandidate ? "JAMB" : "Direct";
 
@@ -4195,3 +4195,6 @@ export async function getAdmissionAcademicUnits() {
         return { success: false, error: e.message, faculties: [], departments: [], programmes: [] };
     }
 }
+
+
+

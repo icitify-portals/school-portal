@@ -221,7 +221,7 @@ export const students = mysqlTable('students', {
   admissionNumber: varchar('admission_number', { length: 50 }).unique(),
   programmeId: int('programme_id').references(() => programmes.id),
   programmeType: mysqlEnum('programme_type', ['ND', 'HND']).notNull().default('ND'),
-  studyMode: mysqlEnum('study_mode', ['full_time', 'part_time', 'e_learning']).default('full_time'),
+
   deptId: int('dept_id').references(() => departments.id),
   unitId: int('unit_id').references(() => institutionalUnits.id),
   groupId: int('group_id').references(() => studentGroups.id), // For Class Arms (A, B, etc.)
@@ -5814,7 +5814,8 @@ export const admissionApplicationsV2 = mysqlTable('admission_applications_v2', {
   applicantId: int('applicant_id').references(() => users.id),
   studentId: int('student_id').references(() => students.id),
   status: mysqlEnum('status', ['draft', 'submitted', 'paid', 'screened', 'admitted', 'rejected']).default('draft'),
-  studyMode: mysqlEnum('study_mode', ['full_time', 'part_time', 'e_learning']).default('full_time'),
+  studyMode: mysqlEnum('study_mode', ['full-time', 'part-time', 'elearning']).default('full-time'),
+
   paymentStatus: mysqlEnum('payment_status', ['pending', 'paid', 'failed']).default('pending'),
   paymentReference: varchar('payment_reference', { length: 100 }),
   processingFeeStatus: mysqlEnum('processing_fee_status', ['pending', 'paid', 'failed']).default('pending'),
@@ -7690,4 +7691,5 @@ export const unifiedExamAssignmentsRelations = relations(unifiedExamAssignments,
   exam: one(unifiedExams, { fields: [unifiedExamAssignments.examId], references: [unifiedExams.id] }),
   user: one(users, { fields: [unifiedExamAssignments.userId], references: [users.id] }),
 }));
+
 
