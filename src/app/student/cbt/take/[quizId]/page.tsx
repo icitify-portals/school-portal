@@ -22,6 +22,7 @@ import { cn } from "@/lib/utils";
 import { RichTextEditor } from "@/components/RichTextEditor";
 import { ActivityMonitor } from "@/components/cbt/ActivityMonitor";
 import { CertificateGenerator } from "@/components/cbt/CertificateGenerator";
+import { ResultSlip } from "@/components/cbt/ResultSlip";
 import { getExamWithQuestions, submitExamResponse, finalizeExamAttempt, startExamAttempt, getAttemptWithRemainingTime } from "@/actions/unified-exam";
 import { getExamSecuritySettingsForStudents } from "@/actions/exam-security";
 import { toast } from "sonner";
@@ -205,39 +206,19 @@ export default function StudentExamPage({ params }: Props) {
     }
 
     if (isSubmitted) {
-        const hasPassed = true; // In real app, calculate based on score
+        const totalMarks = parseFloat(quiz?.totalMarks || '100');
+        const percentage = totalMarks > 0 ? (finalScore / totalMarks) * 100 : 0;
 
         return (
-            <div className="fixed inset-0 bg-white z-[9999] flex flex-col items-center justify-center p-8 text-center overflow-y-auto">
-                <div className="max-w-md w-full space-y-8">
-                    <div className="p-4 bg-emerald-100 rounded-full w-20 h-20 flex items-center justify-center mx-auto">
-                        <CheckCircle2 className="w-12 h-12 text-emerald-600" />
-                    </div>
-                    <div>
-                        <h1 className="text-3xl font-black text-slate-900 mb-2 uppercase tracking-tight">Examination Submitted</h1>
-                        <p className="text-slate-500 font-medium">Your responses have been securely uploaded and are now being processed.</p>
-                    </div>
-
-                    {hasPassed && (
-                        <div className="pt-8 border-t border-slate-100">
-                            <CertificateGenerator
-                                studentName={session?.user?.name || "Student"}
-                                courseName={quiz?.title || "Course"}
-                                quizTitle={quiz?.title || "Main Semester Examination"}
-                                score={finalScore}
-                                date={new Date().toLocaleDateString()}
-                            />
-                        </div>
-                    )}
-
-                    <Button
-                        onClick={() => window.location.href = '/student/dashboard'}
-                        variant="ghost"
-                        className="w-full h-14 rounded-2xl font-black uppercase tracking-widest text-[10px] text-slate-400 hover:text-slate-900"
-                    >
-                        Return to Dashboard
-                    </Button>
-                </div>
+            <div className="min-h-screen bg-slate-100 flex items-center justify-center p-6 pb-20">
+                <ResultSlip
+                    studentName={session?.user?.name || "Student"}
+                    regNumber={(session?.user as any)?.matricNumber || "N/A"}
+                    examTitle={quiz?.title || "Examination"}
+                    score={finalScore}
+                    totalMarks={totalMarks}
+                    percentage={percentage}
+                />
             </div>
         );
     }

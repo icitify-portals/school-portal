@@ -14,7 +14,7 @@ interface Props {
 export function ActivityMonitor({ attemptId, enabled, onLock }: Props) {
     const [violations, setViolations] = useState(0);
     const [isLocked, setIsLocked] = useState(false);
-    const threshold = 3;
+    const threshold = 10;
 
     const logIncident = async (type: 'tab_blur' | 'window_resize' | 'fullscreen_exit' | 'hardware_change', metadata?: string) => {
         if (!enabled || isLocked) return;
