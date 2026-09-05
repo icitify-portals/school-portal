@@ -1,25 +1,46 @@
 "use server";
 import { db } from "@/db/db";
-import { transactions, students, admissionApplicationsV2, users } from "@/db/schema";
-import { eq, inArray, and, desc, like } from "drizzle-orm";
+import { transactions, payment_transactions, students, admissionApplicationsV2, users } from "@/db/schema";
+import { eq, inArray, desc, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 export async function getSuccessfulPaymentsGrouped() {
     try {
-        const txs = await db.select({
+        const admissionTxs = await db.select({
             id: transactions.id,
             amount: transactions.amount,
             gateway: transactions.gateway,
             gatewayReference: transactions.gatewayReference,
             createdAt: transactions.createdAt,
             purpose: transactions.purpose,
-            studentId: transactions.studentId,
-        }).from(transactions).where(eq(transactions.status, 'completed')).orderBy(desc(transactions.createdAt));
+            type: sql<string>`'admission'`,
+            userId: sql<number | null>`null`,
+        }).from(transactions).where(eq(transactions.status, 'completed'));
+
+        const bursaryTxs = await db.select({
+            id: payment_transactions.id,
+            amount: payment_transactions.amount,
+            gateway: payment_transactions.paymentGateway,
+            gatewayReference: payment_transactions.transactionReference,
+            createdAt: payment_transactions.createdAt,
+            purpose: payment_transactions.transactionType,
+            type: sql<string>`'bursary'`,
+            userId: payment_transactions.userId,
+        }).from(payment_transactions).where(eq(payment_transactions.status, 'paid'));
+
+        const txs = [...admissionTxs, ...bursaryTxs].sort((a, b) => {
+            const dA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+            const dB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+            return dB - dA;
+        });
 
         const appIds = new Set<number>();
+        const userIds = new Set<number>();
+
         txs.forEach(tx => {
             const match = tx.gatewayReference?.match(/^(?:SCH|ACC|PROC|FORM)-(\d+)-/);
             if (match) appIds.add(parseInt(match[1]));
+            if (tx.userId) userIds.add(tx.userId);
         });
 
         const appMap = new Map<number, string>();
@@ -39,14 +60,26 @@ export async function getSuccessfulPaymentsGrouped() {
             });
         }
 
+        const userMap = new Map<number, string>();
+        if (userIds.size > 0) {
+            const usersData = await db.select({ id: users.id, name: users.name, firstName: users.firstName, surname: users.surname })
+                .from(users)
+                .where(inArray(users.id, Array.from(userIds)));
+            
+            usersData.forEach(u => {
+                const fullName = u.name || `${u.firstName || ''} ${u.surname || ''}`.trim() || 'Student';
+                userMap.set(u.id, fullName);
+            });
+        }
+
         const grouped: Record<string, any[]> = {};
         for (const tx of txs) {
             if (tx.gateway === 'paystack' || (tx.gateway !== 'remita' && tx.gateway !== 'alatpay')) continue;
             
             let category = 'Other';
-            let itemBreakdown = tx.purpose;
+            let itemBreakdown = tx.purpose || 'N/A';
             
-            const p = tx.purpose.toLowerCase();
+            const p = (tx.purpose || '').toLowerCase();
             if (p.includes('acceptance')) {
                 category = 'Acceptance Fee';
                 itemBreakdown = 'Acceptance Fee & ID Card (N2,000)';
@@ -66,6 +99,8 @@ export async function getSuccessfulPaymentsGrouped() {
             const match = tx.gatewayReference?.match(/^(?:SCH|ACC|PROC|FORM)-(\d+)-/);
             if (match && appMap.has(parseInt(match[1]))) {
                 studentName = appMap.get(parseInt(match[1]))!;
+            } else if (tx.userId && userMap.has(tx.userId)) {
+                studentName = userMap.get(tx.userId)!;
             }
 
             if (!grouped[category]) grouped[category] = [];
@@ -82,9 +117,13 @@ export async function getSuccessfulPaymentsGrouped() {
     }
 }
 
-export async function deleteTransaction(txId: number) {
+export async function deleteTransaction(txId: number, type: string = 'admission') {
     try {
-        await db.delete(transactions).where(eq(transactions.id, txId));
+        if (type === 'bursary') {
+            await db.delete(payment_transactions).where(eq(payment_transactions.id, txId));
+        } else {
+            await db.delete(transactions).where(eq(transactions.id, txId));
+        }
         revalidatePath("/admin/bursary/successful-payments");
         return { success: true };
     } catch(e) {

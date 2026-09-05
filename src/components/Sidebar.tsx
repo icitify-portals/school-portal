@@ -270,6 +270,7 @@ const adminMenuItems: MenuItem[] = [
             { name: "All Transactions", href: "/admin/bursary/transactions" },
             { name: "School Bills", href: "/admin/bursary/bills" },
             { name: "Refund Management", href: "/admin/bursary/refunds" },
+            { name: "Successful Payments", href: "/admin/bursary/successful-payments" },
             { name: "Platform Subscriptions", href: "/admin/bursary/developer-subscriptions" },
             { name: "Financial Reports", href: "/admin/bursary/reports" },
             { name: "Bursary Settings", href: "/admin/bursary/settings" },

@@ -25,9 +25,9 @@ export default function SuccessfulPaymentsPage() {
         loadData();
     }, []);
 
-    const handleDelete = async (id: number) => {
+    const handleDelete = async (id: number, type: string) => {
         if (!confirm("Are you sure you want to delete this test transaction? This cannot be undone.")) return;
-        const res = await deleteTransaction(id);
+        const res = await deleteTransaction(id, type);
         if (res.success) {
             toast.success("Transaction removed");
             loadData();
@@ -113,7 +113,7 @@ export default function SuccessfulPaymentsPage() {
                                                 &#8358;{parseFloat(tx.amount).toLocaleString()}
                                             </td>
                                             <td className="px-6 py-4 text-center">
-                                                <button onClick={() => handleDelete(tx.id)} className="p-2 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded-full transition-colors">
+                                                <button onClick={() => handleDelete(tx.id, tx.type)} className="p-2 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded-full transition-colors">
                                                     <Trash2 className="w-4 h-4" />
                                                 </button>
                                             </td>
