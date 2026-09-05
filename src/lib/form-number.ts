@@ -62,11 +62,27 @@ export async function checkAndGenerateFormNumber(applicationId: number, transact
     const isProcFeePaid = app.template.processingFee === '0.00' || parseFloat(app.template.processingFee || "0") === 0 || app.processingFeeStatus === 'paid';
 
     if (isAppFeePaid && isProcFeePaid && !app.formNumber) {
-        const newFormNumber = await generateFormNumber(app.template.level || 'tertiary');
-        await transactionDb.update(admissionApplicationsV2)
-            .set({ formNumber: newFormNumber })
-            .where(eq(admissionApplicationsV2.id, applicationId));
-        return { success: true, formNumber: newFormNumber };
+        let attempts = 0;
+        const maxAttempts = 5;
+        while (attempts < maxAttempts) {
+            attempts++;
+            try {
+                const newFormNumber = await generateFormNumber(app.template.level || 'tertiary');
+                await transactionDb.update(admissionApplicationsV2)
+                    .set({ formNumber: newFormNumber })
+                    .where(eq(admissionApplicationsV2.id, applicationId));
+                return { success: true, formNumber: newFormNumber };
+            } catch (e: any) {
+                // ER_DUP_ENTRY code (MySQL) is thrown when the unique constraint catches the race condition
+                if (e.code === 'ER_DUP_ENTRY' || (e.message && e.message.includes('Duplicate entry'))) {
+                    if (attempts >= maxAttempts) throw e;
+                    // Add a tiny random delay before retrying to prevent perfect sync collisions
+                    await new Promise(r => setTimeout(r, Math.random() * 200 + 50));
+                    continue;
+                }
+                throw e;
+            }
+        }
     }
     
     return { success: !!app.formNumber, formNumber: app.formNumber || undefined };
