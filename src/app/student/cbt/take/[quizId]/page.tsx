@@ -46,7 +46,7 @@ export default function StudentExamPage({ params }: Props) {
     const [securitySettings, setSecuritySettings] = useState<any>(null);
     const [finalScore, setFinalScore] = useState(0);
 
-    const [mode, setMode] = useState<'exam' | 'practice' | null>(null);
+    const [mode, setMode] = useState<'exam' | 'practice' | null>('exam');
     const { data: session } = useSession();
 
     useEffect(() => {
