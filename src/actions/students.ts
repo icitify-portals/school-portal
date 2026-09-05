@@ -266,6 +266,13 @@ export async function bulkImportStudents(data: any[]) {
                 const parsedYear = parseInt(row.admissionYear);
                 const finalYear = isNaN(parsedYear) ? new Date().getFullYear() : parsedYear;
 
+                let studyMode = 'full-time';
+                if (row.studyMode) {
+                    const sm = row.studyMode.toLowerCase();
+                    if (sm.includes('part')) studyMode = 'part-time';
+                    else if (sm.includes('e-learning') || sm.includes('elearning')) studyMode = 'elearning';
+                }
+
                 // Create Student Profile
                 const barcode = `${name} | ${matricNumber || 'PENDING'}`;
                 await tx.insert(students).values({
@@ -273,6 +280,7 @@ export async function bulkImportStudents(data: any[]) {
                     matricNumber: matricNumber || null,
                     currentLevel: finalLevel,
                     modeOfEntry: entryMode,
+                    studyMode: studyMode as any,
                     admissionYear: finalYear,
                     programmeId: parseInt(programmeId) || null,
                     barcode: barcode
