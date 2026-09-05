@@ -79,7 +79,7 @@ export default function StudentCBTDashboard() {
                   </div>
                   <div className="flex items-center text-sm font-medium text-slate-600 capitalize">
                     <Calendar className="w-4 h-4 mr-3 text-slate-400" />
-                    {exam.contextType || '} Assessment
+                    {exam.contextType || ""} Assessment
                   </div>
                 </div>
 

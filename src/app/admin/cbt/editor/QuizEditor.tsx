@@ -57,12 +57,15 @@ export default function QuizEditor({ existingQuizzes }: { existingQuizzes: any[]
         setIsSearching(false);
     }
 
-    async function handleBulkElearningAssign() {
+    const [bulkStudyMode, setBulkStudyMode] = useState("elearning");
+    const [bulkLevel, setBulkLevel] = useState("");
+
+    async function handleBulkAssign() {
         if (!quizId) return;
-        const { assignElearningStudents } = await import("@/actions/unified-exam");
-        const res = await assignElearningStudents(quizId);
+        const { assignStudentsByFilter } = await import("@/actions/unified-exam");
+        const res = await assignStudentsByFilter(quizId, { studyMode: bulkStudyMode, level: bulkLevel });
         if (res.success) {
-            toast.success(`Successfully assigned ${res.count} E-Learning students`);
+            toast.success(`Successfully assigned ${res.count} students`);
             loadAssigned();
         } else {
             toast.error(res.error || "Failed to assign students");
@@ -230,6 +233,39 @@ export default function QuizEditor({ existingQuizzes }: { existingQuizzes: any[]
 
                         {requireAssignment && (
                             <div className="space-y-4">
+                                <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-4">
+                                    <h4 className="text-sm font-bold text-slate-700">Bulk Assign Students</h4>
+                                    <div className="flex flex-col sm:flex-row gap-3">
+                                        <select 
+                                            value={bulkStudyMode}
+                                            onChange={e => setBulkStudyMode(e.target.value)}
+                                            className="flex-1 h-11 px-3 border border-slate-200 rounded-xl text-sm"
+                                        >
+                                            <option value="">Any Study Mode</option>
+                                            <option value="elearning">E-Learning</option>
+                                            <option value="full-time">Full-Time</option>
+                                            <option value="part-time">Part-Time</option>
+                                        </select>
+                                        <select 
+                                            value={bulkLevel}
+                                            onChange={e => setBulkLevel(e.target.value)}
+                                            className="flex-1 h-11 px-3 border border-slate-200 rounded-xl text-sm"
+                                        >
+                                            <option value="">Any Level</option>
+                                            <option value="ND1">ND 1</option>
+                                            <option value="ND2">ND 2</option>
+                                            <option value="HND1">HND 1</option>
+                                            <option value="HND2">HND 2</option>
+                                        </select>
+                                        <Button 
+                                            variant="outline" 
+                                            className="h-11 rounded-xl bg-cyan-50 text-cyan-700 border-cyan-200 hover:bg-cyan-100 hover:text-cyan-800 transition-colors shrink-0 font-bold"
+                                            onClick={handleBulkAssign}
+                                        >
+                                            Assign
+                                        </Button>
+                                    </div>
+                                </div>
                                 <div className="flex items-center gap-3">
                                     <div className="relative flex-1">
                                         <Search className="absolute left-3 top-3.5 h-4 w-4 text-slate-400" />
@@ -244,13 +280,6 @@ export default function QuizEditor({ existingQuizzes }: { existingQuizzes: any[]
                                         />
                                         {isSearching && <Loader2 className="absolute right-3 top-3.5 h-4 w-4 text-slate-400 animate-spin" />}
                                     </div>
-                                    <Button 
-                                        variant="outline" 
-                                        className="h-11 rounded-xl bg-cyan-50 text-cyan-700 border-cyan-200 hover:bg-cyan-100 hover:text-cyan-800 transition-colors shrink-0 font-bold"
-                                        onClick={handleBulkElearningAssign}
-                                    >
-                                        Bulk Assign E-Learning
-                                    </Button>
                                 </div>
                                 
                                 {searchResults.length > 0 && (

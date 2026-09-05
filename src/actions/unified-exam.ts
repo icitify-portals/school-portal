@@ -706,29 +706,42 @@ export async function assignToExam(examId: number, taker: {
   }
 }
 
-export async function assignElearningStudents(examId: number) {
+export async function assignStudentsByFilter(examId: number, filters: { studyMode?: string; level?: string }) {
   try {
     const allowed = await hasPermission("cbt.manage") || await hasRole("admin") || await hasRole("superadmin");
     if (!allowed) return { success: false, error: "Unauthorized" };
 
-    // Get all active users with 'e-learning' study mode or elearning application mode
-    // (Assuming students table or users table tracks this)
-    // Actually, students are tracked in `students` table.
     const { students } = await import("@/db/schema");
-    const elearningStudents = await db.select({
+    
+    const conditions = [];
+    if (filters.studyMode) conditions.push(eq(students.studyMode, filters.studyMode));
+    
+    if (filters.level) {
+      const isND = filters.level.startsWith('ND');
+      const isHND = filters.level.startsWith('HND');
+      const lvl = filters.level.endsWith('1') ? 1 : filters.level.endsWith('2') ? 2 : null;
+      
+      if (isND) conditions.push(eq(students.programmeType, 'ND'));
+      if (isHND) conditions.push(eq(students.programmeType, 'HND'));
+      if (lvl) conditions.push(eq(students.currentLevel, lvl));
+    }
+    
+    if (conditions.length === 0) return { success: false, error: "Must provide at least one filter" };
+
+    const filteredStudents = await db.select({
       userId: users.id
     }).from(users)
     .innerJoin(students, eq(users.id, students.userId))
-    .where(eq(students.studyMode, 'elearning'));
+    .where(and(...conditions));
 
-    if (elearningStudents.length === 0) return { success: false, error: "No E-Learning students found" };
+    if (filteredStudents.length === 0) return { success: false, error: "No students match these criteria" };
 
     // Fetch existing assignments
     const existing = await db.select().from(unifiedExamAssignments)
       .where(eq(unifiedExamAssignments.examId, examId));
     
     const assignedIds = new Set(existing.map(a => a.userId));
-    const toInsert = elearningStudents
+    const toInsert = filteredStudents
       .filter(s => s.userId && !assignedIds.has(s.userId))
       .map(s => ({
         examId,
