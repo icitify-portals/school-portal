@@ -5835,7 +5835,7 @@ export const admissionApplicationsV2 = mysqlTable('admission_applications_v2', {
   pin: varchar('pin', { length: 255 }), // Hashed or plaintext PIN for candidate portal access
   acceptancePaymentStatus: mysqlEnum('acceptance_payment_status', ['pending', 'paid', 'not_applicable']).default('pending'),
   acceptancePaymentReference: varchar('acceptance_payment_reference', { length: 100 }),
-  applicationMode: mysqlEnum('application_mode', ['full_time', 'part_time']),
+  applicationMode: mysqlEnum('application_mode', ['full_time', 'part_time', 'elearning']),
   jambRegNumber: varchar('jamb_reg_number', { length: 20 }),
   examAttendanceStatus: mysqlEnum('exam_attendance_status', ['pending', 'present', 'absent']).default('pending'),
   mathScore: decimal('math_score', { precision: 5, scale: 2 }), // Screening Mathematics score (0-100)

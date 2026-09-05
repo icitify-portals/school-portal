@@ -866,9 +866,11 @@ export default function StatefulApplicationPage() {
                                 "text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border",
                                 application.applicationMode === 'full_time'
                                     ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                    : application.applicationMode === 'elearning'
+                                    ? "bg-cyan-50 text-cyan-700 border-cyan-200"
                                     : "bg-indigo-50 text-indigo-700 border-indigo-200"
                             )}>
-                                {application.applicationMode === 'full_time' ? 'Full-Time' : 'Part-Time'}
+                                {application.applicationMode === 'full_time' ? 'Full-Time' : application.applicationMode === 'elearning' ? 'E-Learning' : 'Part-Time'}
                                 {application.jambRegNumber ? ` · JAMB: ${application.jambRegNumber}` : ''}
                             </span>
                         )}

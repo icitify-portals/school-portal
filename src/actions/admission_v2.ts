@@ -1994,7 +1994,16 @@ export async function finalizeStudentAdmission(applicationId: number) {
         const isJambCandidate = application.applicationMode
             ? application.applicationMode === 'full_time'
             : (!!jambRegNo && !jambRegNo.toLowerCase().includes("temp") && !jambRegNo.toLowerCase().includes("direct"));
-        let studyMode = formData.studyMode || (isJambCandidate ? "full-time" : "part-time");
+        let studyMode = "part-time";
+        if (formData.studyMode) {
+            studyMode = formData.studyMode;
+        } else if (application.applicationMode) {
+            if (application.applicationMode === 'full_time') studyMode = 'full-time';
+            else if (application.applicationMode === 'elearning') studyMode = 'elearning';
+        } else if (isJambCandidate) {
+            studyMode = 'full-time';
+        }
+        
         // ensure enum match
         if (studyMode === 'full_time') studyMode = 'full-time';
         if (studyMode === 'part_time') studyMode = 'part-time';

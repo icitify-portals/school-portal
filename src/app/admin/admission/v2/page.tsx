@@ -215,7 +215,7 @@ function AdminV2ApplicationsContent() {
                     'Faculty': app.facultyName || 'N/A',
                     'Department': app.departmentName || 'N/A',
                     'Programme': app.programmeName || 'Pending Course Selection',
-                    'Mode of Study': app.applicationMode === 'full_time' ? 'Full Time' : app.applicationMode === 'part_time' ? 'Part Time' : 'N/A',
+                    'Mode of Study': app.applicationMode === 'full_time' ? 'Full Time' : app.applicationMode === 'part_time' ? 'Part Time' : app.applicationMode === 'elearning' ? 'E-Learning' : 'N/A',
                     'Level': app.academicLevel || 'N/A',
                     'Status': app.status ? String(app.status).toUpperCase() : 'N/A',
                     'Payment Status': app.paymentStatus ? String(app.paymentStatus).toUpperCase() : 'N/A',
@@ -669,7 +669,7 @@ function AdminV2ApplicationsContent() {
                                             </td>
                                             <td className="px-6 py-5">
                                                 <span className="px-2.5 py-1 bg-slate-100 border border-slate-200 text-slate-700 rounded-lg text-[9px] font-black uppercase tracking-wider inline-block">
-                                                    {app.applicationMode === 'part_time' ? 'Part-Time' : 'Full-Time'}
+                                                    {app.applicationMode === 'part_time' ? 'Part-Time' : app.applicationMode === 'elearning' ? 'E-Learning' : 'Full-Time'}
                                                 </span>
                                             </td>
                                             <td className="px-6 py-5">

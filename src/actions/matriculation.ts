@@ -185,31 +185,48 @@ export async function generateMatricNumber(options: {
                 serialNumberToIssue = lastSerialNumber + 1;
             }
         } else {
-            // Use transaction to ensure serials are never duplicated
-            await db.transaction(async (tx) => {
-                const sequence = await tx.select().from(matriculationSequences).where(
-                    and(
-                        eq(matriculationSequences.settingId, bestSetting.id),
-                        eq(matriculationSequences.year, year)
-                    )
-                ).limit(1);
-
-                if (sequence.length > 0) {
-                    lastSerialNumber = sequence[0].currentSerial || 0;
-                    serialNumberToIssue = lastSerialNumber + 1;
-                    await tx.update(matriculationSequences)
-                        .set({ currentSerial: serialNumberToIssue })
-                        .where(eq(matriculationSequences.id, sequence[0].id));
-                } else {
-                    serialNumberToIssue = bestSetting.serialStart || 1;
-                    lastSerialNumber = serialNumberToIssue - 1;
-                    await tx.insert(matriculationSequences).values({
-                        settingId: bestSetting.id,
-                        year: year,
-                        currentSerial: serialNumberToIssue
+            // Use transaction with row-level locking (FOR UPDATE) and retries to ensure serials are never duplicated
+            let attempts = 0;
+            const maxAttempts = 5;
+            let success = false;
+            
+            while (attempts < maxAttempts && !success) {
+                attempts++;
+                try {
+                    await db.transaction(async (tx) => {
+                        const sequence = await tx.select().from(matriculationSequences).where(
+                            and(
+                                eq(matriculationSequences.settingId, bestSetting.id),
+                                eq(matriculationSequences.year, year)
+                            )
+                        ).limit(1).for('update');
+        
+                        if (sequence.length > 0) {
+                            lastSerialNumber = sequence[0].currentSerial || 0;
+                            serialNumberToIssue = lastSerialNumber + 1;
+                            await tx.update(matriculationSequences)
+                                .set({ currentSerial: serialNumberToIssue })
+                                .where(eq(matriculationSequences.id, sequence[0].id));
+                        } else {
+                            serialNumberToIssue = bestSetting.serialStart || 1;
+                            lastSerialNumber = serialNumberToIssue - 1;
+                            await tx.insert(matriculationSequences).values({
+                                settingId: bestSetting.id,
+                                year: year,
+                                currentSerial: serialNumberToIssue
+                            });
+                        }
                     });
+                    success = true;
+                } catch (e: any) {
+                    if (e.code === 'ER_DUP_ENTRY' || e.code === 'ER_LOCK_WAIT_TIMEOUT' || e.code === 'ER_LOCK_DEADLOCK' || (e.message && (e.message.includes('Duplicate entry') || e.message.includes('Deadlock') || e.message.includes('Lock')))) {
+                        if (attempts >= maxAttempts) throw e;
+                        await new Promise(r => setTimeout(r, Math.random() * 200 + 50));
+                    } else {
+                        throw e;
+                    }
                 }
-            });
+            }
         }
 
         const serialPadding = bestSetting.serialPadding ?? 3;

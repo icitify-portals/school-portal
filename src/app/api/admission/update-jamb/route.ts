@@ -20,8 +20,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Application not found" }, { status: 404 });
     }
 
-    // Normalize mode to the DB enum values ('full_time' | 'part_time')
-    const normalizedMode = mode === "full-time" || mode === "full_time" ? "full_time" : "part_time";
+    // Normalize mode to the DB enum values ('full_time' | 'part_time' | 'elearning')
+    let normalizedMode = "part_time";
+    if (mode === "full-time" || mode === "full_time") normalizedMode = "full_time";
+    else if (mode === "elearning" || mode === "e-learning") normalizedMode = "elearning";
 
     // Full-Time mode requires a valid JAMB Registration Number
     if (normalizedMode === "full_time" && (!jambNumber || String(jambNumber).trim().length < 8)) {

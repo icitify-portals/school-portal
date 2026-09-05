@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
@@ -9,7 +9,7 @@ import {
   FileText, Users, Sparkles, ChevronRight
 } from "lucide-react";
 
-type Mode = "full-time" | "part-time" | null;
+type Mode = "full-time" | "part-time" | "elearning" | null;
 
 export default function AdmissionInstructionsPage() {
   const params = useParams();
@@ -49,9 +49,9 @@ export default function AdmissionInstructionsPage() {
     setMode(selected);
     if (selected === "full-time") {
       setShowJambModal(true);
-    } else {
-      // Part-time: no JAMB required, persist mode and proceed straight to payment/application
-      persistModeAndProceed("part-time", null);
+    } else if (selected !== null) {
+      // Part-time and E-Learning: no JAMB required, persist mode and proceed straight to payment/application
+      persistModeAndProceed(selected, null);
     }
   }
 
@@ -120,7 +120,7 @@ export default function AdmissionInstructionsPage() {
     {
       step: "01",
       title: "Choose Application Mode",
-      desc: "Select Full-Time or Part-Time. Full-Time applicants must provide a valid JAMB Registration Number.",
+      desc: "Select Full-Time, Part-Time, or E-Learning. Full-Time applicants must provide a valid JAMB Registration Number.",
       icon: <Users className="w-5 h-5" />,
       color: "text-emerald-400",
     },
@@ -270,7 +270,7 @@ export default function AdmissionInstructionsPage() {
                 <AlertTriangle className="w-4 h-4 shrink-0" /> {navError}
               </div>
             )}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {/* Full-Time */}
               <button
                 onClick={() => handleModeSelect("full-time")}
@@ -291,7 +291,7 @@ export default function AdmissionInstructionsPage() {
                   Standard full-time academic programme. Requires a valid JAMB Registration Number for eligibility verification.
                 </p>
                 <div className="flex items-center gap-2 text-xs font-black text-emerald-400 uppercase tracking-wider">
-                  <Hash className="w-3.5 h-3.5" /> JAMB Registration Number Required
+                  <Hash className="w-3.5 h-3.5" /> JAMB Number Required
                 </div>
                 <div className="mt-6 flex items-center justify-between">
                   <span className="text-[9px] font-bold text-slate-600 uppercase tracking-widest">Click to proceed</span>
@@ -319,13 +319,43 @@ export default function AdmissionInstructionsPage() {
                   Flexible part-time academic programme. No JAMB Registration Number required — proceed directly to payment and form filling.
                 </p>
                 <div className="flex items-center gap-2 text-xs font-black text-indigo-400 uppercase tracking-wider">
-                  <CheckCircle2 className="w-3.5 h-3.5" /> No JAMB Number Required
+                  <CheckCircle2 className="w-3.5 h-3.5" /> No JAMB Required
                 </div>
                 <div className="mt-6 flex items-center justify-between">
                   <span className="text-[9px] font-bold text-slate-600 uppercase tracking-widest">Click to proceed</span>
                   {proceeding && mode === "part-time"
                     ? <Loader2 className="w-5 h-5 text-indigo-400 animate-spin" />
                     : <ArrowRight className="w-5 h-5 text-slate-600 group-hover:text-indigo-400 group-hover:translate-x-1 transition-all" />}
+                </div>
+              </button>
+
+              {/* E-Learning */}
+              <button
+                onClick={() => handleModeSelect("elearning")}
+                disabled={proceeding}
+                className={`group relative text-left p-8 rounded-[2rem] border-2 transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0
+                  ${mode === "elearning" ? "border-cyan-500 bg-cyan-500/10" : "border-slate-800 bg-slate-900/60 hover:border-cyan-500/50"}`}
+              >
+                <div className="absolute top-6 right-6">
+                  <div className="w-8 h-8 rounded-full bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center group-hover:bg-cyan-500/20 transition-colors">
+                    <Sparkles className="w-4 h-4 text-cyan-400" />
+                  </div>
+                </div>
+                <span className="px-3 py-1 bg-cyan-500/10 border border-cyan-500/20 rounded-full text-[9px] font-black uppercase tracking-widest text-cyan-400 mb-4 inline-block">
+                  E-Learning
+                </span>
+                <h3 className="text-2xl font-black italic uppercase tracking-tight text-white mb-3">Remote Learning</h3>
+                <p className="text-slate-400 text-xs font-bold leading-relaxed mb-4">
+                  100% remote academic programme with flexible digital classes. No JAMB Registration Number required.
+                </p>
+                <div className="flex items-center gap-2 text-xs font-black text-cyan-400 uppercase tracking-wider">
+                  <CheckCircle2 className="w-3.5 h-3.5" /> No JAMB Required
+                </div>
+                <div className="mt-6 flex items-center justify-between">
+                  <span className="text-[9px] font-bold text-slate-600 uppercase tracking-widest">Click to proceed</span>
+                  {proceeding && mode === "elearning"
+                    ? <Loader2 className="w-5 h-5 text-cyan-400 animate-spin" />
+                    : <ArrowRight className="w-5 h-5 text-slate-600 group-hover:text-cyan-400 group-hover:translate-x-1 transition-all" />}
                 </div>
               </button>
             </div>
