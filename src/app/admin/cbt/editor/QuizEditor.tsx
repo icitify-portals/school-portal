@@ -57,6 +57,18 @@ export default function QuizEditor({ existingQuizzes }: { existingQuizzes: any[]
         setIsSearching(false);
     }
 
+    async function handleBulkElearningAssign() {
+        if (!quizId) return;
+        const { assignElearningStudents } = await import("@/actions/unified-exam");
+        const res = await assignElearningStudents(quizId);
+        if (res.success) {
+            toast.success(`Successfully assigned ${res.count} E-Learning students`);
+            loadAssigned();
+        } else {
+            toast.error(res.error || "Failed to assign students");
+        }
+    }
+
     async function handleAssign(userId: number) {
         if (!quizId) return;
         const res = await assignToExam(quizId, { userId });
@@ -218,15 +230,27 @@ export default function QuizEditor({ existingQuizzes }: { existingQuizzes: any[]
 
                         {requireAssignment && (
                             <div className="space-y-4">
-                                <div className="relative">
-                                    <Search className="absolute left-3 top-3.5 h-4 w-4 text-slate-400" />
-                                    <Input 
-                                        placeholder="Search email, name, or matric..." 
-                                        value={searchQuery}
-                                        onChange={(e) => handleSearch(e.target.value)}
-                                        className="pl-9 h-11 rounded-xl"
-                                    />
-                                    {isSearching && <Loader2 className="absolute right-3 top-3.5 h-4 w-4 animate-spin text-slate-400" />}
+                                <div className="flex items-center gap-3">
+                                    <div className="relative flex-1">
+                                        <Search className="absolute left-3 top-3.5 h-4 w-4 text-slate-400" />
+                                        <Input 
+                                            placeholder="Search email, name, or matric..." 
+                                            value={searchQuery}
+                                            onChange={(e) => {
+                                                setSearchQuery(e.target.value);
+                                                handleSearch(e.target.value);
+                                            }}
+                                            className="pl-9 h-11 bg-slate-50 border-slate-200 rounded-xl focus-visible:ring-indigo-500"
+                                        />
+                                        {isSearching && <Loader2 className="absolute right-3 top-3.5 h-4 w-4 text-slate-400 animate-spin" />}
+                                    </div>
+                                    <Button 
+                                        variant="outline" 
+                                        className="h-11 rounded-xl bg-cyan-50 text-cyan-700 border-cyan-200 hover:bg-cyan-100 hover:text-cyan-800 transition-colors shrink-0 font-bold"
+                                        onClick={handleBulkElearningAssign}
+                                    >
+                                        Bulk Assign E-Learning
+                                    </Button>
                                 </div>
                                 
                                 {searchResults.length > 0 && (

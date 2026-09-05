@@ -706,6 +706,46 @@ export async function assignToExam(examId: number, taker: {
   }
 }
 
+export async function assignElearningStudents(examId: number) {
+  try {
+    const allowed = await hasPermission("cbt.manage") || await hasRole("admin") || await hasRole("superadmin");
+    if (!allowed) return { success: false, error: "Unauthorized" };
+
+    // Get all active users with 'e-learning' study mode or elearning application mode
+    // (Assuming students table or users table tracks this)
+    // Actually, students are tracked in `students` table.
+    const { students } = await import("@/db/schema");
+    const elearningStudents = await db.select({
+      userId: users.id
+    }).from(users)
+    .innerJoin(students, eq(users.id, students.userId))
+    .where(eq(students.studyMode, 'elearning'));
+
+    if (elearningStudents.length === 0) return { success: false, error: "No E-Learning students found" };
+
+    // Fetch existing assignments
+    const existing = await db.select().from(unifiedExamAssignments)
+      .where(eq(unifiedExamAssignments.examId, examId));
+    
+    const assignedIds = new Set(existing.map(a => a.userId));
+    const toInsert = elearningStudents
+      .filter(s => s.userId && !assignedIds.has(s.userId))
+      .map(s => ({
+        examId,
+        userId: s.userId
+      }));
+
+    if (toInsert.length > 0) {
+      await db.insert(unifiedExamAssignments).values(toInsert);
+    }
+
+    return { success: true, count: toInsert.length };
+  } catch (error: any) {
+    console.error(error);
+    return { success: false, error: error.message };
+  }
+}
+
 export async function getExamAssignments(examId: number) {
   try {
     return await db.select({
@@ -720,6 +760,46 @@ export async function getExamAssignments(examId: number) {
       .leftJoin(users, eq(unifiedExamAssignments.userId, users.id))
       .where(eq(unifiedExamAssignments.examId, examId));
   } catch {
+    return [];
+  }
+}
+
+export async function getStudentExams(userId: number) {
+  try {
+    // Get exams specifically assigned to the user
+    const assigned = await db.select({
+      id: unifiedExams.id,
+      title: unifiedExams.title,
+      description: unifiedExams.description,
+      durationMinutes: unifiedExams.durationMinutes,
+      totalMarks: unifiedExams.totalMarks,
+      contextType: unifiedExams.contextType,
+      isActive: unifiedExams.isActive,
+    })
+    .from(unifiedExamAssignments)
+    .innerJoin(unifiedExams, eq(unifiedExamAssignments.examId, unifiedExams.id))
+    .where(and(eq(unifiedExamAssignments.userId, userId), eq(unifiedExams.isActive, true)));
+
+    // Get standalone exams that don't require assignment
+    const standalone = await db.select({
+      id: unifiedExams.id,
+      title: unifiedExams.title,
+      description: unifiedExams.description,
+      durationMinutes: unifiedExams.durationMinutes,
+      totalMarks: unifiedExams.totalMarks,
+      contextType: unifiedExams.contextType,
+      isActive: unifiedExams.isActive,
+    })
+    .from(unifiedExams)
+    .where(and(eq(unifiedExams.contextType, 'standalone'), eq(unifiedExams.requireAssignment, false), eq(unifiedExams.isActive, true)));
+
+    // Combine and deduplicate
+    const all = [...assigned, ...standalone];
+    const unique = Array.from(new Map(all.map(item => [item.id, item])).values());
+    
+    return unique;
+  } catch (error) {
+    console.error("Error fetching student exams:", error);
     return [];
   }
 }
