@@ -183,6 +183,14 @@ export const authConfig = {
                     nextUrl.pathname.startsWith("/admin/programmes")
                 )) return true;
 
+                if (userRoles.includes('SIWES Coordinator') && (
+                    nextUrl.pathname === "/admin/dashboard" || 
+                    nextUrl.pathname.startsWith("/admin/siwes") || 
+                    nextUrl.pathname.startsWith("/admin/communications") || 
+                    nextUrl.pathname.startsWith("/admin/announcements") || 
+                    nextUrl.pathname.startsWith("/admin/profile")
+                )) return true;
+
                 if (userRole === 'librarian' && (nextUrl.pathname === "/admin/dashboard" || nextUrl.pathname.startsWith("/admin/library") || nextUrl.pathname.startsWith("/admin/journal") || nextUrl.pathname.startsWith("/admin/communications") || nextUrl.pathname.startsWith("/admin/announcements"))) return true;
                 if (userRole === 'hod' && (nextUrl.pathname === "/admin/dashboard" || nextUrl.pathname.startsWith("/admin/hod") || nextUrl.pathname.startsWith("/admin/academics") || nextUrl.pathname.startsWith("/admin/academic") || nextUrl.pathname.startsWith("/admin/students") || nextUrl.pathname.startsWith("/admin/hr") || nextUrl.pathname.startsWith("/admin/communications") || nextUrl.pathname.startsWith("/admin/announcements"))) return true;
                 if (userRole === 'dean' && (nextUrl.pathname === "/admin/dashboard" || nextUrl.pathname.startsWith("/admin/dean") || nextUrl.pathname.startsWith("/admin/academics") || nextUrl.pathname.startsWith("/admin/academic") || nextUrl.pathname.startsWith("/admin/students") || nextUrl.pathname.startsWith("/admin/hr") || nextUrl.pathname.startsWith("/admin/communications") || nextUrl.pathname.startsWith("/admin/announcements"))) return true;
