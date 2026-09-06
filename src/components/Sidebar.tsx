@@ -747,6 +747,14 @@ export function Sidebar({ enabledModules = {}, mobileOpen = false, onClose }: {
         } else if (role === 'parent') {
             return parentMenuItems;
         } else if (role === 'staff') {
+            if (userRolesList.includes("SIWES Coordinator")) {
+                const siwesModule = adminMenuItems.find(i => i.name === "SIWES Management");
+                return [
+                    { name: "My Dashboard", icon: LayoutDashboard, href: "/staff/dashboard" },
+                    ...(siwesModule ? [siwesModule] : []),
+                    { name: "Profile", icon: User, href: "/profile" },
+                ];
+            }
             return staffMenuItems;
         } else if (role === 'applicant') {
             return applicantMenuItems;
