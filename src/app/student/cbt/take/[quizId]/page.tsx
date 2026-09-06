@@ -256,31 +256,35 @@ export default function StudentExamPage({ params }: Props) {
                     </div>
                 </div>
 
-                {mode === 'practice' ? (
-                    <div className="flex items-center gap-4">
+                <div className="flex items-center gap-4">
+                    {mode === 'practice' ? (
                         <Badge className="bg-white/20 text-white border-none px-4 py-2 rounded-xl backdrop-blur-md flex gap-2">
                             <Sparkles className="w-4 h-4 text-amber-300" />
-                            <span className="text-[10px] font-black uppercase tracking-widest">Immediate Feedback Enabled</span>
+                            <span className="text-[10px] font-black uppercase tracking-widest hidden md:inline">Immediate Feedback Enabled</span>
                         </Badge>
-                    </div>
-                ) : (
-                    <div className={cn(
-                        "flex items-center gap-3 px-6 py-2 rounded-2xl border-2 transition-colors",
-                        timeLeft < 300 ? "bg-red-500/20 border-red-500 text-red-500 animate-pulse" : "bg-white/10 border-white/20"
-                    )}>
-                        <Clock className="w-5 h-5" />
-                        <span className="text-xl font-black tabular-nums">{formatTime(timeLeft)}</span>
-                    </div>
-                )}
+                    ) : (
+                        <div className={cn(
+                            "flex items-center gap-3 px-4 md:px-6 py-2 rounded-2xl border-2 transition-colors",
+                            timeLeft < 300 ? "bg-red-500/20 border-red-500 text-red-500 animate-pulse" : "bg-white/10 border-white/20"
+                        )}>
+                            <Clock className="w-5 h-5" />
+                            <span className="text-xl font-black tabular-nums">{formatTime(timeLeft)}</span>
+                        </div>
+                    )}
 
-                <div className="hidden md:block text-right">
-                    <p className="text-[10px] font-black uppercase text-white/40">{mode === 'practice' ? "Unlimited Time" : "Time Remaining"}</p>
+                    <Button 
+                        onClick={handleSubmit}
+                        variant="ghost" 
+                        className="bg-red-600 hover:bg-red-700 text-white border-none h-10 px-4 rounded-xl lg:hidden font-black uppercase text-[10px] tracking-widest"
+                    >
+                        Submit
+                    </Button>
                 </div>
             </header>
 
             <main className="flex-1 flex overflow-hidden">
                 <aside className="w-80 bg-white border-r border-slate-200 hidden lg:flex flex-col">
-                    <div className="p-6 border-b border-slate-50">
+                    <div className="p-6 border-b border-slate-50 flex-1 overflow-y-auto">
                         <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-4">Question Map</h3>
                         <div className="grid grid-cols-5 gap-2">
                             {quiz?.questions?.map((q: any, i: number) => (
@@ -299,6 +303,15 @@ export default function StudentExamPage({ params }: Props) {
                                 </button>
                             ))}
                         </div>
+                    </div>
+                    <div className="p-6 border-t border-slate-100 bg-slate-50 mt-auto">
+                        <Button 
+                            onClick={handleSubmit}
+                            className="w-full h-14 bg-red-600 hover:bg-red-700 text-white font-black uppercase tracking-widest text-xs rounded-2xl shadow-lg shadow-red-600/20"
+                        >
+                            <CheckCircle2 className="w-5 h-5 mr-2" />
+                            Submit Exam
+                        </Button>
                     </div>
                 </aside>
 
