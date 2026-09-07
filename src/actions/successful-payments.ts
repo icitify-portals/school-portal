@@ -1,3 +1,4 @@
+"use server";
 import { db } from "@/db/db";
 import { transactions, payment_transactions, students, admissionApplicationsV2, users } from "@/db/schema";
 import { eq, inArray, desc, sql, or } from "drizzle-orm";
@@ -12,9 +13,8 @@ export async function getSuccessfulPaymentsGrouped() {
             gatewayReference: transactions.gatewayReference,
             createdAt: transactions.createdAt,
             purpose: transactions.purpose,
-            type: sql<string>\'admission'\,
-            userId: sql<number | null>\
-ull\,
+            type: sql<string>`'admission'`,
+            userId: sql<number | null>`null`,
         }).from(transactions).where(eq(transactions.status, 'completed'));
 
         const bursaryTxs = await db.select({
@@ -24,7 +24,7 @@ ull\,
             gatewayReference: payment_transactions.transactionReference,
             createdAt: payment_transactions.createdAt,
             purpose: payment_transactions.transactionType,
-            type: sql<string>\'bursary'\,
+            type: sql<string>`'bursary'`,
             userId: payment_transactions.userId,
         }).from(payment_transactions).where(eq(payment_transactions.status, 'paid'));
 
@@ -55,7 +55,7 @@ ull\,
             let fallback = 'Applicant';
             try { 
                 const d = JSON.parse(app.data as string || '{}');
-                fallback = d.fullName || d.name || \\ \\.trim() || 'Applicant';
+                fallback = d.fullName || d.name || `${d.FirstName || d.firstName || d.first_name || ''} ${d['Last Name'] || d.lastName || d.last_name || d.surname || ''}`.trim() || 'Applicant';
             } catch(e) {}
             return app.name || fallback;
         };
@@ -105,7 +105,7 @@ ull\,
                 .where(inArray(users.id, Array.from(userIds)));
             
             usersData.forEach(u => {
-                const fullName = u.name || \\ \\.trim() || 'Student';
+                const fullName = u.name || `${u.firstName || ''} ${u.surname || ''}`.trim() || 'Student';
                 userMap.set(u.id, fullName);
             });
         }
