@@ -119,8 +119,54 @@ export class AdmissionLetterService {
             html = html.replace(new RegExp(key, 'g'), value);
         }
 
+        const applicantPhoto = application[0].admission_applications_v2.applicantPhoto;
+        const applicantPhotoHtml = applicantPhoto ? `
+            <div class="absolute top-0 right-0 w-32 h-32 md:w-40 md:h-40 border-4 border-slate-200 shadow-sm overflow-hidden bg-slate-50">
+                <img src="${applicantPhoto}" alt="Applicant Photo" class="w-full h-full object-cover" />
+            </div>
+        ` : '';
+
+        const departmentName = formTemplate.name.replace(/^(ND|HND) /i, '').trim() || 'Business Administration and Management';
+
+        const enhancedHtml = `
+            <div class="relative w-full min-h-full font-serif text-slate-900" style="-webkit-print-color-adjust: exact; print-color-adjust: exact;">
+                <!-- Watermark -->
+                <div class="absolute inset-0 pointer-events-none flex items-center justify-center overflow-hidden z-0 opacity-[0.03]">
+                    <div class="transform -rotate-45 text-7xl md:text-8xl font-black uppercase text-slate-900 text-center leading-none whitespace-nowrap">
+                        ${unit.name}
+                    </div>
+                </div>
+
+                <!-- Content -->
+                <div class="relative z-10 max-w-full">
+                    <!-- Header -->
+                    <div class="text-center space-y-2 mb-8 border-b-2 border-slate-900 pb-6 relative">
+                        ${applicantPhotoHtml}
+                        <div class="flex justify-center mb-4">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-800">
+                                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                                <path d="m9 12 2 2 4-4"/>
+                            </svg>
+                        </div>
+                        
+                        <h1 class="text-2xl md:text-3xl font-black uppercase tracking-tight">${unit.name}</h1>
+                        <h2 class="text-lg md:text-xl font-bold uppercase">${departmentName}</h2>
+                        
+                        <div class="mt-4 inline-block border-2 border-slate-900 px-6 py-1 font-black uppercase tracking-widest text-sm">
+                            OFFICIAL ADMISSION LETTER
+                        </div>
+                    </div>
+
+                    <!-- Body -->
+                    <div class="text-sm md:text-base leading-relaxed">
+                        ${html}
+                    </div>
+                </div>
+            </div>
+        `;
+
         return {
-            html,
+            html: enhancedHtml,
             css: template[0].templateCss,
             candidateName: candidate.name,
             academicNumber: student.matricNumber
