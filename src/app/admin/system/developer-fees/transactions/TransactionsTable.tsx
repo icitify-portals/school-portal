@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +12,9 @@ export function TransactionsTable({ transactions }: { transactions: any[] }) {
     const [requeryingId, setRequeryingId] = useState<number | null>(null);
     const router = useRouter();
 
+    const [currentPage, setCurrentPage] = useState(1);
+    const ITEMS_PER_PAGE = 50;
+
     const handleRequery = async (id: number, reference: string) => {
         setRequeryingId(id);
         const res = await verifyDeveloperFee(reference);
@@ -23,6 +26,10 @@ export function TransactionsTable({ transactions }: { transactions: any[] }) {
         }
         setRequeryingId(null);
     };
+
+    const totalPages = Math.ceil(transactions.length / ITEMS_PER_PAGE);
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    const paginatedTxs = transactions.slice(startIndex, startIndex + ITEMS_PER_PAGE);
 
     return (
         <div className="overflow-x-auto">
@@ -38,7 +45,7 @@ export function TransactionsTable({ transactions }: { transactions: any[] }) {
                     </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                    {transactions.map((tx) => (
+                    {paginatedTxs.map((tx) => (
                         <tr key={tx.id} className="bg-white hover:bg-slate-50/50 transition-colors group">
                             <td className="px-6 py-4 whitespace-nowrap text-slate-500">
                                 {new Date(tx.createdAt).toLocaleDateString()} <br />
@@ -93,6 +100,35 @@ export function TransactionsTable({ transactions }: { transactions: any[] }) {
                     )}
                 </tbody>
             </table>
+            
+            {totalPages > 1 && (
+                <div className="flex items-center justify-between px-6 py-3 border-t bg-slate-50">
+                    <div className="text-sm text-slate-500">
+                        Showing {startIndex + 1} to {Math.min(startIndex + ITEMS_PER_PAGE, transactions.length)} of {transactions.length} entries
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={currentPage === 1}
+                            onClick={() => setCurrentPage(c => Math.max(1, c - 1))}
+                        >
+                            Previous
+                        </Button>
+                        <span className="text-sm font-medium px-4">
+                            Page {currentPage} of {totalPages}
+                        </span>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={currentPage === totalPages}
+                            onClick={() => setCurrentPage(c => Math.min(totalPages, c + 1))}
+                        >
+                            Next
+                        </Button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

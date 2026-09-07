@@ -3,7 +3,7 @@ import BursarSubscriptionTable from "./BursarSubscriptionTable";
 import PaystackDbTable from "./PaystackDbTable";
 import { db } from "@/db/db";
 import { paystackDeveloperFees, admissionApplicationsV2, users } from "@/db/schema";
-import { desc, eq, inArray, like } from "drizzle-orm";
+import { desc, eq, inArray, like, and } from "drizzle-orm";
 import { TransactionsTable } from "@/app/admin/system/developer-fees/transactions/TransactionsTable";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
@@ -15,40 +15,16 @@ export default async function DeveloperSubscriptionsBursaryPage() {
     let enrichedFees: any[] = [];
     const PAYSTACK_SECRET = process.env.PAYSTACK_SECRET_KEY;
 
-    if (PAYSTACK_SECRET) {
-        try {
-            const res = await fetch(`https://api.paystack.co/transaction?status=success&perPage=100`, {
-                headers: { Authorization: `Bearer ${PAYSTACK_SECRET}` },
-                next: { revalidate: 60 }
-            });
-            const data = await res.json();
-            if (data.status && data.data) {
-                enrichedFees = data.data
-                    .filter((tx: any) => tx.reference && tx.reference.startsWith('DEV-ADM-'))
-                    .map((tx: any) => ({
-                    id: tx.id,
-                    reference: tx.reference,
-                    type: tx.metadata?.type || 'Paystack Transaction',
-                    identifier: tx.metadata?.identifier || tx.metadata?.["Application ID"] || '',
-                    amount: tx.amount / 100,
-                    status: 'paid', // filtered by success
-                    createdAt: new Date(tx.created_at),
-                    applicant: {
-                        name: tx.customer?.first_name ? `${tx.customer.first_name} ${tx.customer.last_name || ''}` : tx.metadata?.payerName || tx.customer?.email || 'N/A',
-                        email: tx.customer?.email || 'N/A'
-                    }
-                }));
-            }
-        } catch (e) {
-            console.error("Failed to fetch paystack api", e);
-        }
-    }
-
-    // Fallback to database if Paystack API fails or is unavailable
+    // We now fetch exclusively from our local database to support "till date" pagination
     if (enrichedFees.length === 0) {
         const fees = await db.select()
             .from(paystackDeveloperFees)
-            .where(like(paystackDeveloperFees.reference, 'DEV-ADM-%'))
+            .where(
+                and(
+                    like(paystackDeveloperFees.reference, 'DEV-ADM-%'),
+                    eq(paystackDeveloperFees.status, 'paid')
+                )
+            )
             .orderBy(desc(paystackDeveloperFees.createdAt));
 
         const appIdsToFetch = new Set<number>();
