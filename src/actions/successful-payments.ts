@@ -45,6 +45,12 @@ export async function getSuccessfulPaymentsGrouped() {
             } else if (tx.type === 'admission' && tx.gatewayReference) {
                 unknownRefs.push(tx.gatewayReference);
             }
+            
+            const purposeMatch = tx.purpose?.match(/Application ID:?\s*(\d+)/i);
+            if (purposeMatch) {
+                appIds.add(parseInt(purposeMatch[1]));
+            }
+
             if (tx.userId) userIds.add(tx.userId);
         });
 
@@ -72,7 +78,6 @@ export async function getSuccessfulPaymentsGrouped() {
         }
 
         if (unknownRefs.length > 0) {
-            // chunk it if needed, but for now we assume it fits
             const chunkedRefs = [];
             for (let i = 0; i < unknownRefs.length; i += 100) chunkedRefs.push(unknownRefs.slice(i, i + 100));
             
@@ -80,6 +85,7 @@ export async function getSuccessfulPaymentsGrouped() {
                 const matchedApps = await db.select({ 
                     payRef: admissionApplicationsV2.paymentReference, 
                     procRef: admissionApplicationsV2.processingFeeReference,
+                    accRef: admissionApplicationsV2.acceptancePaymentReference,
                     name: users.name, 
                     data: admissionApplicationsV2.data 
                 })
@@ -87,13 +93,15 @@ export async function getSuccessfulPaymentsGrouped() {
                 .leftJoin(users, eq(admissionApplicationsV2.applicantId, users.id))
                 .where(or(
                     inArray(admissionApplicationsV2.paymentReference, chunk),
-                    inArray(admissionApplicationsV2.processingFeeReference, chunk)
+                    inArray(admissionApplicationsV2.processingFeeReference, chunk),
+                    inArray(admissionApplicationsV2.acceptancePaymentReference, chunk)
                 ));
 
                 matchedApps.forEach(app => {
                     const name = extractName(app);
                     if (app.payRef) refToNameMap.set(app.payRef, name);
                     if (app.procRef) refToNameMap.set(app.procRef, name);
+                    if (app.accRef) refToNameMap.set(app.accRef, name);
                 });
             }
         }
@@ -112,8 +120,6 @@ export async function getSuccessfulPaymentsGrouped() {
 
         const grouped: Record<string, any[]> = {};
         for (const tx of txs) {
-            // Include paystack if needed, or alatpay/remita
-            // The previous logic filtered out things not alatpay/remita unless paystack
             if (tx.gateway !== 'paystack' && tx.gateway !== 'remita' && tx.gateway !== 'alatpay') continue;
             
             let category = 'Other';
@@ -139,9 +145,16 @@ export async function getSuccessfulPaymentsGrouped() {
             }
 
             let studentName = 'N/A';
+            let matchedAppId = null;
+            
             const match = tx.gatewayReference?.match(/^(?:SCH|ACC|PROC|FORM)-(\d+)-/);
-            if (match && appMap.has(parseInt(match[1]))) {
-                studentName = appMap.get(parseInt(match[1]))!;
+            if (match) matchedAppId = parseInt(match[1]);
+            
+            const purposeMatch = tx.purpose?.match(/Application ID:?\s*(\d+)/i);
+            if (purposeMatch) matchedAppId = parseInt(purposeMatch[1]);
+
+            if (matchedAppId !== null && appMap.has(matchedAppId)) {
+                studentName = appMap.get(matchedAppId)!;
             } else if (tx.gatewayReference && refToNameMap.has(tx.gatewayReference)) {
                 studentName = refToNameMap.get(tx.gatewayReference)!;
             } else if (tx.userId && userMap.has(tx.userId)) {

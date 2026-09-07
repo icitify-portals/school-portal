@@ -58,7 +58,7 @@ export default function RemitaManualUpdatePage() {
                         <input 
                             type="text" 
                             className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                            placeholder="e.g. SCH-5-1234567890"
+                            placeholder="e.g. SCH-5-123456, DEV-ADM-123456"
                             value={reference}
                             onChange={(e) => setReference(e.target.value)}
                         />
