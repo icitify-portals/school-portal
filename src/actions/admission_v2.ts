@@ -3082,7 +3082,9 @@ export async function verifyApplicationByFormNumber(formNumber: string) {
             templateLevel: template?.level || "tertiary",
             applicantName: (() => {
                 const parts = extractNameParts(formData);
-                return buildFullName(parts) || `${parts.firstName} ${parts.lastName}`.trim() || "N/A";
+                const nameFromForm = buildFullName(parts) || `${parts.firstName} ${parts.lastName}`.trim();
+                const nameFromUser = app.applicant ? (app.applicant.name || `${app.applicant.firstName || ''} ${app.applicant.surname || ''}`.trim()) : '';
+                return nameFromForm || nameFromUser || "N/A";
             })(),
             applicantEmail: formData.email || "N/A",
             applicantPhone: formData.phone || "N/A",
@@ -3786,7 +3788,9 @@ export async function getAdmittedRegister(filters?: RegisterFilters) {
             let formData: any = {};
             try { formData = typeof app.data === 'string' ? JSON.parse(app.data) : (app.data || {}); } catch {}
             const parts = extractNameParts(formData);
-            const fullName = buildFullName(parts) || `${parts.firstName} ${parts.lastName}`.trim() || 'Applicant';
+            const nameFromForm = buildFullName(parts) || `${parts.firstName} ${parts.lastName}`.trim();
+            const nameFromUser = app.applicant ? (app.applicant.name || `${app.applicant.firstName || ''} ${app.applicant.surname || ''}`.trim()) : '';
+            const fullName = nameFromForm || nameFromUser || 'Applicant';
 
             const progName = app.programme?.name || formData.programme || 'N/A';
             const deptName = app.programme?.department?.name || 'N/A';
