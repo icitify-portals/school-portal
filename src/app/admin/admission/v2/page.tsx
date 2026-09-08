@@ -8,7 +8,7 @@ import {
     XCircle, AlertCircle, Activity, Filter, ExternalLink, ChevronLeft, ChevronRight,
     CheckSquare, Square, Download, FileSpreadsheet, Printer, Trash2
 } from "lucide-react";
-import { getAdminV2Applications, bulkUpdateAdmissionStatus, getAdmissionTemplates, exportAdminV2Applications, deleteAdmissionApplication, bulkDeleteAdmissionApplications, getAdmissionAcademicUnits, generateBulkApplicantFilesZip, markExamAttendanceAction } from "@/actions/admission_v2";
+import { getAdminV2Applications, bulkUpdateAdmissionStatus, getAdmissionTemplates, exportAdminV2Applications, deleteAdmissionApplication, bulkDeleteAdmissionApplications, getAdmissionAcademicUnits, generateBulkApplicantFilesZip, markExamAttendanceAction, syncApplicantProfileDataFromForms } from "@/actions/admission_v2";
 import * as xlsx from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -41,6 +41,13 @@ function AdminV2ApplicationsContent() {
     const [levelFilter, setLevelFilter] = useState<string>(urlLevelParam);
     const [modeFilter, setModeFilter] = useState<string>("all");
     const [attendanceFilter, setAttendanceFilter] = useState<string>("all");
+    const [genderFilter, setGenderFilter] = useState<string>("all");
+    const [sessionFilter, setSessionFilter] = useState<number | undefined>(undefined);
+    const [ninFilter, setNinFilter] = useState<string>("all");
+    const [hasMatricFilter, setHasMatricFilter] = useState<string>("all");
+    const [hasJambFilter, setHasJambFilter] = useState<string>("all");
+    const [matricSearch, setMatricSearch] = useState<string>("");
+    const [sessions, setSessions] = useState<any[]>([]);
 
     const [faculties, setFaculties] = useState<any[]>([]);
     const [departments, setDepartments] = useState<any[]>([]);
@@ -73,12 +80,18 @@ function AdminV2ApplicationsContent() {
             level: levelFilter !== 'all' ? levelFilter : undefined,
             applicationMode: modeFilter !== 'all' ? modeFilter : undefined,
             examAttendance: attendanceFilter !== 'all' ? attendanceFilter : undefined,
+            gender: genderFilter !== 'all' ? genderFilter : undefined,
+            sessionId: sessionFilter,
+            hasNin: ninFilter !== 'all' ? ninFilter : undefined,
+            hasMatric: hasMatricFilter !== 'all' ? hasMatricFilter : undefined,
+            hasJamb: hasJambFilter !== 'all' ? hasJambFilter : undefined,
+            matricNumber: matricSearch || undefined,
             page,
             pageSize: 10,
         });
         setData(result);
         setLoading(false);
-    }, [search, statusFilter, paymentFilter, templateFilter, facultyFilter, departmentFilter, programmeFilter, levelFilter, modeFilter, attendanceFilter, page]);
+    }, [search, statusFilter, paymentFilter, templateFilter, facultyFilter, departmentFilter, programmeFilter, levelFilter, modeFilter, attendanceFilter, genderFilter, sessionFilter, ninFilter, hasMatricFilter, hasJambFilter, matricSearch, page]);
 
     useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -91,6 +104,8 @@ function AdminV2ApplicationsContent() {
                 setProgrammes(res.programmes || []);
             }
         }).catch(() => {});
+        // Fetch academic sessions for filter dropdown
+        fetch("/api/admin/sessions").then(r => r.json()).then(d => setSessions(d?.sessions || [])).catch(() => {});
     }, []);
 
     const filteredDepartments = facultyFilter
@@ -234,6 +249,23 @@ function AdminV2ApplicationsContent() {
             toast.error("Export failed");
         }
         setLoading(false);
+    };
+
+    const handleSyncProfileData = async () => {
+        setLoading(true);
+        try {
+            const res = await syncApplicantProfileDataFromForms();
+            if (res.success) {
+                toast.success(`Synced profiles: ${res.appsUpdated} applications, ${res.usersUpdated} users updated`);
+                fetchData();
+            } else {
+                toast.error(res.error || "Sync failed");
+            }
+        } catch (err: any) {
+            toast.error(err?.message || "Sync failed");
+        } finally {
+            setLoading(false);
+        }
     };
 
     const handleBulkDownloadPDFs = async () => {
@@ -382,6 +414,14 @@ function AdminV2ApplicationsContent() {
                                 <AlertCircle className="w-4 h-4 mr-2" /> Select N/A
                             </Button>
 
+                            <Button
+                                onClick={handleSyncProfileData}
+                                className="px-5 py-4 rounded-2xl bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs shadow-sm flex items-center shadow-sky-100"
+                                title="Backfill missing gender/phone/NIN/JAMB from form data (non-destructive, only fills missing values)"
+                            >
+                                <Activity className="w-4 h-4 mr-2" /> Sync Profiles
+                            </Button>
+
                             <Button 
                                 onClick={handleExportExcel}
                                 className="px-5 py-4 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm flex items-center"
@@ -397,7 +437,7 @@ function AdminV2ApplicationsContent() {
                                 <Download className="w-4 h-4 mr-2" /> Bulk Download Files (ZIP)
                             </Button>
 
-                            {(search || statusFilter !== 'all' || paymentFilter !== 'all' || facultyFilter || departmentFilter || programmeFilter || levelFilter !== 'all' || modeFilter !== 'all' || templateFilter) && (
+                            {(search || statusFilter !== 'all' || paymentFilter !== 'all' || facultyFilter || departmentFilter || programmeFilter || levelFilter !== 'all' || modeFilter !== 'all' || templateFilter || genderFilter !== 'all' || sessionFilter || ninFilter !== 'all' || hasMatricFilter !== 'all' || hasJambFilter !== 'all' || matricSearch) && (
                                 <Button
                                     variant="ghost"
                                     onClick={() => {
@@ -410,6 +450,12 @@ function AdminV2ApplicationsContent() {
                                         setLevelFilter("all");
                                         setModeFilter("all");
                                         setTemplateFilter(undefined);
+                                        setGenderFilter("all");
+                                        setSessionFilter(undefined);
+                                        setNinFilter("all");
+                                        setHasMatricFilter("all");
+                                        setHasJambFilter("all");
+                                        setMatricSearch("");
                                         setPage(1);
                                     }}
                                     className="text-xs font-bold text-rose-600 hover:bg-rose-50 rounded-2xl px-3 py-4"
@@ -522,6 +568,67 @@ function AdminV2ApplicationsContent() {
                                 <option key={t.id} value={t.id}>{t.name}</option>
                             ))}
                         </select>
+
+                        <select
+                            value={genderFilter}
+                            onChange={(e) => { setGenderFilter(e.target.value); setPage(1); }}
+                            className="px-3 py-3.5 rounded-2xl border border-slate-200 bg-white text-xs font-bold shadow-sm focus:ring-2 focus:ring-indigo-500"
+                        >
+                            <option value="all">All Genders</option>
+                            <option value="male">Male</option>
+                            <option value="female">Female</option>
+                        </select>
+
+                        <select
+                            value={sessionFilter || ""}
+                            onChange={(e) => { setSessionFilter(e.target.value ? Number(e.target.value) : undefined); setPage(1); }}
+                            className="px-3 py-3.5 rounded-2xl border border-slate-200 bg-white text-xs font-bold shadow-sm focus:ring-2 focus:ring-indigo-500"
+                        >
+                            <option value="">All Sessions</option>
+                            {sessions.map((s: any) => (
+                                <option key={s.id} value={s.id}>{s.name}</option>
+                            ))}
+                        </select>
+
+                        <select
+                            value={ninFilter}
+                            onChange={(e) => { setNinFilter(e.target.value); setPage(1); }}
+                            className="px-3 py-3.5 rounded-2xl border border-slate-200 bg-white text-xs font-bold shadow-sm focus:ring-2 focus:ring-indigo-500"
+                        >
+                            <option value="all">NIN Status</option>
+                            <option value="yes">NIN Verified</option>
+                            <option value="no">NIN Missing</option>
+                        </select>
+
+                        <select
+                            value={hasMatricFilter}
+                            onChange={(e) => { setHasMatricFilter(e.target.value); setPage(1); }}
+                            className="px-3 py-3.5 rounded-2xl border border-slate-200 bg-white text-xs font-bold shadow-sm focus:ring-2 focus:ring-indigo-500"
+                        >
+                            <option value="all">Matric Status</option>
+                            <option value="yes">Has Matric No</option>
+                            <option value="no">No Matric No</option>
+                        </select>
+
+                        <select
+                            value={hasJambFilter}
+                            onChange={(e) => { setHasJambFilter(e.target.value); setPage(1); }}
+                            className="px-3 py-3.5 rounded-2xl border border-slate-200 bg-white text-xs font-bold shadow-sm focus:ring-2 focus:ring-indigo-500"
+                        >
+                            <option value="all">JAMB Status</option>
+                            <option value="yes">Has JAMB Reg</option>
+                            <option value="no">No JAMB Reg</option>
+                        </select>
+
+                        <div className="relative">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                            <input
+                                value={matricSearch}
+                                onChange={(e) => { setMatricSearch(e.target.value); setPage(1); }}
+                                placeholder="Matric No search..."
+                                className="w-full pl-9 pr-3 py-3.5 rounded-2xl border border-slate-200 bg-white text-xs font-bold shadow-sm focus:ring-2 focus:ring-indigo-500"
+                            />
+                        </div>
                     </div>
                 </div>
 
@@ -591,6 +698,14 @@ function AdminV2ApplicationsContent() {
                                     <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest">Faculty</th>
                                     <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest">Department</th>
                                     <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest">Programme</th>
+                                    <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest">Gender</th>
+                                    <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest">NIN</th>
+                                    <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest">Age</th>
+                                    <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest">Phone</th>
+                                    <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest">JAMB</th>
+                                    <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest">Matric</th>
+                                    <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest">Session</th>
+                                    <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest">Tuition</th>
                                     <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest">Mode</th>
                                     <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest">Level</th>
                                     <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest">Exam Attendance</th>
@@ -604,13 +719,13 @@ function AdminV2ApplicationsContent() {
                             <tbody className="divide-y divide-slate-100 bg-white">
                                 {loading ? (
                                     <tr>
-                                        <td colSpan={11} className="px-8 py-20 text-center">
+                                        <td colSpan={22} className="px-8 py-20 text-center">
                                             <Loader2 className="w-10 h-10 animate-spin mx-auto text-indigo-500" />
                                         </td>
                                     </tr>
                                 ) : (data?.applications || []).length === 0 ? (
                                     <tr>
-                                        <td colSpan={11} className="px-8 py-20 text-center">
+                                        <td colSpan={22} className="px-8 py-20 text-center">
                                             <div className="max-w-xs mx-auto space-y-4">
                                                 <FileText className="w-12 h-12 text-slate-300 mx-auto" />
                                                 <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest italic">
@@ -666,6 +781,52 @@ function AdminV2ApplicationsContent() {
                                             </td>
                                             <td className="px-6 py-5">
                                                 <span className="text-xs font-black text-indigo-600">{app.programmeName}</span>
+                                            </td>
+                                            <td className="px-6 py-5">
+                                                <span className={cn(
+                                                    "px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider inline-block border",
+                                                    String(app.applicantGender || '').toLowerCase() === 'male' ? "bg-blue-50 text-blue-700 border-blue-200" :
+                                                    String(app.applicantGender || '').toLowerCase() === 'female' ? "bg-pink-50 text-pink-700 border-pink-200" :
+                                                    "bg-slate-50 text-slate-500 border-slate-200"
+                                                )}>
+                                                    {app.applicantGender || '—'}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-5">
+                                                <span className={cn(
+                                                    "font-mono text-[10px] font-bold",
+                                                    app.applicantNin && app.applicantNin !== 'N/A' ? "text-emerald-700" : "text-slate-400 italic"
+                                                )}>
+                                                    {app.applicantNin && app.applicantNin !== 'N/A' ? app.applicantNin : '—'}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-5">
+                                                <span className="text-xs font-bold text-slate-700">{app.applicantAge ?? '—'}</span>
+                                            </td>
+                                            <td className="px-6 py-5">
+                                                <span className="text-xs font-bold text-slate-700">{app.applicantPhone && app.applicantPhone !== 'N/A' ? app.applicantPhone : '—'}</span>
+                                            </td>
+                                            <td className="px-6 py-5">
+                                                <span className={cn(
+                                                    "font-mono text-[10px] font-bold",
+                                                    app.jambRegNumber && app.jambRegNumber !== 'N/A' ? "text-slate-700" : "text-slate-400 italic"
+                                                )}>
+                                                    {app.jambRegNumber && app.jambRegNumber !== 'N/A' ? app.jambRegNumber : app.applicationMode === 'part_time' ? 'n/a' : '—'}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-5">
+                                                <span className={cn(
+                                                    "font-mono text-[10px] font-black italic",
+                                                    app.studentMatricNumber ? "text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200" : "text-slate-400"
+                                                )}>
+                                                    {app.studentMatricNumber || '—'}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-5">
+                                                <span className="text-[10px] font-bold text-slate-600">{app.sessionName || '—'}</span>
+                                            </td>
+                                            <td className="px-6 py-5">
+                                                <span className="text-xs font-black text-slate-800">₦{(app.tuitionFee || 0).toLocaleString()}</span>
                                             </td>
                                             <td className="px-6 py-5">
                                                 <span className="px-2.5 py-1 bg-slate-100 border border-slate-200 text-slate-700 rounded-lg text-[9px] font-black uppercase tracking-wider inline-block">

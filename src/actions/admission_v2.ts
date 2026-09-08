@@ -2672,6 +2672,43 @@ export async function submitApplicationFinal(applicationId: number, applicantId:
             return { success: false, error: "Processing fee must be paid before submission." };
         }
 
+        // Validate mandatory fields before final submission
+        // The `data` JSON is keyed by field label (e.g. "Gender", "Phone Number", "Date of Birth"),
+        // so resolve each mandatory field across label + systemKey aliases. Non-destructive:
+        // only blocks submission, never modifies/deletes stored data.
+        const rawFormData = typeof application.data === 'string' ? JSON.parse(application.data || '{}') : (application.data || {});
+        const resolveFieldValue = (candidates: string[]) => {
+            for (const c of candidates) {
+                const v = rawFormData[c];
+                if (v !== undefined && v !== null && String(v).trim() !== '') return v;
+            }
+            return null;
+        };
+        const mandatoryFields: { key: string; label: string; aliases: string[] }[] = [
+            { key: 'gender', label: 'Gender', aliases: ['gender', 'Gender', 'Sex', 'sex'] },
+            { key: 'dob', label: 'Date of Birth', aliases: ['dob', 'DOB', 'Date of Birth', 'dateOfBirth', 'DOB (YYYY-MM-DD)'] },
+            { key: 'phone', label: 'Phone Number', aliases: ['phone', 'Phone Number', 'phoneNumber', 'phone_number', 'mobile', 'Mobile'] },
+            { key: 'nin', label: 'NIN (National Identification Number)', aliases: ['nin', 'NIN', 'National Identification Number'] },
+        ];
+        // JAMB reg is mandatory for full-time applicants
+        if (application.applicationMode === 'full_time' || !application.applicationMode) {
+            mandatoryFields.push({ key: 'jambRegNumber', label: 'JAMB Registration Number', aliases: ['jambRegNumber', 'JAMB Reg Number', 'JAMB Registration Number', 'JAMB Registration No', 'JAMB REG NO', 'jamb_reg_no', 'JAMB Number'] });
+        }
+        const missingFields = mandatoryFields.filter(f => {
+            let val = resolveFieldValue(f.aliases);
+            if (!val && f.key === 'nin') val = application.nin;
+            if (!val && f.key === 'jambRegNumber') val = application.jambRegNumber;
+            if (!val && f.key === 'dob' && application.ageAtAdmission) val = 'ok'; // age derived from DOB already present
+            return !val || String(val).trim() === '';
+        });
+        if (missingFields.length > 0) {
+            return {
+                success: false,
+                error: "Please fill in the following required fields before submitting: ",
+                missingFields: missingFields.map(f => f.key)
+            };
+        }
+
         // Extract effective JAMB registration number from column or form data JSON
         const formData = typeof application.data === 'string' ? JSON.parse(application.data || '{}') : (application.data || {});
         const effectiveJamb = application.jambRegNumber || 
@@ -3114,6 +3151,12 @@ export async function getAdminV2Applications(filters?: {
     level?: string;
     applicationMode?: string;
     examAttendance?: string;
+    gender?: string;
+    sessionId?: number;
+    hasNin?: string; // 'yes' | 'no'
+    hasMatric?: string; // 'yes' | 'no'
+    hasJamb?: string; // 'yes' | 'no'
+    matricNumber?: string; // exact / partial matric search
     page?: number;
     pageSize?: number;
 }) {
@@ -3170,6 +3213,25 @@ export async function getAdminV2Applications(filters?: {
         if (filters?.examAttendance && filters.examAttendance !== 'all') {
             conditions.push(eq(admissionApplicationsV2.examAttendanceStatus, filters.examAttendance as any));
         }
+        if (filters?.hasNin === 'yes') {
+            conditions.push(sql`${admissionApplicationsV2.nin} IS NOT NULL AND ${admissionApplicationsV2.nin} != ''`);
+        } else if (filters?.hasNin === 'no') {
+            conditions.push(sql`(${admissionApplicationsV2.nin} IS NULL OR ${admissionApplicationsV2.nin} = '')`);
+        }
+        if (filters?.gender) {
+            // Gender is stored in the dynamic JSON data column
+            conditions.push(sql`LOWER(COALESCE(JSON_UNQUOTE(JSON_EXTRACT(${admissionApplicationsV2.data}, '$.gender')), JSON_UNQUOTE(JSON_EXTRACT(${admissionApplicationsV2.data}, '$.Gender')))) = ${filters.gender.toLowerCase()}`);
+        }
+        if (filters?.sessionId) {
+            // Match applications linked to students in that session
+            const sessionStudents = await db.select({ id: students.id }).from(students).where(eq(students.currentSessionId, filters.sessionId));
+            const sIds = sessionStudents.map(s => s.id);
+            if (sIds.length > 0) {
+                conditions.push(inArray(admissionApplicationsV2.studentId, sIds));
+            } else {
+                conditions.push(eq(admissionApplicationsV2.id, -1)); // No match
+            }
+        }
         if (filters?.programmeId) {
             if (filters.programmeId === -1) {
                 conditions.push(isNull(admissionApplicationsV2.programmeId));
@@ -3202,6 +3264,23 @@ export async function getAdminV2Applications(filters?: {
             }
         }
 
+        if (filters?.hasMatric === 'yes') {
+            conditions.push(sql`(${admissionApplicationsV2.studentId} IS NOT NULL OR ${admissionApplicationsV2.data} LIKE '%matricNumber%')`);
+        } else if (filters?.hasMatric === 'no') {
+            conditions.push(isNull(admissionApplicationsV2.studentId));
+        }
+        if (filters?.hasJamb === 'yes') {
+            conditions.push(sql`(${admissionApplicationsV2.jambRegNumber} IS NOT NULL AND ${admissionApplicationsV2.jambRegNumber} != '')`);
+        } else if (filters?.hasJamb === 'no') {
+            conditions.push(sql`(${admissionApplicationsV2.jambRegNumber} IS NULL OR ${admissionApplicationsV2.jambRegNumber} = '')`);
+        }
+        if (filters?.matricNumber) {
+            const matricLike = `%${filters.matricNumber}%`;
+            const matricStudents = await db.select({ id: students.id }).from(students).where(like(students.matricNumber, matricLike));
+            const mIds = matricStudents.map(s => s.id);
+            conditions.push(or(inArray(admissionApplicationsV2.studentId, mIds), like(admissionApplicationsV2.data, matricLike)));
+        }
+
         const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
         const [countResult] = await db.select({ count: sql<number>`count(*)` })
@@ -3231,6 +3310,10 @@ export async function getAdminV2Applications(filters?: {
             }
         });
 
+        // Pre-fetch academic sessions for display
+        const allSessions = await db.select({ id: academicSessions.id, name: academicSessions.name }).from(academicSessions);
+        const sessionMap = new Map(allSessions.map((s: any) => [s.id, s.name]));
+
         // Format Academic Level (ND 1 / HND 1 for entry applicants) and Administrative Level (Applicant)
         const formatLevels = (app: any) => {
             const progName = (app.programme?.name || app.template?.name || '').toUpperCase();
@@ -3257,8 +3340,17 @@ export async function getAdminV2Applications(filters?: {
                 parsedData: formData,
                 applicantName: nameFromForm || nameFromUser || fallbackEmail || 'N/A',
                 applicantEmail: fallbackEmail || app.applicant?.email || 'N/A',
-                applicantPhone: formData.phone || formData.phone_number || app.applicant?.phone || 'N/A',
+                applicantGender: formData.gender || app.applicant?.gender || 'N/A',
+                applicantAge: app.ageAtAdmission || (formData.dob ? Math.floor((Date.now() - new Date(formData.dob).getTime()) / (1000 * 60 * 60 * 24 * 365.25)) : null),
+                applicantDob: formData.dob || formData.dateOfBirth || 'N/A',
+                applicantNin: app.nin || formData.nin || formData.NIN || 'N/A',
+                applicantPhone: formData.phone || formData.phone_number || formData.phoneNumber || app.applicant?.phone || 'N/A',
+                jambRegNumber: app.jambRegNumber || formData.jambRegNumber || formData.jambNumber || formData['JAMB Reg Number'] || formData['JAMB Registration No'] || 'N/A',
                 studentMatricNumber: app.student?.matricNumber || formData.matricNumber || null,
+                studentCurrentSession: app.student?.currentSessionId || null,
+                sessionName: (app.student?.currentSessionId ? (sessionMap.get(app.student.currentSessionId) || null) : null) || formData.session || formData.academicSession || 'N/A',
+                tuitionFee: getCalculatedTuition(app.template, app.programme),
+                hasMatric: !!(app.student?.matricNumber || formData.matricNumber),
                 templateName: app.template?.name || 'N/A',
                 facultyName: app.programme?.department?.faculty?.name || 'Unassigned Faculty',
                 departmentName: app.programme?.department?.name || 'Unassigned Department',
@@ -3381,6 +3473,25 @@ export async function exportAdminV2Applications(filters?: {
         }
         if (filters?.examAttendance && filters.examAttendance !== 'all') {
             conditions.push(eq(admissionApplicationsV2.examAttendanceStatus, filters.examAttendance as any));
+        }
+        if (filters?.hasNin === 'yes') {
+            conditions.push(sql`${admissionApplicationsV2.nin} IS NOT NULL AND ${admissionApplicationsV2.nin} != ''`);
+        } else if (filters?.hasNin === 'no') {
+            conditions.push(sql`(${admissionApplicationsV2.nin} IS NULL OR ${admissionApplicationsV2.nin} = '')`);
+        }
+        if (filters?.gender) {
+            // Gender is stored in the dynamic JSON data column
+            conditions.push(sql`LOWER(COALESCE(JSON_UNQUOTE(JSON_EXTRACT(${admissionApplicationsV2.data}, '$.gender')), JSON_UNQUOTE(JSON_EXTRACT(${admissionApplicationsV2.data}, '$.Gender')))) = ${filters.gender.toLowerCase()}`);
+        }
+        if (filters?.sessionId) {
+            // Match applications linked to students in that session
+            const sessionStudents = await db.select({ id: students.id }).from(students).where(eq(students.currentSessionId, filters.sessionId));
+            const sIds = sessionStudents.map(s => s.id);
+            if (sIds.length > 0) {
+                conditions.push(inArray(admissionApplicationsV2.studentId, sIds));
+            } else {
+                conditions.push(eq(admissionApplicationsV2.id, -1)); // No match
+            }
         }
 
         const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
@@ -4061,6 +4172,76 @@ export async function updateApplicantData(appId: number, updatePayload: any) {
     } catch (error: any) {
         console.error("Failed to update applicant data:", error);
         return { success: false, error: error.message || "Failed to update applicant data" };
+    }
+}
+
+// Non-destructive profile capture/backfill. Only fills MISSING values in the
+// `users` table and the admission `nin`/`jambRegNumber` columns from the form
+// data JSON. Never overwrites existing data, so there is no data loss risk.
+export async function syncApplicantProfileDataFromForms(limit = 5000) {
+    await requireAdmin();
+    try {
+        const apps = await db.query.admissionApplicationsV2.findMany({
+            limit,
+            with: { applicant: true },
+        });
+
+        let usersUpdated = 0;
+        let appsUpdated = 0;
+
+        for (const app of apps) {
+            try {
+                let formData: any = {};
+                try { formData = typeof app.data === 'string' ? JSON.parse(app.data || '{}') : (app.data || {}); } catch {}
+                if (!formData || Object.keys(formData).length === 0) continue;
+
+                // Resolve values across label/systemKey aliases
+                const get = (keys: string[]) => {
+                    for (const k of keys) {
+                        const v = formData[k];
+                        if (v !== undefined && v !== null && String(v).trim() !== '') return String(v).trim();
+                    }
+                    return null;
+                };
+
+                const gender = get(['gender', 'Gender', 'Sex']);
+                const phone = get(['phone', 'Phone Number', 'phoneNumber', 'phone_number', 'mobile']);
+                const nin = get(['nin', 'NIN']) || app.nin;
+                const jamb = get(['jambRegNumber', 'JAMB Reg Number', 'JAMB Registration Number', 'JAMB Registration No', 'JAMB REG NO', 'jamb_reg_no']) || app.jambRegNumber;
+
+                let appNeedsUpdate = false;
+                const appUpdate: any = {};
+                if (nin && !app.nin) { appUpdate.nin = nin; appNeedsUpdate = true; }
+                if (jamb && !app.jambRegNumber) { appUpdate.jambRegNumber = jamb; appNeedsUpdate = true; }
+                if (appNeedsUpdate) {
+                    appUpdate.updatedAt = new Date();
+                    await db.update(admissionApplicationsV2).set(appUpdate).where(eq(admissionApplicationsV2.id, app.id));
+                    appsUpdated++;
+                }
+
+                // Fill missing values on the linked user only (never overwrite)
+                if (app.applicantId) {
+                    const [user] = await db.select({ id: users.id, phone: users.phone }).from(users).where(eq(users.id, app.applicantId)).limit(1);
+                    if (user) {
+                        const userUpdate: any = {};
+                        if (phone && !user.phone) userUpdate.phone = phone;
+                        if (Object.keys(userUpdate).length > 0) {
+                            await db.update(users).set(userUpdate).where(eq(users.id, app.applicantId));
+                            usersUpdated++;
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error(`[syncApplicantProfileData] app #${app.id} failed:`, e);
+            }
+        }
+
+        revalidatePath('/admin/admission/v2');
+        revalidatePath('/admin/admission/v2/[id]');
+        return { success: true, appsUpdated, usersUpdated };
+    } catch (error: any) {
+        console.error("[syncApplicantProfileDataFromForms] Failed:", error);
+        return { success: false, error: error.message || "Failed to sync applicant profiles" };
     }
 }
 export async function getAdmissionV2Stats() {
