@@ -608,6 +608,108 @@ function TranscriptCardOriginal({ transcriptData, qrDataUrl }: { transcriptData:
   }
 }
 
+/* ─── FSS 2016 Official Template (4-col, image-faithful) ─────── */
+function TranscriptCardFSS2016({ transcriptData, qrDataUrl }: { transcriptData: any; qrDataUrl?: string | null }) {
+  try {
+    const student = transcriptData.student || {};
+    const txList: any[] = transcriptData.transcripts || [];
+    const cumulCgpa = transcriptData.cumulCgpa ?? (txList.length ? Number(txList[txList.length - 1].cgpa).toFixed(2) : "-");
+    const cumulCgpaNum = parseFloat(cumulCgpa) || 0;
+    const bySession = new Map<string, Map<string, any>>();
+    for (const tx of txList) {
+      const sKey = tx.academicSession?.name || tx.sessionName || "Session";
+      if (!bySession.has(sKey)) bySession.set(sKey, new Map());
+      bySession.get(sKey)!.set(String(tx.semester), tx);
+    }
+    const fssStyle: any = { ...sheetStyle, fontFamily: "'Times New Roman', Times, serif", fontSize: 10 };
+    const thFss: any = { padding: "2px 4px", textAlign: "center", fontWeight: 700, fontSize: 8, textTransform: "uppercase" as const, borderBottom: "1px solid #000" };
+    const tdFss: any = { padding: "1px 4px", textAlign: "center", fontSize: 8 };
+    const fmtDateFss = (() => { try { const d = new Date(); return `${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}/${d.getFullYear()}`; } catch { return formatDate(); }})();
+    return (
+      <div className="transcript-sheet" style={fssStyle}>
+        {/* Header — image faithful */}
+        <div style={{ textAlign: "center", marginBottom: 6 }}>
+          <div style={{ fontWeight: 900, fontSize: 16, letterSpacing: 0.5 }}>FEDERAL SCHOOL OF STATISTICS</div>
+          <div style={{ fontSize: 10, fontStyle: "italic" }}>(National Bureau of Statistics)</div>
+        </div>
+        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 8, marginBottom: 4 }}>
+          <div>P.O. Box 20753, U. I. IBADAN<br />Telegram: STAT/IBADAN<br />Telephone 08023538477</div>
+          <div style={{ textAlign: "center" }}><img src="/fss_logo.png" alt="FSS" style={{ width: 56, height: 56, objectFit: "contain", margin: "0 auto" }} /></div>
+          <div style={{ textAlign: "right" }}>Ref. No: {student.matricNumber || "-"}<br />Date: {fmtDateFss}</div>
+        </div>
+        <div style={{ textAlign: "center", fontWeight: 900, textDecoration: "underline", fontSize: 12, margin: "6px 0 2px" }}>EXAMINATION TRANSCRIPT</div>
+        <div style={{ textAlign: "center", fontWeight: 700, textDecoration: "underline", fontSize: 10 }}>{(transcriptData.programmeName || student.programme || "NATIONAL DIPLOMA IN COMPUTER SCIENCE").toUpperCase()}</div>
+        <div style={{ fontSize: 8, margin: "6px 0", textAlign: "center" }}>
+          Below is the result of <span style={{ fontWeight: 700, textDecoration: "underline" }}>{(student.name || "STUDENT").toUpperCase()}</span> in the {transcriptData.programmeName || ""} {Array.from(bySession.keys()).join(" to ")} session.
+        </div>
+        {Array.from(bySession.entries()).map(([sessionName, semMap]) => {
+          const levelLabel = (() => {
+            const firstTx: any = semMap.values().next().value;
+            const lvl = firstTx?.level || transcriptData.level || "";
+            return lvl ? ` (${lvl})` : "";
+          })();
+          return (
+            <div key={sessionName} style={{ marginBottom: 8 }}>
+              <div style={{ fontWeight: 900, textDecoration: "underline", fontSize: 9, textAlign: "center", marginBottom: 4, textTransform: "uppercase" }}>
+                {transcriptData.programmeName || ""}{levelLabel} {sessionName} SESSION
+              </div>
+              <div style={{ display: "flex", gap: 12 }}>
+                {["1","2"].map(semKey => {
+                  const sem = semMap.get(semKey);
+                  if (!sem) return <div key={semKey} style={{ flex: 1 }} />;
+                  const totals = calcSemTotals(sem.results || []);
+                  const gpaLabel = `GRADE POINT AVERAGE (GPA)......${totals.gpa.toFixed(2)}`;
+                  return (
+                    <div key={semKey} style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 700, textDecoration: "underline", fontSize: 8, textAlign: "center", marginBottom: 2 }}>{semKey==="1"?"FIRST SEMESTER":"SECOND SEMESTER"}</div>
+                      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 8 }}>
+                        <thead>
+                          <tr style={{ borderTop: "1.5px solid #000", borderBottom: "1px solid #000" }}>
+                            <th style={thFss}>CODE</th>
+                            <th style={{ ...thFss, textAlign: "left" }}>SUBJECT TITLE</th>
+                            <th style={thFss}>CREDIT<br/>UNITS</th>
+                            <th style={thFss}>SCORE/100</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {(sem.results || []).map((r: any, i: number) => (
+                            <tr key={i} style={{ borderBottom: "0.5px solid #ccc" }}>
+                              <td style={{ ...tdFss, fontWeight: 600 }}>{r.courseCode}</td>
+                              <td style={{ ...tdFss, textAlign: "left", maxWidth: 110, overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis" }} title={r.courseTitle}>{r.courseTitle}</td>
+                              <td style={tdFss}>{r.creditLoad}</td>
+                              <td style={tdFss}>{r.score}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      <div style={{ fontSize: 7.5, fontWeight: 700, textAlign: "center", marginTop: 3, borderTop: "1px solid #000", paddingTop: 2 }}>{gpaLabel}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+        <div style={{ textAlign: "center", marginTop: 10, fontWeight: 900, fontSize: 10, borderTop: "1.5px solid #000", paddingTop: 6 }}>
+          GRADUATING GRADE POINT AVERAGE {cumulCgpa} &nbsp; CLASS {getDegreeClass(cumulCgpaNum)}
+        </div>
+        <div style={{ display: "flex", justifyContent: "center", alignItems: "flex-end", marginTop: 18, gap: 24 }}>
+          <div style={{ textAlign: "center" }}>
+            <div style={{ width: 90, height: 90, borderRadius: "50%", border: "2px solid #000", display: "flex", alignItems: "center", justifyContent: "center", opacity: 0.6, margin: "0 auto 6px" }}>
+              <span style={{ fontSize: 6, fontWeight: 900, textAlign: "center" }}>OFFICER<br/>ISSUING REPORT</span>
+            </div>
+            <div style={{ fontSize: 7 }}>DATE: {fmtDateFss}</div>
+          </div>
+          {qrDataUrl && <img src={qrDataUrl} alt="QR" style={{ width: 48, height: 48 }} />}
+        </div>
+        <div style={{ textAlign: "right", fontSize: 7, marginTop: 8, fontStyle: "italic" }}>Turn Over -</div>
+      </div>
+    );
+  } catch (e: any) {
+    return <div className="transcript-sheet" style={sheetStyle}><div style={{ textAlign: "center", marginTop: 80, color: "#dc2626" }}>Rendering Error</div></div>;
+  }
+}
+
 /* ─── Grading Key Sheet (dynamic height) ─────────────────────── */
 function GradingKeySheet({ compact }: { compact?: boolean }) {
   if (compact) {
@@ -721,7 +823,7 @@ const td: React.CSSProperties = {
 /* ─── Main Page ───────────────────────────────────────────────── */
 export default function PrintTranscriptPage() {
   const [studentQuery, setStudentQuery] = useState("");
-  const [templateStyle, setTemplateStyle] = useState<"detailed" | "original">("original");
+  const [templateStyle, setTemplateStyle] = useState<"detailed" | "original" | "fss_2016">("original");
   const [studentResults, setStudentResults] = useState<any[]>([]);
   const [selectedStudent, setSelectedStudent] = useState<any>(null);
   
@@ -1019,6 +1121,7 @@ export default function PrintTranscriptPage() {
                   style={{ width: 140, background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 8, padding: "8px 12px", fontSize: 13, outline: "none", marginRight: 16 }}
                 >
                   <option value="original">FSS Template</option>
+                  <option value="fss_2016">FSS 2016 Official</option>
                   <option value="detailed">Detailed Template</option>
                 </select>
 
@@ -1139,6 +1242,11 @@ export default function PrintTranscriptPage() {
               <div key={idx} style={{ display: 'contents' }}>
                 {templateStyle === 'detailed' ? (
                   <TranscriptCardDetailed
+                    transcriptData={transcriptData}
+                    qrDataUrl={qrCodes[transcriptData?.student?.id]}
+                  />
+                ) : templateStyle === 'fss_2016' ? (
+                  <TranscriptCardFSS2016
                     transcriptData={transcriptData}
                     qrDataUrl={qrCodes[transcriptData?.student?.id]}
                   />
