@@ -1303,7 +1303,8 @@ export async function getAllUnifiedTransactions(filters?: { status?: string, cat
                 status: payment_transactions.status,
                 gateway: payment_transactions.paymentGateway,
                 gatewayReference: payment_transactions.transactionReference,
-                rrr: payment_transactions.gatewayTransactionId,
+                gatewayTransactionId: payment_transactions.gatewayTransactionId,
+                metadata: payment_transactions.metadata,
                 createdAt: payment_transactions.createdAt,
                 student: {
                     id: students.id,
@@ -1325,7 +1326,10 @@ export async function getAllUnifiedTransactions(filters?: { status?: string, cat
 
             const topups = await topupQuery;
             for (const t of topups) {
-                
+                let rrr: string | null = (t as any).gatewayTransactionId || null;
+                if (!rrr && (t as any).metadata) {
+                    try { const m = typeof (t as any).metadata === 'string' ? JSON.parse((t as any).metadata) : (t as any).metadata; rrr = m?.rrr || m?.RRR || null; } catch {}
+                }
                 results.push({
                     id: t.id,
                     sourceTable: 'payment_transactions',
@@ -1335,7 +1339,7 @@ export async function getAllUnifiedTransactions(filters?: { status?: string, cat
                     status: t.status || 'pending',
                     gateway: t.gateway,
                     gatewayReference: t.gatewayReference,
-                    rrr: t.rrr,
+                    rrr,
                     createdAt: t.createdAt,
                     student: t.student
                 });
@@ -1392,9 +1396,16 @@ export async function getAllUnifiedTransactions(filters?: { status?: string, cat
             return dateB - dateA;
         });
 
-        // Optional: you might want to paginate this in a real-world scenario if the array gets too large.
-        // Returning top 300 to avoid overwhelming the frontend UI during UAT
-        return results.slice(0, 300);
+        // Dedupe by gatewayReference/rrr — same logical payment can exist in transactions + payment_transactions
+        const seen = new Map<string, UnifiedTransaction>();
+        for (const r of results) {
+            const key = (r.gatewayReference || r.rrr || `${r.sourceTable}-${r.id}`).toString().trim();
+            if (!seen.has(key)) seen.set(key, r);
+        }
+        const deduped = Array.from(seen.values());
+
+        // Returning top 300 deduped to avoid overwhelming the frontend UI during UAT
+        return deduped.slice(0, 300);
     } catch (error) {
         console.error("Failed to fetch unified transactions:", error);
         return [];

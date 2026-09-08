@@ -11,6 +11,8 @@ export async function getSuccessfulPaymentsGrouped() {
             amount: transactions.amount,
             gateway: transactions.gateway,
             gatewayReference: transactions.gatewayReference,
+            rrr: transactions.rrr,
+            gatewayTransactionId: transactions.gatewayTransactionId,
             createdAt: transactions.createdAt,
             purpose: transactions.purpose,
             type: sql<string>`'admission'`,
@@ -22,13 +24,23 @@ export async function getSuccessfulPaymentsGrouped() {
             amount: payment_transactions.amount,
             gateway: payment_transactions.paymentGateway,
             gatewayReference: payment_transactions.transactionReference,
+            rrr: payment_transactions.gatewayTransactionId,
+            metadata: payment_transactions.metadata,
             createdAt: payment_transactions.createdAt,
             purpose: payment_transactions.transactionType,
             type: sql<string>`'bursary'`,
             userId: payment_transactions.userId,
         }).from(payment_transactions).where(eq(payment_transactions.status, 'paid'));
 
-        const txs = [...admissionTxs, ...bursaryTxs].sort((a, b) => {
+        // Dedupe by gatewayReference (and fallback rrr) — same logical payment can exist in both tables
+        const seen = new Map<string, any>();
+        for (const tx of [...admissionTxs, ...bursaryTxs]) {
+            const anyTx: any = tx;
+            const rrr = anyTx.rrr || (() => { try { const m = typeof anyTx.metadata === 'string' ? JSON.parse(anyTx.metadata) : anyTx.metadata; return m?.rrr || m?.RRR || null; } catch { return null; } })() || anyTx.gatewayTransactionId || null;
+            const key = (tx.gatewayReference || rrr || `${tx.type}-${tx.id}`).toString().trim();
+            if (!seen.has(key)) seen.set(key, { ...tx, rrr });
+        }
+        const txs = Array.from(seen.values()).sort((a, b) => {
             const dA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
             const dB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
             return dB - dA;

@@ -204,6 +204,7 @@ export default function CentralBroadcastCommunicationsPage() {
     };
 
     const levelOptions = [
+        { label: "Applicant (Pre-ND1)", value: "Applicant" },
         { label: "ND 1", value: "ND 1" },
         { label: "ND 2", value: "ND 2" },
         { label: "HND 1", value: "HND 1" },
@@ -599,6 +600,9 @@ export default function CentralBroadcastCommunicationsPage() {
                                             </label>
                                         ))}
                                     </div>
+                                    <p className="text-[11px] text-slate-500 font-medium leading-relaxed bg-white/60 p-2.5 rounded-xl border border-indigo-100">
+                                        <span className="font-bold text-indigo-700">Applicant =</span> pre-matriculation (all admission-applicants without matric). For targeted exam/payment filters (e.g., not-written-exam, not-yet-ND1) use the <span className="font-black">Admission Applicants</span> target above.
+                                    </p>
                                 </div>
                             )}
 

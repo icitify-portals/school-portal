@@ -157,6 +157,7 @@ export default function SuccessfulPaymentsPage() {
                                         <th className="px-6 py-4">Student Name</th>
                                         <th className="px-6 py-4">Item Breakdown</th>
                                         <th className="px-6 py-4">Reference</th>
+                                        <th className="px-6 py-4">RRR</th>
                                         <th className="px-6 py-4">Gateway</th>
                                         <th className="px-6 py-4 text-right">Amount</th>
                                         <th className="px-6 py-4 text-center">Action</th>
@@ -187,6 +188,9 @@ export default function SuccessfulPaymentsPage() {
                                             </td>
                                             <td className="px-6 py-4 font-mono text-xs text-slate-600">
                                                 {tx.gatewayReference || '-'}
+                                            </td>
+                                            <td className="px-6 py-4 font-mono text-xs text-indigo-600">
+                                                {tx.rrr || '-'}
                                             </td>
                                             <td className="px-6 py-4">
                                                 <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${

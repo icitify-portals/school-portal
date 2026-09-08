@@ -180,23 +180,35 @@ export async function resolveBroadcastRecipients(criteria: any): Promise<{ userI
     userIds = res.userIds;
     emails = Array.from(new Set([...emails, ...res.emails]));
   } else if (type === "levels" && criteria?.levels?.length) {
-    const levelStr = criteria.levels[0];
-    if (levelStr === "Applicant") {
-      const q = await db.select({ id: users.id }).from(users).where(eq(users.role, "applicant"));
-      userIds = q.map(r => r.id);
-    } else {
-      let conditions: any[] = [];
-      if (levelStr === "ND_graduated") conditions.push(eq(students.status, "nd_graduant"));
-      else if (levelStr === "HND_graduated") conditions.push(eq(students.status, "hnd_graduant"));
-      else if (levelStr === "ND 1") conditions.push(eq(students.status, "active"), eq(students.currentLevel, 100), eq(students.programmeType, "ND"));
-      else if (levelStr === "ND 2") conditions.push(eq(students.status, "active"), eq(students.currentLevel, 200), eq(students.programmeType, "ND"));
-      else if (levelStr === "HND 1") conditions.push(eq(students.status, "active"), eq(students.currentLevel, 100), eq(students.programmeType, "HND"));
-      else if (levelStr === "HND 2") conditions.push(eq(students.status, "active"), eq(students.currentLevel, 200), eq(students.programmeType, "HND"));
-      if (conditions.length > 0) {
-        const q = await db.select({ userId: students.userId }).from(students).where(and(...conditions));
-        userIds = q.filter(r => r.userId).map(r => r.userId as number);
+    const allIds = new Set<number>();
+    for (const raw of criteria.levels) {
+      const levelStr = String(raw).trim();
+      const norm = levelStr.replace(/\s+/g, "").toUpperCase(); // ND1, HND1, etc.
+      if (norm === "APPLICANT") {
+        const q = await db.select({ id: users.id }).from(users).where(eq(users.role, "applicant"));
+        q.forEach(r => allIds.add(r.id));
+      } else {
+        let conditions: any[] = [];
+        if (norm === "ND_GRADUATED") conditions.push(eq(students.status, "nd_graduant"));
+        else if (norm === "HND_GRADUATED") conditions.push(eq(students.status, "hnd_graduant"));
+        else if (norm === "ND1") conditions.push(eq(students.status, "active"), eq(students.currentLevel, 100), eq(students.programmeType, "ND"));
+        else if (norm === "ND2") conditions.push(eq(students.status, "active"), eq(students.currentLevel, 200), eq(students.programmeType, "ND"));
+        else if (norm === "HND1") conditions.push(eq(students.status, "active"), eq(students.currentLevel, 100), eq(students.programmeType, "HND"));
+        else if (norm === "HND2") conditions.push(eq(students.status, "active"), eq(students.currentLevel, 200), eq(students.programmeType, "HND"));
+        // Back-compat for spaced values like "ND 1" / "HND 2"
+        else if (levelStr === "ND_graduated") conditions.push(eq(students.status, "nd_graduant"));
+        else if (levelStr === "HND_graduated") conditions.push(eq(students.status, "hnd_graduant"));
+        else if (levelStr === "ND 1") conditions.push(eq(students.status, "active"), eq(students.currentLevel, 100), eq(students.programmeType, "ND"));
+        else if (levelStr === "ND 2") conditions.push(eq(students.status, "active"), eq(students.currentLevel, 200), eq(students.programmeType, "ND"));
+        else if (levelStr === "HND 1") conditions.push(eq(students.status, "active"), eq(students.currentLevel, 100), eq(students.programmeType, "HND"));
+        else if (levelStr === "HND 2") conditions.push(eq(students.status, "active"), eq(students.currentLevel, 200), eq(students.programmeType, "HND"));
+        if (conditions.length > 0) {
+          const q = await db.select({ userId: students.userId }).from(students).where(and(...conditions));
+          q.forEach(r => { if (r.userId) allIds.add(r.userId as number); });
+        }
       }
     }
+    userIds = Array.from(allIds);
   } else {
     // all, departments, programmes, debtors (defaults to active students)
     let conditions = [eq(students.status, "active")];
