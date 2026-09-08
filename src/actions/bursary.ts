@@ -1198,16 +1198,16 @@ export async function getAllUnifiedTransactions(filters?: { status?: string, cat
             const fees = await feeQuery;
 
             // Pre-fetch applicant details for admission-related transactions
-            // Try Application ID from purpose first, then fall back to gatewayReference (ACC-{appId}-{timestamp})
+            // Try Application ID from purpose first, then fall back to gatewayReference (ACC/SCH/PROC/FORM-{appId}-{timestamp})
             const appIdsToFetch = new Set<number>();
             for (const f of fees) {
                 if (f.student?.id) continue;
                 if (f.purpose && f.purpose.includes("Application ID:")) {
                     const match = f.purpose.match(/Application ID:\s*(\d+)/);
                     if (match && match[1]) appIdsToFetch.add(parseInt(match[1]));
-                } else if (f.gatewayReference && f.gatewayReference.startsWith("ACC-")) {
-                    const match = f.gatewayReference.match(/^ACC-(\d+)-/);
-                    if (match && match[1]) appIdsToFetch.add(parseInt(match[1]));
+                } else if (f.gatewayReference) {
+                    const m = f.gatewayReference.match(/^(?:ACC|SCH|PROC|FORM)-(\d+)-/);
+                    if (m && m[1]) appIdsToFetch.add(parseInt(m[1]));
                 }
             }
 
@@ -1248,7 +1248,7 @@ export async function getAllUnifiedTransactions(filters?: { status?: string, cat
             const rrrsToFetch = new Set<string>();
             for (const f of fees) {
                 if (f.student?.id) continue;
-                const hasAppId = (f.purpose && f.purpose.includes("Application ID:")) || (f.gatewayReference && f.gatewayReference.startsWith("ACC-"));
+                const hasAppId = (f.purpose && f.purpose.includes("Application ID:")) || (f.gatewayReference && /^(?:ACC|SCH|PROC|FORM)-(\d+)-/.test(f.gatewayReference));
                 if (hasAppId) continue;
                 if (f.rrr) rrrsToFetch.add(f.rrr.trim());
                 else if (f.gateway === 'remita' && f.gatewayReference) rrrsToFetch.add(f.gatewayReference.trim());
@@ -1301,9 +1301,9 @@ export async function getAllUnifiedTransactions(filters?: { status?: string, cat
                     const match = tx.purpose.match(/Application ID:\s*(\d+)/);
                     if (match && match[1]) return parseInt(match[1]);
                 }
-                if (tx.gatewayReference && tx.gatewayReference.startsWith("ACC-")) {
-                    const match = tx.gatewayReference.match(/^ACC-(\d+)-/);
-                    if (match && match[1]) return parseInt(match[1]);
+                if (tx.gatewayReference) {
+                    const m = tx.gatewayReference.match(/^(?:ACC|SCH|PROC|FORM)-(\d+)-/);
+                    if (m && m[1]) return parseInt(m[1]);
                 }
                 return null;
             }
