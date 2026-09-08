@@ -146,7 +146,11 @@ export async function generateMatricNumber(options: {
         if (!bestSetting) {
             const globals = allSettings.filter(s => !s.deptId && !s.facultyId && !s.unitId);
             const isHndForSetting = programmeType?.toUpperCase() === "HND";
-            bestSetting = globals.find(s => isHndForSetting ? s.format.includes("HND") : s.format.includes("ND")) || globals[0];
+            if (isHndForSetting) {
+                bestSetting = globals.find(s => s.format.includes("/HND/")) || globals.find(s => s.format.includes("HND")) || globals[0];
+            } else {
+                bestSetting = globals.find(s => s.format.includes("/ND/")) || globals.find(s => s.format.includes("/FSS/IB/")) || globals[0];
+            }
         }
 
         // If absolutely no setting exists, create a default global one to prevent failure
