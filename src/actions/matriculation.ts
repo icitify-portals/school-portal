@@ -120,21 +120,6 @@ export async function generateMatricNumber(options: {
             unitCode = `U${unitId}`;
         }
 
-        // Determine Prefix based on Study Mode and Programme Type
-        let prefix = "";
-        const isPartTime = studyMode?.toLowerCase().includes("part");
-        const isHnd = programmeType?.toUpperCase() === "HND";
-
-        if (isPartTime) {
-            prefix = isHnd ? "DPP/HND/" : "DPP/";
-        } else {
-            // Full-Time
-            prefix = isHnd ? "HND/" : "";
-        }
-
-        // Apply Prefix to the department code so that it seamlessly integrates with {DEPT_CODE}
-        deptCode = `${prefix}${deptCode}`;
-
         // Find the best setting: Priority -> Dept > Faculty > Unit > Global
         let bestSetting = null;
 
@@ -176,6 +161,28 @@ export async function generateMatricNumber(options: {
                 bestSetting = globals.find(s => s.format.includes("/ND/")) || globals.find(s => s.format.includes("/FSS/IB/")) || globals[0];
             }
         }
+
+        // Determine Prefix based on Study Mode and Programme Type
+        // Only add prefix if the chosen format doesn't already contain ND/HND
+        let prefix = "";
+        const isPartTime = studyMode?.toLowerCase().includes("part");
+        const isHnd = programmeType?.toUpperCase() === "HND";
+        const formatHasND = bestSetting?.format.includes("/ND/") || bestSetting?.format.includes("ND");
+        const formatHasHND = bestSetting?.format.includes("/HND/") || bestSetting?.format.includes("HND");
+
+        if (!formatHasND && !formatHasHND) {
+            if (isPartTime) {
+                prefix = isHnd ? "DPP/HND/" : "DPP/";
+            } else {
+                prefix = isHnd ? "HND/" : "";
+            }
+        } else if (isHnd && !formatHasHND && formatHasND) {
+            // Edge: ND format chosen for HND student (should not happen after above), add HND prefix
+            prefix = isPartTime ? "DPP/HND/" : "HND/";
+        }
+
+        // Apply Prefix to the department code so that it seamlessly integrates with {DEPT_CODE}
+        deptCode = `${prefix}${deptCode}`;
 
         // If absolutely no setting exists, create a default global one to prevent failure
         if (!bestSetting) {
