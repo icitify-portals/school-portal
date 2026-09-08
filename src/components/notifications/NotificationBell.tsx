@@ -53,13 +53,16 @@ export function NotificationBell() {
     };
 
     useEffect(() => {
-        // Initial fetch
         fetchNotifications();
-
-        // Poll every 15 seconds
-        const intervalId = setInterval(fetchNotifications, 15000);
-        return () => clearInterval(intervalId);
-    }, []);
+        // Poll every 30s, pause when tab hidden or dropdown open to reduce contention
+        const intervalId = setInterval(() => {
+            if (document.hidden || isOpen) return;
+            fetchNotifications();
+        }, 30000);
+        const onVis = () => { if (!document.hidden) fetchNotifications(); };
+        document.addEventListener("visibilitychange", onVis);
+        return () => { clearInterval(intervalId); document.removeEventListener("visibilitychange", onVis); };
+    }, [isOpen]);
 
     const handleMarkAsRead = async (id: number) => {
         // Optimistic UI update

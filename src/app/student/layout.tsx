@@ -31,12 +31,24 @@ export default async function StudentLayout({
         return <>{children}</>;
     }
 
-    const activeSession = await db.query.academicSessions.findFirst({
-        // @ts-expect-error
-        where: eq(academicSessions.isCurrent, true)
-    });
-
-    const devSettings = await db.query.developerSubscriptionSettings.findFirst();
+    const [activeSession, devSettings, rawSettings, bills, activeSanctions] = await Promise.all([
+        db.query.academicSessions.findFirst({
+            // @ts-expect-error
+            where: eq(academicSessions.isCurrent, true)
+        }),
+        db.query.developerSubscriptionSettings.findFirst(),
+        db.query.bursarySettings.findMany(),
+        db.query.studentBills.findMany({
+            where: eq(studentBills.studentId, studentRecord.id)
+        }),
+        db.query.conductLogs.findMany({
+            where: (logs, { eq, and, inArray }) => and(
+                eq(logs.studentId, studentRecord.id),
+                eq(logs.status, 'active'),
+                inArray(logs.senateSanction, ['suspension', 'expulsion', 'rustication'])
+            )
+        })
+    ]);
 
     // Developer Subscription Fee Enforcement
     const isSubscriptionEnforced = devSettings?.isActive === true;
@@ -67,16 +79,10 @@ export default async function StudentLayout({
         }
     }
 
-    const rawSettings = await db.query.bursarySettings.findMany();
     const settings = {
         financial_lock_type: rawSettings.find(s => s.key === 'financial_lock_type')?.value || 'none',
         financial_lock_threshold: Number(rawSettings.find(s => s.key === 'financial_lock_threshold')?.value || 0)
     };
-
-    // Calculate outstanding balance
-    const bills = await db.query.studentBills.findMany({
-        where: eq(studentBills.studentId, studentRecord.id)
-    });
     
     // @ts-expect-error - TS2339: Auto-suppressed for build
     const totalOwed = bills.reduce((acc, bill) => acc + Number(bill.amount), 0);
@@ -96,15 +102,6 @@ export default async function StudentLayout({
     
     const isHardLock = isLocked && settings.financial_lock_type === 'hard';
     const isSoftLock = isLocked && settings.financial_lock_type === 'soft';
-
-    // Disciplinary Sanction Enforcement
-    const activeSanctions = await db.query.conductLogs.findMany({
-        where: (logs, { eq, and, inArray }) => and(
-            eq(logs.studentId, studentRecord.id),
-            eq(logs.status, 'active'),
-            inArray(logs.senateSanction, ['suspension', 'expulsion', 'rustication'])
-        )
-    });
 
     const isDisciplinarilyLocked = activeSanctions.length > 0;
     const sanctionMessage = isDisciplinarilyLocked 

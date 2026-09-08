@@ -1182,7 +1182,9 @@ export async function getAllUnifiedTransactions(filters?: { status?: string, cat
             }).from(transactions)
               .leftJoin(students, eq(transactions.studentId, students.id))
               .leftJoin(users, eq(students.userId, users.id))
-              .orderBy(desc(transactions.createdAt));
+              .where(fStatus ? eq(transactions.status, fStatus as any) : undefined)
+              .orderBy(desc(transactions.createdAt))
+              .limit(400);
               
             const fees = await feeQuery;
 
@@ -1305,13 +1307,15 @@ export async function getAllUnifiedTransactions(filters?: { status?: string, cat
             }).from(payment_transactions)
               .leftJoin(users, eq(payment_transactions.userId, users.id))
               .leftJoin(students, eq(users.id, students.userId))
-              .orderBy(desc(payment_transactions.createdAt));
+              .where(and(
+                  fStatus ? eq(payment_transactions.status, fStatus as any) : undefined,
+                  eq(payment_transactions.transactionType, 'wallet_topup' as any)
+                ))
+              .orderBy(desc(payment_transactions.createdAt))
+              .limit(400);
 
             const topups = await topupQuery;
             for (const t of topups) {
-                if (fStatus && t.status !== fStatus) continue;
-                // Only consider wallet topups
-                if (t.purpose !== 'wallet_topup') continue;
                 
                 results.push({
                     id: t.id,
@@ -1350,11 +1354,12 @@ export async function getAllUnifiedTransactions(filters?: { status?: string, cat
             }).from(walletTransactions)
               .leftJoin(students, eq(walletTransactions.studentId, students.id))
               .leftJoin(users, eq(students.userId, users.id))
-              .orderBy(desc(walletTransactions.createdAt));
+              .where(fStatus ? eq(walletTransactions.status, fStatus as any) : undefined)
+              .orderBy(desc(walletTransactions.createdAt))
+              .limit(400);
 
             const usages = await usageQuery;
             for (const u of usages) {
-                if (fStatus && u.status !== fStatus) continue;
                 results.push({
                     id: u.id,
                     sourceTable: 'wallet_transactions',
@@ -1405,7 +1410,8 @@ export async function getTransactions() {
             }
         }).from(transactions)
             .leftJoin(students, eq(transactions.studentId, students.id))
-            .orderBy(desc(transactions.createdAt));
+            .orderBy(desc(transactions.createdAt))
+            .limit(500);
 
         return data;
     } catch (error) {
