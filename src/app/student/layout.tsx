@@ -10,6 +10,13 @@ import { SubscriptionLockEnforcer } from "@/components/finance/SubscriptionLockE
 import { SubscriptionToastNotification } from "@/components/finance/SubscriptionToastNotification";
 import { getBursarySettings } from "@/actions/bursary";
 import { checkDeveloperFeeStatus } from "@/actions/paystack-developer-subscription";
+import { unstable_cache } from "next/cache";
+
+const getCachedActiveSession = unstable_cache(
+    async () => db.query.academicSessions.findFirst({ where: eq(academicSessions.isCurrent, true) }),
+    ["active-academic-session"],
+    { revalidate: 60, tags: ["academic-session"] }
+);
 
 export default async function StudentLayout({
     children,
@@ -32,10 +39,7 @@ export default async function StudentLayout({
     }
 
     const [activeSession, devSettings, rawSettings, bills, activeSanctions] = await Promise.all([
-        db.query.academicSessions.findFirst({
-            // @ts-expect-error
-            where: eq(academicSessions.isCurrent, true)
-        }),
+        getCachedActiveSession() as any,
         db.query.developerSubscriptionSettings.findFirst(),
         db.query.bursarySettings.findMany(),
         db.query.studentBills.findMany({

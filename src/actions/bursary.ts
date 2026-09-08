@@ -34,7 +34,7 @@ import {
     admissionApplicationsV2
 } from "@/db/schema";
 import { eq, and, desc, sql, inArray, gte, lte, ne, sum } from "drizzle-orm";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, unstable_cache } from "next/cache";
 import { hasRole, hasPermission } from "@/lib/rbac";
 import { recordTransaction } from "./accounting";
 import { getBudgetAnalysis } from "./budgets";
@@ -939,13 +939,20 @@ export async function verifyGatewayPayment(reference: string, gateway: 'paystack
     }
 }
 
-// --- Bursary Settings ---
+// --- Bursary Settings --- (cached 60s — invalidated on updateBursarySetting)
+const _getBursarySettingsCached = unstable_cache(
+    async () => {
+        const settings = await db.select().from(bursarySettings);
+        return settings.reduce((acc, curr) => {
+            acc[curr.key] = curr.value;
+            return acc;
+        }, {} as Record<string, string>);
+    },
+    ["bursary-settings"],
+    { revalidate: 60, tags: ["bursary-settings"] }
+);
 export async function getBursarySettings() {
-    const settings = await db.select().from(bursarySettings);
-    return settings.reduce((acc, curr) => {
-        acc[curr.key] = curr.value;
-        return acc;
-    }, {} as Record<string, string>);
+    return _getBursarySettingsCached();
 }
 
 export async function updateBursarySetting(key: string, value: string) {
@@ -954,6 +961,8 @@ export async function updateBursarySetting(key: string, value: string) {
             .values({ key, value })
             .onDuplicateKeyUpdate({ set: { value } });
 
+        const { revalidateTag } = await import("next/cache");
+        revalidateTag("bursary-settings");
         revalidatePath("/admin/bursary/settings");
         return { success: true };
     } catch (error) {
