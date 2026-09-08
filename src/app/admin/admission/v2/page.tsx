@@ -55,6 +55,7 @@ function AdminV2ApplicationsContent() {
 
     const [templates, setTemplates] = useState<any[]>([]);
     const [page, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState(10);
     const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
     const [bulkAction, setBulkAction] = useState("");
 
@@ -87,11 +88,11 @@ function AdminV2ApplicationsContent() {
             hasJamb: hasJambFilter !== 'all' ? hasJambFilter : undefined,
             matricNumber: matricSearch || undefined,
             page,
-            pageSize: 10,
+            pageSize,
         });
         setData(result);
         setLoading(false);
-    }, [search, statusFilter, paymentFilter, templateFilter, facultyFilter, departmentFilter, programmeFilter, levelFilter, modeFilter, attendanceFilter, genderFilter, sessionFilter, ninFilter, hasMatricFilter, hasJambFilter, matricSearch, page]);
+    }, [search, statusFilter, paymentFilter, templateFilter, facultyFilter, departmentFilter, programmeFilter, levelFilter, modeFilter, attendanceFilter, genderFilter, sessionFilter, ninFilter, hasMatricFilter, hasJambFilter, matricSearch, page, pageSize]);
 
     useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -930,10 +931,24 @@ function AdminV2ApplicationsContent() {
                     </div>
                 </Card>
 
-                <div className="flex items-center justify-between">
-                        <span className="text-sm text-slate-500 font-bold">
-                            Page {data.page} of {data.totalPages} ({data.total} total)
-                        </span>
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                        <div className="flex items-center gap-3">
+                            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Rows per page:</span>
+                            <select
+                                value={pageSize}
+                                onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }}
+                                className="px-3 py-2 rounded-xl border border-slate-200 bg-white text-xs font-bold shadow-sm focus:ring-2 focus:ring-indigo-500"
+                            >
+                                <option value={10}>10</option>
+                                <option value={20}>20</option>
+                                <option value={40}>40</option>
+                                <option value={50}>50</option>
+                                <option value={100}>100</option>
+                            </select>
+                            <span className="text-sm text-slate-500 font-bold">
+                                Page {data.page} of {data.totalPages} ({data.total} total)
+                            </span>
+                        </div>
                         <div className="flex gap-2">
                             <Button
                                 onClick={() => setPage(p => Math.max(1, p - 1))}
