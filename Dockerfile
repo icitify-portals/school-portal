@@ -17,7 +17,7 @@ COPY --from=deps /app/node_modules ./node_modules
 # Copy source AFTER node_modules so the npm ci layer stays cached
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
-ENV NODE_OPTIONS="--max-old-space-size=4096"
+ENV NODE_OPTIONS="--max-old-space-size=8192"
 ENV DATABASE_URL="mysql://portal_user:StrongPassword123!@127.0.0.1:3306/school_portal"
 ENV NEXTAUTH_SECRET="build-time-dummy-secret-1234567890"
 ENV AUTH_SECRET="build-time-dummy-secret-1234567890"
