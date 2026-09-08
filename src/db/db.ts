@@ -5,6 +5,7 @@ import dotenv from "dotenv";
 import { headers } from "next/headers";
 import path from "path";
 import { redis } from "../lib/redis";
+import { cache } from "react";
 
 dotenv.config();
 
@@ -42,8 +43,9 @@ export function getPoolForDb(dbName: string): mysql.Pool {
  * Resolves the active database name asynchronously from request headers.
  * Fast path: reads x-tenant-db header set by middleware (no Redis/SQL lookup).
  * Slow path: falls back to Redis cache + SQL lookup (for direct API calls).
+ * Wrapped in React cache() so parallel queries in the same request dedupe to 1 lookup.
  */
-export async function getActiveDbName(): Promise<string> {
+export const getActiveDbName = cache(async (): Promise<string> => {
     if (process.env.CLI_DB_OVERRIDE) {
         return process.env.CLI_DB_OVERRIDE;
     }
@@ -123,7 +125,7 @@ export async function getActiveDbName(): Promise<string> {
     }
 
     return dbName;
-}
+});
 
 /**
  * Proxied connection pool that intercepts all queries and dynamically

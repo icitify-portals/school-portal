@@ -150,67 +150,60 @@ export async function getStudentDashboardStats(userId: number) {
 
         const { student, userStatus, programme } = studentData;
 
-        // Fetch enrolled courses
-        const enrolledCourses = await db.select({
-            id: courses.id,
-            name: courses.name,
-            code: courses.code,
-            credits: courses.creditUnits
-        })
-            .from(enrollments)
-            .innerJoin(courses, eq(enrollments.courseId, courses.id))
-            .where(and(
-                eq(enrollments.studentId, student.id),
-                eq(enrollments.status, 'approved')
-            ));
-
-        // Fetch course progress
-        const detailedProgress = await db.select({
-            courseName: courses.name,
-            courseCode: courses.code,
-            lastAccessed: studentProgress.lastAccessed
-        })
-            .from(studentProgress)
-            .innerJoin(courses, eq(studentProgress.courseId, courses.id))
-            .where(eq(studentProgress.studentId, student.id))
-            .limit(5);
-
-        // Fetch student results
-        const studentResults = await db.select({
-            totalScore: results.totalScore,
-            grade: results.grade,
-            courseName: courses.name,
-            courseCode: courses.code
-        })
-            .from(results)
-            .innerJoin(enrollments, eq(results.enrollmentId, enrollments.id))
-            .innerJoin(courses, eq(enrollments.courseId, courses.id))
-            .where(eq(enrollments.studentId, student.id))
-            .orderBy(desc(results.id))
-            .limit(3);
+        const [enrolledCourses, detailedProgress, studentResults, recentTransactions, recentAttendance] = await Promise.all([
+            db.select({
+                id: courses.id,
+                name: courses.name,
+                code: courses.code,
+                credits: courses.creditUnits
+            })
+                .from(enrollments)
+                .innerJoin(courses, eq(enrollments.courseId, courses.id))
+                .where(and(
+                    eq(enrollments.studentId, student.id),
+                    eq(enrollments.status, 'approved')
+                )),
+            db.select({
+                courseName: courses.name,
+                courseCode: courses.code,
+                lastAccessed: studentProgress.lastAccessed
+            })
+                .from(studentProgress)
+                .innerJoin(courses, eq(studentProgress.courseId, courses.id))
+                .where(eq(studentProgress.studentId, student.id))
+                .limit(5),
+            db.select({
+                totalScore: results.totalScore,
+                grade: results.grade,
+                courseName: courses.name,
+                courseCode: courses.code
+            })
+                .from(results)
+                .innerJoin(enrollments, eq(results.enrollmentId, enrollments.id))
+                .innerJoin(courses, eq(enrollments.courseId, courses.id))
+                .where(eq(enrollments.studentId, student.id))
+                .orderBy(desc(results.id))
+                .limit(3),
+            db.select()
+                .from(transactions)
+                .where(eq(transactions.studentId, student.id))
+                .orderBy(desc(transactions.id))
+                .limit(3),
+            db.execute(sql`
+                SELECT la.time_in as timeIn, c.code as courseCode, c.name as courseName
+                FROM lecture_attendance la
+                INNER JOIN lecture_sessions ls ON la.session_id = ls.id
+                INNER JOIN timetable_slots ts ON ls.slot_id = ts.id
+                INNER JOIN course_lecturers cl ON ts.course_lecturer_id = cl.id
+                INNER JOIN courses c ON cl.course_id = c.id
+                WHERE la.student_id = ${student.id}
+                ORDER BY la.id DESC
+                LIMIT 3
+            `)
+        ]);
 
         const totalPoints = studentResults.reduce((acc, r) => acc + (parseFloat(r.totalScore?.toString() || "0")), 0);
         const cgpa = studentResults.length > 0 ? (totalPoints / (studentResults.length * 20)).toFixed(2) : "0.00";
-
-        // Fetch recent transactions
-        const recentTransactions = await db.select()
-            .from(transactions)
-            .where(eq(transactions.studentId, student.id))
-            .orderBy(desc(transactions.id))
-            .limit(3);
-
-        // Fetch recent attendance check-ins using sql
-        const recentAttendance = await db.execute(sql`
-            SELECT la.time_in as timeIn, c.code as courseCode, c.name as courseName
-            FROM lecture_attendance la
-            INNER JOIN lecture_sessions ls ON la.session_id = ls.id
-            INNER JOIN timetable_slots ts ON ls.slot_id = ts.id
-            INNER JOIN course_lecturers cl ON ts.course_lecturer_id = cl.id
-            INNER JOIN courses c ON cl.course_id = c.id
-            WHERE la.student_id = ${student.id}
-            ORDER BY la.id DESC
-            LIMIT 3
-        `);
 
         // Format recent activities into a unified feed
         const activities: any[] = [];
@@ -280,35 +273,35 @@ export async function getStudentDashboardStats(userId: number) {
 
 export async function getHealthDashboardStats() {
     try {
-        const [totalStudents] = await db.select({ value: count() }).from(students);
-        const [cleared] = await db.select({ value: count() }).from(students).where(eq(students.healthStatus, 'cleared'));
-        const [flagged] = await db.select({ value: count() }).from(students).where(eq(students.healthStatus, 'flagged'));
-        const [pending] = await db.select({ value: count() }).from(students).where(eq(students.healthStatus, 'pending'));
-
-        const recentReports = await db.select({
-            id: healthRecords.id,
-            title: healthRecords.title,
-            studentName: users.name,
-            createdAt: healthRecords.createdAt,
-            status: healthRecords.status
-        })
-            .from(healthRecords)
-            .innerJoin(students, eq(healthRecords.studentId, students.id))
-            .innerJoin(users, eq(students.userId, users.id))
-            .orderBy(desc(healthRecords.createdAt))
-            .limit(5);
-
-        const recentVitals = await db.select({
-            id: studentVitals.id,
-            studentName: users.name,
-            recordedAt: studentVitals.recordedAt,
-            bp: studentVitals.bloodPressure
-        })
-            .from(studentVitals)
-            .innerJoin(students, eq(studentVitals.studentId, students.id))
-            .innerJoin(users, eq(students.userId, users.id))
-            .orderBy(desc(studentVitals.recordedAt))
-            .limit(5);
+        const [[totalStudents], [cleared], [flagged], [pending], recentReports, recentVitals] = await Promise.all([
+            db.select({ value: count() }).from(students),
+            db.select({ value: count() }).from(students).where(eq(students.healthStatus, 'cleared')),
+            db.select({ value: count() }).from(students).where(eq(students.healthStatus, 'flagged')),
+            db.select({ value: count() }).from(students).where(eq(students.healthStatus, 'pending')),
+            db.select({
+                id: healthRecords.id,
+                title: healthRecords.title,
+                studentName: users.name,
+                createdAt: healthRecords.createdAt,
+                status: healthRecords.status
+            })
+                .from(healthRecords)
+                .innerJoin(students, eq(healthRecords.studentId, students.id))
+                .innerJoin(users, eq(students.userId, users.id))
+                .orderBy(desc(healthRecords.createdAt))
+                .limit(5),
+            db.select({
+                id: studentVitals.id,
+                studentName: users.name,
+                recordedAt: studentVitals.recordedAt,
+                bp: studentVitals.bloodPressure
+            })
+                .from(studentVitals)
+                .innerJoin(students, eq(studentVitals.studentId, students.id))
+                .innerJoin(users, eq(students.userId, users.id))
+                .orderBy(desc(studentVitals.recordedAt))
+                .limit(5)
+        ]);
 
         return {
             totalStudents: totalStudents.value,
