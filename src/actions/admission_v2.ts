@@ -35,6 +35,7 @@ import { sendEmail } from "@/lib/mail";
 import { normalizeEmail, isValidEmailFormat } from "@/lib/email";
 import { extractNameParts, buildFullName } from "@/lib/applicant-names";
 import { generateFormNumber, generateFormHash } from "@/lib/form-number";
+import { inArrayChunked } from "@/lib/db-helpers";
 import { storage } from "@/lib/storage";
 import { hash, compare } from "bcryptjs";
 import { writeFile, mkdir, readFile } from "fs/promises";
@@ -3172,12 +3173,14 @@ export async function getAdminV2Applications(filters?: {
             const q = `%${filters.search}%`;
             const matchingUsers = await db.select({ id: users.id })
                 .from(users)
-                .where(like(users.name, q));
+                .where(like(users.name, q))
+                .limit(50);
             const userIds = matchingUsers.map(u => u.id);
 
             const matchingProgs = await db.select({ id: programmes.id })
                 .from(programmes)
-                .where(like(programmes.name, q));
+                .where(like(programmes.name, q))
+                .limit(50);
             const searchProgIds = matchingProgs.map(p => p.id);
 
             const searchOr = [
@@ -3186,10 +3189,12 @@ export async function getAdminV2Applications(filters?: {
             ];
             
             if (userIds.length > 0) {
-                searchOr.push(inArray(admissionApplicationsV2.applicantId, userIds));
+                const chunked = inArrayChunked(admissionApplicationsV2.applicantId, userIds);
+                if (chunked) searchOr.push(chunked);
             }
             if (searchProgIds.length > 0) {
-                searchOr.push(inArray(admissionApplicationsV2.programmeId, searchProgIds));
+                const chunked = inArrayChunked(admissionApplicationsV2.programmeId, searchProgIds);
+                if (chunked) searchOr.push(chunked);
             }
             if (filters.search.toLowerCase().includes('pending') || filters.search.toLowerCase().includes('unassigned')) {
                 searchOr.push(isNull(admissionApplicationsV2.programmeId));
@@ -3402,12 +3407,14 @@ export async function exportAdminV2Applications(filters?: {
             const q = `%${filters.search}%`;
             const matchingUsers = await db.select({ id: users.id })
                 .from(users)
-                .where(like(users.name, q));
+                .where(like(users.name, q))
+                .limit(50);
             const userIds = matchingUsers.map(u => u.id);
 
             const matchingProgs = await db.select({ id: programmes.id })
                 .from(programmes)
-                .where(like(programmes.name, q));
+                .where(like(programmes.name, q))
+                .limit(50);
             const searchProgIds = matchingProgs.map(p => p.id);
 
             const searchOr = [
@@ -3416,10 +3423,12 @@ export async function exportAdminV2Applications(filters?: {
             ];
             
             if (userIds.length > 0) {
-                searchOr.push(inArray(admissionApplicationsV2.applicantId, userIds));
+                const chunked = inArrayChunked(admissionApplicationsV2.applicantId, userIds);
+                if (chunked) searchOr.push(chunked);
             }
             if (searchProgIds.length > 0) {
-                searchOr.push(inArray(admissionApplicationsV2.programmeId, searchProgIds));
+                const chunked = inArrayChunked(admissionApplicationsV2.programmeId, searchProgIds);
+                if (chunked) searchOr.push(chunked);
             }
             if (filters.search.toLowerCase().includes('pending') || filters.search.toLowerCase().includes('unassigned')) {
                 searchOr.push(isNull(admissionApplicationsV2.programmeId));
