@@ -230,6 +230,8 @@ export const students = mysqlTable('students', {
   legacyAccessUnits: text('legacy_access_units'), // JSON: [1, 5, 12] (Unit IDs that can still view)
   admissionYear: int('admission_year'),
   admissionSessionId: int('admission_session_id').references(() => academicSessions.id),
+  currentSessionId: int('current_session_id').references(() => academicSessions.id),
+  currentSemester: int('current_semester').default(1),
   currentLevel: int('current_level').default(1),
   jambNumber: varchar('jamb_number', { length: 50 }).unique(),
   walletBalance: decimal('wallet_balance', { precision: 12, scale: 2 }).default('0.00'), // Used for Legacy/Previous Payments

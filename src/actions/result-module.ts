@@ -471,10 +471,10 @@ export async function getBulkTranscripts(filters: { programmeId?: number, depart
     // Level filter: ND1, ND2, HND1, HND2
     if (filters.level && filters.level !== "all") {
       const levelMap: Record<string, { programmeType: string; currentLevel: number }> = {
-        "ND1": { programmeType: "ND", currentLevel: 100 },
-        "ND2": { programmeType: "ND", currentLevel: 200 },
-        "HND1": { programmeType: "HND", currentLevel: 300 },
-        "HND2": { programmeType: "HND", currentLevel: 400 },
+        "ND1": { programmeType: "ND", currentLevel: 1 },
+        "ND2": { programmeType: "ND", currentLevel: 2 },
+        "HND1": { programmeType: "HND", currentLevel: 1 },
+        "HND2": { programmeType: "HND", currentLevel: 2 },
       };
       const lvl = levelMap[filters.level];
       if (lvl) {
@@ -905,6 +905,17 @@ export async function getResultTemplateStudents(filters: {
       });
       const deptIds = depts.map(d => d.id);
       queryConditions.push(deptIds.length > 0 ? inArray(students.deptId, deptIds) : eq(students.id, 0));
+    } else if (filters.enrolledCourseId) {
+        const enr = await db.query.enrollments.findMany({
+            where: and(
+                eq(enrollments.courseId, filters.enrolledCourseId),
+                filters.batchSessionId ? eq(enrollments.sessionId, filters.batchSessionId) : undefined,
+                filters.batchSemester ? eq(enrollments.semester, Number(filters.batchSemester)) : undefined
+            ),
+            columns: { studentId: true }
+        });
+        const stIds = enr.filter(e => e.studentId !== null).map(e => e.studentId);
+        queryConditions.push(stIds.length > 0 ? inArray(students.id, stIds as number[]) : eq(students.id, 0));
     }
 
     // Level filter: ND1, ND2, HND1, HND2

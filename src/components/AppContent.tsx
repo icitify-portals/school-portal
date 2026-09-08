@@ -159,7 +159,12 @@ export function AppContent({ children, enabledModules }: { children: React.React
                           <div className="p-1 bg-white rounded-lg">
                               <img src="/fss_logo.png" alt="FSS Logo" className="w-5 h-5 object-contain" />
                           </div>
-                          <span className="font-black text-sm truncate">FSSPortal</span>
+                          <div className="flex flex-col">
+                              <span className="font-black text-sm truncate">FSSPortal</span>
+                              {(session?.user as any)?.matricNumber && (
+                                  <span className="text-[10px] text-slate-300 font-mono tracking-widest leading-none">{(session?.user as any)?.matricNumber}</span>
+                              )}
+                          </div>
                     </div>
                     <div className="ml-auto flex items-center gap-2">
                         <NotificationBell />
@@ -167,7 +172,15 @@ export function AppContent({ children, enabledModules }: { children: React.React
                 </header>
 
                 {/* Desktop top bar */}
-                <div className="hidden md:flex items-center justify-end px-6 py-3 bg-white border-b border-slate-100 shadow-sm sticky top-0 z-30 gap-4">
+                <div className="hidden md:flex items-center justify-between px-6 py-3 bg-white border-b border-slate-100 shadow-sm sticky top-0 z-30 gap-4">
+                    <div className="flex items-center gap-3">
+                        <span className="font-bold text-slate-700">{(session?.user as any)?.name}</span>
+                        {(session?.user as any)?.matricNumber && (
+                             <span className="px-2.5 py-1 bg-slate-100 text-slate-600 rounded-md text-xs font-mono font-bold tracking-widest border border-slate-200 shadow-sm">
+                                 {(session?.user as any)?.matricNumber}
+                             </span>
+                        )}
+                    </div>
                     <NotificationBell />
                 </div>
 

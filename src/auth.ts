@@ -248,6 +248,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                     schoolPortalId: (user as any).schoolPortalId,
                     requiresPasswordChange: (user as any).requiresPasswordChange,
                     twoFactorPending: !!user.twoFactorEnabled,
+                    matricNumber: studentRecord?.matricNumber || undefined
                 };
             },
         }),
@@ -311,6 +312,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                         token.status = dbUser.status;
                         token.schoolPortalId = (dbUser as any).schoolPortalId;
                         token.requiresPasswordChange = (dbUser as any).requiresPasswordChange;
+
+                        if (dbUser.role === 'student' || dbUser.role === 'applicant' || dbUser.role === 'fresher') {
+                            const [stu] = await db.select().from(students).where(eq(students.userId, dbUser.id)).limit(1);
+                            if (stu && stu.matricNumber) {
+                                token.matricNumber = stu.matricNumber;
+                            }
+                        }
 
                         const { roleNames, permissionNames } = await fetchUserRolesAndPermissions(dbUser.id);
                         token.roles = roleNames;

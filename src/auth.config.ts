@@ -17,6 +17,9 @@ export const authConfig = {
                 token.schoolPortalId = (user as any).schoolPortalId;
                 token.requiresPasswordChange = (user as any).requiresPasswordChange;
                 token.twoFactorPending = (user as any).twoFactorPending;
+                if ((user as any).matricNumber) {
+                    token.matricNumber = (user as any).matricNumber;
+                }
             }
             if (trigger === "update" && session) {
                 if (session.twoFactorVerified !== undefined) {
@@ -24,6 +27,9 @@ export const authConfig = {
                 }
                 if (session.requiresPasswordChange !== undefined) {
                     token.requiresPasswordChange = session.requiresPasswordChange;
+                }
+                if (session.matricNumber !== undefined) {
+                    token.matricNumber = session.matricNumber;
                 }
             }
             return token;
@@ -38,6 +44,7 @@ export const authConfig = {
                 (session.user as any).schoolPortalId = token.schoolPortalId;
                 (session.user as any).requiresPasswordChange = token.requiresPasswordChange;
                 (session.user as any).twoFactorPending = token.twoFactorPending;
+                (session.user as any).matricNumber = token.matricNumber;
             }
             return session;
         },

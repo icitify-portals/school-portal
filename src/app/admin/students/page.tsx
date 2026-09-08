@@ -28,6 +28,7 @@ function StudentsPageContent() {
     const [students, setStudents] = useState<any[]>([]);
     const [totalCount, setTotalCount] = useState(0);
     const [loading, setLoading] = useState(true);
+    const [sessions, setSessions] = useState<any[]>([]);
     const [showImporter, setShowImporter] = useState(false);
     const [selectedUser, setSelectedUser] = useState<any | null>(null);
 
@@ -40,6 +41,8 @@ function StudentsPageContent() {
     const search = searchParams.get("search") || "";
     const levelParam = searchParams.get("level");
     const level = levelParam || undefined;
+    const sessionParam = searchParams.get("session") || undefined;
+    const semesterParam = searchParams.get("semester") || undefined;
 
     const levels = isK12 
         ? [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
@@ -47,7 +50,7 @@ function StudentsPageContent() {
 
     const fetchStudents = useCallback(async () => {
         setLoading(true);
-        const res = await getStudents({ search, page, pageSize, level });
+        const res = await getStudents({ search, page, pageSize, level, sessionId: sessionParam, semester: semesterParam });
         if (res.success) {
             setStudents(res.data);
             setTotalCount(res.totalCount);
@@ -149,6 +152,28 @@ function StudentsPageContent() {
                                 {isK12 ? `Grade ${lvl}` : lvl}
                             </option>
                         ))}
+                    </select>
+                    <select
+                        className="px-3 h-10 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white shadow-sm text-xs font-bold uppercase tracking-wider text-slate-700 cursor-pointer"
+                        value={sessionParam || ""}
+                        onChange={(e) => handleSessionChange(e.target.value)}
+                    >
+                        <option value="">All Sessions</option>
+                        {sessions.map((s) => (
+                            <option key={s.id} value={s.id.toString()}>
+                                {s.name}
+                            </option>
+                        ))}
+                    </select>
+                    
+                    <select
+                        className="px-3 h-10 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white shadow-sm text-xs font-bold uppercase tracking-wider text-slate-700 cursor-pointer"
+                        value={semesterParam || ""}
+                        onChange={(e) => handleSemesterChange(e.target.value)}
+                    >
+                        <option value="">All Semesters</option>
+                        <option value="1">1st Semester</option>
+                        <option value="2">2nd Semester</option>
                     </select>
 
                       <div className="relative w-full md:w-64">

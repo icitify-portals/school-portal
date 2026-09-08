@@ -10,7 +10,7 @@ import { auth } from "@/auth";
 import { generateMatricNumber } from "@/actions/matriculation";
 import { hasPermission, hasRole } from "@/lib/rbac";
 
-export async function getStudents(options: { search?: string, page?: number, pageSize?: number, level?: number | string } = {}) {
+export async function getStudents(options: { search?: string, page?: number, pageSize?: number, level?: number | string, sessionId?: string, semester?: string } = {}) {
     try {
         const allowed = await hasPermission("students.view") || await hasRole("admin") || await hasRole("superadmin");
         if (!allowed) {
@@ -22,7 +22,7 @@ export async function getStudents(options: { search?: string, page?: number, pag
             }
         }
 
-        const { search = "", page = 1, pageSize = 10, level } = options;
+        const { search = "", page = 1, pageSize = 10, level, sessionId, semester } = options;
         const offset = (page - 1) * pageSize;
         const searchPattern = `%${search}%`;
 

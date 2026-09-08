@@ -87,10 +87,11 @@ export default function BatchDetailPage() {
 
   // Result template download modal
   const [showTemplateModal, setShowTemplateModal] = useState(false);
-  const [templateScope, setTemplateScope] = useState<"all" | "faculty" | "department" | "programme">("all");
+  const [templateScope, setTemplateScope] = useState<"all" | "faculty" | "department" | "programme" | "course">("all");
   const [templateFacultyId, setTemplateFacultyId] = useState("");
   const [templateDeptId, setTemplateDeptId] = useState("");
   const [templateProgrammeId, setTemplateProgrammeId] = useState("");
+  const [templateEnrolledCourseId, setTemplateEnrolledCourseId] = useState("");
   const [templateFaculties, setTemplateFaculties] = useState<any[]>([]);
   const [templateDepartments, setTemplateDepartments] = useState<any[]>([]);
   const [templateProgrammes, setTemplateProgrammes] = useState<any[]>([]);
@@ -367,9 +368,13 @@ export default function BatchDetailPage() {
     if (templateScope === "faculty" && templateFacultyId) f.facultyId = Number(templateFacultyId);
     else if (templateScope === "department" && templateDeptId) f.departmentId = Number(templateDeptId);
     else if (templateScope === "programme" && templateProgrammeId) f.programmeId = Number(templateProgrammeId);
+    else if (templateScope === "course" && templateEnrolledCourseId) f.enrolledCourseId = Number(templateEnrolledCourseId);
     if (templateLevel) f.level = templateLevel;
+    // Add batch context so the server can filter by active session/semester if needed
+    f.batchSessionId = batch?.academicSessionId;
+    f.batchSemester = batch?.semester;
     return f;
-  }, [templateScope, templateFacultyId, templateDeptId, templateProgrammeId, templateLevel]);
+  }, [templateScope, templateFacultyId, templateDeptId, templateProgrammeId, templateEnrolledCourseId, templateLevel, batch]);
 
   useEffect(() => {
     if (!showTemplateModal) return;
@@ -1015,38 +1020,52 @@ export default function BatchDetailPage() {
                               <option value="HND1">HND 1</option>
                               <option value="HND2">HND 2</option>
                             </select>
+                            <div className="flex bg-white/5 p-1 rounded-lg flex-wrap mt-2">
+                              {["all", "faculty", "department", "programme", "course"].map(scope => (
+                                <button key={scope} type="button"
+                                  onClick={() => setTemplateScope(scope as any)}
+                                  className={`py-2 px-3 flex-1 text-center rounded-lg text-xs font-semibold border transition-colors ${templateScope === scope ? "bg-blue-600/30 border-blue-500/40 text-blue-300" : "bg-white/5 border-white/10 text-slate-400 hover:border-white/20"}`}>
+                                  {scope.charAt(0).toUpperCase() + scope.slice(1)}
+                                </button>
+                              ))}
+                            </div>
                           </div>
 
-                          {templateScope === "faculty" && (
-                            <div>
-                              <label className="text-xs font-bold text-slate-500 uppercase">Faculty</label>
-                              <select value={templateFacultyId} onChange={e => setTemplateFacultyId(e.target.value)}
-                                className="mt-1 w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-400">
-                                <option value="">Select faculty...</option>
-                                {templateFaculties.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
-                              </select>
-                            </div>
-                          )}
-
-                          {templateScope === "department" && (
-                            <div>
-                              <label className="text-xs font-bold text-slate-500 uppercase">Department</label>
-                              <select value={templateDeptId} onChange={e => setTemplateDeptId(e.target.value)}
-                                className="mt-1 w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-400">
-                                <option value="">Select department...</option>
-                                {templateDepartments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-                              </select>
-                            </div>
-                          )}
-
-                          {templateScope === "programme" && (
-                            <div>
-                              <label className="text-xs font-bold text-slate-500 uppercase">Programme</label>
-                              <select value={templateProgrammeId} onChange={e => setTemplateProgrammeId(e.target.value)}
-                                className="mt-1 w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-400">
-                                <option value="">Select programme...</option>
-                                {templateProgrammes.map(p => <option key={p.id} value={p.id}>{p.name}{p.department?.name ? ` (${p.department.name})` : ""}</option>)}
-                              </select>
+                          {templateScope !== "all" && (
+                            <div className="grid grid-cols-1 gap-4">
+                              <div>
+                                <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">
+                                  Select {templateScope.charAt(0).toUpperCase() + templateScope.slice(1)}
+                                </label>
+                                {templateScope === "faculty" && (
+                                  <select value={templateFacultyId} onChange={e => setTemplateFacultyId(e.target.value)}
+                                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-400">
+                                    <option value="">-- Choose Faculty --</option>
+                                    {templateFaculties.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
+                                  </select>
+                                )}
+                                {templateScope === "department" && (
+                                  <select value={templateDeptId} onChange={e => setTemplateDeptId(e.target.value)}
+                                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-400">
+                                    <option value="">-- Choose Department --</option>
+                                    {templateDepartments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                                  </select>
+                                )}
+                                {templateScope === "programme" && (
+                                  <select value={templateProgrammeId} onChange={e => setTemplateProgrammeId(e.target.value)}
+                                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-400">
+                                    <option value="">-- Choose Programme --</option>
+                                    {templateProgrammes.map(p => <option key={p.id} value={p.id}>{p.name}{p.department?.name ? ` (${p.department.name})` : ""}</option>)}
+                                  </select>
+                                )}
+                                {templateScope === "course" && (
+                                  <select value={templateEnrolledCourseId} onChange={e => setTemplateEnrolledCourseId(e.target.value)}
+                                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-400">
+                                    <option value="">-- Choose Course --</option>
+                                    {courses.map((c: any) => <option key={c.id} value={c.id}>{c.code} - {c.name}</option>)}
+                                  </select>
+                                )}
+                              </div>
                             </div>
                           )}
 
