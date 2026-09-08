@@ -140,9 +140,33 @@ export async function generateMatricNumber(options: {
 
         const allSettings = await db.select().from(matriculationSettings);
 
-        if (deptId) bestSetting = allSettings.find(s => s.deptId === deptId);
-        if (!bestSetting && facultyId) bestSetting = allSettings.find(s => s.facultyId === facultyId);
-        if (!bestSetting && unitId) bestSetting = allSettings.find(s => s.unitId === unitId);
+        if (deptId) {
+            const deptSettings = allSettings.filter(s => s.deptId === deptId);
+            if (deptSettings.length > 1) {
+                const isHndForDept = programmeType?.toUpperCase() === "HND";
+                bestSetting = deptSettings.find(s => isHndForDept ? s.format.includes("/HND/") : s.format.includes("/ND/")) || deptSettings[0];
+            } else {
+                bestSetting = allSettings.find(s => s.deptId === deptId);
+            }
+        }
+        if (!bestSetting && facultyId) {
+            const facSettings = allSettings.filter(s => s.facultyId === facultyId);
+            if (facSettings.length > 1) {
+                const isHndForFac = programmeType?.toUpperCase() === "HND";
+                bestSetting = facSettings.find(s => isHndForFac ? s.format.includes("/HND/") : s.format.includes("/ND/")) || facSettings[0];
+            } else {
+                bestSetting = allSettings.find(s => s.facultyId === facultyId);
+            }
+        }
+        if (!bestSetting && unitId) {
+            const unitSettings = allSettings.filter(s => s.unitId === unitId);
+            if (unitSettings.length > 1) {
+                const isHndForUnit = programmeType?.toUpperCase() === "HND";
+                bestSetting = unitSettings.find(s => isHndForUnit ? s.format.includes("/HND/") : s.format.includes("/ND/")) || unitSettings[0];
+            } else {
+                bestSetting = allSettings.find(s => s.unitId === unitId);
+            }
+        }
         if (!bestSetting) {
             const globals = allSettings.filter(s => !s.deptId && !s.facultyId && !s.unitId);
             const isHndForSetting = programmeType?.toUpperCase() === "HND";
