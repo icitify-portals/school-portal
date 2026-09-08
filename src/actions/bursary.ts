@@ -33,7 +33,7 @@ import {
     walletTransactions,
     admissionApplicationsV2
 } from "@/db/schema";
-import { eq, and, desc, sql, inArray, gte, lte, ne, sum } from "drizzle-orm";
+import { eq, and, desc, sql, inArray, gte, lte, ne, sum, or } from "drizzle-orm";
 import { revalidatePath, unstable_cache } from "next/cache";
 import { hasRole, hasPermission } from "@/lib/rbac";
 import { recordTransaction } from "./accounting";
@@ -1244,6 +1244,58 @@ export async function getAllUnifiedTransactions(filters?: { status?: string, cat
                 });
             }
 
+            // Also resolve Remita transactions via RRR -> admission application paymentReference
+            const rrrsToFetch = new Set<string>();
+            for (const f of fees) {
+                if (f.student?.id) continue;
+                const hasAppId = (f.purpose && f.purpose.includes("Application ID:")) || (f.gatewayReference && f.gatewayReference.startsWith("ACC-"));
+                if (hasAppId) continue;
+                if (f.rrr) rrrsToFetch.add(f.rrr.trim());
+                else if (f.gateway === 'remita' && f.gatewayReference) rrrsToFetch.add(f.gatewayReference.trim());
+                else if (f.gatewayReference && /^RRR/i.test(f.gatewayReference)) rrrsToFetch.add(f.gatewayReference.trim());
+            }
+            const rrrMap = new Map<string, any>();
+            if (rrrsToFetch.size > 0) {
+                const rrrList = Array.from(rrrsToFetch);
+                const chunkedRrrs: string[][] = [];
+                for (let i = 0; i < rrrList.length; i += 100) chunkedRrrs.push(rrrList.slice(i, i + 100));
+                for (const chunk of chunkedRrrs) {
+                    const appsByRrr = await db.select({
+                        id: admissionApplicationsV2.id,
+                        name: users.name,
+                        email: users.email,
+                        data: admissionApplicationsV2.data,
+                        formNumber: admissionApplicationsV2.formNumber,
+                        paymentReference: admissionApplicationsV2.paymentReference,
+                        processingFeeReference: admissionApplicationsV2.processingFeeReference,
+                        acceptancePaymentReference: admissionApplicationsV2.acceptancePaymentReference,
+                    })
+                    .from(admissionApplicationsV2)
+                    .leftJoin(users, eq(admissionApplicationsV2.applicantId, users.id))
+                    .where(or(
+                        inArray(admissionApplicationsV2.paymentReference, chunk),
+                        inArray(admissionApplicationsV2.processingFeeReference, chunk),
+                        inArray(admissionApplicationsV2.acceptancePaymentReference, chunk)
+                    ));
+                    for (const app of appsByRrr) {
+                        let formData: any = {};
+                        try { formData = typeof app.data === 'string' ? JSON.parse(app.data || '{}') : (app.data || {}); } catch {}
+                        const nameFromForm = formData.surname || formData.Surname || formData['Last Name']
+                            ? `${formData.firstName || formData.FirstName || ''} ${formData.surname || formData.Surname || formData['Last Name']}`.trim()
+                            : `${formData.firstName || formData.FirstName || ''} ${formData.lastName || formData['Last Name'] || ''}`.trim();
+                        const applicant = {
+                            id: app.id,
+                            name: app.name || nameFromForm || 'Unknown Applicant',
+                            email: app.email || formData.email || formData.applicantEmail || '',
+                            formNumber: app.formNumber
+                        };
+                        if (app.paymentReference) rrrMap.set(app.paymentReference, applicant);
+                        if (app.processingFeeReference) rrrMap.set(app.processingFeeReference, applicant);
+                        if (app.acceptancePaymentReference) rrrMap.set(app.acceptancePaymentReference, applicant);
+                    }
+                }
+            }
+
             function resolveAppIdFromTx(tx: any): number | null {
                 if (tx.purpose && tx.purpose.includes("Application ID:")) {
                     const match = tx.purpose.match(/Application ID:\s*(\d+)/);
@@ -1286,6 +1338,23 @@ export async function getAllUnifiedTransactions(filters?: { status?: string, cat
                                 matricNumber: applicant.formNumber || `APP-${appId}`,
                                 contactEmail: applicant.email
                             };
+                        }
+                    } else {
+                        // Fallback: Remita RRR -> admission application
+                        const rrrCandidates = [txEntry.rrr, txEntry.gatewayReference].filter(Boolean) as string[];
+                        for (const rrr of rrrCandidates) {
+                            const applicant = rrrMap.get(rrr.trim());
+                            if (applicant) {
+                                const names = (applicant.name || "Unknown Applicant").split(" ");
+                                txEntry.student = {
+                                    id: 0,
+                                    firstName: names[0],
+                                    lastName: names.slice(1).join(" ") || "",
+                                    matricNumber: applicant.formNumber || `APP-${applicant.id}`,
+                                    contactEmail: applicant.email
+                                };
+                                break;
+                            }
                         }
                     }
                 }
