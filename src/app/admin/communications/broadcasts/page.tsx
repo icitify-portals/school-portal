@@ -13,6 +13,7 @@ import {
 import { dispatchCentralBroadcast, getCentralBroadcastHistory, getAudienceCountPreview, deleteCentralBroadcastRecord, clearCentralBroadcastHistory } from "@/actions/broadcasts";
 import { getDepartments } from "@/actions/departments";
 import { getProgrammes } from "@/actions/programmes";
+import { getFaculties } from "@/actions/faculties";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { useSession } from "next-auth/react";
@@ -30,12 +31,29 @@ export default function CentralBroadcastCommunicationsPage() {
     const [selectedDepts, setSelectedDepts] = useState<number[]>([]);
     const [selectedProgs, setSelectedProgs] = useState<number[]>([]);
     const [admissionStatus, setAdmissionStatus] = useState<string[]>(["all"]);
-    const [examAttendance, setExamAttendance] = useState<"all" | "present" | "absent">("all");
+    const [examAttendance, setExamAttendance] = useState<"all" | "present" | "absent" | "pending">("all");
     const [customEmails, setCustomEmails] = useState("");
     const [scheduledFor, setScheduledFor] = useState("");
 
+    // Rich applicant filter state (Phase 2)
+    const [applicationMode, setApplicationMode] = useState<string>("all");
+    const [facultyIds, setFacultyIds] = useState<number[]>([]);
+    const [gender, setGender] = useState<string>("all");
+    const [hasNin, setHasNin] = useState<string>("all");
+    const [hasJamb, setHasJamb] = useState<string>("all");
+    const [hasMatric, setHasMatric] = useState<string>("all");
+    const [acceptanceFeeStatus, setAcceptanceFeeStatus] = useState<string>("all");
+    const [applicationFeeStatus, setApplicationFeeStatus] = useState<string>("all");
+    const [ageMin, setAgeMin] = useState("");
+    const [ageMax, setAgeMax] = useState("");
+    const [sessionId, setSessionId] = useState<number | undefined>(undefined);
+    const [appliedFrom, setAppliedFrom] = useState("");
+    const [appliedTo, setAppliedTo] = useState("");
+
     const [departments, setDepartments] = useState<any[]>([]);
     const [programmes, setProgrammes] = useState<any[]>([]);
+    const [faculties, setFaculties] = useState<any[]>([]);
+    const [sessions, setSessions] = useState<any[]>([]);
     const [broadcasts, setBroadcasts] = useState<any[]>([]);
     const [loadingHistory, setLoadingHistory] = useState(true);
     const [isDispatching, setIsDispatching] = useState(false);
@@ -70,6 +88,8 @@ export default function CentralBroadcastCommunicationsPage() {
 
         getDepartments().then(res => setDepartments(res || []));
         getProgrammes().then(res => setProgrammes(res || []));
+        getFaculties().then(res => setFaculties(res || []));
+        fetch("/api/admin/sessions").then(r => r.json()).then(d => setSessions(d?.sessions || [])).catch(() => {});
         fetchHistory();
     }, [userRole]);
 
@@ -82,12 +102,25 @@ export default function CentralBroadcastCommunicationsPage() {
             departments: selectedDepts,
             programmes: selectedProgs,
             admissionStatus,
-            examAttendance
+            examAttendance,
+            applicationMode,
+            facultyIds,
+            gender,
+            hasNin,
+            hasJamb,
+            hasMatric,
+            acceptanceFeeStatus,
+            applicationFeeStatus,
+            ageMin: ageMin ? Number(ageMin) : undefined,
+            ageMax: ageMax ? Number(ageMax) : undefined,
+            sessionId,
+            appliedFrom: appliedFrom || undefined,
+            appliedTo: appliedTo || undefined
         }).then(res => {
             setAudiencePreview(res.count);
             setPreviewLoading(false);
         });
-    }, [targetType, selectedLevels, selectedDepts, selectedProgs, admissionStatus, examAttendance]);
+    }, [targetType, selectedLevels, selectedDepts, selectedProgs, admissionStatus, examAttendance, applicationMode, facultyIds, gender, hasNin, hasJamb, hasMatric, acceptanceFeeStatus, applicationFeeStatus, ageMin, ageMax, sessionId, appliedFrom, appliedTo]);
 
     const fetchHistory = async () => {
         setLoadingHistory(true);
@@ -117,6 +150,19 @@ export default function CentralBroadcastCommunicationsPage() {
             programmes: selectedProgs,
             admissionStatus,
             examAttendance,
+            applicationMode,
+            facultyIds,
+            gender,
+            hasNin,
+            hasJamb,
+            hasMatric,
+            acceptanceFeeStatus,
+            applicationFeeStatus,
+            ageMin: ageMin ? Number(ageMin) : undefined,
+            ageMax: ageMax ? Number(ageMax) : undefined,
+            sessionId,
+            appliedFrom: appliedFrom || undefined,
+            appliedTo: appliedTo || undefined,
             emails: emailsArray,
             scheduledFor: scheduledFor || null
         });
@@ -280,6 +326,7 @@ export default function CentralBroadcastCommunicationsPage() {
                                         <>
                                             <option value="all">All Active Students (Campus-Wide)</option>
                                             <option value="staff">All Staff & Administrative Personnel</option>
+                                            <option value="applicants">Admission Applicants (Admitted / Pending / Exam)</option>
                                         </>
                                     )}
                                     {userRole === "admission_officer" && (
@@ -404,6 +451,132 @@ export default function CentralBroadcastCommunicationsPage() {
                                             ))}
                                         </div>
                                     </div>
+
+                                    {/* Faculty Selection for Applicants */}
+                                    <div className="p-4 rounded-2xl bg-teal-50/50 border border-teal-100 space-y-3">
+                                        <div className="flex justify-between items-center">
+                                            <Label className="text-xs font-bold text-teal-800 uppercase tracking-wider block">Filter Applicants by Faculty (Optional)</Label>
+                                            {facultyIds.length > 0 && (
+                                                <button type="button" onClick={() => setFacultyIds([])} className="text-[10px] font-bold text-teal-600 hover:underline">Clear Faculty</button>
+                                            )}
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto custom-scrollbar p-1">
+                                            {faculties.map(f => (
+                                                <label key={f.id} className="flex items-center gap-2 text-xs font-semibold text-slate-700 bg-white p-2.5 rounded-xl border border-slate-200 cursor-pointer hover:bg-slate-50">
+                                                    <input type="checkbox" checked={facultyIds.includes(f.id)}
+                                                        onChange={(e) => { if (e.target.checked) setFacultyIds([...facultyIds, f.id]); else setFacultyIds(facultyIds.filter(id => id !== f.id)); }}
+                                                        className="rounded text-teal-600 focus:ring-teal-500" />
+                                                    <span className="truncate">{f.name}</span>
+                                                </label>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Mode + Level */}
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        <div className="p-4 rounded-2xl bg-slate-50/60 border border-slate-200 space-y-2">
+                                            <Label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">Study Mode</Label>
+                                            <select value={applicationMode} onChange={(e) => setApplicationMode(e.target.value)}
+                                                className="w-full p-2.5 border border-slate-200 rounded-xl text-xs font-bold bg-white text-slate-800">
+                                                <option value="all">All Modes</option>
+                                                <option value="full_time">Full Time</option>
+                                                <option value="part_time">Part Time</option>
+                                                <option value="elearning">E-Learning</option>
+                                            </select>
+                                        </div>
+                                        <div className="p-4 rounded-2xl bg-slate-50/60 border border-slate-200 space-y-2">
+                                            <Label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">Entry Level</Label>
+                                            <div className="flex flex-wrap gap-2">
+                                                {["ND1", "ND2", "HND1", "HND2"].map(lv => (
+                                                    <button key={lv} type="button"
+                                                        onClick={() => setSelectedLevels(selectedLevels.includes(lv) ? selectedLevels.filter(l => l !== lv) : [...selectedLevels, lv])}
+                                                        className={`px-3 py-1.5 rounded-lg text-xs font-bold ${selectedLevels.includes(lv) ? "bg-slate-800 text-white" : "bg-white text-slate-600 border border-slate-200"}`}>
+                                                        {lv}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Gender + NIN + JAMB + Matric */}
+                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                        <div className="space-y-1.5">
+                                            <Label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Gender</Label>
+                                            <select value={gender} onChange={(e) => setGender(e.target.value)} className="w-full p-2 border border-slate-200 rounded-lg text-xs font-bold bg-white">
+                                                <option value="all">All</option><option value="male">Male</option><option value="female">Female</option>
+                                            </select>
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <Label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">NIN</Label>
+                                            <select value={hasNin} onChange={(e) => setHasNin(e.target.value)} className="w-full p-2 border border-slate-200 rounded-lg text-xs font-bold bg-white">
+                                                <option value="all">All</option><option value="yes">Has NIN</option><option value="no">No NIN</option>
+                                            </select>
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <Label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">JAMB</Label>
+                                            <select value={hasJamb} onChange={(e) => setHasJamb(e.target.value)} className="w-full p-2 border border-slate-200 rounded-lg text-xs font-bold bg-white">
+                                                <option value="all">All</option><option value="yes">Has JAMB</option><option value="no">No JAMB</option>
+                                            </select>
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <Label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Matric</Label>
+                                            <select value={hasMatric} onChange={(e) => setHasMatric(e.target.value)} className="w-full p-2 border border-slate-200 rounded-lg text-xs font-bold bg-white">
+                                                <option value="all">All</option><option value="yes">Has Matric</option><option value="no">No Matric</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    {/* Fee statuses */}
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        <div className="space-y-1.5">
+                                            <Label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Application Fee</Label>
+                                            <select value={applicationFeeStatus} onChange={(e) => setApplicationFeeStatus(e.target.value)} className="w-full p-2 border border-slate-200 rounded-lg text-xs font-bold bg-white">
+                                                <option value="all">All</option><option value="paid">Paid</option><option value="not_paid">Not Paid</option>
+                                            </select>
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <Label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Acceptance Fee</Label>
+                                            <select value={acceptanceFeeStatus} onChange={(e) => setAcceptanceFeeStatus(e.target.value)} className="w-full p-2 border border-slate-200 rounded-lg text-xs font-bold bg-white">
+                                                <option value="all">All</option><option value="paid">Paid</option><option value="not_paid">Not Paid</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    {/* Age + Session + Date range */}
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                        <div className="space-y-1.5">
+                                            <Label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Min Age</Label>
+                                            <input type="number" value={ageMin} onChange={(e) => setAgeMin(e.target.value)} placeholder="e.g. 16" className="w-full p-2 border border-slate-200 rounded-lg text-xs font-bold bg-white" />
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <Label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Max Age</Label>
+                                            <input type="number" value={ageMax} onChange={(e) => setAgeMax(e.target.value)} placeholder="e.g. 45" className="w-full p-2 border border-slate-200 rounded-lg text-xs font-bold bg-white" />
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <Label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Session</Label>
+                                            <select value={sessionId || ""} onChange={(e) => setSessionId(e.target.value ? Number(e.target.value) : undefined)} className="w-full p-2 border border-slate-200 rounded-lg text-xs font-bold bg-white">
+                                                <option value="">All Sessions</option>
+                                                {sessions.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        <div className="space-y-1.5">
+                                            <Label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Applied From</Label>
+                                            <input type="date" value={appliedFrom} onChange={(e) => setAppliedFrom(e.target.value)} className="w-full p-2 border border-slate-200 rounded-lg text-xs font-bold bg-white" />
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <Label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Applied To</Label>
+                                            <input type="date" value={appliedTo} onChange={(e) => setAppliedTo(e.target.value)} className="w-full p-2 border border-slate-200 rounded-lg text-xs font-bold bg-white" />
+                                        </div>
+                                    </div>
+
+                                    <button type="button"
+                                        onClick={() => { setAdmissionStatus(["all"]); setExamAttendance("all"); setApplicationMode("all"); setFacultyIds([]); setGender("all"); setHasNin("all"); setHasJamb("all"); setHasMatric("all"); setAcceptanceFeeStatus("all"); setApplicationFeeStatus("all"); setAgeMin(""); setAgeMax(""); setSessionId(undefined); setAppliedFrom(""); setAppliedTo(""); setSelectedDepts([]); setSelectedProgs([]); setSelectedLevels([]); }}
+                                        className="w-full py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-bold uppercase tracking-wider">
+                                        Reset Applicant Filters
+                                    </button>
                                 </div>
                             )}
 

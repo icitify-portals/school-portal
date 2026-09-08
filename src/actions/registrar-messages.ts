@@ -115,87 +115,12 @@ export async function processBulkMessageInline(jobData: any) {
         let studentIds: number[] = [];
         let externalEmails: string[] = targetCriteria.externalEmails || [];
 
-        if (targetCriteria.type === 'users') {
-            studentIds = targetCriteria.userIds || [];
-        } else if (targetCriteria.type === 'staff') {
-            const { inArray } = await import('drizzle-orm');
-            const queryResult = await db.select({ id: users.id })
-                .from(users)
-                .where(inArray(users.role, ['staff', 'admin', 'bursar', 'registrar', 'librarian', 'hod', 'dean', 'admission_officer', 'dvc', 'superadmin']));
-            studentIds = queryResult.map((r: any) => r.id);
-        } else if (targetCriteria.type === 'applicants') {
-            const { inArray, and, sql, eq } = await import('drizzle-orm');
-            const { admissionApplicationsV2, programmes } = await import('@/db/schema');
-            let appConditions: any[] = [];
-            if (targetCriteria.admissionStatus && targetCriteria.admissionStatus.length > 0 && !targetCriteria.admissionStatus.includes('all')) {
-                appConditions.push(inArray(admissionApplicationsV2.status, targetCriteria.admissionStatus));
-            }
-            // Attendance filter must match the audience preview (broadcasts.ts) or
-            // "present/absent only" broadcasts would silently target everyone.
-            if (targetCriteria.examAttendance && targetCriteria.examAttendance !== 'all') {
-                appConditions.push(eq(admissionApplicationsV2.examAttendanceStatus, targetCriteria.examAttendance));
-            }
-            if (targetCriteria.programmes && targetCriteria.programmes.length > 0) {
-                appConditions.push(inArray(admissionApplicationsV2.programmeId, targetCriteria.programmes));
-            } else if (targetCriteria.departments && targetCriteria.departments.length > 0) {
-                const deptProgs = await db.select({ id: programmes.id }).from(programmes).where(inArray(programmes.deptId, targetCriteria.departments));
-                const progIds = deptProgs.map(p => p.id);
-                if (progIds.length > 0) {
-                    appConditions.push(inArray(admissionApplicationsV2.programmeId, progIds));
-                } else {
-                    appConditions.push(sql`1=0`);
-                }
-            }
-            const apps = await db.select({ applicantId: admissionApplicationsV2.applicantId, data: admissionApplicationsV2.data })
-                .from(admissionApplicationsV2)
-                .where(appConditions.length > 0 ? and(...appConditions) : sql`1=1`);
-
-            for (const app of apps) {
-                if (app.applicantId) studentIds.push(app.applicantId);
-                if (app.data) {
-                    try {
-                        const parsed = typeof app.data === 'string' ? JSON.parse(app.data) : app.data;
-                        if (parsed.email && !externalEmails.includes(parsed.email)) {
-                            externalEmails.push(parsed.email);
-                        }
-                    } catch (e) {}
-                }
-            }
-        } else if (targetCriteria.type === 'levels' && targetCriteria.levels?.length) {
-            const levelStr = targetCriteria.levels[0];
-            if (levelStr === 'Applicant') {
-                const queryResult = await db.select({ id: users.id })
-                    .from(users)
-                    .where(eq(users.role, 'applicant'));
-                studentIds = queryResult.map((r: any) => r.id);
-            } else {
-                const { and } = await import('drizzle-orm');
-                let conditions: any[] = [];
-                if (levelStr === 'ND_graduated') conditions.push(eq(students.status, 'nd_graduant'));
-                else if (levelStr === 'HND_graduated') conditions.push(eq(students.status, 'hnd_graduant'));
-                else if (levelStr === 'ND 1') { conditions.push(eq(students.status, 'active'), eq(students.currentLevel, 100), eq(students.programmeType, 'ND')); }
-                else if (levelStr === 'ND 2') { conditions.push(eq(students.status, 'active'), eq(students.currentLevel, 200), eq(students.programmeType, 'ND')); }
-                else if (levelStr === 'HND 1') { conditions.push(eq(students.status, 'active'), eq(students.currentLevel, 100), eq(students.programmeType, 'HND')); }
-                else if (levelStr === 'HND 2') { conditions.push(eq(students.status, 'active'), eq(students.currentLevel, 200), eq(students.programmeType, 'HND')); }
-
-                if (conditions.length > 0) {
-                    const queryResult = await db.select({ userId: students.userId })
-                        .from(students).where(and(...conditions));
-                    studentIds = queryResult.filter((r: any) => r.userId).map((r: any) => r.userId as number);
-                }
-            }
-        } else {
-            const { inArray, and } = await import('drizzle-orm');
-            let conditions = [eq(students.status, 'active')];
-            if (targetCriteria.type === 'departments' && targetCriteria.departments?.length) {
-                conditions.push(inArray(students.departmentId, targetCriteria.departments));
-            } else if (targetCriteria.type === 'programmes' && targetCriteria.programmes?.length) {
-                conditions.push(inArray(students.programmeId, targetCriteria.programmes));
-            }
-            const queryResult = await db.select({ userId: students.userId })
-                .from(students).where(and(...conditions));
-            studentIds = queryResult.filter((r: any) => r.userId).map((r: any) => r.userId as number);
-        }
+        // Shared resolver keeps inline processing identical to the worker and
+        // to the live audience preview, using correct schema columns.
+        const { resolveBroadcastRecipients } = await import("@/actions/broadcast-resolver");
+        const resolved = await resolveBroadcastRecipients(targetCriteria);
+        studentIds = resolved.userIds;
+        externalEmails = Array.from(new Set([...externalEmails, ...resolved.emails]));
         
         if (!studentIds.length && !externalEmails.length) {
             await db.update(broadcastMessages).set({ status: 'completed', totalRecipients: 0 }).where(eq(broadcastMessages.id, broadcastId));

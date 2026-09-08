@@ -17,7 +17,20 @@ export interface CentralBroadcastPayload {
     userIds?: number[];
     emails?: string[];
     admissionStatus?: string[]; // e.g. ["applied", "screened", "admitted", "rejected"]
-    examAttendance?: "all" | "present" | "absent";
+    examAttendance?: "all" | "present" | "absent" | "pending";
+    applicationMode?: string; // all | full_time | part_time | elearning
+    facultyIds?: number[];
+    gender?: string; // all | male | female
+    hasNin?: string; // all | yes | no
+    hasJamb?: string; // all | yes | no
+    hasMatric?: string; // all | yes | no
+    acceptanceFeeStatus?: string; // all | paid | not_paid
+    applicationFeeStatus?: string; // all | paid | not_paid
+    ageMin?: number;
+    ageMax?: number;
+    sessionId?: number;
+    appliedFrom?: string;
+    appliedTo?: string;
     scheduledFor?: string | null;
 }
 
@@ -48,6 +61,19 @@ export async function dispatchCentralBroadcast(data: CentralBroadcastPayload) {
             if (data.examAttendance) targetCriteria.examAttendance = data.examAttendance;
             if (data.departments && data.departments.length > 0) targetCriteria.departments = data.departments;
             if (data.programmes && data.programmes.length > 0) targetCriteria.programmes = data.programmes;
+            if (data.applicationMode) targetCriteria.applicationMode = data.applicationMode;
+            if (data.facultyIds && data.facultyIds.length > 0) targetCriteria.facultyIds = data.facultyIds;
+            if (data.gender) targetCriteria.gender = data.gender;
+            if (data.hasNin) targetCriteria.hasNin = data.hasNin;
+            if (data.hasJamb) targetCriteria.hasJamb = data.hasJamb;
+            if (data.hasMatric) targetCriteria.hasMatric = data.hasMatric;
+            if (data.acceptanceFeeStatus) targetCriteria.acceptanceFeeStatus = data.acceptanceFeeStatus;
+            if (data.applicationFeeStatus) targetCriteria.applicationFeeStatus = data.applicationFeeStatus;
+            if (data.ageMin !== undefined && data.ageMin !== null) targetCriteria.ageMin = data.ageMin;
+            if (data.ageMax !== undefined && data.ageMax !== null) targetCriteria.ageMax = data.ageMax;
+            if (data.sessionId) targetCriteria.sessionId = data.sessionId;
+            if (data.appliedFrom) targetCriteria.appliedFrom = data.appliedFrom;
+            if (data.appliedTo) targetCriteria.appliedTo = data.appliedTo;
         }
         if (data.targetType === "users") {
             let ids: number[] = data.userIds || [];
@@ -166,64 +192,28 @@ export async function getAudienceCountPreview(criteria: {
     departments?: number[];
     programmes?: number[];
     admissionStatus?: string[];
-    examAttendance?: "all" | "present" | "absent";
+    examAttendance?: string;
+    applicationMode?: string;
+    facultyIds?: number[];
+    gender?: string;
+    hasNin?: string;
+    hasJamb?: string;
+    hasMatric?: string;
+    acceptanceFeeStatus?: string;
+    applicationFeeStatus?: string;
+    ageMin?: number;
+    ageMax?: number;
+    sessionId?: number;
+    appliedFrom?: string;
+    appliedTo?: string;
 }) {
     try {
         const session = await auth();
         if (!session?.user?.id) return { success: false, count: 0 };
 
-        if (criteria.targetType === "all") {
-            const [userCount] = await db.select({ count: sql<number>`count(*)` }).from(users).where(eq(users.status, 'active'));
-            return { success: true, count: userCount?.count || 0 };
-        }
-
-        if (criteria.targetType === "staff") {
-            const [staffCount] = await db.select({ count: sql<number>`count(*)` }).from(users).where(and(eq(users.status, 'active'), inArray(users.role, ['staff', 'admin', 'bursar', 'registrar', 'librarian', 'hod', 'dean', 'admission_officer', 'dvc', 'superadmin'])));
-            return { success: true, count: staffCount?.count || 0 };
-        }
-
-        if (criteria.targetType === "applicants") {
-            let conditions: any[] = [];
-            if (criteria.admissionStatus && criteria.admissionStatus.length > 0 && !criteria.admissionStatus.includes("all")) {
-                conditions.push(inArray(admissionApplicationsV2.status, criteria.admissionStatus as any));
-            }
-            if (criteria.examAttendance && criteria.examAttendance !== "all") {
-                conditions.push(eq(admissionApplicationsV2.examAttendanceStatus, criteria.examAttendance as any));
-            }
-            if (criteria.programmes && criteria.programmes.length > 0) {
-                conditions.push(inArray(admissionApplicationsV2.programmeId, criteria.programmes));
-            } else if (criteria.departments && criteria.departments.length > 0) {
-                const deptProgs = await db.select({ id: programmes.id }).from(programmes).where(inArray(programmes.deptId, criteria.departments));
-                const progIds = deptProgs.map(p => p.id);
-                if (progIds.length > 0) {
-                    conditions.push(inArray(admissionApplicationsV2.programmeId, progIds));
-                } else {
-                    conditions.push(sql`1=0`);
-                }
-            }
-            const query = db.select({ count: sql<number>`count(*)` }).from(admissionApplicationsV2);
-            const [appCount] = conditions.length > 0 ? await query.where(and(...conditions)) : await query;
-            return { success: true, count: appCount?.count || 0 };
-        }
-
-        if (criteria.targetType === "levels" && criteria.levels && criteria.levels.length > 0) {
-            const [stuCount] = await db.select({ count: sql<number>`count(*)` }).from(students).where(inArray(students.level, criteria.levels as any));
-            return { success: true, count: stuCount?.count || 0 };
-        }
-
-        if (criteria.targetType === "departments" && criteria.departments && criteria.departments.length > 0) {
-            const [stuCount] = await db.select({ count: sql<number>`count(*)` }).from(students).where(inArray(students.departmentId, criteria.departments));
-            return { success: true, count: stuCount?.count || 0 };
-        }
-
-        if (criteria.targetType === "programmes" && criteria.programmes && criteria.programmes.length > 0) {
-            const [stuCount] = await db.select({ count: sql<number>`count(*)` }).from(students).where(inArray(students.programmeId, criteria.programmes));
-            return { success: true, count: stuCount?.count || 0 };
-        }
-
-        // Fallback default
-        const [defaultCount] = await db.select({ count: sql<number>`count(*)` }).from(students);
-        return { success: true, count: defaultCount?.count || 0 };
+        const { countBroadcastRecipients } = await import("@/actions/broadcast-resolver");
+        const count = await countBroadcastRecipients(criteria);
+        return { success: true, count };
     } catch (e: any) {
         return { success: false, count: 0 };
     }
