@@ -108,10 +108,26 @@ export async function requestTwoFactorOTPAction(purpose: 'login' | 'setup' = 'lo
         const targetMethod = method || user.twoFactorMethod || 'email';
         if (targetMethod === 'app') return { error: "Authenticator app does not use server-sent OTPs." };
 
-        // Generate 6 digit OTP
+        // Generate 6 digit OTP - 15 min expiry, check for recent valid OTP to avoid spamming
+        // If a valid unused OTP was sent in last 2 minutes, reuse it instead of generating new one (prevents email delay confusion)
+        const recentValid = await db.select().from(otpLogs).where(and(eq(otpLogs.userId, userId), eq(otpLogs.isUsed, false), gt(otpLogs.expiresAt, new Date()))).orderBy(desc(otpLogs.createdAt)).limit(1);
+        if (recentValid.length > 0) {
+            const ageMs = Date.now() - new Date((recentValid[0] as any).createdAt || Date.now()).getTime();
+            if (ageMs < 2 * 60 * 1000) {
+                // Reuse recent OTP, just resend email
+                const existingCode = (recentValid[0] as any).otpCode;
+                if (targetMethod === 'email') {
+                    await sendEmail(user.email, 'Your Authentication Code', `<p>Your verification code is: <strong style="font-size: 24px;">${existingCode}</strong></p><p>This code expires in 15 minutes.</p>`);
+                    return { success: true, message: "Code resent to email (same code)." };
+                } else if (targetMethod === 'sms' && user.phone) {
+                    await sendWhatsAppMessage(user.phone, `Your FSS Portal verification code is: *${existingCode}*. It expires in 15 minutes.`);
+                    return { success: true, message: "Code resent to your phone." };
+                }
+            }
+        }
         const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
         const otpId = `2fa_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-        const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+        const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
 
         await db.insert(otpLogs).values({
             userId,
@@ -125,12 +141,15 @@ export async function requestTwoFactorOTPAction(purpose: 'login' | 'setup' = 'lo
             await sendEmail(
                 user.email,
                 'Your Authentication Code',
-                `<p>Your verification code is: <strong style="font-size: 24px;">${otpCode}</strong></p><p>This code expires in 10 minutes.</p>`
+                `<p>Your verification code is: <strong style="font-size: 24px;">${otpCode}</strong></p><p>This code expires in 15 minutes.</p>`
             );
+            // Invalidate older codes after successful send
+            try { await db.execute(sql`UPDATE otp_logs SET is_used=1 WHERE user_id=${userId} AND is_used=0 AND otp_code != ${otpCode} AND expires_at > NOW()`); } catch {}
             return { success: true, message: "Code sent to email." };
         } else if (targetMethod === 'sms') {
             if (!user.phone) return { error: "No phone number registered on your profile." };
-            await sendWhatsAppMessage(user.phone, `Your FSS Portal verification code is: *${otpCode}*. It expires in 10 minutes.`);
+            await sendWhatsAppMessage(user.phone, `Your FSS Portal verification code is: *${otpCode}*. It expires in 15 minutes.`);
+            try { await db.execute(sql`UPDATE otp_logs SET is_used=1 WHERE user_id=${userId} AND is_used=0 AND otp_code != ${otpCode} AND expires_at > NOW()`); } catch {}
             return { success: true, message: "Code sent to your phone." };
         }
 
@@ -211,19 +230,21 @@ export async function verifyTwoFactorLoginAction(code: string) {
                 return { error: "Invalid security code. Please check your authenticator app." };
             }
         } else {
-            // Verify against OTP logs
+            // Verify against OTP logs - trim and handle multiple codes, check expiry explicitly for better message
+            const cleanCode = code.trim();
             const [otpLog] = await db.select()
                 .from(otpLogs)
                 .where(and(
                     eq(otpLogs.userId, userId),
-                    eq(otpLogs.otpCode, code),
-                    eq(otpLogs.isUsed, false),
-                    gt(otpLogs.expiresAt, new Date())
+                    eq(otpLogs.otpCode, cleanCode),
+                    eq(otpLogs.isUsed, false)
                 ))
                 .limit(1);
-
             if (!otpLog) {
-                return { error: "Invalid or expired verification code." };
+                return { error: "Invalid verification code. Please check and try again, or resend a new code." };
+            }
+            if (new Date(otpLog.expiresAt) < new Date()) {
+                return { error: "Code has expired (15 min). Please resend a new code." };
             }
 
             await db.update(otpLogs).set({ isUsed: true }).where(eq(otpLogs.id, otpLog.id));
