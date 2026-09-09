@@ -8,12 +8,48 @@ import {
   BookOpen, Printer, Loader2, AlertCircle, Layout,
 } from "lucide-react";
 
+function FSS2016DetailedResult({ student, transcripts, signatures }: any) {
+  const valid = (transcripts || []).filter((t: any) => t.results && t.results.length > 0);
+  const last = valid[valid.length - 1];
+  const cgpa = last ? Number(last.cgpa).toFixed(2) : "N/A";
+  const getClass = (v: number) => v >= 3.5 ? "DISTINCTION" : v >= 3.0 ? "UPPER CREDIT" : v >= 2.5 ? "LOWER CREDIT" : v >= 2.0 ? "PASS" : "FAIL";
+  return (
+    <div id="transcript-print-area" style={{ fontFamily: "'Times New Roman', Times, serif", background: "#fff", color: "#000", padding: "24px 32px" }}>
+      <div style={{ textAlign: "center", marginBottom: 12 }}>
+        <div style={{ fontWeight: 900, fontSize: 18, letterSpacing: 0.5 }}>FEDERAL SCHOOL OF STATISTICS</div>
+        <div style={{ fontSize: 10, fontStyle: "italic" }}>(National Bureau of Statistics)</div>
+        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 8, marginTop: 8 }}>
+          <div style={{ textAlign: "left" }}>P.O. Box 20753, U.I. IBADAN<br />Telegram: STAT/IBADAN<br />Telephone 08023538477</div>
+          <div style={{ textAlign: "right" }}>Ref. No: {student?.matricNumber || "-"}<br />Date: {new Date().toLocaleDateString()}</div>
+        </div>
+        <div style={{ fontWeight: 900, textDecoration: "underline", fontSize: 13, marginTop: 8 }}>EXAMINATION TRANSCRIPT</div>
+        <div style={{ fontWeight: 700, textDecoration: "underline", fontSize: 11 }}>{(student?.programme?.name || "Programme").toUpperCase()}</div>
+        <div style={{ fontSize: 9, marginTop: 6 }}>Below is the result of <strong style={{ textDecoration: "underline" }}>{(student?.user?.name || `${student?.firstName || ""} ${student?.lastName || ""}`.trim() || "STUDENT").toUpperCase()}</strong> in the {(student?.programme?.name || "")} {valid.map((t: any) => t.academicSession?.name).join(" to ")} session.</div>
+      </div>
+      {valid.map((tr: any) => (
+        <div key={tr.id} style={{ marginBottom: 12, border: "1px solid #000", padding: 8 }}>
+          <div style={{ fontWeight: 900, textAlign: "center", textDecoration: "underline", fontSize: 9, marginBottom: 6 }}>{tr.academicSession?.name} — {tr.semester === "1" ? "FIRST" : "SECOND"} SEMESTER (GPA {tr.gpa} | CGPA {tr.cgpa})</div>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 9 }}>
+            <thead><tr style={{ borderBottom: "1px solid #000" }}><th style={{ textAlign: "left", padding: 2 }}>CODE</th><th style={{ textAlign: "left", padding: 2 }}>TITLE</th><th style={{ textAlign: "center", padding: 2 }}>CREDIT</th><th style={{ textAlign: "center", padding: 2 }}>SCORE</th><th style={{ textAlign: "center", padding: 2 }}>GRADE</th></tr></thead>
+            <tbody>{tr.results.map((r: any, i: number) => (<tr key={i} style={{ borderBottom: "0.5px solid #ccc" }}><td style={{ padding: 2, fontWeight: 600 }}>{r.courseCode}</td><td style={{ padding: 2 }}>{r.courseTitle}</td><td style={{ padding: 2, textAlign: "center" }}>{r.creditLoad}</td><td style={{ padding: 2, textAlign: "center" }}>{r.score}</td><td style={{ padding: 2, textAlign: "center", fontWeight: 700 }}>{r.grade}</td></tr>))}</tbody>
+          </table>
+        </div>
+      ))}
+      <div style={{ textAlign: "center", marginTop: 12, fontWeight: 900, borderTop: "2px solid #000", paddingTop: 8 }}>GRADUATING CGPA: {cgpa} — {getClass(parseFloat(cgpa) || 0)}</div>
+      <div style={{ display: "flex", justifyContent: "space-between", marginTop: 24, fontSize: 9 }}>
+        <div style={{ textAlign: "center" }}><div style={{ borderBottom: "1px solid #000", width: 120, marginBottom: 4 }}>{signatures?.hodName || "HOD"}</div>Head of Department</div>
+        <div style={{ textAlign: "center" }}><div style={{ borderBottom: "1px solid #000", width: 120, marginBottom: 4 }}>{signatures?.registrarName || "Registrar"}</div>Registrar</div>
+      </div>
+    </div>
+  );
+}
+
 export default function StudentTranscriptPage() {
   const { data: session } = useSession();
   const [transcriptData, setTranscriptData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [template, setTemplate] = useState<"standard" | "detailed">("detailed");
+  const [template, setTemplate] = useState<"standard" | "detailed" | "fss_2016">("detailed");
 
   useEffect(() => {
     fetchTranscript();
@@ -117,11 +153,11 @@ export default function StudentTranscriptPage() {
           <div className="flex items-center gap-3">
             {/* Template Switcher */}
             <div className="flex items-center gap-1 bg-white/10 rounded-lg p-1">
-              {(["standard", "detailed"] as const).map(t => (
-                <button key={t} onClick={() => setTemplate(t)}
+              {(["standard", "detailed", "fss_2016"] as const).map(t => (
+                <button key={t} onClick={() => setTemplate(t as any)}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${template === t ? "bg-violet-600 text-white shadow-md" : "text-slate-400 hover:text-white"}`}>
                   <Layout className="w-3.5 h-3.5" />
-                  {t === "standard" ? "Standard" : "Detailed"}
+                  {t === "standard" ? "Standard" : t === "detailed" ? "Detailed" : "Detailed Result"}
                 </button>
               ))}
             </div>
@@ -163,12 +199,16 @@ export default function StudentTranscriptPage() {
           </div>
         ) : (
           <div className="bg-white rounded-2xl overflow-hidden shadow-2xl">
-            <StandardTranscript
-              student={transcriptData.student}
-              transcripts={transcriptData.transcripts}
-              signatures={transcriptData.signatures}
-              template={template}
-            />
+            {template === "fss_2016" ? (
+              <FSS2016DetailedResult student={transcriptData.student} transcripts={transcriptData.transcripts} signatures={transcriptData.signatures} />
+            ) : (
+              <StandardTranscript
+                student={transcriptData.student}
+                transcripts={transcriptData.transcripts}
+                signatures={transcriptData.signatures}
+                template={template as any}
+              />
+            )}
           </div>
         )}
       </div>
