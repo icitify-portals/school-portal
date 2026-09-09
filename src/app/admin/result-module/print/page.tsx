@@ -638,9 +638,9 @@ function TranscriptCardFSS2016({ transcriptData, qrDataUrl }: { transcriptData: 
           <div style={{ textAlign: "right" }}>Ref. No: {student.matricNumber || "-"}<br />Date: {fmtDateFss}</div>
         </div>
         <div style={{ textAlign: "center", fontWeight: 900, textDecoration: "underline", fontSize: 12, margin: "6px 0 2px" }}>EXAMINATION TRANSCRIPT</div>
-        <div style={{ textAlign: "center", fontWeight: 700, textDecoration: "underline", fontSize: 10 }}>{(transcriptData.programmeName || student.programme || "NATIONAL DIPLOMA IN COMPUTER SCIENCE").toUpperCase()}</div>
+        <div style={{ textAlign: "center", fontWeight: 700, textDecoration: "underline", fontSize: 10 }}>{(transcriptData.programmeName || student.programme?.name || "NATIONAL DIPLOMA IN COMPUTER SCIENCE").toString().toUpperCase()}</div>
         <div style={{ fontSize: 8, margin: "6px 0", textAlign: "center" }}>
-          Below is the result of <span style={{ fontWeight: 700, textDecoration: "underline" }}>{(student.name || "STUDENT").toUpperCase()}</span> in the {transcriptData.programmeName || ""} {Array.from(bySession.keys()).join(" to ")} session.
+          Below is the result of <span style={{ fontWeight: 700, textDecoration: "underline" }}>{(student.user?.name || student.name || "STUDENT").toString().toUpperCase()}</span> in the {transcriptData.programmeName || student.programme?.name || ""} {Array.from(bySession.keys()).join(" to ")} session.
         </div>
         {Array.from(bySession.entries()).map(([sessionName, semMap]) => {
           const levelLabel = (() => {
@@ -651,7 +651,7 @@ function TranscriptCardFSS2016({ transcriptData, qrDataUrl }: { transcriptData: 
           return (
             <div key={sessionName} style={{ marginBottom: 8 }}>
               <div style={{ fontWeight: 900, textDecoration: "underline", fontSize: 9, textAlign: "center", marginBottom: 4, textTransform: "uppercase" }}>
-                {transcriptData.programmeName || ""}{levelLabel} {sessionName} SESSION
+                {(transcriptData.programmeName || student.programme?.name || "").toString().toUpperCase()}{levelLabel} {sessionName} SESSION
               </div>
               <div style={{ display: "flex", gap: 12 }}>
                 {["1","2"].map(semKey => {
