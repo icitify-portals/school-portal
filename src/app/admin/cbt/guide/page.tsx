@@ -1,19 +1,26 @@
 "use client";
 
 import { Card, CardContent } from "@/components/ui/card";
-import { Brain, Database, FileEdit, Settings2, BarChart3, AlertCircle } from "lucide-react";
+import { Brain, Database, FileEdit, Settings2, BarChart3, AlertCircle, Printer } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
 export default function CBTAdminGuide() {
     return (
         <div className="p-8 max-w-[1200px] w-full mx-auto space-y-8 pb-32">
-            <div>
-                <h1 className="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-3">
-                    <Brain className="w-8 h-8 text-indigo-600" />
-                    CBT Admin Guide
-                </h1>
-                <p className="text-slate-500 font-medium mt-2">Comprehensive workflow for setting up and managing Computer-Based Tests (CBT)</p>
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                    <h1 className="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-3">
+                        <Brain className="w-8 h-8 text-indigo-600" />
+                        CBT Admin Guide
+                    </h1>
+                    <p className="text-slate-500 font-medium mt-2">Comprehensive workflow for setting up and managing Computer-Based Tests (CBT)</p>
+                </div>
+                <Link href="/admin/cbt/guide/printable">
+                    <Button className="rounded-xl bg-slate-900 hover:bg-black text-white font-black uppercase tracking-widest text-xs px-6 py-6 shadow-lg">
+                        <Printer className="w-4 h-4 mr-2" /> Print One-Page Guide
+                    </Button>
+                </Link>
             </div>
 
             <div className="grid gap-6">
