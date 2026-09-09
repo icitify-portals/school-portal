@@ -105,6 +105,10 @@ export default function AdmissionRegisterClient({
     setLoading(false);
   }, [search, selectedLevel, selectedMode, selectedTemplate, selectedProgramme]);
 
+  // Pagination (client-side) — must be before effects that use setCurrentPage
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+
   useEffect(() => {
     const t = setTimeout(fetchData, 300);
     return () => clearTimeout(t);
@@ -154,9 +158,6 @@ export default function AdmissionRegisterClient({
   const dedupedAdmitted = Array.from(new Map(admitted.map(c => [c.id, c])).values());
   const dedupedPending = Array.from(new Map(pending.map(c => [c.id, c])).values());
   const filteredListRaw = activeTab === "admitted" ? dedupedAdmitted : dedupedPending;
-  // Pagination (client-side)
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
   const totalPages = Math.max(1, Math.ceil(filteredListRaw.length / pageSize));
   const paginatedList = filteredListRaw.slice((currentPage - 1) * pageSize, currentPage * pageSize);
   const filteredList = paginatedList;
