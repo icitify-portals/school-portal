@@ -1,3 +1,5 @@
+"use server";
+
 // Shared broadcast audience resolution.
 // Centralizes recipient targeting so the UI preview count, the BullMQ worker,
 // and the inline fallback all produce identical results using the correct
@@ -170,6 +172,29 @@ export async function resolveBroadcastRecipients(criteria: any): Promise<{ userI
   let userIds: number[] = [];
   let emails: string[] = criteria?.externalEmails ? Array.from(criteria.externalEmails) : [];
 
+  // Helper to build level conditions handling both 1/2 and legacy 100/200
+  const buildLevelConditions = (levelStr: string): any[] => {
+    const norm = String(levelStr).trim().replace(/\s+/g, "").toUpperCase();
+    if (norm === "APPLICANT") return []; // handled separately
+    const levelMap: Record<string, any[]> = {
+      "ND1": [eq(students.status, "active"), sql`(${students.currentLevel} IN (1,100) AND ${students.programmeType}='ND')`],
+      "ND2": [eq(students.status, "active"), sql`(${students.currentLevel} IN (2,200) AND ${students.programmeType}='ND')`],
+      "HND1": [eq(students.status, "active"), sql`(${students.currentLevel} IN (1,100) AND ${students.programmeType}='HND')`],
+      "HND2": [eq(students.status, "active"), sql`(${students.currentLevel} IN (2,200) AND ${students.programmeType}='HND')`],
+      "ND_GRADUATED": [eq(students.status, "nd_graduated" as any)],
+      "HND_GRADUATED": [eq(students.status, "hnd_graduated" as any)],
+    };
+    if (levelMap[norm]) return levelMap[norm];
+    // Spaced variants
+    if (levelStr === "ND 1") return levelMap["ND1"];
+    if (levelStr === "ND 2") return levelMap["ND2"];
+    if (levelStr === "HND 1") return levelMap["HND1"];
+    if (levelStr === "HND 2") return levelMap["HND2"];
+    if (levelStr === "ND_graduated") return [eq(students.status, "nd_graduated" as any)];
+    if (levelStr === "HND_graduated") return [eq(students.status, "hnd_graduated" as any)];
+    return [];
+  };
+
   if (type === "users") {
     userIds = criteria?.userIds || [];
   } else if (type === "staff") {
@@ -181,27 +206,21 @@ export async function resolveBroadcastRecipients(criteria: any): Promise<{ userI
     emails = Array.from(new Set([...emails, ...res.emails]));
   } else if (type === "levels" && criteria?.levels?.length) {
     const allIds = new Set<number>();
-    for (const raw of criteria.levels) {
+    // Handle Entire School as alias for all active students
+    const levels = criteria.levels.includes("Entire School") || criteria.levels.includes("ALL") ? ["ND1","ND2","HND1","HND2","APPLICANT"] : criteria.levels;
+    for (const raw of levels) {
       const levelStr = String(raw).trim();
-      const norm = levelStr.replace(/\s+/g, "").toUpperCase(); // ND1, HND1, etc.
+      const norm = levelStr.replace(/\s+/g, "").toUpperCase();
       if (norm === "APPLICANT") {
         const q = await db.select({ id: users.id }).from(users).where(eq(users.role, "applicant"));
         q.forEach(r => allIds.add(r.id));
+      } else if (norm === "ENTIRESCHOOL" || norm === "ALL") {
+        const q = await db.select({ userId: students.userId }).from(students).where(eq(students.status, "active"));
+        q.forEach(r => { if (r.userId) allIds.add(r.userId as number); });
+        const q2 = await db.select({ id: users.id }).from(users).where(eq(users.role, "applicant"));
+        q2.forEach(r => allIds.add(r.id));
       } else {
-        let conditions: any[] = [];
-        if (norm === "ND_GRADUATED") conditions.push(eq(students.status, "nd_graduant"));
-        else if (norm === "HND_GRADUATED") conditions.push(eq(students.status, "hnd_graduant"));
-        else if (norm === "ND1") conditions.push(eq(students.status, "active"), eq(students.currentLevel, 100), eq(students.programmeType, "ND"));
-        else if (norm === "ND2") conditions.push(eq(students.status, "active"), eq(students.currentLevel, 200), eq(students.programmeType, "ND"));
-        else if (norm === "HND1") conditions.push(eq(students.status, "active"), eq(students.currentLevel, 100), eq(students.programmeType, "HND"));
-        else if (norm === "HND2") conditions.push(eq(students.status, "active"), eq(students.currentLevel, 200), eq(students.programmeType, "HND"));
-        // Back-compat for spaced values like "ND 1" / "HND 2"
-        else if (levelStr === "ND_graduated") conditions.push(eq(students.status, "nd_graduant"));
-        else if (levelStr === "HND_graduated") conditions.push(eq(students.status, "hnd_graduant"));
-        else if (levelStr === "ND 1") conditions.push(eq(students.status, "active"), eq(students.currentLevel, 100), eq(students.programmeType, "ND"));
-        else if (levelStr === "ND 2") conditions.push(eq(students.status, "active"), eq(students.currentLevel, 200), eq(students.programmeType, "ND"));
-        else if (levelStr === "HND 1") conditions.push(eq(students.status, "active"), eq(students.currentLevel, 100), eq(students.programmeType, "HND"));
-        else if (levelStr === "HND 2") conditions.push(eq(students.status, "active"), eq(students.currentLevel, 200), eq(students.programmeType, "HND"));
+        const conditions = buildLevelConditions(levelStr);
         if (conditions.length > 0) {
           const q = await db.select({ userId: students.userId }).from(students).where(and(...conditions));
           q.forEach(r => { if (r.userId) allIds.add(r.userId as number); });
@@ -211,14 +230,24 @@ export async function resolveBroadcastRecipients(criteria: any): Promise<{ userI
     userIds = Array.from(allIds);
   } else {
     // all, departments, programmes, debtors (defaults to active students)
-    let conditions = [eq(students.status, "active")];
-    if (type === "departments" && criteria?.departments?.length) {
-      conditions.push(inArray(students.deptId, criteria.departments));
-    } else if (type === "programmes" && criteria?.programmes?.length) {
-      conditions.push(inArray(students.programmeId, criteria.programmes));
+    // Entire School = all active students + applicants
+    if (type === "all" || criteria?.levels?.includes("Entire School")) {
+      const q = await db.select({ userId: students.userId }).from(students).where(eq(students.status, "active"));
+      userIds = q.filter(r => r.userId).map(r => r.userId as number);
+      const q2 = await db.select({ id: users.id }).from(users).where(eq(users.role, "applicant"));
+      q2.forEach(r => userIds.push(r.id));
+      // Dedupe
+      userIds = Array.from(new Set(userIds));
+    } else {
+      let conditions = [eq(students.status, "active")];
+      if (type === "departments" && criteria?.departments?.length) {
+        conditions.push(inArray(students.deptId, criteria.departments));
+      } else if (type === "programmes" && criteria?.programmes?.length) {
+        conditions.push(inArray(students.programmeId, criteria.programmes));
+      }
+      const q = await db.select({ userId: students.userId }).from(students).where(and(...conditions));
+      userIds = q.filter(r => r.userId).map(r => r.userId as number);
     }
-    const q = await db.select({ userId: students.userId }).from(students).where(and(...conditions));
-    userIds = q.filter(r => r.userId).map(r => r.userId as number);
   }
 
   return { userIds, emails };
@@ -228,4 +257,86 @@ export async function resolveBroadcastRecipients(criteria: any): Promise<{ userI
 export async function countBroadcastRecipients(criteria: any): Promise<number> {
   const res = await resolveBroadcastRecipients(criteria);
   return res.userIds.length + res.emails.length;
+}
+
+// ── Get emails for download (registrar) ─────────────────────────────────
+export async function getEmailsForBroadcast(criteria: any): Promise<{ emails: string[]; count: number; breakdown: any[] }> {
+  const { userIds } = await resolveBroadcastRecipients(criteria);
+  if (userIds.length === 0) return { emails: [], count: 0, breakdown: [] };
+  // Fetch users with emails, deduplicate, include matric/dept/level for CSV
+  const chunkSize = 250;
+  const emails: string[] = [];
+  const breakdown: any[] = [];
+  for (let i = 0; i < userIds.length; i += chunkSize) {
+    const chunk = userIds.slice(i, i + chunkSize);
+    const rows = await db.select({
+      id: users.id,
+      email: users.email,
+      name: users.name,
+      matricNumber: students.matricNumber,
+      deptCode: departments.code,
+      programmeType: students.programmeType,
+      currentLevel: students.currentLevel,
+      deptName: departments.name,
+    }).from(users)
+      .leftJoin(students, eq(students.userId, users.id))
+      .leftJoin(departments, eq(departments.id, students.deptId))
+      .where(inArray(users.id, chunk));
+    for (const r of rows) {
+      if (r.email) {
+        const lower = r.email.toLowerCase();
+        if (!emails.includes(lower)) {
+          emails.push(lower);
+          breakdown.push({
+            email: lower,
+            name: r.name || "",
+            matricNumber: r.matricNumber || "",
+            deptCode: r.deptCode || "",
+            deptName: r.deptName || "",
+            level: r.programmeType && r.currentLevel ? `${r.programmeType}${r.currentLevel}` : "",
+          });
+        }
+      }
+    }
+  }
+  return { emails, count: emails.length, breakdown };
+}
+
+// ── Send direct message (registrar, no queue) ───────────────────────────
+export async function sendDirectBroadcast(criteria: any, subject: string, body: string, channel: 'email' | 'sms' | 'inApp' = 'email'): Promise<{ success: boolean; sent: number; error?: string }> {
+  if (!subject || !body) return { success: false, sent: 0, error: "Subject and body required" };
+  const { userIds } = await resolveBroadcastRecipients(criteria);
+  if (userIds.length === 0) return { success: false, sent: 0, error: "No recipients found for this filter" };
+  // Direct send via existing mail/sms services, batch 50
+  const { sendEmail } = await import("@/lib/mail");
+  const { sendWhatsAppMessage } = await import("@/lib/twilio").catch(() => ({ sendWhatsAppMessage: null }));
+  let sent = 0;
+  const chunkSize = 50;
+  for (let i = 0; i < userIds.length; i += chunkSize) {
+    const chunk = userIds.slice(i, i + chunkSize);
+    const usersChunk = await db.select({ id: users.id, email: users.email, name: users.name, phone: users.phone }).from(users).where(inArray(users.id, chunk));
+    for (const u of usersChunk) {
+      try {
+        if (channel === 'email' && u.email) {
+          await sendEmail(u.email, subject, body);
+          sent++;
+        } else if (channel === 'sms' && u.phone && sendWhatsAppMessage) {
+          await (sendWhatsAppMessage as any)(u.phone, `${subject}\n\n${body}`);
+          sent++;
+        } else if (channel === 'inApp') {
+          const { sendInAppNotification } = await import("@/actions/notifications");
+          await sendInAppNotification({ userId: u.id, title: subject, message: body, type: "info" });
+          sent++;
+        }
+      } catch (e) {
+        console.error(`Direct send failed for user ${u.id}:`, e);
+      }
+    }
+  }
+  // Audit log
+  try {
+    const { logTranscriptActivity } = await import("@/actions/result-module");
+    await logTranscriptActivity({ action: "direct_broadcast", targetType: "broadcast", targetLabel: `Direct ${channel} to ${userIds.length} (${JSON.stringify(criteria)})`, details: { subject, sent, criteria } });
+  } catch {}
+  return { success: true, sent };
 }

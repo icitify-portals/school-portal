@@ -11,6 +11,7 @@ import {
     Trash2, RefreshCw, Layers, Shield, Calendar, Filter, Sparkles, Building, GraduationCap
 } from "lucide-react";
 import { dispatchCentralBroadcast, getCentralBroadcastHistory, getAudienceCountPreview, deleteCentralBroadcastRecord, clearCentralBroadcastHistory } from "@/actions/broadcasts";
+import { getEmailsForBroadcast, sendDirectBroadcast } from "@/actions/broadcast-resolver";
 import { getDepartments } from "@/actions/departments";
 import { getProgrammes } from "@/actions/programmes";
 import { getFaculties } from "@/actions/faculties";
@@ -59,6 +60,9 @@ export default function CentralBroadcastCommunicationsPage() {
     const [isDispatching, setIsDispatching] = useState(false);
     const [audiencePreview, setAudiencePreview] = useState<number | null>(null);
     const [previewLoading, setPreviewLoading] = useState(false);
+    const [isDownloading, setIsDownloading] = useState(false);
+    const [isDirectSending, setIsDirectSending] = useState(false);
+    const [showDirectModal, setShowDirectModal] = useState(false);
 
     // Initial load
     useEffect(() => {
@@ -204,6 +208,7 @@ export default function CentralBroadcastCommunicationsPage() {
     };
 
     const levelOptions = [
+        { label: "Entire School", value: "Entire School" },
         { label: "Applicant (Pre-ND1)", value: "Applicant" },
         { label: "ND 1", value: "ND 1" },
         { label: "ND 2", value: "ND 2" },
@@ -212,6 +217,77 @@ export default function CentralBroadcastCommunicationsPage() {
         { label: "ND Graduated", value: "ND_graduated" },
         { label: "HND Graduated", value: "HND_graduated" },
     ];
+
+    const isRegistrar = ["registrar", "superadmin", "admin", "rector", "dvc"].includes(userRole);
+
+    const buildCriteriaForDownload = () => {
+        if (targetType === "all" || selectedLevels.includes("Entire School")) {
+            return { type: "all" as const, levels: ["Entire School"] };
+        }
+        if (targetType === "levels" && selectedLevels.length > 0) {
+            return { type: "levels" as const, levels: selectedLevels };
+        }
+        if (targetType === "departments" && selectedDepts.length > 0) {
+            return { type: "departments" as const, departments: selectedDepts };
+        }
+        if (targetType === "programmes" && selectedProgs.length > 0) {
+            return { type: "programmes" as const, programmes: selectedProgs };
+        }
+        // Fallback to current preview criteria
+        return { type: targetType as any, levels: selectedLevels, departments: selectedDepts, programmes: selectedProgs };
+    };
+
+    const handleDownloadEmails = async () => {
+        setIsDownloading(true);
+        try {
+            const criteria = buildCriteriaForDownload();
+            const res: any = await getEmailsForBroadcast(criteria);
+            if (!res.emails || res.emails.length === 0) {
+                toast.error("No emails found for this selection");
+                return;
+            }
+            // Build CSV
+            const header = "Email,Name,MatricNumber,DeptCode,DeptName,Level\n";
+            const rows = (res.breakdown || res.emails.map((e:string) => ({ email: e, name: "", matricNumber: "", deptCode: "", deptName: "", level: "" })))
+                .map((r: any) => `"${r.email}","${(r.name||"").replace(/"/g,'""')}","${r.matricNumber||""}","${r.deptCode||""}","${(r.deptName||"").replace(/"/g,'""')}","${r.level||""}"`).join("\n");
+            const csv = header + rows;
+            const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `emails_${(criteria as any).levels?.join('_') || criteria.type}_${new Date().toISOString().slice(0,10)}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+            toast.success(`Downloaded ${res.count} emails`);
+        } catch (e:any) {
+            toast.error(e.message || "Download failed");
+        } finally {
+            setIsDownloading(false);
+        }
+    };
+
+    const handleDirectSend = async () => {
+        if (!title.trim() || !message.trim()) {
+            toast.error("Enter subject and message for direct send");
+            return;
+        }
+        setIsDirectSending(true);
+        try {
+            const criteria = buildCriteriaForDownload();
+            const channel = (channel === "email" || channel === "both") ? "email" : "inApp";
+            const res: any = await sendDirectBroadcast(criteria, title, message, channel as any);
+            if (res.success) {
+                toast.success(`Direct sent to ${res.sent} recipients`);
+                setShowDirectModal(false);
+            } else {
+                toast.error(res.error || "Direct send failed");
+            }
+        } catch (e:any) {
+            toast.error(e.message || "Direct send failed");
+        } finally {
+            setIsDirectSending(false);
+        }
+    };
 
     const getRoleBadge = (role: string) => {
         switch (role) {
@@ -739,6 +815,41 @@ export default function CentralBroadcastCommunicationsPage() {
                             >
                                 {isDispatching ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Send className="w-4 h-4" /> Dispatch Broadcast Announcement</>}
                             </Button>
+
+                            {/* Registrar: Download + Direct Send (Level / Entire School) */}
+                            {isRegistrar && (
+                                <div className="p-4 rounded-2xl bg-emerald-50/70 border border-emerald-200 space-y-3">
+                                    <Label className="text-xs font-black uppercase tracking-wider text-emerald-800 flex items-center gap-2"><GraduationCap className="w-4 h-4" /> Registrar — Direct Tools (Level / Entire School)</Label>
+                                    <p className="text-[11px] text-emerald-700/80">Download emails for a level or entire school, or send directly (bypasses queue, immediate).</p>
+                                    <div className="flex flex-wrap gap-2">
+                                        <Button type="button" onClick={handleDownloadEmails} disabled={isDownloading || previewLoading} className="flex-1 min-w-[160px] bg-white border border-emerald-200 text-emerald-700 hover:bg-emerald-50 font-bold text-xs gap-2">
+                                            {isDownloading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />} Download Emails CSV ({audiencePreview ?? 0})
+                                        </Button>
+                                        <Button type="button" onClick={() => setShowDirectModal(true)} disabled={isDirectSending || !title.trim() || !message.trim()} className="flex-1 min-w-[160px] bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs gap-2">
+                                            <Send className="w-4 h-4" /> Send Direct Now
+                                        </Button>
+                                    </div>
+                                    <p className="text-[10px] text-slate-500">Entire School = all active students + applicants. Level filter respects current selection above.</p>
+                                </div>
+                            )}
+                            {isRegistrar && showDirectModal && (
+                                <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowDirectModal(false)}>
+                                    <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg p-6" onClick={e => e.stopPropagation()}>
+                                        <h3 className="text-sm font-black uppercase tracking-wider text-slate-800">Confirm Direct Send</h3>
+                                        <p className="text-xs text-slate-500 mt-1">This will send <strong>{audiencePreview ?? 0} emails</strong> immediately to <strong>{selectedLevels.includes("Entire School") || targetType==="all" ? "Entire School" : (selectedLevels.join(", ") || targetType)}</strong>.</p>
+                                        <div className="mt-3 p-3 rounded-xl bg-slate-50 border border-slate-200">
+                                            <p className="text-xs font-bold text-slate-700">Subject: {title || "(no subject)"}</p>
+                                            <p className="text-xs text-slate-600 mt-1 line-clamp-3">{message.slice(0, 200) || "(no message)"}</p>
+                                        </div>
+                                        <div className="flex gap-3 mt-4">
+                                            <Button type="button" onClick={() => setShowDirectModal(false)} variant="outline" className="flex-1">Cancel</Button>
+                                            <Button type="button" onClick={handleDirectSend} disabled={isDirectSending} className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs">
+                                                {isDirectSending ? <><Loader2 className="w-4 h-4 animate-spin" /> Sending...</> : `Send to ${audiencePreview ?? 0}`}
+                                            </Button>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
                         </CardContent>
                     </Card>
                 </div>
