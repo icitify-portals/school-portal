@@ -891,6 +891,11 @@ export async function getResultTemplateStudents(filters: {
   facultyId?: number;
   all?: boolean;
   level?: string;
+  sessionId?: number;
+  semester?: string;
+  enrolledCourseId?: number;
+  batchSessionId?: number;
+  batchSemester?: string;
 }) {
   try {
     const allowed = await hasRole("admin") || await hasRole("superadmin") || await hasRole("registrar") || await hasRole("record_officer") || await hasPermission("result_module.manage");
@@ -909,17 +914,25 @@ export async function getResultTemplateStudents(filters: {
       });
       const deptIds = depts.map(d => d.id);
       queryConditions.push(deptIds.length > 0 ? inArray(students.deptId, deptIds) : eq(students.id, 0));
-    } else if (filters.enrolledCourseId) {
+    } else if ((filters as any).enrolledCourseId) {
         const enr = await db.query.enrollments.findMany({
             where: and(
-                eq(enrollments.courseId, filters.enrolledCourseId),
-                filters.batchSessionId ? eq(enrollments.sessionId, filters.batchSessionId) : undefined,
-                filters.batchSemester ? eq(enrollments.semester, Number(filters.batchSemester)) : undefined
+                eq(enrollments.courseId, (filters as any).enrolledCourseId),
+                (filters as any).batchSessionId ? eq(enrollments.sessionId, (filters as any).batchSessionId) : undefined,
+                (filters as any).batchSemester ? eq(enrollments.semester, Number((filters as any).batchSemester)) : undefined
             ),
             columns: { studentId: true }
         });
         const stIds = enr.filter(e => e.studentId !== null).map(e => e.studentId);
         queryConditions.push(stIds.length > 0 ? inArray(students.id, stIds as number[]) : eq(students.id, 0));
+    }
+
+    // Explicit session/semester filter (for manual selection, not just batch context)
+    if (filters.sessionId) {
+      queryConditions.push(eq(students.currentSessionId, filters.sessionId));
+    }
+    if (filters.semester) {
+      queryConditions.push(eq(students.currentSemester, Number(filters.semester) as any));
     }
 
     // Level filter: ND1, ND2, HND1, HND2
@@ -934,6 +947,10 @@ export async function getResultTemplateStudents(filters: {
       if (lvl) {
         queryConditions.push(eq(students.programmeType, lvl.programmeType as any));
         queryConditions.push(eq(students.currentLevel, lvl.currentLevel));
+        // Exclude legacy placeholders without admissionYear when level is used without a broader scope — prevents 895-type rows leaking into ND1
+        if (!filters.sessionId && !filters.programmeId && !filters.departmentId && !filters.facultyId && !(filters as any).enrolledCourseId) {
+          queryConditions.push(sql`${students.admissionYear} IS NOT NULL`);
+        }
       }
     }
 

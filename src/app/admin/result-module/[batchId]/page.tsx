@@ -105,6 +105,8 @@ export default function BatchDetailPage() {
   const [templateCourseSearch, setTemplateCourseSearch] = useState("");
   const [templateCourseOpen, setTemplateCourseOpen] = useState(false);
   const [templateLevel, setTemplateLevel] = useState<string>("");
+  const [templateSessionId, setTemplateSessionId] = useState<string>("");
+  const [academicSessions, setAcademicSessions] = useState<any[]>([]);
 
   // Edit Result record state
   const [editingResult, setEditingResult] = useState<{ id: number; studentName: string; courseCode: string; courseName: string; score: string; creditLoad: string } | null>(null);
@@ -370,11 +372,12 @@ export default function BatchDetailPage() {
     else if (templateScope === "programme" && templateProgrammeId) f.programmeId = Number(templateProgrammeId);
     else if (templateScope === "course" && templateEnrolledCourseId) f.enrolledCourseId = Number(templateEnrolledCourseId);
     if (templateLevel) f.level = templateLevel;
+    if (templateSessionId) f.sessionId = Number(templateSessionId);
     // Add batch context so the server can filter by active session/semester if needed
     f.batchSessionId = batch?.academicSessionId;
     f.batchSemester = batch?.semester;
     return f;
-  }, [templateScope, templateFacultyId, templateDeptId, templateProgrammeId, templateEnrolledCourseId, templateLevel, batch]);
+  }, [templateScope, templateFacultyId, templateDeptId, templateProgrammeId, templateEnrolledCourseId, templateLevel, templateSessionId, batch]);
 
   useEffect(() => {
     if (!showTemplateModal) return;
@@ -399,6 +402,8 @@ export default function BatchDetailPage() {
       setTemplateDepartments(d.data || []);
       setTemplateProgrammes(p.data || []);
     });
+    // Fetch academic sessions for manual session filter
+    import("@/actions/portal").then(m => m.getAcademicSessions?.().then((r: any) => setAcademicSessions(r.data || r || [])).catch(()=>{}));
   }
 
   function closeTemplateModal() {
@@ -412,6 +417,7 @@ export default function BatchDetailPage() {
     setTemplateDeptId("");
     setTemplateProgrammeId("");
     setTemplateLevel("");
+    setTemplateSessionId("");
     setTemplateCount(null);
   }
 
@@ -1000,27 +1006,9 @@ export default function BatchDetailPage() {
                         </div>
 
                         <div className="p-5 space-y-4">
-                          <div className="grid grid-cols-2 gap-2">
-                            {(["all", "faculty", "department", "programme"] as const).map(scope => (
-                              <button key={scope} type="button"
-                                onClick={() => setTemplateScope(scope)}
-                                className={`py-2 rounded-lg text-xs font-semibold border transition-colors ${templateScope === scope ? "bg-blue-600/30 border-blue-500/40 text-blue-300" : "bg-white/5 border-white/10 text-slate-400 hover:border-white/20"}`}>
-                                {scope === "all" ? "All Students" : scope[0].toUpperCase() + scope.slice(1)}
-                              </button>
-                            ))}
-                          </div>
-
                           <div>
-                            <label className="text-xs font-bold text-slate-500 uppercase">Level Filter</label>
-                            <select value={templateLevel} onChange={e => setTemplateLevel(e.target.value)}
-                              className="mt-1 w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-400">
-                              <option value="">All Levels</option>
-                              <option value="ND1">ND 1</option>
-                              <option value="ND2">ND 2</option>
-                              <option value="HND1">HND 1</option>
-                              <option value="HND2">HND 2</option>
-                            </select>
-                            <div className="flex bg-white/5 p-1 rounded-lg flex-wrap mt-2">
+                            <label className="text-xs font-bold text-slate-500 uppercase">Scope</label>
+                            <div className="flex bg-white/5 p-1 rounded-lg flex-wrap mt-1">
                               {["all", "faculty", "department", "programme", "course"].map(scope => (
                                 <button key={scope} type="button"
                                   onClick={() => setTemplateScope(scope as any)}
@@ -1028,6 +1016,28 @@ export default function BatchDetailPage() {
                                   {scope.charAt(0).toUpperCase() + scope.slice(1)}
                                 </button>
                               ))}
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <label className="text-xs font-bold text-slate-500 uppercase">Level Filter</label>
+                              <select value={templateLevel} onChange={e => setTemplateLevel(e.target.value)}
+                                className="mt-1 w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-400">
+                                <option value="">All Levels</option>
+                                <option value="ND1">ND 1</option>
+                                <option value="ND2">ND 2</option>
+                                <option value="HND1">HND 1</option>
+                                <option value="HND2">HND 2</option>
+                              </select>
+                            </div>
+                            <div>
+                              <label className="text-xs font-bold text-slate-500 uppercase">Session (optional)</label>
+                              <select value={templateSessionId} onChange={e => setTemplateSessionId(e.target.value)}
+                                className="mt-1 w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-400">
+                                <option value="">All Sessions</option>
+                                {academicSessions.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                              </select>
                             </div>
                           </div>
 
