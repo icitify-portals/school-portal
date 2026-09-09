@@ -2690,13 +2690,59 @@ export async function submitApplicationFinal(applicationId: number, applicantId:
         // so resolve each mandatory field across label + systemKey aliases. Non-destructive:
         // only blocks submission, never modifies/deletes stored data.
         const rawFormData = typeof application.data === 'string' ? JSON.parse(application.data || '{}') : (application.data || {});
+        // Build case-insensitive map for formData keys (handles Gender vs gender, Phone vs phone, etc.)
+        const lowerKeyMap = new Map<string, string>();
+        for (const k of Object.keys(rawFormData)) {
+            const norm = k.toLowerCase().replace(/[^a-z0-9]/g, '');
+            if (!lowerKeyMap.has(norm)) lowerKeyMap.set(norm, k);
+        }
         const resolveFieldValue = (candidates: string[]) => {
             for (const c of candidates) {
-                const v = rawFormData[c];
+                // Exact match first
+                let v = rawFormData[c];
                 if (v !== undefined && v !== null && String(v).trim() !== '') return v;
+                // Case-insensitive / non-alnum normalized fallback
+                const norm = c.toLowerCase().replace(/[^a-z0-9]/g, '');
+                const mappedKey = lowerKeyMap.get(norm);
+                if (mappedKey) {
+                    v = rawFormData[mappedKey];
+                    if (v !== undefined && v !== null && String(v).trim() !== '') return v;
+                }
+            }
+            // Also check lowercased JSON keys scan
+            const lowerCandidates = candidates.map(c => c.toLowerCase());
+            for (const k of Object.keys(rawFormData)) {
+                if (lowerCandidates.includes(k.toLowerCase())) {
+                    const v = rawFormData[k];
+                    if (v !== undefined && v !== null && String(v).trim() !== '') return v;
+                }
             }
             return null;
         };
+        // Sync applicationMode and ageAtAdmission from formData if columns are null (fixes Part-time incorrectly requiring JAMB)
+        const formModeOfStudy = (rawFormData["Mode of Study"] || rawFormData["Mode of Study "] || rawFormData["Study Mode"] || "").toString().trim().toLowerCase();
+        let derivedAppMode: string | null = null;
+        if (formModeOfStudy.includes("part")) derivedAppMode = "part_time";
+        else if (formModeOfStudy.includes("full")) derivedAppMode = "full_time";
+        else if (formModeOfStudy.includes("elearning") || formModeOfStudy.includes("e-learning")) derivedAppMode = "elearning";
+        if (derivedAppMode && !application.applicationMode) {
+            await db.update(admissionApplicationsV2).set({ applicationMode: derivedAppMode as any }).where(eq(admissionApplicationsV2.id, applicationId));
+            (application as any).applicationMode = derivedAppMode;
+        }
+        // Sync ageAtAdmission from DOB if missing
+        const dobForAge = resolveFieldValue(['dob','DOB','Date of Birth','dateOfBirth','Birth Date','Birthdate']) || rawFormData["Date of Birth"] || rawFormData["DOB"];
+        if (dobForAge && !application.ageAtAdmission) {
+            try {
+                const dobDate = new Date(dobForAge);
+                if (!isNaN(dobDate.getTime())) {
+                    const age = Math.floor((Date.now() - dobDate.getTime()) / (1000*60*60*24*365.25));
+                    if (age > 0 && age < 100) {
+                        await db.update(admissionApplicationsV2).set({ ageAtAdmission: age }).where(eq(admissionApplicationsV2.id, applicationId));
+                        (application as any).ageAtAdmission = age;
+                    }
+                }
+            } catch {}
+        }
         // Parse NIN requirement from template config (if verification disabled, NIN is optional)
         let ninRequired = true;
         try {
@@ -2712,11 +2758,19 @@ export async function submitApplicationFinal(applicationId: number, applicantId:
             { key: 'phone', label: 'Phone Number', aliases: ['phone', 'Phone Number', 'phoneNumber', 'phone_number', 'mobile', 'Mobile'] },
         ];
         if (ninRequired) {
-            mandatoryFields.push({ key: 'nin', label: 'NIN (National Identification Number)', aliases: ['nin', 'NIN', 'National Identification Number'] });
+            mandatoryFields.push({ key: 'nin', label: 'NIN (National Identification Number)', aliases: ['nin', 'NIN', 'National Identification Number', 'NIN Number', 'NIN (11 digits)'] });
         }
-        // JAMB reg is mandatory for full-time applicants
-        if (application.applicationMode === 'full_time' || !application.applicationMode) {
-            mandatoryFields.push({ key: 'jambRegNumber', label: 'JAMB Registration Number', aliases: ['jambRegNumber', 'JAMB Reg Number', 'JAMB Registration Number', 'JAMB Registration No', 'JAMB REG NO', 'jamb_reg_no', 'JAMB Number'] });
+        // JAMB reg is mandatory for full-time applicants - use effectiveJamb (column or any JSON key containing jamb) to avoid false missing when Mode of Study is Part-time but applicationMode column is NULL
+        const effectiveJambForCheck = (application as any).jambRegNumber || resolveFieldValue(['jambRegNumber','JAMB Reg Number','JAMB Registration Number','JAMB Registration No','JAMB REG NO','jamb_reg_no','JAMB Number','JAMB','jamb']) || rawFormData["JAMB Registration Number"] || rawFormData["JAMB Score"] ? "present" : null;
+        // Only require JAMB if truly Full-time and no JAMB found anywhere
+        const isFullTimeForCheck = ((application as any).applicationMode === 'full_time') || (! (application as any).applicationMode && (formModeOfStudy.includes("full") || (!formModeOfStudy && !effectiveJambForCheck)));
+        // If Part-time (derived or column) and no JAMB, don't require
+        if (isFullTimeForCheck) {
+            // Check if JAMB actually present in any form
+            const hasJamb = !!( (application as any).jambRegNumber || resolveFieldValue(['jambRegNumber','JAMB Reg Number','JAMB Registration Number','JAMB Registration No','JAMB REG NO','jamb_reg_no','JAMB Number','JAMB','jamb']) );
+            if (!hasJamb) {
+                mandatoryFields.push({ key: 'jambRegNumber', label: 'JAMB Registration Number', aliases: ['jambRegNumber', 'JAMB Reg Number', 'JAMB Registration Number', 'JAMB Registration No', 'JAMB REG NO', 'jamb_reg_no', 'JAMB Number', 'JAMB'] });
+            }
         }
         const missingFields = mandatoryFields.filter(f => {
             let val = resolveFieldValue(f.aliases);
@@ -2754,12 +2808,41 @@ export async function submitApplicationFinal(applicationId: number, applicantId:
             return { success: false, error: "A JAMB Registration Number is required for Full-Time applications. Please go back and complete this step." };
         }
 
-        // Enforce O-Level details are filled
+        // Enforce O-Level details are filled - check both table and JSON fallback (in case saveOLevel failed but JSON has data)
         const sittings = await db.select().from(applicantOLevelSittings)
             .where(eq(applicantOLevelSittings.applicationId, applicationId));
-
-        if (!sittings || sittings.length === 0) {
+        const hasOLevelTable = sittings && sittings.length > 0;
+        const hasOLevelJson = !!(rawFormData["Give your o-level "] || rawFormData["Give your o-level"] || rawFormData["O-Level Results"] || rawFormData["O-Level"] || rawFormData["olevel"] || (Array.isArray(rawFormData["Give your o-level "]) && rawFormData["Give your o-level "].length > 0));
+        if (!hasOLevelTable && !hasOLevelJson) {
             return { success: false, error: "O-Level details are required. Please go back to the O-Level section and fill your results." };
+        }
+        // If table empty but JSON has data, auto-migrate JSON to table for future consistency
+        if (!hasOLevelTable && hasOLevelJson) {
+            try {
+                const jsonOLevel = rawFormData["Give your o-level "] || rawFormData["Give your o-level"] || rawFormData["O-Level Results"] || [];
+                const arr = Array.isArray(jsonOLevel) ? jsonOLevel : [];
+                if (arr.length > 0 && arr[0].subjects) {
+                    // Use existing save logic to persist
+                    const { saveOLevelResultsAction } = await import('@/actions/admission_v2');
+                    // Quick insert directly
+                    for (let i=0; i<arr.length; i++) {
+                        const s = arr[i];
+                        const [res] = await db.insert(applicantOLevelSittings).values({
+                            applicantId: (application as any).applicantId,
+                            applicationId,
+                            examBodyId: parseInt(s.examBodyId) || 1,
+                            examYear: String(s.examYear || ''),
+                            examNumber: String(s.examNumber || ''),
+                            sittingNumber: i+1
+                        });
+                        const sid = (res as any).insertId;
+                        if (s.subjects) {
+                            const vals = s.subjects.filter((x:any)=>x.subjectName && x.grade).map((x:any)=>({ sittingId: sid, subjectName: String(x.subjectName), grade: String(x.grade) }));
+                            if (vals.length) await db.insert(applicantOLevelSubjects).values(vals);
+                        }
+                    }
+                }
+            } catch {}
         }
 
         // Server-side validation

@@ -1131,7 +1131,15 @@ export default function StatefulApplicationPage() {
                                                                 <select 
                                                                     className="w-full bg-slate-50 border-none rounded-xl px-4 py-3 font-bold text-sm text-gray-900 appearance-none focus:ring-2 focus:ring-[#1a5b3a] outline-none transition-all"
                                                                     value={formData["Mode of Study"] || ""}
-                                                                    onChange={(e) => handleInputChange("Mode of Study", e.target.value)}
+                                                                    onChange={async (e) => {
+                                                                        const val = e.target.value;
+                                                                        handleInputChange("Mode of Study", val);
+                                                                        // Sync to DB column so backend JAMB check uses correct mode (fixes Part-time incorrectly requiring JAMB)
+                                                                        try {
+                                                                            const jambVal = formData["JAMB Registration Number"] || formData["JAMB Score"] ? String(formData["JAMB Registration Number"] || "").trim() : undefined;
+                                                                            await fetch("/api/admission/update-jamb", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ applicationId, mode: val, jambNumber: jambVal }) });
+                                                                        } catch {}
+                                                                    }}
                                                                     required={!isSystemLocked}
                                                                     disabled={isSystemLocked}
                                                                 >
