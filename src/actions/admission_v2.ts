@@ -509,6 +509,45 @@ export async function submitAdmissionApplication(data: any) {
         // Generate unique form number
         const formNumber = await generateFormNumber(template.level);
 
+        // --- Duplicate guards: prevent multiple applications per applicant/template and duplicate NIN/JAMB ---
+        if (applicantId) {
+            const dupApp = await db.query.admissionApplicationsV2.findFirst({
+                where: and(
+                    eq(admissionApplicationsV2.applicantId, applicantId),
+                    eq(admissionApplicationsV2.templateId, templateId)
+                )
+            });
+            if (dupApp) {
+                return { success: false, error: "You already have an application for this programme. Please continue with your existing application.", existingApplicationId: dupApp.id, formNumber: dupApp.formNumber };
+            }
+        }
+        // Duplicate NIN check (column is unique, but give friendly error before DB throw)
+        const rawNinCheck = (formData.nin || formData.NIN || formData['NIN'] || '').toString().trim();
+        if (rawNinCheck) {
+            const existingNin = await db.select().from(admissionApplicationsV2).where(eq(admissionApplicationsV2.nin, rawNinCheck)).limit(1);
+            if (existingNin.length > 0) {
+                return { success: false, error: "This NIN has already been used in another application." };
+            }
+        }
+        // Duplicate JAMB check (column not unique, so must check manually)
+        const rawJambCheck = (formData.jambRegNumber || formData['JAMB Registration Number'] || formData['JAMB Reg Number'] || formData.jamb_reg_no || '').toString().trim().toUpperCase();
+        if (rawJambCheck) {
+            const existingJamb = await db.select().from(admissionApplicationsV2).where(eq(admissionApplicationsV2.jambRegNumber, rawJambCheck)).limit(1);
+            if (existingJamb.length > 0) {
+                return { success: false, error: "This JAMB Registration Number has already been used in another application." };
+            }
+        }
+        // Duplicate email in JSON data (email inside data column)
+        const rawEmailCheck = (formData.email || '').toString().trim().toLowerCase();
+        if (rawEmailCheck) {
+            const existingEmail = await db.execute(sql`SELECT id FROM admission_applications_v2 WHERE LOWER(JSON_UNQUOTE(JSON_EXTRACT(data, '$.email'))) = ${rawEmailCheck} LIMIT 1`);
+            const emailRows = (existingEmail as any).rows || existingEmail;
+            if (emailRows.length > 0) {
+                // Only block if same template and email already used (allow same email across different templates? keep strict for same template)
+                // For now, allow same email across templates, so no block here — kept for future hardening
+            }
+        }
+
         // Generate security hash
         const applicantName = `${formData.firstName || ""} ${formData.lastName || ""}`.trim() || "Applicant";
         const dob = formData.dob || formData.dateOfBirth || "";
@@ -1693,6 +1732,12 @@ export async function updateApplicantMatricNumber(applicationId: number, newMatr
 
         if (!application) return { success: false, error: "Application not found" };
 
+        // Prevent duplicate matric (DB column is unique but give friendly error before throw)
+        const existingMatric = await db.select().from(students).where(eq(students.matricNumber, trimmedMatric)).limit(1);
+        if (existingMatric.length > 0 && existingMatric[0].id !== application.studentId) {
+            return { success: false, error: `Matric number ${trimmedMatric} already exists for another student.` };
+        }
+
         // Update student record if created
         if (application.studentId) {
             await db.update(students)
@@ -2410,7 +2455,21 @@ export async function registerApplicant(data: any) {
             }
         }
 
-        // 2. Create Draft Application
+        // 2. Create Draft Application — prevent duplicate (applicantId, templateId)
+        const existingDraft = await db.query.admissionApplicationsV2.findFirst({
+            where: and(
+                eq(admissionApplicationsV2.applicantId, userId),
+                eq(admissionApplicationsV2.templateId, templateId)
+            )
+        });
+        if (existingDraft) {
+            return {
+                success: true,
+                applicationId: existingDraft.id,
+                requiresVerification: !existingUser,
+                isExisting: true
+            };
+        }
         const [appRes] = await db.insert(admissionApplicationsV2).values({
             templateId,
             applicantId: userId,
@@ -2622,6 +2681,20 @@ export async function saveApplicationDraft(applicationId: number, applicantId: n
 
         if (cleanJamb) {
             updatePayload.jambRegNumber = cleanJamb;
+        }
+
+        // Pre-check duplicates (exclude current application)
+        if (ninValue) {
+            const dupNin = await db.select().from(admissionApplicationsV2).where(and(eq(admissionApplicationsV2.nin, ninValue), sql`${admissionApplicationsV2.id} != ${applicationId}`)).limit(1);
+            if (dupNin.length > 0) {
+                return { success: false, error: "This NIN has already been used in another application." };
+            }
+        }
+        if (cleanJamb) {
+            const dupJamb = await db.select().from(admissionApplicationsV2).where(and(eq(admissionApplicationsV2.jambRegNumber, cleanJamb), sql`${admissionApplicationsV2.id} != ${applicationId}`)).limit(1);
+            if (dupJamb.length > 0) {
+                return { success: false, error: "This JAMB Registration Number has already been used in another application." };
+            }
         }
 
         await db.update(admissionApplicationsV2)

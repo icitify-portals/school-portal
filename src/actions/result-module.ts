@@ -435,6 +435,8 @@ export async function getMyTranscript(studentId: number, options?: { viewForStud
 export async function getBulkTranscripts(filters: { programmeId?: number, departmentId?: number, facultyId?: number, studentIds?: number[], all?: boolean, level?: string, sessionId?: number, semester?: string, batchId?: number }) {
   try {
     let queryConditions = [];
+    // Only active students in bulk transcripts
+    queryConditions.push(eq(students.status, "active" as any));
     
     if (filters.batchId) {
       const entries = await db.query.studentResults.findMany({
@@ -902,6 +904,8 @@ export async function getResultTemplateStudents(filters: {
     if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to download result template" };
 
     const queryConditions: any[] = [];
+    // Only active students should appear in result templates
+    queryConditions.push(eq(students.status, "active" as any));
 
     if (filters.programmeId) {
       queryConditions.push(eq(students.programmeId, filters.programmeId));
