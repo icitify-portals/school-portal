@@ -480,6 +480,10 @@ export async function getBulkTranscripts(filters: { programmeId?: number, depart
       if (lvl) {
         queryConditions.push(eq(students.programmeType, lvl.programmeType as any));
         queryConditions.push(eq(students.currentLevel, lvl.currentLevel));
+        // Exclude legacy placeholder records with no admissionYear and plain serial matric (e.g. 895) when filtering by level without explicit session
+        if (!filters.sessionId && !filters.programmeId && !filters.departmentId && !filters.facultyId) {
+          queryConditions.push(sql`${students.admissionYear} IS NOT NULL`);
+        }
       }
     }
 
