@@ -2689,12 +2689,23 @@ export async function submitApplicationFinal(applicationId: number, applicantId:
             }
             return null;
         };
+        // Parse NIN requirement from template config (if verification disabled, NIN is optional)
+        let ninRequired = true;
+        try {
+            const cfg = (template as any)?.ninVerificationConfig;
+            const parsed = typeof cfg === 'string' ? JSON.parse(cfg) : cfg;
+            if (parsed && typeof parsed.required === 'boolean') ninRequired = parsed.required;
+            else if (parsed && parsed.enabled === false) ninRequired = false;
+            else if (!cfg) ninRequired = false; // no config = not required (e.g., HND template 18)
+        } catch { ninRequired = false; }
         const mandatoryFields: { key: string; label: string; aliases: string[] }[] = [
             { key: 'gender', label: 'Gender', aliases: ['gender', 'Gender', 'Sex', 'sex'] },
             { key: 'dob', label: 'Date of Birth', aliases: ['dob', 'DOB', 'Date of Birth', 'dateOfBirth', 'DOB (YYYY-MM-DD)'] },
             { key: 'phone', label: 'Phone Number', aliases: ['phone', 'Phone Number', 'phoneNumber', 'phone_number', 'mobile', 'Mobile'] },
-            { key: 'nin', label: 'NIN (National Identification Number)', aliases: ['nin', 'NIN', 'National Identification Number'] },
         ];
+        if (ninRequired) {
+            mandatoryFields.push({ key: 'nin', label: 'NIN (National Identification Number)', aliases: ['nin', 'NIN', 'National Identification Number'] });
+        }
         // JAMB reg is mandatory for full-time applicants
         if (application.applicationMode === 'full_time' || !application.applicationMode) {
             mandatoryFields.push({ key: 'jambRegNumber', label: 'JAMB Registration Number', aliases: ['jambRegNumber', 'JAMB Reg Number', 'JAMB Registration Number', 'JAMB Registration No', 'JAMB REG NO', 'jamb_reg_no', 'JAMB Number'] });
