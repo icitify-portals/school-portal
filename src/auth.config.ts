@@ -140,6 +140,18 @@ export const authConfig = {
                     return Response.redirect(new URL("/admin/result-module", nextUrl));
                 }
 
+                const hasCbtPermission = userPermissions.includes("cbt.manage") || userPermissions.includes("lms.quizzes.manage") || userRoles.includes("CBT Manager");
+                if (hasCbtPermission && !isRegistrar) {
+                    if (
+                        nextUrl.pathname === "/admin/dashboard" ||
+                        nextUrl.pathname.startsWith("/admin/cbt") ||
+                        nextUrl.pathname.startsWith("/admin/communications") ||
+                        nextUrl.pathname.startsWith("/admin/announcements") ||
+                        nextUrl.pathname.startsWith("/admin/profile")
+                    ) return true;
+                    return Response.redirect(new URL("/admin/cbt", nextUrl));
+                }
+
                 if (nextUrl.pathname.startsWith("/admin/cms") && hasCmsAccess) return true;
 
                 if (isBursar && (

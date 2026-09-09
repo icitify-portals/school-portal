@@ -590,6 +590,8 @@ export function Sidebar({ enabledModules = {}, mobileOpen = false, onClose }: {
 
     const hasResultModulePermission = userPermissions.includes("result_module.manage");
     const isRestrictedResultOfficer = hasResultModulePermission && !['admin', 'superadmin', 'dvc', 'icitify_dev'].includes(role);
+    const hasCbtPermission = userPermissions.includes("cbt.manage") || userPermissions.includes("lms.quizzes.manage") || userRolesList.includes("CBT Manager");
+    const isRestrictedCbtOfficer = hasCbtPermission && !['admin', 'superadmin', 'dvc', 'icitify_dev', 'registrar'].includes(role);
 
     // Close mobile sidebar on navigation
     useEffect(() => {
@@ -676,6 +678,33 @@ export function Sidebar({ enabledModules = {}, mobileOpen = false, onClose }: {
                         { name: "Transcript Requests", href: "/admin/result-module/requests" },
                         { name: "Grading Scales", href: "/admin/result-module/scales" },
                         { name: "Result Module Guide", href: "/admin/result-module/guide" },
+                    ]
+                },
+                {
+                    name: "Communication",
+                    icon: Megaphone,
+                    module: "communications",
+                    subItems: [
+                        { name: "Broadcast Communications", href: "/admin/communications/broadcasts" },
+                        { name: "Broadcast Center", href: "/admin/announcements" },
+                        { name: "Direct Messages", href: "/communications" },
+                    ]
+                },
+                { name: "Profile", icon: User, href: "/profile" }
+            ];
+        }
+
+        if (isRestrictedCbtOfficer) {
+            return [
+                { name: "CBT Center", icon: LayoutDashboard, href: "/admin/cbt" },
+                {
+                    name: "CBT Assessments",
+                    icon: GraduationCap,
+                    subItems: [
+                        { name: "CBT Assessments", href: "/admin/cbt" },
+                        { name: "Question Banks", href: "/admin/cbt/banks" },
+                        { name: "CBT Guide", href: "/admin/cbt/guide" },
+                        { name: "Exam Slots", href: "/admin/cbt/exam-slots" },
                     ]
                 },
                 {
