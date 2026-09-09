@@ -100,6 +100,11 @@ export async function requestTwoFactorOTPAction(purpose: 'login' | 'setup' = 'lo
         const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
         if (!user) return { error: "User not found" };
 
+        // Guard: only allow OTP when 2FA is enabled, unless this is a setup flow
+        if (!user.twoFactorEnabled && purpose !== 'setup') {
+            return { error: "Two-factor authentication is not active on your account." };
+        }
+
         const targetMethod = method || user.twoFactorMethod || 'email';
         if (targetMethod === 'app') return { error: "Authenticator app does not use server-sent OTPs." };
 
@@ -191,14 +196,14 @@ export async function verifyTwoFactorLoginAction(code: string) {
         const userId = parseInt(session.user.id);
 
         const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
-        if (!user || !user.twoFactorEnabled || !user.twoFactorSecret) {
+        if (!user || !user.twoFactorEnabled) {
             return { error: "Two-factor authentication is not active on your account." };
         }
 
         const method = user.twoFactorMethod || 'app';
 
         if (method === 'app') {
-            if (!user.twoFactorSecret) return { error: "Two-factor secret is missing." };
+            if (!user.twoFactorSecret) return { error: "Two-factor secret is missing. Please re-setup 2FA." };
             // Decrypt the stored secret
             const secret = decrypt(user.twoFactorSecret);
             const isValid = verifyTOTP(secret, code);
