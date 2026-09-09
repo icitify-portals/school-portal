@@ -27,15 +27,22 @@ export async function createAnnouncement(data: {
     targetType: 'global' | 'faculty' | 'department' | 'course';
     targetId?: number;
     priority?: 'low' | 'normal' | 'high';
+    category?: 'general' | 'academic' | 'exam' | 'holiday' | 'ceremony';
+    eventDate?: Date;
     expiresAt?: Date;
+    isFeatured?: boolean;
+    slug?: string;
 }) {
-    const allowed = await hasPermission("communication.announcements.manage") || await hasRole("admin") || await hasRole("superadmin");
+    const allowed = await hasPermission("communication.announcements.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("registrar");
     if (!allowed) return { error: "Unauthorized: Insufficient permissions to create announcements" };
 
     const session = await auth();
     if (!session?.user) return { error: "Unauthorized" };
 
     try {
+        const slugVal = data.slug || data.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') + '-' + Date.now().toString(36);
+        const eventDate = data.eventDate || null;
+        const isArchived = eventDate ? new Date(eventDate) < new Date(new Date().setHours(0,0,0,0)) : false;
         await db.insert(announcements).values({
             senderId: parseInt(session.user.id!),
             title: data.title,
@@ -43,14 +50,68 @@ export async function createAnnouncement(data: {
             targetType: data.targetType,
             targetId: data.targetId,
             priority: data.priority,
-            expiresAt: data.expiresAt
+            category: (data.category as any) || 'general',
+            eventDate: eventDate as any,
+            isFeatured: data.isFeatured || false,
+            isArchived: isArchived as any,
+            archivedAt: isArchived ? new Date() as any : null,
+            slug: slugVal,
+            expiresAt: data.expiresAt,
+            isActive: true as any,
         });
 
         revalidatePath("/");
+        revalidatePath("/notices");
         return { success: true };
     } catch (error) {
         return { error: "Failed to create announcement" };
     }
+}
+
+export async function updateAnnouncement(id: number, data: Partial<{ title: string; content: string; targetType: string; targetId: number; priority: string; category: string; eventDate: Date; expiresAt: Date; isFeatured: boolean; isActive: boolean }>) {
+    const allowed = await hasPermission("communication.announcements.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("registrar");
+    if (!allowed) return { error: "Unauthorized" };
+    try {
+        await db.update(announcements).set({ ...data } as any).where(eq(announcements.id, id));
+        revalidatePath("/notices");
+        revalidatePath("/");
+        return { success: true };
+    } catch { return { error: "Failed to update" }; }
+}
+
+export async function deleteAnnouncement(id: number) {
+    const allowed = await hasPermission("communication.announcements.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("registrar");
+    if (!allowed) return { error: "Unauthorized" };
+    try {
+        await db.delete(announcements).where(eq(announcements.id, id));
+        revalidatePath("/notices");
+        return { success: true };
+    } catch { return { error: "Failed to delete" }; }
+}
+
+export async function toggleArchiveAnnouncement(id: number) {
+    const allowed = await hasPermission("communication.announcements.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("registrar");
+    if (!allowed) return { error: "Unauthorized" };
+    try {
+        const [row] = await db.select().from(announcements).where(eq(announcements.id, id)).limit(1);
+        if (!row) return { error: "Not found" };
+        const nextArchived = !(row as any).isArchived;
+        await db.update(announcements).set({ isArchived: nextArchived as any, archivedAt: (nextArchived ? new Date() : null) as any, isFeatured: nextArchived ? false as any : (row as any).isFeatured } as any).where(eq(announcements.id, id));
+        revalidatePath("/notices");
+        return { success: true, isArchived: nextArchived };
+    } catch { return { error: "Failed to toggle archive" }; }
+}
+
+export async function toggleFeatureAnnouncement(id: number) {
+    const allowed = await hasPermission("communication.announcements.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("registrar");
+    if (!allowed) return { error: "Unauthorized" };
+    try {
+        const [row] = await db.select().from(announcements).where(eq(announcements.id, id)).limit(1);
+        if (!row) return { error: "Not found" };
+        await db.update(announcements).set({ isFeatured: !(row as any).isFeatured } as any).where(eq(announcements.id, id));
+        revalidatePath("/notices");
+        return { success: true, isFeatured: !(row as any).isFeatured };
+    } catch { return { error: "Failed to toggle feature" }; }
 }
 
 export async function getAnnouncements() {
@@ -71,6 +132,57 @@ export async function getAnnouncements() {
     } catch (error) {
         return [];
     }
+}
+
+export async function getUpcomingNotices(limit = 20) {
+    try {
+        const now = new Date();
+        now.setHours(0,0,0,0);
+        const rows = await db.select({ announcement: announcements, sender: users })
+            .from(announcements)
+            .leftJoin(users, eq(announcements.senderId, users.id))
+            .where(and(eq((announcements as any).isActive, true as any), eq((announcements as any).isArchived, false as any)))
+            .orderBy(desc((announcements as any).isFeatured), desc(announcements.createdAt))
+            .limit(limit);
+        // Filter in JS to avoid SQL date handling edge cases with new columns on old rows
+        const filtered = rows.filter(r => {
+            const a: any = r.announcement;
+            if (a.expiresAt && new Date(a.expiresAt) < new Date()) return false;
+            if (a.eventDate && new Date(a.eventDate) < now) return false;
+            return true;
+        });
+        return filtered.map(r => ({ ...r.announcement, sender: r.sender }));
+    } catch { return []; }
+}
+
+export async function getArchivedNotices(page = 1, limit = 20) {
+    try {
+        const offset = (page - 1) * limit;
+        const rows = await db.select({ announcement: announcements, sender: users })
+            .from(announcements)
+            .leftJoin(users, eq(announcements.senderId, users.id))
+            .orderBy(desc(announcements.createdAt))
+            .limit(limit)
+            .offset(offset);
+        const filtered = rows.filter(r => {
+            const a: any = r.announcement;
+            if (a.isArchived) return true;
+            if (a.expiresAt && new Date(a.expiresAt) < new Date()) return true;
+            if (a.eventDate && new Date(a.eventDate) < new Date(new Date().setHours(0,0,0,0))) return true;
+            return false;
+        });
+        return filtered.map(r => ({ ...r.announcement, sender: r.sender }));
+    } catch { return []; }
+}
+
+export async function autoArchivePastNotices() {
+    try {
+        const now = new Date();
+        await db.update(announcements).set({ isArchived: true as any, archivedAt: now as any, isFeatured: false as any } as any)
+            .where(or(sql`${announcements.expiresAt} IS NOT NULL AND ${announcements.expiresAt} < ${now}`, sql`${(announcements as any).eventDate} IS NOT NULL AND ${(announcements as any).eventDate} < ${now}`));
+        revalidatePath("/notices");
+        return { success: true };
+    } catch { return { success: false }; }
 }
 
 // --- MESSAGING ---

@@ -3392,8 +3392,16 @@ export const announcements = mysqlTable('announcements', {
   targetType: mysqlEnum('target_type', ['global', 'faculty', 'department', 'course']).default('global'),
   targetId: int('target_id'), // ID of the faculty, department, or course
   priority: mysqlEnum('priority', ['low', 'normal', 'high']).default('normal'),
+  eventDate: datetime('event_date'),
+  category: mysqlEnum('category', ['general', 'academic', 'exam', 'holiday', 'ceremony']).default('general'),
+  isActive: boolean('is_active').default(true),
+  isArchived: boolean('is_archived').default(false),
+  archivedAt: datetime('archived_at'),
+  isFeatured: boolean('is_featured').default(false),
+  slug: varchar('slug', { length: 255 }),
   expiresAt: datetime('expires_at'),
   createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
 });
 
 export const forums = mysqlTable('forums', {

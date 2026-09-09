@@ -67,8 +67,9 @@ export const authConfig = {
                 nextUrl.pathname === "/api/healthz" ||           // Health check
                 nextUrl.pathname === "/api/push";                // Push notification subscription (pre-auth)
 
+            const isNoticesPage = nextUrl.pathname === "/notices" || nextUrl.pathname.startsWith("/notices/");
             // Allow public API routes and public pages
-            if (isPublicApiRoute || isJobsPage || isAdmissionPage) return true;
+            if (isPublicApiRoute || isJobsPage || isAdmissionPage || isNoticesPage) return true;
 
             // If user is logged in, check if 2FA verification is pending
             const twoFactorPending = (auth?.user as any)?.twoFactorPending;

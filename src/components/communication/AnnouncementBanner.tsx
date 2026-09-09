@@ -45,9 +45,9 @@ export function AnnouncementBanner() {
                 </div>
 
                 <div className="flex items-center gap-3 shrink-0">
-                    <button className="text-[10px] font-black uppercase tracking-widest bg-white text-indigo-900 px-4 py-1.5 rounded-lg flex items-center gap-1 hover:bg-slate-100 transition-colors">
+                    <a href="/notices" className="text-[10px] font-black uppercase tracking-widest bg-white text-indigo-900 px-4 py-1.5 rounded-lg flex items-center gap-1 hover:bg-slate-100 transition-colors">
                         View Details <ChevronRight className="w-3 h-3" />
-                    </button>
+                    </a>
                     <button
                         onClick={() => setVisible(false)}
                         className="p-1 hover:bg-white/10 rounded-full transition-colors"
