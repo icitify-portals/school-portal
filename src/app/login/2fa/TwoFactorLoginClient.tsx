@@ -72,16 +72,22 @@ export default function TwoFactorLoginClient() {
             return;
         }
 
-        // Successfully verified, update session to clear pending flag
-        await update({ twoFactorVerified: true });
-        
+        // Successfully verified, update session to clear pending flag - fast path with timeout
         toast.success("Identity verified successfully!");
-        
-        // Brief delay for the session update to propagate, then redirect
-        setTimeout(() => {
-            router.push("/");
-            router.refresh();
-        }, 500);
+        try {
+            // Race update against 2s timeout so UI never hangs
+            await Promise.race([
+                update({ twoFactorVerified: true }),
+                new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 2000))
+            ]);
+        } catch (e) {
+            console.warn("Session update slow, proceeding anyway", e);
+        } finally {
+            setLoading(false);
+            // Immediate redirect - don't wait for router.refresh to complete
+            window.location.href = "/";
+        }
+        return;
     }
 
     if (initializing) {
