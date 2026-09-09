@@ -1790,7 +1790,9 @@ export async function initiateSchoolFeesCheckout(applicationId: number) {
             purpose: `2026/2027 Session School Fees & Processing Fee`,
             status: 'pending',
             gateway: 'remita',
-            gatewayReference: reference
+            gatewayReference: reference,
+            rrr: rrr,
+            gatewayTransactionId: rrr
         });
 
         return {
@@ -1814,14 +1816,20 @@ export async function confirmSchoolFeesPayment(applicationId: number, reference:
     try {
         const { verifyPayment } = await import('@/actions/payment-gateways');
         const verification = await verifyPayment('remita', reference, rrr);
+        const verifiedRrr = (verification as any)?.rrr || (verification as any)?.gatewayTransactionId || rrr || null;
 
         if (!verification.success || !verification.verified) {
             return { success: false, error: "School fees payment verification failed. Please try again." };
         }
 
-        // Mark transaction completed
+        // Mark transaction completed and ensure RRR is captured
+        const updatePayload: any = { status: 'completed' };
+        if (verifiedRrr) {
+            updatePayload.rrr = verifiedRrr;
+            updatePayload.gatewayTransactionId = verifiedRrr;
+        }
         await db.update(transactions)
-            .set({ status: 'completed' })
+            .set(updatePayload)
             .where(eq(transactions.gatewayReference, reference));
 
         revalidatePath(`/admission/status/${applicationId}`);
