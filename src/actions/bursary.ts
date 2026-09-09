@@ -2775,6 +2775,23 @@ export async function resolveOnlinePaymentAction(reference: string, status: 'com
                 }
             }
 
+            // Check if it's an Acceptance Fee Payment (no studentId required - applicant not yet student, like Admission Form)
+            if (txRecord.purpose?.startsWith('Acceptance Fee Payment')) {
+                const match = txRecord.purpose.match(/Application ID:\s*(\d+)/);
+                const refMatch = txRecord.gatewayReference?.match(/^(ACC|PAY-ADM)-(\d+)-/);
+                const applicationIdStr = match ? match[1] : (refMatch ? refMatch[2] : null);
+                const applicationId = applicationIdStr ? parseInt(applicationIdStr) : NaN;
+                if (!isNaN(applicationId)) {
+                    const { admissionApplicationsV2 } = await import('@/db/schema');
+                    await tx.update(admissionApplicationsV2).set({
+                        acceptancePaymentStatus: 'paid',
+                        acceptancePaymentReference: reference,
+                        updatedAt: new Date()
+                    }).where(eq(admissionApplicationsV2.id, applicationId));
+                    return { success: true, status: 'completed', transactionId: txRecord.id };
+                }
+            }
+
             // 4. Update Student wallet & ledger
             const studentId = txRecord.studentId!;
             const [student] = await tx.select().from(students).where(eq(students.id, studentId)).limit(1);

@@ -94,9 +94,15 @@ export default function ApplicantStatusPage() {
 
     const handleAcceptancePayment = async () => {
         setLoading(true);
-        const res = await initiateAcceptancePaymentCheckout(id);
+        const res: any = await initiateAcceptancePaymentCheckout(id);
         setLoading(false);
         if (res && res.success) {
+            // New flow (like Application Form): redirect to simulate checkout (skipVerification)
+            if (res.checkoutUrl) {
+                window.location.href = res.checkoutUrl;
+                return;
+            }
+            // Fallback inline (legacy) — keep for backward compat if checkoutUrl missing
             setCheckoutPayload({ ...res, isSchoolFees: false });
         } else {
             toast.error(res?.error || "Failed to initiate payment");

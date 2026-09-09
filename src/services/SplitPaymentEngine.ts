@@ -937,4 +937,111 @@ export class SplitPaymentEngine {
         
         return result;
     }
+
+    // Checkout for Acceptance Fee (mirrors checkoutAdmissionForm - same AlatPay skipVerification path, same splits/wallet logic)
+    async checkoutAcceptanceFee(applicationId: number, applicantEmail: string, applicantName: string, applicantPhone?: string) {
+        const settingsRecords = await db.query.bursarySettings.findMany();
+        const settings: any = {};
+        for (const s of settingsRecords) settings[s.settingKey] = s.settingValue;
+
+        const activeGateway = 'alatpay';
+        const feeBearerRule = settings[`${activeGateway}_fee_bearer`] || 'default';
+
+        // Fetch application + template to derive fees (same as admission_v2 initiateAcceptancePaymentCheckout)
+        const app = await db.query.admissionApplicationsV2.findFirst({ where: eq(admissionApplicationsV2.id, applicationId) });
+        if (!app) return { success: false, reference: "", error: "Application not found" };
+        const template = await db.query.admissionFormTemplates.findFirst({ where: eq(admissionFormTemplates.id, app.templateId) });
+        if (!template) return { success: false, reference: "", error: "Template not found" };
+
+        const acceptanceFee = parseFloat((template as any).acceptanceFee || "0");
+        const idCardFee = parseFloat((template as any).idCardFee || "0");
+        let processingFee = 0;
+        try {
+            const pRule = await db.select().from(processingFeeRules).where(eq(processingFeeRules.serviceType, 'ACCEPTANCE_FEE')).limit(1);
+            if (pRule.length > 0) processingFee = parseFloat(pRule[0].amount || "0");
+        } catch {}
+        const billTotal = acceptanceFee + idCardFee + processingFee;
+        if (billTotal <= 0) return { success: false, reference: "", error: "Acceptance fee not configured" };
+
+        // Wallet check (parity with checkoutAdmissionForm)
+        let student: any = null;
+        if (applicantEmail) {
+            const user = await db.query.users.findFirst({ where: eq(users.email, applicantEmail) });
+            if (user?.studentId) student = await db.query.students.findFirst({ where: eq(students.id, user.studentId) });
+        }
+        if (student && parseFloat(student.walletBalance?.toString() || "0") >= billTotal) {
+            const txReference = `WAL-ACC-${Date.now()}`;
+            await db.update(students).set({ walletBalance: (parseFloat(student.walletBalance.toString()) - billTotal).toString() }).where(eq(students.id, student.id));
+            await db.insert(walletTransactions).values({ studentId: student.id, amount: billTotal.toString(), type: 'debit', description: `Acceptance Fee Payment - Application ID: ${applicationId}`, reference: txReference });
+            await db.insert(transactions).values({ amount: billTotal.toFixed(2), gatewayName: 'wallet', purpose: `Acceptance Fee Payment - Application ID: ${applicationId}`, studentId: student.id, status: 'completed', gatewayReference: txReference });
+            await db.update(admissionApplicationsV2).set({ acceptancePaymentStatus: 'paid', acceptancePaymentReference: txReference }).where(eq(admissionApplicationsV2.id, applicationId));
+            const callbackUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/admission/status/${applicationId}`;
+            return { success: true, checkoutUrl: callbackUrl, reference: txReference };
+        }
+
+        // Build splits from feeItems like checkoutAdmissionForm (use Acceptance-related feeItems if configured, else main account)
+        let splits: SplitItem[] = [];
+        let totalAllocated = 0;
+        // Try to find Acceptance feeItems via feeStructureItems if a structure exists for this template, else fallback to single main split
+        const acceptanceFeeItems = await db.query.feeItems.findMany({ where: eq(feeItems.category, 'acceptance') as any }).catch(() => []);
+        if (acceptanceFeeItems.length > 0) {
+            for (const feeItem of acceptanceFeeItems) {
+                const amt = billTotal / acceptanceFeeItems.length; // simple pro-rata if multiple
+                if ((feeItem as any).settlementAccountId) {
+                    const account = await db.query.settlementAccounts.findFirst({ where: eq(settlementAccounts.id, (feeItem as any).settlementAccountId) });
+                    if (account && account.isActive) {
+                        let subaccountCode: string | undefined;
+                        const sub = await db.query.gatewaySubaccounts.findFirst({ where: and(eq(gatewaySubaccounts.settlementAccountId, account.id), eq(gatewaySubaccounts.gatewayName, activeGateway as any)) });
+                        subaccountCode = sub?.gatewaySubaccountCode;
+                        splits.push({ amount: Number(amt.toFixed(2)), accountName: account.accountName, bankCode: account.bankCode, accountNumber: account.accountNumber, subaccountCode, isDeveloperAccount: (feeItem as any).name.toLowerCase().includes('developer') });
+                        totalAllocated += amt;
+                    }
+                }
+            }
+        }
+        if (splits.length === 0) {
+            // Fallback single main account split (parity with checkoutAdmissionForm remaining logic)
+            const mainAcctName = settings['main_school_account_name'] || "Main School Account";
+            const mainBankCode = settings['main_school_bank_code'] || "011";
+            const mainAcctNum = settings['main_school_account_number'] || "0123456789";
+            const mainSubCode = settings[`main_school_${activeGateway}_subaccount`] || undefined;
+            splits.push({ amount: Number(billTotal.toFixed(2)), accountName: mainAcctName, bankCode: mainBankCode, accountNumber: mainAcctNum, subaccountCode: mainSubCode, isDeveloperAccount: false });
+        }
+
+        const baseGatewayFee = SplitPaymentEngine.calculateGatewayFee(billTotal, activeGateway, settings);
+        let checkoutTotal = billTotal;
+        if (feeBearerRule === 'student') checkoutTotal += baseGatewayFee;
+        else if (feeBearerRule === 'developer') {
+            const devIdx = splits.findIndex(s => s.isDeveloperAccount);
+            if (devIdx !== -1) splits[devIdx].amount = Math.max(0, Number((splits[devIdx].amount - baseGatewayFee).toFixed(2)));
+        } else if (feeBearerRule === 'prorated') {
+            splits = splits.map(s => ({ ...s, amount: Math.max(0, Number((s.amount - (s.amount / billTotal) * baseGatewayFee).toFixed(2))) }));
+        } else if (feeBearerRule === 'subaccounts') {
+            const nonDevs = splits.filter(s => !s.isDeveloperAccount);
+            const feeShare = nonDevs.length ? baseGatewayFee / nonDevs.length : 0;
+            splits = splits.map(s => s.isDeveloperAccount ? s : { ...s, amount: Math.max(0, Number((s.amount - feeShare).toFixed(2))) });
+        }
+
+        const txRef = `ACC-${applicationId}-${Date.now()}`;
+        await db.insert(transactions).values({
+            amount: checkoutTotal.toFixed(2),
+            type: 'credit',
+            purpose: `Acceptance Fee Payment - Application ID: ${applicationId}`,
+            status: 'pending',
+            gateway: activeGateway as any,
+            gatewayReference: txRef
+        });
+
+        const applicantUser = await db.query.users.findFirst({ where: eq(users.email, applicantEmail) });
+        const adapter = SplitPaymentEngine.getAdapter(activeGateway);
+        const result = await adapter.initializeSplitPayment(
+            applicantEmail,
+            checkoutTotal,
+            txRef,
+            splits,
+            feeBearerRule,
+            { payerName: applicantName, payerFirstName: applicantUser?.firstName || "", payerLastName: applicantUser?.lastName || "", payerPhone: applicantPhone || applicantUser?.phone || "", description: "Acceptance Fee Payment" }
+        );
+        return result;
+    }
 }

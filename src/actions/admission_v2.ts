@@ -1320,38 +1320,11 @@ export async function initiateAcceptancePaymentCheckout(applicationId: number) {
             where: eq(admissionApplicationsV2.id, applicationId),
             with: { applicant: true }
         });
-
         if (!app) return { success: false, error: "Application not found" };
-
-        const template = await db.query.admissionFormTemplates.findFirst({
-            where: eq(admissionFormTemplates.id, app.templateId)
-        });
-
-        if (!template) return { success: false, error: "Template not found" };
-
-        let acceptanceFee = parseFloat(template.acceptanceFee || "0");
-        const idCardFee = parseFloat(template.idCardFee || "0");
-        let processingFee = 0;
-
-        // Fetch processing fee specifically for acceptance fee using service type 'ACCEPTANCE_FEE'
-        try {
-            const pRule = await db.select().from(processingFeeRules).where(eq(processingFeeRules.serviceType, 'ACCEPTANCE_FEE')).limit(1);
-            if (pRule.length > 0 && pRule[0].isActive) {
-                processingFee = parseFloat(pRule[0].amount);
-            }
-        } catch (e) {
-            console.warn("processingFeeRules table might not exist yet, skipping processing fee.");
-        }
-
-        const totalAmount = acceptanceFee + idCardFee + processingFee;
-        const reference = `ACC-${applicationId}-${Date.now()}`;
         const formData = typeof app.data === 'string' ? JSON.parse(app.data || '{}') : (app.data || {});
-
         const email = app.applicant?.email || formData.email || "student@school.edu.ng";
-        
         let firstName = formData.firstName || formData.first_name || "Applicant";
         let lastName = formData.lastName || formData.last_name || formData.surname || "";
-        
         if (app.applicant && app.applicant.name) {
             const parts = app.applicant.name.split(/\s+/);
             firstName = parts[0] || "Applicant";
@@ -1361,56 +1334,14 @@ export async function initiateAcceptancePaymentCheckout(applicationId: number) {
             firstName = parts[0] || "Applicant";
             lastName = parts.slice(1).join(" ") || parts[0] || "Applicant";
         }
-
         const phone = app.applicant?.phone || formData.phone || formData.phoneNumber || "";
-
-        // Record pending transaction
-        await db.insert(transactions).values({
-            amount: totalAmount.toString(),
-            type: 'credit',
-            purpose: `Acceptance Fee Payment - Application ID: ${applicationId}`,
-            status: 'pending',
-            gateway: 'alatpay',
-            gatewayReference: reference
-        });
-
-        // Resolve ALATPAY dynamic credentials via Bursary Settings (Fee Item -> Settlement Account -> Gateway Mapping)
-        const { like, and } = await import('drizzle-orm');
-        const { feeItems, gatewaySubaccounts } = await import('@/db/schema');
-        
-        let targetBusinessId: string | undefined;
-        let publicKey: string | undefined;
-
-        try {
-            const [feeItem] = await db.select().from(feeItems).where(like(feeItems.name, '%Acceptance%')).limit(1);
-            if (feeItem && feeItem.settlementAccountId) {
-                const [gatewaySub] = await db.select().from(gatewaySubaccounts)
-                    .where(and(
-                        eq(gatewaySubaccounts.settlementAccountId, feeItem.settlementAccountId),
-                        eq(gatewaySubaccounts.gatewayName, 'alatpay')
-                    )).limit(1);
-                
-                if (gatewaySub) {
-                    targetBusinessId = gatewaySub.gatewaySubaccountCode;
-                    publicKey = gatewaySub.publicKey || undefined;
-                }
-            }
-        } catch (e) {
-            console.warn("Failed to resolve dynamic settlement account for Acceptance Fee", e);
-        }
-
-        return {
-            success: true,
-            reference,
-            amount: totalAmount,
-            email,
-            firstName,
-            lastName,
-            phone,
-            description: "Acceptance Fee Payment",
-            targetBusinessId,
-            publicKey
-        };
+        const applicantName = `${firstName} ${lastName}`.trim();
+        const { SplitPaymentEngine } = await import('@/services/SplitPaymentEngine');
+        const engine = new SplitPaymentEngine();
+        const res: any = await (engine as any).checkoutAcceptanceFee(applicationId, email, applicantName, phone);
+        if (!res.success) return res;
+        // Acceptance now mirrors Application Form: redirect to /finance/checkout/simulate?gateway=alatpay (skipVerification)
+        return res;
     } catch (error) {
         console.error("Failed to initiate acceptance payment:", error);
         return { success: false, error: "An error occurred" };
