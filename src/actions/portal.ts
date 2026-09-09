@@ -7,7 +7,26 @@ import { revalidatePath } from "next/cache";
 
 export async function getAcademicSessions() {
     try {
-        return await db.select().from(academicSessions).orderBy(desc(academicSessions.name));
+        // Only return active/planned sessions for selectors; archived duplicates are hidden
+        // This ensures the brain (academic_sessions) has only one active 2025/2026 etc.
+        const all = await db.select().from(academicSessions).orderBy(desc(academicSessions.name));
+        // Deduplicate by name, keep the active/current one (is_active=1 or is_current=1 or status=active)
+        const seen = new Map<string, any>();
+        for (const s of all) {
+            const existing = seen.get(s.name);
+            if (!existing) {
+                seen.set(s.name, s);
+            } else {
+                // Prefer active/current over archived
+                const existingScore = (existing.isActive ? 2 : 0) + (existing.isCurrent ? 2 : 0) + (existing.status === 'active' ? 1 : 0);
+                const newScore = (s.isActive ? 2 : 0) + (s.isCurrent ? 2 : 0) + (s.status === 'active' ? 1 : 0);
+                if (newScore > existingScore) seen.set(s.name, s);
+            }
+        }
+        // Return deduped, sorted with active first, and hide archived duplicates that share name with an active
+        const deduped = Array.from(seen.values());
+        // Also filter out the explicitly archived duplicate we renamed (contains 'duplicate')
+        return deduped.filter(s => !s.name.toLowerCase().includes('duplicate')).sort((a, b) => b.name.localeCompare(a.name));
     } catch (error) {
         console.error("Error fetching academic sessions:", error);
         return [];
