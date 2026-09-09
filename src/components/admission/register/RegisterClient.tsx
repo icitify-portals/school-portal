@@ -110,6 +110,9 @@ export default function AdmissionRegisterClient({
     return () => clearTimeout(t);
   }, [fetchData]);
 
+  // Reset pagination when filters/tab or data size changes
+  useEffect(() => { setCurrentPage(1); }, [activeTab, search, selectedLevel, selectedMode, selectedTemplate, selectedProgramme, admitted.length, pending.length, pageSize]);
+
   const handleAdmit = async (id: number) => {
     if (!confirm("Offer admission to this candidate?")) return;
     setAdmitting(id);
@@ -147,7 +150,16 @@ export default function AdmissionRegisterClient({
     }
   };
 
-  const filteredList = activeTab === "admitted" ? admitted : pending;
+  // Deduplicate by id (defensive, DB now has unique index on applicant+template but keep client guard)
+  const dedupedAdmitted = Array.from(new Map(admitted.map(c => [c.id, c])).values());
+  const dedupedPending = Array.from(new Map(pending.map(c => [c.id, c])).values());
+  const filteredListRaw = activeTab === "admitted" ? dedupedAdmitted : dedupedPending;
+  // Pagination (client-side)
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const totalPages = Math.max(1, Math.ceil(filteredListRaw.length / pageSize));
+  const paginatedList = filteredListRaw.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  const filteredList = paginatedList;
   const levelOptions = ["all", "ND", "HND"];
   const modeOptions = [
     { value: "all", label: "All Modes" },
@@ -547,6 +559,31 @@ export default function AdmissionRegisterClient({
                   ))}
                 </tbody>
               </table>
+            </div>
+          )}
+          {/* Pagination — client-side, deduped */}
+          {filteredListRaw.length > 0 && (
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-6 py-4 border-t border-slate-100 bg-slate-50/50">
+              <div className="flex items-center gap-3">
+                <span className="text-xs font-bold text-slate-600">
+                  Showing {(currentPage - 1) * pageSize + 1}–{Math.min(currentPage * pageSize, filteredListRaw.length)} of {filteredListRaw.length} {activeTab === "admitted" ? "admitted" : "pending"}
+                </span>
+                <span className="text-slate-300">|</span>
+                <label className="flex items-center gap-2 text-xs font-bold text-slate-600">
+                  Rows:
+                  <select value={pageSize} onChange={(e) => setPageSize(Number(e.target.value))} className="px-2 py-1 rounded-lg border border-slate-200 bg-white text-xs font-bold">
+                    <option value={10}>10</option>
+                    <option value={20}>20</option>
+                    <option value={50}>50</option>
+                    <option value={100}>100</option>
+                  </select>
+                </label>
+              </div>
+              <div className="flex items-center gap-2">
+                <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="px-3 py-1.5 rounded-xl border border-slate-200 bg-white text-xs font-black uppercase tracking-widest disabled:opacity-40 hover:bg-slate-50">Prev</button>
+                <span className="text-xs font-black text-slate-700">Page {currentPage} of {totalPages}</span>
+                <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="px-3 py-1.5 rounded-xl border border-slate-200 bg-white text-xs font-black uppercase tracking-widest disabled:opacity-40 hover:bg-slate-50">Next</button>
+              </div>
             </div>
           )}
         </div>
