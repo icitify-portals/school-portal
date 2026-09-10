@@ -34,13 +34,15 @@ export class CourseRegistrationService {
         const studentLevel = student.level || 100;
         const studentDeptId = student.departmentId;
 
-        const available = await db.select({
+        let available = await db.select({
             id: courses.id,
             name: courses.name,
             code: courses.code,
             units: courses.creditUnits,
             status: courseDepartmentSettings.status,
-            isUniversityRequired: courses.isUniversityRequired
+            isUniversityRequired: courses.isUniversityRequired,
+            capacity: (courseDepartmentSettings as any).capacity,
+            enrolledCount: (courseDepartmentSettings as any).enrolledCount,
         })
         .from(courses)
         .innerJoin(courseDepartmentSettings, eq(courses.id, courseDepartmentSettings.courseId))
@@ -49,6 +51,30 @@ export class CourseRegistrationService {
             studentDeptId ? eq(courseDepartmentSettings.deptId, studentDeptId) : sql`1=1`,
             sql`(${courseDepartmentSettings.level} = ${studentLevel} OR ${courseDepartmentSettings.level} <= ${studentLevel})`
         ));
+
+        // Capacity filter (if flag enabled, hide full courses)
+        try {
+            const { isFeatureEnabled } = await import("@/lib/feature-flags");
+            if (isFeatureEnabled("COURSE_CAPACITY")) {
+                available = available.filter((c: any) => !c.capacity || (c.enrolledCount || 0) < c.capacity);
+            }
+        } catch {}
+
+        // Timetable clash check (non-breaking, just annotate)
+        try {
+            const { timetableSlots, courseLecturers } = await import("@/db/schema");
+            const studentRegs = await db.select({ courseId: studentCourseRegistrations.courseId }).from(studentCourseRegistrations).where(and(eq(studentCourseRegistrations.studentId, studentId), eq(studentCourseRegistrations.sessionId, (await db.select().from(students).where(eq(students.id, studentId)).limit(1))[0]?.currentSessionId || 0))).limit(50);
+            const registeredIds = studentRegs.map(r => r.courseId).filter(Boolean);
+            if (registeredIds.length > 0) {
+                const existingSlots = await db.select({ courseId: courseLecturers.courseId, day: timetableSlots.day, startTime: timetableSlots.startTime, endTime: timetableSlots.endTime }).from(timetableSlots).innerJoin(courseLecturers, eq(timetableSlots.courseLecturerId, courseLecturers.id)).where(inArray(courseLecturers.courseId, registeredIds as number[]));
+                const newSlots = await db.select({ courseId: courseLecturers.courseId, day: timetableSlots.day, startTime: timetableSlots.startTime, endTime: timetableSlots.endTime }).from(timetableSlots).innerJoin(courseLecturers, eq(timetableSlots.courseLecturerId, courseLecturers.id)).where(inArray(courseLecturers.courseId, available.map((c:any) => c.id)));
+                // Annotate clash (not filtering, just flag)
+                for (const c of available as any[]) {
+                    const clash = newSlots.some(ns => ns.courseId === c.id && existingSlots.some(es => es.day === ns.day && es.startTime === ns.startTime));
+                    if (clash) (c as any).hasClash = true;
+                }
+            }
+        } catch {}
 
         return available;
     }
@@ -116,6 +142,22 @@ export class CourseRegistrationService {
         const prerequisiteErrors = await this.validatePrerequisites(data.studentId, data.courseIds);
         if (prerequisiteErrors.length > 0) {
             throw new Error(`Prerequisite Failure: ${prerequisiteErrors.map(e => e.message).join(' ')}`);
+        }
+
+        // 1b. Capacity check (if enabled)
+        try {
+            const { isFeatureEnabled } = await import("@/lib/feature-flags");
+            if (isFeatureEnabled("COURSE_CAPACITY")) {
+                for (const cid of data.courseIds) {
+                    const [setting] = await db.select({ capacity: (courseDepartmentSettings as any).capacity, enrolledCount: (courseDepartmentSettings as any).enrolledCount }).from(courseDepartmentSettings).where(and(eq(courseDepartmentSettings.courseId, cid), eq(courseDepartmentSettings.deptId, (await db.select({ deptId: students.deptId }).from(students).where(eq(students.id, data.studentId)).limit(1))[0]?.deptId || 0))).limit(1) as any;
+                    if (setting && (setting as any).capacity && (setting as any).enrolledCount >= (setting as any).capacity) {
+                        const [course] = await db.select({ code: courses.code }).from(courses).where(eq(courses.id, cid)).limit(1);
+                        throw new Error(`Course ${course?.code || cid} is full (capacity ${ (setting as any).capacity})`);
+                    }
+                }
+            }
+        } catch (e: any) {
+            if (e.message?.includes("is full")) throw e;
         }
 
         // 2. Fetch Waivers to mark entries correctly
