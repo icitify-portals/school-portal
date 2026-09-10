@@ -132,6 +132,17 @@ export default function CoursePlayer({
     const [imagePreview, setImagePreview] = useState<string | null>(null);
     const [showUploadModal, setShowUploadModal] = useState(false);
 
+    // LMS-2: track video progress (throttled)
+    const handleVideoTimeUpdate = async (e: React.SyntheticEvent<HTMLVideoElement>) => {
+        const v = e.currentTarget;
+        if (!v.duration) return;
+        const pct = (v.currentTime / v.duration) * 100;
+        try {
+            const { updateProgress } = await import("@/actions/lms");
+            await (updateProgress as any)(studentId, courseId, currentLesson?.id || 0, 'lesson', false, { timeSpentSeconds: 5, videoWatchPercent: pct, lastPosition: Math.floor(v.currentTime) });
+        } catch {}
+    };
+
     // Check for active lecture session
     useEffect(() => {
         const checkSession = async () => {
@@ -579,7 +590,7 @@ export default function CoursePlayer({
                                                             />
                                                         ) : currentLesson.contentType === 'video' && currentLesson.contentUrl ? (
                                                             <div className="aspect-video bg-black flex items-center justify-center max-w-3xl mx-auto rounded-2xl overflow-hidden shadow-lg">
-                                                                <video controls className="w-full h-full" src={currentLesson.contentUrl} onEnded={handleMarkComplete} />
+                                                                <video controls className="w-full h-full" src={currentLesson.contentUrl} onTimeUpdate={handleVideoTimeUpdate} onEnded={handleMarkComplete} />
                                                             </div>
                                                         ) : currentLesson.contentType === 'pdf' && currentLesson.contentUrl ? (
                                                             <iframe src={currentLesson.contentUrl} className="w-full h-[650px] rounded-xl border border-slate-200" />

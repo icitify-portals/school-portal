@@ -2320,6 +2320,9 @@ export const studentProgress = mysqlTable('student_progress', {
   isCompleted: boolean('is_completed').default(false),
   lastAccessed: timestamp('last_accessed').defaultNow(),
   quizScore: int('quiz_score'), // If applicable
+  timeSpentSeconds: int('time_spent_seconds').default(0),
+  videoWatchPercent: decimal('video_watch_percent', { precision: 5, scale: 2 }).default('0.00'),
+  lastPosition: int('last_position').default(0),
 });
 
 export const systemSettings = mysqlTable('system_settings', {

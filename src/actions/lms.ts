@@ -13,7 +13,7 @@ import {
     gradingRubrics,
     rubricCriteria
 } from "@/db/schema";
-import { eq, and, asc, desc } from "drizzle-orm";
+import { eq, and, asc, desc, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { AssignmentService } from "@/services/AssignmentService";
 import { CredentialService } from "@/services/CredentialService";
@@ -159,7 +159,7 @@ export async function getCourseContent(courseId: number, studentId?: number) {
     }
 }
 
-export async function updateProgress(studentId: number, courseId: number, itemId: number, itemType: 'module' | 'lesson', isCompleted: boolean = true) {
+export async function updateProgress(studentId: number, courseId: number, itemId: number, itemType: 'module' | 'lesson', isCompleted: boolean = true, extra?: { timeSpentSeconds?: number; videoWatchPercent?: number; lastPosition?: number }) {
     try {
         const existing = await db.select().from(studentProgress)
             .where(and(
@@ -169,11 +169,15 @@ export async function updateProgress(studentId: number, courseId: number, itemId
             .limit(1);
 
         if (existing.length > 0) {
+            const updateData: any = {
+                isCompleted,
+                lastAccessed: new Date(),
+            };
+            if (extra?.timeSpentSeconds) updateData.timeSpentSeconds = sql`${studentProgress.timeSpentSeconds} + ${extra.timeSpentSeconds}`;
+            if (extra?.videoWatchPercent !== undefined) updateData.videoWatchPercent = Math.max(Number(existing[0].videoWatchPercent || 0), extra.videoWatchPercent).toFixed(2);
+            if (extra?.lastPosition !== undefined) updateData.lastPosition = extra.lastPosition;
             await db.update(studentProgress)
-                .set({
-                    isCompleted,
-                    lastAccessed: new Date()
-                })
+                .set(updateData)
                 .where(eq(studentProgress.id, existing[0].id));
         } else {
             await db.insert(studentProgress).values({
@@ -182,8 +186,11 @@ export async function updateProgress(studentId: number, courseId: number, itemId
                 moduleId: itemType === 'module' ? itemId : undefined,
                 lessonId: itemType === 'lesson' ? itemId : undefined,
                 isCompleted,
-                lastAccessed: new Date()
-            });
+                lastAccessed: new Date(),
+                timeSpentSeconds: extra?.timeSpentSeconds || 0,
+                videoWatchPercent: extra?.videoWatchPercent ? extra.videoWatchPercent.toFixed(2) as any : "0.00",
+                lastPosition: extra?.lastPosition || 0,
+            } as any);
         }
 
         // --- NEW: Module Completion Logic ---
