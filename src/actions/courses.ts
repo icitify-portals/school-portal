@@ -87,6 +87,7 @@ export async function createCourse(data: {
             isGroupSubject: data.isGroupSubject || false,
             parentCourseId: data.parentCourseId || null,
         });
+        try { const { logTranscriptActivity } = await import("@/actions/result-module"); await logTranscriptActivity({ action: "create_course", targetType: "course", targetId: result.insertId, targetLabel: data.code, details: { name: data.name, code: data.code } }); } catch {}
         revalidatePath("/admin/courses");
         return { success: true, courseId: result.insertId };
     } catch (error) {
@@ -255,6 +256,7 @@ export async function updateCourse(id: number, data: any) {
         if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to update course" };
 
         await db.update(courses).set(data).where(eq(courses.id, id));
+        try { const { logTranscriptActivity } = await import("@/actions/result-module"); await logTranscriptActivity({ action: "update_course", targetType: "course", targetId: id, targetLabel: data.code || String(id), details: data }); } catch {}
         revalidatePath("/admin/courses");
         return { success: true };
     } catch (error) {
@@ -281,6 +283,7 @@ export async function deleteCourse(id: number) {
 
         // Dependencies are handled by DB-level references or needs manual cleanup if not cascading
         await db.delete(courses).where(eq(courses.id, id));
+        try { const { logTranscriptActivity } = await import("@/actions/result-module"); await logTranscriptActivity({ action: "delete_course", targetType: "course", targetId: id, targetLabel: String(id), details: {} }); } catch {}
         revalidatePath("/admin/courses");
         return { success: true };
     } catch (error) {

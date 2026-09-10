@@ -1181,8 +1181,11 @@ export async function createStudentRm(data: any) {
     await db.insert(students).values({
       userId: userRes.insertId,
       matricNumber: data.matricNumber,
+      programmeId: data.programmeId || null,
+      deptId: data.deptId || null,
     });
     
+    await logTranscriptActivity({ action: "create_student", targetType: "student", targetId: userRes.insertId, targetLabel: data.matricNumber, details: { name: data.name, programmeId: data.programmeId, deptId: data.deptId } });
     revalidatePath("/admin/result-module/students");
     return { success: true };
   } catch(e) {
@@ -1199,6 +1202,7 @@ export async function deleteStudentRm(id: number) {
     if (stu) {
       await db.delete(students).where(eq(students.id, id));
       await db.delete(users).where(eq(users.id, stu.userId));
+      await logTranscriptActivity({ action: "delete_student", targetType: "student", targetId: id, targetLabel: stu.matricNumber || String(id), details: { matricNumber: stu.matricNumber } });
     }
     
     revalidatePath("/admin/result-module/students");

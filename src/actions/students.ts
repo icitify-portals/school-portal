@@ -10,7 +10,7 @@ import { auth } from "@/auth";
 import { generateMatricNumber } from "@/actions/matriculation";
 import { hasPermission, hasRole } from "@/lib/rbac";
 
-export async function getStudents(options: { search?: string, page?: number, pageSize?: number, level?: number | string, sessionId?: string, semester?: string } = {}) {
+export async function getStudents(options: { search?: string, page?: number, pageSize?: number, level?: number | string, sessionId?: string, semester?: string, departmentId?: number, programmeId?: number } = {}) {
     try {
         const allowed = await hasPermission("students.view") || await hasRole("admin") || await hasRole("superadmin");
         if (!allowed) {
@@ -93,8 +93,12 @@ export async function getStudents(options: { search?: string, page?: number, pag
             levelCondition = eq(students.currentLevel, level);
         }
 
+        const departmentCondition = options.departmentId ? eq(students.deptId, options.departmentId) : undefined;
+        const programmeCondition = options.programmeId ? eq(students.programmeId, options.programmeId) : undefined;
         const countConditions = [
             levelCondition,
+            departmentCondition,
+            programmeCondition,
             search ? or(
                 like(users.name, searchPattern),
                 like(users.email, searchPattern),
