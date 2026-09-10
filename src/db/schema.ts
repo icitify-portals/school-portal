@@ -193,6 +193,8 @@ export const courseDepartmentSettings = mysqlTable('course_department_settings',
   semester: mysqlEnum('semester', ['1', '2']).notNull(),
   status: mysqlEnum('status', ['compulsory', 'required', 'elective']).default('compulsory').notNull(),
   level: int('level').default(100), // e.g., 100, 200...
+  capacity: int('capacity'),
+  enrolledCount: int('enrolled_count').default(0),
 }, (table) => ({
   pk: { columns: [table.courseId, table.deptId] },
 }));

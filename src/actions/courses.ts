@@ -32,9 +32,27 @@ export async function getCourses() {
         const settings = settingsRaw.map(r => ({ ...r.setting, department: r.department }));
         const prerequisites = prerequisitesRaw.map(r => ({ ...r.prerequisiteEntry, prerequisite: r.prerequisite }));
 
+        // Capacity: count enrollments per course-dept for enrolledCount (non-breaking, additive)
+        let capacityMap = new Map<string, number>();
+        try {
+            const { enrollments } = await import("@/db/schema");
+            const counts = await db.select({ courseId: enrollments.courseId, deptId: students.deptId, cnt: sql<number>`count(*)` })
+                .from(enrollments)
+                .leftJoin(students, eq(enrollments.studentId, students.id))
+                .groupBy(enrollments.courseId, students.deptId);
+            for (const row of counts as any[]) {
+                if (row.courseId && row.deptId) capacityMap.set(`${row.courseId}-${row.deptId}`, Number(row.cnt));
+            }
+        } catch {}
+
         let resultCourses = allCourses.map(course => ({
             ...course,
-            departmentSettings: settings.filter(s => s.courseId === course.id),
+            departmentSettings: settings.filter(s => s.courseId === course.id).map(s => ({
+                ...s,
+                // @ts-ignore capacity may not be in Drizzle schema yet (added via ALTER), read raw
+                capacity: (s as any).capacity ?? null,
+                enrolledCount: capacityMap.get(`${course.id}-${s.deptId}`) || 0,
+            })),
             prerequisites: prerequisites.filter(p => p.courseId === course.id)
         }));
 
