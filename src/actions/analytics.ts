@@ -213,3 +213,21 @@ export async function getSecurityAnalytics() {
         tickets: { statusBreakdown: ticketStatus, categoryBreakdown: ticketCategory }
     };
 }
+
+export async function getAtRiskStudents(courseId?: number) {
+  try {
+    const { studentProgress, resultMarks, students, users } = await import("@/db/schema");
+    const allProgress = await db.select({ studentId: studentProgress.studentId, timeSpent: studentProgress.timeSpentSeconds, courseId: studentProgress.courseId }).from(studentProgress).where(courseId ? eq(studentProgress.courseId, courseId) : undefined as any);
+    const avgTime = allProgress.length ? allProgress.reduce((a, r) => a + (Number((r as any).timeSpent) || 0), 0) / allProgress.length : 0;
+    const threshold = avgTime * 0.3;
+    const atRiskIds = allProgress.filter(r => (Number((r as any).timeSpent) || 0) < threshold).map(r => r.studentId);
+    if (atRiskIds.length === 0) return { success: true, data: [] };
+    const failed = await db.select({ studentId: resultMarks.studentId, grade: resultMarks.grade, studentName: users.name, matric: students.matricNumber, timeSpent: studentProgress.timeSpentSeconds })
+      .from(resultMarks).leftJoin(users, eq(users.id, resultMarks.studentId)).leftJoin(students, eq(students.userId, users.id)).leftJoin(studentProgress, eq(studentProgress.studentId, resultMarks.studentId))
+      .where(and(eq(resultMarks.grade, "F") as any, sql`${resultMarks.studentId} IN (${atRiskIds.join(",")})`)).limit(20);
+    const data = failed.map((f: any) => ({ studentId: f.studentId, name: f.studentName, matric: f.matric, grade: f.grade, timePct: avgTime ? Math.round((Number(f.timeSpent) || 0) / avgTime * 100) : 0 }));
+    return { success: true, data };
+  } catch (e: any) {
+    return { success: false, error: e.message, data: [] };
+  }
+}
