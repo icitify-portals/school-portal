@@ -7,6 +7,8 @@ import { BookOpen, Plus, Trash2, Edit, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { getCourses, createCourse, updateCourse, deleteCourse } from "@/actions/courses";
 import { getDepartmentsList, getProgrammesList } from "@/actions/result-module";
+import { PrerequisiteGraph } from "@/components/courses/PrerequisiteGraph";
+import { isFeatureEnabled } from "@/lib/feature-flags";
 
 export default function ResultModuleCoursesPage() {
     const [courses, setCourses] = useState<any[]>([]);
@@ -159,6 +161,11 @@ export default function ResultModuleCoursesPage() {
                             <Button variant="outline" disabled={currentPage===totalPages} onClick={() => setCurrentPage(p=>Math.min(totalPages,p+1))}>Next</Button>
                         </div>
                     </div>
+                    {isFeatureEnabled("PREREQ_GRAPH") && (
+                        <div className="mt-6">
+                            <PrerequisiteGraph courses={courses.map((c:any) => ({ id: c.id, code: c.code, name: c.name }))} prerequisites={courses.flatMap((c:any) => (c.prerequisites||[]).map((p:any) => ({ courseId: c.id, prerequisiteId: p.prerequisiteId || p.prerequisite?.id, minGrade: p.minGrade })))} />
+                        </div>
+                    )}
                     </>
                 )}
             </div>
