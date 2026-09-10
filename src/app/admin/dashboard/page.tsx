@@ -172,6 +172,7 @@ export default async function AdminDashboardPage() {
                     </div>
                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                         {[
+                            { title: "Carryover Dashboard", desc: "All carryover courses, students & payment status", href: "/admin/registrar/carryover", icon: AlertCircle, color: "bg-amber-600" },
                             { title: "User Management", desc: "Manage all users & bulk import", href: "/admin/users", icon: Users, color: "bg-blue-600" },
                             { title: "Admission Desk", desc: "Screening & applications", href: "/admin/admission", icon: UserCheck, color: "bg-emerald-600" },
                             { title: "CBT Assessments", desc: "Advanced Quiz & Exam Engine", href: "/admin/cbt", icon: Brain, color: "bg-purple-600" },
