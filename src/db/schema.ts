@@ -2266,6 +2266,15 @@ export const lessonNoteApprovers = mysqlTable('lesson_note_approvers', {
   createdAt: timestamp('created_at').defaultNow(),
 });
 
+export const lessonNoteEmbeddings = mysqlTable('lesson_note_embeddings', {
+  id: int('id').autoincrement().primaryKey(),
+  lessonNoteId: int('lesson_note_id').references(() => lessonNotes.id).notNull(),
+  chunkIndex: int('chunk_index').notNull(),
+  chunkText: text('chunk_text').notNull(),
+  embedding: text('embedding').notNull(),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
 export const quizResponses = mysqlTable('quiz_responses', {
   id: int('id').autoincrement().primaryKey(),
   attemptId: int('attempt_id').references(() => quizAttempts.id).notNull(),
