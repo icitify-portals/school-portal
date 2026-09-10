@@ -3,7 +3,7 @@
 
 import { db } from "@/db/db";
 import { users, otpLogs } from "@/db/schema";
-import { eq, and, gt, desc } from "drizzle-orm";
+import { eq, and, gt, desc, sql } from "drizzle-orm";
 import { auth } from "@/auth";
 import { encrypt, decrypt } from "@/lib/encryption";
 import { generateBase32Secret, verifyTOTP, generateBackupCodes } from "@/lib/totp";
