@@ -144,21 +144,19 @@ export class CourseRegistrationService {
             throw new Error(`Prerequisite Failure: ${prerequisiteErrors.map(e => e.message).join(' ')}`);
         }
 
-        // 1b. Capacity check (if enabled)
+        // 1b. Capacity check (if enabled) - waitlist instead of throw
+        const waitlistedCourseIds: number[] = [];
         try {
             const { isFeatureEnabled } = await import("@/lib/feature-flags");
             if (isFeatureEnabled("COURSE_CAPACITY")) {
                 for (const cid of data.courseIds) {
                     const [setting] = await db.select({ capacity: (courseDepartmentSettings as any).capacity, enrolledCount: (courseDepartmentSettings as any).enrolledCount }).from(courseDepartmentSettings).where(and(eq(courseDepartmentSettings.courseId, cid), eq(courseDepartmentSettings.deptId, (await db.select({ deptId: students.deptId }).from(students).where(eq(students.id, data.studentId)).limit(1))[0]?.deptId || 0))).limit(1) as any;
                     if (setting && (setting as any).capacity && (setting as any).enrolledCount >= (setting as any).capacity) {
-                        const [course] = await db.select({ code: courses.code }).from(courses).where(eq(courses.id, cid)).limit(1);
-                        throw new Error(`Course ${course?.code || cid} is full (capacity ${ (setting as any).capacity})`);
+                        waitlistedCourseIds.push(cid);
                     }
                 }
             }
-        } catch (e: any) {
-            if (e.message?.includes("is full")) throw e;
-        }
+        } catch {}
 
         // 2. Fetch Waivers to mark entries correctly
         const activeWaivers = await db.select({ courseId: courseRegistrationWaivers.courseId })
@@ -191,12 +189,30 @@ export class CourseRegistrationService {
                 sessionId: data.sessionId,
                 semester: data.semester,
                 isWaiver: waivedCourseIds.includes(courseId),
-                advisorStatus: 'pending' as const,
+                advisorStatus: (waitlistedCourseIds.includes(courseId) ? 'pending' : 'pending') as const,
                 hodStatus: 'pending' as const,
                 finalStatus: 'pending' as const
             }));
+            // For waitlisted, we will set enrollments status to waitlisted after insert via separate enrollments table if needed
+            // Here studentCourseRegistrations doesn't have waitlisted, so we keep pending but enrollments will be waitlisted
 
             await tx.insert(studentCourseRegistrations).values(registrationEntries);
+
+            // Handle enrollments waitlist for capacity-full courses
+            if (waitlistedCourseIds.length > 0) {
+                const student = await tx.select({ academicYear: students.admissionYear }).from(students).where(eq(students.id, data.studentId)).limit(1);
+                const year = student[0]?.academicYear?.toString() || new Date().getFullYear().toString();
+                for (const cid of waitlistedCourseIds) {
+                    await tx.insert(enrollments).values({
+                        studentId: data.studentId,
+                        courseId: cid,
+                        sessionId: data.sessionId,
+                        academicYear: year,
+                        semester: parseInt(data.semester),
+                        status: 'waitlisted' as any,
+                    } as any);
+                }
+            }
 
             await tx.insert(semesterSummaries).values({
                 studentId: data.studentId,
