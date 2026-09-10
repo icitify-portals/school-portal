@@ -117,7 +117,11 @@ export async function requestTwoFactorOTPAction(purpose: 'login' | 'setup' = 'lo
                 // Reuse recent OTP, just resend email
                 const existingCode = (recentValid[0] as any).otpCode;
                 if (targetMethod === 'email') {
-                    await sendEmail(user.email, 'Your Authentication Code', `<p>Your verification code is: <strong style="font-size: 24px;">${existingCode}</strong></p><p>This code expires in 15 minutes.</p>`);
+                    const emailResult = await sendEmail(user.email, 'Your Authentication Code', `<p>Your verification code is: <strong style="font-size: 24px;">${existingCode}</strong></p><p>This code expires in 15 minutes.</p>`);
+                    if (!emailResult.success) {
+                        console.error("OTP resend email failed:", emailResult.error);
+                        return { error: "Failed to send email. Please try again." };
+                    }
                     return { success: true, message: "Code resent to email (same code)." };
                 } else if (targetMethod === 'sms' && user.phone) {
                     await sendWhatsAppMessage(user.phone, `Your FSS Portal verification code is: *${existingCode}*. It expires in 15 minutes.`);
@@ -138,11 +142,15 @@ export async function requestTwoFactorOTPAction(purpose: 'login' | 'setup' = 'lo
         });
 
         if (targetMethod === 'email') {
-            await sendEmail(
+            const emailResult = await sendEmail(
                 user.email,
                 'Your Authentication Code',
                 `<p>Your verification code is: <strong style="font-size: 24px;">${otpCode}</strong></p><p>This code expires in 15 minutes.</p>`
             );
+            if (!emailResult.success) {
+                console.error("OTP email failed to send:", emailResult.error);
+                return { error: "Failed to send email. Please check your email address or try again." };
+            }
             // Invalidate older codes after successful send
             try { await db.execute(sql`UPDATE otp_logs SET is_used=1 WHERE user_id=${userId} AND is_used=0 AND otp_code != ${otpCode} AND expires_at > NOW()`); } catch {}
             return { success: true, message: "Code sent to email." };
