@@ -222,7 +222,7 @@ export default function SignatureCapture({ value, onChange, label, applicationId
     if (preview) {
         return (
             <div className="relative border-2 border-indigo-100 rounded-2xl overflow-hidden bg-white w-full max-w-md mx-auto h-48 flex items-center justify-center">
-                <Image src={preview} alt="Signature preview" layout="fill" objectFit="contain" className="p-4" />
+                <Image src={preview} alt="Signature preview" fill className="object-contain p-4" />
                 <div className="absolute inset-0 bg-slate-900/10 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center gap-4">
                     <Button type="button" onClick={clearPreview} variant="destructive" className="rounded-full w-12 h-12 p-0 shadow-lg">
                         <X className="w-5 h-5" />

@@ -147,7 +147,7 @@ export default function PhotoCapture({ value, onChange, label, applicationId }: 
     if (preview) {
         return (
             <div className="relative border-2 border-indigo-100 rounded-3xl overflow-hidden bg-white w-full max-w-sm mx-auto aspect-square flex items-center justify-center">
-                <Image src={preview} alt="Captured photo" layout="fill" objectFit="cover" />
+                <Image src={preview} alt="Captured photo" fill className="object-cover" />
                 <div className="absolute inset-0 bg-slate-900/10 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center gap-4">
                     <Button type="button" onClick={clearPreview} variant="destructive" className="rounded-full w-12 h-12 p-0 shadow-lg">
                         <X className="w-5 h-5" />
