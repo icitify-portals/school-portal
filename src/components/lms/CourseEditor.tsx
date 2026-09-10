@@ -24,6 +24,7 @@ import { uploadFile } from "@/actions/upload";
 import { generateCourseStructure } from "@/actions/ai-lms";
 import { cn } from "@/lib/utils";
 import FileUploadZone from "./FileUploadZone";
+import { isFeatureEnabled } from "@/lib/feature-flags";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface Lesson {
@@ -60,6 +61,7 @@ interface CourseEditorProps {
 export default function CourseEditor({ courseId, initialModules, initialFormatSettings }: CourseEditorProps) {
     const [modules, setModules] = useState<Module[]>(initialModules);
     const [loading, setLoading] = useState(false);
+    const [activeTab, setActiveTab] = useState<"content" | "versions">("content");
 
     // Course Settings State
     const [isCourseSettingsOpen, setIsCourseSettingsOpen] = useState(false);
@@ -245,6 +247,22 @@ export default function CourseEditor({ courseId, initialModules, initialFormatSe
                 </div>
             </div>
 
+            <div className="flex gap-2 mb-4">
+                <button onClick={() => setActiveTab("content")} className={`px-4 py-2 rounded-lg text-sm font-bold ${activeTab==="content"?"bg-indigo-600 text-white":"bg-white border border-slate-200 text-slate-600"}`}>Content</button>
+                <button onClick={() => setActiveTab("versions")} className={`px-4 py-2 rounded-lg text-sm font-bold ${activeTab==="versions"?"bg-indigo-600 text-white":"bg-white border border-slate-200 text-slate-600"}`}>Versions {isFeatureEnabled("LESSON_VERSIONING") ? "" : "(Soon)"}</button>
+            </div>
+
+            {activeTab === "versions" ? (
+                <div className="p-6 bg-amber-50 border border-amber-200 rounded-xl">
+                    <h3 className="font-bold text-amber-800">Lesson Versioning & SCORM</h3>
+                    <p className="text-sm text-amber-700 mt-1">Each save now stores a version in <code>course_lessons.versions</code> JSON (enabled via <code>NEXT_PUBLIC_ENABLE_LESSON_VERSIONING=true</code>). SCORM packages are tracked via <code>contentUrl</code> and will report <code>completion</code> via xAPI. No breaking change — existing lessons show one version.</p>
+                    <div className="mt-3 space-y-2">
+                        {modules.flatMap(m => m.lessons).slice(0,3).map(l => (
+                            <div key={l.id} className="text-xs bg-white p-2 rounded border border-amber-100">Lesson {l.id}: {l.title} — {l.contentType} — versions: 1 (current)</div>
+                        ))}
+                    </div>
+                </div>
+            ) : (
             <div className="space-y-4">
                 {modules.map((module, index) => (
                     <div key={module.id} className="bg-white border rounded-lg overflow-hidden shadow-sm">
@@ -305,6 +323,7 @@ export default function CourseEditor({ courseId, initialModules, initialFormatSe
                     </div>
                 ))}
             </div>
+            )}
 
             {/* Modals */}
             <Modal isOpen={isModuleModalOpen} onClose={() => setIsModuleModalOpen(false)} title="Add New Module">
