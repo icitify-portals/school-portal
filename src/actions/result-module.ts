@@ -21,6 +21,7 @@ import {
   semesterSummaries,
   resultMarks,
   transcriptAuditLogs,
+  courseDepartmentSettings,
 } from "@/db/schema";
 import { eq, inArray, and, like, or, sql, isNotNull } from "drizzle-orm";
 import {
@@ -329,12 +330,18 @@ export async function addBulkResultsViaIdentifier(
   try {
     const allowed = await hasRole("admin") || await hasRole("superadmin") || await hasRole("registrar") || await hasRole("record_officer") || await hasPermission("result_module.manage");
     if (!allowed) return { success: false, error: "Unauthorized: record_officer or higher required" };
-    // Get course credit load
+    // Get course credit load (per-department override where available)
     const course = await db.query.courses.findFirst({
       where: eq(courses.id, courseId)
     });
     if (!course) throw new Error("Course not found");
-    const creditLoad = course.creditUnits || 0;
+    const deptCreditOverrides = await db.select({
+      deptId: courseDepartmentSettings.deptId,
+      creditUnits: courseDepartmentSettings.creditUnits
+    })
+      .from(courseDepartmentSettings)
+      .where(eq(courseDepartmentSettings.courseId, courseId));
+    const creditByDept = new Map(deptCreditOverrides.map(d => [d.deptId, d.creditUnits]));
 
     // Get all students to map identifiers
     const allStudents = await db.query.students.findMany();
@@ -397,7 +404,8 @@ export async function addBulkResultsViaIdentifier(
       }
 
       const { grade, gradePoint } = resolveGrade(row.score, gradingScaleRules);
-      
+      const creditLoad = creditByDept.get(student.deptId ?? -1) ?? course.creditUnits ?? 0;
+
       toInsert.push({
         studentId: student.id,
         courseId,
@@ -845,6 +853,13 @@ export async function addMultiCourseBulkResults(
 
     const allStudents = await db.query.students.findMany();
     const allCourses = await db.query.courses.findMany();
+    const allDeptCredits = await db.select({
+      courseId: courseDepartmentSettings.courseId,
+      deptId: courseDepartmentSettings.deptId,
+      creditUnits: courseDepartmentSettings.creditUnits
+    }).from(courseDepartmentSettings);
+    const deptCreditKey = (courseId: number, deptId: number | null) => `${courseId}:${deptId ?? -1}`;
+    const creditByCourseDept = new Map(allDeptCredits.map(d => [deptCreditKey(d.courseId, d.deptId), d.creditUnits]));
 
     const errors: string[] = [];
     const toInsert: any[] = [];
@@ -887,7 +902,7 @@ export async function addMultiCourseBulkResults(
         }
       }
 
-      const creditLoad = course.creditUnits || 3;
+      const creditLoad = creditByCourseDept.get(deptCreditKey(course.id, student.deptId ?? null)) ?? course.creditUnits ?? 3;
       const { grade, gradePoint } = resolveGrade(row.score, gradingScaleRules);
 
       toInsert.push({

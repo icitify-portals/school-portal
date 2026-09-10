@@ -13,6 +13,10 @@ import { revalidatePath } from "next/cache";
 import { GradingService } from "@/services/GradingService";
 import { hasPermission, hasRole } from "@/lib/rbac";
 
+function effectiveCreditUnits(courseUnits: number | null, deptUnits: number | null) {
+    return deptUnits ?? courseUnits ?? 0;
+}
+
 export async function getStudentResults(studentId: number) {
     try {
         const studentEnrollments = await db.select({
@@ -22,11 +26,18 @@ export async function getStudentResults(studentId: number) {
             academicYear: enrollments.academicYear,
             semester: enrollments.semester,
             course: courses,
-            result: results
+            result: results,
+            deptUnits: courseDepartmentSettings.creditUnits,
         })
             .from(enrollments)
             .leftJoin(courses, eq(enrollments.courseId, courses.id))
             .leftJoin(results, eq(enrollments.id, results.enrollmentId))
+            .innerJoin(students, eq(enrollments.studentId, students.id))
+            .leftJoin(courseDepartmentSettings, and(
+                eq(courseDepartmentSettings.courseId, courses.id),
+                eq(courseDepartmentSettings.deptId, students.deptId),
+                sql`${enrollments.semester} = ${courseDepartmentSettings.semester}`
+            ))
             .where(eq(enrollments.studentId, studentId)) || [];
 
         // Fetch annual summaries if they exist
@@ -47,7 +58,7 @@ export async function getStudentResults(studentId: number) {
             return {
                 code: e.course?.code,
                 title: e.course?.name,
-                units: e.course?.creditUnits || 0,
+                units: effectiveCreditUnits(e.course?.creditUnits ?? null, e.deptUnits ?? null),
                 score,
                 grade: pointRule?.letterGrade || "F",
                 points: parseFloat(pointRule?.points || "0"),
@@ -68,7 +79,7 @@ export async function getStudentResults(studentId: number) {
             if (result && result.score !== null) {
                 const pointRule = ((gradingSystem as any).points || []).find((p: any) => result.score >= p.minMark && result.score <= p.maxMark);
                 const points = parseFloat(pointRule?.points || "0");
-                const units = e.course?.creditUnits || 0;
+                const units = effectiveCreditUnits(e.course?.creditUnits ?? null, e.deptUnits ?? null);
 
                 acc[key].units += units;
                 acc[key].weightedPoints += (points * units);

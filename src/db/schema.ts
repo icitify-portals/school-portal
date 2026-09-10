@@ -195,6 +195,7 @@ export const courseDepartmentSettings = mysqlTable('course_department_settings',
   level: int('level').default(100), // e.g., 100, 200...
   capacity: int('capacity'),
   enrolledCount: int('enrolled_count').default(0),
+  creditUnits: int('credit_units'),
 }, (table) => ({
   pk: { columns: [table.courseId, table.deptId] },
 }));

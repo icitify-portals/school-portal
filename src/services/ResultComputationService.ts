@@ -6,7 +6,8 @@ import {
     students, 
     gradePoints, 
     gradingSystems,
-    gradingSystemSessions 
+    gradingSystemSessions,
+    courseDepartmentSettings
 } from "@/db/schema";
 import { eq, and, sql, desc, sum } from "drizzle-orm";
 
@@ -41,14 +42,20 @@ export class ResultComputationService {
         if (!config[0]) throw new Error("No grading system configured for this session.");
         const gradingSystemId = config[0].gradingSystemId;
 
-        // 2. Fetch all marks for this semester
+        // 2. Fetch all marks for this semester, using per-department credits when available
         const marks = await db.select({
             id: resultMarks.id,
             totalScore: resultMarks.totalScore,
-            units: courses.creditUnits
+            courseUnits: courses.creditUnits,
+            deptUnits: courseDepartmentSettings.creditUnits,
         })
         .from(resultMarks)
         .innerJoin(courses, eq(resultMarks.courseId, courses.id))
+        .innerJoin(students, eq(resultMarks.studentId, students.id))
+        .leftJoin(courseDepartmentSettings, and(
+            eq(courseDepartmentSettings.courseId, courses.id),
+            eq(courseDepartmentSettings.deptId, students.deptId)
+        ))
         .where(and(
             eq(resultMarks.studentId, studentId),
             eq(resultMarks.sessionId, sessionId),
@@ -61,7 +68,7 @@ export class ResultComputationService {
 
         for (const m of marks) {
             const score = parseFloat(m.totalScore || "0");
-            const units = m.units || 0;
+            const units = m.deptUnits ?? m.courseUnits ?? 0;
             const grade = await this.getGradeForScore(gradingSystemId, score);
 
             if (grade) {

@@ -3,8 +3,8 @@
 import { ResultComputationService } from "@/services/ResultComputationService";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db/db";
-import { resultMarks, semesterSummaries, students, users, courses } from "@/db/schema";
-import { eq, and, desc } from "drizzle-orm";
+import { resultMarks, semesterSummaries, students, users, courses, courseDepartmentSettings } from "@/db/schema";
+import { eq, and, desc, sql } from "drizzle-orm";
 import { hasRole, hasPermission } from "@/lib/rbac";
 
 export async function computeStudentGPAction(studentId: number, sessionId: number, semester: '1' | '2') {
@@ -33,13 +33,19 @@ export async function getStudentSemesterResultAction(studentId: number, sessionI
             id: resultMarks.id,
             courseCode: courses.code,
             courseName: courses.name,
-            units: courses.creditUnits,
+            units: sql<number>`COALESCE(${courseDepartmentSettings.creditUnits}, ${courses.creditUnits})`.mapWith(Number),
             total: resultMarks.totalScore,
             grade: resultMarks.grade,
             points: resultMarks.gradePoint
         })
         .from(resultMarks)
         .innerJoin(courses, eq(resultMarks.courseId, courses.id))
+        .innerJoin(students, eq(resultMarks.studentId, students.id))
+        .leftJoin(courseDepartmentSettings, and(
+            eq(courseDepartmentSettings.courseId, courses.id),
+            eq(courseDepartmentSettings.deptId, students.deptId),
+            sql`${resultMarks.semester} = ${courseDepartmentSettings.semester}`
+        ))
         .where(and(
             eq(resultMarks.studentId, studentId),
             eq(resultMarks.sessionId, sessionId),

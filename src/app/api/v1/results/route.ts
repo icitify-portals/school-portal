@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db/db";
-import { results, enrollments, courses, students } from "@/db/schema";
-import { eq, sql } from "drizzle-orm";
+import { results, enrollments, courses, students, courseDepartmentSettings } from "@/db/schema";
+import { eq, and, sql } from "drizzle-orm";
 import { withApiAuth } from "@/lib/api-auth";
 
 async function handler(req: NextRequest) {
@@ -30,13 +30,18 @@ async function handler(req: NextRequest) {
             status: results.status,
             courseCode: courses.code,
             courseName: courses.name,
-            creditUnits: courses.creditUnits,
+            creditUnits: sql<number>`COALESCE(${courseDepartmentSettings.creditUnits}, ${courses.creditUnits})`.mapWith(Number),
             matricNumber: students.matricNumber,
         })
             .from(results)
             .innerJoin(enrollments, eq(results.enrollmentId, enrollments.id))
             .innerJoin(courses, eq(enrollments.courseId, courses.id))
             .innerJoin(students, eq(enrollments.studentId, students.id))
+            .leftJoin(courseDepartmentSettings, and(
+                eq(courseDepartmentSettings.courseId, courses.id),
+                eq(courseDepartmentSettings.deptId, students.deptId),
+                sql`${enrollments.semester} = ${courseDepartmentSettings.semester}`
+            ))
             .where(conditions.length > 0 ? sql`${sql.join(conditions, sql` AND `)}` : undefined)
             .orderBy(results.id)
             .limit(limit)

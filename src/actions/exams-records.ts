@@ -7,9 +7,13 @@ import {
     institutionalUnits, studentGroups, annualSummaries,
     affectiveTraits, behavioralScores, reportRemarks, studentVitals,
     systemAuditLogs, componentResults, courseComponents, quranMemorizationLogs,
-    reportCardRubrics
+    reportCardRubrics, courseDepartmentSettings
 } from "@/db/schema";
 import { eq, and, sql, desc, or, inArray } from "drizzle-orm";
+
+function effectiveCreditUnits(courseUnits: number | null, deptUnits: number | null) {
+    return deptUnits ?? courseUnits ?? 0;
+}
 import { auth } from "@/auth";
 import { hasPermission, hasRole } from "@/lib/rbac";
 
@@ -133,7 +137,7 @@ export async function getStudentAcademicRecord(studentId: number) {
             courseId: courses.id,
             code: courses.code,
             title: courses.name,
-            units: courses.creditUnits,
+            units: sql<number>`COALESCE(${courseDepartmentSettings.creditUnits}, ${courses.creditUnits})`.mapWith(Number),
             totalScore: results.totalScore,
             caScore: results.caScore,
             examScore: results.examScore,
@@ -149,6 +153,12 @@ export async function getStudentAcademicRecord(studentId: number) {
             .innerJoin(enrollments, eq(results.enrollmentId, enrollments.id))
             .innerJoin(courses, eq(enrollments.courseId, courses.id))
             .innerJoin(academicSessions, eq(enrollments.sessionId, academicSessions.id))
+            .innerJoin(students, eq(enrollments.studentId, students.id))
+            .leftJoin(courseDepartmentSettings, and(
+                eq(courseDepartmentSettings.courseId, courses.id),
+                eq(courseDepartmentSettings.deptId, students.deptId),
+                sql`${enrollments.semester} = ${courseDepartmentSettings.semester}`
+            ))
             .where(eq(enrollments.studentId, studentId))
             .orderBy(enrollments.sessionId, enrollments.semester);
 
@@ -419,7 +429,7 @@ export async function getK12StudentReportData(studentId: number, sessionId: numb
             courseId: courses.id,
             code: courses.code,
             title: courses.name,
-            units: courses.creditUnits,
+            units: sql<number>`COALESCE(${courseDepartmentSettings.creditUnits}, ${courses.creditUnits})`.mapWith(Number),
             caScore: results.caScore,
             examScore: results.examScore,
             totalScore: results.totalScore,
@@ -431,6 +441,12 @@ export async function getK12StudentReportData(studentId: number, sessionId: numb
             .from(results)
             .innerJoin(enrollments, eq(results.enrollmentId, enrollments.id))
             .innerJoin(courses, eq(enrollments.courseId, courses.id))
+            .innerJoin(students, eq(enrollments.studentId, students.id))
+            .leftJoin(courseDepartmentSettings, and(
+                eq(courseDepartmentSettings.courseId, courses.id),
+                eq(courseDepartmentSettings.deptId, students.deptId),
+                sql`${enrollments.semester} = ${courseDepartmentSettings.semester}`
+            ))
             .where(and(
                 eq(enrollments.studentId, studentId),
                 eq(enrollments.sessionId, sessionId),

@@ -1,7 +1,7 @@
 "use server";
 
 import { db } from "@/db/db";
-import { students, courses, academicSessions, resultMarks, studentResults, resultBatches, academicCarryOvers, users, departments, programmes, studentBills } from "@/db/schema";
+import { students, courses, academicSessions, resultMarks, studentResults, resultBatches, academicCarryOvers, users, departments, programmes, studentBills, courseDepartmentSettings } from "@/db/schema";
 import { eq, and, sql, desc, inArray } from "drizzle-orm";
 
 export async function getCarryoverDashboard(filters?: { departmentId?: number; programmeId?: number; level?: string; sessionId?: number; status?: string }) {
@@ -16,7 +16,7 @@ export async function getCarryoverDashboard(filters?: { departmentId?: number; p
       status: academicCarryOvers.status,
       courseCode: courses.code,
       courseName: courses.name,
-      courseUnits: courses.creditUnits,
+      courseUnits: sql<number>`COALESCE(${courseDepartmentSettings.creditUnits}, ${courses.creditUnits})`.mapWith(Number),
       sessionName: academicSessions.name,
       matricNumber: students.matricNumber,
       studentName: users.name,
@@ -32,6 +32,11 @@ export async function getCarryoverDashboard(filters?: { departmentId?: number; p
       .leftJoin(academicSessions, eq(academicCarryOvers.sessionId, academicSessions.id))
       .leftJoin(departments, eq(students.deptId, departments.id))
       .leftJoin(programmes, eq(students.programmeId, programmes.id))
+      .leftJoin(courseDepartmentSettings, and(
+        eq(courseDepartmentSettings.courseId, academicCarryOvers.courseId),
+        eq(courseDepartmentSettings.deptId, students.deptId),
+        sql`${academicCarryOvers.semester} = ${courseDepartmentSettings.semester}`
+      ))
       .orderBy(desc(academicCarryOvers.createdAt))
       .limit(1000);
 
@@ -45,7 +50,7 @@ export async function getCarryoverDashboard(filters?: { departmentId?: number; p
       totalScore: resultMarks.totalScore,
       courseCode: courses.code,
       courseName: courses.name,
-      courseUnits: courses.creditUnits,
+      courseUnits: sql<number>`COALESCE(${courseDepartmentSettings.creditUnits}, ${courses.creditUnits})`.mapWith(Number),
       sessionName: academicSessions.name,
       matricNumber: students.matricNumber,
       studentName: users.name,
@@ -58,6 +63,11 @@ export async function getCarryoverDashboard(filters?: { departmentId?: number; p
       .leftJoin(students, eq(resultMarks.studentId, students.id))
       .leftJoin(users, eq(students.userId, users.id))
       .leftJoin(departments, eq(students.deptId, departments.id))
+      .leftJoin(courseDepartmentSettings, and(
+        eq(courseDepartmentSettings.courseId, resultMarks.courseId),
+        eq(courseDepartmentSettings.deptId, students.deptId),
+        sql`${resultMarks.semester} = ${courseDepartmentSettings.semester}`
+      ))
       .where(and(eq(resultMarks.grade, "F") as any, eq(students.status, "active")))
       .limit(1000);
 

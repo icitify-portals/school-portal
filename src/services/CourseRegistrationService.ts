@@ -38,7 +38,7 @@ export class CourseRegistrationService {
             id: courses.id,
             name: courses.name,
             code: courses.code,
-            units: courses.creditUnits,
+            units: sql<number>`COALESCE(${courseDepartmentSettings.creditUnits}, ${courses.creditUnits})`.mapWith(Number),
             status: courseDepartmentSettings.status,
             isUniversityRequired: courses.isUniversityRequired,
             capacity: (courseDepartmentSettings as any).capacity,
@@ -164,12 +164,25 @@ export class CourseRegistrationService {
             .where(eq(courseRegistrationWaivers.studentId, data.studentId));
         const waivedCourseIds = activeWaivers.map(w => w.courseId);
 
-        // 3. Credit Unit Validation
-        const selectedCourses = await db.select({ units: courses.creditUnits })
+        // 3. Credit Unit Validation (per-department credits where available)
+        const studentDept = await db.select({ deptId: students.deptId })
+            .from(students)
+            .where(eq(students.id, data.studentId))
+            .limit(1);
+        const deptId = studentDept[0]?.deptId;
+
+        const selectedCourses = await db.select({
+            courseUnits: courses.creditUnits,
+            deptUnits: courseDepartmentSettings.creditUnits
+        })
             .from(courses)
+            .leftJoin(courseDepartmentSettings, and(
+                eq(courseDepartmentSettings.courseId, courses.id),
+                deptId ? eq(courseDepartmentSettings.deptId, deptId) : sql`1=1`
+            ))
             .where(inArray(courses.id, data.courseIds));
-        
-        const totalUnits = selectedCourses.reduce((sum, c) => sum + (c.units || 0), 0);
+
+        const totalUnits = selectedCourses.reduce((sum, c) => sum + (c.deptUnits ?? c.courseUnits ?? 0), 0);
         
         if (totalUnits < 15 || totalUnits > 24) {
             throw new Error(`Invalid credit units: ${totalUnits}. Allowed range: 15-24 units.`);

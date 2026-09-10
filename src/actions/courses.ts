@@ -3,7 +3,7 @@
 
 import { db } from "@/db/db";
 import { courses, courseDepartmentSettings, coursePrerequisites, departments, staffProfiles } from "@/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { hasPermission, hasRole } from "@/lib/rbac";
 import { auth } from "@/auth";
@@ -350,7 +350,7 @@ export async function getAvailableCourses(deptId: number, level: number) {
             id: courses.id,
             name: courses.name,
             code: courses.code,
-            units: courses.creditUnits,
+            units: sql<number>`COALESCE(${courseDepartmentSettings.creditUnits}, ${courses.creditUnits})`.mapWith(Number),
             status: courseDepartmentSettings.status
         })
             .from(courses)

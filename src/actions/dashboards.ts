@@ -155,10 +155,16 @@ export async function getStudentDashboardStats(userId: number) {
                 id: courses.id,
                 name: courses.name,
                 code: courses.code,
-                credits: courses.creditUnits
+                credits: sql<number>`COALESCE(${courseDepartmentSettings.creditUnits}, ${courses.creditUnits})`.mapWith(Number)
             })
                 .from(enrollments)
                 .innerJoin(courses, eq(enrollments.courseId, courses.id))
+                .innerJoin(students, eq(enrollments.studentId, students.id))
+                .leftJoin(courseDepartmentSettings, and(
+                    eq(courseDepartmentSettings.courseId, courses.id),
+                    eq(courseDepartmentSettings.deptId, students.deptId),
+                    sql`${enrollments.semester} = ${courseDepartmentSettings.semester}`
+                ))
                 .where(and(
                     eq(enrollments.studentId, student.id),
                     eq(enrollments.status, 'approved')

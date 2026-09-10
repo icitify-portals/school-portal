@@ -12,7 +12,8 @@ import {
     departments,
     programmes,
     systemSettings,
-    institutionalUnits
+    institutionalUnits,
+    courseDepartmentSettings
 } from "@/db/schema";
 import { eq, and, asc, sql } from "drizzle-orm";
 import StudentResults from "@/components/lms/StudentResults";
@@ -84,7 +85,7 @@ export default async function ResultsPage() {
                     const courseResults = await db.select({
                         code: courses.code,
                         title: courses.name,
-                        units: courses.creditUnits,
+                        units: sql<number>`COALESCE(${courseDepartmentSettings.creditUnits}, ${courses.creditUnits})`.mapWith(Number),
                         score: results.totalScore,
                         grade: results.grade,
                         gp: results.gradePoint,
@@ -92,6 +93,12 @@ export default async function ResultsPage() {
                         .from(results)
                         .innerJoin(enrollments, eq(results.enrollmentId, enrollments.id))
                         .innerJoin(courses, eq(enrollments.courseId, courses.id))
+                        .innerJoin(students, eq(enrollments.studentId, students.id))
+                        .leftJoin(courseDepartmentSettings, and(
+                            eq(courseDepartmentSettings.courseId, courses.id),
+                            eq(courseDepartmentSettings.deptId, students.deptId),
+                            sql`${enrollments.semester} = ${courseDepartmentSettings.semester}`
+                        ))
                         .where(and(
                             eq(enrollments.studentId, student.id),
                             eq(enrollments.academicYear, academicSession.name),

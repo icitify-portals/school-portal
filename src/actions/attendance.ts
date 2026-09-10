@@ -6,7 +6,7 @@ import { hasPermission, hasRole } from "@/lib/rbac";
 import { NotificationService } from "@/services/NotificationService";
 
 import { db } from "@/db/db";
-import { attendance, staffProfiles, students, users, departments, courses, attendanceExcuses, parentStudentMappings, attendanceKioskTokens } from "@/db/schema";
+import { attendance, staffProfiles, students, users, departments, courses, attendanceExcuses, parentStudentMappings, attendanceKioskTokens, courseDepartmentSettings } from "@/db/schema";
 import { eq, desc, and, gte, lte, sql, or, count, isNull } from "drizzle-orm";
 import { lectureSessions, lectureAttendance, timetableSlots, courseLecturers } from "@/db/schema";
 import { getAttendanceSettings, getSettingByKey } from "@/actions/settings";
@@ -529,7 +529,7 @@ export async function getStudentCourseAttendance(studentId?: number) {
             courseId: courseLecturers.courseId,
             courseName: courses.name,
             courseCode: courses.code,
-            creditUnits: courses.creditUnits,
+            creditUnits: sql<number>`COALESCE(${courseDepartmentSettings.creditUnits}, ${courses.creditUnits})`.mapWith(Number),
             sessionId: lectureSessions.id,
             attendanceId: lectureAttendance.id,
             timeIn: lectureAttendance.timeIn,
@@ -541,6 +541,11 @@ export async function getStudentCourseAttendance(studentId?: number) {
             .innerJoin(timetableSlots, eq(lectureSessions.slotId, timetableSlots.id))
             .innerJoin(courseLecturers, eq(timetableSlots.courseLecturerId, courseLecturers.id))
             .innerJoin(courses, eq(courseLecturers.courseId, courses.id))
+            .innerJoin(students, eq(lectureAttendance.studentId, students.id))
+            .leftJoin(courseDepartmentSettings, and(
+                eq(courseDepartmentSettings.courseId, courses.id),
+                eq(courseDepartmentSettings.deptId, students.deptId)
+            ))
             .where(eq(lectureAttendance.studentId, sid))
             .orderBy(desc(lectureSessions.date));
 

@@ -69,7 +69,7 @@ export async function checkGraduationEligibility(studentId: number) {
       courseId: courses.id,
       code: courses.code,
       name: courses.name,
-      creditUnits: courses.creditUnits
+      creditUnits: courseDepartmentSettings.creditUnits
     })
     .from(courseDepartmentSettings)
     .innerJoin(courses, eq(courseDepartmentSettings.courseId, courses.id))
@@ -98,7 +98,7 @@ export async function checkGraduationEligibility(studentId: number) {
       if (!isPassed) {
         unpassedCompulsoryCourses.push(`${core.code} - ${core.name}`);
       } else if (result) {
-        passedCredits += core.creditUnits;
+        passedCredits += core.creditUnits ?? 0;
       }
     }
 
@@ -108,7 +108,7 @@ export async function checkGraduationEligibility(studentId: number) {
 
     studentResults.forEach(r => {
       const resultCourse = compulsoryCourses.find(c => c.courseId === r.courseId);
-      const units = resultCourse?.creditUnits || 3; // Fallback unit
+      const units = resultCourse?.creditUnits ?? 0;
       if (r.gradePoint) {
         const gp = parseFloat(r.gradePoint.toString());
         totalGradePoints += gp * units;

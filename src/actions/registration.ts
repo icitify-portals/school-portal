@@ -107,9 +107,20 @@ export async function validateRegistration(studentId: number, courseIds: number[
             }
         }
 
-        // 3. Fetch Course Details
-        const selectedCourses = await db.select().from(courses).where(inArray(courses.id, courseIds));
-        const totalUnits = selectedCourses.reduce((sum, c) => sum + (c.creditUnits || 0), 0);
+        // 3. Fetch Course Details (with per-department credit overrides)
+        const selectedCourses = await db.select({
+            id: courses.id,
+            code: courses.code,
+            courseUnits: courses.creditUnits,
+            deptUnits: courseDepartmentSettings.creditUnits
+        })
+            .from(courses)
+            .leftJoin(courseDepartmentSettings, and(
+                eq(courseDepartmentSettings.courseId, courses.id),
+                eq(courseDepartmentSettings.deptId, student.deptId)
+            ))
+            .where(inArray(courses.id, courseIds));
+        const totalUnits = selectedCourses.reduce((sum, c) => sum + (c.deptUnits ?? c.courseUnits ?? 0), 0);
 
         // 4. Validate Unit Limits
         if (isAnnual) {
@@ -242,10 +253,16 @@ export async function getPendingRegistrations() {
                 id: courses.id,
                 code: courses.code,
                 name: courses.name,
-                units: courses.creditUnits
+                units: sql<number>`COALESCE(${courseDepartmentSettings.creditUnits}, ${courses.creditUnits})`.mapWith(Number)
             })
                 .from(enrollments)
                 .innerJoin(courses, eq(enrollments.courseId, courses.id))
+                .innerJoin(students, eq(enrollments.studentId, students.id))
+                .leftJoin(courseDepartmentSettings, and(
+                    eq(courseDepartmentSettings.courseId, courses.id),
+                    eq(courseDepartmentSettings.deptId, students.deptId),
+                    sql`${enrollments.semester} = ${courseDepartmentSettings.semester}`
+                ))
                 .where(and(
                     eq(enrollments.studentId, reg.studentId!),
                     eq(enrollments.academicYear, reg.academicYear!),

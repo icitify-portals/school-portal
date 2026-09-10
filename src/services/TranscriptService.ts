@@ -156,7 +156,7 @@ export class TranscriptService {
 
                 const group = sessionsMap.get(key)!;
                 const score = parseFloat(r.result?.totalScore?.toString() || '0');
-                const units = r.course.creditUnits;
+                const units = r.deptSetting?.creditUnits ?? r.course.creditUnits;
                 const gp = parseFloat(r.result?.gradePoint?.toString() || '0');
 
                 group.courses.push({

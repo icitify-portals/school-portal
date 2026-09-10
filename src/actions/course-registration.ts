@@ -3,8 +3,8 @@
 import { CourseRegistrationService } from "@/services/CourseRegistrationService";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db/db";
-import { studentCourseRegistrations, courses, students, users } from "@/db/schema";
-import { eq, and } from "drizzle-orm";
+import { studentCourseRegistrations, courses, students, users, courseDepartmentSettings } from "@/db/schema";
+import { eq, and, sql } from "drizzle-orm";
 import { hasRole, hasPermission } from "@/lib/rbac";
 import { sendInAppNotification } from "./notifications";
 
@@ -50,12 +50,18 @@ export async function getRegisteredCoursesAction(studentId: number, sessionId: n
             id: courses.id,
             name: courses.name,
             code: courses.code,
-            units: courses.creditUnits,
+            units: sql<number>`COALESCE(${courseDepartmentSettings.creditUnits}, ${courses.creditUnits})`.mapWith(Number),
             // @ts-expect-error - TS2339: Auto-suppressed for build
             status: studentCourseRegistrations.status
         })
         .from(studentCourseRegistrations)
         .innerJoin(courses, eq(studentCourseRegistrations.courseId, courses.id))
+        .innerJoin(students, eq(studentCourseRegistrations.studentId, students.id))
+        .leftJoin(courseDepartmentSettings, and(
+            eq(courseDepartmentSettings.courseId, courses.id),
+            eq(courseDepartmentSettings.deptId, students.deptId),
+            sql`${studentCourseRegistrations.semester} = ${courseDepartmentSettings.semester}`
+        ))
         .where(and(
             eq(studentCourseRegistrations.studentId, studentId),
             eq(studentCourseRegistrations.sessionId, sessionId),
@@ -121,7 +127,7 @@ export async function getCourseRegisteredStudentsRosterAction(courseId: number, 
             courseId: courses.id,
             courseCode: courses.code,
             courseName: courses.name,
-            creditUnits: courses.creditUnits,
+            creditUnits: sql<number>`COALESCE(${courseDepartmentSettings.creditUnits}, ${courses.creditUnits})`.mapWith(Number),
             status: studentCourseRegistrations.status,
             advisorStatus: studentCourseRegistrations.advisorStatus,
             createdAt: studentCourseRegistrations.createdAt
@@ -130,6 +136,11 @@ export async function getCourseRegisteredStudentsRosterAction(courseId: number, 
         .innerJoin(students, eq(studentCourseRegistrations.studentId, students.id))
         .leftJoin(users, eq(students.userId, users.id))
         .innerJoin(courses, eq(studentCourseRegistrations.courseId, courses.id))
+        .leftJoin(courseDepartmentSettings, and(
+            eq(courseDepartmentSettings.courseId, courses.id),
+            eq(courseDepartmentSettings.deptId, students.deptId),
+            sql`${studentCourseRegistrations.semester} = ${courseDepartmentSettings.semester}`
+        ))
         .where(and(...conditions));
 
         return { success: true, data: rows };
