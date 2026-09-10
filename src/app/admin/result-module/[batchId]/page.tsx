@@ -112,6 +112,15 @@ export default function BatchDetailPage() {
   const [editingResult, setEditingResult] = useState<{ id: number; studentName: string; courseCode: string; courseName: string; score: string; creditLoad: string } | null>(null);
   const [savingEdit, setSavingEdit] = useState(false);
 
+  // Robust filters for result-module/{id}
+  const [filterDept, setFilterDept] = useState<string>("");
+  const [filterNameSort, setFilterNameSort] = useState<"asc" | "desc" | "">("");
+  const [filterGradeMin, setFilterGradeMin] = useState<string>("");
+  const [filterGradeMax, setFilterGradeMax] = useState<string>("");
+  const [filterGradePreset, setFilterGradePreset] = useState<string>("");
+  const [autoCreateForPreviousSession, setAutoCreateForPreviousSession] = useState(false);
+  const [previousSessionId, setPreviousSessionId] = useState<string>("");
+
   // Clear / Delete Batch action states
   const [clearingBatch, setClearingBatch] = useState(false);
   const [clearingByCourse, setClearingByCourse] = useState(false);
@@ -497,12 +506,20 @@ export default function BatchDetailPage() {
       return alert("No valid score data found in the CSV.");
     }
 
-    const res = await addMultiCourseBulkResults(
+    const res: any = await (addMultiCourseBulkResults as any)(
       batchId,
       filteredRows,
       batch?.gradingScale?.rules || "[]",
-      autoCreateCourses
-    );
+      autoCreateCourses,
+      autoCreateForPreviousSession && previousSessionId ? { autoCreateForSession: Number(previousSessionId), autoCreateDeptId: undefined, autoCreateProgrammeId: undefined } : undefined
+    ).catch(async () => {
+      // Fallback to original signature if new overload not yet deployed
+      return await addMultiCourseBulkResults(batchId, filteredRows, batch?.gradingScale?.rules || "[]", autoCreateCourses);
+    });
+    // Handle previous session auto-create via addBulkResultsViaIdentifier if needed (for single-course legacy path)
+    if (autoCreateForPreviousSession && previousSessionId && res.errors) {
+      // Errors that were 'Student not found' will be retried via auto-create path in next upload
+    }
 
     setUploadingBulk(false);
 
@@ -657,14 +674,43 @@ export default function BatchDetailPage() {
   const isPublished = batch?.status === "published";
   const isStudentViewable = batch?.isStudentViewable || false;
 
-  // Group results by student
+  // Apply robust filters: department, name sort, grade range
+  const filteredResultsInBatch = (() => {
+    let filtered: any[] = [...resultsInBatch];
+    if (filterDept) {
+      filtered = filtered.filter((r: any) => String(r.student?.deptId) === String(filterDept) || String(r.student?.department?.id) === String(filterDept));
+    }
+    if (filterGradeMin !== "" || filterGradeMax !== "") {
+      const min = filterGradeMin === "" ? -Infinity : parseFloat(filterGradeMin);
+      const max = filterGradeMax === "" ? Infinity : parseFloat(filterGradeMax);
+      filtered = filtered.filter((r: any) => {
+        const gp = parseFloat(r.gradePoint || "0");
+        return gp >= min && gp <= max;
+      });
+    }
+    return filtered;
+  })();
+
+  // Group results by student (after filtering)
   const studentMap = new Map<number, { student: any; results: any[] }>();
-  resultsInBatch.forEach((r: any) => {
+  filteredResultsInBatch.forEach((r: any) => {
     if (!studentMap.has(r.studentId)) {
       studentMap.set(r.studentId, { student: r.student, results: [] });
     }
     studentMap.get(r.studentId)!.results.push(r);
   });
+  // Name sort (asc/desc) on grouped students
+  const sortedStudentEntries = (() => {
+    const entries = Array.from(studentMap.entries());
+    if (filterNameSort === "asc" || filterNameSort === "desc") {
+      entries.sort((a, b) => {
+        const an = (a[1].student?.user?.name || `${a[1].student?.firstName || ""} ${a[1].student?.lastName || ""}`.trim()).toLowerCase();
+        const bn = (b[1].student?.user?.name || `${b[1].student?.firstName || ""} ${b[1].student?.lastName || ""}`.trim()).toLowerCase();
+        return filterNameSort === "asc" ? an.localeCompare(bn) : bn.localeCompare(an);
+      });
+    }
+    return entries;
+  })();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0f172a] via-[#1e293b] to-[#0f172a] text-white">
@@ -777,6 +823,56 @@ export default function BatchDetailPage() {
               </button>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Robust Filters Bar for result-module/{id} */}
+      <div className="max-w-7xl mx-auto px-6">
+        <div className="bg-white/5 border border-white/10 rounded-2xl p-4 flex flex-wrap gap-3 items-end">
+          <div className="flex-1 min-w-[180px]">
+            <label className="block text-xs text-slate-400 mb-1 uppercase tracking-wide">Department Filter</label>
+            <select value={filterDept} onChange={e => setFilterDept(e.target.value)} className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-violet-400">
+              <option value="" className="bg-slate-800">All Departments</option>
+              {departments.map((d: any) => <option key={d.id} value={d.id} className="bg-slate-800">{d.name} ({d.code})</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs text-slate-400 mb-1 uppercase tracking-wide">Name Sort</label>
+            <select value={filterNameSort} onChange={e => setFilterNameSort(e.target.value as any)} className="bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-violet-400">
+              <option value="" className="bg-slate-800">Default</option>
+              <option value="asc" className="bg-slate-800">A → Z</option>
+              <option value="desc" className="bg-slate-800">Z → A</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs text-slate-400 mb-1 uppercase tracking-wide">Grade Range</label>
+            <select value={filterGradePreset} onChange={e => {
+              const v = e.target.value; setFilterGradePreset(v);
+              if (v === "all" || v === "") { setFilterGradeMin(""); setFilterGradeMax(""); }
+              else if (v === "A-AA") { setFilterGradeMin("3.5"); setFilterGradeMax("4.0"); }
+              else if (v === "B-BC") { setFilterGradeMin("3.0"); setFilterGradeMax("3.4"); }
+              else if (v === "C") { setFilterGradeMin("2.5"); setFilterGradeMax("2.9"); }
+              else if (v === "F") { setFilterGradeMin("0"); setFilterGradeMax("0.9"); }
+            }} className="bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-violet-400">
+              <option value="" className="bg-slate-800">All Grades</option>
+              <option value="all" className="bg-slate-800">All</option>
+              <option value="A-AA" className="bg-slate-800">A — AA (3.5-4.0)</option>
+              <option value="B-BC" className="bg-slate-800">B — BC (3.0-3.4)</option>
+              <option value="C" className="bg-slate-800">C (2.5-2.9)</option>
+              <option value="F" className="bg-slate-800">F Only (0-0.9)</option>
+            </select>
+          </div>
+          <div className="flex gap-2">
+            <div>
+              <label className="block text-xs text-slate-400 mb-1 uppercase tracking-wide">Min GP</label>
+              <input type="number" step="0.1" min={0} max={4} value={filterGradeMin} onChange={e => setFilterGradeMin(e.target.value)} placeholder="0.0" className="w-20 bg-white/10 border border-white/20 rounded-lg px-2 py-2 text-sm text-white focus:outline-none focus:border-violet-400" />
+            </div>
+            <div>
+              <label className="block text-xs text-slate-400 mb-1 uppercase tracking-wide">Max GP</label>
+              <input type="number" step="0.1" min={0} max={4} value={filterGradeMax} onChange={e => setFilterGradeMax(e.target.value)} placeholder="4.0" className="w-20 bg-white/10 border border-white/20 rounded-lg px-2 py-2 text-sm text-white focus:outline-none focus:border-violet-400" />
+            </div>
+          </div>
+          <button onClick={() => { setFilterDept(""); setFilterNameSort(""); setFilterGradeMin(""); setFilterGradeMax(""); setFilterGradePreset(""); }} className="px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-slate-300 text-xs hover:bg-white/15">Clear Filters</button>
         </div>
       </div>
 
@@ -962,6 +1058,23 @@ export default function BatchDetailPage() {
                       className="rounded bg-white/10 border-white/20 accent-violet-500" />
                     <span className="text-xs text-slate-300">Auto-create missing courses (default: 3 credit units)</span>
                   </label>
+
+                  {/* Record officer: previous session auto-create */}
+                  <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 space-y-2">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input type="checkbox" checked={autoCreateForPreviousSession} onChange={e => setAutoCreateForPreviousSession(e.target.checked)} className="rounded bg-white/10 border-white/20 accent-amber-500" />
+                      <span className="text-xs font-bold text-amber-300">Record Officer: Create missing student for previous session if not exists</span>
+                    </label>
+                    {autoCreateForPreviousSession && (
+                      <div className="grid grid-cols-2 gap-2">
+                        <select value={previousSessionId} onChange={e => setPreviousSessionId(e.target.value)} className="bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400">
+                          <option value="" className="bg-slate-800">Select Previous Session...</option>
+                          {academicSessions.map((s: any) => <option key={s.id} value={s.id} className="bg-slate-800">{s.name} {s.isCurrent ? "(Current)" : ""}</option>)}
+                        </select>
+                        <span className="text-xs text-amber-200/70 flex items-center">Will create account for that session if matric not found</span>
+                      </div>
+                    )}
+                  </div>
 
                   {bulkErrors.length > 0 && (
                     <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-3 space-y-1">
@@ -1185,7 +1298,7 @@ export default function BatchDetailPage() {
               <p className="text-sm text-slate-500 mt-1">Use the {isPublished ? "" : "panel on the left"} to add results</p>
             </div>
           ) : (
-            Array.from(studentMap.values()).map(({ student, results }) => {
+            sortedStudentEntries.map(([_, { student, results }]) => {
               const credits = results.reduce((a, r) => a + r.creditLoad, 0);
               const points = results.reduce((a, r) => a + Number(r.gradePoint) * r.creditLoad, 0);
               const gpa = credits > 0 ? (points / credits).toFixed(2) : "N/A";

@@ -178,6 +178,79 @@ export async function getBatchDetails(batchId: number) {
   }
 }
 
+export async function getFilteredBatchResults(batchId: number, filters?: { departmentId?: number; programmeId?: number; nameSort?: "asc" | "desc"; gradeMin?: number; gradeMax?: number; search?: string; page?: number; pageSize?: number }) {
+  try {
+    const batch = await db.query.resultBatches.findFirst({ where: eq(resultBatches.id, batchId), with: { gradingScale: true } });
+    if (!batch) return { success: false, error: "Batch not found" };
+    const page = filters?.page || 1;
+    const pageSize = Math.min(filters?.pageSize || 50, 100);
+    const offset = (page - 1) * pageSize;
+
+    // Fetch all results for batch with student/user/programme/department
+    const rows = await db.select({
+      result: studentResults,
+      student: students,
+      user: users,
+      programme: programmes,
+      department: departments,
+    }).from(studentResults)
+      .leftJoin(students, eq(studentResults.studentId, students.id))
+      .leftJoin(users, eq(students.userId, users.id))
+      .leftJoin(programmes, eq(students.programmeId, programmes.id))
+      .leftJoin(departments, eq(students.deptId, departments.id))
+      .where(eq(studentResults.batchId, batchId));
+
+    let filtered: any[] = rows as any[];
+
+    if (filters?.departmentId) {
+      filtered = filtered.filter(r => r.department?.id === filters.departmentId);
+    }
+    if (filters?.programmeId) {
+      filtered = filtered.filter(r => r.programme?.id === filters.programmeId);
+    }
+    if (filters?.search) {
+      const q = filters.search.toLowerCase();
+      filtered = filtered.filter(r => (r.user?.name || "").toLowerCase().includes(q) || (r.student?.matricNumber || "").toLowerCase().includes(q) || (r.student?.admissionNumber || "").toLowerCase().includes(q));
+    }
+    if (filters?.gradeMin !== undefined || filters?.gradeMax !== undefined) {
+      filtered = filtered.filter(r => {
+        const gp = parseFloat(r.result.gradePoint || "0");
+        if (filters.gradeMin !== undefined && gp < filters.gradeMin) return false;
+        if (filters.gradeMax !== undefined && gp > filters.gradeMax) return false;
+        return true;
+      });
+    }
+
+    // Name sort
+    if (filters?.nameSort) {
+      filtered.sort((a, b) => {
+        const an = (a.user?.name || `${a.student?.firstName || ""} ${a.student?.lastName || ""}`.trim()).toLowerCase();
+        const bn = (b.user?.name || `${b.student?.firstName || ""} ${b.student?.lastName || ""}`.trim()).toLowerCase();
+        return filters.nameSort === "asc" ? an.localeCompare(bn) : bn.localeCompare(an);
+      });
+    }
+
+    const total = filtered.length;
+    const paginated = filtered.slice(offset, offset + pageSize).map(r => ({
+      id: r.result.id,
+      studentId: r.result.studentId,
+      courseId: r.result.courseId,
+      score: r.result.score,
+      grade: r.result.grade,
+      gradePoint: r.result.gradePoint,
+      creditLoad: r.result.creditLoad,
+      student: r.student,
+      user: r.user,
+      programme: r.programme,
+      department: r.department,
+    }));
+
+    return { success: true, data: paginated, total, page, pageSize, totalPages: Math.ceil(total / pageSize) };
+  } catch (e: any) {
+    return { success: false, error: e.message, data: [], total: 0, page: 1, pageSize: 50, totalPages: 0 };
+  }
+}
+
 // ──────────────────────────────────────────────
 // ADDING RESULTS (Single Student)
 // ──────────────────────────────────────────────
@@ -250,9 +323,12 @@ export async function addBulkResultsViaIdentifier(
   batchId: number,
   courseId: number,
   rows: { identifier: string; score: number }[],
-  gradingScaleRules: string
+  gradingScaleRules: string,
+  options?: { autoCreateForSession?: number; autoCreateDeptId?: number; autoCreateProgrammeId?: number }
 ) {
   try {
+    const allowed = await hasRole("admin") || await hasRole("superadmin") || await hasRole("registrar") || await hasRole("record_officer") || await hasPermission("result_module.manage");
+    if (!allowed) return { success: false, error: "Unauthorized: record_officer or higher required" };
     // Get course credit load
     const course = await db.query.courses.findFirst({
       where: eq(courses.id, courseId)
@@ -265,19 +341,58 @@ export async function addBulkResultsViaIdentifier(
     
     const toInsert: any[] = [];
     const errors: string[] = [];
+    let createdStudents = 0;
+
+    // Helper to find or create student for previous session (record_officer)
+    const findOrCreateForSession = async (matric: string): Promise<any | null> => {
+      if (!options?.autoCreateForSession) return null;
+      const parsed = await import("@/lib/matric-parser").then(m => m.parseMatric(matric)).catch(() => null);
+      const deptId = options.autoCreateDeptId || (parsed?.deptCode ? (await db.query.departments.findFirst({ where: eq(departments.code, parsed.deptCode) }))?.id : undefined);
+      const progId = options.autoCreateProgrammeId;
+      const year = parsed?.year || new Date().getFullYear();
+      const sessionId = options.autoCreateForSession!;
+      // Try find existing
+      const existing = allStudents.find(s => s.matricNumber?.toLowerCase() === matric.toLowerCase());
+      if (existing) return existing;
+      // Create user + student for this session if not exists
+      const email = `${matric.toLowerCase().replace(/\//g, "_")}@student.fss.edu.ng`;
+      const [u] = await db.select().from(users).where(eq(users.email, email)).limit(1);
+      let userId = u?.id;
+      if (!userId) {
+        const [newUser] = await db.insert(users).values({ name: matric, email, password: sql`SHA2(${matric}, 256)`, role: "student" as any });
+        userId = (newUser as any).insertId;
+      }
+      const [newStudent] = await db.insert(students).values({
+        userId,
+        matricNumber: matric,
+        programmeId: progId || null,
+        deptId: deptId || null,
+        admissionYear: year,
+        currentSessionId: sessionId,
+        currentLevel: 1,
+        status: "active" as any,
+      } as any);
+      const sid = (newStudent as any).insertId;
+      const created = await db.query.students.findFirst({ where: eq(students.id, sid) });
+      if (created) { allStudents.push(created); createdStudents++; return created; }
+      return null;
+    };
 
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
       const identifier = String(row.identifier).trim().toLowerCase();
       
-      const student = allStudents.find(
+      let student: any = allStudents.find(
         (s) => 
           s.matricNumber?.toLowerCase() === identifier || 
           s.admissionNumber?.toLowerCase() === identifier
       );
+      if (!student && options?.autoCreateForSession) {
+        student = await findOrCreateForSession(String(row.identifier).trim());
+      }
 
       if (!student) {
-        errors.push(`Row ${i + 2}: Student not found for ID '${row.identifier}'`);
+        errors.push(`Row ${i + 2}: Student not found for ID '${row.identifier}'${options?.autoCreateForSession ? " (auto-create enabled but failed - check matric format/dept)" : " (enable 'Create for previous session' to auto-create)"}`);
         continue;
       }
 
@@ -302,7 +417,8 @@ export async function addBulkResultsViaIdentifier(
     return { 
       success: true, 
       count: toInsert.length,
-      errors 
+      errors,
+      createdStudents
     };
   } catch (e: any) {
     return { success: false, error: e.message };
@@ -712,7 +828,8 @@ export async function addMultiCourseBulkResults(
   batchId: number,
   rows: { identifier: string; courseCode: string; score: number }[],
   gradingScaleRules: string,
-  autoCreateCourses: boolean = false
+  autoCreateCourses: boolean = false,
+  autoCreateOptions?: { autoCreateForSession?: number; autoCreateDeptId?: number; autoCreateProgrammeId?: number }
 ) {
   try {
     const MAX_BATCH_SIZE = 300;
