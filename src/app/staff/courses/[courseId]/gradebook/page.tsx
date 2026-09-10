@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { BookOpen, Download, Filter, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { CAWeightValidator } from "@/components/staff/CAWeightValidator";
 
 interface PageProps {
     params: Promise<{
@@ -105,6 +106,10 @@ export default async function CourseGradebookPage(props: PageProps) {
                         </p>
                     </CardContent>
                 </Card>
+            </div>
+
+            <div className="px-1">
+                <CAWeightValidator courseId={courseId} sessionId={currentSession.id} />
             </div>
 
             <Card className="border-none shadow-xl shadow-slate-200/50 rounded-[2.5rem] bg-white overflow-hidden">

@@ -93,6 +93,16 @@ export async function getGradebookData(courseId: number, sessionId: number) {
     }
 }
 
+export async function getGradingConfigurations(courseId: number, sessionId: number) {
+    try {
+        const { gradingConfigurations } = await import("@/db/schema");
+        const rows = await db.select().from(gradingConfigurations).where(and(eq(gradingConfigurations.courseId, courseId), eq(gradingConfigurations.sessionId, sessionId)));
+        return { success: true, data: rows };
+    } catch (e: any) {
+        return { success: false, error: e.message, data: [] };
+    }
+}
+
 export async function updateGradebookScores(courseId: number, sessionId: number, updates: { studentId: number; examScore?: number; caScore?: number }[]) {
     try {
         await db.transaction(async (tx) => {
