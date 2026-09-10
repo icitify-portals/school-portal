@@ -10,6 +10,7 @@ import {
     feeStructureItems,
     feeItems,
     admissionApplicationsV2,
+    admissionFormTemplates,
     users,
     studentBillItems,
     walletTransactions,
