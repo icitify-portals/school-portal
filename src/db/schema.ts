@@ -2115,6 +2115,34 @@ export const assignmentSubmissions = mysqlTable('assignment_submissions', {
   gradedAt: datetime('graded_at'),
 });
 
+export const assignmentGroups = mysqlTable('assignment_groups', {
+  id: int('id').autoincrement().primaryKey(),
+  assignmentId: int('assignment_id').references(() => assignments.id).notNull(),
+  groupName: varchar('group_name', { length: 255 }).notNull(),
+  maxMembers: int('max_members').default(5),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const assignmentGroupMembers = mysqlTable('assignment_group_members', {
+  id: int('id').autoincrement().primaryKey(),
+  groupId: int('group_id').references(() => assignmentGroups.id).notNull(),
+  studentId: int('student_id').references(() => students.id).notNull(),
+  joinedAt: timestamp('joined_at').defaultNow(),
+});
+
+export const peerReviews = mysqlTable('peer_reviews', {
+  id: int('id').autoincrement().primaryKey(),
+  submissionId: int('submission_id').references(() => assignmentSubmissions.id).notNull(),
+  reviewerId: int('reviewer_id').references(() => students.id).notNull(),
+  revieweeId: int('reviewee_id').references(() => students.id).notNull(),
+  score: int('score'),
+  feedback: text('feedback'),
+  rubricScores: text('rubric_scores'), // JSON: {rubricId: score}
+  status: mysqlEnum('status', ['pending', 'in_progress', 'completed']).default('pending'),
+  submittedAt: datetime('submitted_at'),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
 export const gradingRubrics = mysqlTable('grading_rubrics', {
   id: int('id').autoincrement().primaryKey(),
   title: varchar('title', { length: 255 }).notNull(),

@@ -5,11 +5,17 @@ import { cbtQuizzes, cbtQuestions, cbtAttempts, cbtResponses, cbtAssignments, us
 import { eq, and, sql, desc } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { hasPermission, hasRole } from "@/lib/rbac";
+import { isFeatureEnabled } from "@/lib/feature-flags";
 
 export async function createQuiz(data: any) {
     try {
         const allowed = await hasPermission("cbt.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("academic_registrar");
         if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to create quiz" };
+
+        // CBT_UNIFIED: block creation if courseId provided (should use unified exams)
+        if (isFeatureEnabled("CBT_UNIFIED") && data.courseId) {
+            return { success: false, error: "Course-linked exams must be created via the unified exam editor." };
+        }
 
         const [result] = await db.insert(cbtQuizzes).values({
             title: data.title,
@@ -42,6 +48,14 @@ export async function addQuestion(quizId: number, data: any) {
         const allowed = await hasPermission("cbt.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("academic_registrar");
         if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to add questions" };
 
+        // CBT_UNIFIED: block if quiz is unified
+        if (isFeatureEnabled("CBT_UNIFIED")) {
+            const [quiz] = await db.select().from(cbtQuizzes).where(eq(cbtQuizzes.id, quizId)).limit(1);
+            if (quiz?.courseId) {
+                return { success: false, error: "This exam is managed under unified exams. Add questions from the unified exam editor." };
+            }
+        }
+
         await db.insert(cbtQuestions).values({
             quizId,
             questionText: data.questionText,
@@ -61,6 +75,14 @@ export async function addQuestion(quizId: number, data: any) {
 
 export async function startAttempt(quizId: number, userId: number) {
     try {
+        // CBT_UNIFIED: redirect to unified exam if flag on
+        if (isFeatureEnabled("CBT_UNIFIED")) {
+            const [quiz] = await db.select().from(cbtQuizzes).where(eq(cbtQuizzes.id, quizId)).limit(1);
+            if (quiz?.courseId) {
+                return { success: false, error: "This exam has been unified. Redirect to unified exam.", redirect: true, courseId: quiz.courseId };
+            }
+        }
+
         const quizList = await db.select().from(cbtQuizzes).where(eq(cbtQuizzes.id, quizId)).limit(1);
         if (quizList.length === 0) return { success: false, error: "Quiz not found" };
         const quiz = quizList[0];
@@ -146,6 +168,17 @@ export async function recordTabSwitch(attemptId: number) {
  
 export async function submitResponse(attemptId: number, questionId: number, selectedAnswer: string) {
     try {
+        // CBT_UNIFIED: block if attempt is for a unified exam
+        if (isFeatureEnabled("CBT_UNIFIED")) {
+            const [attempt] = await db.select().from(cbtAttempts).where(eq(cbtAttempts.id, attemptId)).limit(1);
+            if (attempt) {
+                const [quiz] = await db.select().from(cbtQuizzes).where(eq(cbtQuizzes.id, attempt.quizId)).limit(1);
+                if (quiz?.courseId) {
+                    return { success: false, error: "This exam is managed under unified exams." };
+                }
+            }
+        }
+
         const questions = await db.select().from(cbtQuestions).where(eq(cbtQuestions.id, questionId)).limit(1);
         if (questions.length === 0) return { success: false, error: "Question not found" };
         
@@ -181,6 +214,17 @@ export async function submitResponse(attemptId: number, questionId: number, sele
  
 export async function submitAttempt(attemptId: number, autoSubmitted: boolean = false) {
     try {
+        // CBT_UNIFIED: block if attempt is for a unified exam
+        if (isFeatureEnabled("CBT_UNIFIED")) {
+            const [attempt] = await db.select().from(cbtAttempts).where(eq(cbtAttempts.id, attemptId)).limit(1);
+            if (attempt) {
+                const [quiz] = await db.select().from(cbtQuizzes).where(eq(cbtQuizzes.id, attempt.quizId)).limit(1);
+                if (quiz?.courseId) {
+                    return { success: false, error: "This exam is managed under unified exams. Submit via the unified exam portal." };
+                }
+            }
+        }
+
         const responses = await db.select().from(cbtResponses).where(eq(cbtResponses.attemptId, attemptId));
         let totalScore = 0;
         responses.forEach(r => {

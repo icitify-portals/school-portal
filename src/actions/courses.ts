@@ -120,6 +120,7 @@ export async function addCourseToDepartment(data: {
     semester: "1" | "2";
     status: "compulsory" | "required" | "elective";
     level: number;
+    capacity?: number | null;
 }) {
     try {
         const session = await auth();
@@ -135,7 +136,8 @@ export async function addCourseToDepartment(data: {
 
         if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to link course to department" };
 
-        await db.insert(courseDepartmentSettings).values(data);
+        const { capacity, ...rest } = data;
+        await db.insert(courseDepartmentSettings).values({ ...rest, capacity: capacity || null });
         revalidatePath("/admin/courses");
         return { success: true };
     } catch (error) {
@@ -148,6 +150,7 @@ export async function updateCourseDepartmentSetting(courseId: number, deptId: nu
     semester?: "1" | "2";
     status?: "compulsory" | "required" | "elective";
     level?: number;
+    capacity?: number | null;
 }) {
     try {
         const session = await auth();

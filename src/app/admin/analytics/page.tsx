@@ -22,6 +22,7 @@ import {
     ArrowUpRight,
     ArrowDownRight
 } from "lucide-react";
+import { AtRiskList } from "@/components/analytics/AtRiskList";
 
 export default async function AdminAnalyticsPage() {
     // 1. High Level Stats
@@ -158,6 +159,20 @@ export default async function AdminAnalyticsPage() {
                     </CardContent>
                 </Card>
             </div>
+
+            {/* At-Risk Students */}
+            <Card className="border-none shadow-xl rounded-[2rem] overflow-hidden">
+                <CardHeader className="bg-rose-50/50 border-b border-rose-100 p-6">
+                    <CardTitle className="text-lg flex items-center gap-2">
+                        <AlertTriangle className="w-5 h-5 text-rose-500" />
+                        At-Risk Students
+                    </CardTitle>
+                    <CardDescription>Students with time spent &lt;30% average AND grade F. Requires immediate intervention.</CardDescription>
+                </CardHeader>
+                <CardContent className="p-6">
+                    <AtRiskList />
+                </CardContent>
+            </Card>
         </div>
     );
 }

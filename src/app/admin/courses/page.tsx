@@ -38,7 +38,7 @@ export default function CoursesPage() {
         isGroupSubject: false,
         parentCourseId: null as number | null
     });
-    const [deptSettings, setDeptSettings] = useState({ deptId: "", semester: "1", status: "compulsory", level: 100 });
+    const [deptSettings, setDeptSettings] = useState({ deptId: "", semester: "1", status: "compulsory", level: 100, capacity: "" });
     const [prereqId, setPrereqId] = useState("");
 
     const [editingCourse, setEditingCourse] = useState<any>(null);
@@ -105,10 +105,12 @@ export default function CoursesPage() {
             deptId: parseInt(deptSettings.deptId),
             semester: deptSettings.semester as any,
             status: deptSettings.status as any,
-            level: deptSettings.level
+            level: deptSettings.level,
+            capacity: deptSettings.capacity ? parseInt(deptSettings.capacity) : null,
         });
         if (res.success) {
             alert("Department setting added! You can add another or proceed.");
+            setDeptSettings({ ...deptSettings, deptId: "", capacity: "" });
         } else alert(res.error);
     };
 
@@ -176,11 +178,11 @@ export default function CoursesPage() {
             deptId: parseInt(deptSettings.deptId),
             semester: deptSettings.semester as any,
             status: deptSettings.status as any,
-            level: deptSettings.level
+            level: deptSettings.level,
+            capacity: deptSettings.capacity ? parseInt(deptSettings.capacity) : null,
         });
         if (res.success) {
             fetchData();
-            // Refresh settings in modal
             const dept = depts.find(d => d.id === parseInt(deptSettings.deptId));
             const newSetting = {
                 deptId: parseInt(deptSettings.deptId),
@@ -188,13 +190,14 @@ export default function CoursesPage() {
                 semester: deptSettings.semester,
                 status: deptSettings.status,
                 level: deptSettings.level,
+                capacity: deptSettings.capacity ? parseInt(deptSettings.capacity) : null,
                 department: dept
             };
             setEditingCourse({
                 ...editingCourse,
                 departmentSettings: [...editingCourse.departmentSettings, newSetting]
             });
-            setDeptSettings({ deptId: "", semester: "1", status: "compulsory", level: 100 });
+            setDeptSettings({ deptId: "", semester: "1", status: "compulsory", level: 100, capacity: "" });
         } else alert(res.error);
     };
 
@@ -364,7 +367,7 @@ export default function CoursesPage() {
 
                         {step === 2 && (
                             <div className="space-y-8">
-                                <form onSubmit={handleAddDept} className="grid grid-cols-1 md:grid-cols-5 gap-4 bg-slate-800/30 p-6 rounded-2xl border border-slate-800">
+                                <form onSubmit={handleAddDept} className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-800/30 p-6 rounded-2xl border border-slate-800">
                                     <div className="space-y-1">
                                         <label className="text-[10px] font-black text-slate-500">DEPARTMENT</label>
                                         <select className="w-full bg-slate-800 text-white border-none rounded-lg p-3 text-sm" value={deptSettings.deptId} onChange={e => setDeptSettings({ ...deptSettings, deptId: e.target.value })}>
@@ -390,6 +393,10 @@ export default function CoursesPage() {
                                     <div className="space-y-1">
                                         <label className="text-[10px] font-black text-slate-500">LEVEL</label>
                                         <input type="number" step="100" className="w-full bg-slate-800 text-white border-none rounded-lg p-3 text-sm" value={deptSettings.level} onChange={e => setDeptSettings({ ...deptSettings, level: parseInt(e.target.value) })} />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-black text-slate-500">CAPACITY</label>
+                                        <input type="number" min="0" placeholder="Unlimited" className="w-full bg-slate-800 text-white border-none rounded-lg p-3 text-sm placeholder:text-slate-600" value={deptSettings.capacity} onChange={e => setDeptSettings({ ...deptSettings, capacity: e.target.value })} />
                                     </div>
                                     <div className="flex items-end">
                                         <Button type="submit" className="w-full bg-indigo-500 text-white h-11"><Plus className="w-4 h-4 mr-1" /> Link Dept</Button>
@@ -674,6 +681,16 @@ export default function CoursesPage() {
                                                         <span className="px-3 py-1 rounded-full bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest">
                                                             {isK12 ? "Class " : "Lvl "}{set.level}
                                                         </span>
+                                                        {set.capacity != null && (
+                                                            <span className={cn(
+                                                                "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest",
+                                                                (set.enrolledCount || 0) >= set.capacity
+                                                                    ? "bg-red-100 text-red-700"
+                                                                    : "bg-blue-100 text-blue-700"
+                                                            )}>
+                                                                {set.enrolledCount || 0}/{set.capacity}
+                                                            </span>
+                                                        )}
                                                     </div>
                                                 </div>
                                             ))}

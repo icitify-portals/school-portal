@@ -11,6 +11,7 @@ import {
 } from "@/db/schema";
 import { eq, and, desc } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { isFeatureEnabled } from "@/lib/feature-flags";
 
 // --- INSTRUCTOR ACTIONS ---
 
@@ -36,6 +37,14 @@ export async function saveQuestion(quizId: number, question: {
     points: number;
 }) {
     try {
+        // CBT_UNIFIED: block edits if quiz is unified
+        if (isFeatureEnabled("CBT_UNIFIED")) {
+            const [quiz] = await db.select().from(quizzes).where(eq(quizzes.id, quizId)).limit(1);
+            if (quiz?.courseId) {
+                return { success: false, error: "This quiz is managed under unified exams. Edit from the unified exam editor." };
+            }
+        }
+
         const payload = {
             quizId,
             questionText: question.text,
@@ -90,9 +99,13 @@ export async function getStudentQuizQuestions(quizId: number) {
 
 export async function startQuizAttempt(quizId: number, studentId: number) {
     try {
-        // Check for existing active attempt? 
-        // For now, simplify: just create a new one.
-        // In strictly timed mode, we might check if one exists and is within time window.
+        // CBT_UNIFIED: redirect to unified exam if flag on and quiz has courseId
+        if (isFeatureEnabled("CBT_UNIFIED")) {
+            const [quiz] = await db.select().from(quizzes).where(eq(quizzes.id, quizId)).limit(1);
+            if (quiz?.courseId) {
+                return { success: false, error: "This quiz has been unified. Redirect to unified exam.", redirect: true, courseId: quiz.courseId };
+            }
+        }
 
         const [res] = await db.insert(quizAttempts).values({
             quizId,
@@ -110,10 +123,21 @@ export async function startQuizAttempt(quizId: number, studentId: number) {
 
 export async function submitQuiz(
     attemptId: number,
-    answers: Record<number, string>, // questionId -> selectedOption
+    answers: Record<number, string>,
     submissionType: 'manual' | 'auto_timer' | 'auto_global' = 'manual'
 ) {
     try {
+        // CBT_UNIFIED: block submission if quiz is unified
+        if (isFeatureEnabled("CBT_UNIFIED")) {
+            const [attempt] = await db.select().from(quizAttempts).where(eq(quizAttempts.id, attemptId)).limit(1);
+            if (attempt) {
+                const [quiz] = await db.select().from(quizzes).where(eq(quizzes.id, attempt.quizId)).limit(1);
+                if (quiz?.courseId) {
+                    return { success: false, error: "This quiz is managed under unified exams. Submit via the unified exam portal." };
+                }
+            }
+        }
+
         // 1. Fetch Attempt & Quiz
         const attempt = await db.select().from(quizAttempts).where(eq(quizAttempts.id, attemptId)).limit(1);
         if (!attempt.length) return { success: false, error: "Invalid attempt" };
