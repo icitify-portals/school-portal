@@ -26,6 +26,7 @@ import SignatureCapture from "@/components/forms/SignatureCapture";
 import naija from 'naija-state-local-government';
 import { COUNTRY_NAMES } from "@/lib/countries";
 import { normalizeEmail, isValidEmailFormat } from "@/lib/email";
+import { viewableAssetUrl } from "@/lib/assets";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -1110,7 +1111,7 @@ export default function StatefulApplicationPage() {
                                                     {field.options && (
                                                         <div className="bg-white border border-gray-200 rounded-xl p-4">
                                                             <img
-                                                                src={field.options}
+                                                                src={viewableAssetUrl(field.options) || field.options}
                                                                 alt={field.label}
                                                                 className="max-w-full h-auto max-h-64 rounded-lg object-contain mx-auto"
                                                             />
@@ -1369,7 +1370,7 @@ export default function StatefulApplicationPage() {
                                                 return (
                                                     <div key={field.id} className="flex flex-col">
                                                         <span className="text-xs font-bold text-gray-500 uppercase">{field.label}</span>
-                                                        {value ? <img src={value} alt="Signature" className="h-12 object-contain mt-2 border rounded-xl bg-white p-1" /> : <span className="text-gray-400 italic text-sm">Not uploaded</span>}
+                                                        {value ? <img src={viewableAssetUrl(value) || value} alt="Signature" className="h-12 object-contain mt-2 border rounded-xl bg-white p-1" /> : <span className="text-gray-400 italic text-sm">Not uploaded</span>}
                                                     </div>
                                                 );
                                             }

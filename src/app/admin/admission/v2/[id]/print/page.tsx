@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { getAdminV2ApplicationDetail } from "@/actions/admission_v2";
 import { getBrandingSettings } from "@/actions/settings";
+import { viewableAssetUrl } from "@/lib/assets";
 import { Loader2, Printer, ArrowLeft, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -144,7 +145,7 @@ export default function AdminApplicationPrintPage() {
                                 <div>
                                     <div className="w-28 h-32 print:w-24 print:h-28 bg-slate-50 border-2 border-slate-200 rounded-lg overflow-hidden print:overflow-visible relative">
                                         {applicantPhoto ? (
-                                            <img src={applicantPhoto} alt="Passport" className="w-full h-full object-cover print:object-contain" />
+                                            <img src={viewableAssetUrl(applicantPhoto) || applicantPhoto} alt="Passport" className="w-full h-full object-cover print:object-contain" />
                                         ) : (
                                             <div className="w-full h-full flex items-center justify-center text-slate-200">
                                                 <User className="w-8 h-8" />
@@ -156,7 +157,7 @@ export default function AdminApplicationPrintPage() {
                                 {applicantSignature && (
                                     <div>
                                         <div className="w-28 h-12 print:w-24 print:h-10 bg-white border border-slate-200 rounded flex items-center justify-center overflow-hidden print:overflow-visible">
-                                            <img src={applicantSignature} alt="Signature" className="w-full h-full object-contain p-1" />
+                                            <img src={viewableAssetUrl(applicantSignature) || applicantSignature} alt="Signature" className="w-full h-full object-contain p-1" />
                                         </div>
                                         <p className="text-[7px] font-bold text-center text-slate-400 mt-0.5 uppercase tracking-widest">Signature</p>
                                     </div>

@@ -7,6 +7,7 @@ import { Loader2, Printer, ShieldCheck, MapPin, Calendar, Clock, User } from "lu
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { viewableAssetUrl } from "@/lib/assets";
 
 export default function AdmissionSlipPage() {
     const params = useParams();
@@ -66,7 +67,7 @@ export default function AdmissionSlipPage() {
                             {/* Photo */}
                             <div className="w-48 h-56 bg-slate-50 border-2 border-slate-100 rounded-2xl overflow-hidden flex-shrink-0 relative">
                                 {data.applicantPhoto ? (
-                                    <img src={data.applicantPhoto} alt="Applicant" className="w-full h-full object-cover" />
+                                    <img src={viewableAssetUrl(data.applicantPhoto) || data.applicantPhoto} alt="Applicant" className="w-full h-full object-cover" />
                                 ) : (
                                     <div className="w-full h-full flex items-center justify-center text-slate-200">
                                         <User className="w-16 h-16" />

@@ -7,6 +7,7 @@ import QRCode from "qrcode";
 import { getApplicantApplication, getApplicantOLevelData } from "@/actions/admission_v2";
 import { getBrandingSettings } from "@/actions/settings";
 import { generateVerificationUrl } from "@/lib/verification-url";
+import { viewableAssetUrl } from "@/lib/assets";
 import { Loader2, Printer, ArrowLeft, User, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -171,7 +172,7 @@ export default function ApplicationSlip() {
                                 <div className="w-36 shrink-0">
                                     <div className="w-36 h-44 bg-slate-50 border-2 border-slate-200 rounded-xl overflow-hidden print:border print:border-gray-300">
                                         {applicantPhoto ? (
-                                            <img src={applicantPhoto} alt="Passport" className="w-full h-full object-cover" />
+                                            <img src={viewableAssetUrl(applicantPhoto) || applicantPhoto} alt="Passport" className="w-full h-full object-cover" />
                                         ) : (
                                             <div className="w-full h-full flex items-center justify-center text-slate-200 print:text-gray-300">
                                                 <User className="w-12 h-12" />

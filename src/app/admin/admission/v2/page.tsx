@@ -13,6 +13,7 @@ import * as xlsx from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { cn } from "@/lib/utils";
+import { viewableAssetUrl } from "@/lib/assets";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import Link from "next/link";
@@ -748,7 +749,7 @@ function AdminV2ApplicationsContent() {
                                             <td className="px-6 py-5">
                                                 <div className="flex items-center gap-4">
                                                     {app.applicantPhoto ? (
-                                                        <img src={app.applicantPhoto} alt="" loading="lazy" decoding="async" className="w-10 h-10 rounded-xl object-cover" />
+                                                        <img src={viewableAssetUrl(app.applicantPhoto) || app.applicantPhoto} alt="" loading="lazy" decoding="async" className="w-10 h-10 rounded-xl object-cover" />
                                                     ) : (
                                                         <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center text-slate-400">
                                                             <User className="w-5 h-5" />

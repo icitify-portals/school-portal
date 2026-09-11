@@ -13,6 +13,7 @@ import { getAdminV2ApplicationDetail, updateAdmissionStatus, confirmAdmissionPay
 import { getBrandingSettings } from "@/actions/settings";
 import { verifyUserEmailManually, resetUserPassword } from "@/actions/user-actions";
 import { cn } from "@/lib/utils";
+import { viewableAssetUrl } from "@/lib/assets";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import Link from "next/link";
@@ -444,7 +445,7 @@ export default function V2ApplicationDetailPage() {
         if (typeof value === 'string' && (value.startsWith('data:image') || field?.type === 'image' || field?.type === 'photo' || field?.type === 'signature')) {
             return (
                 <div className="relative w-32 h-32 rounded-xl overflow-hidden border-2 border-slate-200 bg-slate-50">
-                    <img src={value} alt={field?.label || 'Upload'} className="w-full h-full object-cover print-img" />
+                    <img src={viewableAssetUrl(value) || value} alt={field?.label || 'Upload'} className="w-full h-full object-cover print-img" />
                 </div>
             );
         }
@@ -454,7 +455,7 @@ export default function V2ApplicationDetailPage() {
             if (value.match(/\.(jpeg|jpg|gif|png|webp)(\?.*)?$/i) || field?.type === 'image' || field?.type === 'photo' || field?.type === 'signature') {
                 return (
                     <div className="relative group">
-                        <img src={value} alt="Upload" className="w-20 h-20 object-contain rounded-xl border border-slate-200 shadow-sm cursor-pointer hover:scale-[3] transition-transform duration-200 hover:z-10 hover:shadow-xl bg-white print-img" />
+                        <img src={viewableAssetUrl(value) || value} alt="Upload" className="w-20 h-20 object-contain rounded-xl border border-slate-200 shadow-sm cursor-pointer hover:scale-[3] transition-transform duration-200 hover:z-10 hover:shadow-xl bg-white print-img" />
                     </div>
                 );
             }
@@ -593,7 +594,7 @@ export default function V2ApplicationDetailPage() {
                         <div className="flex items-center gap-6">
                             <div className="w-32 h-32 md:w-40 md:h-40 relative rounded-2xl overflow-hidden border-4 border-slate-900 bg-slate-800 shadow-2xl flex-shrink-0 z-10 print-avatar">
                                 {app.applicantPhoto || app.parsedData?.["Passport Photograph"] || app.parsedData?.["Passport Photo"] || app.parsedData?.["Passport"] || app.parsedData?.["Photo"] || app.parsedData?.["Photograph/camera"] ? (
-                                    <img src={app.applicantPhoto || app.parsedData?.["Passport Photograph"] || app.parsedData?.["Passport Photo"] || app.parsedData?.["Passport"] || app.parsedData?.["Photo"] || app.parsedData?.["Photograph/camera"]} alt={app.applicantName} className="w-full h-full object-cover relative z-10" />
+                                    <img src={viewableAssetUrl(app.applicantPhoto || app.parsedData?.["Passport Photograph"] || app.parsedData?.["Passport Photo"] || app.parsedData?.["Passport"] || app.parsedData?.["Photo"] || app.parsedData?.["Photograph/camera"]) || app.applicantPhoto || app.parsedData?.["Passport Photograph"] || app.parsedData?.["Passport Photo"] || app.parsedData?.["Passport"] || app.parsedData?.["Photo"] || app.parsedData?.["Photograph/camera"]} alt={app.applicantName} className="w-full h-full object-cover relative z-10" />
                                 ) : (
                                     <div className="w-full h-full flex items-center justify-center relative z-10">
                                         <User className="w-16 h-16 text-slate-600" />

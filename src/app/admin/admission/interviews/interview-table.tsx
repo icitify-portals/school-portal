@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { viewableAssetUrl } from "@/lib/assets";
 import { Video, MapPin, CheckCircle, XCircle } from "lucide-react";
 
 export function InterviewTable({ initialData }: { initialData: any[] }) {
@@ -54,7 +55,7 @@ export function InterviewTable({ initialData }: { initialData: any[] }) {
                                     <td className="px-6 py-4">
                                         <div className="flex items-center gap-3">
                                             {item.applicantPhoto ? (
-                                                <img src={item.applicantPhoto} alt="Photo" className="w-10 h-10 rounded-full object-cover" />
+                                                <img src={viewableAssetUrl(item.applicantPhoto) || item.applicantPhoto} alt="Photo" className="w-10 h-10 rounded-full object-cover" />
                                             ) : (
                                                 <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center text-slate-500 font-bold">
                                                     {name.charAt(0)}

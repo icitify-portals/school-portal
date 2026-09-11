@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useParams } from "next/navigation";
 import { verifyApplicationByFormNumber } from "@/actions/admission_v2";
 import { getBrandingSettings } from "@/actions/settings";
+import { viewableAssetUrl } from "@/lib/assets";
 import { Loader2, ShieldCheck, ShieldX, User, Search, Printer } from "lucide-react";
 
 export default function VerifyPage() {
@@ -124,7 +125,7 @@ export default function VerifyPage() {
                             <div className="flex gap-8 items-start">
                                 <div className="w-32 h-40 bg-slate-50 border-2 border-slate-200 rounded-xl overflow-hidden shrink-0">
                                     {data.applicantPhoto ? (
-                                        <img src={data.applicantPhoto} alt="Passport" className="w-full h-full object-cover" />
+                                        <img src={viewableAssetUrl(data.applicantPhoto) || data.applicantPhoto} alt="Passport" className="w-full h-full object-cover" />
                                     ) : (
                                         <div className="w-full h-full flex items-center justify-center text-slate-200">
                                             <User className="w-10 h-10" />

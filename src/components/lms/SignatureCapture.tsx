@@ -7,6 +7,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Upload, Trash2, Check, PenTool } from "lucide-react";
 import { toast } from "sonner";
 import { updateOfficerSignature } from "@/actions/officers";
+import { viewableAssetUrl } from "@/lib/assets";
 
 interface Props {
     userId: number;
@@ -159,7 +160,7 @@ export default function SignatureCapture({ userId, currentSignature, isCurrentDi
                     <TabsContent value="upload" className="space-y-4 mt-4">
                         <div className="aspect-[5/2] border-2 border-dashed border-slate-200 rounded-2xl bg-white flex flex-col items-center justify-center p-4 relative group">
                             {preview && uploadMode === 'upload' ? (
-                                <img src={preview} alt="Signature Preview" className="max-h-full object-contain" />
+                                <img src={preview ? viewableAssetUrl(preview) : ""} alt="Signature Preview" className="max-h-full object-contain" />
                             ) : (
                                 <>
                                     <div className="p-3 bg-slate-50 rounded-full mb-2">
