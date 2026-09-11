@@ -351,7 +351,15 @@ export async function unifyCbt({
 
 async function main() {
     const shouldExecute = process.argv.includes("--execute");
-    const report = await unifyCbt({ dryRun: !shouldExecute });
+    const ignoreFlag = process.argv.includes("--ignore-flag");
+
+    // CLI runs outside request context; force the master tenant DB so dynamic
+    // routing does not silently resolve to an empty/default partition.
+    if (!process.env.CLI_DB_OVERRIDE) {
+        process.env.CLI_DB_OVERRIDE = "school_portal";
+    }
+
+    const report = await unifyCbt({ dryRun: !shouldExecute, checkFlag: !ignoreFlag });
     console.log("Report:", report);
 }
 
