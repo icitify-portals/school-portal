@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { getAdmissionV2Stats, getAdmissionAcademicUnits } from "@/actions/admission_v2";
+import MatriculatedLettersBoard from "@/components/admissions/MatriculatedLettersBoard";
 
 export default function AdminAdmissionDashboard() {
     const [stats, setStats] = useState<any>(null);
@@ -202,6 +203,8 @@ export default function AdminAdmissionDashboard() {
                                 </Card>
                             </Link>
                         </div>
+
+                        <MatriculatedLettersBoard />
 
                         {/* Applicants by Programme Table */}
                         <Card className="border border-white/40 shadow-2xl shadow-slate-200/50 bg-white/60 backdrop-blur-3xl overflow-hidden rounded-[3rem]">

@@ -218,3 +218,54 @@ export async function bulkDeleteTransactions(items: { id: number, type: string }
         return { success: false, error: String(e) };
     }
 }
+
+export async function updateSuccessfulPayment(
+    txId: number,
+    type: string,
+    updates: {
+        rrr?: string | null;
+        gatewayReference?: string | null;
+        gateway?: string | null;
+        amount?: string | null;
+        purpose?: string | null;
+        createdAt?: string | null;
+    }
+) {
+    try {
+        if (type === 'bursary') {
+            const data: Record<string, any> = {};
+            if (updates.rrr !== undefined) data.gatewayTransactionId = updates.rrr || null;
+            if (updates.gatewayReference !== undefined) data.transactionReference = updates.gatewayReference || null;
+            if (updates.gateway !== undefined) data.paymentGateway = updates.gateway || null;
+            if (updates.amount !== undefined) {
+                const amt = parseFloat(updates.amount || '0');
+                if (isNaN(amt) || amt < 0) return { success: false, error: "Invalid amount" };
+                data.amount = updates.amount;
+            }
+            if (updates.purpose !== undefined) data.transactionType = updates.purpose || null;
+            if (updates.createdAt !== undefined) data.createdAt = updates.createdAt ? new Date(updates.createdAt) : null;
+            if (Object.keys(data).length > 0) {
+                await db.update(payment_transactions).set(data).where(eq(payment_transactions.id, txId));
+            }
+        } else {
+            const data: Record<string, any> = {};
+            if (updates.rrr !== undefined) data.rrr = updates.rrr || null;
+            if (updates.gatewayReference !== undefined) data.gatewayReference = updates.gatewayReference || null;
+            if (updates.gateway !== undefined) data.gateway = updates.gateway || null;
+            if (updates.amount !== undefined) {
+                const amt = parseFloat(updates.amount || '0');
+                if (isNaN(amt) || amt < 0) return { success: false, error: "Invalid amount" };
+                data.amount = updates.amount;
+            }
+            if (updates.purpose !== undefined) data.purpose = updates.purpose || null;
+            if (updates.createdAt !== undefined) data.createdAt = updates.createdAt ? new Date(updates.createdAt) : null;
+            if (Object.keys(data).length > 0) {
+                await db.update(transactions).set(data).where(eq(transactions.id, txId));
+            }
+        }
+        revalidatePath("/admin/bursary/successful-payments");
+        return { success: true };
+    } catch(e) {
+        return { success: false, error: String(e) };
+    }
+}

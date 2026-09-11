@@ -657,6 +657,12 @@ export default function V2ApplicationDetailPage() {
                             >
                                 <Printer className="w-4 h-4 mr-2" /> Print
                             </Button>
+                            <Button
+                                onClick={() => window.open(`/admin/admission/v2/${app.id}/letter`, '_blank')}
+                                className="rounded-xl bg-indigo-600/30 hover:bg-indigo-600/50 text-white border border-indigo-400/40 font-black text-[10px] uppercase tracking-widest px-5 py-3 backdrop-blur-md"
+                            >
+                                <FileText className="w-4 h-4 mr-2" /> Admission Letter
+                            </Button>
                         </div>
                     </div>
                 </div>

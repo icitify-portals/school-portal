@@ -29,6 +29,7 @@ import { users, departments, programmes, courses, students, jambCandidates, admi
 import { count, eq, and, desc, sql, inArray } from "drizzle-orm";
 import { cookies } from "next/headers";
 import ActiveStudentsModal from "./_components/ActiveStudentsModal";
+import MatriculatedLettersBoard from "@/components/admissions/MatriculatedLettersBoard";
 
 export const dynamic = "force-dynamic";
 
@@ -260,6 +261,8 @@ export default async function AdminDashboardPage() {
                     </Card>
                 </div>
             </div>
+
+            <MatriculatedLettersBoard />
         </div>
     );
 }

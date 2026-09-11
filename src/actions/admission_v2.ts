@@ -1699,6 +1699,44 @@ export async function updateApplicantMatricNumber(applicationId: number, newMatr
     }
 }
 
+export async function getMatriculatedApplicants(limit: number = 60) {
+    await requireAdmin();
+    try {
+        const rows = await db.select({
+            applicationId: admissionApplicationsV2.id,
+            applicantName: users.name,
+            formNumber: admissionApplicationsV2.formNumber,
+            applicationNumber: admissionApplicationsV2.applicationNumber,
+            studentId: students.id,
+            matricNumber: students.matricNumber,
+            programmeName: programmes.name,
+            programmeType: students.programmeType,
+            departmentName: departments.name,
+            departmentCode: departments.code,
+            applicationStatus: admissionApplicationsV2.status,
+            updatedAt: admissionApplicationsV2.updatedAt,
+        })
+        .from(admissionApplicationsV2)
+        .innerJoin(users, eq(admissionApplicationsV2.applicantId, users.id))
+        .leftJoin(students, eq(admissionApplicationsV2.studentId, students.id))
+        .leftJoin(programmes, eq(admissionApplicationsV2.programmeId, programmes.id))
+        .leftJoin(departments, eq(programmes.deptId, departments.id))
+        .where(
+            and(
+                eq(admissionApplicationsV2.status, 'admitted'),
+                sql`${students.matricNumber} IS NOT NULL AND ${students.matricNumber} <> ''`
+            )
+        )
+        .orderBy(desc(admissionApplicationsV2.updatedAt))
+        .limit(limit);
+
+        return { success: true, data: rows };
+    } catch (error) {
+        console.error("[getMatriculatedApplicants] Failed:", error);
+        return { success: false, error: String(error) };
+    }
+}
+
 export async function initiateSchoolFeesCheckout(applicationId: number) {
     try {
         const app = await db.query.admissionApplicationsV2.findFirst({

@@ -1,9 +1,13 @@
 "use client";
 import { useState, useEffect, useMemo } from "react";
 import { Card } from "@/components/ui/card";
-import { getSuccessfulPaymentsGrouped, deleteTransaction, bulkDeleteTransactions } from "@/actions/successful-payments";
-import { Loader2, Calendar, Trash2 } from "lucide-react";
+import { getSuccessfulPaymentsGrouped, deleteTransaction, bulkDeleteTransactions, updateSuccessfulPayment } from "@/actions/successful-payments";
+import { Loader2, Calendar, Trash2, Pencil, Save, X } from "lucide-react";
 import { toast } from "sonner";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 
 export default function SuccessfulPaymentsPage() {
     const [groupedData, setGroupedData] = useState<Record<string, any[]>>({});
@@ -97,6 +101,44 @@ export default function SuccessfulPaymentsPage() {
                 newSelected.add(`${tx.type}-${tx.id}`);
             });
             setSelectedIds(newSelected);
+        }
+    };
+
+    // Edit state
+    const [editTx, setEditTx] = useState<any>(null);
+    const [editData, setEditData] = useState({
+        rrr: '',
+        gatewayReference: '',
+        gateway: '',
+        amount: '',
+        purpose: '',
+        createdAt: '',
+    });
+    const [isSaving, setIsSaving] = useState(false);
+
+    const openEditModal = (tx: any) => {
+        setEditTx(tx);
+        setEditData({
+            rrr: tx.rrr || '',
+            gatewayReference: tx.gatewayReference || '',
+            gateway: tx.gateway || '',
+            amount: tx.amount?.toString() || '',
+            purpose: tx.purpose || '',
+            createdAt: tx.createdAt ? new Date(tx.createdAt).toISOString().slice(0, 10) : '',
+        });
+    };
+
+    const handleSaveEdit = async () => {
+        if (!editTx) return;
+        setIsSaving(true);
+        const res = await updateSuccessfulPayment(editTx.id, editTx.type, editData);
+        setIsSaving(false);
+        if (res.success) {
+            toast.success("Transaction updated");
+            setEditTx(null);
+            loadData();
+        } else {
+            toast.error(res.error || "Failed to update");
         }
     };
 
@@ -205,9 +247,14 @@ export default function SuccessfulPaymentsPage() {
                                                 &#8358;{parseFloat(tx.amount).toLocaleString()}
                                             </td>
                                             <td className="px-6 py-4 text-center">
-                                                <button onClick={() => handleDelete(tx.id, tx.type)} className="p-2 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded-full transition-colors">
-                                                    <Trash2 className="w-4 h-4" />
-                                                </button>
+                                                <div className="flex items-center justify-center gap-1">
+                                                    <button onClick={() => openEditModal(tx)} className="p-2 text-indigo-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-full transition-colors" title="Edit transaction">
+                                                        <Pencil className="w-4 h-4" />
+                                                    </button>
+                                                    <button onClick={() => handleDelete(tx.id, tx.type)} className="p-2 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded-full transition-colors" title="Delete">
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </button>
+                                                </div>
                                             </td>
                                         </tr>
                                     ))}
@@ -245,6 +292,97 @@ export default function SuccessfulPaymentsPage() {
                     </Card>
                 </div>
             )}
+
+            {/* Edit Transaction Modal */}
+            <Dialog open={!!editTx} onOpenChange={(open) => { if (!open) setEditTx(null); }}>
+                <DialogContent className="max-w-lg bg-white rounded-3xl p-6 border border-slate-200 shadow-2xl">
+                    <DialogHeader>
+                        <DialogTitle className="text-xl font-bold flex items-center gap-2 text-slate-800">
+                            <Pencil className="w-5 h-5 text-indigo-600" /> Edit Transaction
+                            <span className="ml-auto text-[10px] font-black text-slate-400 uppercase tracking-widest">{editTx?.type} #{editTx?.id}</span>
+                        </DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 my-2 max-h-[60vh] overflow-y-auto pr-1">
+                        <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Student Name</p>
+                            <p className="text-sm font-bold text-slate-700">{editTx?.studentName || 'N/A'}</p>
+                        </div>
+                        <div>
+                            <Label className="text-xs font-bold text-slate-600 uppercase tracking-wider">RRR</Label>
+                            <Input
+                                value={editData.rrr}
+                                onChange={(e) => setEditData({ ...editData, rrr: e.target.value })}
+                                placeholder="e.g. 125007894321"
+                                className="mt-1 p-3 rounded-xl border border-slate-200 text-sm font-mono"
+                            />
+                        </div>
+                        <div>
+                            <Label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Gateway Reference</Label>
+                            <Input
+                                value={editData.gatewayReference}
+                                onChange={(e) => setEditData({ ...editData, gatewayReference: e.target.value })}
+                                placeholder="e.g. SCH-153-123456"
+                                className="mt-1 p-3 rounded-xl border border-slate-200 text-sm font-mono"
+                            />
+                        </div>
+                        <div>
+                            <Label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Gateway</Label>
+                            <select
+                                value={editData.gateway}
+                                onChange={(e) => setEditData({ ...editData, gateway: e.target.value })}
+                                className="w-full mt-1 p-3 border border-slate-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-indigo-500 bg-white"
+                            >
+                                <option value="">-- Select Gateway --</option>
+                                {['remita', 'alatpay', 'paystack', 'flutterwave', 'opay', 'manual'].map(g => (
+                                    <option key={g} value={g}>{g}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div>
+                            <Label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Amount (₦)</Label>
+                            <Input
+                                value={editData.amount}
+                                onChange={(e) => setEditData({ ...editData, amount: e.target.value })}
+                                placeholder="e.g. 5000"
+                                className="mt-1 p-3 rounded-xl border border-slate-200 text-sm font-mono"
+                            />
+                        </div>
+                        <div>
+                            <Label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Purpose / Item</Label>
+                            <Input
+                                value={editData.purpose}
+                                onChange={(e) => setEditData({ ...editData, purpose: e.target.value })}
+                                placeholder="e.g. Acceptance Fee / School Fees"
+                                className="mt-1 p-3 rounded-xl border border-slate-200 text-sm"
+                            />
+                        </div>
+                        <div>
+                            <Label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Payment Date</Label>
+                            <Input
+                                type="date"
+                                value={editData.createdAt}
+                                onChange={(e) => setEditData({ ...editData, createdAt: e.target.value })}
+                                className="mt-1 p-3 rounded-xl border border-slate-200 text-sm"
+                            />
+                        </div>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                            Editable fields apply to the selected gateway transaction record.
+                        </p>
+                    </div>
+                    <div className="flex justify-end gap-3 mt-4">
+                        <Button variant="outline" onClick={() => setEditTx(null)} className="rounded-xl font-bold">
+                            <X className="w-4 h-4 mr-2" /> Cancel
+                        </Button>
+                        <Button
+                            onClick={handleSaveEdit}
+                            disabled={isSaving}
+                            className="rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-5"
+                        >
+                            {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4 mr-2" />} Save Changes
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }
