@@ -1,8 +1,12 @@
 import { db } from "@/db/db";
-import { transactions, directPayments, users, journalReviews } from "@/db/schema";
+import {
+    transactions, directPayments, users, journalReviews,
+    lessonNotes, enrollments, courseDepartmentSettings, students, courses
+} from "@/db/schema";
 import { PaymentService } from "./PaymentService";
 import { BackupService } from "./BackupService";
-import { eq, and, lt, sql } from "drizzle-orm";
+import { NotificationService } from "./NotificationService";
+import { eq, and, lt, sql, asc, count } from "drizzle-orm";
 import fs from "fs";
 import path from "path";
 
@@ -150,6 +154,93 @@ export class CronService {
             return { success: true, expiredCount: expiredReviews.length };
         } catch (error) {
             console.error("Cron review invitations expiration failed:", error);
+            return { success: false, error };
+        }
+    }
+
+    /**
+     * LMS-5: Auto-promote waitlisted students when course capacity opens up.
+     */
+    static async promoteWaitlistedStudents() {
+        console.log("[CRON] Promoting waitlisted students...");
+        try {
+            const promoted: number[] = [];
+
+            // Find courses with waitlisted students and available capacity
+            const waitlistCandidates = await db.select({
+                courseId: enrollments.courseId,
+                deptId: courseDepartmentSettings.deptId,
+                capacity: courseDepartmentSettings.capacity,
+                enrolledCount: courseDepartmentSettings.enrolledCount,
+                waitlistCount: sql<number>`count(${enrollments.id})`.mapWith(Number)
+            })
+                .from(enrollments)
+                .innerJoin(courseDepartmentSettings, and(
+                    eq(enrollments.courseId, courseDepartmentSettings.courseId),
+                    eq(enrollments.status, 'waitlisted')
+                ))
+                .where(and(
+                    eq(enrollments.status, 'waitlisted'),
+                    sql`${courseDepartmentSettings.capacity} IS NOT NULL`,
+                    sql`${courseDepartmentSettings.capacity} > COALESCE(${courseDepartmentSettings.enrolledCount}, 0)`
+                ))
+                .groupBy(enrollments.courseId, courseDepartmentSettings.deptId, courseDepartmentSettings.capacity, courseDepartmentSettings.enrolledCount);
+
+            for (const candidate of waitlistCandidates) {
+                const slots = (candidate.capacity || 0) - (candidate.enrolledCount || 0);
+                if (slots <= 0) continue;
+
+                const courseId = candidate.courseId as number;
+                const deptId = candidate.deptId as number;
+
+                const toPromote = await db.select({
+                    enrollmentId: enrollments.id,
+                    studentId: enrollments.studentId,
+                    userId: students.userId,
+                    courseCode: courses.code,
+                    courseName: courses.name
+                })
+                    .from(enrollments)
+                    .innerJoin(students, eq(enrollments.studentId, students.id))
+                    .innerJoin(courses, eq(enrollments.courseId, courses.id))
+                    .where(and(
+                        eq(enrollments.courseId, courseId),
+                        eq(enrollments.status, 'waitlisted')
+                    ))
+                    .orderBy(asc(enrollments.enrollmentDate))
+                    .limit(slots);
+
+                for (const entry of toPromote) {
+                    await db.transaction(async (tx) => {
+                        await tx.update(enrollments)
+                            .set({ status: 'approved' })
+                            .where(eq(enrollments.id, entry.enrollmentId));
+
+                        await tx.update(courseDepartmentSettings)
+                            .set({ enrolledCount: sql`${courseDepartmentSettings.enrolledCount} + 1` })
+                            .where(and(
+                                eq(courseDepartmentSettings.courseId, courseId),
+                                eq(courseDepartmentSettings.deptId, deptId)
+                            ));
+                    });
+
+                    promoted.push(entry.enrollmentId);
+
+                    if (entry.userId) {
+                        NotificationService.notifyUser(entry.userId, {
+                            title: "Course Waitlist Update",
+                            message: `You have been moved from the waitlist into ${entry.courseCode} - ${entry.courseName}.`,
+                            type: "success",
+                            channels: ["toast", "email"]
+                        }).catch(err => console.error(`[CRON] Failed to notify user ${entry.userId}:`, err));
+                    }
+                }
+            }
+
+            console.log(`[CRON] Promoted ${promoted.length} waitlisted enrollment(s).`);
+            return { success: true, promotedCount: promoted.length };
+        } catch (error) {
+            console.error("[CRON] Waitlist promotion failed:", error);
             return { success: false, error };
         }
     }

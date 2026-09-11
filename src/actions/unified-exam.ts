@@ -316,13 +316,59 @@ export async function drawFromBank(bankId: number, count: number, filters?: { di
   try {
     let questions = await db.select().from(bankQuestions).where(eq(bankQuestions.bankId, bankId));
 
-    if (filters?.difficulty) {
-      questions = questions.filter(q => q.difficultyLevel === filters.difficulty);
+    if (filters?.tags && filters.tags.length > 0) {
+      questions = questions.filter(q => {
+        if (!q.tags) return false;
+        const tags = Array.isArray(q.tags) ? q.tags : JSON.parse(q.tags);
+        return filters.tags!.some(t => tags.includes(t));
+      });
     }
 
-    // Random draw
-    const shuffled = questions.sort(() => Math.random() - 0.5);
-    return shuffled.slice(0, count);
+    const shuffle = (arr: typeof questions) => arr.sort(() => Math.random() - 0.5);
+    let selected: typeof questions = [];
+
+    if (filters?.difficulty) {
+      selected = shuffle(questions.filter(q => q.difficultyLevel === filters.difficulty)).slice(0, count);
+    } else {
+      // CBT-4: default distribution easy 30%, medium 50%, hard 20%
+      const targetEasy = Math.max(0, Math.round(count * 0.30));
+      const targetMedium = Math.max(0, Math.round(count * 0.50));
+      const targetHard = count - targetEasy - targetMedium;
+
+      const byDifficulty = {
+        easy: shuffle(questions.filter(q => q.difficultyLevel === 'easy')),
+        medium: shuffle(questions.filter(q => q.difficultyLevel === 'medium')),
+        hard: shuffle(questions.filter(q => q.difficultyLevel === 'hard'))
+      };
+
+      const take = (diff: 'easy' | 'medium' | 'hard', n: number) => {
+        const picked = byDifficulty[diff].splice(0, n);
+        selected.push(...picked);
+      };
+
+      take('easy', targetEasy);
+      take('medium', targetMedium);
+      take('hard', targetHard);
+
+      // Fill any shortfall from remaining questions (least-used first to balance bank)
+      const remaining = [...byDifficulty.easy, ...byDifficulty.medium, ...byDifficulty.hard]
+        .sort((a, b) => Number(a.usageCount || 0) - Number(b.usageCount || 0));
+      while (selected.length < count && remaining.length > 0) {
+        selected.push(remaining.shift()!);
+      }
+
+      selected = shuffle(selected);
+    }
+
+    // Increment usage count for drawn questions
+    if (selected.length > 0) {
+      const ids = selected.map(q => q.id);
+      await db.update(bankQuestions)
+        .set({ usageCount: sql`${bankQuestions.usageCount} + 1` })
+        .where(sql`${bankQuestions.id} IN (${sql.join(ids, sql`, `)})`);
+    }
+
+    return selected;
   } catch {
     return [];
   }

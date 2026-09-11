@@ -50,6 +50,23 @@ if (cron) {
         }
     });
     console.log("✅ Cron scheduled: '0 1 * * *' (Daily at 1:00 AM for Felicitation Messages)");
+
+    // LMS-5: Promote waitlisted students every 15 minutes
+    cron.schedule("*/15 * * * *", async () => {
+        console.log(`[${new Date().toISOString()}] CRON TRIGGERED: Waitlist Promotion`);
+        try {
+            const { CronService } = await import("../services/CronService");
+            const result = await CronService.promoteWaitlistedStudents();
+            if (result.success) {
+                console.log(`[${new Date().toISOString()}] ✅ Waitlist Promotion Complete: ${result.promotedCount} promoted`);
+            } else {
+                console.error(`[${new Date().toISOString()}] ❌ Waitlist Promotion Failed:`, result.error);
+            }
+        } catch (error) {
+            console.error(`[${new Date().toISOString()}] ❌ Waitlist Promotion CRON Encountered Fatal Error:`, error);
+        }
+    });
+    console.log("✅ Cron scheduled: '*/15 * * * *' (Every 15 minutes for Waitlist Promotion)");
 }
 
 console.log("Listening for background worker tasks... (Press Ctrl+C to exit)");

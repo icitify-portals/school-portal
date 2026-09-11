@@ -200,7 +200,7 @@ export const courseDepartmentSettings = mysqlTable('course_department_settings',
   pk: { columns: [table.courseId, table.deptId] },
 }));
 
-export const courseOfferings = mysqlView('course_offerings', {
+export const courseOfferings = mysqlView('courseOfferings', {
   courseId: int('course_id').notNull(),
   deptId: int('dept_id').notNull(),
   level: int('level'),
@@ -7545,6 +7545,8 @@ export const bankQuestions = mysqlTable('bank_questions', {
   imagePath: varchar('image_path', { length: 255 }),
   rubric: text('rubric'),
   aiGradingEnabled: boolean('ai_grading_enabled').default(false),
+  usageCount: int('usage_count').default(0),
+  discriminationIndex: decimal('discrimination_index', { precision: 4, scale: 2 }),
   createdAt: timestamp('created_at').defaultNow(),
 });
 
