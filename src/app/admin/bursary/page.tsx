@@ -124,7 +124,7 @@ const bursaryModules = [
     {
         name: "Bulk Messaging",
         description: "Send emails and in-app notifications to students and staff",
-        href: "/admin/bursary/messages",
+        href: "/admin/communications/broadcasts",
         icon: MessageSquare,
         color: "text-blue-600",
         bg: "bg-blue-50",
