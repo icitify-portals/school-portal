@@ -2,11 +2,14 @@ import { db } from "@/db/db";
 import {
     assignments,
     assignmentSubmissions,
+    assignmentGroups,
+    assignmentGroupMembers,
+    peerReviews,
     gradingRubrics,
     rubricCriteria,
     submissionRubricGrades
 } from "@/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 
 export class AssignmentService {
     /**
@@ -216,5 +219,65 @@ export class AssignmentService {
 
             return { success: true, rubricId };
         });
+    }
+
+    /**
+     * Create a group for a group assignment.
+     */
+    static async createAssignmentGroup(data: {
+        assignmentId: number;
+        groupName: string;
+        maxMembers?: number;
+        studentIds: number[];
+    }) {
+        return await db.transaction(async (tx) => {
+            const [group] = await tx.insert(assignmentGroups).values({
+                assignmentId: data.assignmentId,
+                groupName: data.groupName,
+                maxMembers: data.maxMembers ?? 5
+            });
+            const groupId = group.insertId;
+            if (data.studentIds.length > 0) {
+                await tx.insert(assignmentGroupMembers).values(
+                    data.studentIds.map(studentId => ({ groupId, studentId }))
+                );
+            }
+            return { success: true, groupId };
+        });
+    }
+
+    /**
+     * Create a peer review request.
+     */
+    static async createPeerReview(data: {
+        submissionId: number;
+        reviewerId: number;
+        revieweeId: number;
+    }) {
+        const [res] = await db.insert(peerReviews).values({
+            submissionId: data.submissionId,
+            reviewerId: data.reviewerId,
+            revieweeId: data.revieweeId,
+            status: 'pending'
+        });
+        return { success: true, peerReviewId: res.insertId };
+    }
+
+    /**
+     * Submit a peer review score/feedback.
+     */
+    static async submitPeerReview(peerReviewId: number, data: {
+        score: number;
+        feedback?: string;
+        rubricScores?: Record<string, number>;
+    }) {
+        await db.update(peerReviews).set({
+            score: data.score,
+            feedback: data.feedback,
+            rubricScores: data.rubricScores ? JSON.stringify(data.rubricScores) : undefined,
+            status: 'completed',
+            submittedAt: new Date()
+        }).where(eq(peerReviews.id, peerReviewId));
+        return { success: true };
     }
 }

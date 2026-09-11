@@ -394,6 +394,23 @@ export async function updateLessonContent(
     }
 ) {
     try {
+        // LMS-1: snapshot current lesson into versions JSON before updating
+        const [existing] = await db.select().from(courseLessons).where(eq(courseLessons.id, lessonId)).limit(1);
+        if (existing) {
+            let versions: any[] = [];
+            if (existing.versions) {
+                try { versions = JSON.parse(existing.versions as string); } catch {}
+            }
+            versions.unshift({
+                title: existing.title,
+                contentBody: existing.contentBody,
+                contentUrl: existing.contentUrl,
+                savedAt: new Date().toISOString()
+            });
+            if (versions.length > 10) versions.pop();
+            await db.update(courseLessons).set({ versions: JSON.stringify(versions) }).where(eq(courseLessons.id, lessonId));
+        }
+
         // Update Lesson Base
         await db.update(courseLessons).set({
             title: data.title,
@@ -452,6 +469,42 @@ export async function updateLessonContent(
     } catch (error) {
         console.error("Update lesson error:", error);
         return { success: false, error: "Failed to update lesson" };
+    }
+}
+
+export async function restoreLessonVersion(lessonId: number, versionIndex: number) {
+    try {
+        const [existing] = await db.select().from(courseLessons).where(eq(courseLessons.id, lessonId)).limit(1);
+        if (!existing) return { success: false, error: "Lesson not found" };
+
+        let versions: any[] = [];
+        if (existing.versions) {
+            try { versions = JSON.parse(existing.versions as string); } catch {}
+        }
+        const version = versions[versionIndex];
+        if (!version) return { success: false, error: "Version not found" };
+
+        // Snapshot current state before restoring (so restore itself is reversible)
+        const currentSnapshot = {
+            title: existing.title,
+            contentBody: existing.contentBody,
+            contentUrl: existing.contentUrl,
+            savedAt: new Date().toISOString()
+        };
+        const newVersions = [currentSnapshot, ...versions.filter((_, i) => i !== versionIndex)].slice(0, 10);
+
+        await db.update(courseLessons).set({
+            title: version.title,
+            contentBody: version.contentBody,
+            contentUrl: version.contentUrl,
+            versions: JSON.stringify(newVersions)
+        }).where(eq(courseLessons.id, lessonId));
+
+        revalidatePath(`/staff/courses`);
+        return { success: true };
+    } catch (error) {
+        console.error("Restore lesson version error:", error);
+        return { success: false, error: "Failed to restore version" };
     }
 }
 

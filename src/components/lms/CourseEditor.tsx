@@ -19,7 +19,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
-import { createModule, createLesson, deleteModule, deleteLesson, reorderModules, createCourseFromAI, updateModuleSettings, updateCourseSettings } from "@/actions/lms";
+import { createModule, createLesson, deleteModule, deleteLesson, reorderModules, createCourseFromAI, updateModuleSettings, updateCourseSettings, restoreLessonVersion } from "@/actions/lms";
 import { uploadFile } from "@/actions/upload";
 import { generateCourseStructure } from "@/actions/ai-lms";
 import { cn } from "@/lib/utils";
@@ -35,6 +35,7 @@ interface Lesson {
     contentBody?: string;
     order: number;
     prerequisiteLessonId?: number;
+    versions?: string;
 }
 
 interface Module {
@@ -255,11 +256,41 @@ export default function CourseEditor({ courseId, initialModules, initialFormatSe
             {activeTab === "versions" ? (
                 <div className="p-6 bg-amber-50 border border-amber-200 rounded-xl">
                     <h3 className="font-bold text-amber-800">Lesson Versioning & SCORM</h3>
-                    <p className="text-sm text-amber-700 mt-1">Each save now stores a version in <code>course_lessons.versions</code> JSON (enabled via <code>NEXT_PUBLIC_ENABLE_LESSON_VERSIONING=true</code>). SCORM packages are tracked via <code>contentUrl</code> and will report <code>completion</code> via xAPI. No breaking change — existing lessons show one version.</p>
-                    <div className="mt-3 space-y-2">
-                        {modules.flatMap(m => m.lessons).slice(0,3).map(l => (
-                            <div key={l.id} className="text-xs bg-white p-2 rounded border border-amber-100">Lesson {l.id}: {l.title} — {l.contentType} — versions: 1 (current)</div>
-                        ))}
+                    <p className="text-sm text-amber-700 mt-1">Each save stores a snapshot in <code>course_lessons.versions</code> JSON (max 10). SCORM packages are tracked via <code>contentUrl</code>. No breaking change.</p>
+                    {!isFeatureEnabled("LESSON_VERSIONING") && <p className="text-xs text-amber-600 mt-2">Flag <code>LESSON_VERSIONING</code> is off — restore is disabled, but snapshots are still saved.</p>}
+                    <div className="mt-3 space-y-4">
+                        {modules.flatMap(m => m.lessons).map(l => {
+                            let versions: any[] = [];
+                            if (l.versions) { try { versions = JSON.parse(l.versions); } catch {} }
+                            return (
+                                <div key={l.id} className="bg-white p-3 rounded border border-amber-100">
+                                    <div className="text-xs font-bold text-slate-700 mb-2">{l.title} <span className="text-slate-400 font-normal">({versions.length} version{versions.length !== 1 ? 's' : ''})</span></div>
+                                    {versions.length === 0 ? (
+                                        <div className="text-xs text-slate-400">No saved versions yet.</div>
+                                    ) : (
+                                        <div className="space-y-1">
+                                            {versions.map((v, idx) => (
+                                                <div key={idx} className="flex items-center justify-between text-xs bg-slate-50 p-2 rounded">
+                                                    <span className="text-slate-600">{new Date(v.savedAt).toLocaleString()} — {v.title}</span>
+                                                    <Button
+                                                        size="sm"
+                                                        variant="outline"
+                                                        disabled={!isFeatureEnabled("LESSON_VERSIONING")}
+                                                        onClick={async () => {
+                                                            if (!confirm(`Restore lesson "${l.title}" to version from ${new Date(v.savedAt).toLocaleString()}?`)) return;
+                                                            const res = await restoreLessonVersion(l.id, idx);
+                                                            if (res.success) window.location.reload();
+                                                            else alert(res.error || "Restore failed");
+                                                        }}
+                                                        className="h-7 text-[10px]"
+                                                    >Restore</Button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
                     </div>
                 </div>
             ) : (
