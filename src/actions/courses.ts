@@ -2,7 +2,7 @@
 "use server";
 
 import { db } from "@/db/db";
-import { courses, courseDepartmentSettings, coursePrerequisites, departments, staffProfiles } from "@/db/schema";
+import { courses, courseDepartmentSettings, coursePrerequisites, departments, staffProfiles, students, enrollments } from "@/db/schema";
 import { eq, and, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { hasPermission, hasRole } from "@/lib/rbac";

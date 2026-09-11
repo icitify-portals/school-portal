@@ -24,6 +24,12 @@ export async function submitCourseRegistrationAction(data: {
     courseIds: number[]
 }) {
     try {
+        // COURSE-6: early prerequisite check before level/capacity validations
+        const failedPrerequisites = await CourseRegistrationService.validatePrerequisites(data.studentId, data.courseIds);
+        if (failedPrerequisites.length > 0) {
+            return { success: false, error: "Prerequisite Failure", failedPrerequisites };
+        }
+
         const result = await CourseRegistrationService.submitRegistration(data);
         
         const student = await db.select({ userId: students.userId }).from(students).where(eq(students.id, data.studentId)).limit(1);
@@ -51,8 +57,7 @@ export async function getRegisteredCoursesAction(studentId: number, sessionId: n
             name: courses.name,
             code: courses.code,
             units: sql<number>`COALESCE(${courseDepartmentSettings.creditUnits}, ${courses.creditUnits})`.mapWith(Number),
-            // @ts-expect-error - TS2339: Auto-suppressed for build
-            status: studentCourseRegistrations.status
+            finalStatus: studentCourseRegistrations.finalStatus
         })
         .from(studentCourseRegistrations)
         .innerJoin(courses, eq(studentCourseRegistrations.courseId, courses.id))
@@ -80,7 +85,6 @@ export async function approveStudentRegistrationAction(studentId: number, sessio
         if (!isStaff) throw new Error("Unauthorized access");
 
         const staffId = 1; // Placeholder
-        // @ts-expect-error - TS2339: Auto-suppressed for build
         await CourseRegistrationService.approveRegistration(studentId, sessionId, semester, staffId);
         
         const student = await db.select({ userId: students.userId }).from(students).where(eq(students.id, studentId)).limit(1);
@@ -123,14 +127,14 @@ export async function getCourseRegisteredStudentsRosterAction(courseId: number, 
             admissionNumber: students.admissionNumber,
             studentName: users.name,
             studentEmail: users.email,
-            level: students.level,
+            level: students.currentLevel,
             courseId: courses.id,
             courseCode: courses.code,
             courseName: courses.name,
             creditUnits: sql<number>`COALESCE(${courseDepartmentSettings.creditUnits}, ${courses.creditUnits})`.mapWith(Number),
-            status: studentCourseRegistrations.status,
+            finalStatus: studentCourseRegistrations.finalStatus,
             advisorStatus: studentCourseRegistrations.advisorStatus,
-            createdAt: studentCourseRegistrations.createdAt
+            registeredAt: studentCourseRegistrations.registeredAt
         })
         .from(studentCourseRegistrations)
         .innerJoin(students, eq(studentCourseRegistrations.studentId, students.id))

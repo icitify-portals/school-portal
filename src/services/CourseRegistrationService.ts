@@ -22,8 +22,8 @@ export class CourseRegistrationService {
     static async getAvailableCourses(studentId: number, semester: '1' | '2') {
         const studentRecord = await db.select({
             id: students.id,
-            departmentId: students.departmentId,
-            level: students.level
+            deptId: students.deptId,
+            level: students.currentLevel
         })
         .from(students)
         .where(eq(students.id, studentId))
@@ -32,7 +32,7 @@ export class CourseRegistrationService {
         if (!studentRecord.length) return [];
         const student = studentRecord[0];
         const studentLevel = student.level || 100;
-        const studentDeptId = student.departmentId;
+        const studentDeptId = student.deptId;
 
         let available = await db.select({
             id: courses.id,
@@ -144,19 +144,86 @@ export class CourseRegistrationService {
             throw new Error(`Prerequisite Failure: ${prerequisiteErrors.map(e => e.message).join(' ')}`);
         }
 
-        // 1b. Capacity check (if enabled) - waitlist instead of throw
-        const waitlistedCourseIds: number[] = [];
+        // 1b. Capacity & timetable clash check (if enabled) - fail late with clear message
+        const capacityErrors: string[] = [];
+        const clashErrors: string[] = [];
         try {
             const { isFeatureEnabled } = await import("@/lib/feature-flags");
             if (isFeatureEnabled("COURSE_CAPACITY")) {
+                const studentDept = await db.select({ deptId: students.deptId }).from(students).where(eq(students.id, data.studentId)).limit(1);
+                const deptId = studentDept[0]?.deptId;
                 for (const cid of data.courseIds) {
-                    const [setting] = await db.select({ capacity: (courseDepartmentSettings as any).capacity, enrolledCount: (courseDepartmentSettings as any).enrolledCount }).from(courseDepartmentSettings).where(and(eq(courseDepartmentSettings.courseId, cid), eq(courseDepartmentSettings.deptId, (await db.select({ deptId: students.deptId }).from(students).where(eq(students.id, data.studentId)).limit(1))[0]?.deptId || 0))).limit(1) as any;
-                    if (setting && (setting as any).capacity && (setting as any).enrolledCount >= (setting as any).capacity) {
-                        waitlistedCourseIds.push(cid);
+                    if (!deptId) continue;
+                    const [setting] = await db.select({
+                        capacity: courseDepartmentSettings.capacity,
+                        enrolledCount: courseDepartmentSettings.enrolledCount,
+                        courseCode: courses.code
+                    })
+                        .from(courseDepartmentSettings)
+                        .innerJoin(courses, eq(courseDepartmentSettings.courseId, courses.id))
+                        .where(and(
+                            eq(courseDepartmentSettings.courseId, cid),
+                            eq(courseDepartmentSettings.deptId, deptId)
+                        ))
+                        .limit(1);
+                    if (setting?.capacity && (setting.enrolledCount || 0) >= setting.capacity) {
+                        capacityErrors.push(`${setting.courseCode} is full (${setting.enrolledCount}/${setting.capacity})`);
+                    }
+                }
+            }
+
+            // Timetable clash check against already-registered courses
+            const { timetableSlots, courseLecturers } = await import("@/db/schema");
+            const studentRegs = await db.select({ courseId: studentCourseRegistrations.courseId })
+                .from(studentCourseRegistrations)
+                .where(and(
+                    eq(studentCourseRegistrations.studentId, data.studentId),
+                    eq(studentCourseRegistrations.sessionId, data.sessionId)
+                ))
+                .limit(50);
+            const registeredIds = studentRegs.map(r => r.courseId).filter(Boolean) as number[];
+            if (registeredIds.length > 0) {
+                const existingSlots = await db.select({
+                    courseId: courseLecturers.courseId,
+                    day: timetableSlots.day,
+                    startTime: timetableSlots.startTime,
+                    endTime: timetableSlots.endTime
+                })
+                    .from(timetableSlots)
+                    .innerJoin(courseLecturers, eq(timetableSlots.courseLecturerId, courseLecturers.id))
+                    .where(inArray(courseLecturers.courseId, registeredIds));
+
+                const newSlots = await db.select({
+                    courseCode: courses.code,
+                    courseId: courseLecturers.courseId,
+                    day: timetableSlots.day,
+                    startTime: timetableSlots.startTime,
+                    endTime: timetableSlots.endTime
+                })
+                    .from(timetableSlots)
+                    .innerJoin(courseLecturers, eq(timetableSlots.courseLecturerId, courseLecturers.id))
+                    .innerJoin(courses, eq(courseLecturers.courseId, courses.id))
+                    .where(inArray(courseLecturers.courseId, data.courseIds));
+
+                for (const ns of newSlots) {
+                    const overlap = existingSlots.some(es =>
+                        es.day === ns.day &&
+                        es.startTime && es.endTime && ns.startTime && ns.endTime &&
+                        ns.startTime < es.endTime && ns.endTime > es.startTime
+                    );
+                    if (overlap) {
+                        clashErrors.push(`${ns.courseCode} clashes with your existing timetable`);
                     }
                 }
             }
         } catch {}
+
+        if (capacityErrors.length > 0) {
+            throw new Error(`Capacity reached: ${capacityErrors.join('; ')}`);
+        }
+        if (clashErrors.length > 0) {
+            throw new Error(`Timetable clash: ${clashErrors.join('; ')}`);
+        }
 
         // 2. Fetch Waivers to mark entries correctly
         const activeWaivers = await db.select({ courseId: courseRegistrationWaivers.courseId })
@@ -202,30 +269,12 @@ export class CourseRegistrationService {
                 sessionId: data.sessionId,
                 semester: data.semester,
                 isWaiver: waivedCourseIds.includes(courseId),
-                advisorStatus: (waitlistedCourseIds.includes(courseId) ? 'pending' : 'pending') as const,
+                advisorStatus: 'pending' as const,
                 hodStatus: 'pending' as const,
                 finalStatus: 'pending' as const
             }));
-            // For waitlisted, we will set enrollments status to waitlisted after insert via separate enrollments table if needed
-            // Here studentCourseRegistrations doesn't have waitlisted, so we keep pending but enrollments will be waitlisted
 
             await tx.insert(studentCourseRegistrations).values(registrationEntries);
-
-            // Handle enrollments waitlist for capacity-full courses
-            if (waitlistedCourseIds.length > 0) {
-                const student = await tx.select({ academicYear: students.admissionYear }).from(students).where(eq(students.id, data.studentId)).limit(1);
-                const year = student[0]?.academicYear?.toString() || new Date().getFullYear().toString();
-                for (const cid of waitlistedCourseIds) {
-                    await tx.insert(enrollments).values({
-                        studentId: data.studentId,
-                        courseId: cid,
-                        sessionId: data.sessionId,
-                        academicYear: year,
-                        semester: parseInt(data.semester),
-                        status: 'waitlisted' as any,
-                    } as any);
-                }
-            }
 
             await tx.insert(semesterSummaries).values({
                 studentId: data.studentId,
@@ -235,6 +284,32 @@ export class CourseRegistrationService {
             }).onDuplicateKeyUpdate({ set: { tcr: totalUnits } });
 
             return { success: true, totalUnits };
+        });
+    }
+
+    /**
+     * Approves a student's course registration (advisor/HOD level).
+     */
+    static async approveRegistration(studentId: number, sessionId: number, semester: '1' | '2', staffId: number) {
+        return await db.transaction(async (tx) => {
+            const regs = await tx.select().from(studentCourseRegistrations).where(and(
+                eq(studentCourseRegistrations.studentId, studentId),
+                eq(studentCourseRegistrations.sessionId, sessionId),
+                eq(studentCourseRegistrations.semester, semester)
+            ));
+
+            for (const reg of regs) {
+                let update: Partial<typeof studentCourseRegistrations.$inferInsert> = {};
+                if (reg.advisorStatus === 'pending') {
+                    update = { advisorStatus: 'approved', advisorApprovedBy: staffId, advisorApprovedAt: new Date() };
+                } else if (reg.hodStatus === 'pending') {
+                    update = { hodStatus: 'approved', hodApprovedBy: staffId, hodApprovedAt: new Date(), finalStatus: 'approved' };
+                } else {
+                    update = { finalStatus: 'approved' };
+                }
+                await tx.update(studentCourseRegistrations).set(update).where(eq(studentCourseRegistrations.id, reg.id));
+            }
+            return { success: true };
         });
     }
 

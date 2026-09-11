@@ -15,10 +15,12 @@ import * as xlsx from "xlsx";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { useBranch } from "@/providers/BranchProvider";
+import { isFeatureEnabled } from "@/lib/feature-flags";
 
 export default function CoursesPage() {
     const { isK12 } = useBranch();
     const [courses, setCourses] = useState<any[]>([]);
+    const [courseCapacityEnabled, setCourseCapacityEnabled] = useState(false);
     const [depts, setDepts] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [isAdding, setIsAdding] = useState(false);
@@ -54,6 +56,7 @@ export default function CoursesPage() {
 
     useEffect(() => {
         fetchData();
+        setCourseCapacityEnabled(isFeatureEnabled("COURSE_CAPACITY"));
     }, []);
 
     useEffect(() => {
@@ -394,10 +397,12 @@ export default function CoursesPage() {
                                         <label className="text-[10px] font-black text-slate-500">LEVEL</label>
                                         <input type="number" step="100" className="w-full bg-slate-800 text-white border-none rounded-lg p-3 text-sm" value={deptSettings.level} onChange={e => setDeptSettings({ ...deptSettings, level: parseInt(e.target.value) })} />
                                     </div>
-                                    <div className="space-y-1">
-                                        <label className="text-[10px] font-black text-slate-500">CAPACITY</label>
-                                        <input type="number" min="0" placeholder="Unlimited" className="w-full bg-slate-800 text-white border-none rounded-lg p-3 text-sm placeholder:text-slate-600" value={deptSettings.capacity} onChange={e => setDeptSettings({ ...deptSettings, capacity: e.target.value })} />
-                                    </div>
+                                    {courseCapacityEnabled && (
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] font-black text-slate-500">CAPACITY</label>
+                                            <input type="number" min="0" placeholder="Unlimited" className="w-full bg-slate-800 text-white border-none rounded-lg p-3 text-sm placeholder:text-slate-600" value={deptSettings.capacity} onChange={e => setDeptSettings({ ...deptSettings, capacity: e.target.value })} />
+                                        </div>
+                                    )}
                                     <div className="flex items-end">
                                         <Button type="submit" className="w-full bg-indigo-500 text-white h-11"><Plus className="w-4 h-4 mr-1" /> Link Dept</Button>
                                     </div>
@@ -681,7 +686,7 @@ export default function CoursesPage() {
                                                         <span className="px-3 py-1 rounded-full bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest">
                                                             {isK12 ? "Class " : "Lvl "}{set.level}
                                                         </span>
-                                                        {set.capacity != null && (
+                                                        {courseCapacityEnabled && set.capacity != null && (
                                                             <span className={cn(
                                                                 "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest",
                                                                 (set.enrolledCount || 0) >= set.capacity

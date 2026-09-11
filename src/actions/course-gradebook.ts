@@ -17,6 +17,18 @@ import { eq, and, sql, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { NotificationService } from "@/services/NotificationService";
 
+async function validateGradingWeights(courseId: number, sessionId: number) {
+    const { gradingConfigurations } = await import("@/db/schema");
+    const configs = await db.select({ weight: gradingConfigurations.weight }).from(gradingConfigurations).where(
+        and(eq(gradingConfigurations.courseId, courseId), eq(gradingConfigurations.sessionId, sessionId))
+    );
+    const total = configs.reduce((sum, c) => sum + (Number(c.weight) || 0), 0);
+    if (configs.length > 0 && Math.abs(total - 100) > 1) {
+        throw new Error(`Grading weights must sum to 100% (currently ${total}%). Adjust configurations before publishing.`);
+    }
+    return total;
+}
+
 export async function getGradebookData(courseId: number, sessionId: number) {
     try {
         // 1. Fetch all students enrolled in this course for this session
@@ -105,6 +117,8 @@ export async function getGradingConfigurations(courseId: number, sessionId: numb
 
 export async function updateGradebookScores(courseId: number, sessionId: number, updates: { studentId: number; examScore?: number; caScore?: number }[]) {
     try {
+        await validateGradingWeights(courseId, sessionId);
+
         await db.transaction(async (tx) => {
             for (const update of updates) {
                 const total = (update.caScore || 0) + (update.examScore || 0);

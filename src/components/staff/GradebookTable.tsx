@@ -10,7 +10,7 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { User, MoreHorizontal, Edit2, Check, X, AlertTriangle } from "lucide-react";
+import { User, MoreHorizontal, Edit2, Check, X, AlertTriangle, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { updateGradebookScores } from "@/actions/course-gradebook";
@@ -31,11 +31,13 @@ interface StudentGrade {
 export default function GradebookTable({
     initialStudents,
     courseId,
-    sessionId
+    sessionId,
+    weightsValid = true
 }: {
     initialStudents: StudentGrade[],
     courseId: number,
-    sessionId: number
+    sessionId: number,
+    weightsValid?: boolean
 }) {
     const [students, setStudents] = useState(initialStudents);
     const [editingRow, setEditingRow] = useState<number | null>(null);
@@ -90,8 +92,38 @@ export default function GradebookTable({
         return 'F';
     };
 
+    const handlePublishAll = async () => {
+        if (!weightsValid) {
+            toast.error("Cannot publish: grading weights must sum to 100% ±1%");
+            return;
+        }
+        setSaving(true);
+        const updates = students.map(s => ({
+            studentId: s.studentId,
+            caScore: s.caScore,
+            examScore: s.examScore
+        }));
+        const res = await updateGradebookScores(courseId, sessionId, updates);
+        if (res.success) {
+            toast.success("All grades published successfully");
+        } else {
+            toast.error(res.error || "Failed to publish grades");
+        }
+        setSaving(false);
+    };
+
     return (
-        <Table>
+        <div className="space-y-4">
+            <div className="flex justify-end px-6 pt-4">
+                <Button
+                    onClick={handlePublishAll}
+                    disabled={saving || !weightsValid}
+                    className="bg-indigo-600 hover:bg-slate-900 text-white rounded-2xl h-11 px-6 font-black uppercase tracking-widest text-[10px] shadow-lg shadow-indigo-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    <Save className="w-4 h-4 mr-2" /> Publish All
+                </Button>
+            </div>
+            <Table>
             <TableHeader className="bg-slate-50 border-b border-slate-100">
                 <TableRow>
                     <TableHead className="w-[300px] pl-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Student Identity</TableHead>
@@ -211,5 +243,6 @@ export default function GradebookTable({
                 })}
             </TableBody>
         </Table>
+        </div>
     );
 }

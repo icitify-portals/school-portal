@@ -1,8 +1,8 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { db } from "@/db/db";
-import { courses, academicSessions } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { courses, academicSessions, gradingConfigurations } from "@/db/schema";
+import { eq, and } from "drizzle-orm";
 import { getGradebookData } from "@/actions/course-gradebook";
 import GradebookTable from "@/components/staff/GradebookTable";
 import {
@@ -13,7 +13,7 @@ import {
     CardDescription
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { BookOpen, Download, Filter, Save } from "lucide-react";
+import { BookOpen, Download, Filter } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { CAWeightValidator } from "@/components/staff/CAWeightValidator";
@@ -44,6 +44,12 @@ export default async function CourseGradebookPage(props: PageProps) {
     const gradebookResult = await getGradebookData(courseId, currentSession.id);
     const students = (gradebookResult.success ? gradebookResult.data : []) || [];
 
+    const configs = await db.select({ weight: gradingConfigurations.weight }).from(gradingConfigurations).where(
+        and(eq(gradingConfigurations.courseId, courseId), eq(gradingConfigurations.sessionId, currentSession.id))
+    );
+    const totalWeight = configs.reduce((sum, c) => sum + (Number(c.weight) || 0), 0);
+    const weightsValid = configs.length === 0 || Math.abs(totalWeight - 100) <= 1;
+
     return (
         <div className="p-8 space-y-8 bg-slate-50 min-h-screen">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -60,9 +66,6 @@ export default async function CourseGradebookPage(props: PageProps) {
                 <div className="flex gap-2">
                     <Button variant="outline" className="border-none bg-white shadow-sm hover:bg-slate-100 rounded-2xl h-12 px-6 font-black uppercase tracking-widest text-[10px]">
                         <Download className="w-4 h-4 mr-2" /> Export CSV
-                    </Button>
-                    <Button className="bg-indigo-600 hover:bg-slate-900 text-white rounded-2xl h-12 px-8 font-black uppercase tracking-widest text-[10px] shadow-lg shadow-indigo-100">
-                        <Save className="w-4 h-4 mr-2" /> Publish All
                     </Button>
                 </div>
             </div>
@@ -133,6 +136,7 @@ export default async function CourseGradebookPage(props: PageProps) {
                         initialStudents={students as any}
                         courseId={courseId}
                         sessionId={currentSession.id}
+                        weightsValid={weightsValid}
                     />
                 </CardContent>
             </Card>

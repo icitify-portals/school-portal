@@ -1,4 +1,4 @@
-import { mysqlTable, int, varchar, text, timestamp, boolean, mysqlEnum, char, decimal, date, mediumtext, longtext, unique, datetime, foreignKey, time, uniqueIndex } from 'drizzle-orm/mysql-core';
+import { mysqlTable, mysqlView, int, varchar, text, timestamp, boolean, mysqlEnum, char, decimal, date, mediumtext, longtext, unique, datetime, foreignKey, time, uniqueIndex } from 'drizzle-orm/mysql-core';
 import { relations, sql } from 'drizzle-orm';
 
 // --- CORE / USER MODULE ---
@@ -199,6 +199,15 @@ export const courseDepartmentSettings = mysqlTable('course_department_settings',
 }, (table) => ({
   pk: { columns: [table.courseId, table.deptId] },
 }));
+
+export const courseOfferings = mysqlView('course_offerings', {
+  courseId: int('course_id').notNull(),
+  deptId: int('dept_id').notNull(),
+  level: int('level'),
+  semester: mysqlEnum('semester', ['1', '2']).notNull(),
+  capacity: int('capacity'),
+  enrolledCount: int('enrolled_count'),
+}).as(sql`select course_id, dept_id, level, semester, capacity, enrolled_count from course_department_settings`);
 
 export const admissionSessions = mysqlTable('admission_sessions', {
   id: int('id').autoincrement().primaryKey(),
@@ -452,7 +461,7 @@ export const enrollments = mysqlTable('enrollments', {
   sessionId: int('session_id').references(() => academicSessions.id),
   academicYear: varchar('academic_year', { length: 20 }).notNull(),
   semester: int('semester').notNull(),
-  status: mysqlEnum('status', ['pending', 'approved', 'rejected']).default('pending').notNull(),
+  status: mysqlEnum('status', ['pending', 'approved', 'rejected', 'waitlisted']).default('pending').notNull(),
   enrollmentDate: timestamp('enrollment_date').defaultNow(),
 });
 
@@ -2072,6 +2081,7 @@ export const courseLessons = mysqlTable('course_lessons', {
   contentType: mysqlEnum('content_type', ['text', 'video', 'pdf', 'scorm', 'quiz', 'assignment', 'h5p']).notNull(),
   contentUrl: varchar('content_url', { length: 255 }), // URL for video/pdf/scorm
   contentBody: text('content_body'), // For rich text lessons
+  versions: text('versions'), // JSON array of lesson version snapshots (LMS-1)
   prerequisiteLessonId: int('prerequisite_lesson_id'), // Self-reference
   durationMinutes: int('duration_minutes'),
   createdAt: timestamp('created_at').defaultNow(),
@@ -6758,6 +6768,7 @@ export const admissionInterviewsRelations = relations(admissionInterviews, ({ on
 
 export const cbtQuizzes = mysqlTable('cbt_quizzes', {
   id: int('id').autoincrement().primaryKey(),
+  courseId: int('course_id').references(() => courses.id),
   title: varchar('title', { length: 255 }).notNull(),
   description: text('description'),
   durationMinutes: int('duration_minutes').default(60),
