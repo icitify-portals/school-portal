@@ -682,14 +682,14 @@ export default function BursarySettingsPage() {
                                     </tr>
                                     <tr className="hover:bg-slate-50/50 bg-indigo-50/20">
                                         <td className="p-3 font-bold text-indigo-900">ND Acceptance Fee</td>
-                                        <td className="p-3 font-bold text-indigo-900">₦35,000.00</td>
+                                        <td className="p-3 font-bold text-indigo-900">₦35,500.00</td>
                                         <td className="p-3 font-bold text-slate-800">FSS TECH STUDIO 1</td>
                                         <td className="p-3"><span className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-indigo-100 text-indigo-800 border border-indigo-200">FSS TECH STUDIO 1</span></td>
                                         <td className="p-3 text-right"><span className="text-emerald-600 font-bold">Active</span></td>
                                     </tr>
                                     <tr className="hover:bg-slate-50/50 bg-indigo-50/20">
                                         <td className="p-3 font-bold text-indigo-900">HND Acceptance Fee</td>
-                                        <td className="p-3 font-bold text-indigo-900">₦45,000.00</td>
+                                        <td className="p-3 font-bold text-indigo-900">₦45,500.00</td>
                                         <td className="p-3 font-bold text-slate-800">FSS TECH STUDIO 1</td>
                                         <td className="p-3"><span className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-indigo-100 text-indigo-800 border border-indigo-200">FSS TECH STUDIO 1</span></td>
                                         <td className="p-3 text-right"><span className="text-emerald-600 font-bold">Active</span></td>

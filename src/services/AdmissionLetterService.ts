@@ -9,6 +9,27 @@ import {
 } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 
+const NLNG_UNITS = ["", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen", "eighteen", "nineteen"];
+const NLNG_TENS = ["", "", "twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety"];
+
+function nlngToWords(n: number): string {
+    if (n === 0) return "zero";
+    const groups: [number, string][] = [[1000000, "million"], [1000, "thousand"], [1, ""]];
+    const parts: string[] = [];
+    for (const [div, label] of groups) {
+        const g = Math.floor(n / div);
+        if (g > 0) {
+            let text: string;
+            if (g < 20) text = NLNG_UNITS[g];
+            else if (g < 100) text = `${NLNG_TENS[Math.floor(g / 10)]}${g % 10 ? "-" + NLNG_UNITS[g % 10] : ""}`;
+            else text = `${NLNG_UNITS[Math.floor(g / 100)]} hundred${g % 100 ? " and " + (g % 100 < 20 ? NLNG_UNITS[g % 100] : `${NLNG_TENS[Math.floor((g % 100) / 10)]}${(g % 100) % 10 ? "-" + NLNG_UNITS[(g % 100) % 10] : ""}`) : ""}`;
+            parts.push(`${text}${label ? " " + label : ""}`);
+            n %= div;
+        }
+    }
+    return parts.join(" ");
+}
+
 export class AdmissionLetterService {
 
     /**
@@ -90,8 +111,9 @@ export class AdmissionLetterService {
         else if (isPartTime && !isHND) refNo = `FSS/IB/DPPND/ADM/${yearRef}/${serialStr}`;
         else if (!isPartTime && isHND) refNo = `FSS/IB/HND/ADM/${yearRef}/${serialStr}`;
 
-        const acceptanceFee = isHND ? '25,000:00' : '35,000:00';
-        const acceptanceFeeWords = isHND ? 'Twenty-five thousand naira' : 'Thirty-five thousand naira';
+        const acceptanceFeeAmount = Math.round(parseFloat(formTemplate.acceptanceFee || "0") || 0);
+        const acceptanceFee = acceptanceFeeAmount.toLocaleString('en-NG');
+        const acceptanceFeeWords = `${nlngToWords(acceptanceFeeAmount)} naira`;
         
         let html = template[0].templateHtml;
         const replacements: Record<string, string> = {

@@ -261,7 +261,7 @@ export default function AdmissionGuidePage() {
                             <div className="space-y-2">
                                 {[
                                     { icon: GraduationCap, title: "1. Offer", body: "Their dashboard shows a green Congratulations banner; the status page shows 'Provisional Admission Offered' with their screening score once results are released." },
-                                    { icon: CreditCard, title: "2. Acceptance + ID Card fee", body: "One checkout: Acceptance Fee (ND ₦25,000 / HND ₦35,000) + ID Card Fee (₦2,000). Verified through alatpay before anything unlocks." },
+                                    { icon: CreditCard, title: "2. Acceptance + ID Card fee", body: "One checkout: Acceptance Fee (ND ₦35,500 / HND ₦45,500) + ID Card Fee (₦2,000). Verified through alatpay before anything unlocks." },
                                     { icon: FileText, title: "3. Admission Letter unlocks", body: "Download/print becomes available, plus the post-admission document uploads (birth certificate, O-Level, JAMB)." },
                                     { icon: Receipt, title: "4. School Fees", body: "Tuition checkout opens only after acceptance is confirmed." },
                                     { icon: CheckCircle2, title: "5. Matriculation", body: "School-fees confirmation automatically generates the Matric Number and converts the applicant into a student." },
