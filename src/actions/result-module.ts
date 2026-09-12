@@ -3,6 +3,7 @@
 import { hasRole, hasPermission } from "@/lib/rbac";
 import { revalidatePath } from "next/cache";
 import { sendEmail } from "@/lib/mail";
+import { parseMatric } from "@/lib/matric-parser";
 import { db } from "@/db";
 import { auth } from "@/auth";
 import {
@@ -352,37 +353,9 @@ export async function addBulkResultsViaIdentifier(
 
     // Helper to find or create student for previous session (record_officer)
     const findOrCreateForSession = async (matric: string): Promise<any | null> => {
-      if (!options?.autoCreateForSession) return null;
-      const parsed = await import("@/lib/matric-parser").then(m => m.parseMatric(matric)).catch(() => null);
-      const deptId = options.autoCreateDeptId || (parsed?.deptCode ? (await db.query.departments.findFirst({ where: eq(departments.code, parsed.deptCode) }))?.id : undefined);
-      const progId = options.autoCreateProgrammeId;
-      const year = parsed?.year || new Date().getFullYear();
-      const sessionId = options.autoCreateForSession!;
-      // Try find existing
-      const existing = allStudents.find(s => s.matricNumber?.toLowerCase() === matric.toLowerCase());
-      if (existing) return existing;
-      // Create user + student for this session if not exists
-      const email = `${matric.toLowerCase().replace(/\//g, "_")}@student.fss.edu.ng`;
-      const [u] = await db.select().from(users).where(eq(users.email, email)).limit(1);
-      let userId = u?.id;
-      if (!userId) {
-        const [newUser] = await db.insert(users).values({ name: matric, email, password: sql`SHA2(${matric}, 256)`, role: "student" as any });
-        userId = (newUser as any).insertId;
-      }
-      const [newStudent] = await db.insert(students).values({
-        userId,
-        matricNumber: matric,
-        programmeId: progId || null,
-        deptId: deptId || null,
-        admissionYear: year,
-        currentSessionId: sessionId,
-        currentLevel: 1,
-        status: "active" as any,
-      } as any);
-      const sid = (newStudent as any).insertId;
-      const created = await db.query.students.findFirst({ where: eq(students.id, sid) });
-      if (created) { allStudents.push(created); createdStudents++; return created; }
-      return null;
+      const created = await findOrCreateStudentForSession(matric, allStudents, options);
+      if (created) createdStudents++;
+      return created;
     };
 
     for (let i = 0; i < rows.length; i++) {
@@ -707,7 +680,8 @@ export async function sendStudentTranscriptEmail(email: string, pdfBase64: strin
 
 export async function previewBulkImport(
   batchId: number,
-  rows: { identifier: string; courseCode: string; score: number }[]
+  rows: { identifier: string; courseCode: string; score: number; name?: string }[],
+  autoCreateForSession?: number
 ) {
   try {
     const MAX_BATCH_SIZE = 300;
@@ -776,6 +750,9 @@ export async function previewBulkImport(
       const scoreValidation = validateScoreFn(row.score, 100);
       const { grade, gradePoint } = gradeScore(row.score);
 
+      // If the row is missing but auto-create is enabled, it's still importable.
+      const willCreate = !match.student && !!autoCreateForSession;
+
       previewRows.push({
         rowIndex: i + 2,
         identifier: id,
@@ -790,14 +767,14 @@ export async function previewBulkImport(
         score: row.score,
         grade,
         gradePoint,
-        isValid: scoreValidation.isValid && !!match.student,
+        isValid: scoreValidation.isValid && (!!match.student || willCreate),
         warning: scoreValidation.warning,
-        status: !match.student ? 'error' : match.confidence < 0.8 ? 'review' : 'ready',
+        status: willCreate ? 'ready' : (!match.student ? 'error' : match.confidence < 0.8 ? 'review' : 'ready'),
       });
 
       if (!match.student) {
         const serial = extractSerial(id, 5);
-        errors.push(`Row ${i + 2}: Student not found for '${id}'${serial ? ` (serial: ${serial})` : ''}`);
+        errors.push(`Row ${i + 2}: Student not found for '${id}'${willCreate ? ' — will be auto-created on upload' : ''}${serial ? ` (serial: ${serial})` : ''}`);
       } else if (match.confidence < 0.8) {
         warnings.push(`Row ${i + 2}: Low confidence match for '${id}' → ${match.student.name} (${match.strategy}, ${Math.round(match.confidence * 100)}%)`);
       }
@@ -832,6 +809,83 @@ export async function previewBulkImport(
 // ADDING RESULTS (Multi-Course Bulk CSV)
 // ──────────────────────────────────────────────
 
+// Shared helper: find an existing student, or create a missing user + student
+// record for a previous session (used by Record Officer result uploads).
+async function findOrCreateStudentForSession(
+  matric: string,
+  allStudents: any[],
+  options?: { autoCreateForSession?: number; autoCreateDeptId?: number; autoCreateProgrammeId?: number },
+  name?: string | null
+): Promise<any | null> {
+  if (!options?.autoCreateForSession) return null;
+
+  // Try a duplicate-safe lookup inside the current in-memory snapshot first,
+  // so rows for the same new student in one upload reuse the same record.
+  const existing = allStudents.find(
+    (s) =>
+      s.matricNumber?.toLowerCase() === matric.toLowerCase() ||
+      s.admissionNumber?.toLowerCase() === matric.toLowerCase()
+  );
+  if (existing) return existing;
+
+  try {
+    const parsedMatric = parseMatric(matric);
+    const year = parsedMatric?.year || new Date().getFullYear();
+    const deptCode = parsedMatric?.department || null;
+
+    // Resolve dept from the matric code if not supplied explicitly.
+    let deptId = options.autoCreateDeptId;
+    if (!deptId && deptCode) {
+      const dept = await db.query.departments.findFirst({
+        where: eq(departments.code, deptCode),
+      });
+      deptId = dept?.id;
+    }
+
+    const email = `${matric.toLowerCase().replace(/\//g, "_")}@student.fss.edu.ng`;
+
+    const [existingUser] = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.email, email))
+      .limit(1);
+
+    let userId = existingUser?.id;
+    if (!userId) {
+      const [newUser] = await db.insert(users).values({
+        name: name || matric,
+        firstName: name?.split(" ")[0] || matric,
+        surname: name?.split(" ").slice(1).join(" ") || matric,
+        email,
+        password: sql`SHA2(${matric}, 256)`,
+        role: "student",
+      });
+      userId = (newUser as any)[0]?.insertId ?? (newUser as any).insertId;
+    }
+
+    const [newStudent] = await db.insert(students).values({
+      userId,
+      firstName: name?.split(" ")[0] || matric,
+      lastName: name?.split(" ").slice(1).join(" ") || matric,
+      matricNumber: matric,
+      admissionYear: year,
+      currentSessionId: options.autoCreateForSession,
+      currentLevel: 1,
+      deptId: deptId || null,
+      programmeId: options.autoCreateProgrammeId || null,
+      status: "active",
+    } as any);
+
+    const studentId = (newStudent as any)[0]?.insertId ?? (newStudent as any).insertId;
+    const created = await db.query.students.findFirst({ where: eq(students.id, studentId) });
+    if (created) allStudents.push(created);
+    return created || null;
+  } catch (e: any) {
+    console.error(`[result-module] Failed to auto-create student '${matric}':`, e?.message);
+    return null;
+  }
+}
+
 export async function addMultiCourseBulkResults(
   batchId: number,
   rows: { identifier: string; courseCode: string; score: number }[],
@@ -864,6 +918,7 @@ export async function addMultiCourseBulkResults(
     const errors: string[] = [];
     const toInsert: any[] = [];
     const createdCourses: { code: string; id: number }[] = [];
+    let createdStudents = 0;
 
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
@@ -874,11 +929,20 @@ export async function addMultiCourseBulkResults(
       if (!courseCode) { errors.push(`Row ${i + 2}: missing course_code`); continue; }
       if (isNaN(row.score)) { errors.push(`Row ${i + 2}: invalid score '${row.score}'`); continue; }
 
-      const student = allStudents.find(
+      let student = allStudents.find(
         (s) =>
           s.matricNumber?.toLowerCase() === identifier ||
           s.admissionNumber?.toLowerCase() === identifier
       );
+      if (!student && autoCreateOptions?.autoCreateForSession) {
+        student = await findOrCreateStudentForSession(
+          String(row.identifier).trim(),
+          allStudents,
+          autoCreateOptions,
+          (row as any).name
+        );
+        if (student) createdStudents++;
+      }
       if (!student) {
         errors.push(`Row ${i + 2}: Student not found for '${row.identifier}'`);
         continue;
@@ -926,6 +990,7 @@ export async function addMultiCourseBulkResults(
       count: toInsert.length,
       errors: errors.length > 0 ? errors : undefined,
       createdCourses,
+      createdStudents,
     };
   } catch (e: any) {
     return { success: false, error: e.message };

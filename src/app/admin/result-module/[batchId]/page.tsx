@@ -473,15 +473,19 @@ export default function BatchDetailPage() {
     setShowPreview(false);
 
     // Transform pivot format into row-per-result
-    const rows: { identifier: string; courseCode: string; score: number }[] = [];
+    const rows: { identifier: string; courseCode: string; score: number; name?: string }[] = [];
     csvData.forEach(r => {
       for (const cc of csvCourseColumns) {
         const val = r[cc];
         if (val !== undefined && val !== null && val !== "") {
+          const name =
+            r.name || r.student_name || r["student name"] || r.full_name || r["full name"] || r.surname ||
+            r.last_name || r["last name"] || r.first_name || r["first name"] || undefined;
           rows.push({
             identifier: r.matric_number,
             courseCode: cc,
             score: Number(val),
+            name: name ? String(name).trim() : undefined,
           });
         }
       }
@@ -511,15 +515,10 @@ export default function BatchDetailPage() {
       filteredRows,
       batch?.gradingScale?.rules || "[]",
       autoCreateCourses,
-      autoCreateForPreviousSession && previousSessionId ? { autoCreateForSession: Number(previousSessionId), autoCreateDeptId: undefined, autoCreateProgrammeId: undefined } : undefined
-    ).catch(async () => {
-      // Fallback to original signature if new overload not yet deployed
-      return await addMultiCourseBulkResults(batchId, filteredRows, batch?.gradingScale?.rules || "[]", autoCreateCourses);
-    });
-    // Handle previous session auto-create via addBulkResultsViaIdentifier if needed (for single-course legacy path)
-    if (autoCreateForPreviousSession && previousSessionId && res.errors) {
-      // Errors that were 'Student not found' will be retried via auto-create path in next upload
-    }
+      autoCreateForPreviousSession && previousSessionId
+        ? { autoCreateForSession: Number(previousSessionId), autoCreateDeptId: undefined, autoCreateProgrammeId: undefined }
+        : undefined
+    );
 
     setUploadingBulk(false);
 
@@ -529,6 +528,9 @@ export default function BatchDetailPage() {
       setCsvFile(null);
       fetchBatch();
       let msg = `✓ Uploaded ${res.count} results successfully (${filteredRows.length} scores)`;
+      if (res.createdStudents) {
+        msg += `\nCreated ${res.createdStudents} new student record(s).`;
+      }
       if (res.createdCourses?.length) {
         msg += `\nCreated ${res.createdCourses.length} new course(s): ${res.createdCourses.map((c: any) => c.code).join(", ")}`;
       }
@@ -550,15 +552,19 @@ export default function BatchDetailPage() {
     setShowPreview(true);
 
     // Transform pivot format into row-per-result
-    const rows: { identifier: string; courseCode: string; score: number }[] = [];
+    const rows: { identifier: string; courseCode: string; score: number; name?: string }[] = [];
     csvData.forEach(r => {
       for (const cc of csvCourseColumns) {
         const val = r[cc];
         if (val !== undefined && val !== null && val !== "") {
+          const name =
+            r.name || r.student_name || r["student name"] || r.full_name || r["full name"] || r.surname ||
+            r.last_name || r["last name"] || r.first_name || r["first name"] || undefined;
           rows.push({
             identifier: r.matric_number,
             courseCode: cc,
             score: Number(val),
+            name: name ? String(name).trim() : undefined,
           });
         }
       }
@@ -566,7 +572,7 @@ export default function BatchDetailPage() {
 
     setPreviewRows(rows);
 
-    const res = await previewBulkImport(batchId, rows);
+    const res = await previewBulkImport(batchId, rows, autoCreateForPreviousSession && previousSessionId ? Number(previousSessionId) : undefined);
     setPreviewData(res);
     setPreviewLoading(false);
   }
