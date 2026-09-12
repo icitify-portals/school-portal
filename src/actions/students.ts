@@ -551,32 +551,85 @@ export async function updateAdminStudentProfile(studentId: number, updatePayload
         const [student] = await db.select().from(students).where(eq(students.id, studentId)).limit(1);
         if (!student) return { success: false, error: "Student not found" };
 
+        // Normalize unique-column values: trim and treat empty strings as NULL so
+        // partially-filled records don't collide on the UNIQUE indexes.
+        const normValue = (v: any) => (typeof v === "string" ? v.trim() : v) || null;
+        const newMatric = updatePayload.matricNumber !== undefined ? normValue(updatePayload.matricNumber) : student.matricNumber;
+        const newJamb = updatePayload.jambNumber !== undefined ? normValue(updatePayload.jambNumber) : student.jambNumber;
+        const newNin = updatePayload.nin !== undefined ? normValue(updatePayload.nin) : student.nin;
+
+        // Unique existence checks (excluding the current student) so we return a
+        // human-readable message instead of a raw duplicate-key SQL error.
+        const dupChecks: { label: string; column: any; value: string | null }[] = [
+            { label: "matric number", column: students.matricNumber, value: newMatric },
+            { label: "JAMB number", column: students.jambNumber, value: newJamb },
+        ];
+        for (const check of dupChecks) {
+            if (!check.value) continue;
+            const [dup] = await db
+                .select({ id: students.id })
+                .from(students)
+                .where(and(eq(check.column, check.value), sql`${students.id} != ${studentId}`))
+                .limit(1);
+            if (dup) {
+                return { success: false, error: `Another student already has this ${check.label}: '${check.value}'.` };
+            }
+        }
+        if (updatePayload.nin !== undefined && newNin && newNin !== student.nin) {
+            const [dupNin] = await db
+                .select({ id: students.id })
+                .from(students)
+                .where(and(eq(students.nin, newNin), sql`${students.id} != ${studentId}`))
+                .limit(1);
+            if (dupNin) {
+                return { success: false, error: `Another student already has this NIN: '${newNin}'.` };
+            }
+        }
+
         const studentUpdates: any = {};
-        if (updatePayload.firstName !== undefined) studentUpdates.firstName = updatePayload.firstName;
-        if (updatePayload.lastName !== undefined) studentUpdates.lastName = updatePayload.lastName;
-        if (updatePayload.otherNames !== undefined) studentUpdates.otherNames = updatePayload.otherNames;
-        if (updatePayload.jambNumber !== undefined) studentUpdates.jambNumber = updatePayload.jambNumber;
-        if (updatePayload.matricNumber !== undefined) studentUpdates.matricNumber = updatePayload.matricNumber;
-        if (updatePayload.nin !== undefined) studentUpdates.nin = updatePayload.nin;
+        if (updatePayload.firstName !== undefined) studentUpdates.firstName = updatePayload.firstName?.trim?.() || null;
+        if (updatePayload.lastName !== undefined) studentUpdates.lastName = updatePayload.lastName?.trim?.() || null;
+        if (updatePayload.otherNames !== undefined) studentUpdates.otherNames = updatePayload.otherNames?.trim?.() || null;
+        if (updatePayload.jambNumber !== undefined) studentUpdates.jambNumber = newJamb;
+        if (updatePayload.matricNumber !== undefined) studentUpdates.matricNumber = newMatric;
+        if (updatePayload.nin !== undefined) studentUpdates.nin = newNin;
         
         if (Object.keys(studentUpdates).length > 0) {
             await db.update(students).set(studentUpdates).where(eq(students.id, studentId));
         }
 
         if (student.userId) {
+            const [user] = await db.select().from(users).where(eq(users.id, student.userId)).limit(1);
             const userUpdates: any = {};
-            let newFirstName = updatePayload.firstName !== undefined ? updatePayload.firstName : student.firstName || '';
-            let newLastName = updatePayload.lastName !== undefined ? updatePayload.lastName : student.lastName || '';
-            let newMiddleName = updatePayload.otherNames !== undefined ? updatePayload.otherNames : student.otherNames || '';
+            let newFirstName = updatePayload.firstName !== undefined ? studentUpdates.firstName : (student.firstName || '');
+            let newLastName = updatePayload.lastName !== undefined ? studentUpdates.lastName : (student.lastName || '');
+            let newMiddleName = updatePayload.otherNames !== undefined ? studentUpdates.otherNames : (student.otherNames || '');
 
             if (updatePayload.firstName !== undefined || updatePayload.lastName !== undefined || updatePayload.otherNames !== undefined) {
-                userUpdates.name = `${newFirstName} ${newMiddleName} ${newLastName}`.replace(/\s+/g, ' ').trim();
-                userUpdates.firstName = newFirstName;
-                userUpdates.surname = newLastName;
-                userUpdates.middleName = newMiddleName;
+                userUpdates.name = `${newFirstName || ''} ${newMiddleName || ''} ${newLastName || ''}`.replace(/\s+/g, ' ').trim();
+                userUpdates.firstName = newFirstName || null;
+                userUpdates.surname = newLastName || null;
+                userUpdates.middleName = newMiddleName || null;
             }
-            if (updatePayload.email !== undefined) userUpdates.email = updatePayload.email;
-            if (updatePayload.phone !== undefined) userUpdates.phone = updatePayload.phone;
+
+            if (updatePayload.email !== undefined && user) {
+                const newEmail = String(updatePayload.email).trim().toLowerCase();
+                if (!newEmail) {
+                    return { success: false, error: "Email cannot be empty." };
+                }
+                if (newEmail !== (user.email || '').trim().toLowerCase()) {
+                    const [emailDup] = await db
+                        .select({ id: users.id })
+                        .from(users)
+                        .where(and(eq(users.email, newEmail), sql`${users.id} != ${student.userId}`))
+                        .limit(1);
+                    if (emailDup) {
+                        return { success: false, error: `Email '${newEmail}' is already used by another account.` };
+                    }
+                }
+                userUpdates.email = newEmail;
+            }
+            if (updatePayload.phone !== undefined) userUpdates.phone = String(updatePayload.phone).trim() || null;
 
             if (Object.keys(userUpdates).length > 0) {
                 await db.update(users).set(userUpdates).where(eq(users.id, student.userId));
@@ -585,6 +638,17 @@ export async function updateAdminStudentProfile(studentId: number, updatePayload
         revalidatePath(`/admin/students/${studentId}`);
         return { success: true };
     } catch (error: any) {
+        // Catch duplicate-key violations even if our pre-checks missed a race, and
+        // surface a friendly message instead of a raw SQL error.
+        const raw = String(error?.message || error?.code || '');
+        if (/duplicate|ER_DUP_ENTRY/i.test(raw)) {
+            const col = /for key '([^']+)'/.exec(raw)?.[1] || '';
+            if (col.includes('users_email')) return { success: false, error: "That email is already used by another account." };
+            if (col.includes('matric')) return { success: false, error: "That matric number is already used by another student." };
+            if (col.includes('jamb')) return { success: false, error: "That JAMB number is already used by another student." };
+            if (col.includes('nin')) return { success: false, error: "That NIN is already used by another student." };
+            return { success: false, error: "That value is already in use by another record." };
+        }
         console.error("Failed to update student data:", error);
         return { success: false, error: error.message || "Failed to update student data" };
     }
