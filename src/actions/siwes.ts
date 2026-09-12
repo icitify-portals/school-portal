@@ -345,3 +345,115 @@ export async function getSiwesConfigs(): Promise<{ success: boolean; data?: any[
         return { success: false, error: "Failed to fetch configs" };
     }
 }
+
+export async function toggleSiwesConfig(configId: number) {
+    try {
+        const isAuth = await hasPermission("siwes.config.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("siwes_coordinator");
+        if (!isAuth) return { success: false, error: "Unauthorized" };
+        const [existing] = await db.select().from(siwesConfigs).where(eq(siwesConfigs.id, configId)).limit(1);
+        if (!existing) return { success: false, error: "Configuration not found" };
+        await db.update(siwesConfigs)
+            .set({ isActive: !existing.isActive })
+            .where(eq(siwesConfigs.id, configId));
+        revalidatePath("/admin/siwes");
+        revalidatePath("/student/siwes");
+        return { success: true };
+    } catch (error) {
+        return { success: false, error: "Failed to update configuration" };
+    }
+}
+
+export async function getAdminCompanies(): Promise<{ success: boolean; data?: any[]; error?: string }> {
+    try {
+        const isAuth = await hasPermission("siwes.placement.view") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("siwes_coordinator");
+        if (!isAuth) return { success: false, error: "Unauthorized" };
+        const companies = await db.select().from(siwesCompanies).orderBy(desc(siwesCompanies.id));
+        const addedByIds = Array.from(new Set(companies.map(c => c.addedById).filter((id): id is number => id !== null)));
+        const addedByUsers = addedByIds.length > 0 ? await db.select({ id: users.id, name: users.name }).from(users).where(inArray(users.id, addedByIds)) : [];
+        const data = companies.map(c => ({
+            ...c,
+            addedBy: addedByIds.includes(c.addedById as number) ? addedByUsers.find(u => u.id === c.addedById) : null
+        }));
+        return { success: true, data };
+    } catch (error) {
+        return { success: false, error: "Failed to fetch companies" };
+    }
+}
+
+export async function setCompanyApproval(companyId: number, approved: boolean) {
+    try {
+        const isAuth = await hasPermission("siwes.config.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("siwes_coordinator");
+        if (!isAuth) return { success: false, error: "Unauthorized" };
+        await db.update(siwesCompanies)
+            .set({ isApproved: approved })
+            .where(eq(siwesCompanies.id, companyId));
+        revalidatePath("/admin/siwes");
+        revalidatePath("/student/siwes");
+        return { success: true };
+    } catch (error) {
+        return { success: false, error: "Failed to update company" };
+    }
+}
+
+export async function reviewLogbook(logbookId: number, status: 'approved' | 'flagged', coordinatorComment?: string) {
+    try {
+        const isAuth = await hasPermission("siwes.placement.assess") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("siwes_coordinator");
+        if (!isAuth) return { success: false, error: "Unauthorized" };
+        await db.update(siwesLogbooks)
+            .set({ status, coordinatorComment: coordinatorComment || null })
+            .where(eq(siwesLogbooks.id, logbookId));
+        revalidatePath("/admin/siwes");
+        revalidatePath("/student/siwes");
+        return { success: true };
+    } catch (error) {
+        return { success: false, error: "Failed to review logbook entry" };
+    }
+}
+
+export async function editLogbook(logbookId: number, activities: string, signedLogbookUrl?: string) {
+    try {
+        const session = await auth();
+        if (!session?.user?.id) return { success: false, error: "Unauthorized" };
+        const userId = parseInt(session.user.id);
+
+        const [logbook] = await db.select().from(siwesLogbooks).where(eq(siwesLogbooks.id, logbookId)).limit(1);
+        if (!logbook) return { success: false, error: "Logbook entry not found" };
+        if (logbook.status === 'approved') return { success: false, error: "Approved entries cannot be edited." };
+
+        const [placement] = await db.select().from(siwesPlacements).where(eq(siwesPlacements.id, logbook.placementId)).limit(1);
+        if (!placement) return { success: false, error: "Placement not found" };
+        const [student] = await db.select().from(students).where(and(eq(students.id, placement.studentId), eq(students.userId, userId))).limit(1);
+        if (!student) return { success: false, error: "Unauthorized" };
+
+        await db.update(siwesLogbooks)
+            .set({ activities, signedLogbookUrl: signedLogbookUrl || null, status: 'submitted' })
+            .where(eq(siwesLogbooks.id, logbookId));
+        revalidatePath("/student/siwes");
+        return { success: true };
+    } catch (error) {
+        return { success: false, error: "Failed to update logbook entry" };
+    }
+}
+
+export async function deleteLogbook(logbookId: number) {
+    try {
+        const session = await auth();
+        if (!session?.user?.id) return { success: false, error: "Unauthorized" };
+        const userId = parseInt(session.user.id);
+
+        const [logbook] = await db.select().from(siwesLogbooks).where(eq(siwesLogbooks.id, logbookId)).limit(1);
+        if (!logbook) return { success: false, error: "Logbook entry not found" };
+        if (logbook.status === 'approved') return { success: false, error: "Approved entries cannot be deleted." };
+
+        const [placement] = await db.select().from(siwesPlacements).where(eq(siwesPlacements.id, logbook.placementId)).limit(1);
+        if (!placement) return { success: false, error: "Placement not found" };
+        const [student] = await db.select().from(students).where(and(eq(students.id, placement.studentId), eq(students.userId, userId))).limit(1);
+        if (!student) return { success: false, error: "Unauthorized" };
+
+        await db.delete(siwesLogbooks).where(eq(siwesLogbooks.id, logbookId));
+        revalidatePath("/student/siwes");
+        return { success: true };
+    } catch (error) {
+        return { success: false, error: "Failed to delete logbook entry" };
+    }
+}

@@ -423,6 +423,7 @@ export const siwesLogbooks = mysqlTable('siwes_logbooks', {
   weekNumber: int('week_number').notNull(),
   activities: text('activities'),
   signedLogbookUrl: varchar('signed_logbook_url', { length: 500 }),
+  coordinatorComment: text('coordinator_comment'),
   status: mysqlEnum('status', ['submitted', 'approved', 'flagged']).default('submitted'),
   submittedAt: timestamp('submitted_at').defaultNow(),
 });

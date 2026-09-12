@@ -2,24 +2,28 @@
 
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Modal } from "@/components/ui/modal";
+import { SiwesFileUpload } from "@/components/siwes/SiwesFileUpload";
 import {
     Briefcase,
     Building2,
     FileText,
     CheckCircle2,
     Clock,
-    Upload,
     Download,
     Plus,
     Loader2,
     AlertCircle,
     ArrowRight,
-    Search
+    Search,
+    Pencil,
+    Trash2,
+    ExternalLink
 } from "lucide-react";
 import {
     getSiwesEligibility,
@@ -28,11 +32,14 @@ import {
     applyToCompany,
     uploadAcceptanceLetter,
     submitLogbook,
-    requestCompany
+    requestCompany,
+    editLogbook,
+    deleteLogbook
 } from "@/actions/siwes";
 import { getStudentByUserId } from "@/actions/students";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { viewableAssetUrl } from "@/lib/assets";
 
 export default function StudentSiwesPortal() {
     const { data: session } = useSession();
@@ -42,6 +49,87 @@ export default function StudentSiwesPortal() {
     const [placements, setPlacements] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<'overview' | 'apply' | 'logbook'>('overview');
+    const [logbookModal, setLogbookModal] = useState<{ mode: 'new'; entry?: undefined } | { mode: 'edit'; entry: any } | null>(null);
+    const [logbookActivities, setLogbookActivities] = useState("");
+    const [logbookDocUrl, setLogbookDocUrl] = useState<string | null>(null);
+    const [logbookSaving, setLogbookSaving] = useState(false);
+
+    const downloadLogbookTemplate = () => {
+        const weeks = Math.max(1, (eligibility?.config?.durationMonths || 3) * 4);
+        let rows = "";
+        for (let w = 1; w <= weeks; w++) {
+            rows += `
+                <tr>
+                    <td class="wk" style="border:1px solid #000;padding:8px;text-align:center;font-weight:bold;">Week ${w}</td>
+                    <td style="border:1px solid #000;padding:8px;height:70px;">&nbsp;</td>
+                    <td style="border:1px solid #000;padding:8px;">&nbsp;</td>
+                    <td style="border:1px solid #000;padding:8px;text-align:center;">&nbsp;</td>
+                </tr>`;
+        }
+        const html = `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>SIWES Logbook Template</title></head>
+<body style="font-family:Arial,sans-serif;max-width:900px;margin:24px auto;color:#111;">
+    <h2 style="text-align:center;text-transform:uppercase;letter-spacing:1px;">Industrial Work Experience Scheme (SIWES)</h2>
+    <h3 style="text-align:center;text-transform:uppercase;">Weekly Activity Logbook</h3>
+    <table style="width:100%;border-collapse:collapse;border:1px solid #000;margin-top:24px;">
+        <thead>
+            <tr style="background:#eee;">
+                <th style="border:1px solid #000;padding:8px;">Week</th>
+                <th style="border:1px solid #000;padding:8px;">Activities / Tasks Undertaken</th>
+                <th style="border:1px solid #000;padding:8px;">Skills Acquired</th>
+                <th style="border:1px solid #000;padding:8px;">Supervisor Sign / Date</th>
+            </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+    </table>
+    <p style="margin-top:16px;font-size:11px;">Print and fill in your weekly activities. Have each week endorsed by your company supervisor.</p>
+</body></html>`;
+        const blob = new Blob([html], { type: "text/html" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "SIWES_Logbook_Template.html";
+        a.click();
+        URL.revokeObjectURL(url);
+    };
+
+    const openLogbookModal = (mode: 'new' | 'edit', entry?: any) => {
+        setLogbookModal({ mode, entry } as any);
+        setLogbookActivities(entry?.activities || "");
+        setLogbookDocUrl(entry?.signedLogbookUrl || null);
+    };
+
+    const saveLogbook = async () => {
+        if (!currentPlacement) return;
+        if (!logbookActivities.trim()) {
+            toast.error("Please describe your activities for this week.");
+            return;
+        }
+        setLogbookSaving(true);
+        const res = logbookModal?.mode === 'edit'
+            ? await editLogbook(logbookModal.entry.id, logbookActivities.trim(), logbookDocUrl || undefined)
+            : await submitLogbook({ placementId: currentPlacement.id, weekNumber: (currentPlacement.logbooks?.length || 0) + 1, activities: logbookActivities.trim(), signedLogbookUrl: logbookDocUrl || undefined });
+        setLogbookSaving(false);
+        if (res.success) {
+            toast.success(logbookModal?.mode === 'edit' ? "Logbook entry updated!" : "Logbook entry submitted!");
+            setLogbookModal(null);
+            fetchData();
+        } else {
+            toast.error(res.error || "Failed to save logbook entry");
+        }
+    };
+
+    const handleDeleteLogbook = async (entry: any) => {
+        if (!window.confirm(`Delete Week ${entry.weekNumber} entry? This cannot be undone.`)) return;
+        const res = await deleteLogbook(entry.id);
+        if (res.success) {
+            toast.success("Logbook entry deleted");
+            setLogbookModal(null);
+            fetchData();
+        } else {
+            toast.error(res.error || "Failed to delete entry");
+        }
+    };
 
     const fetchData = async () => {
         if (!session?.user?.id) return;
@@ -103,6 +191,7 @@ export default function StudentSiwesPortal() {
     const currentPlacement = placements[0];
 
     return (
+        <>
         <div className="p-4 sm:p-6 lg:p-8 min-h-screen bg-transparent">
             <div className="max-w-[1600px] w-full mx-auto space-y-10 text-slate-800">
                 {/* Header */}
@@ -222,20 +311,28 @@ export default function StudentSiwesPortal() {
 
                                             <div className="flex flex-wrap gap-4 pt-8 border-t border-white/40">
                                                 <Button variant="outline" className="rounded-2xl bg-white hover:bg-slate-50 text-slate-700 border-slate-200 h-14 px-8 font-black uppercase text-[11px] tracking-widest flex items-center gap-3 active:scale-95 shadow-sm" asChild>
-                                                    <a href={currentPlacement.acceptanceLetterUrl || "#"} target="_blank" rel="noreferrer">
+                                                    <a href={currentPlacement.acceptanceLetterUrl ? (viewableAssetUrl(currentPlacement.acceptanceLetterUrl) || "#") : "#"} target="_blank" rel="noreferrer">
                                                         <Download className="w-5 h-5 text-slate-450" /> Download Letter
                                                     </a>
                                                 </Button>
                                                 {currentPlacement.status === 'applied' && (
-                                                    <Button
-                                                        onClick={() => {
-                                                            const url = prompt("Enter Acceptance Letter URL (Simulation):");
-                                                            if (url) uploadAcceptanceLetter(currentPlacement.id, url).then(fetchData);
-                                                        }}
-                                                        className="bg-emerald-650 hover:bg-emerald-700 text-white h-14 px-8 rounded-2xl font-black uppercase text-[11px] tracking-widest flex items-center gap-3 active:scale-95 shadow-md"
-                                                    >
-                                                        <Upload className="w-5 h-5" /> Upload Acceptance
-                                                    </Button>
+                                                    <div className="flex items-center gap-4">
+                                                        <SiwesFileUpload
+                                                            folder="letters"
+                                                            label="Upload Acceptance Letter"
+                                                            value={currentPlacement.acceptanceLetterUrl}
+                                                            onUploaded={async (url) => {
+                                                                if (!url) return;
+                                                                const res = await uploadAcceptanceLetter(currentPlacement.id, url);
+                                                                if (res.success) {
+                                                                    toast.success("Acceptance letter uploaded — placement accepted!");
+                                                                    fetchData();
+                                                                } else {
+                                                                    toast.error(res.error || "Failed to upload letter");
+                                                                }
+                                                            }}
+                                                        />
+                                                    </div>
                                                 )}
                                             </div>
                                         </Card>
@@ -247,7 +344,7 @@ export default function StudentSiwesPortal() {
                                                     <h4 className="text-lg font-black uppercase italic mb-1">Download Resources</h4>
                                                     <p className="text-indigo-200 text-xs font-bold uppercase tracking-wider">Get your official logbook template and guidelines.</p>
                                                 </div>
-                                                <Button className="bg-white text-indigo-900 hover:bg-indigo-100 px-6 py-6 rounded-xl font-black uppercase text-[10px] tracking-widest active:scale-95 shadow-md">
+                                                <Button onClick={downloadLogbookTemplate} className="bg-white text-indigo-900 hover:bg-indigo-100 px-6 py-6 rounded-xl font-black uppercase text-[10px] tracking-widest active:scale-95 shadow-md">
                                                     Official Logbook
                                                 </Button>
                                             </div>
@@ -308,10 +405,7 @@ export default function StudentSiwesPortal() {
                                     <div className="flex justify-between items-center mb-10">
                                         <h3 className="text-2xl font-black text-slate-900 uppercase italic tracking-tight leading-none">Weekly Activities</h3>
                                         <Button
-                                            onClick={() => {
-                                                const activities = prompt("Describe your activities for this week:");
-                                                if (activities) submitLogbook({ placementId: currentPlacement.id, weekNumber: (currentPlacement.logbooks?.length || 0) + 1, activities }).then(fetchData);
-                                            }}
+                                            onClick={() => openLogbookModal('new')}
                                             className="bg-indigo-650 hover:bg-indigo-700 text-white px-6 py-6 rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center gap-2 active:scale-95 shadow-md"
                                         >
                                             <Plus className="w-4 h-4" /> New Entry
@@ -341,10 +435,27 @@ export default function StudentSiwesPortal() {
                                                 <p className="text-sm text-slate-650 font-medium leading-relaxed bg-slate-50/50 p-6 rounded-2xl border border-slate-100 italic">
                                                     "{l.activities}"
                                                 </p>
+                                                {l.coordinatorComment && (
+                                                    <div className="mt-4 p-4 rounded-2xl bg-amber-50 border border-amber-200 text-[11px] font-bold text-amber-700">
+                                                        <span className="uppercase tracking-widest block mb-1">Coordinator feedback</span>
+                                                        {l.coordinatorComment}
+                                                    </div>
+                                                )}
                                                 <div className="mt-6 pt-6 border-t border-slate-200/60 flex justify-between items-center">
                                                     <div className="flex gap-2">
-                                                        <Button variant="ghost" size="sm" className="rounded-xl text-indigo-650 font-black uppercase text-[9px] hover:bg-indigo-50">View Document</Button>
-                                                        <Button variant="ghost" size="sm" className="rounded-xl text-slate-400 font-black uppercase text-[9px]">Edit Entry</Button>
+                                                        <Button variant="ghost" size="sm" className="rounded-xl text-indigo-650 font-black uppercase text-[9px] hover:bg-indigo-50" disabled={!l.signedLogbookUrl} asChild={!!l.signedLogbookUrl}>
+                                                            {l.signedLogbookUrl ? (
+                                                                <a href={viewableAssetUrl(l.signedLogbookUrl)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1"><ExternalLink className="w-3 h-3" /> View Document</a>
+                                                            ) : (
+                                                                <span className="inline-flex items-center gap-1"><FileText className="w-3 h-3" /> No Document</span>
+                                                            )}
+                                                        </Button>
+                                                        <Button variant="ghost" size="sm" className="rounded-xl text-slate-400 font-black uppercase text-[9px] hover:bg-slate-50" disabled={l.status === 'approved'} onClick={() => openLogbookModal('edit', l)}>
+                                                            <Pencil className="w-3 h-3 mr-1" /> Edit Entry
+                                                        </Button>
+                                                        <Button variant="ghost" size="sm" className="rounded-xl text-rose-400 font-black uppercase text-[9px] hover:bg-rose-50" disabled={l.status === 'approved'} onClick={() => handleDeleteLogbook(l)}>
+                                                            <Trash2 className="w-3 h-3 mr-1" /> Delete
+                                                        </Button>
                                                     </div>
                                                     <CheckCircle2 className={cn("w-6 h-6", l.status === 'approved' ? "text-emerald-500 animate-pulse" : "text-slate-100")} />
                                                 </div>
@@ -364,5 +475,51 @@ export default function StudentSiwesPortal() {
                 </div>
             </div>
         </div>
+
+        {logbookModal && (
+            <Modal isOpen onClose={() => !logbookSaving && setLogbookModal(null)} title={logbookModal.mode === 'edit' ? `Edit Week ${logbookModal.entry.weekNumber} Entry` : "New Weekly Entry"}>
+                <div className="space-y-5">
+                    {logbookModal.mode === 'new' && (
+                        <div className="p-4 rounded-2xl bg-indigo-50 border border-indigo-100 text-center">
+                            <p className="text-2xl font-black text-indigo-700 italic">W{(currentPlacement?.logbooks?.length || 0) + 1}</p>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-indigo-400">Next available week</p>
+                        </div>
+                    )}
+                    <div>
+                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-2">Describe your activities for this week</label>
+                        <Textarea
+                            value={logbookActivities}
+                            onChange={(e) => setLogbookActivities(e.target.value)}
+                            rows={6}
+                            placeholder="e.g. Assisted with data entry, observed account reconciliation procedures, prepared reports..."
+                            className="rounded-2xl resize-none"
+                        />
+                    </div>
+                    <div>
+                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-2">Signed logbook document (optional)</label>
+                        <SiwesFileUpload
+                            folder="logbooks"
+                            label="Upload signed logbook"
+                            value={logbookDocUrl}
+                            onUploaded={(url) => setLogbookDocUrl(url || null)}
+                        />
+                    </div>
+                    <div className="flex gap-3 pt-2">
+                        <Button
+                            onClick={saveLogbook}
+                            disabled={logbookSaving}
+                            className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest h-12 active:scale-95 shadow-md"
+                        >
+                            {logbookSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                            {logbookModal.mode === 'edit' ? "Save Changes" : "Submit Entry"}
+                        </Button>
+                        <Button variant="outline" onClick={() => setLogbookModal(null)} disabled={logbookSaving} className="rounded-2xl font-black uppercase text-[10px] tracking-widest h-12">
+                            Cancel
+                        </Button>
+                    </div>
+                </div>
+            </Modal>
+        )}
+        </>
     );
 }
