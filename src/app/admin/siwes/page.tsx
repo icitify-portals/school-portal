@@ -35,8 +35,11 @@ import {
     reviewLogbook,
     updatePlacementStatus,
     updatePlacementDetails,
-    getStaffList
+    getStaffList,
+    assessPlacement,
+    updateCompany
 } from "@/actions/siwes";
+import { SiwesFileUpload } from "@/components/siwes/SiwesFileUpload";
 import { getFaculties } from "@/actions/faculties";
 import { getDepartments } from "@/actions/departments";
 import { getProgrammes } from "@/actions/programmes";
@@ -82,6 +85,15 @@ export default function AdminSiwesDashboard() {
     const [editForm, setEditForm] = useState({ startDate: "", endDate: "", supervisorId: "" });
     const [confirmComplete, setConfirmComplete] = useState<any>(null);
     const [cancelTarget, setCancelTarget] = useState<any>(null);
+
+    // Assessment modal state
+    const [assessTarget, setAssessTarget] = useState<any>(null);
+    const [assessForm, setAssessForm] = useState({ score: "", comment: "", centreApprovalStatus: "pending" });
+    const [finalReportUrl, setFinalReportUrl] = useState<string | null>(null);
+
+    // Edit company modal state
+    const [editCompany, setEditCompany] = useState<any>(null);
+    const [companyForm, setCompanyForm] = useState({ name: "", address: "", email: "", phone: "" });
 
     const fetchData = async () => {
         setLoading(true);
@@ -162,6 +174,49 @@ export default function AdminSiwesDashboard() {
             fetchData();
         } else {
             toast.error(res.error || "Failed to update placement");
+        }
+    };
+
+    const saveAssessment = async () => {
+        if (!assessTarget) return;
+        const score = parseInt(assessForm.score);
+        if (isNaN(score) || score < 0 || score > 100) { toast.error("Score must be between 0 and 100"); return; }
+        setActionBusy(true);
+        const res = await assessPlacement({
+            placementId: assessTarget.id,
+            supervisorScore: score,
+            supervisorComment: assessForm.comment.trim(),
+            finalReportUrl: finalReportUrl || undefined,
+            centreApprovalStatus: assessForm.centreApprovalStatus as 'pending' | 'approved' | 'rejected'
+        });
+        setActionBusy(false);
+        if (res.success) {
+            toast.success("Assessment saved successfully");
+            setAssessTarget(null);
+            setFinalReportUrl(null);
+            fetchData();
+        } else {
+            toast.error(res.error || "Failed to save assessment");
+        }
+    };
+
+    const saveCompany = async () => {
+        if (!editCompany) return;
+        if (!companyForm.name.trim()) { toast.error("Company name is required"); return; }
+        setActionBusy(true);
+        const res = await updateCompany(editCompany.id, {
+            name: companyForm.name.trim(),
+            address: companyForm.address.trim(),
+            email: companyForm.email.trim() || null,
+            phone: companyForm.phone.trim() || null
+        });
+        setActionBusy(false);
+        if (res.success) {
+            toast.success("Company updated successfully");
+            setEditCompany(null);
+            fetchData();
+        } else {
+            toast.error(res.error || "Failed to update company");
         }
     };
 
@@ -369,6 +424,18 @@ export default function AdminSiwesDashboard() {
                                                                         <Pencil className="w-3.5 h-3.5 mr-1.5" />
                                                                         Edit
                                                                     </Button>
+                                                                    <Button size="sm" variant="outline" onClick={() => {
+                                                                        setAssessTarget(p);
+                                                                        setAssessForm({
+                                                                            score: p.assessment?.supervisorScore?.toString() || "",
+                                                                            comment: p.assessment?.supervisorComment || "",
+                                                                            centreApprovalStatus: p.assessment?.centreApprovalStatus || (p.status === 'completed' ? 'approved' : 'pending')
+                                                                        });
+                                                                        setFinalReportUrl(p.assessment?.finalReportUrl || null);
+                                                                    }} disabled={actionBusy} className="rounded-xl font-black uppercase tracking-widest text-[9px] px-4 py-4 text-purple-600 shadow-sm transition-all">
+                                                                        <FileText className="w-3.5 h-3.5 mr-1.5" />
+                                                                        Assess
+                                                                    </Button>
                                                                     <Button size="sm" variant="outline" onClick={() => setConfirmComplete(p)} disabled={actionBusy} className="rounded-xl font-black uppercase tracking-widest text-[9px] px-4 py-4 text-slate-600 shadow-sm transition-all">
                                                                         <CheckCircle2 className="w-3.5 h-3.5 mr-1.5" />
                                                                         Complete
@@ -465,10 +532,18 @@ export default function AdminSiwesDashboard() {
                                                         <h4 className="text-lg font-black text-slate-800 uppercase italic mb-2 tracking-tight">{c.name}</h4>
                                                         <p className="text-xs text-slate-500 font-bold leading-relaxed mb-6 line-clamp-2">{c.address}</p>
                                                     </div>
-                                                    <div className="pt-5 border-t border-white/40">
-                                                        <Button variant="outline" onClick={() => handleSetApproval(c.id, false)} className="w-full rounded-2xl font-black uppercase text-[10px] tracking-widest h-10 text-slate-500">
-                                                            Remove Approval
-                                                        </Button>
+                                                    <div className="pt-5 border-t border-white/40 space-y-2">
+                                                        <div className="flex gap-2">
+                                                            <Button variant="outline" onClick={() => {
+                                                                setEditCompany(c);
+                                                                setCompanyForm({ name: c.name || "", address: c.address || "", email: c.email || "", phone: c.phone || "" });
+                                                            }} disabled={actionBusy} className="flex-1 rounded-2xl font-black uppercase text-[10px] tracking-widest h-10 text-indigo-600">
+                                                                <Pencil className="w-3.5 h-3.5 mr-1.5" /> Edit
+                                                            </Button>
+                                                            <Button variant="outline" onClick={() => handleSetApproval(c.id, false)} className="flex-1 rounded-2xl font-black uppercase text-[10px] tracking-widest h-10 text-slate-500">
+                                                                Remove
+                                                            </Button>
+                                                        </div>
                                                     </div>
                                                 </Card>
                                             ))}
@@ -779,6 +854,115 @@ export default function AdminSiwesDashboard() {
                             </Button>
                             <Button variant="outline" onClick={() => { setConfirmComplete(null); setCancelTarget(null); }} disabled={actionBusy} className="rounded-2xl font-black uppercase text-[10px] tracking-widest h-12">
                                 Close
+                            </Button>
+                        </div>
+                    </div>
+                </Modal>
+            )}
+
+            {/* ASSESS PLACEMENT MODAL */}
+            {assessTarget && (
+                <Modal isOpen onClose={() => !actionBusy && setAssessTarget(null)} title={`Assess Placement — ${assessTarget.student?.user?.name || 'Student'}`}>
+                    <div className="space-y-5">
+                        <p className="text-[11px] font-bold text-slate-500">
+                            Company: <span className="text-slate-800 uppercase">{assessTarget.company?.name}</span>
+                        </p>
+                        <div className="flex items-center gap-4">
+                            <div className="flex-1">
+                                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-2">Supervisor Score (0-100)</Label>
+                                <Input
+                                    type="number"
+                                    min={0}
+                                    max={100}
+                                    value={assessForm.score}
+                                    onChange={(e) => setAssessForm({ ...assessForm, score: e.target.value })}
+                                    placeholder="e.g. 78"
+                                    className="rounded-2xl"
+                                />
+                            </div>
+                            <div className="flex-1">
+                                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-2">Centre Approval</Label>
+                                <Select value={assessForm.centreApprovalStatus} onValueChange={(v) => setAssessForm({ ...assessForm, centreApprovalStatus: v })}>
+                                    <SelectTrigger className="rounded-2xl">
+                                        <SelectValue placeholder="Select status" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="pending">Pending</SelectItem>
+                                        <SelectItem value="approved">Approved</SelectItem>
+                                        <SelectItem value="rejected">Rejected</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+                        <div>
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-2">Supervisor Comment</Label>
+                            <Textarea
+                                value={assessForm.comment}
+                                onChange={(e) => setAssessForm({ ...assessForm, comment: e.target.value })}
+                                rows={3}
+                                placeholder="Assessment notes / recommendation..."
+                                className="rounded-2xl resize-none"
+                            />
+                        </div>
+                        <div>
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-2">Final Report (optional)</Label>
+                            <SiwesFileUpload
+                                folder="siwes-report"
+                                label="Upload final report"
+                                value={finalReportUrl}
+                                onUploaded={(url) => setFinalReportUrl(url || null)}
+                            />
+                        </div>
+                        <div className="flex gap-3 pt-2">
+                            <Button
+                                onClick={saveAssessment}
+                                disabled={actionBusy}
+                                className="flex-1 bg-purple-600 hover:bg-purple-700 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest h-12 active:scale-95 shadow-md"
+                            >
+                                {actionBusy ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                                Save Assessment
+                            </Button>
+                            <Button variant="outline" onClick={() => setAssessTarget(null)} disabled={actionBusy} className="rounded-2xl font-black uppercase text-[10px] tracking-widest h-12">
+                                Cancel
+                            </Button>
+                        </div>
+                    </div>
+                </Modal>
+            )}
+
+            {/* EDIT COMPANY MODAL */}
+            {editCompany && (
+                <Modal isOpen onClose={() => !actionBusy && setEditCompany(null)} title="Edit Company">
+                    <div className="space-y-5">
+                        <div>
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-2">Company Name</Label>
+                            <Input value={companyForm.name} onChange={(e) => setCompanyForm({ ...companyForm, name: e.target.value })} className="rounded-2xl" />
+                        </div>
+                        <div>
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-2">Address</Label>
+                            <Textarea value={companyForm.address} onChange={(e) => setCompanyForm({ ...companyForm, address: e.target.value })} rows={2} className="rounded-2xl resize-none" />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-2">Email</Label>
+                                <Input type="email" value={companyForm.email} onChange={(e) => setCompanyForm({ ...companyForm, email: e.target.value })} className="rounded-2xl" />
+                            </div>
+                            <div>
+                                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-2">Phone</Label>
+                                <Input value={companyForm.phone} onChange={(e) => setCompanyForm({ ...companyForm, phone: e.target.value })} className="rounded-2xl" />
+                            </div>
+                        </div>
+                        <div className="flex gap-3 pt-2">
+                            <Button
+                                onClick={saveCompany}
+                                disabled={actionBusy}
+                                className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest h-12 active:scale-95 shadow-md"
+                            >
+                                {actionBusy ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                                Save Company
+                            </Button>
+                            <Button variant="outline" onClick={() => setEditCompany(null)} disabled={actionBusy} className="rounded-2xl font-black uppercase text-[10px] tracking-widest h-12">
+                                Cancel
                             </Button>
                         </div>
                     </div>

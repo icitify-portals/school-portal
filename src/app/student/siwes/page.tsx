@@ -54,6 +54,9 @@ export default function StudentSiwesPortal() {
     const [logbookActivities, setLogbookActivities] = useState("");
     const [logbookDocUrl, setLogbookDocUrl] = useState<string | null>(null);
     const [logbookSaving, setLogbookSaving] = useState(false);
+    const [showCompanyModal, setShowCompanyModal] = useState(false);
+    const [companyForm, setCompanyForm] = useState({ name: "", address: "", email: "", phone: "" });
+    const [companySaving, setCompanySaving] = useState(false);
 
     const downloadLogbookTemplate = () => {
         const weeks = Math.max(1, (eligibility?.config?.durationMonths || 3) * 4);
@@ -98,6 +101,26 @@ export default function StudentSiwesPortal() {
         setLogbookModal({ mode, entry } as any);
         setLogbookActivities(entry?.activities || "");
         setLogbookDocUrl(entry?.signedLogbookUrl || null);
+    };
+
+    const submitCompanyRequest = async () => {
+        if (!companyForm.name.trim()) { toast.error("Organization name is required"); return; }
+        setCompanySaving(true);
+        const res = await requestCompany({
+            name: companyForm.name.trim(),
+            address: companyForm.address.trim(),
+            email: companyForm.email.trim() || undefined,
+            phone: companyForm.phone.trim() || undefined,
+            addedById: parseInt(session?.user?.id!)
+        });
+        setCompanySaving(false);
+        if (res.success) {
+            toast.success("Organization request submitted for approval!");
+            setShowCompanyModal(false);
+            setCompanyForm({ name: "", address: "", email: "", phone: "" });
+        } else {
+            toast.error(res.error || "Failed to submit request");
+        }
     };
 
     const saveLogbook = async () => {
@@ -365,6 +388,51 @@ export default function StudentSiwesPortal() {
                                             </div>
                                         </Card>
 
+                                            {currentPlacement.assessment && (
+                                                <Card className={cn("border shadow-xl rounded-[2.5rem] p-8",
+                                                    currentPlacement.assessment.centreApprovalStatus === 'approved' ? "border-emerald-200 bg-emerald-50/60" :
+                                                        currentPlacement.assessment.centreApprovalStatus === 'rejected' ? "border-rose-200 bg-rose-50/60" :
+                                                            "border-white/40 bg-white/60 backdrop-blur-3xl")}>
+                                                    <div className="flex flex-col sm:flex-row justify-between items-start gap-6 mb-6">
+                                                        <div className="flex items-center gap-4">
+                                                            <div className={cn("w-14 h-14 rounded-2xl flex items-center justify-center shadow-inner",
+                                                                currentPlacement.assessment.centreApprovalStatus === 'approved' ? "bg-emerald-100 text-emerald-600" :
+                                                                    currentPlacement.assessment.centreApprovalStatus === 'rejected' ? "bg-rose-100 text-rose-600" :
+                                                                        "bg-indigo-50 text-indigo-600")}>
+                                                                <FileText className="w-8 h-8" />
+                                                            </div>
+                                                            <div>
+                                                                <h4 className="text-lg font-black uppercase italic tracking-tight text-slate-800">Final Assessment</h4>
+                                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Centre: {currentPlacement.assessment.centreApprovalStatus}</p>
+                                                            </div>
+                                                        </div>
+                                                        <div className="text-right">
+                                                            <p className="text-5xl font-black italic text-slate-800 tracking-tighter font-mono">
+                                                                {currentPlacement.assessment.supervisorScore}<span className="text-xl text-slate-400">/100</span>
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                    {currentPlacement.assessment.supervisorComment && (
+                                                        <p className="text-sm text-slate-600 font-medium leading-relaxed bg-white/70 p-5 rounded-2xl border border-slate-100 italic mb-5">
+                                                            "{currentPlacement.assessment.supervisorComment}"
+                                                        </p>
+                                                    )}
+                                                    {currentPlacement.assessment.centreComment && (
+                                                        <div className="mb-5 p-4 rounded-2xl bg-amber-50 border border-amber-200 text-[11px] font-bold text-amber-700">
+                                                            <span className="uppercase tracking-widest block mb-1">Centre comment</span>
+                                                            {currentPlacement.assessment.centreComment}
+                                                        </div>
+                                                    )}
+                                                    {currentPlacement.assessment.finalReportUrl && (
+                                                        <Button variant="outline" asChild className="rounded-2xl bg-white hover:bg-indigo-50 text-indigo-600 border-indigo-200 font-black uppercase text-[10px] tracking-widest h-11">
+                                                            <a href={viewableAssetUrl(currentPlacement.assessment.finalReportUrl) || "#"} target="_blank" rel="noreferrer">
+                                                                <Download className="w-4 h-4 mr-2" /> Final Report
+                                                            </a>
+                                                        </Button>
+                                                    )}
+                                                </Card>
+                                            )}
+
                                         <Card className="border border-white/10 shadow-xl bg-indigo-900 p-8 text-white relative overflow-hidden rounded-[2.5rem]">
                                             <div className="absolute inset-0 bg-gradient-to-r from-indigo-800/50 to-purple-800/50 opacity-40" />
                                             <div className="relative z-10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -412,11 +480,7 @@ export default function StudentSiwesPortal() {
                                             </Card>
                                         ))}
                                         <button
-                                            onClick={() => {
-                                                const name = prompt("Organization Name:");
-                                                const addr = prompt("Address:");
-                                                if (name && addr) requestCompany({ name, address: addr, addedById: parseInt(session?.user?.id!) }).then(() => toast.success("Request submitted!"));
-                                            }}
+                                            onClick={() => setShowCompanyModal(true)}
                                             className="p-8 rounded-[2.5rem] border-2 border-dashed border-slate-200 bg-white/40 hover:border-indigo-300 transition-all flex flex-col items-center justify-center gap-4 group active:scale-[0.98] min-h-[220px]"
                                         >
                                             <Plus className="w-12 h-12 text-slate-300 group-hover:text-indigo-400 transition-colors" />
@@ -542,6 +606,61 @@ export default function StudentSiwesPortal() {
                             {logbookModal.mode === 'edit' ? "Save Changes" : "Submit Entry"}
                         </Button>
                         <Button variant="outline" onClick={() => setLogbookModal(null)} disabled={logbookSaving} className="rounded-2xl font-black uppercase text-[10px] tracking-widest h-12">
+                            Cancel
+                        </Button>
+                    </div>
+                </div>
+            </Modal>
+        )}
+
+        {showCompanyModal && (
+            <Modal isOpen onClose={() => !companySaving && setShowCompanyModal(false)} title="Request New Organization">
+                <div className="space-y-5">
+                    <div className="p-4 rounded-2xl bg-indigo-50 border border-indigo-100">
+                        <p className="text-[10px] font-black uppercase tracking-widest text-indigo-400 mb-1">Note</p>
+                        <p className="text-[11px] font-medium text-slate-500 leading-relaxed">
+                            Your organization will be reviewed and approved by the SIWES coordinator before you can apply to it.
+                        </p>
+                    </div>
+                    <div>
+                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-2">Organization Name *</label>
+                        <Input
+                            value={companyForm.name}
+                            onChange={(e) => setCompanyForm({ ...companyForm, name: e.target.value })}
+                            placeholder="e.g. Dangote Refinery Plc"
+                            className="rounded-2xl"
+                        />
+                    </div>
+                    <div>
+                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-2">Address *</label>
+                        <Textarea
+                            value={companyForm.address}
+                            onChange={(e) => setCompanyForm({ ...companyForm, address: e.target.value })}
+                            rows={2}
+                            placeholder="Street, city, state..."
+                            className="rounded-2xl resize-none"
+                        />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-2">Email</label>
+                            <Input type="email" value={companyForm.email} onChange={(e) => setCompanyForm({ ...companyForm, email: e.target.value })} placeholder="hr@company.com" className="rounded-2xl" />
+                        </div>
+                        <div>
+                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-2">Phone</label>
+                            <Input value={companyForm.phone} onChange={(e) => setCompanyForm({ ...companyForm, phone: e.target.value })} placeholder="+234..." className="rounded-2xl" />
+                        </div>
+                    </div>
+                    <div className="flex gap-3 pt-2">
+                        <Button
+                            onClick={submitCompanyRequest}
+                            disabled={companySaving}
+                            className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest h-12 active:scale-95 shadow-md"
+                        >
+                            {companySaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                            Submit Request
+                        </Button>
+                        <Button variant="outline" onClick={() => setShowCompanyModal(false)} disabled={companySaving} className="rounded-2xl font-black uppercase text-[10px] tracking-widest h-12">
                             Cancel
                         </Button>
                     </div>

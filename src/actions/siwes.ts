@@ -12,9 +12,9 @@ import {
     programmes,
     faculties,
     users,
-    notifications,
     staffProfiles
 } from "@/db/schema";
+import { NotificationService } from "@/services/NotificationService";
 import { eq, and, or, isNull, desc, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
@@ -274,7 +274,9 @@ export async function assessPlacement(data: {
     placementId: number,
     supervisorScore: number,
     supervisorComment: string,
-    centreApprovalStatus: 'pending' | 'approved' | 'rejected'
+    finalReportUrl?: string,
+    centreApprovalStatus: 'pending' | 'approved' | 'rejected',
+    centreComment?: string
 }) {
     try {
         const isAuth = await hasPermission("siwes.placement.assess") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("siwes_coordinator");
@@ -284,17 +286,23 @@ export async function assessPlacement(data: {
             where: eq(siwesAssessments.placementId, data.placementId)
         });
 
+        const assessmentValues: any = {
+            supervisorScore: data.supervisorScore,
+            supervisorComment: data.supervisorComment,
+            centreApprovalStatus: data.centreApprovalStatus,
+            centreComment: data.centreComment || null,
+            assessedAt: new Date()
+        };
+        if (data.finalReportUrl !== undefined) assessmentValues.finalReportUrl = data.finalReportUrl || null;
+
         if (existing) {
             await db.update(siwesAssessments)
-                .set({
-                    ...data,
-                    assessedAt: new Date()
-                })
+                .set(assessmentValues)
                 .where(eq(siwesAssessments.id, existing.id));
         } else {
             await db.insert(siwesAssessments).values({
-                ...data,
-                assessedAt: new Date()
+                ...assessmentValues,
+                placementId: data.placementId
             });
         }
 
@@ -302,6 +310,24 @@ export async function assessPlacement(data: {
             await db.update(siwesPlacements)
                 .set({ status: 'completed' })
                 .where(eq(siwesPlacements.id, data.placementId));
+        }
+
+        // Notify student of assessment outcome
+        const [placement] = await db.select().from(siwesPlacements).where(eq(siwesPlacements.id, data.placementId)).limit(1);
+        if (placement) {
+            const [student] = await db.select().from(students).where(eq(students.id, placement.studentId)).limit(1);
+            if (student?.userId) {
+                await NotificationService.notifyUser(student.userId, {
+                    title: "SIWES Assessment Completed",
+                    message: data.centreApprovalStatus === 'approved'
+                        ? `Congratulations! Your SIWES placement has been approved and marked completed. Final score: ${data.supervisorScore}/100.`
+                        : data.centreApprovalStatus === 'rejected'
+                            ? `Your SIWES assessment was not approved${data.centreComment ? `: ${data.centreComment}` : ''}.`
+                            : `Your SIWES assessment has been recorded. Score: ${data.supervisorScore}/100.`,
+                    type: data.centreApprovalStatus === 'approved' ? 'success' : data.centreApprovalStatus === 'rejected' ? 'error' : 'info',
+                    channels: ['toast', 'email']
+                });
+            }
         }
 
         revalidatePath("/admin/siwes");
@@ -404,6 +430,32 @@ export async function setCompanyApproval(companyId: number, approved: boolean) {
     }
 }
 
+export async function updateCompany(companyId: number, data: { name?: string; address?: string; email?: string | null; phone?: string | null }) {
+    try {
+        const isAuth = await hasPermission("siwes.config.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("siwes_coordinator");
+        if (!isAuth) return { success: false, error: "Unauthorized" };
+        const [company] = await db.select().from(siwesCompanies).where(eq(siwesCompanies.id, companyId)).limit(1);
+        if (!company) return { success: false, error: "Company not found" };
+
+        const updates: Record<string, any> = {};
+        if (data.name !== undefined && data.name.trim()) updates.name = data.name.trim();
+        if (data.address !== undefined) updates.address = data.address || null;
+        if (data.email !== undefined) updates.email = data.email || null;
+        if (data.phone !== undefined) updates.phone = data.phone || null;
+
+        if (Object.keys(updates).length === 0) return { success: false, error: "No changes provided" };
+
+        await db.update(siwesCompanies)
+            .set(updates)
+            .where(eq(siwesCompanies.id, companyId));
+        revalidatePath("/admin/siwes");
+        revalidatePath("/student/siwes");
+        return { success: true };
+    } catch (error) {
+        return { success: false, error: "Failed to update company" };
+    }
+}
+
 export async function reviewLogbook(logbookId: number, status: 'approved' | 'flagged', coordinatorComment?: string) {
     try {
         const isAuth = await hasPermission("siwes.placement.assess") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("siwes_coordinator");
@@ -489,17 +541,15 @@ export async function updatePlacementStatus(
             .set({ status: newStatus })
             .where(eq(siwesPlacements.id, placementId));
 
-        // Send notification to student
+        // Notify student via email + in-app
         const [student] = await db.select().from(students).where(eq(students.id, placement.studentId)).limit(1);
         if (student?.userId) {
             const label = newStatus.charAt(0).toUpperCase() + newStatus.slice(1);
-            await db.insert(notifications).values({
-                userId: student.userId,
+            await NotificationService.notifyUser(student.userId, {
                 title: `SIWES Placement ${label}`,
                 message: comment || `Your SIWES placement status has changed to ${label}.`,
                 type: newStatus === 'accepted' || newStatus === 'completed' ? 'success' : newStatus === 'rejected' ? 'error' : 'warning',
-                channel: 'both',
-                link: '/student/siwes',
+                channels: ['toast', 'email']
             });
         }
 
@@ -543,13 +593,11 @@ export async function updatePlacementDetails(
                 .limit(1);
             const [student] = await db.select().from(students).where(eq(students.id, placement.studentId)).limit(1);
             if (student?.userId && supervisorUser) {
-                await db.insert(notifications).values({
-                    userId: student.userId,
+                await NotificationService.notifyUser(student.userId, {
                     title: "SIWES Supervisor Assigned",
                     message: `${supervisorUser.name} has been assigned as your SIWES supervisor.`,
                     type: "info",
-                    channel: 'both',
-                    link: '/student/siwes',
+                    channels: ['toast', 'email']
                 });
             }
         }
