@@ -14,6 +14,7 @@ import {
     Building2,
     FileText,
     CheckCircle2,
+    XCircle,
     Clock,
     Download,
     Plus,
@@ -264,6 +265,29 @@ export default function StudentSiwesPortal() {
                     <div className="lg:col-span-3">
                         {activeTab === 'overview' && (
                             <div className="space-y-8">
+                                {currentPlacement && (currentPlacement.status === 'rejected' || currentPlacement.status === 'cancelled') && (
+                                    <div className={cn("p-8 rounded-[2.5rem] border shadow-xl flex flex-col sm:flex-row items-start sm:items-center gap-4",
+                                        currentPlacement.status === 'rejected' ? "bg-rose-50/80 border-rose-200" : "bg-slate-100 border-slate-300")}>
+                                        <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center shadow-inner",
+                                            currentPlacement.status === 'rejected' ? "bg-rose-100 text-rose-600" : "bg-slate-200 text-slate-500")}>
+                                            <XCircle className="w-7 h-7" />
+                                        </div>
+                                        <div className="flex-1">
+                                            <h4 className="text-base font-black uppercase italic tracking-tight text-slate-800">
+                                                {currentPlacement.status === 'rejected' ? 'Application Rejected' : 'Placement Cancelled'}
+                                            </h4>
+                                            <p className="text-xs font-bold text-slate-500 mt-1">
+                                                Your application to <span className="uppercase text-slate-700">{currentPlacement.company?.name}</span> was {currentPlacement.status}.
+                                            </p>
+                                        </div>
+                                        <Button
+                                            onClick={() => setActiveTab('apply')}
+                                            className="bg-slate-900 text-white hover:bg-slate-800 rounded-2xl font-black uppercase tracking-widest text-[10px] px-6 h-11 active:scale-95 shadow-md"
+                                        >
+                                            Apply Elsewhere <ArrowRight className="w-4 h-4 ml-2" />
+                                        </Button>
+                                    </div>
+                                )}
                                 {!currentPlacement ? (
                                     <Card className="border border-indigo-500/20 shadow-2xl rounded-[3rem] bg-indigo-600 p-12 text-white relative overflow-hidden group">
                                         <div className="relative z-10 space-y-6">
@@ -294,7 +318,7 @@ export default function StudentSiwesPortal() {
                                                 <Badge className="rounded-xl px-4 py-2 bg-indigo-600 text-white font-black uppercase text-[10px] tracking-widest">{currentPlacement.status}</Badge>
                                             </div>
 
-                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
                                                 <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-1">
                                                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Start Date</p>
                                                     <p className="text-sm font-black text-slate-700 uppercase italic font-mono">{currentPlacement.startDate ? new Date(currentPlacement.startDate).toLocaleDateString() : 'Pending'}</p>
@@ -306,6 +330,10 @@ export default function StudentSiwesPortal() {
                                                 <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-1">
                                                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Weeks Covered</p>
                                                     <p className="text-sm font-black text-slate-700 uppercase italic font-mono">{currentPlacement.logbooks?.length || 0} / {eligibility.config.durationMonths * 4}</p>
+                                                </div>
+                                                <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-1">
+                                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Supervisor</p>
+                                                    <p className="text-sm font-black text-slate-700 uppercase italic">{currentPlacement.supervisor?.name || 'Not assigned'}</p>
                                                 </div>
                                             </div>
 
@@ -325,7 +353,7 @@ export default function StudentSiwesPortal() {
                                                                 if (!url) return;
                                                                 const res = await uploadAcceptanceLetter(currentPlacement.id, url);
                                                                 if (res.success) {
-                                                                    toast.success("Acceptance letter uploaded — placement accepted!");
+                                                                    toast.success("Acceptance letter uploaded — awaiting approval");
                                                                     fetchData();
                                                                 } else {
                                                                     toast.error(res.error || "Failed to upload letter");

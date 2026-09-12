@@ -11,7 +11,9 @@ import {
     departments,
     programmes,
     faculties,
-    users
+    users,
+    notifications,
+    staffProfiles
 } from "@/db/schema";
 import { eq, and, or, isNull, desc, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
@@ -140,8 +142,7 @@ export async function uploadAcceptanceLetter(placementId: number, url: string) {
         if (!student) return { success: false, error: "Unauthorized" };
         await db.update(siwesPlacements)
             .set({
-                acceptanceLetterUrl: url,
-                status: 'accepted'
+                acceptanceLetterUrl: url
             })
             .where(eq(siwesPlacements.id, placementId));
         revalidatePath("/student/siwes");
@@ -201,11 +202,15 @@ export async function getStudentPlacements(studentId: number): Promise<{ success
             db.select().from(siwesAssessments).where(inArray(siwesAssessments.placementId, placementIds))
         ]);
 
+        const supervisorIds = Array.from(new Set(basePlacements.map(p => p.supervisorId).filter((id): id is number => id !== null)));
+        const supervisors = supervisorIds.length > 0 ? await db.select({ id: users.id, name: users.name, email: users.email }).from(users).where(inArray(users.id, supervisorIds)) : [];
+
         const data = basePlacements.map(p => ({
             ...p,
             company: companies.find(c => c.id === p.companyId),
             logbooks: allLogbooks.filter(l => l.placementId === p.id),
-            assessment: allAssessments.find(a => a.placementId === p.id)
+            assessment: allAssessments.find(a => a.placementId === p.id),
+            supervisor: p.supervisorId ? supervisors.find(s => s.id === p.supervisorId) : null
         }));
 
         return { success: true, data };
@@ -240,6 +245,9 @@ export async function getPlacementsForAdmin(): Promise<{ success: boolean; data?
             progIds.length > 0 ? db.select().from(programmes).where(inArray(programmes.id, progIds)) : []
         ]);
 
+        const supervisorIds = Array.from(new Set(basePlacements.map(p => p.supervisorId).filter((id): id is number => id !== null)));
+        const supervisors = supervisorIds.length > 0 ? await db.select({ id: users.id, name: users.name, email: users.email }).from(users).where(inArray(users.id, supervisorIds)) : [];
+
         const data = basePlacements.map(p => {
             const student = studentsList.find(s => s.id === p.studentId);
             return {
@@ -251,7 +259,8 @@ export async function getPlacementsForAdmin(): Promise<{ success: boolean; data?
                 } : null,
                 company: companies.find(c => c.id === p.companyId),
                 logbooks: allLogbooks.filter(l => l.placementId === p.id),
-                assessment: allAssessments.find(a => a.placementId === p.id)
+                assessment: allAssessments.find(a => a.placementId === p.id),
+                supervisor: p.supervisorId ? supervisors.find(s => s.id === p.supervisorId) : null
             };
         });
 
@@ -455,5 +464,134 @@ export async function deleteLogbook(logbookId: number) {
         return { success: true };
     } catch (error) {
         return { success: false, error: "Failed to delete logbook entry" };
+    }
+}
+
+export async function updatePlacementStatus(
+    placementId: number,
+    newStatus: 'accepted' | 'rejected' | 'completed' | 'cancelled',
+    comment?: string
+) {
+    try {
+        const isAuth = await hasPermission("siwes.placement.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("siwes_coordinator");
+        if (!isAuth) return { success: false, error: "Unauthorized" };
+
+        const [placement] = await db.select().from(siwesPlacements).where(eq(siwesPlacements.id, placementId)).limit(1);
+        if (!placement) return { success: false, error: "Placement not found" };
+
+        // Validate transitions
+        if (newStatus === 'accepted' && placement.status !== 'applied') return { success: false, error: "Only applied placements can be accepted." };
+        if (newStatus === 'rejected' && placement.status !== 'applied') return { success: false, error: "Only applied placements can be rejected." };
+        if (newStatus === 'completed' && placement.status !== 'accepted') return { success: false, error: "Only accepted placements can be completed." };
+        if (newStatus === 'cancelled' && placement.status !== 'accepted' && placement.status !== 'applied') return { success: false, error: "This placement cannot be cancelled." };
+
+        await db.update(siwesPlacements)
+            .set({ status: newStatus })
+            .where(eq(siwesPlacements.id, placementId));
+
+        // Send notification to student
+        const [student] = await db.select().from(students).where(eq(students.id, placement.studentId)).limit(1);
+        if (student?.userId) {
+            const label = newStatus.charAt(0).toUpperCase() + newStatus.slice(1);
+            await db.insert(notifications).values({
+                userId: student.userId,
+                title: `SIWES Placement ${label}`,
+                message: comment || `Your SIWES placement status has changed to ${label}.`,
+                type: newStatus === 'accepted' || newStatus === 'completed' ? 'success' : newStatus === 'rejected' ? 'error' : 'warning',
+                channel: 'both',
+                link: '/student/siwes',
+            });
+        }
+
+        revalidatePath("/admin/siwes");
+        revalidatePath("/student/siwes");
+        return { success: true };
+    } catch (error) {
+        console.error("Failed to update placement status:", error);
+        return { success: false, error: "Failed to update placement status" };
+    }
+}
+
+export async function updatePlacementDetails(
+    placementId: number,
+    data: { startDate?: string; endDate?: string; supervisorId?: number | null }
+) {
+    try {
+        const isAuth = await hasPermission("siwes.placement.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("siwes_coordinator");
+        if (!isAuth) return { success: false, error: "Unauthorized" };
+
+        const [placement] = await db.select().from(siwesPlacements).where(eq(siwesPlacements.id, placementId)).limit(1);
+        if (!placement) return { success: false, error: "Placement not found" };
+
+        const updates: Record<string, any> = {};
+        if (data.startDate !== undefined) updates.startDate = data.startDate || null;
+        if (data.endDate !== undefined) updates.endDate = data.endDate || null;
+        if (data.supervisorId !== undefined) updates.supervisorId = data.supervisorId || null;
+
+        if (Object.keys(updates).length === 0) return { success: false, error: "No changes provided" };
+
+        await db.update(siwesPlacements)
+            .set(updates)
+            .where(eq(siwesPlacements.id, placementId));
+
+        // Notify student about supervisor assignment
+        if (data.supervisorId) {
+            const [supervisorUser] = await db.select({ name: users.name })
+                .from(staffProfiles)
+                .innerJoin(users, eq(staffProfiles.userId, users.id))
+                .where(eq(staffProfiles.id, data.supervisorId))
+                .limit(1);
+            const [student] = await db.select().from(students).where(eq(students.id, placement.studentId)).limit(1);
+            if (student?.userId && supervisorUser) {
+                await db.insert(notifications).values({
+                    userId: student.userId,
+                    title: "SIWES Supervisor Assigned",
+                    message: `${supervisorUser.name} has been assigned as your SIWES supervisor.`,
+                    type: "info",
+                    channel: 'both',
+                    link: '/student/siwes',
+                });
+            }
+        }
+
+        revalidatePath("/admin/siwes");
+        revalidatePath("/student/siwes");
+        return { success: true };
+    } catch (error) {
+        console.error("Failed to update placement details:", error);
+        return { success: false, error: "Failed to update placement details" };
+    }
+}
+
+export async function getStaffList(): Promise<{ success: boolean; data?: { userId: number; name: string; jobTitle: string; department: string | null; staffId: string | null }[]; error?: string }> {
+    try {
+        const isAuth = await hasPermission("siwes.placement.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("siwes_coordinator");
+        if (!isAuth) return { success: false, error: "Unauthorized" };
+
+        const rows = await db.select({
+            staffId: staffProfiles.staffId,
+            jobTitle: staffProfiles.jobTitle,
+            department: staffProfiles.department,
+            userId: staffProfiles.userId,
+            name: users.name,
+        })
+            .from(staffProfiles)
+            .innerJoin(users, eq(staffProfiles.userId, users.id))
+            .where(eq(staffProfiles.isActive, true))
+            .orderBy(users.name);
+
+        return {
+            success: true,
+            data: rows.map(r => ({
+                userId: r.userId!,
+                name: r.name,
+                jobTitle: r.jobTitle,
+                department: r.department,
+                staffId: r.staffId,
+            }))
+        };
+    } catch (error) {
+        console.error("Failed to fetch staff list:", error);
+        return { success: false, error: "Failed to fetch staff" };
     }
 }

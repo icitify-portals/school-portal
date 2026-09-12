@@ -20,7 +20,10 @@ import {
     Loader2,
     ShieldCheck,
     ShieldAlert,
-    FileText
+    FileText,
+    Pencil,
+    UserRound,
+    Ban
 } from "lucide-react";
 import {
     getSiwesConfigs,
@@ -29,7 +32,10 @@ import {
     addSiwesConfig,
     toggleSiwesConfig,
     setCompanyApproval,
-    reviewLogbook
+    reviewLogbook,
+    updatePlacementStatus,
+    updatePlacementDetails,
+    getStaffList
 } from "@/actions/siwes";
 import { getFaculties } from "@/actions/faculties";
 import { getDepartments } from "@/actions/departments";
@@ -66,15 +72,27 @@ export default function AdminSiwesDashboard() {
     const [reviewTarget, setReviewTarget] = useState<any>(null);
     const [reviewComment, setReviewComment] = useState("");
 
+    // Placement workflow state
+    const [staffList, setStaffList] = useState<any[]>([]);
+    const [placementFilter, setPlacementFilter] = useState<'all' | 'applied' | 'accepted' | 'closed'>('all');
+    const [rejectTarget, setRejectTarget] = useState<any>(null);
+    const [rejectReason, setRejectReason] = useState("");
+    const [actionBusy, setActionBusy] = useState(false);
+    const [editTarget, setEditTarget] = useState<any>(null);
+    const [editForm, setEditForm] = useState({ startDate: "", endDate: "", supervisorId: "" });
+    const [confirmComplete, setConfirmComplete] = useState<any>(null);
+    const [cancelTarget, setCancelTarget] = useState<any>(null);
+
     const fetchData = async () => {
         setLoading(true);
-        const [confRes, compRes, placRes, facRes, deptRes, progRes] = await Promise.all([
+        const [confRes, compRes, placRes, facRes, deptRes, progRes, staffRes] = await Promise.all([
             getSiwesConfigs(),
             getAdminCompanies(),
             getPlacementsForAdmin(),
             getFaculties() as any,
             getDepartments() as any,
-            getProgrammes() as any
+            getProgrammes() as any,
+            getStaffList() as any
         ]);
 
         if (confRes.success && confRes.data) setConfigs(confRes.data);
@@ -83,6 +101,7 @@ export default function AdminSiwesDashboard() {
         setFaculties(Array.isArray(facRes) ? facRes : []);
         setDepartments(Array.isArray(deptRes) ? deptRes : []);
         setProgrammes(Array.isArray(progRes) ? progRes : []);
+        if (staffRes.success && staffRes.data) setStaffList(staffRes.data);
         setLoading(false);
     };
 
@@ -93,6 +112,58 @@ export default function AdminSiwesDashboard() {
     const approvedCompanies = companies.filter(c => c.isApproved);
     const pendingCompanies = companies.filter(c => !c.isApproved);
     const pendingLogbookCount = placements.reduce((acc, p) => acc + (p.logbooks?.filter((l: any) => l.status === 'submitted').length || 0), 0);
+
+    const appliedPlacements = placements.filter(p => p.status === 'applied');
+    const activePlacements = placements.filter(p => p.status === 'accepted');
+    const otherPlacements = placements.filter(p => !['applied', 'accepted'].includes(p.status));
+
+    const handlePlacementStatus = async (placementId: number, status: 'accepted' | 'rejected' | 'completed' | 'cancelled', comment?: string) => {
+        setActionBusy(true);
+        const res = await updatePlacementStatus(placementId, status, comment);
+        setActionBusy(false);
+        if (res.success) {
+            toast.success(`Placement ${status} successfully`);
+            setRejectTarget(null);
+            setRejectReason("");
+            setConfirmComplete(null);
+            setCancelTarget(null);
+            setEditTarget(null);
+            fetchData();
+        } else {
+            toast.error(res.error || `Failed to ${status} placement`);
+        }
+    };
+
+    const openEditPlacement = (p: any) => {
+        setEditTarget(p);
+        setEditForm({
+            startDate: p.startDate ? p.startDate.split('T')[0] : "",
+            endDate: p.endDate ? p.endDate.split('T')[0] : "",
+            supervisorId: p.supervisorId ? p.supervisorId.toString() : ""
+        });
+    };
+
+    const savePlacementDetails = async () => {
+        if (!editTarget) return;
+        if (editForm.startDate && editForm.endDate && new Date(editForm.endDate) <= new Date(editForm.startDate)) {
+            toast.error("End date must be after start date");
+            return;
+        }
+        setActionBusy(true);
+        const res = await updatePlacementDetails(editTarget.id, {
+            startDate: editForm.startDate || undefined,
+            endDate: editForm.endDate || undefined,
+            supervisorId: editForm.supervisorId ? parseInt(editForm.supervisorId) : null
+        });
+        setActionBusy(false);
+        if (res.success) {
+            toast.success("Placement details updated");
+            setEditTarget(null);
+            fetchData();
+        } else {
+            toast.error(res.error || "Failed to update placement");
+        }
+    };
 
     const saveConfig = async () => {
         const payload: any = { semester: configForm.semester, durationMonths: parseInt(configForm.durationMonths) || 3, isActive: true };
@@ -175,8 +246,8 @@ export default function AdminSiwesDashboard() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <Card className="border border-white/40 shadow-xl shadow-slate-200/50 bg-white/60 backdrop-blur-3xl rounded-[3rem] p-8 hover:-translate-y-1 transition-all duration-300">
                         <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Active Placements</p>
-                        <h3 className="text-4xl font-black italic text-slate-900 tracking-tighter">{placements.length}</h3>
-                        <p className="text-[9px] font-bold text-slate-450 uppercase tracking-widest mt-2">Across all programmes</p>
+                        <h3 className="text-4xl font-black italic text-slate-900 tracking-tighter">{activePlacements.length}</h3>
+                        <p className="text-[9px] font-bold text-slate-450 uppercase tracking-widest mt-2">Accepted placements</p>
                     </Card>
                     <Card className="border border-white/40 shadow-xl shadow-slate-200/50 bg-white/60 backdrop-blur-3xl rounded-[3rem] p-8 hover:-translate-y-1 transition-all duration-300">
                         <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Pending Logbooks</p>
@@ -210,6 +281,21 @@ export default function AdminSiwesDashboard() {
                                 </div>
                             ) : (
                                 <div className="overflow-x-auto">
+                                    <div className="flex flex-wrap items-center gap-2 px-10 pt-6">
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 mr-2">Filter:</span>
+                                        {[{ k: 'all', label: `All (${placements.length})` }, { k: 'applied', label: `Applied (${appliedPlacements.length})` }, { k: 'accepted', label: `Active (${activePlacements.length})` }, { k: 'closed', label: `Closed (${otherPlacements.length})` }].map(f => (
+                                            <button
+                                                key={f.k}
+                                                onClick={() => setPlacementFilter(f.k as any)}
+                                                className={cn(
+                                                    "px-4 py-2 rounded-xl font-black uppercase tracking-widest text-[9px] border transition-all",
+                                                    placementFilter === f.k ? "bg-indigo-600 text-white border-indigo-600 shadow-md" : "bg-white/60 border-slate-200 text-slate-500 hover:border-indigo-300"
+                                                )}
+                                            >
+                                                {f.label}
+                                            </button>
+                                        ))}
+                                    </div>
                                     <table className="w-full text-left">
                                         <thead>
                                             <tr className="bg-slate-900 text-white">
@@ -221,7 +307,12 @@ export default function AdminSiwesDashboard() {
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-white/40 bg-white/20">
-                                            {placements.map((p) => (
+                                            {placements.filter(p =>
+                                                placementFilter === 'all' ? true :
+                                                    placementFilter === 'applied' ? p.status === 'applied' :
+                                                        placementFilter === 'accepted' ? p.status === 'accepted' :
+                                                            !['applied', 'accepted'].includes(p.status)
+                                            ).map((p) => (
                                                 <tr key={p.id} className="group hover:bg-white/40 transition-colors">
                                                     <td className="px-10 py-6">
                                                         <div className="flex flex-col">
@@ -235,8 +326,16 @@ export default function AdminSiwesDashboard() {
                                                     <td className="px-10 py-6">
                                                         <div className="flex items-center gap-2 text-slate-600 font-bold font-mono">
                                                             <Clock className="w-4 h-4 text-slate-400" />
-                                                            <span className="text-xs uppercase">{p.startDate ? new Date(p.startDate).toLocaleDateString() : 'NOT SET'}</span>
+                                                            <span className="text-xs uppercase">
+                                                                {p.startDate ? `${new Date(p.startDate).toLocaleDateString()}` : 'NOT SET'}
+                                                                {p.endDate ? ` → ${new Date(p.endDate).toLocaleDateString()}` : ''}
+                                                            </span>
                                                         </div>
+                                                        {p.supervisor && (
+                                                            <div className="flex items-center gap-1.5 mt-1 text-[10px] font-bold text-indigo-600 uppercase tracking-wider">
+                                                                <UserRound className="w-3 h-3" /> {p.supervisor.name}
+                                                            </div>
+                                                        )}
                                                     </td>
                                                     <td className="px-10 py-6">
                                                         <Badge className={cn(
@@ -244,16 +343,47 @@ export default function AdminSiwesDashboard() {
                                                             p.status === 'accepted' ? "bg-emerald-50 border-emerald-250 text-emerald-600 shadow-sm" :
                                                                 p.status === 'applied' ? "bg-amber-50 border-amber-250 text-amber-600 shadow-sm" :
                                                                     p.status === 'completed' ? "bg-indigo-50 border-indigo-250 text-indigo-600 shadow-sm" :
-                                                                        "bg-slate-100 border-slate-200 text-slate-400"
+                                                                        p.status === 'rejected' ? "bg-rose-50 border-rose-250 text-rose-600 shadow-sm" :
+                                                                            "bg-slate-100 border-slate-200 text-slate-400"
                                                         )}>
-                                                            {p.status}
+                                                            {p.status === 'cancelled' ? 'Cancelled' : p.status}
                                                         </Badge>
                                                     </td>
-                                                    <td className="px-10 py-6 text-right">
-                                                        <Button size="sm" onClick={() => { setReviewTarget(p); setReviewComment(""); }} className="bg-white hover:bg-indigo-600 hover:text-white text-slate-700 border border-slate-200 rounded-xl font-black uppercase tracking-widest text-[9px] px-4 py-4 shadow-sm transition-all">
-                                                            <FileText className="w-3.5 h-3.5 mr-1.5" />
-                                                            Review Logbook ({p.logbooks?.length || 0})
-                                                        </Button>
+                                                    <td className="px-10 py-6">
+                                                        <div className="flex flex-wrap justify-end gap-2">
+                                                            {p.status === 'applied' && (
+                                                                <>
+                                                                    <Button size="sm" variant="success" onClick={() => handlePlacementStatus(p.id, 'accepted')} disabled={actionBusy} className="rounded-xl font-black uppercase tracking-widest text-[9px] px-4 py-4 shadow-sm transition-all">
+                                                                        <CheckCircle2 className="w-3.5 h-3.5 mr-1.5" />
+                                                                        Accept
+                                                                    </Button>
+                                                                    <Button size="sm" variant="outline" onClick={() => { setRejectTarget(p); setRejectReason(""); }} disabled={actionBusy} className="rounded-xl font-black uppercase tracking-widest text-[9px] px-4 py-4 text-rose-500 shadow-sm transition-all">
+                                                                        <XCircle className="w-3.5 h-3.5 mr-1.5" />
+                                                                        Reject
+                                                                    </Button>
+                                                                </>
+                                                            )}
+                                                            {p.status === 'accepted' && (
+                                                                <>
+                                                                    <Button size="sm" variant="outline" onClick={() => openEditPlacement(p)} disabled={actionBusy} className="rounded-xl font-black uppercase tracking-widest text-[9px] px-4 py-4 text-indigo-600 shadow-sm transition-all">
+                                                                        <Pencil className="w-3.5 h-3.5 mr-1.5" />
+                                                                        Edit
+                                                                    </Button>
+                                                                    <Button size="sm" variant="outline" onClick={() => setConfirmComplete(p)} disabled={actionBusy} className="rounded-xl font-black uppercase tracking-widest text-[9px] px-4 py-4 text-slate-600 shadow-sm transition-all">
+                                                                        <CheckCircle2 className="w-3.5 h-3.5 mr-1.5" />
+                                                                        Complete
+                                                                    </Button>
+                                                                    <Button size="sm" variant="outline" onClick={() => setCancelTarget(p)} disabled={actionBusy} className="rounded-xl font-black uppercase tracking-widest text-[9px] px-4 py-4 text-slate-400 shadow-sm transition-all">
+                                                                        <Ban className="w-3.5 h-3.5 mr-1.5" />
+                                                                        Cancel
+                                                                    </Button>
+                                                                </>
+                                                            )}
+                                                            <Button size="sm" onClick={() => { setReviewTarget(p); setReviewComment(""); }} className="bg-white hover:bg-indigo-600 hover:text-white text-slate-700 border border-slate-200 rounded-xl font-black uppercase tracking-widest text-[9px] px-4 py-4 shadow-sm transition-all">
+                                                                <FileText className="w-3.5 h-3.5 mr-1.5" />
+                                                                Review Logbook ({p.logbooks?.length || 0})
+                                                            </Button>
+                                                        </div>
                                                     </td>
                                                 </tr>
                                             ))}
@@ -543,6 +673,114 @@ export default function AdminSiwesDashboard() {
                         <Button variant="outline" onClick={() => setReviewTarget(null)} className="w-full rounded-2xl font-black uppercase text-[10px] tracking-widest h-11">
                             Close
                         </Button>
+                    </div>
+                </Modal>
+            )}
+
+            {/* REJECT PLACEMENT MODAL */}
+            {rejectTarget && (
+                <Modal isOpen onClose={() => !actionBusy && setRejectTarget(null)} title={`Reject Placement — ${rejectTarget.student?.user?.name || 'Student'}`}>
+                    <div className="space-y-5">
+                        <p className="text-[11px] font-bold text-slate-500">
+                            Company: <span className="text-slate-800 uppercase">{rejectTarget.company?.name}</span>
+                        </p>
+                        <div>
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-2">Reason for rejection (optional)</Label>
+                            <Textarea
+                                value={rejectReason}
+                                onChange={(e) => setRejectReason(e.target.value)}
+                                rows={3}
+                                placeholder="e.g. Company quota filled, incomplete documentation, venue unreachable..."
+                                className="rounded-2xl resize-none"
+                            />
+                        </div>
+                        <div className="flex gap-3 pt-2">
+                            <Button
+                                onClick={() => handlePlacementStatus(rejectTarget.id, 'rejected', rejectReason.trim() || undefined)}
+                                disabled={actionBusy}
+                                className="flex-1 bg-rose-600 hover:bg-rose-700 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest h-12 active:scale-95 shadow-md"
+                            >
+                                {actionBusy ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <XCircle className="w-4 h-4 mr-2" />}
+                                Reject Placement
+                            </Button>
+                            <Button variant="outline" onClick={() => setRejectTarget(null)} disabled={actionBusy} className="rounded-2xl font-black uppercase text-[10px] tracking-widest h-12">
+                                Cancel
+                            </Button>
+                        </div>
+                    </div>
+                </Modal>
+            )}
+
+            {/* EDIT PLACEMENT DETAILS MODAL */}
+            {editTarget && (
+                <Modal isOpen onClose={() => !actionBusy && setEditTarget(null)} title={`Edit Placement — ${editTarget.student?.user?.name || 'Student'}`}>
+                    <div className="space-y-5">
+                        <p className="text-[11px] font-bold text-slate-500">
+                            Company: <span className="text-slate-800 uppercase">{editTarget.company?.name}</span>
+                        </p>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-2">Start Date</Label>
+                                <Input type="date" value={editForm.startDate} onChange={(e) => setEditForm({ ...editForm, startDate: e.target.value })} className="rounded-2xl" />
+                            </div>
+                            <div>
+                                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-2">End Date</Label>
+                                <Input type="date" value={editForm.endDate} onChange={(e) => setEditForm({ ...editForm, endDate: e.target.value })} className="rounded-2xl" />
+                            </div>
+                        </div>
+                        <div>
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-2">Supervisor</Label>
+                            <Select value={editForm.supervisorId || "none"} onValueChange={(v) => setEditForm({ ...editForm, supervisorId: v === "none" ? "" : v })}>
+                                <SelectTrigger className="rounded-2xl">
+                                    <SelectValue placeholder="Select supervisor" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="none">No Supervisor</SelectItem>
+                                    {staffList.map(s => <SelectItem key={s.userId} value={s.userId.toString()}>{s.name}{s.jobTitle ? ` — ${s.jobTitle}` : ''}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="flex gap-3 pt-2">
+                            <Button
+                                onClick={savePlacementDetails}
+                                disabled={actionBusy}
+                                className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest h-12 active:scale-95 shadow-md"
+                            >
+                                {actionBusy ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                                Save Details
+                            </Button>
+                            <Button variant="outline" onClick={() => setEditTarget(null)} disabled={actionBusy} className="rounded-2xl font-black uppercase text-[10px] tracking-widest h-12">
+                                Cancel
+                            </Button>
+                        </div>
+                    </div>
+                </Modal>
+            )}
+
+            {/* COMPLETE / CANCEL CONFIRMATION */}
+            {(confirmComplete || cancelTarget) && (
+                <Modal isOpen onClose={() => { if (!actionBusy) { setConfirmComplete(null); setCancelTarget(null); } }} title={(confirmComplete ? "Complete" : "Cancel") + " Placement"}>
+                    <div className="space-y-5">
+                        <p className="text-[11px] font-bold text-slate-500 leading-relaxed">
+                            {(confirmComplete ? "Mark this placement as completed?" : "Cancel this placement? This will notify the student and block further logbook submissions.")}
+                        </p>
+                        <p className="text-sm font-black text-slate-800 uppercase italic">
+                            {(confirmComplete || cancelTarget)?.student?.user?.name} — {(confirmComplete || cancelTarget)?.company?.name}
+                        </p>
+                        <div className="flex gap-3 pt-2">
+                            <Button
+                                onClick={() => confirmComplete ? handlePlacementStatus(confirmComplete.id, 'completed') : handlePlacementStatus(cancelTarget.id, 'cancelled')}
+                                disabled={actionBusy}
+                                className={cn("flex-1 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest h-12 active:scale-95 shadow-md",
+                                    confirmComplete ? "bg-indigo-600 hover:bg-indigo-700" : "bg-slate-700 hover:bg-slate-800")}
+                            >
+                                {actionBusy ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                                {confirmComplete ? "Mark Completed" : "Cancel Placement"}
+                            </Button>
+                            <Button variant="outline" onClick={() => { setConfirmComplete(null); setCancelTarget(null); }} disabled={actionBusy} className="rounded-2xl font-black uppercase text-[10px] tracking-widest h-12">
+                                Close
+                            </Button>
+                        </div>
                     </div>
                 </Modal>
             )}
