@@ -222,7 +222,7 @@ export default function MaintenanceHeadDashboard() {
                             <CardContent className="p-6">
                                 {quotes.length === 0 ? (
                                     <div className="p-12 text-center text-slate-400 font-medium">
-                                        <CheckCircle className="w-12 h-12 mx-auto mb-3 opacity-20 text-emerald-500" />
+                                        <CheckCircle2 className="w-12 h-12 mx-auto mb-3 opacity-20 text-emerald-500" />
                                         No pending repair quotes found.
                                     </div>
                                 ) : (
@@ -298,7 +298,7 @@ export default function MaintenanceHeadDashboard() {
                                                                             placeholder="Explain why this quote is rejected (e.g. cost too high, parts already in stock)..."
                                                                             rows={4}
                                                                             value={rejectionNotes}
-                                                                            onChange={(e) => setNotesOverride(e.target.value)}
+                                                                            onChange={(e) => setRejectionNotes(e.target.value)}
                                                                         />
                                                                     </div>
                                                                 </div>
@@ -409,7 +409,4 @@ export default function MaintenanceHeadDashboard() {
         </div>
     );
 
-    function setNotesOverride(notes: string) {
-        setRejectionNotes(notes);
-    }
 }
