@@ -44,6 +44,7 @@ import { BursaryService } from "@/services/BursaryService";
 import { NotificationService } from "@/services/NotificationService";
 import { OfficialService } from "@/services/OfficialService";
 import { ExcelBacklogService } from "@/services/ExcelBacklogService";
+import { assertActivityUnlocked, buildStudentLockContext, ACTIVITIES } from "@/services/ActivityLockService";
 
 // --- MIDDLEWARE HELPERS ---
 async function ensureBursar() {
@@ -2527,6 +2528,12 @@ export async function postDirectPayment(studentId: number, billId: number, amoun
         return await db.transaction(async (tx) => {
             const [student] = await tx.select().from(students).where(eq(students.id, studentId)).limit(1);
             if (!student) throw new Error("Student not found.");
+
+            // Activity lock check (e.g. school fee freeze)
+            const lockCheck = await assertActivityUnlocked(ACTIVITIES.SCHOOL_FEE_PAYMENT, buildStudentLockContext(student));
+            if (!lockCheck.success) {
+                throw new Error(lockCheck.error || "School fee payments are currently closed.");
+            }
 
             const [bill] = await tx.select().from(studentBills).where(eq(studentBills.id, billId)).limit(1);
             if (!bill) throw new Error("Bill not found.");

@@ -37,6 +37,7 @@ import { extractNameParts, buildFullName, findFormValue } from "@/lib/applicant-
 import { generateFormNumber, generateFormHash } from "@/lib/form-number";
 import { inArrayChunked } from "@/lib/db-helpers";
 import { storage } from "@/lib/storage";
+import { assertActivityUnlocked, ACTIVITIES } from "@/services/ActivityLockService";
 import { hash, compare } from "bcryptjs";
 import { writeFile, mkdir, readFile } from "fs/promises";
 
@@ -1753,6 +1754,16 @@ export async function initiateSchoolFeesCheckout(applicationId: number) {
         if (!template) return { success: false, error: "Template not found" };
 
         if (app.acceptancePaymentStatus !== 'paid') return { success: false, error: "Acceptance Fee must be paid before School Fees." };
+
+        // Activity lock check (e.g. school fee freeze). Fresh admits are level 1.
+        const lockCheck = await assertActivityUnlocked(ACTIVITIES.SCHOOL_FEE_PAYMENT, {
+            programmeType: app.programme?.programmeType || null,
+            level: 1,
+            departmentId: app.programme?.deptId ?? null,
+        });
+        if (!lockCheck.success) {
+            return { success: false, error: lockCheck.error || "School fee payments are currently closed." };
+        }
 
         const totalAmount = getCalculatedTuition(template, app.programme);
 

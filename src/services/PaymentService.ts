@@ -2,6 +2,7 @@
 import { transactions, directPayments, students, users, studentBills, studentBillItems, studentLedger, walletTransactions, feeItems } from "@/db/schema";
 import { eq, and, sql, desc, inArray } from "drizzle-orm";
 import crypto from "crypto";
+import { assertActivityUnlocked, buildStudentLockContext, ACTIVITIES } from "./ActivityLockService";
 
 export type PaymentContext = 'Main' | 'Admission' | 'Hostel' | 'Other';
 
@@ -159,6 +160,12 @@ export class PaymentService {
             // 1. Fetch student
             const [student] = await tx.select().from(students).where(eq(students.id, studentId)).limit(1);
             if (!student) throw new Error("Student not found.");
+
+            // Activity lock check (e.g. school fee freeze)
+            const lockCheck = await assertActivityUnlocked(ACTIVITIES.SCHOOL_FEE_PAYMENT, buildStudentLockContext(student));
+            if (!lockCheck.success) {
+                throw new Error(lockCheck.error || "Payment is currently closed.");
+            }
 
             const walletBalance = parseFloat(student.digitalWalletBalance || "0.00");
             if (walletBalance < amount) {

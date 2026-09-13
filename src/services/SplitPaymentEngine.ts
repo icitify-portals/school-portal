@@ -18,6 +18,7 @@ import {
     processingFeeRules
 } from "@/db/schema";
 import { eq, and, desc } from "drizzle-orm";
+import { assertActivityUnlocked, buildStudentLockContext, ACTIVITIES } from "./ActivityLockService";
 
 export interface SplitItem {
     amount: number;             // Flat amount for this split
@@ -476,6 +477,12 @@ export class SplitPaymentEngine {
         }
         
         const student = { ...studentRows[0].student, user: studentRows[0].user };
+
+        // 1.5 Activity lock check (e.g. school fee freeze)
+        const lockCheck = await assertActivityUnlocked(ACTIVITIES.SCHOOL_FEE_PAYMENT, buildStudentLockContext(student));
+        if (!lockCheck.success) {
+            return { success: false, reference: "", error: lockCheck.error || "Payment is currently closed." };
+        }
 
         // 2. Fetch Active Settings
         const settings = await this.getBursarySettingsMap();

@@ -57,6 +57,19 @@ export interface ActivityLockContext {
 
 export type ActivityLockRow = typeof activityLocks.$inferSelect;
 
+/** Build a lock context from a students row (programmeType + academic level + department). */
+export function buildStudentLockContext(student: {
+    programmeType?: string | null;
+    currentLevel?: number | null;
+    deptId?: number | null;
+}): ActivityLockContext {
+    return {
+        programmeType: student.programmeType || null,
+        level: student.currentLevel ?? null,
+        departmentId: student.deptId ?? null,
+    };
+}
+
 /** Normalize legacy 100/200/300/400/500 level encoding to 1/2/3. */
 export function normalizeLevel(level?: number | string | null): number | null {
     if (level === undefined || level === null || level === '') return null;
