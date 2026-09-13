@@ -33,7 +33,7 @@ import { sendInAppNotification } from "./notifications";
 import { checkDeveloperFeeStatus } from "./paystack-developer-subscription";
 import { sendEmail } from "@/lib/mail";
 import { normalizeEmail, isValidEmailFormat } from "@/lib/email";
-import { extractNameParts, buildFullName } from "@/lib/applicant-names";
+import { extractNameParts, buildFullName, findFormValue } from "@/lib/applicant-names";
 import { generateFormNumber, generateFormHash } from "@/lib/form-number";
 import { inArrayChunked } from "@/lib/db-helpers";
 import { storage } from "@/lib/storage";
@@ -3268,11 +3268,11 @@ export async function verifyApplicationByFormNumber(formNumber: string) {
                 const nameFromUser = app.applicant ? (app.applicant.name || `${app.applicant.firstName || ''} ${app.applicant.surname || ''}`.trim()) : '';
                 return nameFromForm || nameFromUser || "N/A";
             })(),
-            applicantEmail: formData.email || "N/A",
-            applicantPhone: formData.phone || "N/A",
+            applicantEmail: findFormValue(formData, ['email']) || "N/A",
+            applicantPhone: findFormValue(formData, ['phone', 'phone number', 'phonenumber', 'mobile', 'telephone']) || "N/A",
             programmeChoice: formData.programmeChoice || formData.programme || "N/A",
-            dateOfBirth: formData.dob || formData.dateOfBirth || "N/A",
-            gender: formData.gender || "N/A",
+            dateOfBirth: findFormValue(formData, ['dob', 'date of birth', 'dateofbirth', 'birth date', 'birthdate']) || "N/A",
+            gender: findFormValue(formData, ['gender', 'sex']) || "N/A",
             stateOfOrigin: formData.stateOfOrigin || formData.state || "N/A",
         };
     } catch (error) {
@@ -3484,16 +3484,19 @@ export async function getAdminV2Applications(filters?: {
 
             const { academicLevel, administrativeLevel } = formatLevels(app);
 
+            const applicantDob = findFormValue(formData, ['dob', 'date of birth', 'dateofbirth', 'birth date', 'birthdate']);
+            const applicantPhone = findFormValue(formData, ['phone', 'phone number', 'phonenumber', 'mobile', 'telephone']) || app.applicant?.phone || 'N/A';
+
             return {
                 ...app,
                 parsedData: formData,
                 applicantName: nameFromForm || nameFromUser || fallbackEmail || 'N/A',
                 applicantEmail: fallbackEmail || app.applicant?.email || 'N/A',
-                applicantGender: formData.gender || app.applicant?.gender || 'N/A',
-                applicantAge: app.ageAtAdmission || (formData.dob ? Math.floor((Date.now() - new Date(formData.dob).getTime()) / (1000 * 60 * 60 * 24 * 365.25)) : null),
-                applicantDob: formData.dob || formData.dateOfBirth || 'N/A',
-                applicantNin: app.nin || formData.nin || formData.NIN || 'N/A',
-                applicantPhone: formData.phone || formData.phone_number || formData.phoneNumber || app.applicant?.phone || 'N/A',
+                applicantGender: findFormValue(formData, ['gender', 'sex']) || app.applicant?.gender || 'N/A',
+                applicantAge: app.ageAtAdmission || (applicantDob ? Math.floor((Date.now() - new Date(applicantDob).getTime()) / (1000 * 60 * 60 * 24 * 365.25)) : null),
+                applicantDob: applicantDob || 'N/A',
+                applicantNin: app.nin || findFormValue(formData, ['nin']) || 'N/A',
+                applicantPhone,
                 jambRegNumber: app.jambRegNumber || formData.jambRegNumber || formData.jambNumber || formData['JAMB Reg Number'] || formData['JAMB Registration No'] || 'N/A',
                 studentMatricNumber: app.student?.matricNumber || formData.matricNumber || null,
                 studentCurrentSession: app.student?.currentSessionId || null,

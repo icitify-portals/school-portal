@@ -31,6 +31,25 @@ function findValue(formData: Record<string, any>, aliases: string[]): string {
     return '';
 }
 
+/**
+ * Resolve a field value from admission form data across label aliases,
+ * matching keys case-insensitively (e.g. "Gender"/"gender"/"Sex").
+ * Form templates key the data JSON by field label, so direct `formData.gender`
+ * chains silently miss labels like "Gender".
+ */
+export function findFormValue(formData: Record<string, any>, aliases: string[]): string {
+    const keys = Object.keys(formData || {});
+    for (const alias of aliases) {
+        const key = keys.find(k => (k || '').trim().toLowerCase() === (alias || '').toLowerCase());
+        if (key) {
+            const v = formData[key];
+            if (typeof v === 'string' && v.trim()) return v.replace(/\s+/g, ' ').trim();
+            if (typeof v === 'number') return String(v);
+        }
+    }
+    return '';
+}
+
 export function extractNameParts(formData: Record<string, any>): { firstName: string; middleName: string; lastName: string } {
     return {
         firstName: findValue(formData, FIRST_NAME_ALIASES),
