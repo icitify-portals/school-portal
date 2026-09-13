@@ -99,6 +99,15 @@ export default function SettingsHubClient({ initialSettings, modulesCount }: Set
       status: "Officer Assignments Active"
     },
     {
+      title: "Activity Locks",
+      description: "Freeze specific portal activities: payments, registration, add/drop, or application submissions.",
+      href: "/admin/settings/activity-locks",
+      category: "Governance & Policies",
+      icon: Lock,
+      iconBg: "bg-amber-50 text-amber-600",
+      status: "Lock Management Active"
+    },
+    {
       title: "CMS Content Managers",
       description: "Assign designated content editors and page managers to write and publish school pages.",
       href: "/admin/settings/cms-managers",

@@ -14,6 +14,8 @@ import {
     type ActivityLockInput,
     type ActivityScope,
 } from "@/services/ActivityLockService";
+import { db } from "@/db/db";
+import { departments } from "@/db/schema";
 
 async function canManage(): Promise<boolean> {
     return (await hasPermission("system.settings.manage")) || (await hasRole("admin")) || (await hasRole("superadmin"));
@@ -97,3 +99,12 @@ export async function deleteActivityLockAction(id: number) {
 }
 
 export type { ActivityKey, ActivityLockContext, ActivityUnlockResult } from "@/services/ActivityLockService";
+
+export async function getLockDepartmentsAction() {
+    try {
+        const rows = await db.select({ id: departments.id, name: departments.name, code: departments.code }).from(departments);
+        return { success: true, departments: rows };
+    } catch (error: any) {
+        return { success: false, error: error?.message || "Failed to load departments" };
+    }
+}
