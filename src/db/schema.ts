@@ -2383,6 +2383,22 @@ export const systemSettings = mysqlTable('system_settings', {
   updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
 });
 
+export const activityLocks = mysqlTable('activity_locks', {
+  id: int('id').autoincrement().primaryKey(),
+  activity: varchar('activity', { length: 100 }).notNull(), // e.g. 'school_fee_payment', 'course_registration'
+  scope: mysqlEnum('scope', ['global', 'programme_level', 'department', 'applicant']).notNull().default('global'),
+  programmeType: mysqlEnum('programme_type', ['ND', 'HND']),
+  level: int('level'), // academic level (1/2, legacy 100/200/300/400 tolerated)
+  departmentId: int('department_id').references(() => departments.id),
+  isLocked: boolean('is_locked').notNull().default(true),
+  opensAt: datetime('opens_at'), // if set: "locked until" this time (enforced while now < opensAt)
+  closesAt: datetime('closes_at'), // if set (and no opensAt): "lock expires" at this time (enforced while now <= closesAt)
+  message: text('message'), // user-facing reason shown when blocked
+  createdBy: int('created_by').references(() => users.id),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
+});
+
 export const academicSessions = mysqlTable('academic_sessions', {
   id: int('id').autoincrement().primaryKey(),
   name: varchar('name', { length: 255 }).notNull(), // e.g., "2024/2025"
@@ -2404,7 +2420,10 @@ export const registrationLevelControls = mysqlTable('registration_level_controls
   id: int('id').autoincrement().primaryKey(),
   sessionId: int('session_id').references(() => academicSessions.id).notNull(),
   level: int('level').notNull(),
+  programmeType: mysqlEnum('programme_type', ['ND', 'HND']), // distinguishes ND 2 from HND 2
   isOpen: boolean('is_open').default(false),
+  opensAt: datetime('opens_at'), // if set: registration opens for this level at this time (enforced while now < opensAt)
+  closesAt: datetime('closes_at'), // if set: registration closes for this level at this time (auto-lock after)
 });
 
 export const registrationConcessions = mysqlTable('registration_concessions', {
@@ -2516,6 +2535,17 @@ export const registrationLevelControlsRelations = relations(registrationLevelCon
   session: one(academicSessions, {
     fields: [registrationLevelControls.sessionId],
     references: [academicSessions.id],
+  }),
+}));
+
+export const activityLocksRelations = relations(activityLocks, ({ one }) => ({
+  department: one(departments, {
+    fields: [activityLocks.departmentId],
+    references: [departments.id],
+  }),
+  createdByUser: one(users, {
+    fields: [activityLocks.createdBy],
+    references: [users.id],
   }),
 }));
 
