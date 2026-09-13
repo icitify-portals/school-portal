@@ -12,6 +12,7 @@ import {
     courseRegistrationWaivers
 } from "@/db/schema";
 import { eq, and, inArray, sql, exists } from "drizzle-orm";
+import { assertActivityUnlocked, buildStudentLockContext, ACTIVITIES } from "./ActivityLockService";
 
 export class CourseRegistrationService {
 
@@ -138,6 +139,19 @@ export class CourseRegistrationService {
         semester: '1' | '2',
         courseIds: number[]
     }) {
+        // 0. Activity lock check (e.g. course registration freeze by level/programme)
+        const [lockStudent] = await db.select({
+            programmeType: students.programmeType,
+            currentLevel: students.currentLevel,
+            deptId: students.deptId,
+        }).from(students).where(eq(students.id, data.studentId)).limit(1);
+        if (lockStudent) {
+            const lockCheck = await assertActivityUnlocked(ACTIVITIES.COURSE_REGISTRATION, buildStudentLockContext(lockStudent));
+            if (!lockCheck.success) {
+                throw new Error(lockCheck.error || "Course registration is currently closed.");
+            }
+        }
+
         // 1. Prerequisite & Waiver Validation
         const prerequisiteErrors = await this.validatePrerequisites(data.studentId, data.courseIds);
         if (prerequisiteErrors.length > 0) {

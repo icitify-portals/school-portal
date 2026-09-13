@@ -5,6 +5,7 @@ import { registrationLevelControls, registrationConcessions, academicSessions, s
 import { eq, and, desc, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
+import { assertActivityUnlocked, buildStudentLockContext, ACTIVITIES } from "@/services/ActivityLockService";
 
 // --- LEVEL-BASED CONTROLS ---
 
@@ -153,6 +154,14 @@ export async function checkRegistrationAccess(studentId: number, sessionId: numb
 
         // 2. Level Check
         const [student] = await db.select().from(students).where(eq(students.id, studentId)).limit(1);
+
+        // Activity lock check (e.g. course registration freeze)
+        if (student) {
+            const lockCheck = await assertActivityUnlocked(ACTIVITIES.COURSE_REGISTRATION, buildStudentLockContext(student));
+            if (!lockCheck.success) {
+                return { canRegister: false, reason: lockCheck.error || "Course registration is currently closed." };
+            }
+        }
 
         if (student) {
             const [levelControl] = await db.select().from(registrationLevelControls).where(and(

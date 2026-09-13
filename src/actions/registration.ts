@@ -22,6 +22,7 @@ import { eq, and, inArray, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { hasPermission, hasRole } from "@/lib/rbac";
 import { getActiveSevereSanctions } from "@/actions/disciplinary";
+import { assertActivityUnlocked, buildStudentLockContext, ACTIVITIES } from "@/services/ActivityLockService";
 
 /**
  * Validates a list of courses against institutional and departmental rules.
@@ -45,6 +46,12 @@ export async function validateRegistration(studentId: number, courseIds: number[
 
         if (!student || !student.deptId) return { success: false, error: "Student department mapping not found" };
         const dept = student.department as any;
+
+        // Activity lock check (e.g. course registration freeze by level/programme)
+        const lockCheck = await assertActivityUnlocked(ACTIVITIES.COURSE_REGISTRATION, buildStudentLockContext(student));
+        if (!lockCheck.success) {
+            return { success: false, error: lockCheck.error || "Course registration is currently closed." };
+        }
 
         // 2. Fetch Session Info & Registration Settings
         const [session] = await db.select().from(academicSessions).where(eq(academicSessions.name, academicYear)).limit(1);
