@@ -496,10 +496,7 @@ export class SplitPaymentEngine {
         }
         const bill = billRows[0];
 
-        // Gateway Override for Outstanding Bills
-        if (bill.note === 'Outstanding Balance 2025/2026') {
-            activeGateway = 'alatpay';
-        }
+        // Gateway Override for Outstanding Bills — use configured gateway (no longer force Alatpay)
         
         const billItemRows = await db.select({
             item: studentBillItems,

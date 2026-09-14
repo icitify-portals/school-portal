@@ -44,8 +44,9 @@ export async function GET(request: Request) {
 
         for (const tx of pendingTxs) {
             if (!tx.paymentGateway || !tx.transactionReference) continue;
-            // Strict rule: Only re-query Remita transactions, never ALATPay
-            if (tx.paymentGateway.toLowerCase() !== 'remita') continue;
+            // Sweep Remita and Paystack only — ALATPay API is unreliable, skip it
+            const gw1 = tx.paymentGateway.toLowerCase();
+            if (gw1 !== 'remita' && gw1 !== 'paystack') continue;
 
             console.log(`[CRON] Reconciling TX: ${tx.transactionReference} via ${tx.paymentGateway}`);
             
@@ -117,12 +118,32 @@ export async function GET(request: Request) {
         let admFailCount = 0;
         const { confirmAcceptancePayment, confirmSchoolFeesPayment, confirmProcessingFeePayment, confirmAdmissionPayment } = await import('@/actions/admission_v2');
 
+        const { resolveOnlinePaymentAction } = await import('@/actions/bursary');
+
         for (const tx of pendingAdmissionTxs) {
             if (!tx.gateway || !tx.gatewayReference) continue;
-            // Strict rule: Only re-query Remita transactions, never ALATPay
-            if (tx.gateway.toLowerCase() !== 'remita') continue;
+            // Sweep Remita and Paystack only — ALATPay API is unreliable, skip it
+            const gw2 = tx.gateway.toLowerCase();
+            if (gw2 !== 'remita' && gw2 !== 'paystack') continue;
             
             console.log(`[CRON] Reconciling Admission TX: ${tx.gatewayReference} via ${tx.gateway}`);
+
+            // Student school fees from SplitPaymentEngine (TX-SPL-*) → use resolveOnlinePaymentAction
+            if (tx.gatewayReference.startsWith('TX-SPL-')) {
+                const result = await resolveOnlinePaymentAction(tx.gatewayReference, 'completed');
+                if (result.success) {
+                    admSuccessCount++;
+                } else {
+                    const hoursOld = (new Date().getTime() - new Date(tx.createdAt || new Date()).getTime()) / (1000 * 60 * 60);
+                    if (hoursOld > 24) {
+                        await db.update(transactions)
+                            .set({ status: 'failed' })
+                            .where(eq(transactions.id, tx.id));
+                        admFailCount++;
+                    }
+                }
+                continue;
+            }
             
             const match = tx.gatewayReference.match(/^(SCH|ACC|PROC|FORM)-(\d+)-/);
             if (!match) continue;

@@ -43,11 +43,12 @@ export async function hasPermission(permission: string) {
         return true;
     }
 
-    // Record Officer automatically has access to result module, exams/records, and communication features
+    // Record Officer automatically has access to result module, exams/records, communication, and course management features
     if ((baseRole === "record_officer" || baseRole === "record officer" || baseRole === "recordofficer") && (
         permission.startsWith("result_module.") || 
         permission.startsWith("exams_records.") || 
         permission.startsWith("communication.") ||
+        permission.startsWith("academic.courses.") ||
         permission === "result_module.manage"
     )) {
         return true;
