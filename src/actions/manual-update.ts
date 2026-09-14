@@ -148,7 +148,15 @@ export async function forceUpdateAdmissionPayment(reference: string, action: 'pa
 
         if (action === 'paid') {
             if (type === 'ACC') await adminActions.adminConfirmAcceptancePayment(appId, gatewayRef);
-            else if (type === 'PROC') await adminActions.adminConfirmProcessingFeePayment(appId, gatewayRef);
+            else if (type === 'PROC') {
+                // Mark transaction completed, set reference, and finalize student admission (create student + matric number)
+                const { admissionApplicationsV2 } = await import('@/db/schema');
+                await db.update(transactions).set({ status: 'completed' }).where(eq(transactions.gatewayReference, gatewayRef));
+                await db.update(admissionApplicationsV2)
+                    .set({ processingFeeStatus: 'paid', processingFeeReference: gatewayRef })
+                    .where(eq(admissionApplicationsV2.id, appId));
+                await adminActions.finalizeStudentAdmission(appId);
+            }
             else if (type === 'FORM') await adminActions.confirmAdmissionPayment(appId, gatewayRef);
             else {
                 // School fees only relies on the transaction table
