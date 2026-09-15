@@ -5,7 +5,9 @@ import {
     students, 
     users, 
     institutionalUnits,
-    admissionFormTemplates
+    admissionFormTemplates,
+    programmes,
+    departments
 } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 
@@ -37,12 +39,22 @@ export class AdmissionLetterService {
      */
     static async generateLetter(applicationId: number) {
         // 1. Fetch Candidate, Student, Form Template and Unit Data
-        const application = await db.select()
+        const application = await db.select({
+            application: admissionApplicationsV2,
+            users: users,
+            students: students,
+            admission_form_templates: admissionFormTemplates,
+            institutional_units: institutionalUnits,
+            programmes: programmes,
+            departments: departments
+        })
             .from(admissionApplicationsV2)
             .innerJoin(users, eq(admissionApplicationsV2.applicantId, users.id))
             .innerJoin(admissionFormTemplates, eq(admissionApplicationsV2.templateId, admissionFormTemplates.id))
             .leftJoin(students, eq(admissionApplicationsV2.studentId, students.id))
             .leftJoin(institutionalUnits, eq(students.unitId, institutionalUnits.id))
+            .leftJoin(programmes, eq(students.programmeId, programmes.id))
+            .leftJoin(departments, eq(programmes.deptId, departments.id))
             .where(eq(admissionApplicationsV2.id, applicationId))
             .limit(1);
 
@@ -51,6 +63,7 @@ export class AdmissionLetterService {
         const candidate = application[0].users;
         const student = application[0].students || {} as any;
         const formTemplate = application[0].admission_form_templates;
+        const dept = application[0].departments;
         let unit = application[0].institutional_units;
 
         if (!unit) {
@@ -59,7 +72,7 @@ export class AdmissionLetterService {
         }
 
         // 2. Fetch the correct Admission Letter template
-        const appMode = application[0].admission_applications_v2.applicationMode;
+        const appMode = application[0].application.applicationMode;
         const isPartTime = formTemplate.studyMode?.toLowerCase().includes('part-time') || student.studyMode?.toLowerCase().includes('part-time') || appMode?.toLowerCase().includes('part-time');
         const isHND = formTemplate.name?.toUpperCase().includes('HND');
         
@@ -101,11 +114,11 @@ export class AdmissionLetterService {
         const academicSession = `${admissionYearString}/${parseInt(admissionYearString) + 1}`;
 
         // Ref No logic
-        const serialStr = application[0].admission_applications_v2.id.toString().padStart(3, '0');
+        const serialStr = application[0].application.id.toString().padStart(3, '0');
         
         let refNo = `FSS/ADM/${admissionYearString}/${serialStr}`;
         if (student.matricNumber) {
-            refNo = `FSS/ADM/${admissionYearString}/${student.matricNumber}`;
+            refNo = student.matricNumber; // Use the exact matric number to prevent FSS/ADM/2026/FSS/COM/... duplication
         }
 
         const acceptanceFeeAmount = Math.round(parseFloat(formTemplate.acceptanceFee || "0") || 0);
@@ -125,7 +138,7 @@ export class AdmissionLetterService {
             '{{study_mode}}': student.studyMode || 'Full-Time',
             '{{mode_of_entry}}': student.modeOfEntry || 'Direct',
             '{{programme_name}}': formTemplate.name,
-            '{{department_name}}': formTemplate.name.replace(/^(ND|HND) /i, '').trim() || 'Business Administration and Management',
+            '{{department_name}}': dept?.name || formTemplate.name.replace(/^(ND|HND) /i, '').trim() || 'Business Administration and Management',
             '{{jamb_reg_no}}': student.jambNumber || 'N/A',
             '{{ref_no}}': refNo,
             '{{resumption_date}}': '7th October, 2024',
@@ -138,7 +151,7 @@ export class AdmissionLetterService {
             html = html.replace(new RegExp(key, 'g'), value);
         }
 
-        const applicantPhoto = application[0].admission_applications_v2.applicantPhoto;
+        const applicantPhoto = application[0].application.applicantPhoto;
         const applicantPhotoHtml = applicantPhoto ? `
             <div class="absolute top-0 right-0 w-32 h-32 md:w-40 md:h-40 border-4 border-slate-200 shadow-sm overflow-hidden bg-slate-50">
                 <img src="${applicantPhoto}" alt="Applicant Photo" class="w-full h-full object-cover" />
