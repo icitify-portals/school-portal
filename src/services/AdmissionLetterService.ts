@@ -102,14 +102,11 @@ export class AdmissionLetterService {
 
         // Ref No logic
         const serialStr = application[0].admission_applications_v2.id.toString().padStart(3, '0');
-        const shortYear = admissionYearString.slice(-2);
-        const shortNextYear = (parseInt(admissionYearString) + 1).toString().slice(-2);
-        const yearRef = `${shortYear}-${shortNextYear}`;
-
-        let refNo = `FSS/IB/ND/ADM/${yearRef}/${serialStr}`;
-        if (isPartTime && isHND) refNo = `FSS/IB/DPPHND/ADM/${yearRef}/${serialStr}`;
-        else if (isPartTime && !isHND) refNo = `FSS/IB/DPPND/ADM/${yearRef}/${serialStr}`;
-        else if (!isPartTime && isHND) refNo = `FSS/IB/HND/ADM/${yearRef}/${serialStr}`;
+        
+        let refNo = `FSS/ADM/${admissionYearString}/${serialStr}`;
+        if (student.matricNumber) {
+            refNo = `FSS/ADM/${admissionYearString}/${student.matricNumber}`;
+        }
 
         const acceptanceFeeAmount = Math.round(parseFloat(formTemplate.acceptanceFee || "0") || 0);
         const acceptanceFee = acceptanceFeeAmount.toLocaleString('en-NG');
