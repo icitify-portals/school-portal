@@ -118,7 +118,7 @@ export class AdmissionLetterService {
             '{{academic_number}}': student.matricNumber || 'PENDING',
             '{{academic_number_label}}': academicNumberLabel,
             '{{institution_name}}': unit.name,
-            '{{date}}': new Date().toLocaleDateString(),
+            '{{date}}': new Date().toLocaleDateString('en-GB'),
             '{{admission_year}}': admissionYearString,
             '{{academic_session}}': academicSession,
             // @ts-expect-error - TS2339: Auto-suppressed for build
@@ -145,75 +145,9 @@ export class AdmissionLetterService {
             </div>
         ` : '';
 
-        const dateStr = new Date().toLocaleDateString('en-GB'); // DD/MM/YYYY
-        
-        const enhancedHtml = `
-            <div class="relative w-full min-h-full text-slate-900 bg-white px-8 py-10" style="-webkit-print-color-adjust: exact; print-color-adjust: exact; font-family: 'Times New Roman', Times, serif;">
-                <!-- Header -->
-                <div class="mb-4">
-                    <div class="text-center mb-6">
-                        <h1 class="text-3xl font-bold uppercase tracking-tight" style="color: #006600;">FEDERAL SCHOOL OF STATISTICS</h1>
-                        <p class="text-base font-bold italic text-black">(National Bureau of Statistics)</p>
-                    </div>
-                    
-                    <div class="flex justify-between items-start mb-6 relative">
-                        <!-- Left Info -->
-                        <div class="text-sm space-y-2 font-bold w-1/3 text-black">
-                            <p>P. O. Box 20753, U. I. IBADAN</p>
-                            <p>Email: <span class="font-normal">info@fssibadan.edu.ng</span></p>
-                            <p>Telephone: <span class="underline">07036516563</span></p>
-                        </div>
-                        
-                        <!-- Center Logo -->
-                        <div class="w-1/3 flex justify-center -mt-4">
-                            <img src="/fss_logo.png" alt="School Logo" class="w-24 h-28 object-contain" />
-                        </div>
-                        
-                        <!-- Right Info -->
-                        <div class="text-sm space-y-3 font-bold w-1/3 text-right text-black">
-                            <div class="flex justify-end items-center">
-                                <span class="mr-2">Ref. No:</span>
-                                <span class="border-b border-black flex-1 text-left inline-block pb-0.5">${refNo}</span>
-                            </div>
-                            <div class="flex justify-end items-center">
-                                <span class="mr-2">Date:</span>
-                                <span class="border-b border-black flex-1 text-left inline-block pb-0.5">${dateStr}</span>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Applicant Info -->
-                    <div class="text-sm font-bold uppercase space-y-2 italic mb-8 text-black">
-                        <p>NAME: <span class="font-normal">${candidate.name}</span></p>
-                        <p>DEPARTMENT: <span class="font-normal">${replacements['{{department_name}}']}</span></p>
-                        <p>MATRICULATION NUMBER: <span class="font-normal">${student.matricNumber || 'PENDING'}</span></p>
-                    </div>
-                    
-                    <div class="text-center font-bold italic uppercase mb-6 text-lg tracking-wide text-black">
-                        OFFER OF PROVISIONAL ADMISSION
-                    </div>
-                </div>
-
-                <!-- Body -->
-                <div class="text-base leading-relaxed text-black italic text-justify" style="line-height: 1.6;">
-                    <style>
-                        .admission-body p { margin-bottom: 1rem; }
-                        .admission-body ol { list-style-type: lower-roman; padding-left: 3rem; margin-bottom: 1.5rem; font-style: normal; font-weight: normal; }
-                        .admission-body ol li { margin-bottom: 0.5rem; padding-left: 0.5rem; }
-                        .admission-body .sign-off { margin-top: 2rem; margin-bottom: 3.5rem; font-style: italic; font-weight: normal; }
-                        .admission-body .signature { font-weight: bold; font-style: normal; }
-                        .admission-body b, .admission-body strong { color: #000; }
-                    </style>
-                    <div class="admission-body">
-                        ${html}
-                    </div>
-                </div>
-            </div>
-        `;
-
         return {
-            html: enhancedHtml,
-            css: template[0].templateCss,
+            html: html,
+            css: template[0].templateCss || '',
             candidateName: candidate.name,
             academicNumber: student.matricNumber
         };
