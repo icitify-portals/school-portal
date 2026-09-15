@@ -2047,7 +2047,8 @@ export async function finalizeStudentAdmission(applicationId: number) {
 
         // Generate FSS standard matriculation number
         const year = new Date().getFullYear();
-        const programmeType = (template.name.toLowerCase().includes("nd") || template.name.toLowerCase().includes("diploma")) ? "ND" : "HND";
+        const tmplName = template.name.toLowerCase();
+        const programmeType = tmplName.includes("hnd") ? "HND" : (tmplName.includes("nd") || tmplName.includes("diploma") ? "ND" : "HND");
         
         // Look up programme from application, fallback to template's linked programmes
         let selectedProgrammeId = application.programmeId;
