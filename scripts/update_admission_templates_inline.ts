@@ -4,7 +4,7 @@ import { eq } from "drizzle-orm";
 
 async function run() {
     try {
-        console.log("Updating admission letter templates...");
+        console.log("Updating admission letter templates with bullets...");
 
         const newHtml = `
 <div style="font-family: 'Times New Roman', Times, serif; color: #000000; line-height: 1.6; padding: 40px; background-color: #ffffff; max-width: 800px; margin: 0 auto; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
@@ -63,7 +63,7 @@ async function run() {
             Please note the following conditions relating to this provisional offer:
         </p>
 
-        <ol style="list-style-type: lower-roman; padding-left: 48px; margin-bottom: 24px; font-style: normal;">
+        <ul style="list-style-type: disc; padding-left: 48px; margin-bottom: 24px; font-style: normal;">
             <li style="margin-bottom: 8px; padding-left: 8px;">You are expected to commence the programme at the beginning of {{academic_session}} academic session of this institution on {{resumption_date}}.</li>
             <li style="margin-bottom: 8px; padding-left: 8px;">You are therefore required to indicate acceptance of this offer by paying the acceptance fee of {{acceptance_fee_words}} only (N{{acceptance_fee}}) into the college account within two weeks from the date of this letter. Failure to complete the acceptance process within this stipulated time will lead to forfeiture of this provisional offer of admission.</li>
             <li style="margin-bottom: 8px; padding-left: 8px;">Lecture commences for the fresh students on {{lecture_start_date}}.</li>
@@ -72,9 +72,9 @@ async function run() {
             <li style="margin-bottom: 8px; padding-left: 8px;">Please note that there is no hostel accommodation hence students are expected to make personal arrangement to live off campus.</li>
             <li style="margin-bottom: 8px; padding-left: 8px;">There will be weeding out of students with below average performance (i.e. having more than six carry-overs) after the first semester examination.</li>
             <li style="margin-bottom: 8px; padding-left: 8px;">Pregnancy is not allowed throughout the duration of the course except those who are officially married.</li>
-            <li style="margin-bottom: 8px; padding-left: 8px;">Note that the offer may be revoked and your place given to someone else if the provisions of i - iv above are not fulfilled within the stipulated time.</li>
+            <li style="margin-bottom: 8px; padding-left: 8px;">Note that the offer may be revoked and your place given to someone else if the provisions of the above are not fulfilled within the stipulated time.</li>
             <li style="margin-bottom: 8px; padding-left: 8px;">Further information is available at the college.</li>
-        </ol>
+        </ul>
 
         <p style="margin-bottom: 56px; margin-top: 32px;">
             Accept my congratulations.
