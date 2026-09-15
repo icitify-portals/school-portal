@@ -145,44 +145,60 @@ export class AdmissionLetterService {
             </div>
         ` : '';
 
+        const dateStr = new Date().toLocaleDateString('en-GB'); // DD/MM/YYYY
+        
         const enhancedHtml = `
-            <div class="relative w-full min-h-full font-serif text-slate-900" style="-webkit-print-color-adjust: exact; print-color-adjust: exact;">
-                <!-- Watermark -->
-                <div class="absolute inset-0 pointer-events-none flex items-center justify-center overflow-hidden z-0 opacity-[0.03]">
-                    <div class="transform -rotate-45 text-7xl md:text-8xl font-black uppercase text-slate-900 text-center leading-none whitespace-nowrap">
-                        ${unit.name}
+            <div class="relative w-full min-h-full font-serif text-slate-900" style="-webkit-print-color-adjust: exact; print-color-adjust: exact; font-family: 'Times New Roman', Times, serif;">
+                <!-- Header -->
+                <div class="mb-4">
+                    <div class="text-center">
+                        <h1 class="text-2xl font-black uppercase tracking-tight" style="color: #006600;">FEDERAL SCHOOL OF STATISTICS</h1>
+                        <p class="text-sm font-bold italic text-slate-900">(National Bureau of Statistics)</p>
+                    </div>
+                    
+                    <div class="flex justify-between items-start mt-2">
+                        <!-- Left Info -->
+                        <div class="text-xs space-y-2 font-bold" style="padding-top: 10px;">
+                            <p>P. O. Box 20753, U. I. IBADAN</p>
+                            <p>Email: <span class="font-normal">info@fssibadan.edu.ng</span></p>
+                            <p>Telephone: <span class="underline">07036516563</span></p>
+                        </div>
+                        
+                        <!-- Center Logo -->
+                        <div class="flex justify-center -mt-6">
+                            <img src="/fss_logo.png" alt="School Logo" class="w-28 h-28 object-contain" />
+                        </div>
+                        
+                        <!-- Right Info -->
+                        <div class="text-xs space-y-2 font-bold pt-4">
+                            <p>Ref. No: <span class="border-b border-black pb-0.5" style="border-bottom: 1px solid black; padding-bottom: 1px;">${refNo}</span></p>
+                            <p>Date: <span class="border-b border-black pb-0.5" style="border-bottom: 1px solid black; padding-bottom: 1px;">${dateStr}</span></p>
+                        </div>
+                    </div>
+                    
+                    <hr class="border-t border-black mt-2 mb-4" />
+                    
+                    <!-- Applicant Info -->
+                    <div class="text-sm font-bold uppercase space-y-2 italic mb-6">
+                        <p>NAME: <span class="font-normal">${candidate.name}</span></p>
+                        <p>DEPARTMENT: <span class="font-normal">${replacements['{{department_name}}']}</span></p>
+                    </div>
+                    
+                    <div class="text-center font-bold italic mb-4" style="font-size: 1.1rem;">
+                        <span style="text-decoration: underline; text-underline-offset: 4px;">OFFER OF PROVISIONAL ADMISSION</span>
                     </div>
                 </div>
 
-                <!-- Content -->
-                <div class="relative z-10 max-w-full">
-                    <!-- Header -->
-                    <div class="text-center space-y-2 mb-8 border-b-2 border-slate-900 pb-6 relative">
-                        ${applicantPhotoHtml}
-                        <div class="flex justify-center mb-3">
-                            <img src="/fss_logo.png" alt="School Logo" class="w-20 h-20 md:w-24 md:h-24 object-contain" />
-                        </div>
-                        
-                        <h1 class="text-2xl md:text-3xl font-black uppercase tracking-tight">${unit.name}</h1>
-                        <p class="text-xs md:text-sm text-slate-500 italic tracking-wide">Character and Learning</p>
-                        
-                        <div class="mt-4 inline-block border-2 border-slate-900 px-6 py-1 font-black uppercase tracking-widest text-sm">
-                            OFFICIAL ADMISSION LETTER
-                        </div>
-                    </div>
-
-                    <!-- Body -->
-                    <div class="text-sm md:text-base leading-loose" style="line-height: 1.9;">
-                        <style>
-                            .admission-body p { margin-bottom: 0.75em; }
-                            .admission-body b, .admission-body strong { color: #0f172a; }
-                            .admission-body table { border-collapse: collapse; width: 100%; margin: 1em 0; }
-                            .admission-body table td, .admission-body table th { padding: 6px 10px; border: 1px solid #cbd5e1; }
-                            .admission-body table th { background: #f1f5f9; font-weight: 700; text-transform: uppercase; font-size: 0.75em; letter-spacing: 0.05em; }
-                        </style>
-                        <div class="admission-body">
-                            ${html}
-                        </div>
+                <!-- Body -->
+                <div class="text-sm leading-relaxed" style="line-height: 1.5;">
+                    <style>
+                        .admission-body p { margin-bottom: 1em; text-align: justify; }
+                        .admission-body ol { margin-left: 1em; margin-bottom: 1em; }
+                        .admission-body ol li { margin-bottom: 0.5em; padding-left: 0.5em; text-align: justify; }
+                        .admission-body b, .admission-body strong { color: #0f172a; }
+                    </style>
+                    <div class="admission-body font-semibold italic text-slate-900 text-sm">
+                        ${html}
                     </div>
                 </div>
             </div>
