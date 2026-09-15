@@ -148,8 +148,6 @@ export class AdmissionLetterService {
             </div>
         ` : '';
 
-        const departmentName = formTemplate.name.replace(/^(ND|HND) /i, '').trim() || 'Business Administration and Management';
-
         const enhancedHtml = `
             <div class="relative w-full min-h-full font-serif text-slate-900" style="-webkit-print-color-adjust: exact; print-color-adjust: exact;">
                 <!-- Watermark -->
@@ -164,15 +162,12 @@ export class AdmissionLetterService {
                     <!-- Header -->
                     <div class="text-center space-y-2 mb-8 border-b-2 border-slate-900 pb-6 relative">
                         ${applicantPhotoHtml}
-                        <div class="flex justify-center mb-4">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-800">
-                                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-                                <path d="m9 12 2 2 4-4"/>
-                            </svg>
+                        <div class="flex justify-center mb-3">
+                            <img src="/fss_logo.png" alt="School Logo" class="w-20 h-20 md:w-24 md:h-24 object-contain" />
                         </div>
                         
                         <h1 class="text-2xl md:text-3xl font-black uppercase tracking-tight">${unit.name}</h1>
-                        <h2 class="text-lg md:text-xl font-bold uppercase">${departmentName}</h2>
+                        <p class="text-xs md:text-sm text-slate-500 italic tracking-wide">Character and Learning</p>
                         
                         <div class="mt-4 inline-block border-2 border-slate-900 px-6 py-1 font-black uppercase tracking-widest text-sm">
                             OFFICIAL ADMISSION LETTER
@@ -180,8 +175,17 @@ export class AdmissionLetterService {
                     </div>
 
                     <!-- Body -->
-                    <div class="text-sm md:text-base leading-relaxed">
-                        ${html}
+                    <div class="text-sm md:text-base leading-loose" style="line-height: 1.9;">
+                        <style>
+                            .admission-body p { margin-bottom: 0.75em; }
+                            .admission-body b, .admission-body strong { color: #0f172a; }
+                            .admission-body table { border-collapse: collapse; width: 100%; margin: 1em 0; }
+                            .admission-body table td, .admission-body table th { padding: 6px 10px; border: 1px solid #cbd5e1; }
+                            .admission-body table th { background: #f1f5f9; font-weight: 700; text-transform: uppercase; font-size: 0.75em; letter-spacing: 0.05em; }
+                        </style>
+                        <div class="admission-body">
+                            ${html}
+                        </div>
                     </div>
                 </div>
             </div>
