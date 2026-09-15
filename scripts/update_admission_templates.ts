@@ -7,15 +7,15 @@ async function run() {
         console.log("Updating admission letter templates...");
 
         const newHtml = `
-  <p style="margin-bottom: 20px;">
+<p>
     With reference to the Post UTME and your basic entering qualification into the Federal School of Statistics, Ibadan, it is my pleasure to offer you a provisional admission into the {{study_mode}} Programme for a National Diploma in {{department_name}} which has a minimum duration of two years.
-  </p>
+</p>
 
-  <p style="margin-bottom: 15px;">
+<p>
     Please note the following conditions relating to this provisional offer:
-  </p>
+</p>
 
-  <ol type="i">
+<ol>
     <li>You are expected to commence the programme at the beginning of {{academic_session}} academic session of this institution on {{resumption_date}}.</li>
     <li>You are therefore required to indicate acceptance of this offer by paying the acceptance fee of {{acceptance_fee_words}} only (N{{acceptance_fee}}) into the college account within two weeks from the date of this letter. Failure to complete the acceptance process within this stipulated time will lead to forfeiture of this provisional offer of admission.</li>
     <li>Lecture commences for the fresh students on {{lecture_start_date}}.</li>
@@ -26,15 +26,15 @@ async function run() {
     <li>Pregnancy is not allowed throughout the duration of the course except those who are officially married.</li>
     <li>Note that the offer may be revoked and your place given to someone else if the provisions of i - iv above are not fulfilled within the stipulated time.</li>
     <li>Further information is available at the college.</li>
-  </ol>
+</ol>
 
-  <p style="margin-bottom: 40px; margin-top: 20px;">
+<p class="sign-off">
     Accept my congratulations.
-  </p>
+</p>
 
-  <div style="margin-top: 50px;">
-    <p style="font-weight: bold; margin: 0; font-style: normal;">Ag. Registrar</p>
-  </div>
+<div>
+    <p class="signature">Ag. Registrar</p>
+</div>
 `;
 
         await db.update(documentTemplates)
