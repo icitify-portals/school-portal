@@ -327,6 +327,7 @@ const adminMenuItems: MenuItem[] = [
         subItems: [
             { name: "Admission Dashboard", href: "/admin/admission" },
             { name: "Form Builder", href: "/admin/admission/forms" },
+            { name: "Admission Letters", href: "/admin/academic/templates" },
             { name: "Applications (V2)", href: "/admin/admission/v2" },
             { name: "Leads (Prospects)", href: "/admin/admission/leads" },
             { name: "Screening & Scoring", href: "/admin/admission/screening" },

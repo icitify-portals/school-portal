@@ -47,7 +47,7 @@ export default function ResultTemplateManager() {
   const handleSave = async () => {
     setSaving(true);
     setStatus(null);
-    const res = await saveDocumentTemplate({ name, type: 'result_slip', level, html, css });
+    const res = await saveDocumentTemplate({ id: selectedTemplate?.id, name, type: selectedTemplate?.type || 'result_slip', level, html, css });
     setSaving(false);
     
     if (res.success) {
@@ -241,3 +241,4 @@ export default function ResultTemplateManager() {
     </div>
   );
 }
+

@@ -53,21 +53,34 @@ export async function createGradingSystem(data: {
 }
 
 export async function saveDocumentTemplate(data: {
+    id?: number,
     name: string,
-    type: 'result_slip' | 'transcript' | 'admission_letter' | 'certificate' | 'id_card',
-    level: 'primary' | 'secondary' | 'tertiary' | 'postgraduate',
+    type?: 'result_slip' | 'transcript' | 'admission_letter' | 'certificate' | 'id_card',
+    level?: 'primary' | 'secondary' | 'tertiary' | 'postgraduate',
     html: string,
     css?: string
 }) {
     try {
         await ensureAdminAccess();
-        await db.insert(documentTemplates).values({
-            name: data.name,
-            type: data.type,
-            level: data.level,
-            templateHtml: data.html,
-            templateCss: data.css
-        });
+        if (data.id) {
+            await db.update(documentTemplates)
+                .set({
+                    name: data.name,
+                    ...(data.type && { type: data.type }),
+                    ...(data.level && { level: data.level }),
+                    templateHtml: data.html,
+                    templateCss: data.css
+                })
+                .where(eq(documentTemplates.id, data.id));
+        } else {
+            await db.insert(documentTemplates).values({
+                name: data.name,
+                type: data.type || "result_slip",
+                level: data.level || "tertiary",
+                templateHtml: data.html,
+                templateCss: data.css
+            });
+        }
         revalidatePath("/admin/academic/templates");
         return { success: true };
     } catch (error) {
@@ -179,3 +192,5 @@ export async function dispatchResultNotificationsAction(studentId: number, metho
         return { success: false, error: (error as Error).message };
     }
 }
+
+
