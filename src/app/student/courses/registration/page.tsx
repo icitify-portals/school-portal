@@ -20,11 +20,16 @@ import {
   Search
 } from 'lucide-react';
 import { getAvailableCoursesAction, submitCourseRegistrationAction, getRegisteredCoursesAction } from '@/actions/course-registration';
+import { recordPrintFeePaymentAction } from '@/actions/finance';
+import { AlatpayInlineCheckout } from '@/components/finance/AlatpayInlineCheckout';
+import { toast } from 'sonner';
 
 export default function AdvancedCourseRegistrationPortal() {
   const [availableCourses, setAvailableCourses] = useState<any[]>([]);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [registeredCourses, setRegisteredCourses] = useState<any[]>([]);
+  const [isPrintFeePaid, setIsPrintFeePaid] = useState(false);
+  const [showPayment, setShowPayment] = useState(false);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -49,6 +54,7 @@ export default function AdvancedCourseRegistrationPortal() {
     
     if (availRes.success) setAvailableCourses(availRes.data);
     if (regRes.success) {
+        setIsPrintFeePaid(regRes.isPrintFeePaid || false);
         // @ts-expect-error - TS2345: Auto-suppressed for build
         setRegisteredCourses(regRes.data);
         // @ts-expect-error - TS18048: Auto-suppressed for build
@@ -290,7 +296,45 @@ export default function AdvancedCourseRegistrationPortal() {
              </div>
           </div>
         </div>
+
+        {showPayment && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+                <div className="bg-white rounded-[2rem] p-8 max-w-md w-full shadow-2xl">
+                    <div className="flex justify-between items-center mb-6">
+                        <h3 className="text-xl font-black text-slate-900">Print Course Form</h3>
+                        <button onClick={() => setShowPayment(false)} className="text-slate-400 hover:text-slate-600">
+                            <XCircle className="w-6 h-6" />
+                        </button>
+                    </div>
+                    <div className="bg-slate-50 p-6 rounded-2xl mb-6 border border-slate-100">
+                        <p className="text-sm text-slate-600 mb-2 font-medium">To print your approved course registration form, a processing fee is required.</p>
+                        <div className="text-3xl font-black text-indigo-600">?500.00</div>
+                    </div>
+                    <AlatpayInlineCheckout 
+                        amount={500}
+                        email="student@fss.edu.ng" // In a real app, use the student's actual email
+                        firstName="Student"
+                        lastName="User"
+                        phone="08000000000"
+                        reference={"PRINT_" + studentId + "_" + Date.now()}
+                        description="Course Registration Print Fee"
+                        onSuccess={async (res) => {
+                            const r = await recordPrintFeePaymentAction(studentId, sessionId, semester, 500, res.reference || res.transactionReference, res.gatewayTransactionId || "");
+                            if (r.success) {
+                                toast.success("Payment successful! You can now print your form.");
+                                setIsPrintFeePaid(true);
+                                setShowPayment(false);
+                            } else {
+                                toast.error("Failed to record payment.");
+                            }
+                        }}
+                        onClose={() => setShowPayment(false)}
+                    />
+                </div>
+            </div>
+        )}
       </div>
     </div>
   );
 }
+

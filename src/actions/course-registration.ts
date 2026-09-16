@@ -52,12 +52,25 @@ export async function submitCourseRegistrationAction(data: {
 
 export async function getRegisteredCoursesAction(studentId: number, sessionId: number, semester: '1' | '2') {
     try {
+        const { semesterSummaries } = await import("@/db/schema");
+        const summary = await db.select({ isPrintFeePaid: semesterSummaries.isPrintFeePaid })
+            .from(semesterSummaries)
+            .where(and(
+                eq(semesterSummaries.studentId, studentId),
+                eq(semesterSummaries.sessionId, sessionId),
+                eq(semesterSummaries.semester, semester)
+            ))
+            .limit(1);
+        const isPrintFeePaid = summary[0]?.isPrintFeePaid || false;
+
         const registered = await db.select({
             id: courses.id,
             name: courses.name,
             code: courses.code,
             units: sql<number>`COALESCE(${courseDepartmentSettings.creditUnits}, ${courses.creditUnits})`.mapWith(Number),
-            finalStatus: studentCourseRegistrations.finalStatus
+            finalStatus: studentCourseRegistrations.finalStatus,
+            advisorStatus: studentCourseRegistrations.advisorStatus,
+            hodStatus: studentCourseRegistrations.hodStatus
         })
         .from(studentCourseRegistrations)
         .innerJoin(courses, eq(studentCourseRegistrations.courseId, courses.id))
@@ -73,7 +86,7 @@ export async function getRegisteredCoursesAction(studentId: number, sessionId: n
             eq(studentCourseRegistrations.semester, semester)
         ));
 
-        return { success: true, data: registered };
+        return { success: true, data: registered, isPrintFeePaid };
     } catch (error) {
         return { success: false, error: (error as Error).message };
     }
@@ -153,3 +166,4 @@ export async function getCourseRegisteredStudentsRosterAction(courseId: number, 
         return { success: false, error: (error as Error).message, data: [] };
     }
 }
+

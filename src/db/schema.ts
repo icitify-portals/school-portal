@@ -605,6 +605,7 @@ export const semesterSummaries = mysqlTable('semester_summaries', {
   twgp: decimal('twgp', { precision: 7, scale: 2 }).default('0.00'), // Total Weighted Grade Points
   gpa: decimal('gpa', { precision: 4, scale: 2 }).default('0.00'),
   cgpa: decimal('cgpa', { precision: 4, scale: 2 }).default('0.00'),
+    isPrintFeePaid: boolean('is_print_fee_paid').default(false),
   approvalStatus: mysqlEnum('approval_status', ['pending', 'hod_approved', 'dean_approved', 'published']).default('pending'),
   hodApprovedBy: int('hod_approved_by').references(() => users.id),
   hodApprovedAt: datetime('hod_approved_at'),
@@ -7788,5 +7789,6 @@ export const unifiedExamAssignmentsRelations = relations(unifiedExamAssignments,
   exam: one(unifiedExams, { fields: [unifiedExamAssignments.examId], references: [unifiedExams.id] }),
   user: one(users, { fields: [unifiedExamAssignments.userId], references: [users.id] }),
 }));
+
 
 

@@ -496,11 +496,6 @@ export async function deleteInstitutionalUnit(id: number) {
     }
 }
 
-import { db } from "@/db/db";
-import { systemSettings } from "@/db/schema";
-import { eq } from "drizzle-orm";
-import { hasRole, hasPermission } from "@/lib/rbac";
-import { revalidatePath } from "next/cache";
 
 export async function getAutoApproveSetting() {
     const res = await db.select().from(systemSettings).where(eq(systemSettings.settingKey, "auto_approve_course_registration")).limit(1);
