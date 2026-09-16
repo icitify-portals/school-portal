@@ -53,7 +53,7 @@ export class AdmissionLetterService {
             .innerJoin(admissionFormTemplates, eq(admissionApplicationsV2.templateId, admissionFormTemplates.id))
             .leftJoin(students, eq(admissionApplicationsV2.studentId, students.id))
             .leftJoin(institutionalUnits, eq(students.unitId, institutionalUnits.id))
-            .leftJoin(programmes, eq(students.programmeId, programmes.id))
+            .leftJoin(programmes, eq(admissionApplicationsV2.programmeId, programmes.id))
             .leftJoin(departments, eq(programmes.deptId, departments.id))
             .where(eq(admissionApplicationsV2.id, applicationId))
             .limit(1);
