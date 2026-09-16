@@ -89,8 +89,7 @@ export async function bulkUploadResults(data: any[], courseId: number, sessionId
                     gradePoint: gradePoint.toString(),
                     teacherRemark: remark,
                     status: 'pending',
-                    lastEditedBy: parseInt(session.user.id),
-                    updatedAt: new Date()
+                    lastEditedBy: session.user?.id ? parseInt(session.user.id) : null
                 }).where(eq(results.id, existing[0].id));
             } else {
                 // Insert new
@@ -103,7 +102,7 @@ export async function bulkUploadResults(data: any[], courseId: number, sessionId
                     gradePoint: gradePoint.toString(),
                     teacherRemark: remark,
                     status: 'pending',
-                    lastEditedBy: parseInt(session.user.id)
+                    lastEditedBy: session.user?.id ? parseInt(session.user.id) : null
                 });
             }
             successCount++;
@@ -159,3 +158,5 @@ export async function fetchCourseEnrollmentTemplate(courseId: number, sessionId:
         return { success: false, error: error.message || "Failed to generate template" };
     }
 }
+
+
