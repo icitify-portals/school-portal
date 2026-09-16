@@ -35,35 +35,16 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build image (with full log output)
-        run: |
-          docker buildx build \
-            --progress=plain \
-            --build-arg CACHEBUST=${{ github.run_number }} \
-            --load \
-            -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest \
-            -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
-            . 2>&1 | tee /tmp/docker-build.log
-          exit_code=${PIPESTATUS[0]}
-          if [ $exit_code -ne 0 ]; then
-            echo "===== BUILD FAILED (exit $exit_code) ====="
-            tail -200 /tmp/docker-build.log
-            exit $exit_code
-          fi
-
-      - name: Push image
-        if: success()
-        run: |
-          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
-
-      - name: Upload build log on failure
-        if: failure()
-        uses: actions/upload-artifact@v4
+      - name: Build and push image
+        uses: docker/build-push-action@v7
         with:
-          name: docker-build-log
-          path: /tmp/docker-build.log
-          retention-days: 3
+          context: .
+          push: true
+          build-args: |
+            CACHEBUST=${{ github.run_number }}
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
 
   deploy-to-vps:
     name: Deploy to Hostinger VPS
