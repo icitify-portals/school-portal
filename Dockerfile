@@ -2,8 +2,6 @@
 FROM node:20-alpine AS base
 
 # ── deps: install node_modules ────────────────────────────────────────────────
-# This layer is ONLY invalidated when package.json / package-lock.json change.
-# Source code changes do NOT trigger an npm install.
 FROM base AS deps
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
@@ -14,7 +12,6 @@ RUN npm ci --legacy-peer-deps
 FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
-# Copy source AFTER node_modules so the npm ci layer stays cached
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_OPTIONS="--max-old-space-size=8192"
@@ -37,10 +34,8 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-# Install mysql-client to enable mysqldump for backup actions
 RUN apk add --no-cache mysql-client
 
-# Create backups directory with correct permissions so the Next.js user can write to it
 RUN mkdir -p /app/backups && chown nextjs:nodejs /app/backups
 
 COPY --from=builder /app/public ./public
