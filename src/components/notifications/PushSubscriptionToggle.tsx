@@ -10,7 +10,7 @@ export function PushSubscriptionToggle() {
     const [isLoading, setIsLoading] = useState(true);
 
     const checkSubscription = useCallback(async () => {
-        if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
+        if (typeof navigator === 'undefined' || typeof window === 'undefined' || !("serviceWorker" in navigator) || !("PushManager" in window)) {
             setIsLoading(false);
             return;
         }
@@ -81,8 +81,7 @@ export function PushSubscriptionToggle() {
             setIsLoading(false);
         }
     };
-
-    if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
+    if (typeof navigator === 'undefined' || typeof window === 'undefined' || !("serviceWorker" in navigator) || !("PushManager" in window)) {
         return null; // Browser doesn't support push
     }
 
