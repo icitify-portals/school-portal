@@ -21,7 +21,11 @@ function friendlyAdmissionLabel(status: string | null | undefined): { label: str
 
 export default async function ApplicantDashboard() {
     const session = await auth();
-    const userId = Number(session?.user?.id);
+    if (!session?.user) {
+        const { redirect } = await import('next/navigation');
+        redirect('/login');
+    }
+    const userId = Number(session.user.id);
 
     // Fetch ALL active form templates
     const templates = await db.select()
@@ -266,5 +270,6 @@ export default async function ApplicantDashboard() {
         </div>
     );
 }
+
 
 
