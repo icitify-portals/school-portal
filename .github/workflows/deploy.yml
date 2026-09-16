@@ -6,8 +6,8 @@ on:
       - main
 
 concurrency:
-  group: production-deploy
-  cancel-in-progress: true
+  group: production-deploy-${{ github.sha }}
+  cancel-in-progress: false
 
 env:
   REGISTRY: ghcr.io
@@ -37,16 +37,15 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           push: true
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
-          # Cache layers between builds using GitHub Actions cache
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=build-${{ github.sha }}
+          cache-to: type=gha,mode=max,scope=build-${{ github.sha }}
 
   # ── Step 2: SSH into VPS, pull the pre-built image, restart containers ──────
   deploy-to-vps:

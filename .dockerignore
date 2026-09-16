@@ -19,3 +19,6 @@ coverage
 test-app.ts
 query.ts
 query2.ts
+scripts
+*.xlsx
+*.csv
