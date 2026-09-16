@@ -1,4 +1,4 @@
-﻿import { auth } from "@/auth";
+import { auth } from "@/auth";
 import { db } from "@/db/db";
 import { admissionApplicationsV2, admissionFormTemplates } from "@/db/schema";
 import { eq } from "drizzle-orm";
@@ -10,7 +10,11 @@ import Link from "next/link";
 
 export default async function ApplicantReceiptsPage() {
     const session = await auth();
-    const userId = Number(session?.user?.id);
+    if (!session?.user) {
+        const { redirect } = await import('next/navigation');
+        redirect('/login');
+    }
+    const userId = Number(session.user.id);
 
     const applications = await db.select({
         id: admissionApplicationsV2.id,
@@ -70,7 +74,7 @@ export default async function ApplicantReceiptsPage() {
                                         <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 flex justify-between items-center">
                                             <div>
                                                 <p className="text-xs font-black uppercase tracking-widest text-slate-400 mb-1">Application Fee</p>
-                                                <p className="text-lg font-black text-slate-900">₦{parseFloat(app.template.applicationFee?.toString() || "0").toLocaleString()}</p>
+                                                <p className="text-lg font-black text-slate-900">?{parseFloat(app.template.applicationFee?.toString() || "0").toLocaleString()}</p>
                                                 <p className="text-[10px] font-bold text-slate-500 mt-1">Ref: {app.paymentReference}</p>
                                             </div>
                                             <Button variant="outline" className="rounded-xl border-slate-200 hover:border-indigo-600 hover:text-indigo-600 font-bold px-4 h-12 text-xs uppercase tracking-widest flex gap-2" asChild>
@@ -84,7 +88,7 @@ export default async function ApplicantReceiptsPage() {
                                         <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 flex justify-between items-center">
                                             <div>
                                                 <p className="text-xs font-black uppercase tracking-widest text-slate-400 mb-1">Processing Fee</p>
-                                                <p className="text-lg font-black text-slate-900">₦{parseFloat(app.template.processingFee?.toString() || "0").toLocaleString()}</p>
+                                                <p className="text-lg font-black text-slate-900">?{parseFloat(app.template.processingFee?.toString() || "0").toLocaleString()}</p>
                                                 <p className="text-[10px] font-bold text-slate-500 mt-1">Ref: {app.processingFeeReference}</p>
                                             </div>
                                             <Button variant="outline" className="rounded-xl border-slate-200 hover:border-indigo-600 hover:text-indigo-600 font-bold px-4 h-12 text-xs uppercase tracking-widest flex gap-2" asChild>
@@ -103,3 +107,4 @@ export default async function ApplicantReceiptsPage() {
         </div>
     );
 }
+
