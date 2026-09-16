@@ -22,7 +22,7 @@ ENV NEXT_PUBLIC_APP_URL="https://portal.fssibadan.edu.ng"
 ENV ENCRYPTION_KEY="1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b"
 ENV JWT_SECRET="build-time-jwt-secret-1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b"
 ARG CACHEBUST=1
-RUN npx next build
+RUN npx next build --webpack
 
 # ── runner: minimal production image ─────────────────────────────────────────
 FROM base AS runner
