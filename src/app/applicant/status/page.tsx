@@ -17,8 +17,8 @@ export default async function ApplicantStatusRedirect() {
     // Find the latest application for this user
     const [app] = await db.select()
         .from(admissionApplicationsV2)
-        .where(eq(admissionApplicationsV2.userId, userId))
-        .orderBy(desc(admissionApplicationsV2.createdAt))
+        .where(eq(admissionApplicationsV2.applicantId, userId))
+        .orderBy(desc(admissionApplicationsV2.appliedAt))
         .limit(1);
 
     if (app) {
