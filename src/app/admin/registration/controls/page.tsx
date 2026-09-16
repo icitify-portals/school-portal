@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { getAcademicSessions } from "@/actions/portal";
 import { getLevelControls, setLevelControl } from "@/actions/concessions";
+import { getAutoApproveSetting, toggleAutoApproveSettingAction } from "@/actions/settings";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -24,6 +25,7 @@ export default function RegistrationControlsPage() {
     const [selectedSessionId, setSelectedSessionId] = useState<number | "">("");
     const [controls, setControls] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const [autoApprove, setAutoApprove] = useState(false);
 
     useEffect(() => {
         loadSessions();
@@ -41,12 +43,26 @@ export default function RegistrationControlsPage() {
         const current = data.find(s => s.isCurrent);
         if (current) setSelectedSessionId(current.id);
         setLoading(false);
+        const auto = await getAutoApproveSetting();
+        setAutoApprove(auto);
     };
 
     const loadControls = async () => {
         if (!selectedSessionId) return;
         const data = await getLevelControls(Number(selectedSessionId));
         setControls(data);
+    };
+
+    const handleToggleAutoApprove = async () => {
+        const newVal = !autoApprove;
+        setAutoApprove(newVal);
+        const res = await toggleAutoApproveSettingAction(newVal);
+        if (res.success) {
+            toast.success(newVal ? "Auto-approval enabled" : "Auto-approval disabled");
+        } else {
+            setAutoApprove(!newVal);
+            toast.error("Failed to update setting");
+        }
     };
 
     const handleToggle = async (level: number, currentStatus: boolean) => {
@@ -118,6 +134,45 @@ export default function RegistrationControlsPage() {
                     </CardContent>
                 </Card>
 
+                <Card className="border-none shadow-2xl rounded-[3rem] overflow-hidden bg-white">
+                    <CardHeader className="p-10 border-b border-slate-50 flex flex-row justify-between items-center">
+                        <div>
+                            <CardTitle className="text-2xl font-black italic uppercase tracking-tighter">Auto Approval</CardTitle>
+                            <p className="text-slate-400 font-bold uppercase tracking-widest text-[9px] mt-1">Automatic course registration approval</p>
+                        </div>
+                        <Badge variant={autoApprove ? "default" : "secondary"} className="py-2 px-4 rounded-xl font-black">
+                            {autoApprove ? "AUTO ON" : "MANUAL"}
+                        </Badge>
+                    </CardHeader>
+                    <CardContent className="p-10">
+                        <div className="bg-slate-50 p-8 rounded-2xl border border-dashed border-slate-200 flex gap-6 items-center">
+                            <div className={cn(
+                                "p-6 rounded-[1.5rem] shadow-2xl transition-all",
+                                autoApprove ? "bg-indigo-500 text-white" : "bg-slate-300 text-slate-600"
+                            )}>
+                                <ShieldCheck className="w-8 h-8" />
+                            </div>
+                            <div className="flex-1">
+                                <h4 className="font-black italic uppercase text-slate-600">Approval Workflow</h4>
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+                                    {autoApprove
+                                        ? "Student registrations are automatically approved upon submission."
+                                        : "Registrations require manual HOD / Advisor approval."}
+                                </p>
+                            </div>
+                            <Button
+                                onClick={handleToggleAutoApprove}
+                                className={cn(
+                                    "rounded-xl font-black px-6 py-6 uppercase text-[10px] tracking-widest transition-all",
+                                    autoApprove ? "bg-rose-500 hover:bg-rose-600 text-white" : "bg-indigo-600 hover:bg-indigo-700 text-white"
+                                )}
+                            >
+                                {autoApprove ? "Disable Auto" : "Enable Auto"}
+                            </Button>
+                        </div>
+                    </CardContent>
+                </Card>
+
                 <Card className="border-none shadow-2xl rounded-[3rem] overflow-hidden bg-slate-900 text-white">
                     <CardHeader className="p-10 border-b border-white/10">
                         <CardTitle className="text-2xl font-black italic uppercase tracking-tighter">Level Exceptions</CardTitle>
@@ -180,3 +235,8 @@ export default function RegistrationControlsPage() {
         </div>
     );
 }
+
+
+
+
+

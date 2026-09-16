@@ -277,15 +277,23 @@ export class CourseRegistrationService {
                 eq(studentCourseRegistrations.advisorStatus, 'pending')
             ));
 
+            const { systemSettings } = await import("@/db/schema");
+            const autoApproveSetting = await tx.select({ value: systemSettings.settingValue })
+                .from(systemSettings)
+                .where(eq(systemSettings.settingKey, 'auto_approve_course_registration'))
+                .limit(1);
+            const isAutoApprove = autoApproveSetting[0]?.value === 'true';
+
             const registrationEntries = data.courseIds.map(courseId => ({
                 studentId: data.studentId,
                 courseId: courseId,
                 sessionId: data.sessionId,
                 semester: data.semester,
                 isWaiver: waivedCourseIds.includes(courseId),
-                advisorStatus: 'pending' as const,
-                hodStatus: 'pending' as const,
-                finalStatus: 'pending' as const
+                advisorStatus: isAutoApprove ? 'approved' as const : 'pending' as const,
+                hodStatus: isAutoApprove ? 'approved' as const : 'pending' as const,
+                finalStatus: isAutoApprove ? 'approved' as const : 'pending' as const,
+                ...(isAutoApprove ? { advisorApprovedAt: new Date(), hodApprovedAt: new Date() } : {})
             }));
 
             await tx.insert(studentCourseRegistrations).values(registrationEntries);
@@ -344,3 +352,4 @@ export class CourseRegistrationService {
         });
     }
 }
+
