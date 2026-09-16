@@ -37,7 +37,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           push: true
@@ -46,8 +46,7 @@ jobs:
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
-          cache-from: type=gha,scope=build-${{ github.sha }}
-          cache-to: type=gha,mode=max,scope=build-${{ github.sha }}
+          no-cache: true
 
   # ── Step 2: SSH into VPS, pull the pre-built image, restart containers ──────
   deploy-to-vps:
