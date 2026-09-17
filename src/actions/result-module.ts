@@ -684,7 +684,7 @@ export async function previewBulkImport(
   autoCreateForSession?: number
 ) {
   try {
-    const MAX_BATCH_SIZE = 300;
+    const MAX_BATCH_SIZE = 1000;
     if (rows.length > MAX_BATCH_SIZE) {
       return {
         success: false,
@@ -894,7 +894,7 @@ export async function addMultiCourseBulkResults(
   autoCreateOptions?: { autoCreateForSession?: number; autoCreateDeptId?: number; autoCreateProgrammeId?: number }
 ) {
   try {
-    const MAX_BATCH_SIZE = 300;
+    const MAX_BATCH_SIZE = 1000;
     if (rows.length > MAX_BATCH_SIZE) {
       return {
         success: false,
