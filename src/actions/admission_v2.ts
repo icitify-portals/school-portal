@@ -2813,7 +2813,9 @@ export async function submitApplicationFinal(applicationId: number, applicantId:
         // JAMB reg is mandatory for full-time applicants - use effectiveJamb (column or any JSON key containing jamb) to avoid false missing when Mode of Study is Part-time but applicationMode column is NULL
         const effectiveJambForCheck = (application as any).jambRegNumber || resolveFieldValue(['jambRegNumber','JAMB Reg Number','JAMB Registration Number','JAMB Registration No','JAMB REG NO','jamb_reg_no','JAMB Number','JAMB','jamb']) || rawFormData["JAMB Registration Number"] || rawFormData["JAMB Score"] ? "present" : null;
         // Only require JAMB if truly Full-time and no JAMB found anywhere
-        const isHndTemplate = template?.name?.toLowerCase().includes('hnd'); const isFullTimeForCheck = !isHndTemplate && (((application as any).applicationMode === 'full_time') || (! (application as any).applicationMode && (formModeOfStudy.includes("full") || (!formModeOfStudy && !effectiveJambForCheck))));
+        const hasModeOfStudy = !!(application as any).applicationMode || !!formModeOfStudy;
+          if (!hasModeOfStudy) { return { success: false, error: "Please select your Mode of Study before submitting." }; }
+          const isFullTimeForCheck = ((application as any).applicationMode === 'full_time') || formModeOfStudy.includes("full");
         // If Part-time (derived or column) and no JAMB, don't require
         if (isFullTimeForCheck) {
             // Check if JAMB actually present in any form

@@ -1153,7 +1153,7 @@ export default function StatefulApplicationPage() {
                                                                 <>
                                                                     <div className="space-y-2">
                                                                         <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">
-                                                                            JAMB Registration Number (Optional)
+                                                                            JAMB Registration Number (Required for Full-Time)
                                                                         </label>
                                                                         <input 
                                                                             type="text"
@@ -1166,7 +1166,7 @@ export default function StatefulApplicationPage() {
                                                                     </div>
                                                                     <div className="space-y-2">
                                                                         <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">
-                                                                            JAMB Score (Optional)
+                                                                            JAMB Score (Required for Full-Time)
                                                                         </label>
                                                                         <input 
                                                                             type="number"
