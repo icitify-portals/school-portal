@@ -880,7 +880,7 @@ export const feeItems = mysqlTable('fee_items', {
   description: text('description'),
   defaultAmount: decimal('default_amount', { precision: 12, scale: 2 }).default('0.00'),
   currency: varchar('currency', { length: 10 }).default('NGN'),
-  category: mysqlEnum('category', ['tuition', 'hostel', 'library', 'lab', 'other']).default('other'),
+  category: mysqlEnum('category', ['tuition', 'hostel', 'library', 'lab', 'other', 'acceptance']).default('other'),
   recurrence: mysqlEnum('recurrence', ['once', 'per_semester', 'per_session']).default('per_session'),
   isRequired: boolean('is_required').default(true),
   settlementAccountId: int('settlement_account_id').references(() => settlementAccounts.id),
