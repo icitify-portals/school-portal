@@ -36,8 +36,9 @@ export default async function DashboardRedirectPage() {
         case 'bursar':
             redirect("/admin/bursary"); // Task-bounded Bursar Finance Dashboard
         case 'registrar':
+            redirect("/admin/registrar"); // Task-bounded Registrar Dashboard
         case 'admission_officer':
-            redirect("/admin/admission"); // Task-bounded Registrar & Admission Dashboard
+            redirect("/admin/admission"); // Task-bounded Admission Dashboard
         case 'record_officer':
         case 'record officer':
             redirect("/admin/result-module"); // Task-bounded Record Officer Dashboard

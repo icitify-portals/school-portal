@@ -3559,6 +3559,9 @@ export async function exportAdminV2Applications(filters?: {
     level?: string;
     applicationMode?: string;
     examAttendance?: string;
+    hasNin?: string;
+    gender?: string;
+    sessionId?: number;
 }) {
     await requireAdmin();
     try {
