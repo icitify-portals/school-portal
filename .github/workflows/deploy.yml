@@ -50,6 +50,8 @@ jobs:
     name: Deploy to Hostinger VPS
     runs-on: ubuntu-latest
     needs: build-and-push
+    permissions:
+      packages: read
 
     steps:
       - name: SSH into VPS & deploy
