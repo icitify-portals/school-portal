@@ -49,6 +49,10 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 # which Turbopack/Next fails to trace. The background worker additionally
 # needs its own small runtime deps (untraced because it is launched via tsx,
 # not bundled). Each is only a few MB — keeps the image slim for fast pulls.
+COPY --from=deps --chown=nextjs:nodejs /app/node_modules/next ./node_modules/next
+COPY --from=deps --chown=nextjs:nodejs /app/node_modules/react ./node_modules/react
+COPY --from=deps --chown=nextjs:nodejs /app/node_modules/react-dom ./node_modules/react-dom
+COPY --from=deps --chown=nextjs:nodejs /app/node_modules/next-auth ./node_modules/next-auth
 COPY --from=deps --chown=nextjs:nodejs /app/node_modules/@swc ./node_modules/@swc
 COPY --from=deps --chown=nextjs:nodejs /app/node_modules/bullmq ./node_modules/bullmq
 COPY --from=deps --chown=nextjs:nodejs /app/node_modules/ioredis ./node_modules/ioredis
