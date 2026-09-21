@@ -79,8 +79,9 @@ jobs:
             echo "=== RESTARTING CONTAINERS ==="
             docker compose -f compose.yml up -d --force-recreate school-portal-app school-portal-worker
 
-            echo "=== CLEANING UP OLD IMAGES ==="
-            docker image prune -f || true
+            echo "=== CLEANING UP OLD APP IMAGES (bounded, ours only) ==="
+            docker images ghcr.io/${{ env.IMAGE_NAME }} -q | tail -n +3 | xargs -r docker rmi -f || true
+            timeout 120 docker image prune -f --filter "until=168h" || true
 
             echo "=== DEPLOYMENT COMPLETE ==="
             docker compose -f compose.yml ps
