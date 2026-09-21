@@ -1,28 +1,43 @@
-﻿import { db } from "@/db/db";
+﻿import { auth } from "@/auth";
+import { db } from "@/db/db";
 import { admissionApplicationsV2, admissionFormTemplates, users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { Card, CardContent } from "@/components/ui/card";
-import { School, CheckCircle2, MapPin, Mail, Phone } from "lucide-react";
+import { CheckCircle2, MapPin, Mail } from "lucide-react";
 import { format } from "date-fns";
+import { redirect } from "next/navigation";
+import { hasPermission } from "@/lib/rbac";
+import { amountInWords } from "@/lib/numberToWords";
+import PrintButton from "./PrintButton";
 
 export default async function ApplicationReceipt(props: { params: Promise<{ id: string }>, searchParams: Promise<{ type?: string }> }) {
+    const session = await auth();
+    if (!session?.user) redirect('/login');
+    const userId = Number((session.user as any).id);
+
     const params = await props.params;
     const searchParams = await props.searchParams;
     const applicationId = parseInt(params.id);
-    const receiptType = searchParams.type || 'application'; // 'application' or 'processing'
+    const receiptType = searchParams.type || 'application'; // 'application' | 'processing' | 'acceptance'
 
     const [application] = await db.select({
         id: admissionApplicationsV2.id,
+        applicantId: admissionApplicationsV2.applicantId,
         applicationNumber: admissionApplicationsV2.applicationNumber,
         paymentStatus: admissionApplicationsV2.paymentStatus,
         paymentReference: admissionApplicationsV2.paymentReference,
         processingFeeStatus: admissionApplicationsV2.processingFeeStatus,
         processingFeeReference: admissionApplicationsV2.processingFeeReference,
+        acceptancePaymentStatus: admissionApplicationsV2.acceptancePaymentStatus,
+        acceptancePaymentReference: admissionApplicationsV2.acceptancePaymentReference,
         appliedAt: admissionApplicationsV2.appliedAt,
+        updatedAt: admissionApplicationsV2.updatedAt,
         template: {
             name: admissionFormTemplates.name,
             applicationFee: admissionFormTemplates.applicationFee,
             processingFee: admissionFormTemplates.processingFee,
+            acceptanceFee: admissionFormTemplates.acceptanceFee,
+            idCardFee: admissionFormTemplates.idCardFee,
         },
         applicant: {
             name: users.name,
@@ -39,14 +54,30 @@ export default async function ApplicationReceipt(props: { params: Promise<{ id: 
         return <div className="p-8 text-center text-red-500 font-bold">Application not found</div>;
     }
 
+    const isOwner = Number(application.applicantId) === userId;
+    const isStaff = await hasPermission("finance.view_detailed").catch(() => false);
+    if (!isOwner && !isStaff) {
+        return <div className="p-8 text-center text-red-500 font-bold">Unauthorized: this receipt does not belong to your account.</div>;
+    }
+
     const isAppFee = receiptType === 'application';
-    const feeAmount = isAppFee ? application.template.applicationFee : application.template.processingFee;
-    const refNumber = isAppFee ? application.paymentReference : application.processingFeeReference;
-    const feeStatus = isAppFee ? application.paymentStatus : application.processingFeeStatus;
+    const isProcessing = receiptType === 'processing';
+    const feeAmount = isAppFee
+        ? application.template.applicationFee
+        : isProcessing
+            ? application.template.processingFee
+            : ((parseFloat(application.template.acceptanceFee?.toString() || "0") + parseFloat(application.template.idCardFee?.toString() || "0")).toFixed(2) as any);
+    const refNumber = isAppFee ? application.paymentReference : isProcessing ? application.processingFeeReference : application.acceptancePaymentReference;
+    const feeStatus = isAppFee ? application.paymentStatus : isProcessing ? application.processingFeeStatus : application.acceptancePaymentStatus;
+    const feeLabel = isAppFee ? 'Application Fee' : isProcessing ? 'Processing Fee' : 'Acceptance + ID Card Fee';
 
     if (feeStatus !== 'paid') {
         return <div className="p-8 text-center text-red-500 font-bold">This fee has not been paid yet.</div>;
     }
+
+    const receiptNo = `RCP-${application.applicationNumber || `APP-${application.id}`}-${receiptType.slice(0, 4).toUpperCase()}`;
+    const paidAt = application.updatedAt || application.appliedAt;
+    const amountNum = parseFloat(feeAmount?.toString() || "0");
 
     return (
         <div className="min-h-screen bg-slate-100 p-8 flex items-start justify-center print:bg-white print:p-0">
@@ -62,7 +93,7 @@ export default async function ApplicationReceipt(props: { params: Promise<{ id: 
                             <span className="flex items-center gap-1"><Mail className="w-3 h-3" /> info@fssibadan.edu.ng</span>
                         </div>
                     </div>
-                    
+
                     <div className="p-8 md:p-12 space-y-12 bg-white">
                         <div className="text-center">
                             <div className="inline-flex items-center gap-2 bg-emerald-50 text-emerald-700 px-6 py-2 rounded-full mb-6 print:bg-emerald-50 print:text-emerald-700 print:-webkit-print-color-adjust-exact">
@@ -70,7 +101,8 @@ export default async function ApplicationReceipt(props: { params: Promise<{ id: 
                                 <span className="font-black text-sm tracking-widest uppercase">Payment Successful</span>
                             </div>
                             <h2 className="text-2xl font-black text-slate-900 uppercase">OFFICIAL RECEIPT</h2>
-                            <p className="text-slate-500 font-bold text-xs tracking-widest uppercase mt-2">Date: {format(new Date(), 'PPP')}</p>
+                            <p className="text-slate-500 font-bold text-xs tracking-widest uppercase mt-2">Receipt No: {receiptNo}</p>
+                            <p className="text-slate-500 font-bold text-xs tracking-widest uppercase mt-1">Date: {paidAt ? format(new Date(paidAt), 'PPP') : format(new Date(), 'PPP')}</p>
                         </div>
 
                         <div className="grid grid-cols-2 gap-8 border-y border-dashed border-slate-200 py-8">
@@ -92,13 +124,14 @@ export default async function ApplicationReceipt(props: { params: Promise<{ id: 
                                 <p className="text-xs font-black uppercase tracking-widest text-slate-400">Description</p>
                                 <p className="text-xs font-black uppercase tracking-widest text-slate-400">Amount</p>
                             </div>
-                            <div className="flex justify-between items-center mb-8">
+                            <div className="flex justify-between items-center mb-4">
                                 <div>
                                     <p className="font-black text-slate-900 uppercase">{application.template.name}</p>
-                                    <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">{isAppFee ? 'Application Fee' : 'Processing Fee'}</p>
+                                    <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">{feeLabel}</p>
                                 </div>
-                                <p className="font-black text-slate-900 text-xl">₦{parseFloat(feeAmount?.toString() || "0").toLocaleString()}</p>
+                                <p className="font-black text-slate-900 text-xl">₦{amountNum.toLocaleString()}</p>
                             </div>
+                            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Amount in words: {amountInWords(amountNum)}</p>
                         </div>
 
                         <div className="bg-slate-50 p-6 rounded-2xl text-center print:bg-slate-50 print:-webkit-print-color-adjust-exact">
@@ -106,11 +139,11 @@ export default async function ApplicationReceipt(props: { params: Promise<{ id: 
                                 This is a computer generated receipt and does not require a physical signature. Keep this receipt safe for your records.
                             </p>
                         </div>
+
+                        <PrintButton />
                     </div>
                 </CardContent>
             </Card>
-
-            <script dangerouslySetInnerHTML={{ __html: `setTimeout(() => window.print(), 1000);` }} />
         </div>
     );
 }

@@ -31,10 +31,12 @@ import {
     budgets,
     payment_transactions,
     walletTransactions,
-    admissionApplicationsV2
+    admissionApplicationsV2,
+    admissionFormTemplates
 } from "@/db/schema";
 import { eq, and, desc, sql, inArray, gte, lte, ne, sum, or } from "drizzle-orm";
 import { revalidatePath, unstable_cache } from "next/cache";
+import { auth } from "@/auth";
 import { hasRole, hasPermission } from "@/lib/rbac";
 import { recordTransaction } from "./accounting";
 import { getBudgetAnalysis } from "./budgets";
@@ -1585,6 +1587,11 @@ export async function requeryUnifiedTransaction(txId: number, sourceTable: 'tran
 
 export async function getTransactionForReceipt(id: number) {
     try {
+        const session = await auth().catch(() => null);
+        const sessionUserId = Number((session?.user as any)?.id || 0);
+        if (!sessionUserId) return null;
+        const isStaff = await hasPermission("finance.view_detailed").catch(() => false);
+
         let data = await db.select({
             transaction: transactions,
             student: students,
@@ -1599,6 +1606,7 @@ export async function getTransactionForReceipt(id: number) {
             .limit(1);
 
         let txData: any = data.length > 0 ? data[0] : null;
+        if (txData && !isStaff && Number(txData.student?.userId || 0) !== sessionUserId) return null;
 
         if (!txData) {
             // Check payment_transactions for wallet topups
@@ -1611,6 +1619,7 @@ export async function getTransactionForReceipt(id: number) {
 
             if (ptData.length === 0) return null;
             const pt = ptData[0].pt;
+            if (!isStaff && Number(pt.userId) !== sessionUserId) return null;
 
             // Get student info using userId
             const studentData = await db.select({
@@ -1686,7 +1695,7 @@ export async function getTransactionForReceipt(id: number) {
         }
 
         return {
-            ...data[0],
+            ...txData,
             branding,
             bursar,
             arrears,
@@ -1696,6 +1705,142 @@ export async function getTransactionForReceipt(id: number) {
     } catch (error) {
         console.error("Failed to fetch transaction for receipt:", error);
         return null;
+    }
+}
+
+// --- Unified Receipt Center ---
+export interface UnifiedReceiptItem {
+    key: string;
+    kind: 'student_transaction' | 'wallet_topup' | 'online_payment' | 'application_fee' | 'processing_fee' | 'acceptance_fee';
+    date: string;
+    purpose: string;
+    amount: number;
+    reference: string;
+    status: string;
+    receiptUrl: string;
+}
+
+export async function getMyReceipts(): Promise<{ success: boolean; data: UnifiedReceiptItem[]; error?: string }> {
+    try {
+        const session = await auth().catch(() => null);
+        const sessionUserId = Number((session?.user as any)?.id || 0);
+        if (!sessionUserId) return { success: false, data: [], error: "Unauthorized" };
+
+        const items: UnifiedReceiptItem[] = [];
+
+        // 1. Student ledger transactions (school fees, print fees, wallet debits)
+        const [studentRow] = await db.select({ id: students.id }).from(students).where(eq(students.userId, sessionUserId)).limit(1);
+        if (studentRow) {
+            const txs = await db.select().from(transactions)
+                .where(and(eq(transactions.studentId, studentRow.id), eq(transactions.status, 'completed')))
+                .orderBy(desc(transactions.createdAt));
+            for (const t of txs) {
+                items.push({
+                    key: `tx-${t.id}`,
+                    kind: 'student_transaction',
+                    date: (t.createdAt as any)?.toISOString?.() || String(t.createdAt),
+                    purpose: t.purpose || "Student Payment",
+                    amount: parseFloat(t.amount?.toString() || "0"),
+                    reference: t.gatewayReference || t.rrr || `TRX-${t.id}`,
+                    status: t.status || "completed",
+                    receiptUrl: `/finance/receipt/${t.id}`,
+                });
+            }
+        }
+
+        // 2. Online payments + wallet top-ups (excludes legacy migrations)
+        const pts = await db.select().from(payment_transactions)
+            .where(and(
+                eq(payment_transactions.userId, sessionUserId),
+                ne(payment_transactions.paymentMethod, 'legacy'),
+                ne(payment_transactions.status, 'pending'),
+                ne(payment_transactions.status, 'failed')
+            ))
+            .orderBy(desc(payment_transactions.createdAt));
+        for (const pt of pts) {
+            const meta: any = pt.metadata ? (typeof pt.metadata === 'string' ? JSON.parse(pt.metadata) : pt.metadata) : {};
+            const isTopup = pt.transactionType === 'wallet_topup';
+            items.push({
+                key: `pt-${pt.id}`,
+                kind: isTopup ? 'wallet_topup' : 'online_payment',
+                date: (pt.createdAt as any)?.toISOString?.() || String(pt.createdAt),
+                purpose: isTopup ? "Wallet Top-up" : (pt.transactionType || "Online Payment"),
+                amount: parseFloat(pt.amount?.toString() || "0"),
+                reference: pt.transactionReference,
+                status: pt.status || "completed",
+                receiptUrl: `/finance/receipt/${pt.id}`,
+            });
+            void meta;
+        }
+
+        // 3. Applicant fees (application, processing, acceptance + ID card)
+        const apps = await db.select({
+            id: admissionApplicationsV2.id,
+            applicationNumber: admissionApplicationsV2.applicationNumber,
+            paymentStatus: admissionApplicationsV2.paymentStatus,
+            paymentReference: admissionApplicationsV2.paymentReference,
+            processingFeeStatus: admissionApplicationsV2.processingFeeStatus,
+            processingFeeReference: admissionApplicationsV2.processingFeeReference,
+            acceptancePaymentStatus: admissionApplicationsV2.acceptancePaymentStatus,
+            acceptancePaymentReference: admissionApplicationsV2.acceptancePaymentReference,
+            updatedAt: admissionApplicationsV2.updatedAt,
+            appliedAt: admissionApplicationsV2.appliedAt,
+            templateName: admissionFormTemplates.name,
+            applicationFee: admissionFormTemplates.applicationFee,
+            processingFee: admissionFormTemplates.processingFee,
+            acceptanceFee: admissionFormTemplates.acceptanceFee,
+            idCardFee: admissionFormTemplates.idCardFee,
+        })
+            .from(admissionApplicationsV2)
+            .innerJoin(admissionFormTemplates, eq(admissionApplicationsV2.templateId, admissionFormTemplates.id))
+            .where(eq(admissionApplicationsV2.applicantId, sessionUserId))
+            .orderBy(desc(admissionApplicationsV2.updatedAt));
+        for (const app of apps) {
+            const paidAt = (app.updatedAt as any)?.toISOString?.() || String(app.updatedAt || app.appliedAt);
+            const appNo = app.applicationNumber || `APP-${app.id}`;
+            if (app.paymentStatus === 'paid') {
+                items.push({
+                    key: `app-${app.id}-application`,
+                    kind: 'application_fee',
+                    date: paidAt,
+                    purpose: `${app.templateName} — Application Fee (${appNo})`,
+                    amount: parseFloat(app.applicationFee?.toString() || "0"),
+                    reference: app.paymentReference || appNo,
+                    status: 'paid',
+                    receiptUrl: `/applicant/application/${app.id}/receipt?type=application`,
+                });
+            }
+            if (app.processingFeeStatus === 'paid') {
+                items.push({
+                    key: `app-${app.id}-processing`,
+                    kind: 'processing_fee',
+                    date: paidAt,
+                    purpose: `${app.templateName} — Processing Fee (${appNo})`,
+                    amount: parseFloat(app.processingFee?.toString() || "0"),
+                    reference: app.processingFeeReference || appNo,
+                    status: 'paid',
+                    receiptUrl: `/applicant/application/${app.id}/receipt?type=processing`,
+                });
+            }
+            if ((app as any).acceptancePaymentStatus === 'paid') {
+                items.push({
+                    key: `app-${app.id}-acceptance`,
+                    kind: 'acceptance_fee',
+                    date: paidAt,
+                    purpose: `${app.templateName} — Acceptance + ID Card Fee (${appNo})`,
+                    amount: parseFloat(app.acceptanceFee?.toString() || "0") + parseFloat(app.idCardFee?.toString() || "0"),
+                    reference: (app as any).acceptancePaymentReference || appNo,
+                    status: 'paid',
+                    receiptUrl: `/applicant/application/${app.id}/receipt?type=acceptance`,
+                });
+            }
+        }
+
+        items.sort((a, b) => +new Date(b.date) - +new Date(a.date));
+        return { success: true, data: items };
+    } catch (error) {
+        console.error("Failed to fetch unified receipts:", error);
+        return { success: false, data: [], error: (error as Error).message };
     }
 }
 

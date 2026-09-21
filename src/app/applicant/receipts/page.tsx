@@ -23,17 +23,22 @@ export default async function ApplicantReceiptsPage() {
         paymentReference: admissionApplicationsV2.paymentReference,
         processingFeeStatus: admissionApplicationsV2.processingFeeStatus,
         processingFeeReference: admissionApplicationsV2.processingFeeReference,
+        acceptancePaymentStatus: admissionApplicationsV2.acceptancePaymentStatus,
+        acceptancePaymentReference: admissionApplicationsV2.acceptancePaymentReference,
         appliedAt: admissionApplicationsV2.appliedAt,
+        updatedAt: admissionApplicationsV2.updatedAt,
         template: {
             name: admissionFormTemplates.name,
             applicationFee: admissionFormTemplates.applicationFee,
             processingFee: admissionFormTemplates.processingFee,
+            acceptanceFee: admissionFormTemplates.acceptanceFee,
+            idCardFee: admissionFormTemplates.idCardFee,
         }
     }).from(admissionApplicationsV2)
       .innerJoin(admissionFormTemplates, eq(admissionApplicationsV2.templateId, admissionFormTemplates.id))
       .where(eq(admissionApplicationsV2.applicantId, userId));
 
-    const paidReceipts = applications.filter(app => app.paymentStatus === 'paid' || app.processingFeeStatus === 'paid');
+    const paidReceipts = applications.filter(app => app.paymentStatus === 'paid' || app.processingFeeStatus === 'paid' || (app as any).acceptancePaymentStatus === 'paid');
 
     return (
         <div className="p-8 w-full max-w-5xl mx-auto space-y-8 animate-in fade-in duration-500">
@@ -74,7 +79,7 @@ export default async function ApplicantReceiptsPage() {
                                         <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 flex justify-between items-center">
                                             <div>
                                                 <p className="text-xs font-black uppercase tracking-widest text-slate-400 mb-1">Application Fee</p>
-                                                <p className="text-lg font-black text-slate-900">?{parseFloat(app.template.applicationFee?.toString() || "0").toLocaleString()}</p>
+                                                <p className="text-lg font-black text-slate-900">₦{parseFloat(app.template.applicationFee?.toString() || "0").toLocaleString()}</p>
                                                 <p className="text-[10px] font-bold text-slate-500 mt-1">Ref: {app.paymentReference}</p>
                                             </div>
                                             <Button variant="outline" className="rounded-xl border-slate-200 hover:border-indigo-600 hover:text-indigo-600 font-bold px-4 h-12 text-xs uppercase tracking-widest flex gap-2" asChild>
@@ -88,11 +93,25 @@ export default async function ApplicantReceiptsPage() {
                                         <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 flex justify-between items-center">
                                             <div>
                                                 <p className="text-xs font-black uppercase tracking-widest text-slate-400 mb-1">Processing Fee</p>
-                                                <p className="text-lg font-black text-slate-900">?{parseFloat(app.template.processingFee?.toString() || "0").toLocaleString()}</p>
+                                                <p className="text-lg font-black text-slate-900">₦{parseFloat(app.template.processingFee?.toString() || "0").toLocaleString()}</p>
                                                 <p className="text-[10px] font-bold text-slate-500 mt-1">Ref: {app.processingFeeReference}</p>
                                             </div>
                                             <Button variant="outline" className="rounded-xl border-slate-200 hover:border-indigo-600 hover:text-indigo-600 font-bold px-4 h-12 text-xs uppercase tracking-widest flex gap-2" asChild>
                                                 <Link href={`/applicant/application/${app.id}/receipt?type=processing`} target="_blank">
+                                                    <Printer className="w-4 h-4" /> Print
+                                                </Link>
+                                            </Button>
+                                        </div>
+                                    )}
+                                    {(app as any).acceptancePaymentStatus === 'paid' && (
+                                        <div className="bg-emerald-50/60 p-6 rounded-2xl border border-emerald-100 flex justify-between items-center">
+                                            <div>
+                                                <p className="text-xs font-black uppercase tracking-widest text-emerald-600 mb-1">Acceptance + ID Card Fee</p>
+                                                <p className="text-lg font-black text-slate-900">₦{(parseFloat((app.template as any).acceptanceFee?.toString() || "0") + parseFloat((app.template as any).idCardFee?.toString() || "0")).toLocaleString()}</p>
+                                                <p className="text-[10px] font-bold text-slate-500 mt-1">Ref: {(app as any).acceptancePaymentReference}</p>
+                                            </div>
+                                            <Button variant="outline" className="rounded-xl border-emerald-200 hover:border-emerald-600 hover:text-emerald-700 font-bold px-4 h-12 text-xs uppercase tracking-widest flex gap-2" asChild>
+                                                <Link href={`/applicant/application/${app.id}/receipt?type=acceptance`} target="_blank">
                                                     <Printer className="w-4 h-4" /> Print
                                                 </Link>
                                             </Button>

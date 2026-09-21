@@ -34,6 +34,10 @@ export default function ReceiptPage() {
         window.print();
     };
 
+    const handleDownload = () => {
+        window.open(`/api/receipts/pdf?id=${params.id}`, '_blank');
+    };
+
     if (loading) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-slate-50">
@@ -78,7 +82,7 @@ export default function ReceiptPage() {
                         <Printer className="w-4 h-4" />
                         Print Receipt
                     </Button>
-                    <Button className="gap-2 rounded-xl bg-indigo-600 shadow-lg shadow-indigo-200 text-white" onClick={handlePrint}>
+                    <Button className="gap-2 rounded-xl bg-indigo-600 shadow-lg shadow-indigo-200 text-white" onClick={handleDownload}>
                         <Download className="w-4 h-4" />
                         Download PDF
                     </Button>
