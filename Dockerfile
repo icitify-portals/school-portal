@@ -45,11 +45,31 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 # Full prod modules for worker-side deps (bullmq/node-cron/dotenv) that the
 # standalone trace does not include. Pruned of devDeps; the redundant shadow
 # copy of `next` is dropped (standalone carries its own traced copy).
-COPY package.json package-lock.json* ./
-COPY --from=deps --chown=nextjs:nodejs /app/node_modules ./node_modules
-RUN npm prune --omit=dev --legacy-peer-deps --no-audit --no-fund \
- && rm -rf ./node_modules/next \
- && npm cache clean --force
+# Standalone output is self-contained for the web app, except @swc/helpers
+# which Turbopack/Next fails to trace. The background worker additionally
+# needs its own small runtime deps (untraced because it is launched via tsx,
+# not bundled). Each is only a few MB — keeps the image slim for fast pulls.
+COPY --from=deps --chown=nextjs:nodejs /app/node_modules/@swc ./node_modules/@swc
+COPY --from=deps --chown=nextjs:nodejs /app/node_modules/bullmq ./node_modules/bullmq
+COPY --from=deps --chown=nextjs:nodejs /app/node_modules/ioredis ./node_modules/ioredis
+COPY --from=deps --chown=nextjs:nodejs /app/node_modules/uuid ./node_modules/uuid
+COPY --from=deps --chown=nextjs:nodejs /app/node_modules/debug ./node_modules/debug
+COPY --from=deps --chown=nextjs:nodejs /app/node_modules/ms ./node_modules/ms
+COPY --from=deps --chown=nextjs:nodejs /app/node_modules/@ioredis ./node_modules/@ioredis
+COPY --from=deps --chown=nextjs:nodejs /app/node_modules/lodash.defaults ./node_modules/lodash.defaults
+COPY --from=deps --chown=nextjs:nodejs /app/node_modules/lodash.isarguments ./node_modules/lodash.isarguments
+COPY --from=deps --chown=nextjs:nodejs /app/node_modules/redis-parser ./node_modules/redis-parser
+COPY --from=deps --chown=nextjs:nodejs /app/node_modules/cron-parser ./node_modules/cron-parser
+COPY --from=deps --chown=nextjs:nodejs /app/node_modules/msgpackr ./node_modules/msgpackr
+COPY --from=deps --chown=nextjs:nodejs /app/node_modules/node-abort-controller ./node_modules/node-abort-controller
+COPY --from=deps --chown=nextjs:nodejs /app/node_modules/semver ./node_modules/semver
+COPY --from=deps --chown=nextjs:nodejs /app/node_modules/tslib ./node_modules/tslib
+COPY --from=deps --chown=nextjs:nodejs /app/node_modules/denque ./node_modules/denque
+COPY --from=deps --chown=nextjs:nodejs /app/node_modules/cluster-key-slot ./node_modules/cluster-key-slot
+COPY --from=deps --chown=nextjs:nodejs /app/node_modules/redis-errors ./node_modules/redis-errors
+COPY --from=deps --chown=nextjs:nodejs /app/node_modules/standard-as-callback ./node_modules/standard-as-callback
+COPY --from=deps --chown=nextjs:nodejs /app/node_modules/dotenv ./node_modules/dotenv
+COPY --from=deps --chown=nextjs:nodejs /app/node_modules/node-cron ./node_modules/node-cron
 
 USER nextjs
 EXPOSE 3000
