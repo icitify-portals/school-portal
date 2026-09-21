@@ -70,6 +70,16 @@ COPY --from=deps --chown=nextjs:nodejs /app/node_modules/redis-errors ./node_mod
 COPY --from=deps --chown=nextjs:nodejs /app/node_modules/standard-as-callback ./node_modules/standard-as-callback
 COPY --from=deps --chown=nextjs:nodejs /app/node_modules/dotenv ./node_modules/dotenv
 COPY --from=deps --chown=nextjs:nodejs /app/node_modules/node-cron ./node_modules/node-cron
+COPY --from=deps --chown=nextjs:nodejs /app/node_modules/drizzle-orm ./node_modules/drizzle-orm
+COPY --from=deps --chown=nextjs:nodejs /app/node_modules/mysql2 ./node_modules/mysql2
+COPY --from=deps --chown=nextjs:nodejs /app/node_modules/bcryptjs ./node_modules/bcryptjs
+COPY --from=deps --chown=nextjs:nodejs /app/node_modules/pdfkit ./node_modules/pdfkit
+COPY --from=deps --chown=nextjs:nodejs /app/node_modules/resend ./node_modules/resend
+COPY --from=deps --chown=nextjs:nodejs /app/node_modules/twilio ./node_modules/twilio
+COPY --from=deps --chown=nextjs:nodejs /app/node_modules/web-push ./node_modules/web-push
+COPY --from=deps --chown=nextjs:nodejs /app/node_modules/adm-zip ./node_modules/adm-zip
+COPY --from=deps --chown=nextjs:nodejs /app/node_modules/@aws-sdk/client-s3 ./node_modules/@aws-sdk/client-s3
+COPY --from=deps --chown=nextjs:nodejs /app/node_modules/@aws-sdk/s3-request-presigner ./node_modules/@aws-sdk/s3-request-presigner
 
 USER nextjs
 EXPOSE 3000
