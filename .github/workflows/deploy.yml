@@ -63,7 +63,9 @@ jobs:
             cd /var/www/school-portal
 
             echo "=== PULLING LATEST CODE ==="
-            git pull origin main
+            git fetch origin main
+            git reset --hard origin/main
+            git clean -fd
 
             echo "=== LOGGING INTO GHCR ==="
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin || true
