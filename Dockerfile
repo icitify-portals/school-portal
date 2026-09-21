@@ -1,7 +1,7 @@
 # Dockerfile
 FROM node:20-alpine AS base
 
-# ── deps: install node_modules ────────────────────────────────────────────────
+# ── deps: install node_modules (for builder) ─────────────────────────────────
 FROM base AS deps
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
@@ -21,12 +21,10 @@ ENV AUTH_SECRET="build-time-dummy-secret-1234567890"
 ENV NEXT_PUBLIC_APP_URL="https://portal.fssibadan.edu.ng"
 ENV ENCRYPTION_KEY="1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b"
 ENV JWT_SECRET="build-time-jwt-secret-1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b"
-# This persists the .next/cache directory between builds so
-# unchanged pages are not recompiled — the single biggest win.
 RUN --mount=type=cache,id=nextjs-build-cache,target=/app/.next/cache \
     npx next build
 
-# ── runner: minimal production image ─────────────────────────────────────────
+# ── runner: production image ─────────────────────────────────────────────────
 FROM base AS runner
 WORKDIR /app
 ENV NODE_ENV=production
@@ -43,14 +41,12 @@ COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-# Full prod-only node_modules for the background worker (bullmq, cron-parser,
-# dotenv, drizzle-orm, etc. are NOT traced into standalone output).  DevDeps
-# are pruned away; the redundant copy of `next/` is dropped (the standalone
-# trace carries its own minimal server copy — saving 157 MB of unused SWC
-# platform binaries).  This keeps the image correct AND small.
+# Prod-only node_modules for the background worker (bullmq, cron-parser,
+# dotenv, drizzle-orm, etc. — all NOT traced into standalone output).
+# Single RUN layer avoids the double-layer bloat of COPY + RUN.
+# Redundant `next/` is removed (standalone carries its own minimal copy).
 COPY package.json package-lock.json* ./
-COPY --from=deps --chown=nextjs:nodejs /app/node_modules ./node_modules
-RUN npm prune --omit=dev --legacy-peer-deps --no-audit --no-fund \
+RUN npm ci --omit=dev --legacy-peer-deps --no-audit --no-fund \
  && rm -rf /app/node_modules/next \
  && npm cache clean --force
 
