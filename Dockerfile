@@ -42,6 +42,14 @@ RUN mkdir -p /app/backups && chown nextjs:nodejs /app/backups
 COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+# Full prod modules for worker-side deps (bullmq/node-cron/dotenv) that the
+# standalone trace does not include. Pruned of devDeps; the redundant shadow
+# copy of `next` is dropped (standalone carries its own traced copy).
+COPY package.json package-lock.json* ./
+COPY --from=deps --chown=nextjs:nodejs /app/node_modules ./node_modules
+RUN npm prune --omit=dev --legacy-peer-deps --no-audit --no-fund \
+ && rm -rf ./node_modules/next \
+ && npm cache clean --force
 
 USER nextjs
 EXPOSE 3000
