@@ -40,7 +40,7 @@ export default function CoursesPage() {
         isGroupSubject: false,
         parentCourseId: null as number | null
     });
-    const [deptSettings, setDeptSettings] = useState({ deptId: "", semester: "1", status: "compulsory", level: 100, capacity: "" });
+    const [deptSettings, setDeptSettings] = useState({ deptId: "", semester: "1", status: "compulsory", level: 100, capacity: "", creditUnits: "" });
     const [prereqId, setPrereqId] = useState("");
 
     const [editingCourse, setEditingCourse] = useState<any>(null);
@@ -110,10 +110,11 @@ export default function CoursesPage() {
             status: deptSettings.status as any,
             level: deptSettings.level,
             capacity: deptSettings.capacity ? parseInt(deptSettings.capacity) : null,
+            creditUnits: deptSettings.creditUnits ? parseInt(deptSettings.creditUnits) : null,
         });
         if (res.success) {
             alert("Department setting added! You can add another or proceed.");
-            setDeptSettings({ ...deptSettings, deptId: "", capacity: "" });
+            setDeptSettings({ ...deptSettings, deptId: "", capacity: "", creditUnits: "" });
         } else alert(res.error);
     };
 
@@ -183,6 +184,7 @@ export default function CoursesPage() {
             status: deptSettings.status as any,
             level: deptSettings.level,
             capacity: deptSettings.capacity ? parseInt(deptSettings.capacity) : null,
+            creditUnits: deptSettings.creditUnits ? parseInt(deptSettings.creditUnits) : null,
         });
         if (res.success) {
             fetchData();
@@ -194,13 +196,14 @@ export default function CoursesPage() {
                 status: deptSettings.status,
                 level: deptSettings.level,
                 capacity: deptSettings.capacity ? parseInt(deptSettings.capacity) : null,
+                creditUnits: deptSettings.creditUnits ? parseInt(deptSettings.creditUnits) : null,
                 department: dept
             };
             setEditingCourse({
                 ...editingCourse,
                 departmentSettings: [...editingCourse.departmentSettings, newSetting]
             });
-            setDeptSettings({ deptId: "", semester: "1", status: "compulsory", level: 100, capacity: "" });
+            setDeptSettings({ deptId: "", semester: "1", status: "compulsory", level: 100, capacity: "", creditUnits: "" });
         } else alert(res.error);
     };
 
@@ -403,6 +406,10 @@ export default function CoursesPage() {
                                             <input type="number" min="0" placeholder="Unlimited" className="w-full bg-slate-800 text-white border-none rounded-lg p-3 text-sm placeholder:text-slate-600" value={deptSettings.capacity} onChange={e => setDeptSettings({ ...deptSettings, capacity: e.target.value })} />
                                         </div>
                                     )}
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-black text-slate-500">CREDIT UNITS OVERRIDE</label>
+                                        <input type="number" min="1" placeholder="Use course default" className="w-full bg-slate-800 text-white border-none rounded-lg p-3 text-sm placeholder:text-slate-600" value={deptSettings.creditUnits} onChange={e => setDeptSettings({ ...deptSettings, creditUnits: e.target.value })} />
+                                    </div>
                                     <div className="flex items-end">
                                         <Button type="submit" className="w-full bg-indigo-500 text-white h-11"><Plus className="w-4 h-4 mr-1" /> Link Dept</Button>
                                     </div>
@@ -854,10 +861,34 @@ export default function CoursesPage() {
                                                     <option key={d.id} value={d.id}>{d.name}</option>
                                                 ))}
                                             </select>
+                                            <select
+                                                className="bg-white border-slate-200 rounded-lg p-2 text-xs"
+                                                value={deptSettings.semester}
+                                                onChange={e => setDeptSettings({ ...deptSettings, semester: e.target.value })}
+                                            >
+                                                <option value="1">Semester 1</option>
+                                                <option value="2">Semester 2</option>
+                                            </select>
+                                            <input
+                                                type="number"
+                                                step="100"
+                                                placeholder="Level (e.g. 100)"
+                                                className="bg-white border border-slate-200 rounded-lg p-2 text-xs"
+                                                value={deptSettings.level}
+                                                onChange={e => setDeptSettings({ ...deptSettings, level: parseInt(e.target.value) })}
+                                            />
+                                            <input
+                                                type="number"
+                                                min="1"
+                                                placeholder="Credit Units Override"
+                                                className="bg-white border border-slate-200 rounded-lg p-2 text-xs placeholder:text-slate-400"
+                                                value={deptSettings.creditUnits}
+                                                onChange={e => setDeptSettings({ ...deptSettings, creditUnits: e.target.value })}
+                                            />
                                             <Button
                                                 onClick={handleAddDeptInEdit}
                                                 disabled={!deptSettings.deptId}
-                                                className="bg-indigo-600 text-white h-9 text-[10px] font-bold rounded-lg"
+                                                className="col-span-2 bg-indigo-600 text-white h-9 text-[10px] font-bold rounded-lg"
                                             >
                                                 Add Link
                                             </Button>
