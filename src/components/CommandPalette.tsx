@@ -42,6 +42,7 @@ export function CommandPalette({ userRole }: { userRole: string }) {
     
     if (userRole === "student") {
         items.push({ title: "Pay Fees", href: "/student/finance" });
+        items.push({ title: "My Receipts", href: "/student/finance/receipts" });
         items.push({ title: "My Results", href: "/student/results" });
         items.push({ title: "CBT Exams", href: "/student/cbt" });
         items.push({ title: "Hostel Allocation", href: "/student/finance/hostel" });

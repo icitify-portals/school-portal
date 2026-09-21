@@ -666,6 +666,17 @@ export default function StudentFinancePage() {
                                                 <div className="text-right">
                                                     <h4 className="font-black text-lg text-emerald-600">₦{parseFloat(p.amount).toLocaleString()}</h4>
                                                     <span className="text-[9px] font-black bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-full uppercase">{p.status}</span>
+                                                    <div className="mt-2">
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            className="h-7 px-3 rounded-lg text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 font-black text-[9px] gap-1.5 uppercase tracking-wider"
+                                                            onClick={() => window.open(`/finance/receipt/${p.id}`, '_blank')}
+                                                        >
+                                                            <FileText className="w-3 h-3" />
+                                                            Receipt
+                                                        </Button>
+                                                    </div>
                                                 </div>
                                             </div>
                                         ))}
@@ -686,6 +697,17 @@ export default function StudentFinancePage() {
                                                 <div className="text-right">
                                                     <h4 className="font-black text-lg text-teal-600">₦{parseFloat(p.amount).toLocaleString()}</h4>
                                                     <span className="text-[9px] font-black bg-teal-50 text-teal-600 px-2 py-0.5 rounded-full uppercase">{p.status}</span>
+                                                    <div className="mt-2">
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            className="h-7 px-3 rounded-lg text-teal-600 hover:text-teal-700 hover:bg-teal-50 font-black text-[9px] gap-1.5 uppercase tracking-wider"
+                                                            onClick={() => window.open(`/finance/receipt/${p.id}`, '_blank')}
+                                                        >
+                                                            <FileText className="w-3 h-3" />
+                                                            Receipt
+                                                        </Button>
+                                                    </div>
                                                 </div>
                                             </div>
                                         ))}
@@ -720,6 +742,7 @@ export default function StudentFinancePage() {
                                                     <div className="text-right">
                                                         <h4 className="font-black text-lg text-slate-700">₦{parseFloat(p.amount).toLocaleString()}</h4>
                                                         <span className="text-[9px] font-black bg-slate-200 text-slate-600 px-2 py-0.5 rounded-full uppercase">Migrated</span>
+                                                        <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-1">No receipt — migrated record</p>
                                                     </div>
                                                 </div>
                                             );

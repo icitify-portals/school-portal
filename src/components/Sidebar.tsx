@@ -112,6 +112,7 @@ const studentMenuItems: MenuItem[] = [
         module: "finance",
         subItems: [
             { name: "Finance Dashboard", href: "/student/finance" },
+            { name: "My Receipts", href: "/student/finance/receipts" },
             { name: "Apply for Refund", href: "/student/finance/refund" },
         ]
     },
