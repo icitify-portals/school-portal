@@ -60,8 +60,9 @@ jobs:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           password: ${{ secrets.SERVER_PASSWORD }}
-          command_timeout: 25m
+          command_timeout: 40m
           script: |
+            set -euxo pipefail
             cd /var/www/school-portal
 
             echo "=== PULLING LATEST CODE ==="
