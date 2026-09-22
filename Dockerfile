@@ -47,7 +47,6 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 # Redundant `next/` is removed (standalone carries its own minimal copy).
 COPY package.json package-lock.json* ./
 RUN npm ci --omit=dev --legacy-peer-deps --no-audit --no-fund \
- && rm -rf /app/node_modules/next \
  && npm cache clean --force
 
 USER nextjs
