@@ -21,8 +21,9 @@ COPY closure-packages.txt ./
 RUN set -eux; \
     while IFS= read -r pkg; do \
       [ -z "$pkg" ] && continue; \
-      mkdir -p "/closure/$(dirname "$pkg")"; \
-      cp -a "/app/node_modules/$pkg" "/closure/$pkg"; \
+      pkg="${pkg#node_modules/}"; \
+      mkdir -p "/closure/node_modules/$(dirname "$pkg")"; \
+      cp -a "/app/node_modules/$pkg" "/closure/node_modules/$pkg"; \
     done < closure-packages.txt; \
     tar -C /closure -czf /closure.tar.gz .
 
