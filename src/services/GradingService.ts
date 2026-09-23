@@ -1,9 +1,76 @@
 import { db } from "@/db/db";
-import { gradingSystems, gradePoints, gradingSystemSessions } from "@/db/schema";
-import { eq, and, sql } from "drizzle-orm";
+import {
+    gradingSystems,
+    gradePoints,
+    gradingSystemSessions,
+    enrollments,
+    results,
+    students,
+    users,
+} from "@/db/schema";
+import { eq, and } from "drizzle-orm";
 
 export class GradingService {
-    
+
+    /**
+     * Returns the list of enrolled students for a course with their current scores.
+     * Used by the /staff/courses/[courseId]/grading page to populate ScoreEntry.
+     */
+    static async getCourseGrades(courseId: number, sessionId: number): Promise<{
+        studentId: number;
+        enrollmentId: number;
+        name: string;
+        matricNumber: string | null;
+        autoCA: number;
+        manualCA: number;
+        examScore: number;
+        total: number;
+        grade: string;
+        isProrated: boolean;
+    }[]> {
+        // Fetch all approved enrollments for this course + session
+        const enrolled = await db
+            .select({
+                enrollmentId: enrollments.id,
+                studentId: enrollments.studentId,
+                studentName: users.name,
+                matricNumber: students.matricNumber,
+                caScore: results.caScore,
+                examScore: results.examScore,
+                totalScore: results.totalScore,
+                grade: results.grade,
+                isProrated: results.isProrated,
+            })
+            .from(enrollments)
+            .innerJoin(students, eq(students.id, enrollments.studentId))
+            .innerJoin(users, eq(users.id, students.userId))
+            .leftJoin(results, eq(results.enrollmentId, enrollments.id))
+            .where(
+                and(
+                    eq(enrollments.courseId, courseId),
+                    eq(enrollments.sessionId, sessionId),
+                )
+            );
+
+        return enrolled.map((row) => {
+            const caScore = parseFloat(row.caScore?.toString() ?? '0') || 0;
+            const examScore = parseFloat(row.examScore?.toString() ?? '0') || 0;
+            const total = parseFloat(row.totalScore?.toString() ?? '0') || (caScore + examScore);
+            return {
+                studentId: row.studentId!,
+                enrollmentId: row.enrollmentId,
+                name: row.studentName ?? 'Unknown Student',
+                matricNumber: row.matricNumber ?? null,
+                autoCA: 0,         // auto-CA from LMS activities — not computed here
+                manualCA: caScore, // stored CA score as manual CA
+                examScore: examScore,
+                total: total,
+                grade: row.grade ?? '—',
+                isProrated: row.isProrated ?? false,
+            };
+        });
+    }
+
     /**
      * Dynamically calculates the Grade and Remark based on the system's grading rubrics.
      * Maps to Result::grade and Result::remark in the Rust system.
