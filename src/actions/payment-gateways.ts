@@ -138,7 +138,8 @@ export async function initiatePayment(gateway: string, amount: number, reference
                     payerName: `${firstName || ''} ${lastName || ''}`.trim() || email.split('@')[0],
                     payerEmail: email,
                     payerPhone: "08000000000"
-                })
+                }),
+                signal: AbortSignal.timeout(15000)
             });
             const textResponse = await res.text();
             let data;
@@ -244,7 +245,8 @@ export async function verifyPayment(gateway: string, reference: string, rrr?: st
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `remitaConsumerKey=${merchantId},remitaConsumerToken=${hash}`
-                }
+                },
+                signal: AbortSignal.timeout(15000)
             });
             const data = await res.json();
             

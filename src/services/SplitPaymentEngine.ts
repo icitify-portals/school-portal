@@ -286,7 +286,8 @@ export class RemitaAdapter implements PaymentGatewayAdapter {
                     'Content-Type': 'application/json',
                     'Authorization': `remitaConsumerKey=${merchantId},remitaConsumerToken=${hash}`
                 },
-                body: JSON.stringify(payload)
+                body: JSON.stringify(payload),
+                signal: AbortSignal.timeout(15000)
             });
             const text = await res.text();
             let data: any = {};

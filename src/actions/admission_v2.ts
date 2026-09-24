@@ -1810,7 +1810,8 @@ export async function initiateSchoolFeesCheckout(applicationId: number) {
                 payerName: `${firstName || ''} ${lastName || ''}`.trim() || email.split('@')[0],
                 payerEmail: email,
                 payerPhone: phone || "08000000000"
-            })
+            }),
+            signal: AbortSignal.timeout(15000)
         });
         const textResponse = await res.text();
         let data;

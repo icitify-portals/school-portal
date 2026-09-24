@@ -88,6 +88,15 @@ interface StudentProfile {
     programme?: { name: string };
 }
 
+const ACTION_TIMEOUT_MS = 25000;
+
+function withTimeout<T>(promise: Promise<T>, fallback: T, ms: number = ACTION_TIMEOUT_MS): Promise<T> {
+    return Promise.race([
+        promise,
+        new Promise<T>((resolve) => setTimeout(() => resolve(fallback), ms)),
+    ]);
+}
+
 export default function StudentFinancePage() {
     const { data: session } = useSession();
     const router = useRouter();
@@ -123,7 +132,7 @@ export default function StudentFinancePage() {
         if (!userId) return;
 
         try {
-            const studentData = await getStudentByUserId(parseInt(userId));
+            const studentData = await withTimeout(getStudentByUserId(parseInt(userId)), null);
             if (!studentData) {
                 setLoading(false);
                 return;
@@ -132,11 +141,11 @@ export default function StudentFinancePage() {
             const studentId = studentData.id;
 
             const [ledgerData, billsData, summaryData, settingsData, paymentHistory] = await Promise.all([
-                getStudentLedger(studentId),
-                getStudentBills(studentId),
-                getStudentFinancialSummary(studentId),
-                getBursarySettings(),
-                getStudentPaymentHistory(parseInt(userId), studentId)
+                withTimeout(getStudentLedger(studentId), []),
+                withTimeout(getStudentBills(studentId), []),
+                withTimeout(getStudentFinancialSummary(studentId), null),
+                withTimeout(getBursarySettings(), {}),
+                withTimeout(getStudentPaymentHistory(parseInt(userId), studentId), { success: false, data: null } as any)
             ]);
             setLedger(ledgerData as LedgerEntry[]);
             setBills(billsData as Bill[]);
@@ -211,7 +220,10 @@ export default function StudentFinancePage() {
 
                 // Proceed directly to wallet payment
                 try {
-                    const res = await payBillWithWalletAction(student.id, selectedBill.id, selectedAmount);
+                    const res = await withTimeout(
+                        payBillWithWalletAction(student.id, selectedBill.id, selectedAmount),
+                        { success: false, error: "Wallet payment is taking too long to respond. Please try again." } as any
+                    );
                     if (res.success) {
                         setCheckoutSuccess(true);
                         setTimeout(() => {
@@ -229,7 +241,10 @@ export default function StudentFinancePage() {
             } else {
                 // Proceed directly to online checkout
                 try {
-                    const res = await initializeOnlineCheckoutAction(student.id, selectedBill.id, selectedAmount);
+                    const res = await withTimeout(
+                        initializeOnlineCheckoutAction(student.id, selectedBill.id, selectedAmount),
+                        { success: false, error: "Payment gateway is taking too long to respond. Please try again." } as any
+                    );
 
                     if (res.success && res.rrr && !res.rrr.startsWith('RRR-MOCK-')) {
                         setRemitaData({ rrr: res.rrr, reference: res.reference || "" });

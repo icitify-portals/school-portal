@@ -8,8 +8,8 @@ const { auth } = NextAuth(authConfig);
 // ── Rate Limiting (in-memory, resets on restart) ────────────────
 const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
 const RATE_LIMIT_WINDOW = 60 * 1000;
-const RATE_LIMIT_MAX = 200;
-const RATE_LIMIT_API_MAX = 100;
+const RATE_LIMIT_MAX = 600;
+const RATE_LIMIT_API_MAX = 300;
 
 // ── Tenant Cache (in-memory, invalidates on deploy/restart) ─────
 const tenantCache = new Map<string, { dbName: string; expiry: number }>();

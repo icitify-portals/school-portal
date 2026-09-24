@@ -107,7 +107,8 @@ export class PaymentService {
                     'Content-Type': 'application/json',
                     'Authorization': `remitaConsumerKey=${merchantId},remitaConsumerToken=${hash}`
                 },
-                body: JSON.stringify(payload)
+                body: JSON.stringify(payload),
+                signal: AbortSignal.timeout(15000)
             });
             const data = await res.json();
             if (data && data.statuscode === "025" && data.rrr) {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Loader2, CreditCard } from "lucide-react";
 import { toast } from "sonner";
@@ -28,6 +28,8 @@ export function RemitaInlineCheckout({
 }: RemitaInlineCheckoutProps) {
     const [isScriptLoaded, setIsScriptLoaded] = useState(false);
     const [isPaying, setIsPaying] = useState(false);
+    const [loadError, setLoadError] = useState(false);
+    const openedRef = useRef(false);
 
     const makePayment = () => {
         if (typeof window === "undefined") {
@@ -43,6 +45,8 @@ export function RemitaInlineCheckout({
             return;
         }
 
+        if (openedRef.current) return;
+        openedRef.current = true;
         setIsPaying(true);
 
         try {
@@ -91,6 +95,36 @@ export function RemitaInlineCheckout({
         }
     };
 
+    const reloadScript = () => {
+        setLoadError(false);
+        const existing = document.getElementById("remita-inline-script");
+        if (existing) existing.remove();
+        let remitaLoaded = false;
+
+        setTimeout(() => {
+            if (!(window as any).RmPaymentEngine && !remitaLoaded) {
+                setLoadError(true);
+                toast.error("Remita payment engine took too long to load. Please try again.", { duration: 5000 });
+            }
+        }, 12000);
+
+        const script = document.createElement("script");
+        script.id = "remita-inline-script";
+        const isLive = process.env.NEXT_PUBLIC_REMITA_ENV !== 'demo';
+        script.src = isLive ? "https://login.remita.net/payment/v1/remita-pay-inline.bundle.js" : "https://demo.remita.net/payment/v1/remita-pay-inline.bundle.js";
+        script.async = true;
+        script.onload = () => {
+            remitaLoaded = true;
+            setTimeout(() => setIsScriptLoaded(true), 200);
+        };
+        script.onerror = () => {
+            remitaLoaded = true;
+            setLoadError(true);
+            toast.error("Failed to load Remita payment engine. Please check your network connection or adblocker.", { duration: 5000 });
+        };
+        document.body.appendChild(script);
+    };
+
     useEffect(() => {
         if (typeof window === "undefined") return;
 
@@ -123,14 +157,25 @@ export function RemitaInlineCheckout({
         
         script.onerror = () => {
             console.error("Failed to load Remita script");
+            setLoadError(true);
             toast.error("Failed to load Remita payment engine. Please check your network connection or adblocker.", { duration: 5000 });
         };
         
         document.body.appendChild(script);
+
+        const loadTimeout = setTimeout(() => {
+            if (!(window as any).RmPaymentEngine) {
+                console.error("Remita script timed out");
+                setLoadError(true);
+                toast.error("Remita payment engine took too long to load. Please try again.", { duration: 5000 });
+            }
+        }, 12000);
+
+        return () => clearTimeout(loadTimeout);
     }, []);
 
     useEffect(() => {
-        if (isScriptLoaded && !isPaying) {
+        if (isScriptLoaded && !isPaying && !openedRef.current) {
             makePayment();
         }
     }, [isScriptLoaded]);
@@ -139,23 +184,27 @@ export function RemitaInlineCheckout({
         <div className="fixed inset-0 z-[99999] bg-slate-900/80 backdrop-blur-md flex items-center justify-center p-4">
             <div className="bg-white rounded-3xl p-8 max-w-sm w-full shadow-2xl flex flex-col items-center text-center space-y-6">
                 <div className="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600">
-                    <Loader2 className="w-8 h-8 animate-spin" />
+                    {loadError ? <CreditCard className="w-8 h-8" /> : <Loader2 className="w-8 h-8 animate-spin" />}
                 </div>
                 <div>
-                    <h3 className="text-xl font-black text-slate-900">Connecting to Remita</h3>
-                    <p className="text-sm text-slate-500 mt-2 font-medium">Please complete your payment of ₦{amount.toLocaleString()} in the secure Remita window.</p>
+                    <h3 className="text-xl font-black text-slate-900">{loadError ? "Remita Unavailable" : "Connecting to Remita"}</h3>
+                    <p className="text-sm text-slate-500 mt-2 font-medium">
+                        {loadError
+                            ? "We could not reach the Remita payment gateway from your network. Check your connection or adblocker and try again."
+                            : `Please complete your payment of ₦${amount.toLocaleString()} in the secure Remita window.`}
+                    </p>
                 </div>
                 
                 <button
-                    onClick={makePayment}
-                    disabled={isPaying || !isScriptLoaded}
+                    onClick={loadError ? reloadScript : makePayment}
+                    disabled={isPaying}
                     className={`w-full py-4 rounded-xl font-black text-lg transition-all shadow-xl flex items-center justify-center gap-2 ${
-                        isPaying || !isScriptLoaded
+                        isPaying
                             ? 'bg-slate-100 text-slate-400 cursor-not-allowed shadow-none'
                             : 'bg-indigo-600 text-white hover:bg-indigo-500 hover:-translate-y-0.5 hover:shadow-indigo-500/25'
                     }`}
                 >
-                    {isPaying ? "Processing..." : "Open Gateway"}
+                    {isPaying ? "Processing..." : loadError ? "Retry" : "Open Gateway"}
                 </button>
                 <button
                     onClick={onClose}
