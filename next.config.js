@@ -62,6 +62,39 @@ const securityHeaders = [
 const nextConfig = {
   output: 'standalone',
   reactStrictMode: true,
+  // Deterministic BUILD_ID so that identical source rebuilds produce byte-identical
+  // standalone layers. Next.js defaults BUILD_ID to a timestamp, which made every
+  // deploy replace the ~190MB standalone layer (re-pulled cold on the VPS). Hashing
+  // the working tree keeps no-op rebuilds reusing the same docker layer digest.
+  // Content-only hash (no timestamps, no git) — safe under BuildKit suppression
+  // of .git, node_modules and .next from the build context.
+  generateBuildId: async () => {
+    const crypto = require('crypto');
+    const fs = require('fs');
+    const path = require('path');
+
+    const SKIP = new Set(['node_modules', '.next', '.git']);
+    const files = [];
+    const walk = (dir) => {
+      for (const ent of fs.readdirSync(dir, { withFileTypes: true })) {
+        if (ent.isDirectory()) {
+          if (!SKIP.has(ent.name)) walk(path.join(dir, ent.name));
+        } else {
+          files.push(path.join(dir, ent.name));
+        }
+      }
+    };
+    walk('.');
+    files.sort();
+
+    const h = crypto.createHash('sha256');
+    for (const f of files) {
+      h.update(f.replace(/\\/g, '/'));
+      h.update('\0');
+      h.update(fs.readFileSync(f));
+    }
+    return h.digest('hex').slice(0, 32);
+  },
   async headers() {
     return [
       {
