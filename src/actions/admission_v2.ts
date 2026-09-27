@@ -36,6 +36,7 @@ import { normalizeEmail, isValidEmailFormat } from "@/lib/email";
 import { extractNameParts, buildFullName, findFormValue } from "@/lib/applicant-names";
 import { generateFormNumber, generateFormHash } from "@/lib/form-number";
 import { inArrayChunked } from "@/lib/db-helpers";
+import { resolveJambNumber } from "@/lib/jamb";
 import { storage } from "@/lib/storage";
 import { assertActivityUnlocked, ACTIVITIES } from "@/services/ActivityLockService";
 import { verifyAdmissionFeesForApplication, describeMissingFees } from "@/services/AdmissionFeeVerificationService";
@@ -2010,18 +2011,13 @@ export async function finalizeStudentAdmission(applicationId: number) {
 
         const formData = typeof application.data === 'string' ? JSON.parse(application.data || "{}") : (application.data || {});
 
-        // Prefer the dedicated applicationMode/jambRegNumber columns (set during the
-        // Full-Time/Part-Time instructions step). Fall back to scanning dynamic form
-        // fields for a legacy/manually-added "JAMB" field for older applications.
-        let jambRegNo = application.jambRegNumber || "";
-        if (!jambRegNo) {
-            for (const key of Object.keys(formData)) {
-                if (key.toLowerCase().includes("jamb") && formData[key]) {
-                    jambRegNo = String(formData[key]).trim();
-                    break;
-                }
-            }
-        }
+        // Prefer the dedicated jambRegNumber column, then a form field that is
+        // clearly a registration number. Never persist placeholder values
+        // ("0", all-zero, etc.): students.jamb_number is uniquely indexed.
+        const jambResolution = resolveJambNumber(application.jambRegNumber, formData);
+        const jambRegNo = jambResolution.raw;
+        const jambNumberForDb = jambResolution.persistable;
+
         const isJambCandidate = application.applicationMode
             ? application.applicationMode === 'full_time'
             : (!!jambRegNo && !jambRegNo.toLowerCase().includes("temp") && !jambRegNo.toLowerCase().includes("direct"));
@@ -2156,6 +2152,10 @@ export async function finalizeStudentAdmission(applicationId: number) {
             : `${formData.firstName || ''} ${formData.lastName || ''}`.trim() || formData.fullName || `Applicant ${application.id}`;
         
         let userId = application.applicantId;
+        // The role promotion is deferred until after the student row is written.
+        // Promoting first left users with role='student' and no student record
+        // whenever the student insert failed (e.g. a unique-index collision).
+        let pendingRolePromotion: { userId: number; imageUrl?: string | null } | null = null;
 
         if (userId) {
             // Check if user exists
@@ -2167,9 +2167,7 @@ export async function finalizeStudentAdmission(applicationId: number) {
                 // If they are strictly an applicant, promote them to student
                 // If they are already a student (e.g. ND -> HND), we just leave them as student
                 if (existingUser.role === 'applicant') {
-                    await db.update(users)
-                        .set({ role: 'student', status: 'active', imageUrl: finalImageUrl || existingUser.imageUrl })
-                        .where(eq(users.id, userId));
+                    pendingRolePromotion = { userId, imageUrl: finalImageUrl || existingUser.imageUrl };
                 }
             } else {
                 userId = null;
@@ -2221,7 +2219,7 @@ export async function finalizeStudentAdmission(applicationId: number) {
                 lastName: formData.surname || formData.lastName || formData.fullName?.split(' ').slice(1).join(' ') || existingStudent.lastName,
                 matricNumber: matricNumber,
                 previousMatricNumbers: JSON.stringify(prevMatrics),
-                jambNumber: jambRegNo || existingStudent.jambNumber,
+                jambNumber: jambNumberForDb || existingStudent.jambNumber,
                 modeOfEntry: modeOfEntry || existingStudent.modeOfEntry,
                 studyMode: studyMode || existingStudent.studyMode,
                 programmeType: programmeType || existingStudent.programmeType,
@@ -2245,7 +2243,7 @@ export async function finalizeStudentAdmission(applicationId: number) {
                 firstName: formData.firstName || formData.fullName?.split(' ')[0],
                 lastName: formData.surname || formData.lastName || formData.fullName?.split(' ').slice(1).join(' '),
                 matricNumber: matricNumber,
-                jambNumber: jambRegNo || null,
+                jambNumber: jambNumberForDb,
                 modeOfEntry: modeOfEntry,
                 studyMode: studyMode,
                 programmeType: programmeType,
@@ -2274,6 +2272,13 @@ export async function finalizeStudentAdmission(applicationId: number) {
                 status: 'active'
             });
             finalStudentId = studentResult.insertId;
+        }
+
+        // The student record now exists, so it is safe to promote the account.
+        if (pendingRolePromotion) {
+            await db.update(users)
+                .set({ role: 'student', status: 'active', imageUrl: pendingRolePromotion.imageUrl })
+                .where(eq(users.id, pendingRolePromotion.userId));
         }
 
         // 3. Update Application Status
