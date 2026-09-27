@@ -18,10 +18,18 @@ const FIRST_NAME_ALIASES = ['firstname', 'first name', 'first_name'];
 const MIDDLE_NAME_ALIASES = ['middlename', 'middle name', 'middle_name', 'othernames', 'other names', 'other_names'];
 const LAST_NAME_ALIASES = ['lastname', 'last name', 'last_name', 'surname'];
 
+// Labels are authored by hand in the template builder, so they drift in more
+// ways than case: "Last  Name" (double space) and " Last Name " (padded) are
+// the same field as "Last Name". Normalize both sides before comparing,
+// otherwise a stray space silently drops the value.
+function normalizeKey(k: unknown): string {
+    return String(k ?? '').trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
 function findValue(formData: Record<string, any>, aliases: string[]): string {
     const keys = Object.keys(formData || {});
     for (const alias of aliases) {
-        const key = keys.find(k => (k || '').trim().toLowerCase() === alias);
+        const key = keys.find(k => normalizeKey(k) === normalizeKey(alias));
         if (key) {
             const v = formData[key];
             if (typeof v === 'string' && v.trim()) return v.replace(/\s+/g, ' ').trim();
@@ -40,7 +48,7 @@ function findValue(formData: Record<string, any>, aliases: string[]): string {
 export function findFormValue(formData: Record<string, any>, aliases: string[]): string {
     const keys = Object.keys(formData || {});
     for (const alias of aliases) {
-        const key = keys.find(k => (k || '').trim().toLowerCase() === (alias || '').toLowerCase());
+        const key = keys.find(k => normalizeKey(k) === normalizeKey(alias));
         if (key) {
             const v = formData[key];
             if (typeof v === 'string' && v.trim()) return v.replace(/\s+/g, ' ').trim();

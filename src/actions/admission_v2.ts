@@ -2144,18 +2144,24 @@ export async function finalizeStudentAdmission(applicationId: number) {
             finalSignatureUrl = await processBase64Image(formData.signature, 'signatures');
         }
 
+        // Form templates key their data JSON by field label, and the labels are
+        // inconsistent ("FirstName", "Last Name", "Surname", ...). Reading
+        // formData.firstName/formData.surname directly silently missed those
+        // spellings and wrote NULL names onto the student record. Resolve the
+        // parts once through the alias-aware helper.
+        const nameParts = extractNameParts(formData);
+        const resolvedFirstName = nameParts.firstName || formData.fullName?.split(' ')[0] || '';
+        const resolvedLastName = nameParts.lastName || formData.fullName?.split(' ').slice(1).join(' ') || '';
+
         // 1. Check or Create User - Handle new name structure
-        const userFullName = formData.surname 
-            ? (formData.middleName 
-                ? `${formData.surname} ${formData.firstName} ${formData.middleName}`.trim()
-                : `${formData.surname} ${formData.firstName}`.trim())
-            : `${formData.firstName || ''} ${formData.lastName || ''}`.trim() || formData.fullName || `Applicant ${application.id}`;
+        const userFullName = buildFullName(nameParts) || formData.fullName || `Applicant ${application.id}`;
         
         let userId = application.applicantId;
         // The role promotion is deferred until after the student row is written.
         // Promoting first left users with role='student' and no student record
         // whenever the student insert failed (e.g. a unique-index collision).
         let pendingRolePromotion: { userId: number; imageUrl?: string | null } | null = null;
+        let accountEmail = "";
 
         if (userId) {
             // Check if user exists
@@ -2164,6 +2170,7 @@ export async function finalizeStudentAdmission(applicationId: number) {
             });
             
             if (existingUser) {
+                accountEmail = existingUser.email || "";
                 // If they are strictly an applicant, promote them to student
                 // If they are already a student (e.g. ND -> HND), we just leave them as student
                 if (existingUser.role === 'applicant') {
@@ -2215,8 +2222,8 @@ export async function finalizeStudentAdmission(applicationId: number) {
             }
 
             await db.update(students).set({
-                firstName: formData.firstName || formData.fullName?.split(' ')[0] || existingStudent.firstName,
-                lastName: formData.surname || formData.lastName || formData.fullName?.split(' ').slice(1).join(' ') || existingStudent.lastName,
+                firstName: resolvedFirstName || existingStudent.firstName,
+                lastName: resolvedLastName || existingStudent.lastName,
                 matricNumber: matricNumber,
                 previousMatricNumbers: JSON.stringify(prevMatrics),
                 jambNumber: jambNumberForDb || existingStudent.jambNumber,
@@ -2240,8 +2247,8 @@ export async function finalizeStudentAdmission(applicationId: number) {
             // Create Student with extended mapping including Study Mode
             const [studentResult] = await db.insert(students).values({
                 userId: userId,
-                firstName: formData.firstName || formData.fullName?.split(' ')[0],
-                lastName: formData.surname || formData.lastName || formData.fullName?.split(' ').slice(1).join(' '),
+                firstName: resolvedFirstName,
+                lastName: resolvedLastName,
                 matricNumber: matricNumber,
                 jambNumber: jambNumberForDb,
                 modeOfEntry: modeOfEntry,
@@ -2294,13 +2301,16 @@ export async function finalizeStudentAdmission(applicationId: number) {
         revalidatePath("/admin/admission/reports");
         
         // Send admission accepted email
-        const applicantName = formData.surname 
-            ? (formData.middleName 
-                ? `${formData.surname} ${formData.firstName} ${formData.middleName}`.trim()
-                : `${formData.surname} ${formData.firstName}`.trim())
-            : `${formData.firstName || ''} ${formData.lastName || ''}`.trim() || 'Applicant';
+        const applicantName = buildFullName(nameParts) || 'Applicant';
         
-        const applicantEmail = formData.email || "";
+        // The form labels this field "Email", not "email", so reading
+        // formData.email directly yielded undefined and the acceptance email was
+        // silently skipped entirely. Resolve across label aliases, then fall
+        // back to the account email.
+        const applicantEmail =
+            findFormValue(formData, ["email", "e-mail", "e mail", "email address", "e-mail address"]) ||
+            accountEmail ||
+            "";
         if (applicantEmail) {
             sendEmail(
                 applicantEmail,
@@ -3001,13 +3011,13 @@ export async function submitApplicationFinal(applicationId: number, applicantId:
 
         // Send email notification
         if (template) {
-            const applicantName = formData.surname 
-                ? (formData.middleName 
-                    ? `${formData.surname} ${formData.firstName} ${formData.middleName}`.trim()
-                    : `${formData.surname} ${formData.firstName}`.trim())
-                : `${formData.firstName || ''} ${formData.lastName || ''}`.trim() || 'Applicant';
-            
-            const applicantEmail = formData.email || "";
+            const applicantName = buildFullName(extractNameParts(formData)) || 'Applicant';
+
+            // The form labels this field "Email", not "email", so reading
+            // formData.email directly yielded undefined and the notification was
+            // silently skipped. Resolve across label aliases instead.
+            const applicantEmail =
+                findFormValue(formData, ["email", "e-mail", "e mail", "email address", "e-mail address"]) || "";
             if (applicantEmail) {
                 sendEmail(
                     applicantEmail,
@@ -3966,14 +3976,12 @@ export async function bulkUpdateAdmissionStatus(ids: number[], status: string, n
             for (const app of apps) {
                 if (!app.template) continue;
                 const formData = typeof app.data === 'string' ? JSON.parse(app.data || '{}') : (app.data || {});
-                const applicantEmail = formData.email || "";
+                const applicantEmail =
+                    findFormValue(formData, ["email", "e-mail", "e mail", "email address", "e-mail address"]) || "";
                 if (!applicantEmail) continue;
                 
-                const applicantName = formData.surname 
-                    ? (formData.middleName 
-                        ? `${formData.surname} ${formData.firstName} ${formData.middleName}`.trim()
-                        : `${formData.surname} ${formData.firstName}`.trim())
-                    : `${formData.firstName || ''} ${formData.lastName || ''}`.trim() || 'Applicant';
+                const bulkNameParts = extractNameParts(formData);
+                const applicantName = buildFullName(bulkNameParts) || 'Applicant';
                 
                 if (status === 'admitted') {
                     sendEmail(
