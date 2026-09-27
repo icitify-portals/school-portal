@@ -6,12 +6,14 @@ import {
   users,
   roleTransitions,
   students,
-  programmes
+  programmes,
+  admissionApplicationsV2
 } from "@/db/schema";
 import { eq, and, desc } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { storage } from "@/lib/storage";
+import { verifyAdmissionFeesForApplication, describeMissingFees } from "@/services/AdmissionFeeVerificationService";
 
 // Upload applicant document (passport photo or signature)
 export async function uploadApplicantDocument(
@@ -292,6 +294,42 @@ export async function transitionUserRole(
 
     if (!currentUser) {
       return { success: false, error: "User not found" };
+    }
+
+    // Payment gate: an applicant may only be moved to student status (ND 1 / HND 1)
+    // once the acceptance fee and the school fee are both verified against
+    // completed payment records. This applies to every route into student status,
+    // including manual admin transitions.
+    if (toRole === 'student') {
+      const [application] = await db
+        .select()
+        .from(admissionApplicationsV2)
+        .where(
+          and(
+            eq(admissionApplicationsV2.applicantId, userId),
+            eq(admissionApplicationsV2.status, 'admitted')
+          )
+        )
+        .orderBy(desc(admissionApplicationsV2.id))
+        .limit(1);
+
+      if (!application) {
+        return { success: false, error: "No admitted application found for this user, so payment cannot be verified. The transition to student status is blocked." };
+      }
+
+      const sessionYear = parseInt((academicSession || '').split('/')[0], 10) || new Date().getFullYear();
+      const feeCheck = await verifyAdmissionFeesForApplication(
+        {
+          id: application.id,
+          applicantId: application.applicantId,
+          acceptancePaymentStatus: application.acceptancePaymentStatus,
+        },
+        { notBefore: new Date(sessionYear, 0, 1), sessionName: academicSession || null, remitaOnlySchoolFee: true }
+      );
+
+      if (!feeCheck.verified) {
+        return { success: false, error: describeMissingFees(feeCheck) };
+      }
     }
 
     // Create role transition record

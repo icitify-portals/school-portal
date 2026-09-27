@@ -38,6 +38,7 @@ import { generateFormNumber, generateFormHash } from "@/lib/form-number";
 import { inArrayChunked } from "@/lib/db-helpers";
 import { storage } from "@/lib/storage";
 import { assertActivityUnlocked, ACTIVITIES } from "@/services/ActivityLockService";
+import { verifyAdmissionFeesForApplication, describeMissingFees } from "@/services/AdmissionFeeVerificationService";
 import { hash, compare } from "bcryptjs";
 import { writeFile, mkdir, readFile } from "fs/promises";
 
@@ -2007,11 +2008,6 @@ export async function finalizeStudentAdmission(applicationId: number) {
             return { success: false, error: "Template not found." };
         }
 
-        // Check if acceptance fee is required and paid
-        if (template.requireAcceptanceFee && application.acceptancePaymentStatus !== 'paid') {
-            return { success: false, error: "Acceptance fee has not been paid." };
-        }
-
         const formData = typeof application.data === 'string' ? JSON.parse(application.data || "{}") : (application.data || {});
 
         // Prefer the dedicated applicationMode/jambRegNumber columns (set during the
@@ -2083,6 +2079,27 @@ export async function finalizeStudentAdmission(applicationId: number) {
                 .orderBy(desc(academicSessions.startDate))
                 .limit(1);
             targetSession = activeSession;
+        }
+
+        // Hard payment gate: both the acceptance fee and the school fee must be
+        // backed by completed payment records. The self-declared
+        // acceptancePaymentStatus column is NOT trusted on its own.
+        // Legacy payments carry no session id, so only those from the academic
+        // year of the session being admitted into are allowed to count.
+        const sessionYear = targetSession?.startDate
+            ? new Date(targetSession.startDate).getFullYear()
+            : year;
+        const feeCheck = await verifyAdmissionFeesForApplication(
+            {
+                id: application.id,
+                applicantId: application.applicantId,
+                acceptancePaymentStatus: application.acceptancePaymentStatus,
+            },
+            { notBefore: new Date(sessionYear, 0, 1), sessionName: targetSession?.name ?? null, remitaOnlySchoolFee: true }
+        );
+
+        if (!feeCheck.verified) {
+            return { success: false, error: describeMissingFees(feeCheck) };
         }
 
         let matricNumber = "";

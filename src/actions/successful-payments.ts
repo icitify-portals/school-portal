@@ -30,7 +30,7 @@ export async function getSuccessfulPaymentsGrouped() {
             purpose: payment_transactions.transactionType,
             type: sql<string>`'bursary'`,
             userId: payment_transactions.userId,
-        }).from(payment_transactions).where(eq(payment_transactions.status, 'paid'));
+        }).from(payment_transactions).where(eq(payment_transactions.status, 'completed'));
 
         // Dedupe by gatewayReference (and fallback rrr) — same logical payment can exist in both tables
         const seen = new Map<string, any>();

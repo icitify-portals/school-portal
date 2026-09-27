@@ -91,3 +91,7 @@ scripts/
 !tailwind.config.js
 .agents/
 public/uploads/
+
+# production database dumps (the deploy workflow runs `git clean -fd`, which
+# would otherwise delete these rollback archives and the nightly cron dumps)
+backups/
