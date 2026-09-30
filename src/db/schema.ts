@@ -1,4 +1,4 @@
-import { mysqlTable, mysqlView, int, varchar, text, timestamp, boolean, mysqlEnum, char, decimal, date, mediumtext, longtext, unique, datetime, foreignKey, time, uniqueIndex } from 'drizzle-orm/mysql-core';
+import { mysqlTable, mysqlView, int, varchar, text, timestamp, boolean, mysqlEnum, char, decimal, date, mediumtext, longtext, unique, datetime, foreignKey, time, uniqueIndex, json } from 'drizzle-orm/mysql-core';
 import { relations, sql } from 'drizzle-orm';
 
 // --- CORE / USER MODULE ---
@@ -14,7 +14,7 @@ export const users = mysqlTable('users', {
   password: varchar('password', { length: 255 }).notNull(),
   requiresPasswordChange: boolean('requires_password_change').default(false),
   role: mysqlEnum('role', ['admin', 'staff', 'student', 'dvc', 'healthadmin', 'applicant', 'fresher', 'superadmin', 'parent', 'icitify_dev', 'bursar', 'registrar', 'librarian', 'hod', 'dean', 'admission_officer', 'record_officer']).default('student'),
-  status: mysqlEnum('status', ['active', 'suspended', 'withdrawn', 'nd_graduant', 'hnd_graduant', 'rusticated']).default('active'),
+  status: mysqlEnum('status', ['active', 'suspended', 'withdrawn', 'nd_graduated', 'hnd_graduated', 'rusticated']).default('active'),
   phone: varchar('phone', { length: 20 }),
   imageUrl: varchar('image_url', { length: 255 }),
   failedLoginAttempts: int('failed_login_attempts').default(0),
@@ -257,7 +257,7 @@ export const students = mysqlTable('students', {
   isFinanciallyLocked: boolean('is_financially_locked').default(false),
   nin: varchar('nin', { length: 11 }),
   ninVerified: boolean('nin_verified').default(false),
-  status: mysqlEnum('status', ['active', 'nd_graduant', 'hnd_graduant', 'withdrawn', 'suspended', 'rusticated']).default('active'),
+  status: mysqlEnum('status', ['active', 'nd_graduated', 'hnd_graduated', 'withdrawn', 'suspended', 'rusticated']).default('active'),
   subscriptionLockOverride: mysqlEnum('subscription_lock_override', ['default', 'enforce', 'exempt']).default('default'),
 
   // Guardian Details
@@ -296,6 +296,50 @@ export const students = mysqlTable('students', {
   classOfDegree: varchar('class_of_degree', { length: 100 }),
   deletedAt: datetime('deleted_at'),
 });
+
+export const archivedApplicants = mysqlTable('archived_applicants', {
+  id: int('id').autoincrement().primaryKey(),
+  source: varchar('source', { length: 32 }).notNull().default('old_portal'),
+  studentId: int('student_id').notNull(),
+  userId: int('user_id').notNull(),
+  matricNumber: varchar('matric_number', { length: 50 }),
+  admissionNumber: varchar('admission_number', { length: 50 }),
+  fullName: varchar('full_name', { length: 255 }),
+  email: varchar('email', { length: 255 }),
+  phone: varchar('phone', { length: 20 }),
+  userRole: varchar('user_role', { length: 32 }),
+  userStatus: varchar('user_status', { length: 32 }),
+  gender: varchar('gender', { length: 20 }),
+  dob: varchar('dob', { length: 50 }),
+  nationality: varchar('nationality', { length: 100 }),
+  nin: varchar('nin', { length: 11 }),
+  programmeType: varchar('programme_type', { length: 10 }),
+  programmeId: int('programme_id'),
+  deptId: int('dept_id'),
+  unitId: int('unit_id'),
+  groupId: int('group_id'),
+  admissionYear: int('admission_year'),
+  admissionSessionId: int('admission_session_id'),
+  currentSessionId: int('current_session_id'),
+  currentLevel: int('current_level'),
+  studentStatus: varchar('student_status', { length: 32 }),
+  modeOfEntry: varchar('mode_of_entry', { length: 50 }),
+  studyMode: varchar('study_mode', { length: 20 }),
+  jambNumber: varchar('jamb_number', { length: 50 }),
+  paidAdmissionForm: boolean('paid_admission_form').notNull().default(false),
+  paidAcceptanceFee: boolean('paid_acceptance_fee').notNull().default(false),
+  paidSchoolFee: boolean('paid_school_fee').notNull().default(false),
+  outstandingReason: varchar('outstanding_reason', { length: 255 }),
+  applicationIds: json('application_ids'),
+  relatedRecords: json('related_records'),
+  rawStudent: json('raw_student'),
+  rawUser: json('raw_user'),
+  archiveReason: text('archive_reason'),
+  archivedBy: int('archived_by'),
+  archivedAt: timestamp('archived_at').notNull().defaultNow(),
+  restoredAt: datetime('restored_at'),
+  restoredBy: int('restored_by'),
+}, (table) => [uniqueIndex('uq_student').on(table.studentId)]);
 
 export const walletTransactions = mysqlTable('wallet_transactions', {
   id: int('id').autoincrement().primaryKey(),
@@ -451,6 +495,8 @@ export const transactions = mysqlTable('transactions', {
   gatewayReference: varchar('gateway_reference', { length: 255 }),
   gatewayTransactionId: varchar('gateway_transaction_id', { length: 255 }),
   rrr: varchar('rrr', { length: 50 }),
+  serviceTypeId: varchar('service_type_id', { length: 20 }),
+  tuitionProfile: varchar('tuition_profile', { length: 50 }),
   createdAt: timestamp('created_at').defaultNow(),
 });
 
@@ -1548,7 +1594,7 @@ export const promotionLogs = mysqlTable('promotion_logs', {
   toLevel: int('to_level').notNull(),
   fromSessionId: int('from_session_id').references(() => academicSessions.id).notNull(),
   toSessionId: int('to_session_id').references(() => academicSessions.id),
-  decision: mysqlEnum('decision', ['promoted', 'withdrawn', 'nd_graduant', 'hnd_graduant', 'repeat', 'rusticated', 'concession']).notNull(),
+  decision: mysqlEnum('decision', ['promoted', 'demoted', 'level_assigned', 'withdrawn', 'nd_graduated', 'hnd_graduated', 'repeat', 'rusticated', 'concession']).notNull(),
   cgpa: decimal('cgpa', { precision: 4, scale: 2 }),
   creditsEarned: int('credits_earned'),
   reason: text('reason'),

@@ -39,6 +39,7 @@ import { inArrayChunked } from "@/lib/db-helpers";
 import { resolveJambNumber } from "@/lib/jamb";
 import { storage } from "@/lib/storage";
 import { assertActivityUnlocked, ACTIVITIES } from "@/services/ActivityLockService";
+import { resolveRemitaServiceType } from "@/services/SplitPaymentEngine";
 import { verifyAdmissionFeesForApplication, describeMissingFees } from "@/services/AdmissionFeeVerificationService";
 import { hash, compare } from "bcryptjs";
 import { writeFile, mkdir, readFile } from "fs/promises";
@@ -1791,8 +1792,16 @@ export async function initiateSchoolFeesCheckout(applicationId: number) {
 
         const isLive = process.env.REMITA_ENV !== 'demo';
         const merchantId = isLive ? "19201597339" : (process.env.REMITA_MERCHANT_ID || "19201597339");
-        const serviceTypeId = isLive ? "8817651539" : (process.env.REMITA_SERVICE_TYPE_ID || "8817651539");
         const apiKey = isLive ? "6NYU4646" : (process.env.REMITA_API_KEY || "6NYU4646");
+
+        // Derive programmeType for tuition profile resolution
+        const progName = (app.programme?.name || template?.name || '').toUpperCase();
+        const programmeType = (app.programme?.programmeType || (progName.includes('HND') ? 'HND' : 'ND')).toUpperCase();
+        const { serviceTypeId, tuitionProfile } = resolveRemitaServiceType({
+            programmeType,
+            level: 1, // Fresh admits are always level 1
+        });
+
         const crypto = require('crypto');
         const hash = crypto.createHash('sha512').update(`${merchantId}${serviceTypeId}${reference}${totalAmount}${apiKey}`).digest('hex');
         
@@ -1844,7 +1853,9 @@ export async function initiateSchoolFeesCheckout(applicationId: number) {
             gateway: 'remita',
             gatewayReference: reference,
             rrr: rrr,
-            gatewayTransactionId: rrr
+            gatewayTransactionId: rrr,
+            serviceTypeId: serviceTypeId,
+            tuitionProfile: tuitionProfile,
         });
 
         return {

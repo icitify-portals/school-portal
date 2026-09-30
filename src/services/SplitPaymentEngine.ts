@@ -20,6 +20,51 @@ import {
 import { eq, and, desc } from "drizzle-orm";
 import { assertActivityUnlocked, buildStudentLockContext, ACTIVITIES } from "./ActivityLockService";
 
+// ──────────────────────────────────────────────────────────────
+// Remita Tuition Profile Resolver
+// Maps (programmeType, currentLevel) → Remita serviceTypeId
+// ──────────────────────────────────────────────────────────────
+const REMITA_TUITION_PROFILES: Record<string, { serviceTypeId: string; label: string }> = {
+    "ND_1":  { serviceTypeId: "8817651539", label: "ND 1 Tuition" },
+    "ND_2":  { serviceTypeId: "1172909756", label: "ND 2 Tuition" },
+    "HND_1": { serviceTypeId: "8817962375", label: "HND 1 Tuition" },
+    "HND_2": { serviceTypeId: "1173000079", label: "HND 2 Tuition" },
+};
+
+export function resolveRemitaServiceType(options: {
+    programmeType: string;
+    level: number | string;
+}): { serviceTypeId: string; tuitionProfile: string } {
+    const ptype = (options.programmeType || "").toUpperCase().trim();
+    const rawLevel = String(options.level ?? "").trim();
+
+    // Normalise level: accept both legacy (100/200) and canonical (1/2)
+    let level: number;
+    if (rawLevel === "100" || rawLevel === "1") level = 1;
+    else if (rawLevel === "200" || rawLevel === "2") level = 2;
+    else {
+        throw new Error(
+            `Cannot resolve Remita tuition profile: unsupported level "${rawLevel}". ` +
+            `Only ND 1/2 and HND 1/2 have tuition profiles.`
+        );
+    }
+
+    if (ptype !== "ND" && ptype !== "HND") {
+        throw new Error(
+            `Cannot resolve Remita tuition profile: invalid programmeType "${ptype}". ` +
+            `Must be "ND" or "HND".`
+        );
+    }
+
+    const key = `${ptype}_${level}`;
+    const profile = REMITA_TUITION_PROFILES[key];
+    if (!profile) {
+        throw new Error(`No Remita tuition profile defined for ${key}`);
+    }
+
+    return { serviceTypeId: profile.serviceTypeId, tuitionProfile: profile.label };
+}
+
 export interface SplitItem {
     amount: number;             // Flat amount for this split
     accountName: string;        // Destination account name
@@ -237,21 +282,16 @@ export class RemitaAdapter implements PaymentGatewayAdapter {
         const merchantId = isLive ? "19201597339" : (process.env.REMITA_MERCHANT_ID || "19201597339");
         const apiKey = isLive ? "6NYU4646" : (process.env.REMITA_API_KEY || "6NYU4646");
 
-        let serviceTypeId = isLive ? "8817651539" : (process.env.REMITA_SERVICE_TYPE_ID || "8817651539"); // Default to ND1
-        const level = String(meta?.studentLevel || "").toLowerCase();
-        const programmeType = String(meta?.programmeType || "").toUpperCase();
-        
-        // Dynamically assign Service Type ID based on student level and programme type
-        if (meta?.studentLevel) {
-            if (programmeType === 'HND' && level === '2') {
-                serviceTypeId = "1173000079"; // HND2
-            } else if (programmeType === 'HND' && level === '1') {
-                serviceTypeId = "8817962375"; // HND1
-            } else if (programmeType === 'ND' && level === '2') {
-                serviceTypeId = "1172909756"; // ND2
-            } else {
-                serviceTypeId = "8817651539"; // ND1
-            }
+        // Resolve tuition profile from programme type and level
+        let serviceTypeId = "8817651539"; // safe default for non-tuition payments
+        const metaLevel = meta?.studentLevel;
+        const metaPType = meta?.programmeType;
+        if (metaLevel != null && metaLevel !== "" && metaPType) {
+            const resolved = resolveRemitaServiceType({
+                programmeType: String(metaPType),
+                level: String(metaLevel),
+            });
+            serviceTypeId = resolved.serviceTypeId;
         }
 
         const payload: any = {
@@ -713,6 +753,22 @@ export class SplitPaymentEngine {
         // 6. Record pending transaction in database
         const txRef = `TX-SPL-${Date.now()}`;
         
+        // Resolve Remita tuition profile when gateway is remita and student context exists
+        let remitServiceTypeId: string | null = null;
+        let remitTuitionProfile: string | null = null;
+        if (activeGateway === 'remita' && student.programmeType && student.currentLevel != null) {
+            try {
+                const resolved = resolveRemitaServiceType({
+                    programmeType: student.programmeType,
+                    level: student.currentLevel,
+                });
+                remitServiceTypeId = resolved.serviceTypeId;
+                remitTuitionProfile = resolved.tuitionProfile;
+            } catch {
+                // Non-tuition bill or unsupported level — leave null
+            }
+        }
+
         await db.insert(transactions).values({
             studentId,
             amount: checkoutTotal.toFixed(2),
@@ -720,7 +776,9 @@ export class SplitPaymentEngine {
             purpose: bill.note || "School Fees Online Payment",
             status: 'pending',
             gateway: activeGateway as 'paystack' | 'flutterwave' | 'remita' | 'opay' | 'manual' | 'alatpay',
-            gatewayReference: txRef
+            gatewayReference: txRef,
+            serviceTypeId: remitServiceTypeId,
+            tuitionProfile: remitTuitionProfile,
         });
 
         // 7. Invoke active gateway adapter
@@ -732,7 +790,8 @@ export class SplitPaymentEngine {
             splits,
             feeBearerRule,
             { 
-                studentLevel: student.level || "", 
+                studentLevel: student.currentLevel ?? "",
+                programmeType: student.programmeType || "",
                 payerName: `${student.user.firstName || ''} ${student.user.lastName || ''}`.trim() || student.user.email,
                 payerFirstName: student.user.firstName || "",
                 payerLastName: student.user.lastName || "",
