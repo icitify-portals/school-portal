@@ -2032,14 +2032,19 @@ export async function finalizeStudentAdmission(applicationId: number) {
         const isJambCandidate = application.applicationMode
             ? application.applicationMode === 'full_time'
             : (!!jambRegNo && !jambRegNo.toLowerCase().includes("temp") && !jambRegNo.toLowerCase().includes("direct"));
-        let studyMode = "part-time";
-        if (formData.studyMode) {
+
+        // Study mode priority: JAMB candidate → explicit form data → application mode → default part-time
+        let studyMode: string;
+        if (isJambCandidate) {
+            studyMode = 'full-time';
+        } else if (formData.studyMode) {
             studyMode = formData.studyMode;
         } else if (application.applicationMode) {
             if (application.applicationMode === 'full_time') studyMode = 'full-time';
             else if (application.applicationMode === 'elearning') studyMode = 'elearning';
-        } else if (isJambCandidate) {
-            studyMode = 'full-time';
+            else studyMode = 'part-time';
+        } else {
+            studyMode = 'part-time';
         }
         
         // ensure enum match
