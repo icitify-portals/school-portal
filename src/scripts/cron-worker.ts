@@ -67,6 +67,17 @@ if (cron) {
         }
     });
     console.log("✅ Cron scheduled: '*/15 * * * *' (Every 15 minutes for Waitlist Promotion)");
+
+    // Payment Reconciliation: verify pending payments against gateways every 5 minutes
+    cron.schedule("*/5 * * * *", async () => {
+        try {
+            const { reconcilePayments } = await import("../services/PaymentReconciliationService");
+            await reconcilePayments();
+        } catch (error) {
+            console.error(`[${new Date().toISOString()}] ❌ Payment Reconciliation CRON Encountered Fatal Error:`, error);
+        }
+    });
+    console.log("✅ Cron scheduled: '*/5 * * * *' (Every 5 minutes for Payment Reconciliation)");
 }
 
 console.log("Listening for background worker tasks... (Press Ctrl+C to exit)");

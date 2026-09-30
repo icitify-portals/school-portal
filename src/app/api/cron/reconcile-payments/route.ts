@@ -1,13 +1,9 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/db';
-import { payment_transactions } from '@/db/schema';
-import { eq, and, sql } from 'drizzle-orm';
-import { verifyPayment } from '@/actions/payment-gateways';
+import { reconcilePayments } from '@/services/PaymentReconciliationService';
 
 export async function GET(request: Request) {
     try {
-        // SECURITY FIX C-4: Require CRON_SECRET_KEY to be explicitly configured.
-        // Never fall back to a hardcoded known-plaintext string.
+        // SECURITY: Require CRON_SECRET_KEY to be explicitly configured.
         const expectedKey = process.env.CRON_SECRET_KEY;
         if (!expectedKey) {
             console.error("[CRON] CRON_SECRET_KEY is not configured. Aborting for security.");
@@ -17,7 +13,6 @@ export async function GET(request: Request) {
             );
         }
 
-        // Secure the cron endpoint. Require an Authorization header or an API key query param
         const { searchParams } = new URL(request.url);
         const cronKey = searchParams.get('cron_key');
 
@@ -25,157 +20,11 @@ export async function GET(request: Request) {
             return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
         }
 
-
-        // Find all pending transactions
-        const pendingTxs = await db.select()
-            .from(payment_transactions)
-            .where(
-                and(
-                    eq(payment_transactions.status, 'pending'),
-                    // Only sweep transactions older than 15 minutes to avoid race conditions with users actively paying
-                    sql`${payment_transactions.createdAt} < NOW() - INTERVAL 15 MINUTE`
-                )
-            );
-
-        console.log(`[CRON] Found ${pendingTxs.length} pending transactions to reconcile.`);
-
-        let successCount = 0;
-        let failCount = 0;
-
-        for (const tx of pendingTxs) {
-            if (!tx.paymentGateway || !tx.transactionReference) continue;
-            // Sweep Remita and Paystack only — ALATPay API is unreliable, skip it
-            const gw1 = tx.paymentGateway.toLowerCase();
-            if (gw1 !== 'remita' && gw1 !== 'paystack') continue;
-
-            console.log(`[CRON] Reconciling TX: ${tx.transactionReference} via ${tx.paymentGateway}`);
-            
-            // Re-query the gateway
-            const verification = await verifyPayment(tx.paymentGateway, tx.transactionReference);
-
-            if (verification.success && verification.verified) {
-                await db.update(payment_transactions)
-                    .set({
-                        status: 'paid',
-                        updatedAt: new Date()
-                    })
-                    .where(eq(payment_transactions.id, tx.id));
-                
-                // Now process the payment (update bills, ledger, wallet)
-                const { processPayment } = await import('@/actions/bursary');
-                const { students } = await import('@/db/schema');
-                const [student] = await db.select().from(students).where(eq(students.userId, tx.userId)).limit(1);
-
-                if (student) {
-                    let billId = undefined;
-                    try {
-                        const meta = tx.metadata ? JSON.parse(tx.metadata as string) : {};
-                        billId = meta.billId;
-                    } catch(e) {}
-
-                    await processPayment({
-                        studentId: student.id,
-                        amount: tx.amount,
-                        purpose: tx.transactionType,
-                        gateway: (tx.paymentGateway as any) || 'remita',
-                        gatewayReference: tx.transactionReference,
-                        billId: billId
-                    });
-                }
-
-                successCount++;
-            } else if (verification.success && !verification.verified) {
-                // We might not want to mark as failed immediately if they just haven't paid yet.
-                // It stays pending until a deadline, but for now we leave it pending.
-                // Some implementations mark as 'failed' if older than 24 hours.
-                const hoursOld = (new Date().getTime() - new Date(tx.createdAt || new Date()).getTime()) / (1000 * 60 * 60);
-                if (hoursOld > 24) {
-                    await db.update(payment_transactions)
-                        .set({
-                            status: 'failed',
-                            updatedAt: new Date()
-                        })
-                        .where(eq(payment_transactions.id, tx.id));
-                    failCount++;
-                }
-            }
-        }
-
-        // SWEEP 2: Admission portal `transactions` table (Remita, Alatpay, Paystack)
-        const { transactions } = await import('@/db/schema');
-        const pendingAdmissionTxs = await db.select()
-            .from(transactions)
-            .where(
-                and(
-                    eq(transactions.status, 'pending'),
-                    sql`${transactions.createdAt} < NOW() - INTERVAL 15 MINUTE`
-                )
-            );
-
-        console.log(`[CRON] Found ${pendingAdmissionTxs.length} pending ADMISSION transactions to reconcile.`);
-
-        let admSuccessCount = 0;
-        let admFailCount = 0;
-        const { confirmAcceptancePayment, confirmSchoolFeesPayment, confirmProcessingFeePayment, confirmAdmissionPayment } = await import('@/actions/admission_v2');
-
-        const { resolveOnlinePaymentAction } = await import('@/actions/bursary');
-
-        for (const tx of pendingAdmissionTxs) {
-            if (!tx.gateway || !tx.gatewayReference) continue;
-            // Sweep Remita and Paystack only — ALATPay API is unreliable, skip it
-            const gw2 = tx.gateway.toLowerCase();
-            if (gw2 !== 'remita' && gw2 !== 'paystack') continue;
-            
-            console.log(`[CRON] Reconciling Admission TX: ${tx.gatewayReference} via ${tx.gateway}`);
-
-            // Student school fees from SplitPaymentEngine (TX-SPL-*) → use resolveOnlinePaymentAction
-            if (tx.gatewayReference.startsWith('TX-SPL-')) {
-                const result = await resolveOnlinePaymentAction(tx.gatewayReference, 'completed');
-                if (result.success) {
-                    admSuccessCount++;
-                } else {
-                    const hoursOld = (new Date().getTime() - new Date(tx.createdAt || new Date()).getTime()) / (1000 * 60 * 60);
-                    if (hoursOld > 24) {
-                        await db.update(transactions)
-                            .set({ status: 'failed' })
-                            .where(eq(transactions.id, tx.id));
-                        admFailCount++;
-                    }
-                }
-                continue;
-            }
-            
-            const match = tx.gatewayReference.match(/^(SCH|ACC|PROC|FORM)-(\d+)-/);
-            if (!match) continue;
-
-            const type = match[1];
-            const appId = parseInt(match[2]);
-
-            let result;
-            if (type === 'ACC') result = await confirmAcceptancePayment(appId, tx.gatewayReference, tx.rrr);
-            else if (type === 'SCH') result = await confirmSchoolFeesPayment(appId, tx.gatewayReference, tx.rrr);
-            else if (type === 'PROC') result = await confirmProcessingFeePayment(appId, tx.gatewayReference, tx.rrr);
-            else if (type === 'FORM') result = await confirmAdmissionPayment(appId, tx.gatewayReference);
-
-            if (result?.success) {
-                admSuccessCount++;
-            } else {
-                const hoursOld = (new Date().getTime() - new Date(tx.createdAt || new Date()).getTime()) / (1000 * 60 * 60);
-                if (hoursOld > 24) {
-                    await db.update(transactions)
-                        .set({ status: 'failed' })
-                        .where(eq(transactions.id, tx.id));
-                    admFailCount++;
-                }
-            }
-        }
+        const result = await reconcilePayments();
 
         return NextResponse.json({
             message: "Cron job completed successfully",
-            sweptBursary: pendingTxs.length,
-            markedPaidBursary: successCount,
-            sweptAdmission: pendingAdmissionTxs.length,
-            markedPaidAdmission: admSuccessCount
+            ...result
         }, { status: 200 });
 
     } catch (error: any) {
