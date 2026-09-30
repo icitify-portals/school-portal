@@ -152,9 +152,9 @@ export async function GET(request: Request) {
             const appId = parseInt(match[2]);
 
             let result;
-            if (type === 'ACC') result = await confirmAcceptancePayment(appId, tx.gatewayReference);
-            else if (type === 'SCH') result = await confirmSchoolFeesPayment(appId, tx.gatewayReference);
-            else if (type === 'PROC') result = await confirmProcessingFeePayment(appId, tx.gatewayReference);
+            if (type === 'ACC') result = await confirmAcceptancePayment(appId, tx.gatewayReference, tx.rrr);
+            else if (type === 'SCH') result = await confirmSchoolFeesPayment(appId, tx.gatewayReference, tx.rrr);
+            else if (type === 'PROC') result = await confirmProcessingFeePayment(appId, tx.gatewayReference, tx.rrr);
             else if (type === 'FORM') result = await confirmAdmissionPayment(appId, tx.gatewayReference);
 
             if (result?.success) {
