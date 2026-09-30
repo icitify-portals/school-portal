@@ -33,8 +33,20 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { ImportPreviewModal } from "@/components/result-module/ImportPreviewModal";
+import { courseCodeKey } from "@/lib/course-code";
 
 type Tab = "single" | "bulk";
+
+type BatchResultRow = {
+  id: number;
+  studentId: number;
+  courseId: number;
+  score?: string | number;
+  grade?: string;
+  gradePoint?: string | number;
+  creditLoad?: number;
+  course?: { code?: string | null; name?: string | null; creditUnits?: number | null } | null;
+};
 
 export default function BatchDetailPage() {
   const params = useParams();
@@ -174,26 +186,47 @@ export default function BatchDetailPage() {
 
   async function handleClearResultsByCourse() {
     if (resultsInBatch.length === 0) return;
-    const coursesInBatch = Array.from(new Set(resultsInBatch.map((r: any) => JSON.stringify({ id: r.courseId, code: r.course?.code }))));
-    if (coursesInBatch.length === 0) return;
-    
-    const parsedCourses = coursesInBatch.map((c: any) => JSON.parse(c));
-    const courseCodeStr = parsedCourses.map((c: any) => `${c.code} (ID: ${c.id})`).join("\n");
-    const input = prompt(`Enter the Course ID you want to delete for ALL students in this batch.\n\nAvailable courses in batch:\n${courseCodeStr}`);
-    
+    // Group by normalised course code: a course can exist as several rows
+    // (e.g. "STA 111" and "STA 111\t"), and clearing only one ID used to leave
+    // the other ID's results behind.
+    const byCode = new Map<string, { label: string; ids: number[] }>();
+    for (const r of resultsInBatch as BatchResultRow[]) {
+      const key = courseCodeKey(r.course?.code) || `id-${r.courseId}`;
+      const existing = byCode.get(key);
+      if (existing) {
+        if (!existing.ids.includes(r.courseId)) existing.ids.push(r.courseId);
+      } else {
+        byCode.set(key, { label: r.course?.code || `Course ${r.courseId}`, ids: [r.courseId] });
+      }
+    }
+    if (byCode.size === 0) return;
+
+    const options = Array.from(byCode.values());
+    const courseCodeStr = options
+      .map((c, i) => `${i + 1}. ${c.label} (ID: ${c.ids.join(", ")})`)
+      .join("\n");
+    const input = prompt(
+      `Enter the number of the course to delete for ALL students in this batch.\n\n${courseCodeStr}`
+    );
+
     if (!input || isNaN(Number(input))) return;
-    
-    const courseIdToClear = Number(input);
-    if (!confirm(`Are you sure you want to delete ALL results for Course ID: ${courseIdToClear} in this batch? This action cannot be undone.`)) return;
-    
+
+    const choice = options[Number(input) - 1];
+    if (!choice) return;
+
+    if (!confirm(`Are you sure you want to delete ALL results for ${choice.label} (ID: ${choice.ids.join(", ")}) in this batch? This action cannot be undone.`)) return;
+
     setClearingByCourse(true);
-    const res = await clearBatchResultsByCourse(batchId, courseIdToClear);
+    let last: any = { success: false, error: "No course selected" };
+    for (const id of choice.ids) {
+      last = await clearBatchResultsByCourse(batchId, id);
+    }
     setClearingByCourse(false);
-    if (res.success) {
+    if (last.success) {
       fetchBatch();
-      alert(`✓ All results for Course ID: ${courseIdToClear} cleared successfully!`);
+      alert(`✓ All results for ${choice.label} cleared successfully!`);
     } else {
-      alert("Error: " + res.error);
+      alert("Error: " + last.error);
     }
   }
 
@@ -253,6 +286,13 @@ export default function BatchDetailPage() {
   }
 
   useEffect(() => { fetchBatch(); }, [batchId]);
+
+  // The department/programme dropdowns are rendered on first paint, but the
+  // lists were only ever fetched when the "Add Student" or "Import Students"
+  // modals were opened (see loadProgrammesAndDepts call sites below). On a fresh
+  // page load `departments` stayed [] so the Department Filter showed only
+  // "All Departments" and could not be used.
+  useEffect(() => { loadProgrammesAndDepts(); }, []);
 
   async function fetchBatch() {
     setLoading(true);
@@ -333,12 +373,27 @@ export default function BatchDetailPage() {
           return;
         }
 
-        // Normalize rows so the identifier is always exposed as 'matric_number'
+        // Normalize rows so the identifier is always exposed as 'matric_number'.
+        // Duplicate headers ("BAM 111" and "BAM 111" with a tab) used to survive
+        // as two course columns and emit two result rows per student.
+        const headerKeys = new Map<string, string>();
+        const duplicateHeaders: string[] = [];
+        for (const h of headers) {
+          if (!h) continue;
+          const key = courseCodeKey(h);
+          if (headerKeys.has(key)) duplicateHeaders.push(h);
+          else headerKeys.set(key, h);
+        }
+        const uniqueHeaders = Array.from(headerKeys.values());
+        if (duplicateHeaders.length > 0) {
+          errors.push(`Ignored duplicate column(s): ${duplicateHeaders.join(", ")}`);
+        }
+
         const rows = rawRows.map(r => {
           const cleaned: any = {};
-          for (const h of headers) {
+          for (const h of uniqueHeaders) {
             if (h === idHeader) cleaned["matric_number"] = r[idHeader];
-            else if (h) cleaned[h] = r[h];
+            else cleaned[h] = r[h];
           }
           return cleaned;
         });
@@ -348,7 +403,7 @@ export default function BatchDetailPage() {
           "surname", "last name", "first name", "programme", "programme name",
           "program", "s/n", "sn", "serial", "serial no", "no",
         ]);
-        const courseColumns = headers.filter(h => h && h !== idHeader && !NON_COURSE_COLUMNS.has(h.toLowerCase()));
+        const courseColumns = uniqueHeaders.filter(h => h !== idHeader && !NON_COURSE_COLUMNS.has(h.toLowerCase()));
         if (courseColumns.length === 0) {
           errors.push("No course code columns found (add course columns after 'matric_number')");
         }
@@ -501,7 +556,8 @@ export default function BatchDetailPage() {
       );
       filteredRows = rows.filter((r, i) => validIds.has(`${i + 2}:${r.courseCode}`));
     } else if (mode === 'skip_duplicates' && previewData?.anomalies) {
-      // For now, just import all (duplicate filtering happens server-side)
+      // Rows already carrying a result for the same (student, course) in this
+      // batch are dropped server-side via duplicateMode='skip'.
       filteredRows = rows;
     }
 
@@ -517,7 +573,8 @@ export default function BatchDetailPage() {
       autoCreateCourses,
       autoCreateForPreviousSession && previousSessionId
         ? { autoCreateForSession: Number(previousSessionId), autoCreateDeptId: undefined, autoCreateProgrammeId: undefined }
-        : undefined
+        : undefined,
+      mode === 'skip_duplicates' ? 'skip' : 'overwrite'
     );
 
     setUploadingBulk(false);
@@ -527,12 +584,21 @@ export default function BatchDetailPage() {
       setCsvCourseColumns([]);
       setCsvFile(null);
       fetchBatch();
-      let msg = `✓ Uploaded ${res.count} results successfully (${filteredRows.length} scores)`;
+      let msg = `✓ Saved ${res.inserted ?? res.count} new result(s)`;
+      if (res.updated) msg += `, updated ${res.updated} existing`;
+      if (res.skipped) msg += `, skipped ${res.skipped} duplicate`;
+      msg += ` (from ${filteredRows.length} score cells)`;
       if (res.createdStudents) {
         msg += `\nCreated ${res.createdStudents} new student record(s).`;
       }
       if (res.createdCourses?.length) {
         msg += `\nCreated ${res.createdCourses.length} new course(s): ${res.createdCourses.map((c: any) => c.code).join(", ")}`;
+      }
+      if (res.unitlessCourses?.length) {
+        msg += `\n⚠ Created with 0 credit units — set them before publishing: ${res.unitlessCourses.join(", ")}`;
+      }
+      if (res.existingDuplicates) {
+        msg += `\n⚠ This batch already holds ${res.existingDuplicates} duplicate result row(s) from an earlier upload.`;
       }
       if (res.errors && res.errors.length > 0) {
         setSkippedRows(res.errors);
@@ -1305,8 +1371,18 @@ export default function BatchDetailPage() {
             </div>
           ) : (
             sortedStudentEntries.map(([_, { student, results }]) => {
-              const credits = results.reduce((a, r) => a + r.creditLoad, 0);
-              const points = results.reduce((a, r) => a + Number(r.gradePoint) * r.creditLoad, 0);
+              // `creditLoad` is a snapshot taken at upload time. The effective
+              // weight is the department-specific override when one exists
+              // (e.g. STA 111 is 3 units in Statistics, 2 in Business), then the
+              // course master, and only then the stored snapshot.
+              const unitsOf = (r: BatchResultRow) => {
+                const override = Number((r as { effectiveCreditUnits?: number })?.effectiveCreditUnits);
+                if (Number.isFinite(override) && override > 0) return override;
+                const real = Number(r.course?.creditUnits);
+                return Number.isFinite(real) && real > 0 ? real : Number(r.creditLoad) || 0;
+              };
+              const credits = results.reduce((a: number, r: BatchResultRow) => a + unitsOf(r), 0);
+              const points = results.reduce((a: number, r: BatchResultRow) => a + Number(r.gradePoint) * unitsOf(r), 0);
               const gpa = credits > 0 ? (points / credits).toFixed(2) : "N/A";
               return (
                 <div key={student.id} className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden hover:border-violet-500/20 transition-colors">
@@ -1335,8 +1411,15 @@ export default function BatchDetailPage() {
                       {results.map((r: any) => (
                         <tr key={r.id} className="border-t border-white/5 hover:bg-white/5 transition-colors">
                           <td className="px-5 py-3 text-sm">
-                            <span className="font-mono text-violet-300 mr-2">{r.course?.code}</span>
-                            <span className="text-slate-300">{r.course?.name}</span>
+                            <span className="font-mono text-violet-300">{r.course?.code}</span>
+                            {r.course?.name && courseCodeKey(r.course.name) !== courseCodeKey(r.course?.code) && (
+                              <span className="text-slate-300 ml-2">{r.course.name}</span>
+                            )}
+                            {r.course?.description ? (
+                              <p className="text-xs text-slate-500 mt-0.5">{r.course.description}</p>
+                            ) : (
+                              <p className="text-xs text-amber-500/80 mt-0.5">No course description on record</p>
+                            )}
                           </td>
                           <td className="px-5 py-3 text-center text-sm text-white">{r.score}</td>
                           <td className="px-5 py-3 text-center">
@@ -1345,7 +1428,12 @@ export default function BatchDetailPage() {
                             </span>
                           </td>
                           <td className="px-5 py-3 text-center text-sm text-slate-300">{Number(r.gradePoint).toFixed(1)}</td>
-                          <td className="px-5 py-3 text-center text-sm text-slate-300">{r.creditLoad}</td>
+                          <td className="px-5 py-3 text-center text-sm text-slate-300">
+                            {unitsOf(r)}
+                            {unitsOf(r) !== Number(r.creditLoad) && (
+                              <p className="text-[10px] text-amber-500/80 mt-0.5">stored: {r.creditLoad}</p>
+                            )}
+                          </td>
                           <td className="px-5 py-3 text-center">
                             <div className="flex items-center justify-center gap-2">
                               <button
@@ -1354,9 +1442,9 @@ export default function BatchDetailPage() {
                                   id: r.id,
                                   studentName: student.user?.name || "Student",
                                   courseCode: r.course?.code || "COURSE",
-                                  courseName: r.course?.name || "",
+                                  courseName: courseCodeKey(r.course?.name) === courseCodeKey(r.course?.code) ? "" : r.course?.name || "",
                                   score: String(r.score),
-                                  creditLoad: String(r.creditLoad)
+                                  creditLoad: String(unitsOf(r))
                                 })}
                                 className="p-1.5 rounded-lg bg-violet-500/20 hover:bg-violet-500/40 text-violet-300 transition-colors"
                                 title="Edit Record"
