@@ -1,10 +1,11 @@
 import { auth } from "@/auth";
 import { db } from "@/db";
-import { students, conductLogs } from "@/db/schema";
+import { students, conductLogs, academicSessions, systemSettings } from "@/db/schema";
 import { eq, and, inArray } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { Lock } from "lucide-react";
 import { ProfileCompletionGuard } from "@/components/auth/ProfileCompletionGuard";
+import { OathMedicalBanner } from "@/components/auth/OathMedicalBanner";
 
 export default async function StudentLayout({
     children,
@@ -26,7 +27,7 @@ export default async function StudentLayout({
         return <>{children}</>;
     }
 
-    // Check disciplinary sanctions only
+    // Check disciplinary sanctions
     const activeSanctions = await db.query.conductLogs.findMany({
         where: (logs, { eq, and, inArray }) => and(
             eq(logs.studentId, studentRecord.id),
@@ -40,10 +41,86 @@ export default async function StudentLayout({
         ? `You have been temporarily suspended or expelled due to a disciplinary infraction (${activeSanctions[0].infraction}). Please contact the Registrar's office.`
         : "";
 
+    // Check oath/medical form deadlines
+    let oathRequired = false;
+    let medicalRequired = false;
+    let deadlinePassed = false;
+    let deadlineDate: string | null = null;
+
+    try {
+        // Get active session and deadline
+        const activeSession = await db.query.academicSessions.findFirst({
+            where: eq(academicSessions.isCurrent, true),
+            columns: { id: true, startDate: true, matriculationDeadline: true },
+        });
+
+        if (activeSession?.startDate) {
+            const startDate = new Date(activeSession.startDate);
+            const deadline = activeSession.matriculationDeadline
+                ? new Date(activeSession.matriculationDeadline)
+                : new Date(startDate.getTime() + 28 * 24 * 60 * 60 * 1000); // 4 weeks
+
+            deadlineDate = deadline.toISOString();
+            const now = new Date();
+            deadlinePassed = now > deadline;
+
+            // Check oath scope setting
+            const oathEnabledSetting = await db.query.systemSettings?.findFirst?.({
+                where: eq(systemSettings.settingKey, 'matriculation_oath_enabled'),
+                columns: { settingValue: true },
+            }).catch?.(() => null);
+
+            const oathScopeSetting = await db.query.systemSettings?.findFirst?.({
+                where: eq(systemSettings.settingKey, 'matriculation_oath_scope'),
+                columns: { settingValue: true },
+            }).catch?.(() => null);
+
+            const oathEnabled = oathEnabledSetting?.settingValue !== 'false';
+            const oathScope = oathScopeSetting?.settingValue || 'freshers_only';
+
+            // Check if oath is required for this student
+            if (oathEnabled) {
+                if (oathScope === 'all_students') {
+                    oathRequired = !studentRecord.oathSignedAt;
+                } else {
+                    // freshers_only: ND 1 or HND 1
+                    oathRequired = (studentRecord.currentLevel === 1) && !studentRecord.oathSignedAt;
+                }
+            }
+
+            // Medical form is always required
+            medicalRequired = !studentRecord.medicalFormSubmittedAt;
+        }
+    } catch (e) {
+        // Silently fail — don't block the student portal for a settings error
+        console.error("[Layout] Oath/medical deadline check failed:", e);
+    }
+
+    // Redirect if deadline passed and requirements not met
+    // Skip redirect for the oath/medical pages themselves
+    // Note: pathname check is done client-side via ProfileCompletionGuard
+    // Server-side redirect for hard enforcement:
+    if (deadlinePassed && oathRequired && !studentRecord.oathSignedAt) {
+        redirect("/student/matriculation");
+    }
+    if (deadlinePassed && medicalRequired && !studentRecord.medicalFormSubmittedAt && !studentRecord.oathSignedAt) {
+        // Only redirect to medical if oath is already done
+        // If both are pending, oath takes priority
+    }
+
     return (
         // @ts-expect-error - TS2322: Auto-suppressed for build
         <ProfileCompletionGuard>
             <>
+                {/* Reminder banner for pending oath/medical (before deadline) */}
+                {(oathRequired || medicalRequired) && !deadlinePassed && (
+                    <OathMedicalBanner
+                        oathRequired={oathRequired}
+                        medicalRequired={medicalRequired}
+                        deadline={deadlineDate}
+                    />
+                )}
+
                 {isDisciplinarilyLocked && (
                  <div className="fixed inset-0 z-[9999] bg-slate-900/95 backdrop-blur-md flex items-center justify-center p-4">
                      <div className="bg-white max-w-md w-full rounded-2xl shadow-2xl overflow-hidden border border-rose-100">

@@ -10,14 +10,16 @@ export function ProfileCompletionGuard({ children }: { children: React.ReactNode
     const [checking, setChecking] = useState(true);
 
     useEffect(() => {
-        // Skip check if already on the complete-profile page
-        if (pathname === "/student/complete-profile") {
+        // Skip check on the completion pages themselves
+        if (pathname === "/student/complete-profile" ||
+            pathname === "/student/matriculation" ||
+            pathname === "/student/medical") {
             setChecking(false);
             return;
         }
 
         getStudentProfileStatus().then((res) => {
-            if (res.success && !res.isComplete) {
+            if (!res.success || !res.isComplete) {
                 router.replace("/student/complete-profile");
             } else {
                 setChecking(false);
@@ -25,8 +27,9 @@ export function ProfileCompletionGuard({ children }: { children: React.ReactNode
         }).catch(() => setChecking(false));
     }, [pathname, router]);
 
-    // Don't block rendering on the complete-profile page
-    if (pathname === "/student/complete-profile") {
+    if (pathname === "/student/complete-profile" ||
+        pathname === "/student/matriculation" ||
+        pathname === "/student/medical") {
         return <>{children}</>;
     }
 

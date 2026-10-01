@@ -260,6 +260,8 @@ export const students = mysqlTable('students', {
   stateOfOrigin: varchar('state_of_origin', { length: 100 }),
   lga: varchar('lga', { length: 100 }),
   profileCompleted: boolean('profile_completed').default(false),
+  oathSignedAt: datetime('oath_signed_at'),
+  medicalFormSubmittedAt: datetime('medical_form_submitted_at'),
   status: mysqlEnum('status', ['active', 'nd_graduated', 'hnd_graduated', 'withdrawn', 'suspended', 'rusticated']).default('active'),
   subscriptionLockOverride: mysqlEnum('subscription_lock_override', ['default', 'enforce', 'exempt']).default('default'),
 

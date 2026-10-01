@@ -45,6 +45,7 @@ import {
     ScrollText,
     Target,
     Wrench,
+    Stethoscope,
     HelpCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -141,6 +142,7 @@ const studentMenuItems: MenuItem[] = [
         subItems: [
             { name: "Hostel Management", href: "/hostel", module: "hostels" },
             { name: "Medical Form", href: "/student/medical" },
+            { name: "Matriculation Oath", href: "/student/matriculation" },
             { name: "SIWES Portal", href: "/student/siwes", module: "siwes" },
             { name: "Digital ID Card", href: "/student/id-card" },
             { name: "Library & OPAC", href: "/library", module: "library" },
@@ -391,6 +393,15 @@ const adminMenuItems: MenuItem[] = [
             { name: "Scanner", href: "/admin/attendance" },
             { name: "Reports & Analysis", href: "/admin/attendance/reports" },
             { name: "Attendance Settings", href: "/admin/attendance/settings" },
+        ]
+    },
+    {
+        name: "Health & Medical",
+        icon: Stethoscope,
+        role: "healthadmin",
+        subItems: [
+            { name: "Medical Records", href: "/admin/health/medical-records" },
+            { name: "Health Dashboard", href: "/admin/health" },
         ]
     },
     {
