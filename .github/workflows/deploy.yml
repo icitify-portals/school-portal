@@ -1,93 +1,69 @@
-name: Automated Production Deployment
+name: Build and Deploy
 
 on:
   push:
-    branches:
-      - main
-
-concurrency:
-  group: production-deploy-${{ github.sha }}
-  cancel-in-progress: false
+    branches: [main]
+  workflow_dispatch:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository_owner }}/school-portal-app
+  IMAGE_NAME: icitify-portals/school-portal-app
 
 jobs:
   build-and-push:
-    name: Build & Push Docker Image to GHCR
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
 
     steps:
-      - name: Checkout source
-        uses: actions/checkout@v5
-
-      - name: Normalize checkout mtimes for reproducible layers
-        run: find . -type f -exec touch -d '1970-01-01 UTC' {} +
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
+        uses: docker/setup-buildx-action@v3
 
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v4
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push image
-        uses: docker/build-push-action@v7
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=latest
+            type=sha,prefix=
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
         with:
           context: .
           push: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
-          cache-from: type=gha,scope=build-v2
-          cache-to: type=gha,mode=max,scope=build-v2
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
-  deploy-to-vps:
-    name: Deploy to Hostinger VPS
-    runs-on: ubuntu-latest
+  deploy:
     needs: build-and-push
-    permissions:
-      packages: read
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
 
     steps:
-      - name: SSH into VPS & deploy
-        uses: appleboy/ssh-action@v1.0.3
+      - name: Deploy to production
+        uses: appleboy/ssh-action@v1
         with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          password: ${{ secrets.SERVER_PASSWORD }}
-          command_timeout: 40m
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
           script: |
-            set -euxo pipefail
             cd /var/www/school-portal
-
-            echo "=== PULLING LATEST CODE ==="
-            git fetch origin main
-            git reset --hard origin/main
-            git clean -fd
-
-            echo "=== LOGGING INTO GHCR ==="
-            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin || true
-
-            echo "=== PULLING PRE-BUILT IMAGE FROM GHCR ==="
-            docker pull ghcr.io/${{ env.IMAGE_NAME }}:latest
-
-            echo "=== TAGGING IMAGE FOR COMPOSE ==="
-            docker tag ghcr.io/${{ env.IMAGE_NAME }}:latest school-portal-school-portal-app:latest
-
-            echo "=== RESTARTING CONTAINERS ==="
-            docker compose -f compose.yml up -d --force-recreate school-portal-app school-portal-worker
-
-            echo "=== CLEANING UP OLD APP IMAGES (bounded, ours only) ==="
-            docker images ghcr.io/${{ env.IMAGE_NAME }} -q | tail -n +3 | xargs -r docker rmi -f || true
-            timeout 120 docker image prune -f --filter "until=168h" || true
-
-            echo "=== DEPLOYMENT COMPLETE ==="
-            docker compose -f compose.yml ps
+            docker compose pull
+            docker compose up -d --remove-orphans
+            docker image prune -f
+            echo "Deployed successfully at $(date)"
