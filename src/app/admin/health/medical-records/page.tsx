@@ -13,7 +13,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import {
     Select, SelectContent, SelectItem, SelectTrigger, SelectValue
 } from "@/components/ui/select";
-import { getMedicalRecords } from "@/actions/medical-records";
+import { getMedicalRecords, getMedicalRecordStats } from "@/actions/medical-records";
 
 const DEPARTMENTS = [
     { id: 54, name: "Computer Science" },
@@ -26,6 +26,7 @@ const DEPARTMENTS = [
 
 export default function MedicalRecordsPage() {
     const [records, setRecords] = useState<any[]>([]);
+    const [stats, setStats] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [filterDept, setFilterDept] = useState<string>("all");
     const [filterStatus, setFilterStatus] = useState<string>("all");
@@ -37,25 +38,27 @@ export default function MedicalRecordsPage() {
 
     const loadRecords = useCallback(async () => {
         setLoading(true);
-        const res = await getMedicalRecords({
-            departmentId: filterDept !== "all" ? parseInt(filterDept) : undefined,
-            status: filterStatus !== "all" ? filterStatus : undefined,
-            search: search || undefined,
-            page,
-            limit: pageSize,
-        });
+        const [res, statsRes] = await Promise.all([
+            getMedicalRecords({
+                departmentId: filterDept !== "all" ? parseInt(filterDept) : undefined,
+                status: filterStatus !== "all" ? filterStatus : undefined,
+                search: search || undefined,
+                page,
+                limit: pageSize,
+            }),
+            getMedicalRecordStats(),
+        ]);
         if (res.success) {
             setRecords(res.data);
             setTotal(res.total);
         }
+        if (statsRes.success) setStats(statsRes.data);
         setLoading(false);
     }, [filterDept, filterStatus, search, page]);
 
     useEffect(() => { loadRecords(); }, [loadRecords]);
 
     const totalPages = Math.ceil(total / pageSize);
-    const submittedCount = records.filter(r => r.medicalFormSubmittedAt).length;
-    const clearedCount = records.filter(r => r.healthStatus === 'cleared').length;
 
     return (
         <div className="min-h-screen bg-slate-50 p-6">
@@ -76,19 +79,19 @@ export default function MedicalRecordsPage() {
                 {/* Stats */}
                 <div className="grid grid-cols-4 gap-4">
                     <Card><CardContent className="p-4 text-center">
-                        <p className="text-2xl font-bold text-slate-900">{total}</p>
+                        <p className="text-2xl font-bold text-slate-900">{stats?.total || total}</p>
                         <p className="text-xs text-slate-500">Total Students</p>
                     </CardContent></Card>
                     <Card><CardContent className="p-4 text-center">
-                        <p className="text-2xl font-bold text-green-600">{submittedCount}</p>
+                        <p className="text-2xl font-bold text-green-600">{stats?.submitted || 0}</p>
                         <p className="text-xs text-slate-500">Form Submitted</p>
                     </CardContent></Card>
                     <Card><CardContent className="p-4 text-center">
-                        <p className="text-2xl font-bold text-blue-600">{clearedCount}</p>
+                        <p className="text-2xl font-bold text-blue-600">{stats?.cleared || 0}</p>
                         <p className="text-xs text-slate-500">Cleared</p>
                     </CardContent></Card>
                     <Card><CardContent className="p-4 text-center">
-                        <p className="text-2xl font-bold text-amber-600">{total - submittedCount}</p>
+                        <p className="text-2xl font-bold text-amber-600">{stats?.pending || 0}</p>
                         <p className="text-xs text-slate-500">Pending</p>
                     </CardContent></Card>
                 </div>

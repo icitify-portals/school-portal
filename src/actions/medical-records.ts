@@ -31,19 +31,34 @@ export async function getMedicalRecords(filters?: {
         const page = filters?.page || 1;
         const offset = (page - 1) * limit;
 
-        let whereConditions = eq(students.deletedAt, null as any);
+        // Build base conditions
+        const conditions = [eq(students.deletedAt, null as any)];
 
         if (filters?.departmentId) {
-            whereConditions = and(whereConditions, eq(students.deptId, filters.departmentId));
+            conditions.push(eq(students.deptId, filters.departmentId));
         }
 
         if (filters?.status === 'submitted') {
-            whereConditions = and(whereConditions, sql`${students.medicalFormSubmittedAt} IS NOT NULL`);
+            conditions.push(sql`${students.medicalFormSubmittedAt} IS NOT NULL`);
         } else if (filters?.status === 'pending') {
-            whereConditions = and(whereConditions, sql`${students.medicalFormSubmittedAt} IS NULL`);
+            conditions.push(sql`${students.medicalFormSubmittedAt} IS NULL`);
         } else if (filters?.status === 'cleared') {
-            whereConditions = and(whereConditions, eq(students.healthStatus, 'cleared'));
+            conditions.push(eq(students.healthStatus, 'cleared'));
         }
+
+        if (filters?.search) {
+            const q = `%${filters.search}%`;
+            conditions.push(
+                or(
+                    like(users.name, q),
+                    like(students.firstName, q),
+                    like(students.lastName, q),
+                    like(students.matricNumber, q)
+                )
+            );
+        }
+
+        const whereClause = and(...conditions);
 
         const rows = await db.select({
             studentId: students.id,
@@ -65,28 +80,38 @@ export async function getMedicalRecords(filters?: {
         .innerJoin(users, eq(students.userId, users.id))
         .leftJoin(departments, eq(students.deptId, departments.id))
         .leftJoin(studentMedicalRecords, eq(studentMedicalRecords.studentId, students.id))
-        .where(whereConditions)
+        .where(whereClause)
         .orderBy(users.name)
         .limit(limit)
         .offset(offset);
 
-        // Filter by search
-        let filtered = rows;
-        if (filters?.search) {
-            const q = filters.search.toLowerCase();
-            filtered = rows.filter(r =>
-                (r.studentName || '').toLowerCase().includes(q) ||
-                (r.matricNumber || '').toLowerCase().includes(q)
-            );
-        }
-
         // Get total count
         const [{ count }] = await db.select({ count: sql<number>`count(*)` })
             .from(students)
-            .where(whereConditions);
+            .innerJoin(users, eq(students.userId, users.id))
+            .where(whereClause);
 
-        return { success: true, data: filtered, total: count };
+        return { success: true, data: rows, total: Number(count) };
     } catch (error) {
         return { success: false, error: (error as Error).message, data: [], total: 0 };
+    }
+}
+
+export async function getMedicalRecordStats() {
+    try {
+        await ensureHealthAccess();
+
+        const [stats] = await db.select({
+            total: sql<number>`count(*)`,
+            submitted: sql<number>`sum(${students.medicalFormSubmittedAt} IS NOT NULL)`,
+            cleared: sql<number>`sum(${students.healthStatus} = 'cleared')`,
+            pending: sql<number>`sum(${students.healthStatus} = 'pending')`,
+        })
+        .from(students)
+        .where(eq(students.deletedAt, null as any));
+
+        return { success: true, data: stats };
+    } catch (error) {
+        return { success: false, error: (error as Error).message };
     }
 }
