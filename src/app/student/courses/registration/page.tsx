@@ -1,26 +1,14 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { 
-  BookOpen, 
-  CheckCircle2, 
-  AlertCircle, 
-  Plus, 
-  Trash2, 
-  ChevronRight, 
-  FileText, 
-  Clock, 
-  ShieldCheck,
-  Loader2,
-  Info,
-  Layers,
-  Printer,
-  Edit3,
-  XCircle,
-  Search
+import {
+  BookOpen, CheckCircle2, AlertCircle, Plus, Trash2, ChevronRight,
+  FileText, Clock, ShieldCheck, Loader2, Info, Layers, Printer,
+  Edit3, XCircle, Search, CreditCard
 } from 'lucide-react';
 import { getAvailableCoursesAction, submitCourseRegistrationAction, getRegisteredCoursesAction } from '@/actions/course-registration';
 import { recordPrintFeePaymentAction } from '@/actions/finance';
+import { getStudentProfileStatus } from '@/actions/student-profile';
 import { AlatpayInlineCheckout } from '@/components/finance/AlatpayInlineCheckout';
 import { toast } from 'sonner';
 
@@ -33,37 +21,59 @@ export default function AdvancedCourseRegistrationPortal() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [studentCtx, setStudentCtx] = useState<{ id: number; sessionId: number; semester: '1' | '2'; email: string; firstName: string; lastName: string; phone: string } | null>(null);
 
-  // Configuration (Placeholders)
-  const studentId = 1;
-  const sessionId = 1;
-  const semester: '1' | '2' = '1';
   const MIN_UNITS = 15;
   const MAX_UNITS = 24;
 
   useEffect(() => {
-    loadData();
+    initContext();
   }, []);
 
-  async function loadData() {
+  async function initContext() {
     setLoading(true);
-    const [availRes, regRes] = await Promise.all([
-      getAvailableCoursesAction(studentId, semester),
-      getRegisteredCoursesAction(studentId, sessionId, semester)
-    ]);
-    
-    if (availRes.success) setAvailableCourses(availRes.data);
-    if (regRes.success) {
-        setIsPrintFeePaid(regRes.isPrintFeePaid || false);
-        // @ts-expect-error - TS2345: Auto-suppressed for build
-        setRegisteredCourses(regRes.data);
-        // @ts-expect-error - TS18048: Auto-suppressed for build
-        if (regRes.data.length > 0) {
-            // @ts-expect-error - TS18048: Auto-suppressed for build
-            setSelectedIds(regRes.data.map((c: any) => c.id));
-        }
+    try {
+      const profileRes = await getStudentProfileStatus();
+      if (!profileRes.success || !profileRes.profile) {
+        setError("Unable to load student profile.");
+        setLoading(false);
+        return;
+      }
+      const p = profileRes.profile;
+      const ctx = {
+        id: p.id,
+        sessionId: p.currentSessionId || 6,
+        semester: '1' as const,
+        email: p.email || '',
+        firstName: p.firstName || '',
+        lastName: p.lastName || '',
+        phone: p.phone || '',
+      };
+      setStudentCtx(ctx);
+      await loadData(ctx);
+    } catch (e: any) {
+      setError(e.message || "Failed to load student data.");
     }
     setLoading(false);
+  }
+
+  async function loadData(ctx: { id: number; sessionId: number; semester: '1' | '2' }) {
+    const [availRes, regRes] = await Promise.all([
+      getAvailableCoursesAction(ctx.id, ctx.semester),
+      getRegisteredCoursesAction(ctx.id, ctx.sessionId, ctx.semester)
+    ]);
+
+    if (availRes.success) setAvailableCourses(availRes.data);
+    if (regRes.success) {
+      setIsPrintFeePaid(regRes.isPrintFeePaid || false);
+      // @ts-expect-error - TS2345: Auto-suppressed for build
+      setRegisteredCourses(regRes.data);
+      // @ts-expect-error - TS18048: Auto-suppressed for build
+      if (regRes.data.length > 0) {
+        // @ts-expect-error - TS18048: Auto-suppressed for build
+        setSelectedIds(regRes.data.map((c: any) => c.id));
+      }
+    }
   }
 
   const toggleCourse = (courseId: number) => {
@@ -75,32 +85,61 @@ export default function AdvancedCourseRegistrationPortal() {
     .filter(c => selectedIds.includes(c.id))
     .reduce((sum, c) => sum + (c.units || 0), 0);
 
-  // Logic: Locked if Advisor has approved
   const advisorStatus = registeredCourses[0]?.advisorStatus || 'pending';
   const hodStatus = registeredCourses[0]?.hodStatus || 'pending';
   const isLocked = advisorStatus === 'approved' || hodStatus === 'approved';
 
   const handleSubmit = async () => {
+    if (!studentCtx) return;
     if (totalUnits < MIN_UNITS || totalUnits > MAX_UNITS) return;
     setError(null);
     setSubmitting(true);
     const res = await submitCourseRegistrationAction({
-      studentId,
-      sessionId,
-      semester,
+      studentId: studentCtx.id,
+      sessionId: studentCtx.sessionId,
+      semester: studentCtx.semester,
       courseIds: selectedIds
     });
     setSubmitting(false);
     if (res.success) {
-      loadData();
+      toast.success("Course registration submitted successfully.");
+      await loadData(studentCtx);
     } else {
       setError(res.error || "Submission failed");
     }
   };
 
-  const handlePrint = () => {
-     window.print();
+  const handlePrintClick = () => {
+    if (!studentCtx) return;
+    if (isPrintFeePaid) {
+      window.print();
+    } else {
+      setShowPayment(true);
+    }
   };
+
+  const handlePaymentSuccess = async (res: any) => {
+    if (!studentCtx) return;
+    const r = await recordPrintFeePaymentAction(
+      studentCtx.id, studentCtx.sessionId, studentCtx.semester,
+      500, res.reference || res.transactionReference, res.gatewayTransactionId || ""
+    );
+    if (r.success) {
+      toast.success("Payment successful! You can now print your form.");
+      setIsPrintFeePaid(true);
+      setShowPayment(false);
+    } else {
+      toast.error("Failed to record payment.");
+    }
+  };
+
+  if (loading || !studentCtx) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <Loader2 className="w-10 h-10 animate-spin text-indigo-500" />
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 min-h-screen bg-transparent">
@@ -115,28 +154,33 @@ export default function AdvancedCourseRegistrationPortal() {
                     </h2>
                 </div>
                 <p className="text-slate-300 font-medium mt-1 uppercase text-sm tracking-wide opacity-90">
-                    Tertiary Level • Faculty of Science • Semester {semester}
+                    {studentCtx.firstName} {studentCtx.lastName} • Semester {studentCtx.semester}
                 </p>
             </div>
-            
+
             <div className="relative z-10 flex gap-3">
-               <button 
-                 onClick={handlePrint}
-                 className="h-12 w-12 flex items-center justify-center bg-white/10 border border-white/20 rounded-2xl text-white hover:bg-white/20 transition-all shadow-lg backdrop-blur-md"
+               <button
+                 onClick={handlePrintClick}
+                 className={`h-12 px-4 flex items-center gap-2 rounded-2xl font-bold text-sm transition-all shadow-lg backdrop-blur-md border ${
+                   isPrintFeePaid
+                     ? 'bg-white/10 border-white/20 text-white hover:bg-white/20'
+                     : 'bg-amber-500/90 border-amber-400 text-white hover:bg-amber-600'
+                 }`}
                >
-                  <Printer size={20} />
+                   <Printer size={18} />
+                   {isPrintFeePaid ? 'Print Form' : 'Pay ₦500 to Print'}
                </button>
-               <button 
+               <button
                  onClick={handleSubmit}
                  disabled={submitting || totalUnits < MIN_UNITS || totalUnits > MAX_UNITS || isLocked}
                  className={`h-12 px-6 rounded-2xl font-bold flex items-center gap-2 transition-all shadow-lg backdrop-blur-md border disabled:opacity-50 disabled:cursor-not-allowed ${
-                   isLocked 
-                    ? 'bg-emerald-600/90 border-emerald-500 text-white shadow-emerald-900/50' 
+                   isLocked
+                    ? 'bg-emerald-600/90 border-emerald-500 text-white shadow-emerald-900/50'
                     : 'bg-indigo-600 border-indigo-500/50 text-white hover:bg-indigo-700 shadow-indigo-900/50'
                  }`}
                >
-                  {submitting ? <Loader2 size={18} className="animate-spin" /> : isLocked ? <ShieldCheck size={18} /> : <CheckCircle2 size={18} />}
-                  {isLocked ? 'Registration Finalized' : 'Submit for Verification'}
+                   {submitting ? <Loader2 size={18} className="animate-spin" /> : isLocked ? <ShieldCheck size={18} /> : <CheckCircle2 size={18} />}
+                   {isLocked ? 'Registration Finalized' : 'Submit for Verification'}
                </button>
             </div>
         </div>
@@ -160,12 +204,6 @@ export default function AdvancedCourseRegistrationPortal() {
                       <Layers size={24} className="text-indigo-600" />
                       Available Courses
                    </h2>
-                   <div className="flex gap-4">
-                      <div className="relative">
-                         <input type="text" placeholder="Search courses..." className="pl-10 pr-4 py-3 bg-white/80 border border-white/60 rounded-[1.5rem] text-sm font-bold shadow-inner focus:ring-4 focus:ring-indigo-500/20 outline-none w-64 transition-all" />
-                         <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-                      </div>
-                   </div>
                 </div>
 
                 <div className="divide-y divide-white/40 bg-white/20 p-4">
@@ -174,8 +212,8 @@ export default function AdvancedCourseRegistrationPortal() {
                          <Loader2 className="animate-spin text-indigo-500" size={40} />
                       </div>
                    ) : availableCourses.map((course) => (
-                      <div 
-                        key={course.id} 
+                      <div
+                        key={course.id}
                         onClick={() => toggleCourse(course.id)}
                         className={`p-6 rounded-[2rem] flex flex-col lg:flex-row lg:items-center justify-between gap-4 transition-all cursor-pointer group mb-2 last:mb-0 ${
                           selectedIds.includes(course.id) ? 'bg-indigo-600/90 shadow-lg shadow-indigo-500/20 border border-indigo-500' : 'bg-white/40 border border-white/50 hover:bg-white/80'
@@ -205,7 +243,7 @@ export default function AdvancedCourseRegistrationPortal() {
 
                          <div className="flex items-center justify-between lg:justify-end gap-6 ml-[5.5rem] lg:ml-0">
                             <div className={`px-4 py-1.5 rounded-[1rem] text-[10px] font-black uppercase tracking-widest shadow-sm ${
-                              course.status === 'compulsory' ? 'bg-indigo-100 text-indigo-700 border border-indigo-200' : 
+                              course.status === 'compulsory' ? 'bg-indigo-100 text-indigo-700 border border-indigo-200' :
                               course.status === 'required' ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-500 border border-slate-200'
                             }`}>
                                {course.status}
@@ -222,24 +260,22 @@ export default function AdvancedCourseRegistrationPortal() {
              </div>
           </div>
 
-          {/* Multi-Level Approval Hub */}
+          {/* Sidebar */}
           <div className="col-span-12 lg:col-span-4 space-y-6">
              <div className="bg-white/60 backdrop-blur-3xl p-8 rounded-[3rem] border border-white/40 shadow-xl shadow-slate-200/50 space-y-8">
                 <h3 className="text-2xl font-black text-slate-900 tracking-tight italic flex items-center gap-3">
                    <ShieldCheck size={24} className="text-indigo-600" />
                    Approval Chain
                 </h3>
-                
+
                 <div className="space-y-8 relative">
                    <div className="absolute left-5 top-5 bottom-5 w-0.5 bg-slate-200" />
-                   
-                   {/* Phase 1: Level Advisor */}
+
                    <div className="relative pl-14">
                       <div className={`absolute left-0 top-0 w-10 h-10 rounded-full border-2 flex items-center justify-center z-10 transition-all ${
                         advisorStatus === 'approved' ? 'bg-emerald-500 border-emerald-500 text-white shadow-lg shadow-emerald-500/20' : 'bg-white border-slate-300 text-slate-400'
                       }`}>
-                         {/* @ts-expect-error - TS2304: Auto-suppressed for build */}
-                         {advisorStatus === 'approved' ? <CheckCircle2 size={18} /> : <User size={18} />}
+                         {advisorStatus === 'approved' ? <CheckCircle2 size={18} /> : <FileText size={18} />}
                       </div>
                       <div>
                          <div className="text-base font-black text-slate-800">Level Advisor Review</div>
@@ -248,7 +284,6 @@ export default function AdvancedCourseRegistrationPortal() {
                       </div>
                    </div>
 
-                   {/* Phase 2: HOD */}
                    <div className="relative pl-14">
                       <div className={`absolute left-0 top-0 w-10 h-10 rounded-full border-2 flex items-center justify-center z-10 transition-all ${
                         hodStatus === 'approved' ? 'bg-emerald-500 border-emerald-500 text-white shadow-lg shadow-emerald-500/20' : 'bg-white border-slate-300 text-slate-400'
@@ -288,16 +323,12 @@ export default function AdvancedCourseRegistrationPortal() {
                 <p className="text-xs text-indigo-200 leading-relaxed font-bold relative z-10">
                   The system automatically blocks registration for courses whose prerequisites have not been successfully passed in previous academic sessions.
                 </p>
-                <div className="h-px bg-white/10 relative z-10" />
-                <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-indigo-300 relative z-10">
-                   <span>Minimum Grade: D</span>
-                   <span>Passed Only</span>
-                </div>
              </div>
           </div>
         </div>
 
-        {showPayment && (
+        {/* Payment Modal */}
+        {showPayment && studentCtx && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
                 <div className="bg-white rounded-[2rem] p-8 max-w-md w-full shadow-2xl">
                     <div className="flex justify-between items-center mb-6">
@@ -308,26 +339,17 @@ export default function AdvancedCourseRegistrationPortal() {
                     </div>
                     <div className="bg-slate-50 p-6 rounded-2xl mb-6 border border-slate-100">
                         <p className="text-sm text-slate-600 mb-2 font-medium">To print your approved course registration form, a processing fee is required.</p>
-                        <div className="text-3xl font-black text-indigo-600">?500.00</div>
+                        <div className="text-3xl font-black text-indigo-600">₦500.00</div>
                     </div>
-                    <AlatpayInlineCheckout 
+                    <AlatpayInlineCheckout
                         amount={500}
-                        email="student@fss.edu.ng" // In a real app, use the student's actual email
-                        firstName="Student"
-                        lastName="User"
-                        phone="08000000000"
-                        reference={"PRINT_" + studentId + "_" + Date.now()}
+                        email={studentCtx.email}
+                        firstName={studentCtx.firstName}
+                        lastName={studentCtx.lastName}
+                        phone={studentCtx.phone}
+                        reference={`PRINT_${studentCtx.id}_${Date.now()}`}
                         description="Course Registration Print Fee"
-                        onSuccess={async (res) => {
-                            const r = await recordPrintFeePaymentAction(studentId, sessionId, semester, 500, res.reference || res.transactionReference, res.gatewayTransactionId || "");
-                            if (r.success) {
-                                toast.success("Payment successful! You can now print your form.");
-                                setIsPrintFeePaid(true);
-                                setShowPayment(false);
-                            } else {
-                                toast.error("Failed to record payment.");
-                            }
-                        }}
+                        onSuccess={handlePaymentSuccess}
                         onClose={() => setShowPayment(false)}
                     />
                 </div>
@@ -337,4 +359,3 @@ export default function AdvancedCourseRegistrationPortal() {
     </div>
   );
 }
-
