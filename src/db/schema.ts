@@ -257,6 +257,9 @@ export const students = mysqlTable('students', {
   isFinanciallyLocked: boolean('is_financially_locked').default(false),
   nin: varchar('nin', { length: 11 }),
   ninVerified: boolean('nin_verified').default(false),
+  stateOfOrigin: varchar('state_of_origin', { length: 100 }),
+  lga: varchar('lga', { length: 100 }),
+  profileCompleted: boolean('profile_completed').default(false),
   status: mysqlEnum('status', ['active', 'nd_graduated', 'hnd_graduated', 'withdrawn', 'suspended', 'rusticated']).default('active'),
   subscriptionLockOverride: mysqlEnum('subscription_lock_override', ['default', 'enforce', 'exempt']).default('default'),
 
