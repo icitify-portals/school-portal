@@ -206,9 +206,15 @@ export async function uploadProfileImage(formData: FormData) {
         const isStaff = profile.isStaffProfile;
 
         // Check if student profile is already locked
+        // Allow returning students (level > 1) and ICT-captured photos to bypass the lock
         // @ts-expect-error - TS2339: Auto-suppressed for build
         if (!isStaff && profile.isProfileLocked) {
-            return { success: false, error: "Profile image is locked and cannot be changed." };
+            // @ts-expect-error - TS2339: Auto-suppressed for build
+            const studentLevel = profile.currentLevel || 1;
+            if (studentLevel <= 1) {
+                return { success: false, error: "Profile image is locked. Returning students (ND 2/HND 2) can upload at the ICT unit." };
+            }
+            // Level > 1: allow re-upload (returning students)
         }
 
         // Create unique filename
