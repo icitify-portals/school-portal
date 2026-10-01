@@ -312,27 +312,7 @@ export async function bulkImportStudents(data: any[]) {
 
 export async function getStudentByUserId(userId: number) {
     try {
-        let studentRows = await db.select().from(students).where(eq(students.userId, userId)).limit(1);
-        
-        if (studentRows.length === 0) {
-            const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
-            if (user && user.role === 'student') {
-                const admissionYear = new Date().getFullYear();
-                const matricNumber = `STU/${admissionYear}/${Math.floor(1000 + Math.random() * 9000)}`;
-                const barcode = `${user.name} | ${matricNumber}`;
-
-                await db.insert(students).values({
-                    userId,
-                    matricNumber,
-                    currentLevel: 100,
-                    admissionYear,
-                    barcode,
-                    status: 'active'
-                });
-
-                studentRows = await db.select().from(students).where(eq(students.userId, userId)).limit(1);
-            }
-        }
+        const studentRows = await db.select().from(students).where(eq(students.userId, userId)).limit(1);
 
         if (!studentRows.length) return null;
         return studentRows[0];
