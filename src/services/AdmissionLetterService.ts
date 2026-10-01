@@ -141,8 +141,8 @@ export class AdmissionLetterService {
             '{{department_name}}': dept?.name || formTemplate.name.replace(/^(ND|HND) /i, '').trim() || 'Business Administration and Management',
             '{{jamb_reg_no}}': student.jambNumber || 'N/A',
             '{{ref_no}}': refNo,
-            '{{resumption_date}}': '7th October, 2024',
-            '{{lecture_start_date}}': '14th October, 2024',
+            '{{resumption_date}}': `6th October, ${admissionYearString}`,
+            '{{lecture_start_date}}': `13th October, ${admissionYearString}`,
             '{{acceptance_fee}}': acceptanceFee,
             '{{acceptance_fee_words}}': acceptanceFeeWords
         };

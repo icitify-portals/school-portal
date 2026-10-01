@@ -6,6 +6,8 @@ import { getAdminV2ApplicationDetail } from "@/actions/admission_v2";
 import { generateAdmissionLetterAction } from "@/actions/result-management";
 import { Loader2, Printer, ShieldCheck, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import FitSheet, { LETTER_PAGE_PRINT_STYLES } from "@/components/admission/FitSheet";
+import AdmissionLetterLayout from "@/components/admission/AdmissionLetterLayout";
 
 export default function AdminAdmissionLetterPage() {
     const params = useParams();
@@ -68,8 +70,9 @@ export default function AdminAdmissionLetterPage() {
     }
 
     return (
-        <div className="min-h-screen bg-slate-100 py-20 px-4 print:p-0 print:bg-white">
-            <div className="max-w-4xl mx-auto space-y-8">
+        <div className="letter-page min-h-screen bg-slate-100 py-20 px-4 print:p-0 print:bg-white">
+            <style dangerouslySetInnerHTML={{ __html: LETTER_PAGE_PRINT_STYLES }} />
+            <div className="max-w-4xl mx-auto space-y-8 print:max-w-none print:space-y-0">
                 <div className="flex justify-between items-center print:hidden">
                     <div className="flex items-center gap-3 text-sm font-bold text-slate-500">
                         <ArrowLeft className="w-4 h-4" />
@@ -80,10 +83,15 @@ export default function AdminAdmissionLetterPage() {
                     </Button>
                 </div>
 
-                <div className="bg-white shadow-2xl rounded-[3rem] overflow-hidden border border-slate-200 print:shadow-none print:border-none print:rounded-none min-h-[11in] p-16 md:p-24 space-y-12">
-                    <style dangerouslySetInnerHTML={{ __html: letter.css }} />
-                    <div dangerouslySetInnerHTML={{ __html: letter.html }} />
-                </div>
+                {/* The Letter - scaled to a single A4 sheet */}
+                <FitSheet className="bg-white shadow-2xl rounded-[3rem] border border-slate-200 print:shadow-none print:border-none print:rounded-none">
+                    <div className="p-16 md:p-24">
+                        <AdmissionLetterLayout
+                            bodyHtml={letter.html}
+                            css={letter.css}
+                        />
+                    </div>
+                </FitSheet>
             </div>
         </div>
     );
