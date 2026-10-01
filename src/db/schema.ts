@@ -3880,6 +3880,13 @@ export const idCards = mysqlTable('id_cards', {
   expiresAt: datetime('expires_at'),
   status: mysqlEnum('status', ['active', 'expired', 'revoked']).default('active'),
   verificationCode: varchar('verification_code', { length: 255 }).unique().notNull(),
+  // Print assignment fields
+  printStatus: mysqlEnum('print_status', ['pending', 'assigned', 'printing', 'printed', 'delivered']).default('pending'),
+  assignedTo: int('assigned_to').references(() => users.id),
+  assignedAt: timestamp('assigned_at'),
+  printedAt: timestamp('printed_at'),
+  deliveredAt: timestamp('delivered_at'),
+  printNotes: text('print_notes'),
   createdAt: timestamp('created_at').defaultNow(),
 });
 

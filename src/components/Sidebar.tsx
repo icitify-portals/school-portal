@@ -374,6 +374,7 @@ const adminMenuItems: MenuItem[] = [
             { name: "User Manager", href: "/admin/users" },
             { name: "Cohort Groups", href: "/admin/cohorts" },
             { name: "Identity Center", href: "/admin/identity" },
+            { name: "ICT Print Queue", href: "/admin/ict/print-queue" },
             { name: "RBAC Settings", href: "/admin/rbac" },
             { name: "Portal Management", href: "/admin/settings/portal" },
         ]
