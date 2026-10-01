@@ -540,6 +540,7 @@ const staffMenuItems: MenuItem[] = [
             { name: "My Payslips", href: "/staff/payslips" },
             { name: "Expenditure Requests", href: "/staff/expenditure" },
             { name: "Staff ID Card", href: "/staff/id-card" },
+            { name: "Print Tasks", href: "/staff/print-tasks" },
         ]
     },
     {
