@@ -25,9 +25,10 @@ import {
     Camera,
     ShieldCheck,
     Fingerprint,
-    Bell
+    Bell,
+    FileText
 } from "lucide-react";
-import { updateStudentProfile, updateStaffProfile, getLoggedUserProfile, uploadProfileImage } from "@/actions/student-profile";
+import { updateStudentProfile, updateStaffProfile, getLoggedUserProfile, uploadProfileImage, uploadSignatureImage } from "@/actions/student-profile";
 import { verifyNin } from "@/actions/nin-actions";
 import { IdentityCard } from "@/components/IdentityCard";
 import { toast } from "sonner";
@@ -44,6 +45,7 @@ export default function ProfilePage() {
     const [ninInput, setNinInput] = useState("");
     const [isVerifyingNin, setIsVerifyingNin] = useState(false);
     const [isUpdatingImage, setIsUpdatingImage] = useState(false);
+const [isUpdatingSignature, setIsUpdatingSignature] = useState(false);
 
     useEffect(() => {
         if (session?.user) fetchProfile();
@@ -138,6 +140,32 @@ export default function ProfilePage() {
             toast.error(res.error || "Failed to upload image");
         }
         setIsUpdatingImage(false);
+    };
+
+    const handleSignatureChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        if (!file.type.startsWith("image/")) {
+            toast.error("Please upload an image file (JPEG or PNG)");
+            return;
+        }
+        if (file.size > 2 * 1024 * 1024) {
+            toast.error("File size is too large. Maximum 2MB allowed");
+            return;
+        }
+
+        setIsUpdatingSignature(true);
+        const formData = new FormData();
+        formData.append("file", file);
+
+        const res = await uploadSignatureImage(formData);
+        if (res.success && res.signatureUrl) {
+            toast.success("Signature uploaded successfully.");
+            setProfile((prev: any) => ({ ...prev, signatureUrl: res.signatureUrl }));
+        } else {
+            toast.error(res.error || "Failed to upload signature");
+        }
+        setIsUpdatingSignature(false);
     };
 
     if (loading) return (
@@ -456,6 +484,57 @@ export default function ProfilePage() {
                                                             </div>
                                                         </div>
                                                     )}
+                                                </div>
+
+                                                {/* Signature Upload */}
+                                                <div className="p-8 bg-slate-50 rounded-[2.5rem] border border-slate-100 space-y-6">
+                                                    <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 flex items-center gap-2">
+                                                        <FileText className="w-3 h-3 text-indigo-500" />
+                                                        Signature Capture
+                                                    </Label>
+                                                    <div className="space-y-4">
+                                                        {profile.signatureUrl && (
+                                                            <div className="flex justify-center p-4 bg-white rounded-2xl border border-slate-200">
+                                                                <img src={profile.signatureUrl} alt="Signature" className="max-h-20 object-contain" />
+                                                            </div>
+                                                        )}
+                                                        <div className="flex flex-col items-center justify-center border-2 border-dashed border-slate-200 hover:border-indigo-500 rounded-2xl p-6 bg-slate-50/50 hover:bg-indigo-50/20 transition-all cursor-pointer relative group">
+                                                            <input
+                                                                id="signature-upload-input"
+                                                                type="file"
+                                                                accept="image/jpeg,image/png,image/jpg"
+                                                                onChange={handleSignatureChange}
+                                                                disabled={isUpdatingSignature}
+                                                                className="hidden"
+                                                            />
+                                                            <label htmlFor="signature-upload-input" className="w-full h-full flex flex-col items-center justify-center cursor-pointer space-y-2">
+                                                                {isUpdatingSignature ? (
+                                                                    <div className="flex flex-col items-center gap-2">
+                                                                        <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
+                                                                        <p className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">Uploading...</p>
+                                                                    </div>
+                                                                ) : (
+                                                                    <>
+                                                                        <div className="w-10 h-10 bg-white rounded-2xl flex items-center justify-center shadow-md group-hover:scale-110 transition-transform">
+                                                                            <Camera className="w-5 h-5 text-slate-500 group-hover:text-indigo-600" />
+                                                                        </div>
+                                                                        <div className="text-center">
+                                                                            <span className="text-xs font-black text-slate-700 uppercase tracking-tight block">
+                                                                                {profile.signatureUrl ? 'Replace Signature' : 'Upload Signature'}
+                                                                            </span>
+                                                                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block mt-1">JPEG or PNG up to 2MB</span>
+                                                                        </div>
+                                                                    </>
+                                                                )}
+                                                            </label>
+                                                        </div>
+                                                        <div className="p-4 bg-indigo-50 rounded-2xl border border-indigo-100 flex gap-3 items-start">
+                                                            <Info className="w-4 h-4 text-indigo-600 mt-0.5 shrink-0" />
+                                                            <p className="text-[9px] font-bold text-indigo-800 uppercase leading-relaxed">
+                                                                Your signature will be printed on your official ID card and course registration forms.
+                                                            </p>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </div>
 

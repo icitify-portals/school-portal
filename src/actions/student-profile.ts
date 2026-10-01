@@ -254,6 +254,48 @@ export async function uploadProfileImage(formData: FormData) {
     }
 }
 
+export async function uploadSignatureImage(formData: FormData) {
+    try {
+        const session = await auth();
+        if (!session?.user) return { success: false, error: "Not authenticated" };
+
+        const file = formData.get("file") as File;
+        if (!file) return { success: false, error: "No file provided" };
+
+        const allowedTypes = ["image/jpeg", "image/png", "image/jpg"];
+        if (!allowedTypes.includes(file.type)) return { success: false, error: "Only JPEG and PNG images are allowed" };
+        if (file.size > 2 * 1024 * 1024) return { success: false, error: "File size too large. Maximum 2MB allowed" };
+
+        const profile = await getLoggedUserProfile();
+        if (!profile) return { success: false, error: "Profile not found" };
+
+        const userId = profile.userId;
+        const isStaff = profile.isStaffProfile;
+
+        const fileExtension = file.name.split('.').pop() || 'jpg';
+        const uniqueFilename = `sig_${userId}_${Date.now()}.${fileExtension}`;
+        const bytes = await file.arrayBuffer();
+        const buffer = Buffer.from(bytes);
+        const uploadResult = await storage.upload(buffer, uniqueFilename, 'signatures', file.type);
+
+        if (!uploadResult.success || !uploadResult.url) return { success: false, error: uploadResult.error || "Failed to upload signature" };
+
+        const signatureUrl = uploadResult.url;
+
+        if (isStaff) {
+            await db.update(staffProfiles).set({ signatureUrl }).where(eq(staffProfiles.userId, userId));
+        } else {
+            await db.update(students).set({ signatureUrl }).where(eq(students.userId, userId));
+        }
+
+        revalidatePath("/profile");
+        return { success: true, signatureUrl };
+    } catch (error: any) {
+        console.error("Failed to upload signature:", error);
+        return { success: false, error: error.message || "Failed to upload signature" };
+    }
+}
+
 // ──────────────────────────────────────────────────────────────
 // Profile Completion (for new students on first login)
 // ──────────────────────────────────────────────────────────────
