@@ -110,6 +110,10 @@ export async function getStudents(options: { search?: string, page?: number, pag
             : undefined;
 
         const countConditions = [
+            // Soft-deleted students must not appear in the admin directory,
+            // otherwise records removed via the incomplete-admissions review
+            // would keep showing up here.
+            isNull(students.deletedAt),
             levelCondition,
             departmentCondition,
             programmeCondition,
