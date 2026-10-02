@@ -5,7 +5,7 @@ import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Users, CheckCircle, Loader2, Search, FileUp, X, FileText, ShieldAlert, QrCode } from "lucide-react";
-import { getStudents, approveStudent, bulkImportStudents, toggleFinancialLock } from "@/actions/students";
+import { getStudents, approveStudent, bulkImportStudents, toggleFinancialLock, getStudentSessionOptions } from "@/actions/students";
 import { impersonateUser } from "@/actions/impersonation";
 import { generateIdentityQRCodeAction } from "@/actions/utility-actions";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
@@ -23,12 +23,13 @@ function StudentsPageContent() {
     const pathname = usePathname();
     const searchParams = useSearchParams();
     const { isK12 } = useBranch();
-    const settings = { base_currency: "₦" };
+    const settings = { base_currency: "â‚¦" };
 
     const [students, setStudents] = useState<any[]>([]);
     const [totalCount, setTotalCount] = useState(0);
     const [loading, setLoading] = useState(true);
     const [sessions, setSessions] = useState<any[]>([]);
+    const [unassignedCount, setUnassignedCount] = useState(0);
     const [showImporter, setShowImporter] = useState(false);
     const [selectedUser, setSelectedUser] = useState<any | null>(null);
 
@@ -56,11 +57,21 @@ function StudentsPageContent() {
             setTotalCount(res.totalCount);
         }
         setLoading(false);
-    }, [search, page, pageSize, level]);
+    }, [search, page, pageSize, level, sessionParam, semesterParam]);
 
     useEffect(() => {
         fetchStudents();
     }, [fetchStudents]);
+
+    useEffect(() => {
+        (async () => {
+            const res = await getStudentSessionOptions();
+            if (res.success) {
+                setSessions(res.sessions);
+                setUnassignedCount(res.unassignedCount);
+            }
+        })();
+    }, []);
 
     const handleSearch = (value: string) => {
         const params = new URLSearchParams(searchParams);
@@ -79,6 +90,28 @@ function StudentsPageContent() {
             params.set("level", value);
         } else {
             params.delete("level");
+        }
+        params.set("page", "1");
+        router.push(`${pathname}?${params.toString()}`);
+    };
+
+    const handleSessionChange = (value: string) => {
+        const params = new URLSearchParams(searchParams);
+        if (value) {
+            params.set("session", value);
+        } else {
+            params.delete("session");
+        }
+        params.set("page", "1");
+        router.push(`${pathname}?${params.toString()}`);
+    };
+
+    const handleSemesterChange = (value: string) => {
+        const params = new URLSearchParams(searchParams);
+        if (value) {
+            params.set("semester", value);
+        } else {
+            params.delete("semester");
         }
         params.set("page", "1");
         router.push(`${pathname}?${params.toString()}`);
@@ -159,9 +192,14 @@ function StudentsPageContent() {
                         onChange={(e) => handleSessionChange(e.target.value)}
                     >
                         <option value="">All Sessions</option>
+                        <option value="unassigned">
+                            No Session Assigned ({unassignedCount.toLocaleString()})
+                        </option>
                         {sessions.map((s) => (
                             <option key={s.id} value={s.id.toString()}>
                                 {s.name}
+                                {s.isCurrent ? " (Current)" : s.status === "archived" ? " (Archived)" : ""}
+                                {` â€” ${(s.studentCount || 0).toLocaleString()}`}
                             </option>
                         ))}
                     </select>
@@ -229,6 +267,7 @@ function StudentsPageContent() {
                                 <th className="px-6 py-4">Student</th>
                                 <th className="px-6 py-4">Matric No.</th>
                                 <th className="px-6 py-4">Level</th>
+                                <th className="px-6 py-4">Session</th>
                                 <th className="px-6 py-4">Programme</th>
                                 <th className="px-6 py-4">Wallet</th>
                                 <th className="px-6 py-4">Fin Status</th>
@@ -238,13 +277,13 @@ function StudentsPageContent() {
                         <tbody className="divide-y divide-slate-100">
                             {loading ? (
                                 <tr>
-                                    <td colSpan={6} className="px-6 py-10 text-center">
+                                    <td colSpan={7} className="px-6 py-10 text-center">
                                         <Loader2 className="w-6 h-6 animate-spin mx-auto text-slate-400" />
                                     </td>
                                 </tr>
                             ) : students.length === 0 ? (
                                 <tr>
-                                    <td colSpan={6} className="px-6 py-10 text-center text-slate-500">
+                                    <td colSpan={7} className="px-6 py-10 text-center text-slate-500">
                                         No students found.
                                     </td>
                                 </tr>
@@ -274,10 +313,29 @@ function StudentsPageContent() {
                                             </span>
                                         </td>
                                         <td className="px-6 py-4">
+                                            {s.currentSession ? (
+                                                <div className="flex flex-col">
+                                                    <span className={`text-sm font-bold ${s.currentSession.isCurrent ? 'text-emerald-600' : 'text-slate-600'}`}>
+                                                        {s.currentSession.name}
+                                                    </span>
+                                                    {s.currentSession.isCurrent && (
+                                                        <span className="text-[10px] uppercase tracking-wider font-bold text-emerald-500">Current</span>
+                                                    )}
+                                                    {s.admissionSession && (
+                                                        <span className="text-[10px] text-slate-400">
+                                                            Admitted: {s.admissionSession.name}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            ) : (
+                                                <span className="text-xs text-slate-400 italic">Not assigned</span>
+                                            )}
+                                        </td>
+                                        <td className="px-6 py-4">
                                             <span className="text-sm text-slate-600">{s.programme?.name || 'Not Assigned'}</span>
                                         </td>
                                         <td className="px-6 py-4">
-                                            <span className="text-sm font-bold text-slate-700">{settings?.base_currency || "₦"}{parseFloat(s.digitalWalletBalance || '0').toLocaleString()}</span>
+                                            <span className="text-sm font-bold text-slate-700">{settings?.base_currency || "â‚¦"}{parseFloat(s.digitalWalletBalance || '0').toLocaleString()}</span>
                                         </td>
                                         <td className="px-6 py-4">
                                             <Button

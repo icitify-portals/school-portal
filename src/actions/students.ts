@@ -2,8 +2,9 @@
 "use server";
 
 import { db } from "@/db/db";
-import { users, students, programmes, userRoles, roles, courses, enrollments, quizAttempts, quizResponses, quizQuestions, lessonNotes, quizzes, staffProfiles, departments, systemAuditLogs } from "@/db/schema";
-import { eq, inArray, sql, or, like, and, desc } from "drizzle-orm";
+import { users, students, programmes, userRoles, roles, courses, enrollments, quizAttempts, quizResponses, quizQuestions, lessonNotes, quizzes, staffProfiles, departments, systemAuditLogs, academicSessions } from "@/db/schema";
+import { eq, inArray, sql, or, like, and, desc, isNull } from "drizzle-orm";
+import { alias } from "drizzle-orm/sql";
 import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
 import { auth } from "@/auth";
@@ -73,7 +74,7 @@ export async function getStudents(options: { search?: string, page?: number, pag
                     levelCondition = and(eq(students.currentLevel, 2), eq(programmes.programmeType, 'ND'));
                     break;
                 case "ND_GRADUATED":
-                    levelCondition = eq(students.status, 'nd_graduant');
+                    levelCondition = eq(students.status, 'nd_graduated');
                     break;
                 case "HND 1":
                     levelCondition = and(eq(students.currentLevel, 1), eq(programmes.programmeType, 'HND'));
@@ -82,7 +83,7 @@ export async function getStudents(options: { search?: string, page?: number, pag
                     levelCondition = and(eq(students.currentLevel, 2), eq(programmes.programmeType, 'HND'));
                     break;
                 case "HND_GRADUATED":
-                    levelCondition = eq(students.status, 'hnd_graduant');
+                    levelCondition = eq(students.status, 'hnd_graduated');
                     break;
                 default:
                     if (!isNaN(Number(level))) {
@@ -95,10 +96,26 @@ export async function getStudents(options: { search?: string, page?: number, pag
 
         const departmentCondition = options.departmentId ? eq(students.deptId, options.departmentId) : undefined;
         const programmeCondition = options.programmeId ? eq(students.programmeId, options.programmeId) : undefined;
+
+        // Session filter. "unassigned" buckets students with no current session,
+        // which is the single largest cohort in the legacy data.
+        let sessionCondition: any = undefined;
+        if (sessionId === "unassigned") {
+            sessionCondition = isNull(students.currentSessionId);
+        } else if (sessionId && !isNaN(Number(sessionId))) {
+            sessionCondition = eq(students.currentSessionId, Number(sessionId));
+        }
+
+        const semesterCondition = semester && !isNaN(Number(semester))
+            ? eq(students.currentSemester, Number(semester))
+            : undefined;
+
         const countConditions = [
             levelCondition,
             departmentCondition,
             programmeCondition,
+            sessionCondition,
+            semesterCondition,
             search ? or(
                 like(users.name, searchPattern),
                 like(users.email, searchPattern),
@@ -119,15 +136,30 @@ export async function getStudents(options: { search?: string, page?: number, pag
             .where(countWhere);
         const totalCount = countRes?.count || 0;
 
-        // 2. Fetch paginated data
+        // 2. Fetch paginated data. academic_sessions is joined twice (current +
+        // admission), so the second join needs an alias to be addressable.
+        const admissionSession = alias(academicSessions, "admission_session");
+
         const studentRows = await db.select({
             student: students,
             user: users,
-            programme: programmes
+            programme: programmes,
+            currentSession: {
+                id: academicSessions.id,
+                name: academicSessions.name,
+                status: academicSessions.status,
+                isCurrent: academicSessions.isCurrent
+            },
+            admissionSession: {
+                id: admissionSession.id,
+                name: admissionSession.name
+            }
         })
             .from(students)
             .innerJoin(users, eq(students.userId, users.id))
             .leftJoin(programmes, eq(students.programmeId, programmes.id))
+            .leftJoin(academicSessions, eq(students.currentSessionId, academicSessions.id))
+            .leftJoin(admissionSession, eq(students.admissionSessionId, admissionSession.id))
             .where(countWhere)
             .limit(pageSize)
             .offset(offset);
@@ -137,13 +169,67 @@ export async function getStudents(options: { search?: string, page?: number, pag
             data: studentRows.map(r => ({
                 ...r.student,
                 user: r.user,
-                programme: r.programme
+                programme: r.programme,
+                currentSession: r.currentSession?.id ? r.currentSession : null,
+                admissionSession: r.admissionSession?.id ? r.admissionSession : null
             })),
             totalCount
         };
     } catch (error) {
         console.error("Failed to fetch students:", error);
         return { success: false, error: "Failed to fetch students", data: [], totalCount: 0 };
+    }
+}
+
+/**
+ * Session options for the admin student filter.
+ *
+ * Deliberately does NOT de-duplicate by name: the legacy data contains two
+ * distinct sessions both named "2025/2026" (ids 3 and 41) and two named
+ * "2023/2024" (ids 1 and 38). Collapsing them would filter students into the
+ * wrong bucket, so every id is returned and labelled.
+ */
+export async function getStudentSessionOptions() {
+    try {
+        const allowed = await hasPermission("students.view") || await hasRole("admin")
+            || await hasRole("superadmin") || await hasRole("registrar")
+            || await hasRole("admission_officer");
+        if (!allowed) return { success: false, error: "Access denied", sessions: [] };
+
+        const rows = await db.execute(sql`
+            SELECT s.id,
+                   s.name,
+                   COALESCE(s.status, '')  AS status,
+                   s.is_current,
+                   s.start_date,
+                   COUNT(st.id) AS student_count
+            FROM academic_sessions s
+            LEFT JOIN students st
+                   ON st.current_session_id = s.id AND st.deleted_at IS NULL
+            GROUP BY s.id, s.name, s.status, s.is_current, s.start_date
+            ORDER BY s.is_current DESC, s.id DESC
+        `) as unknown as Array<Record<string, any>>;
+
+        const unassigned = await db.execute(sql`
+            SELECT COUNT(*) AS c FROM students
+            WHERE current_session_id IS NULL AND deleted_at IS NULL
+        `) as unknown as Array<Record<string, any>>;
+
+        return {
+            success: true,
+            sessions: rows.map((r) => ({
+                id: Number(r.id),
+                name: String(r.name),
+                status: r.status || null,
+                isCurrent: Boolean(r.is_current),
+                startDate: r.start_date ? new Date(r.start_date).toISOString() : null,
+                studentCount: Number(r.student_count || 0)
+            })),
+            unassignedCount: Number(unassigned[0]?.c || 0)
+        };
+    } catch (error) {
+        console.error("Failed to fetch student session options:", error);
+        return { success: false, error: "Failed to fetch sessions", sessions: [], unassignedCount: 0 };
     }
 }
 
