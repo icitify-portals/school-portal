@@ -3,8 +3,7 @@
 
 import { db } from "@/db/db";
 import { users, students, programmes, userRoles, roles, courses, enrollments, quizAttempts, quizResponses, quizQuestions, lessonNotes, quizzes, staffProfiles, departments, systemAuditLogs, academicSessions } from "@/db/schema";
-import { eq, inArray, sql, or, like, and, desc, isNull } from "drizzle-orm";
-import { alias } from "drizzle-orm/sql";
+import { eq, inArray, sql, or, like, and, desc, isNull, alias } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
 import { auth } from "@/auth";
