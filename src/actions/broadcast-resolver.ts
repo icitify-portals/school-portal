@@ -181,8 +181,8 @@ export async function resolveBroadcastRecipients(criteria: any): Promise<{ userI
       "ND2": [eq(students.status, "active"), sql`(${students.currentLevel} IN (2,200) AND ${students.programmeType}='ND')`],
       "HND1": [eq(students.status, "active"), sql`(${students.currentLevel} IN (1,100) AND ${students.programmeType}='HND')`],
       "HND2": [eq(students.status, "active"), sql`(${students.currentLevel} IN (2,200) AND ${students.programmeType}='HND')`],
-      "ND_GRADUATED": [eq(students.status, "nd_graduated" as any)],
-      "HND_GRADUATED": [eq(students.status, "hnd_graduated" as any)],
+    "ND_GRADUATED": [eq(students.status, "nd_graduant" as any)],
+    "HND_GRADUATED": [eq(students.status, "hnd_graduant" as any)],
     };
     if (levelMap[norm]) return levelMap[norm];
     // Spaced variants
@@ -190,8 +190,8 @@ export async function resolveBroadcastRecipients(criteria: any): Promise<{ userI
     if (levelStr === "ND 2") return levelMap["ND2"];
     if (levelStr === "HND 1") return levelMap["HND1"];
     if (levelStr === "HND 2") return levelMap["HND2"];
-    if (levelStr === "ND_graduated") return [eq(students.status, "nd_graduated" as any)];
-    if (levelStr === "HND_graduated") return [eq(students.status, "hnd_graduated" as any)];
+    if (levelStr === "ND_graduated") return [eq(students.status, "nd_graduant" as any)];
+    if (levelStr === "HND_graduated") return [eq(students.status, "hnd_graduant" as any)];
     return [];
   };
 

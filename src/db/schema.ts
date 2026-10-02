@@ -14,7 +14,8 @@ export const users = mysqlTable('users', {
   password: varchar('password', { length: 255 }).notNull(),
   requiresPasswordChange: boolean('requires_password_change').default(false),
   role: mysqlEnum('role', ['admin', 'staff', 'student', 'dvc', 'healthadmin', 'applicant', 'fresher', 'superadmin', 'parent', 'icitify_dev', 'bursar', 'registrar', 'librarian', 'hod', 'dean', 'admission_officer', 'record_officer']).default('student'),
-  status: mysqlEnum('status', ['active', 'suspended', 'withdrawn', 'nd_graduated', 'hnd_graduated', 'rusticated']).default('active'),
+  // 'graduated' is retained during the graduant migration; new writes must use 'graduant'.
+  status: mysqlEnum('status', ['active', 'suspended', 'withdrawn', 'nd_graduant', 'hnd_graduant', 'nd_graduated', 'hnd_graduated', 'rusticated']).default('active'),
   phone: varchar('phone', { length: 20 }),
   imageUrl: varchar('image_url', { length: 255 }),
   failedLoginAttempts: int('failed_login_attempts').default(0),
@@ -262,7 +263,8 @@ export const students = mysqlTable('students', {
   profileCompleted: boolean('profile_completed').default(false),
   oathSignedAt: datetime('oath_signed_at'),
   medicalFormSubmittedAt: datetime('medical_form_submitted_at'),
-  status: mysqlEnum('status', ['active', 'nd_graduated', 'hnd_graduated', 'withdrawn', 'suspended', 'rusticated', 'pending_review']).default('active'),
+  // 'graduated' is retained during the graduant migration; new writes must use 'graduant'.
+  status: mysqlEnum('status', ['active', 'nd_graduant', 'hnd_graduant', 'nd_graduated', 'hnd_graduated', 'withdrawn', 'suspended', 'rusticated', 'pending_review']).default('active'),
   subscriptionLockOverride: mysqlEnum('subscription_lock_override', ['default', 'enforce', 'exempt']).default('default'),
 
   // Guardian Details
@@ -1599,7 +1601,8 @@ export const promotionLogs = mysqlTable('promotion_logs', {
   toLevel: int('to_level').notNull(),
   fromSessionId: int('from_session_id').references(() => academicSessions.id).notNull(),
   toSessionId: int('to_session_id').references(() => academicSessions.id),
-  decision: mysqlEnum('decision', ['promoted', 'demoted', 'level_assigned', 'withdrawn', 'nd_graduated', 'hnd_graduated', 'repeat', 'rusticated', 'concession']).notNull(),
+  // 'graduated' is retained during the graduant migration; new writes must use 'graduant'.
+  decision: mysqlEnum('decision', ['promoted', 'demoted', 'level_assigned', 'withdrawn', 'nd_graduant', 'hnd_graduant', 'nd_graduated', 'hnd_graduated', 'repeat', 'rusticated', 'concession']).notNull(),
   cgpa: decimal('cgpa', { precision: 4, scale: 2 }),
   creditsEarned: int('credits_earned'),
   reason: text('reason'),

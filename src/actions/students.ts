@@ -73,7 +73,7 @@ export async function getStudents(options: { search?: string, page?: number, pag
                     levelCondition = and(eq(students.currentLevel, 2), eq(programmes.programmeType, 'ND'));
                     break;
                 case "ND_GRADUATED":
-                    levelCondition = eq(students.status, 'nd_graduated');
+                    levelCondition = eq(students.status, 'nd_graduant');
                     break;
                 case "HND 1":
                     levelCondition = and(eq(students.currentLevel, 1), eq(programmes.programmeType, 'HND'));
@@ -82,7 +82,7 @@ export async function getStudents(options: { search?: string, page?: number, pag
                     levelCondition = and(eq(students.currentLevel, 2), eq(programmes.programmeType, 'HND'));
                     break;
                 case "HND_GRADUATED":
-                    levelCondition = eq(students.status, 'hnd_graduated');
+                    levelCondition = eq(students.status, 'hnd_graduant');
                     break;
                 default:
                     if (!isNaN(Number(level))) {
