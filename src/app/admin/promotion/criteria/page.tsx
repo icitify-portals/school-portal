@@ -38,6 +38,7 @@ export default function CriteriaPage() {
     const [minCredits, setMinCredits] = useState(25);
     const [rules, setRules] = useState<Rule[]>([]);
     const [isDefault, setIsDefault] = useState(true);
+    const [allowAutoWithdraw, setAllowAutoWithdraw] = useState(false);
 
     useEffect(() => {
         getDepartmentsList().then(res => {
@@ -53,6 +54,7 @@ export default function CriteriaPage() {
             setMinCgpa(parseFloat(res.criteria.minCgpa || '1.00'));
             setMinCredits(res.criteria.minCreditsPerSession || 25);
             setRules(res.criteria.additionalRules || []);
+            setAllowAutoWithdraw((res.criteria as any).ruleFlags?.allowAutoWithdraw === true);
             setIsDefault(res.criteria.isDefault || false);
         }
     };
@@ -76,6 +78,7 @@ export default function CriteriaPage() {
             minCgpa,
             minCreditsPerSession: minCredits,
             additionalRules: rules,
+            ruleFlags: { allowAutoWithdraw },
         });
         if (res.success) {
             toast.success(res.message);
@@ -123,6 +126,39 @@ export default function CriteriaPage() {
                             <p className="text-xl font-black text-slate-900">&gt; 25</p>
                             <p className="text-[10px] text-slate-500">Below = Withdraw</p>
                         </div>
+                    </div>
+                </CardContent>
+            </Card>
+
+            {/* Withdrawal safety switch */}
+            <Card className={cn(
+                "border-none shadow-xl rounded-[2rem) bg-white",
+                allowAutoWithdraw ? "ring-2 ring-red-300" : "ring-2 ring-emerald-200"
+            )}>
+                <CardContent className="p-5 flex items-start gap-4">
+                    <div className={cn(
+                        "p-2.5 rounded-xl shrink-0",
+                        allowAutoWithdraw ? "bg-red-100" : "bg-emerald-100"
+                    )}>
+                        <Shield className={cn("w-5 h-5", allowAutoWithdraw ? "text-red-600" : "text-emerald-600")} />
+                    </div>
+                    <div className="flex-1">
+                        <label className="flex items-center gap-3 cursor-pointer">
+                            <input
+                                type="checkbox"
+                                checked={allowAutoWithdraw}
+                                onChange={e => setAllowAutoWithdraw(e.target.checked)}
+                                className="w-5 h-5 rounded border-slate-300"
+                            />
+                            <span className="text-xs font-black uppercase tracking-widest text-slate-700">
+                                Allow automatic withdrawal
+                            </span>
+                        </label>
+                        <p className="text-[11px] text-slate-500 font-medium mt-1.5">
+                            {allowAutoWithdraw
+                                ? "Students who have a published summary but fall below both the CGPA and credit minimums will be marked WITHDRAWN automatically. Leave this off while results are incomplete — students are then held for review instead."
+                                : "Recommended while results are incomplete. Students below the minimums are held for manual review and are never withdrawn automatically. Students with no summary at all are always held, regardless of this setting."}
+                        </p>
                     </div>
                 </CardContent>
             </Card>

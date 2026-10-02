@@ -100,7 +100,7 @@ export async function checkAndGenerateMatricNumber(studentId: number, tx: any) {
         if (student.programmeId) {
             const [prog] = await tx.select().from(programmes).where(eq(programmes.id, student.programmeId)).limit(1);
             if (prog) {
-                deptId = prog.departmentId || undefined;
+                deptId = prog.deptId || undefined;
             }
         } else {
             deptId = student.deptId || undefined;

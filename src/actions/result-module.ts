@@ -25,11 +25,150 @@ import {
   courseDepartmentSettings,
 } from "@/db/schema";
 import { eq, inArray, and, like, or, sql, isNotNull } from "drizzle-orm";
+
+/**
+ * A course code carries a single default unit count, but the same code can be
+ * offered with a different weight per department (e.g. `STA 111` is 3 units in
+ * Statistics and 2 units in Business Administration). Those per-department
+ * weights live in `course_department_settings.credit_units`; when the column
+ * is NULL the course default applies.
+ *
+ * Keyed by course + department + level, falling back to the course default.
+ */
+function creditUnitKey(courseId: number, deptId: number | null, level: number | null) {
+  return `${courseId}:${deptId ?? 0}:${level ?? 0}`;
+}
+
+/** Minimal shape needed to resolve a result row's effective credit units. */
+type BatchResultRowWithUnits = {
+  courseId: number;
+  creditLoad?: number | null;
+  student?: { deptId?: number | null; currentLevel?: number | null } | null;
+  course?: { creditUnits?: number | null } | null;
+  effectiveCreditUnits?: number | null;
+};
+
+async function loadCreditUnitOverrides(courseIds: number[]) {
+  const map = new Map<string, number>();
+  if (!courseIds.length) return map;
+
+  const rows = await db
+    .select({
+      courseId: courseDepartmentSettings.courseId,
+      deptId: courseDepartmentSettings.deptId,
+      level: courseDepartmentSettings.level,
+      creditUnits: courseDepartmentSettings.creditUnits,
+    })
+    .from(courseDepartmentSettings)
+    .where(
+      and(
+        inArray(courseDepartmentSettings.courseId, courseIds),
+        isNotNull(courseDepartmentSettings.creditUnits)
+      )
+    );
+
+  for (const r of rows) {
+    if (r.creditUnits == null || r.creditUnits <= 0) continue;
+    map.set(creditUnitKey(r.courseId, r.deptId, r.level), r.creditUnits);
+  }
+  return map;
+}
+import { buildCourseCodeIndex, normalizeCourseCode } from "@/lib/course-code";
 import {
   resolveGrade,
   publishResultBatch,
   getStudentTranscriptData,
 } from "@/services/results.service";
+
+type ResultRowInput = {
+  studentId: number;
+  courseId: number;
+  score: string;
+  grade: string;
+  gradePoint: string;
+  creditLoad: number;
+};
+
+/**
+ * Persist result rows idempotently.
+ *
+ * `student_results` has no unique index on (student_id, course_id, batch_id)
+ * and the uploader used to blind-insert, so re-uploading a CSV into the same
+ * batch duplicated every row and the batch page rendered the same course twice
+ * per student. This resolves each incoming row against what the batch already
+ * holds:
+ *   - not present  -> insert
+ *   - present      -> overwrite (default) or skip, per `mode`
+ *   - repeated twice within the same upload -> collapsed
+ */
+async function persistResultRows(
+  batchId: number,
+  rows: ResultRowInput[],
+  mode: "overwrite" | "skip" = "overwrite"
+) {
+  const summary = { inserted: 0, updated: 0, skipped: 0, existingDuplicates: 0 };
+  if (rows.length === 0) return summary;
+
+  const existing = await db
+    .select({
+      id: studentResults.id,
+      studentId: studentResults.studentId,
+      courseId: studentResults.courseId,
+    })
+    .from(studentResults)
+    .where(eq(studentResults.batchId, batchId));
+
+  const existingByKey = new Map<string, number>();
+  for (const row of existing) {
+    const key = `${row.studentId}:${row.courseId}`;
+    if (existingByKey.has(key)) {
+      summary.existingDuplicates++;
+      continue;
+    }
+    existingByKey.set(key, row.id);
+  }
+
+  const toInsert: ResultRowInput[] = [];
+  const updates: { id: number; values: ResultRowInput }[] = [];
+  const handled = new Set<string>();
+
+  for (const row of rows) {
+    const key = `${row.studentId}:${row.courseId}`;
+    if (handled.has(key)) {
+      summary.skipped++;
+      continue;
+    }
+    handled.add(key);
+
+    const existingId = existingByKey.get(key);
+    if (existingId === undefined) {
+      toInsert.push(row);
+    } else if (mode === "skip") {
+      summary.skipped++;
+    } else {
+      updates.push({ id: existingId, values: row });
+    }
+  }
+
+  if (toInsert.length > 0) {
+    await db.insert(studentResults).values(toInsert.map((row) => ({ ...row, batchId })));
+  }
+  for (const update of updates) {
+    await db
+      .update(studentResults)
+      .set({
+        score: update.values.score,
+        grade: update.values.grade,
+        gradePoint: update.values.gradePoint,
+        creditLoad: update.values.creditLoad,
+      })
+      .where(eq(studentResults.id, update.id));
+  }
+
+  summary.inserted = toInsert.length;
+  summary.updated = updates.length;
+  return summary;
+}
 
 // ──────────────────────────────────────────────
 // GRADING SCALES
@@ -153,7 +292,9 @@ export async function getBatchDetails(batchId: number) {
         studentResults: {
           with: {
             student: {
-              with: { user: true },
+              // `department` is required by the batch page's department filter,
+              // which was silently matching nothing because it was not loaded.
+              with: { user: true, department: true, programme: true },
             },
             course: true,
           },
@@ -172,6 +313,19 @@ export async function getBatchDetails(batchId: number) {
         columns: { id: true }
       });
       (batch as any).isStudentViewable = !!viewableTranscript;
+
+      // Resolve the department-specific unit weight for every result row so the
+      // CU column and GPA do not fall back to a single global course value.
+      const rows = (batch.studentResults ?? []) as BatchResultRowWithUnits[];
+      const courseIds = [
+        ...new Set(rows.map((r) => r.courseId).filter((id): id is number => typeof id === "number")),
+      ];
+      const overrides = await loadCreditUnitOverrides(courseIds);
+      for (const r of rows) {
+        const level = r.student?.currentLevel != null ? r.student.currentLevel * 100 : null;
+        const override = overrides.get(creditUnitKey(r.courseId, r.student?.deptId ?? null, level));
+        r.effectiveCreditUnits = override ?? r.course?.creditUnits ?? r.creditLoad ?? null;
+      }
     }
 
     return { success: true, data: batch };
@@ -270,17 +424,28 @@ export async function addSingleStudentResult(data: {
       data.score,
       data.gradingScaleRules
     );
-    await db.insert(studentResults).values({
-      studentId: data.studentId,
-      courseId: data.courseId,
-      batchId: data.batchId,
-      score: data.score.toString(),
-      grade,
-      gradePoint: gradePoint.toString(),
-      creditLoad: data.creditLoad,
+    const course = await db.query.courses.findFirst({
+      where: eq(courses.id, data.courseId),
+      columns: { creditUnits: true },
     });
+    if (!course) return { success: false, error: "Course not found" };
+
+    const summary = await persistResultRows(
+      data.batchId,
+      [
+        {
+          studentId: data.studentId,
+          courseId: data.courseId,
+          score: data.score.toString(),
+          grade,
+          gradePoint: gradePoint.toString(),
+          creditLoad: data.creditLoad > 0 ? data.creditLoad : course.creditUnits,
+        },
+      ],
+      "overwrite"
+    );
     revalidatePath(`/admin/result-module/${data.batchId}`);
-    return { success: true, grade, gradePoint };
+    return { success: true, grade, gradePoint, ...summary };
   } catch (e: any) {
     return { success: false, error: e.message };
   }
@@ -306,16 +471,15 @@ export async function addBulkResults(
       return {
         studentId: r.studentId,
         courseId: r.courseId,
-        batchId,
         score: r.score.toString(),
         grade,
         gradePoint: gradePoint.toString(),
         creditLoad: r.creditLoad,
       };
     });
-    await db.insert(studentResults).values(toInsert);
+    const summary = await persistResultRows(batchId, toInsert, "overwrite");
     revalidatePath(`/admin/result-module/${batchId}`);
-    return { success: true, count: toInsert.length };
+    return { success: true, count: toInsert.length, ...summary };
   } catch (e: any) {
     return { success: false, error: e.message };
   }
@@ -331,18 +495,15 @@ export async function addBulkResultsViaIdentifier(
   try {
     const allowed = await hasRole("admin") || await hasRole("superadmin") || await hasRole("registrar") || await hasRole("record_officer") || await hasPermission("result_module.manage");
     if (!allowed) return { success: false, error: "Unauthorized: record_officer or higher required" };
-    // Get course credit load (per-department override where available)
+    // Course credit units are the single source of truth.
+    // `courseDepartmentSettings.credit_units` is declared in the Drizzle schema
+    // but does not exist in the deployed table, so reading it here threw an
+    // "Unknown column" error on every upload.
     const course = await db.query.courses.findFirst({
-      where: eq(courses.id, courseId)
+      where: eq(courses.id, courseId),
+      columns: { id: true, creditUnits: true }
     });
     if (!course) throw new Error("Course not found");
-    const deptCreditOverrides = await db.select({
-      deptId: courseDepartmentSettings.deptId,
-      creditUnits: courseDepartmentSettings.creditUnits
-    })
-      .from(courseDepartmentSettings)
-      .where(eq(courseDepartmentSettings.courseId, courseId));
-    const creditByDept = new Map(deptCreditOverrides.map(d => [d.deptId, d.creditUnits]));
 
     // Get all students to map identifiers
     const allStudents = await db.query.students.findMany();
@@ -377,12 +538,11 @@ export async function addBulkResultsViaIdentifier(
       }
 
       const { grade, gradePoint } = resolveGrade(row.score, gradingScaleRules);
-      const creditLoad = creditByDept.get(student.deptId ?? -1) ?? course.creditUnits ?? 0;
+      const creditLoad = course.creditUnits;
 
       toInsert.push({
         studentId: student.id,
         courseId,
-        batchId,
         score: row.score.toString(),
         grade,
         gradePoint: gradePoint.toString(),
@@ -390,16 +550,15 @@ export async function addBulkResultsViaIdentifier(
       });
     }
 
-    if (toInsert.length > 0) {
-      await db.insert(studentResults).values(toInsert);
-    }
+    const summary = await persistResultRows(batchId, toInsert, "overwrite");
 
     revalidatePath(`/admin/result-module/${batchId}`);
     return { 
       success: true, 
       count: toInsert.length,
       errors,
-      createdStudents
+      createdStudents,
+      ...summary
     };
   } catch (e: any) {
     return { success: false, error: e.message };
@@ -734,6 +893,14 @@ export async function previewBulkImport(
       }
     }
 
+    // Resolve course codes so the preview can flag unknown codes and stored
+    // variants (e.g. a course stored as "STA 111\t") before the upload creates
+    // a duplicate row for it.
+    const previewCourses = await db.query.courses.findMany({
+      columns: { id: true, code: true, name: true, creditUnits: true, description: true },
+    });
+    const previewCourseIndex = buildCourseCodeIndex(previewCourses);
+
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
       const id = (row.identifier || '').trim();
@@ -745,6 +912,23 @@ export async function previewBulkImport(
 
       // Smart student matching
       const match = matchStudent(id, allStudents);
+
+      // Course resolution
+      const inputCode = normalizeCourseCode(row.courseCode);
+      const matchedCourse = previewCourseIndex.find(row.courseCode);
+      let courseNote: string | null = null;
+      if (!inputCode) {
+        errors.push(`Row ${i + 2}: Missing course code`);
+      } else if (!matchedCourse) {
+        courseNote = `Course '${row.courseCode}' does not exist yet — it will be created with 0 credit units, set them before publishing`;
+        warnings.push(`Row ${i + 2}: ${courseNote}`);
+      } else if (normalizeCourseCode(matchedCourse.code) !== inputCode) {
+        courseNote = `Course '${row.courseCode}' matched stored code '${matchedCourse.code}'`;
+        warnings.push(`Row ${i + 2}: ${courseNote}`);
+      }
+      if (matchedCourse && !matchedCourse.description) {
+        warnings.push(`Row ${i + 2}: Course '${matchedCourse.code}' has no description on record`);
+      }
 
       // Validate score
       const scoreValidation = validateScoreFn(row.score, 100);
@@ -764,6 +948,16 @@ export async function previewBulkImport(
         matchConfidence: match.confidence,
         matchStrategy: match.strategy,
         courseCode: row.courseCode,
+        matchedCourse: matchedCourse
+          ? {
+              id: matchedCourse.id,
+              code: matchedCourse.code,
+              name: matchedCourse.name,
+              creditUnits: matchedCourse.creditUnits,
+              hasDescription: !!matchedCourse.description,
+            }
+          : null,
+        courseNote,
         score: row.score,
         grade,
         gradePoint,
@@ -891,7 +1085,8 @@ export async function addMultiCourseBulkResults(
   rows: { identifier: string; courseCode: string; score: number }[],
   gradingScaleRules: string,
   autoCreateCourses: boolean = false,
-  autoCreateOptions?: { autoCreateForSession?: number; autoCreateDeptId?: number; autoCreateProgrammeId?: number }
+  autoCreateOptions?: { autoCreateForSession?: number; autoCreateDeptId?: number; autoCreateProgrammeId?: number },
+  duplicateMode: "overwrite" | "skip" = "overwrite"
 ) {
   try {
     const MAX_BATCH_SIZE = 1000;
@@ -907,17 +1102,14 @@ export async function addMultiCourseBulkResults(
 
     const allStudents = await db.query.students.findMany();
     const allCourses = await db.query.courses.findMany();
-    const allDeptCredits = await db.select({
-      courseId: courseDepartmentSettings.courseId,
-      deptId: courseDepartmentSettings.deptId,
-      creditUnits: courseDepartmentSettings.creditUnits
-    }).from(courseDepartmentSettings);
-    const deptCreditKey = (courseId: number, deptId: number | null) => `${courseId}:${deptId ?? -1}`;
-    const creditByCourseDept = new Map(allDeptCredits.map(d => [deptCreditKey(d.courseId, d.deptId), d.creditUnits]));
+    // Tolerant lookup: stored codes carry stray tabs/spaces ("STA 111\t"), so
+    // plain equality misses and used to trigger a duplicate auto-create.
+    let courseIndex = buildCourseCodeIndex(allCourses);
 
     const errors: string[] = [];
-    const toInsert: any[] = [];
-    const createdCourses: { code: string; id: number }[] = [];
+    const toInsert: ResultRowInput[] = [];
+    const createdCourses: { code: string; id: number; creditUnits: number }[] = [];
+    const unitlessCourses: string[] = [];
     let createdStudents = 0;
 
     for (let i = 0; i < rows.length; i++) {
@@ -948,31 +1140,37 @@ export async function addMultiCourseBulkResults(
         continue;
       }
 
-      let course = allCourses.find((c) => c.code.toUpperCase() === courseCode);
+      let course = courseIndex.find(courseCode);
       if (!course) {
         if (autoCreateCourses) {
-          const result = await db.insert(courses).values({
-            name: courseCode,
-            code: courseCode,
-            creditUnits: 3,
-          });
-          const courseId = (result as any)[0]?.insertId ?? (result as any).insertId;
-          allCourses.push({ id: courseId, code: courseCode, name: courseCode, creditUnits: 3 } as any);
-          createdCourses.push({ code: courseCode, id: courseId });
-          course = allCourses[allCourses.length - 1];
+          // Units are unknown at this point. Previously this invented 3 units,
+          // which is how 1-, 2- and 4-unit courses ended up stored as 3.
+          const newCourse = await db
+            .insert(courses)
+            .values({ name: courseCode, code: courseCode, creditUnits: 0 });
+          const courseId = (newCourse as any)[0]?.insertId ?? (newCourse as any).insertId;
+          const saved = await db.query.courses.findFirst({ where: eq(courses.id, courseId) });
+          if (!saved) {
+            errors.push(`Row ${i + 2}: Failed to create course '${courseCode}'`);
+            continue;
+          }
+          allCourses.push(saved as any);
+          courseIndex = buildCourseCodeIndex(allCourses);
+          createdCourses.push({ code: saved.code, id: saved.id, creditUnits: saved.creditUnits });
+          unitlessCourses.push(saved.code);
+          course = saved;
         } else {
           errors.push(`Row ${i + 2}: Course '${row.courseCode}' not found`);
           continue;
         }
       }
 
-      const creditLoad = creditByCourseDept.get(deptCreditKey(course.id, student.deptId ?? null)) ?? course.creditUnits ?? 3;
+      const creditLoad = course.creditUnits;
       const { grade, gradePoint } = resolveGrade(row.score, gradingScaleRules);
 
       toInsert.push({
         studentId: student.id,
         courseId: course.id,
-        batchId,
         score: row.score.toString(),
         grade,
         gradePoint: gradePoint.toString(),
@@ -980,9 +1178,7 @@ export async function addMultiCourseBulkResults(
       });
     }
 
-    if (toInsert.length > 0) {
-      await db.insert(studentResults).values(toInsert);
-    }
+    const summary = await persistResultRows(batchId, toInsert, duplicateMode);
 
     revalidatePath(`/admin/result-module/${batchId}`);
     return {
@@ -990,7 +1186,9 @@ export async function addMultiCourseBulkResults(
       count: toInsert.length,
       errors: errors.length > 0 ? errors : undefined,
       createdCourses,
+      unitlessCourses: unitlessCourses.length > 0 ? unitlessCourses : undefined,
       createdStudents,
+      ...summary,
     };
   } catch (e: any) {
     return { success: false, error: e.message };

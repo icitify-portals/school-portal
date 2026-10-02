@@ -5,6 +5,7 @@
 
 import { parseMatric, validateScore } from './matric-parser';
 import { matchStudent, StudentRecord, batchMatchStudents } from './student-matcher';
+import { normalizeCourseCode } from './course-code';
 
 export interface CsvRow {
   matric_number: string;
@@ -68,7 +69,8 @@ function detectAnomalies(
   rows: CsvRow[],
   courseColumns: string[],
   students: StudentRecord[],
-  existingResults?: { studentId: number; courseId: number }[]
+  existingResults?: { studentId: number; courseId: number }[],
+  courseIdByCode?: Map<string, number>
 ): Anomaly[] {
   const anomalies: Anomaly[] = [];
   const seenIdentifiers = new Map<string, number[]>();
@@ -160,6 +162,8 @@ function detectAnomalies(
 
   // Check for duplicate results across existing batches
   if (existingResults) {
+    const resultKeys = new Set(existingResults.map(r => `${r.studentId}:${r.courseId}`));
+
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
       const student = students.find(
@@ -167,18 +171,31 @@ function detectAnomalies(
       );
       if (!student) continue;
 
+      let flagged = false;
       for (const cc of courseColumns) {
         if (row[cc] === undefined || row[cc] === '' || isNaN(Number(row[cc]))) continue;
-        // This is a simplified check - in production, you'd query the DB
-        const exists = existingResults.some(
-          r => r.studentId === student.id
-        );
-        if (exists) {
+
+        // A duplicate is the same student AND the same course. Comparing only
+        // the student flagged every course column of every returning student.
+        const courseId = courseIdByCode?.get(normalizeCourseCode(cc));
+        if (courseId === undefined) {
+          if (flagged) continue;
+          flagged = true;
           anomalies.push({
             type: 'duplicate_across_batches',
             row: i + 2,
-            message: `Student ${student.matricNumber} may already have results in another batch`,
+            message: `Student ${student.matricNumber} already has results in another batch`,
             details: { studentId: student.id, studentName: student.name },
+          });
+          continue;
+        }
+
+        if (resultKeys.has(`${student.id}:${courseId}`)) {
+          anomalies.push({
+            type: 'duplicate_across_batches',
+            row: i + 2,
+            message: `${student.matricNumber} already has a result for ${cc} in another batch`,
+            details: { studentId: student.id, studentName: student.name, courseId, courseCode: cc },
           });
         }
       }
@@ -247,6 +264,7 @@ export async function validateCsvImport(
   options?: {
     existingResults?: { studentId: number; courseId: number }[];
     gradingScaleRules?: string;
+    courseIdByCode?: Map<string, number>;
   }
 ): Promise<ValidationResult> {
   const errors: CsvError[] = [];
@@ -277,7 +295,7 @@ export async function validateCsvImport(
   });
 
   // ─── Detect anomalies ───
-  const anomalies = detectAnomalies(rows, courseColumns, students, options?.existingResults);
+  const anomalies = detectAnomalies(rows, courseColumns, students, options?.existingResults, options?.courseIdByCode);
 
   // ─── Batch match students ───
   const matchInput = rows.map((row, i) => ({
