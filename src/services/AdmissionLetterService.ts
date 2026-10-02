@@ -124,7 +124,16 @@ export class AdmissionLetterService {
         const acceptanceFeeAmount = Math.round(parseFloat(formTemplate.acceptanceFee || "0") || 0);
         const acceptanceFee = acceptanceFeeAmount.toLocaleString('en-NG');
         const acceptanceFeeWords = `${nlngToWords(acceptanceFeeAmount)} naira`;
-        
+
+        // Fixed-width flex child of the letterhead row, so the photo adds no page height.
+        // Emitted with its frame so no empty box is left when a candidate has no photo.
+        const applicantPhoto = application[0].application.applicantPhoto;
+        const applicantPhotoHtml = applicantPhoto
+            ? `<div style="flex:0 0 auto;width:92px;height:110px;border:1px solid #cbd5e1;overflow:hidden;background:#f8fafc;line-height:0;">
+                   <img src="${applicantPhoto}" alt="Applicant Photo" style="width:100%;height:100%;object-fit:cover;object-position:center top;display:block;" />
+               </div>`
+            : '';
+
         let html = template[0].templateHtml;
         const replacements: Record<string, string> = {
             '{{candidate_name}}': candidate.name,
@@ -144,19 +153,13 @@ export class AdmissionLetterService {
             '{{resumption_date}}': `6th October, ${admissionYearString}`,
             '{{lecture_start_date}}': `13th October, ${admissionYearString}`,
             '{{acceptance_fee}}': acceptanceFee,
-            '{{acceptance_fee_words}}': acceptanceFeeWords
+            '{{acceptance_fee_words}}': acceptanceFeeWords,
+            '{{applicant_photo}}': applicantPhotoHtml
         };
 
         for (const [key, value] of Object.entries(replacements)) {
             html = html.replace(new RegExp(key, 'g'), value);
         }
-
-        const applicantPhoto = application[0].application.applicantPhoto;
-        const applicantPhotoHtml = applicantPhoto ? `
-            <div class="absolute top-0 right-0 w-32 h-32 md:w-40 md:h-40 border-4 border-slate-200 shadow-sm overflow-hidden bg-slate-50">
-                <img src="${applicantPhoto}" alt="Applicant Photo" class="w-full h-full object-cover" />
-            </div>
-        ` : '';
 
         return {
             html: html,
