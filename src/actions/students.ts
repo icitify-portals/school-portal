@@ -3,7 +3,7 @@
 
 import { db } from "@/db/db";
 import { users, students, programmes, userRoles, roles, courses, enrollments, quizAttempts, quizResponses, quizQuestions, lessonNotes, quizzes, staffProfiles, departments, systemAuditLogs, academicSessions } from "@/db/schema";
-import { eq, inArray, sql, or, like, and, desc, isNull, alias } from "drizzle-orm";
+import { eq, inArray, sql, or, like, and, desc, isNull, aliasedTable } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
 import { auth } from "@/auth";
@@ -137,7 +137,7 @@ export async function getStudents(options: { search?: string, page?: number, pag
 
         // 2. Fetch paginated data. academic_sessions is joined twice (current +
         // admission), so the second join needs an alias to be addressable.
-        const admissionSession = alias(academicSessions, "admission_session");
+        const admissionSession = aliasedTable(academicSessions, "admission_session");
 
         const studentRows = await db.select({
             student: students,
