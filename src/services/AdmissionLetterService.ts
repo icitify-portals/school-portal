@@ -127,7 +127,12 @@ export class AdmissionLetterService {
 
         // Fixed-width flex child of the letterhead row, so the photo adds no page height.
         // Emitted with its frame so no empty box is left when a candidate has no photo.
-        const applicantPhoto = application[0].application.applicantPhoto;
+        // admission_applications_v2.applicant_photo is not populated by the current upload
+        // flow, so fall back to the student/user image, which is where photos actually live.
+        const applicantPhoto =
+            application[0].application.applicantPhoto
+            || student.imageUrl
+            || candidate.imageUrl;
         const applicantPhotoHtml = applicantPhoto
             ? `<div style="flex:0 0 auto;width:92px;height:110px;border:1px solid #cbd5e1;overflow:hidden;background:#f8fafc;line-height:0;">
                    <img src="${applicantPhoto}" alt="Applicant Photo" style="width:100%;height:100%;object-fit:cover;object-position:center top;display:block;" />
