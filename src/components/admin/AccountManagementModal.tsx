@@ -24,7 +24,7 @@ import {
     ShieldCheck
 } from "lucide-react";
 import { resetUserPassword, updateUserStatus, verifyUserEmailManually, updateUserBaseRole } from "@/actions/user-actions";
-import { getAllRoles, assignRoleToUser, removeRoleFromUser } from "@/actions/rbac";
+import { getAllRoles, assignRoleToUser, removeRoleFromUser, canManageRoles } from "@/actions/rbac";
 import { cn } from "@/lib/utils";
 
 interface AccountManagementModalProps {
@@ -46,6 +46,7 @@ export function AccountManagementModal({ user, onClose, onUpdate }: AccountManag
     const [newPassword, setNewPassword] = useState("");
     const [allRoles, setAllRoles] = useState<any[]>([]);
     const [userRoles, setUserRoles] = useState<any[]>([]);
+    const [canManage, setCanManage] = useState(false);
 
     useEffect(() => {
         if (user) {
@@ -57,6 +58,10 @@ export function AccountManagementModal({ user, onClose, onUpdate }: AccountManag
         setLoading(true);
         const roles = await getAllRoles();
         setAllRoles(roles);
+        
+        const hasAccess = await canManageRoles();
+        setCanManage(hasAccess);
+        
         // If the user object doesn't have roles, we might need a separate fetch, 
         // but for now we assume it's passed or handled via rbac actions directly.
         setLoading(false);
@@ -64,9 +69,9 @@ export function AccountManagementModal({ user, onClose, onUpdate }: AccountManag
 
     if (!user) return null;
 
-    const handleResetPassword = async () => {
+    const handleResetPassword = async (override?: string) => {
         setActionLoading("password");
-        const res = await resetUserPassword(user.id, newPassword);
+        const res = await resetUserPassword(user.id, override !== undefined ? override : newPassword);
         if (res.success) {
             alert(res.message);
             setNewPassword("");
@@ -180,9 +185,23 @@ export function AccountManagementModal({ user, onClose, onUpdate }: AccountManag
 
                     {/* Password Reset Section */}
                     <div className="space-y-4">
-                        <div className="flex items-center gap-2 text-slate-900">
-                            <Lock className="w-4 h-4 text-indigo-600" />
-                            <h3 className="font-black uppercase text-[10px] tracking-[0.2em]">Reset Password</h3>
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2 text-slate-900">
+                                <Lock className="w-4 h-4 text-indigo-600" />
+                                <h3 className="font-black uppercase text-[10px] tracking-[0.2em]">Reset Password</h3>
+                            </div>
+                            <Button 
+                                onClick={() => {
+                                    if (!confirm(`Reset ${user.name}'s password to the default "welcome123"?`)) return;
+                                    setNewPassword("");
+                                    handleResetPassword("");
+                                }}
+                                disabled={actionLoading === "password"}
+                                variant="outline"
+                                className="h-8 px-3 rounded-lg border-indigo-200 text-indigo-600 hover:bg-indigo-50 font-bold text-[10px] uppercase"
+                            >
+                                Reset to welcome123
+                            </Button>
                         </div>
                         <div className="flex gap-2">
                             <Input 
@@ -192,7 +211,7 @@ export function AccountManagementModal({ user, onClose, onUpdate }: AccountManag
                                 className="h-11 rounded-xl bg-slate-50 border-slate-100 text-sm font-medium focus:ring-2 focus:ring-indigo-500 transition-all"
                             />
                             <Button 
-                                onClick={handleResetPassword}
+                                onClick={() => handleResetPassword()}
                                 disabled={actionLoading === "password"}
                                 className="h-11 px-6 rounded-xl bg-slate-900 hover:bg-black font-black uppercase text-[10px] tracking-widest gap-2 shadow-lg shrink-0"
                             >
@@ -203,73 +222,77 @@ export function AccountManagementModal({ user, onClose, onUpdate }: AccountManag
                     </div>
 
                     {/* Role Management */}
-                    <div className="space-y-4">
-                        <div className="flex items-center gap-2 text-slate-900 border-b border-slate-100 pb-2">
-                            <Shield className="w-4 h-4 text-indigo-600" />
-                            <h3 className="font-black uppercase text-[10px] tracking-[0.2em]">Assign Granular Roles</h3>
-                        </div>
-                        <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
-                            {loading ? (
-                                <div className="w-full py-8 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-slate-300" /></div>
-                            ) : allRoles.map((role) => {
-                                // This is tricky because the user object passed might not have granular roles list
-                                // For now, we'll check user.role (top level) or wait for a better user object
-                                const isAssigned = user.role === role.name.toLowerCase() || (user as any).userRoles?.some((ur: any) => ur.roleId === role.id);
-                                return (
-                                    <button
-                                        key={role.id}
-                                        onClick={() => handleToggleRole(role.id, isAssigned)}
-                                        disabled={actionLoading?.startsWith('role-')}
-                                        className={cn(
-                                            "px-3 py-2 rounded-xl text-[10px] font-bold text-center border transition-all flex items-center gap-2",
-                                            isAssigned
-                                                ? "bg-indigo-600 border-indigo-600 text-white shadow-md"
-                                                : "bg-white border-slate-200 text-slate-500 hover:border-indigo-300 hover:text-indigo-600"
-                                        )}
-                                    >
-                                        {actionLoading === `role-${role.id}` ? <Loader2 className="w-3 h-3 animate-spin" /> : <Shield className="w-3 h-3" />}
-                                        {role.name}
-                                    </button>
-                                );
-                            })}
-                        </div>
-                    </div>
+                    {canManage && (
+                        <>
+                            <div className="space-y-4">
+                                <div className="flex items-center gap-2 text-slate-900 border-b border-slate-100 pb-2">
+                                    <Shield className="w-4 h-4 text-indigo-600" />
+                                    <h3 className="font-black uppercase text-[10px] tracking-[0.2em]">Assign Granular Roles</h3>
+                                </div>
+                                <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
+                                    {loading ? (
+                                        <div className="w-full py-8 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-slate-300" /></div>
+                                    ) : allRoles.map((role) => {
+                                        // This is tricky because the user object passed might not have granular roles list
+                                        // For now, we'll check user.role (top level) or wait for a better user object
+                                        const isAssigned = user.role === role.name.toLowerCase() || (user as any).userRoles?.some((ur: any) => ur.roleId === role.id);
+                                        return (
+                                            <button
+                                                key={role.id}
+                                                onClick={() => handleToggleRole(role.id, isAssigned)}
+                                                disabled={actionLoading?.startsWith('role-')}
+                                                className={cn(
+                                                    "px-3 py-2 rounded-xl text-[10px] font-bold text-center border transition-all flex items-center gap-2",
+                                                    isAssigned
+                                                        ? "bg-indigo-600 border-indigo-600 text-white shadow-md"
+                                                        : "bg-white border-slate-200 text-slate-500 hover:border-indigo-300 hover:text-indigo-600"
+                                                )}
+                                            >
+                                                {actionLoading === `role-${role.id}` ? <Loader2 className="w-3 h-3 animate-spin" /> : <Shield className="w-3 h-3" />}
+                                                {role.name}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
 
-                    {/* Base Role Management */}
-                    <div className="space-y-4">
-                        <div className="flex items-center gap-2 text-slate-900 border-b border-slate-100 pb-2">
-                            <UserCheck className="w-4 h-4 text-indigo-600" />
-                            <h3 className="font-black uppercase text-[10px] tracking-[0.2em]">Change Primary Role</h3>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <select 
-                                className="h-11 rounded-xl bg-slate-50 border-slate-100 text-sm font-medium focus:ring-2 focus:ring-indigo-500 px-4 w-full"
-                                value={user.role}
-                                onChange={async (e) => {
-                                    const newRole = e.target.value as 'applicant' | 'student' | 'staff' | 'admin';
-                                    if (confirm(`Are you sure you want to change this user's primary role to ${newRole}?`)) {
-                                        setActionLoading("baseRole");
-                                        const res = await updateUserBaseRole(user.id, newRole);
-                                        if (res.success) {
-                                            alert(res.message);
-                                            onUpdate?.();
-                                        } else {
-                                            alert(res.error);
-                                        }
-                                        setActionLoading(null);
-                                    }
-                                }}
-                                disabled={actionLoading === "baseRole"}
-                            >
-                                <option value="applicant">Applicant</option>
-                                <option value="student">Student</option>
-                                <option value="staff">Staff</option>
-                                <option value="admin">Admin</option>
-                            </select>
-                            {actionLoading === "baseRole" && <Loader2 className="w-5 h-5 animate-spin text-indigo-500" />}
-                        </div>
-                        <p className="text-[10px] text-slate-400 font-medium italic">Changes user dashboard layout and permissions.</p>
-                    </div>
+                            {/* Base Role Management */}
+                            <div className="space-y-4">
+                                <div className="flex items-center gap-2 text-slate-900 border-b border-slate-100 pb-2">
+                                    <UserCheck className="w-4 h-4 text-indigo-600" />
+                                    <h3 className="font-black uppercase text-[10px] tracking-[0.2em]">Change Primary Role</h3>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <select 
+                                        className="h-11 rounded-xl bg-slate-50 border-slate-100 text-sm font-medium focus:ring-2 focus:ring-indigo-500 px-4 w-full"
+                                        value={user.role}
+                                        onChange={async (e) => {
+                                            const newRole = e.target.value as 'applicant' | 'student' | 'staff' | 'admin';
+                                            if (confirm(`Are you sure you want to change this user's primary role to ${newRole}?`)) {
+                                                setActionLoading("baseRole");
+                                                const res = await updateUserBaseRole(user.id, newRole);
+                                                if (res.success) {
+                                                    alert(res.message);
+                                                    onUpdate?.();
+                                                } else {
+                                                    alert(res.error);
+                                                }
+                                                setActionLoading(null);
+                                            }
+                                        }}
+                                        disabled={actionLoading === "baseRole"}
+                                    >
+                                        <option value="applicant">Applicant</option>
+                                        <option value="student">Student</option>
+                                        <option value="staff">Staff</option>
+                                        <option value="admin">Admin</option>
+                                    </select>
+                                    {actionLoading === "baseRole" && <Loader2 className="w-5 h-5 animate-spin text-indigo-500" />}
+                                </div>
+                                <p className="text-[10px] text-slate-400 font-medium italic">Changes user dashboard layout and permissions.</p>
+                            </div>
+                        </>
+                    )}
 
                     {/* Meta Info / Footer Action */}
                     <div className="pt-4 border-t border-slate-100 flex justify-between items-center">

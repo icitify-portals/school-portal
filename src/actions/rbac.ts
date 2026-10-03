@@ -8,6 +8,12 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 
 // --- Role Management ---
+export async function canManageRoles() {
+    const session = await auth();
+    const actorRole = (session?.user as any)?.role?.toLowerCase() || "";
+    return ['superadmin', 'admin', 'dvc', 'bursar', 'registrar'].includes(actorRole);
+}
+
 export async function getAllRoles() {
     try {
         const allRoles = await db.select().from(roles);

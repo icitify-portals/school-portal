@@ -5,6 +5,7 @@ import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Users, CheckCircle, Loader2, Search, FileUp, X, FileText, ShieldAlert, QrCode } from "lucide-react";
+import { getDepartments } from "@/actions/departments";
 import { getStudents, approveStudent, bulkImportStudents, toggleFinancialLock, getStudentSessionOptions } from "@/actions/students";
 import { impersonateUser } from "@/actions/impersonation";
 import { generateIdentityQRCodeAction } from "@/actions/utility-actions";
@@ -29,6 +30,7 @@ function StudentsPageContent() {
     const [totalCount, setTotalCount] = useState(0);
     const [loading, setLoading] = useState(true);
     const [sessions, setSessions] = useState<any[]>([]);
+    const [departmentsList, setDepartmentsList] = useState<any[]>([]);
     const [unassignedCount, setUnassignedCount] = useState(0);
     const [showImporter, setShowImporter] = useState(false);
     const [selectedUser, setSelectedUser] = useState<any | null>(null);
@@ -44,6 +46,7 @@ function StudentsPageContent() {
     const level = levelParam || undefined;
     const sessionParam = searchParams.get("session") || undefined;
     const semesterParam = searchParams.get("semester") || undefined;
+    const deptIdParam = searchParams.get("deptId") || undefined;
 
     const levels = isK12 
         ? [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
@@ -51,13 +54,13 @@ function StudentsPageContent() {
 
     const fetchStudents = useCallback(async () => {
         setLoading(true);
-        const res = await getStudents({ search, page, pageSize, level, sessionId: sessionParam, semester: semesterParam });
+        const res = await getStudents({ search, page, pageSize, level, sessionId: sessionParam, semester: semesterParam, departmentId: deptIdParam ? parseInt(deptIdParam) : undefined });
         if (res.success) {
             setStudents(res.data);
             setTotalCount(res.totalCount);
         }
         setLoading(false);
-    }, [search, page, pageSize, level, sessionParam, semesterParam]);
+    }, [search, page, pageSize, level, sessionParam, semesterParam, deptIdParam]);
 
     useEffect(() => {
         fetchStudents();
@@ -65,7 +68,8 @@ function StudentsPageContent() {
 
     useEffect(() => {
         (async () => {
-            const res = await getStudentSessionOptions();
+            const [res, deptRes] = await Promise.all([getStudentSessionOptions(), getDepartments()]);
+            if (deptRes.success) { setDepartmentsList(deptRes.data); }
             if (res.success) {
                 setSessions(res.sessions);
                 setUnassignedCount(res.unassignedCount);
@@ -101,6 +105,17 @@ function StudentsPageContent() {
             params.set("session", value);
         } else {
             params.delete("session");
+        }
+        params.set("page", "1");
+        router.push(`${pathname}?${params.toString()}`);
+    };
+
+    const handleDepartmentChange = (value: string) => {
+        const params = new URLSearchParams(searchParams);
+        if (value) {
+            params.set("deptId", value);
+        } else {
+            params.delete("deptId");
         }
         params.set("page", "1");
         router.push(`${pathname}?${params.toString()}`);
@@ -212,6 +227,17 @@ function StudentsPageContent() {
                         <option value="">All Semesters</option>
                         <option value="1">1st Semester</option>
                         <option value="2">2nd Semester</option>
+                    </select>
+
+                    <select
+                        className="px-3 h-10 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white shadow-sm text-xs font-bold uppercase tracking-wider text-slate-700 cursor-pointer"
+                        value={deptIdParam || ""}
+                        onChange={(e) => handleDepartmentChange(e.target.value)}
+                    >
+                        <option value="">All Departments</option>
+                        {departmentsList.map((d) => (
+                            <option key={d.id} value={d.id.toString()}>{d.name}</option>
+                        ))}
                     </select>
 
                       <div className="relative w-full md:w-64">

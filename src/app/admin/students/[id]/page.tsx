@@ -36,7 +36,13 @@ export default function StudentDetailsPage() {
             phone: student.user?.phone || '',
             nin: student.nin || '',
             jambNumber: student.jambNumber || '',
-            matricNumber: student.matricNumber || ''
+            matricNumber: student.matricNumber || '',
+            dob: (() => {
+                if (!student.dob) return '';
+                const d = new Date(student.dob);
+                return isNaN(d.getTime()) ? '' : d.toISOString().slice(0, 10);
+            })(),
+            gender: student.gender || ''
         });
         setEditOpen(true);
     };
@@ -269,6 +275,24 @@ export default function StudentDetailsPage() {
                         <div className="space-y-2">
                             <Label>NIN</Label>
                             <Input value={editData.nin || ''} onChange={e => setEditData({...editData, nin: e.target.value})} />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label>Date of Birth</Label>
+                                <Input type="date" value={editData.dob || ''} onChange={e => setEditData({...editData, dob: e.target.value})} />
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Gender</Label>
+                                <select
+                                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                                    value={editData.gender || ''}
+                                    onChange={e => setEditData({...editData, gender: e.target.value})}
+                                >
+                                    <option value="">— Select —</option>
+                                    <option value="male">Male</option>
+                                    <option value="female">Female</option>
+                                </select>
+                            </div>
                         </div>
                     </div>
                     <div className="flex justify-end gap-3 mt-4">

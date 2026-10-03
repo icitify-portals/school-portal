@@ -662,6 +662,11 @@ export async function updateAdminStudentProfile(studentId: number, updatePayload
         if (updatePayload.jambNumber !== undefined) studentUpdates.jambNumber = newJamb;
         if (updatePayload.matricNumber !== undefined) studentUpdates.matricNumber = newMatric;
         if (updatePayload.nin !== undefined) studentUpdates.nin = newNin;
+        if (updatePayload.dob !== undefined) studentUpdates.dob = normValue(updatePayload.dob);
+        if (updatePayload.gender !== undefined) {
+            const g = (updatePayload.gender || '').toString().toLowerCase().trim();
+            studentUpdates.gender = ['male', 'female', 'other'].includes(g) ? g : null;
+        }
         
         if (Object.keys(studentUpdates).length > 0) {
             await db.update(students).set(studentUpdates).where(eq(students.id, studentId));

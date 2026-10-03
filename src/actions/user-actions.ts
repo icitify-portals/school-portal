@@ -174,12 +174,21 @@ export async function resetUserPassword(userId: number, newPassword?: string) {
             return { success: false, error: "Unauthorized access to reset password." };
         }
 
+        // Limited roles may only reset learner/applicant accounts — never staff or admin accounts.
+        if (['admission_officer', 'hod', 'dean'].includes(actorRole)) {
+            const [target] = await db.select({ role: users.role }).from(users).where(eq(users.id, userId)).limit(1);
+            const targetRole = (target?.role || '').toString().toLowerCase();
+            if (!['student', 'applicant', 'fresher'].includes(targetRole)) {
+                return { success: false, error: "You can only reset passwords for student or applicant accounts." };
+            }
+        }
+
         const passwordToSet = newPassword || "welcome123";
         const passwordHash = await bcrypt.hash(passwordToSet, 10);
 
         await db.update(users).set({
             password: passwordHash,
-            requiresPasswordChange: false,
+            requiresPasswordChange: true, // user must pick their own password at next login
             failedLoginAttempts: 0,
             lockoutUntil: null
         }).where(eq(users.id, userId));
