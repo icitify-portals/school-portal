@@ -95,7 +95,7 @@ export default async function CourseGradingPage(props: PageProps) {
                         <ScoreEntry
                             courseId={courseId}
                             sessionId={currentSession.id}
-                            semester={(course as any).semester as '1' | '2'}
+                            semester={(currentSession.currentSemester || '1') as '1' | '2'}
                             students={studentGrades}
                         />
                     </TabsContent>
