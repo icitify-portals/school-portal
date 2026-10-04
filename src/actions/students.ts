@@ -102,7 +102,16 @@ export async function getStudents(options: { search?: string, page?: number, pag
         if (sessionId === "unassigned") {
             sessionCondition = isNull(students.currentSessionId);
         } else if (sessionId && !isNaN(Number(sessionId))) {
-            sessionCondition = eq(students.currentSessionId, Number(sessionId));
+            const sid = Number(sessionId);
+            // Match students whose current session is this session, OR who have an enrollment in this session
+            const hasEnrollmentsQuery = db.select({ studentId: enrollments.studentId })
+                .from(enrollments)
+                .where(eq(enrollments.sessionId, sid));
+            
+            sessionCondition = or(
+                eq(students.currentSessionId, sid),
+                inArray(students.id, hasEnrollmentsQuery)
+            );
         }
 
         const semesterCondition = semester && !isNaN(Number(semester))
@@ -205,11 +214,14 @@ export async function getStudentSessionOptions() {
                    COALESCE(s.status, '')  AS status,
                    s.is_current,
                    s.start_date,
-                   COUNT(st.id) AS student_count
+                   (
+                       SELECT COUNT(DISTINCT id)
+                       FROM students
+                       WHERE (current_session_id = s.id 
+                              OR id IN (SELECT student_id FROM enrollments WHERE session_id = s.id))
+                         AND deleted_at IS NULL
+                   ) AS student_count
             FROM academic_sessions s
-            LEFT JOIN students st
-                   ON st.current_session_id = s.id AND st.deleted_at IS NULL
-            GROUP BY s.id, s.name, s.status, s.is_current, s.start_date
             ORDER BY s.is_current DESC, s.id DESC
         `) as unknown as [Array<Record<string, any>>];
 
