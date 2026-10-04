@@ -198,7 +198,7 @@ export default async function StudentDashboard() {
         },
         { 
             name: "Previous Payments", 
-            value: "₦" + parseFloat(statsData?.legacyBalance || "0.00").toLocaleString(), 
+            value: "\u20A6" + parseFloat(statsData?.legacyBalance || "0.00").toLocaleString(), 
             desc: "Historical school payments", 
             icon: Receipt, 
             color: "text-slate-600", 
@@ -206,7 +206,7 @@ export default async function StudentDashboard() {
         },
         { 
             name: "Wallet Balance", 
-            value: "₦" + parseFloat(statsData?.walletBalance || "0.00").toLocaleString(), 
+            value: "\u20A6" + parseFloat(statsData?.walletBalance || "0.00").toLocaleString(), 
             desc: "Available spendable funds", 
             icon: Wallet, 
             color: "text-purple-600", 
