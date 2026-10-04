@@ -11,7 +11,6 @@ import { impersonateUser } from "@/actions/impersonation";
 import { generateIdentityQRCodeAction } from "@/actions/utility-actions";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { UniversalImporter } from "@/components/UniversalImporter";
-import { StudentSeeder } from "@/components/StudentSeeder";
 import { DataTablePagination } from "@/components/DataTablePagination";
 import { Suspense } from "react";
 import { AccountManagementModal } from "@/components/admin/AccountManagementModal";
@@ -276,9 +275,7 @@ function StudentsPageContent() {
                 </div>
             )}
 
-            <div className="mb-8">
-                <StudentSeeder />
-            </div>
+
 
             <Card className="border-none shadow-sm overflow-hidden flex flex-col">
                 <DataTablePagination

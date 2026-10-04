@@ -199,7 +199,7 @@ export async function getStudentSessionOptions() {
             || await hasRole("admission_officer");
         if (!allowed) return { success: false, error: "Access denied", sessions: [] };
 
-        const rows = await db.execute(sql`
+        const [rows] = await db.execute(sql`
             SELECT s.id,
                    s.name,
                    COALESCE(s.status, '')  AS status,
@@ -211,12 +211,12 @@ export async function getStudentSessionOptions() {
                    ON st.current_session_id = s.id AND st.deleted_at IS NULL
             GROUP BY s.id, s.name, s.status, s.is_current, s.start_date
             ORDER BY s.is_current DESC, s.id DESC
-        `) as unknown as Array<Record<string, any>>;
+        `) as unknown as [Array<Record<string, any>>];
 
-        const unassigned = await db.execute(sql`
+        const [unassigned] = await db.execute(sql`
             SELECT COUNT(*) AS c FROM students
             WHERE current_session_id IS NULL AND deleted_at IS NULL
-        `) as unknown as Array<Record<string, any>>;
+        `) as unknown as [Array<Record<string, any>>];
 
         return {
             success: true,
