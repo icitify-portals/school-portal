@@ -23,7 +23,7 @@ function StudentsPageContent() {
     const pathname = usePathname();
     const searchParams = useSearchParams();
     const { isK12 } = useBranch();
-    const settings = { base_currency: "₦" };
+    const settings = { base_currency: "\u20A6" };
 
     const [students, setStudents] = useState<any[]>([]);
     const [totalCount, setTotalCount] = useState(0);
@@ -213,7 +213,7 @@ function StudentsPageContent() {
                             <option key={s.id} value={s.id.toString()}>
                                 {s.name}
                                 {s.isCurrent ? " (Current)" : s.status === "archived" ? " (Archived)" : ""}
-                                {` â€” ${(s.studentCount || 0).toLocaleString()}`}
+                                {` - ${(s.studentCount || 0).toLocaleString()}`}
                             </option>
                         ))}
                     </select>
@@ -358,7 +358,7 @@ function StudentsPageContent() {
                                             <span className="text-sm text-slate-600">{s.programme?.name || 'Not Assigned'}</span>
                                         </td>
                                         <td className="px-6 py-4">
-                                            <span className="text-sm font-bold text-slate-700">{settings?.base_currency || "₦"}{parseFloat(s.digitalWalletBalance || '0').toLocaleString()}</span>
+                                            <span className="text-sm font-bold text-slate-700">{settings?.base_currency || "\u20A6"}{parseFloat(s.digitalWalletBalance || '0').toLocaleString()}</span>
                                         </td>
                                         <td className="px-6 py-4">
                                             <Button
