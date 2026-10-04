@@ -557,6 +557,18 @@ export class SplitPaymentEngine {
             console.log("Gateway Override: Enforcing Remita for Tuition bill.");
         }
 
+        const isAlatpayRequired = billItemRows.some(bi => 
+            bi.feeItem?.name?.includes('Certificate') || 
+            bi.feeItem?.name?.includes('Convocation') || 
+            bi.feeItem?.name?.includes('Incidental') || 
+            bi.feeItem?.name?.includes('ICT') || 
+            bi.feeItem?.name?.includes('Course Form')
+        );
+        if (isAlatpayRequired && !isTuitionFee) {
+            activeGateway = 'alatpay';
+            console.log("Gateway Override: Enforcing Alatpay for Ancillary/Graduation fees.");
+        }
+
         const billTotal = parseFloat(billWithItems.totalAmount);
         if (billTotal <= 0) {
             return { success: false, reference: "", error: "Invalid bill amount." };
