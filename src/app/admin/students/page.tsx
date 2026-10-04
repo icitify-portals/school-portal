@@ -14,6 +14,7 @@ import { UniversalImporter } from "@/components/UniversalImporter";
 import { DataTablePagination } from "@/components/DataTablePagination";
 import { Suspense } from "react";
 import { AccountManagementModal } from "@/components/admin/AccountManagementModal";
+import { BulkPlacementModal } from "@/components/admin/BulkPlacementModal";
 import Link from "next/link";
 
 import { useBranch } from "@/providers/BranchProvider";
@@ -33,6 +34,9 @@ function StudentsPageContent() {
     const [unassignedCount, setUnassignedCount] = useState(0);
     const [showImporter, setShowImporter] = useState(false);
     const [selectedUser, setSelectedUser] = useState<any | null>(null);
+
+    const [selectedStudentIds, setSelectedStudentIds] = useState<number[]>([]);
+    const [showBulkPlacement, setShowBulkPlacement] = useState(false);
 
     const [qrStudent, setQrStudent] = useState<any | null>(null);
     const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
@@ -278,6 +282,26 @@ function StudentsPageContent() {
 
 
             <Card className="border-none shadow-sm overflow-hidden flex flex-col">
+                {selectedStudentIds.length > 0 && (
+                    <div className="mx-6 mt-6 mb-2 p-4 bg-indigo-50 border border-indigo-100 rounded-xl flex items-center justify-between">
+                        <span className="text-sm font-bold text-indigo-700">{selectedStudentIds.length} student(s) selected</span>
+                        <div className="flex gap-2">
+                            <Button
+                                onClick={() => setSelectedStudentIds([])}
+                                variant="outline"
+                                className="h-10 px-4 rounded-xl text-xs font-bold uppercase tracking-wider bg-white"
+                            >
+                                Clear
+                            </Button>
+                            <Button
+                                onClick={() => setShowBulkPlacement(true)}
+                                className="bg-indigo-600 hover:bg-indigo-700 text-white h-10 px-4 rounded-xl text-xs font-bold uppercase tracking-wider"
+                            >
+                                Bulk Placement
+                            </Button>
+                        </div>
+                    </div>
+                )}
                 <DataTablePagination
                     totalItems={totalCount}
                     pageSize={pageSize}
@@ -287,6 +311,20 @@ function StudentsPageContent() {
                     <table className="w-full text-left">
                         <thead>
                             <tr className="bg-slate-50 text-slate-500 text-xs font-bold uppercase tracking-wider">
+                                <th className="px-6 py-4 w-10">
+                                    <input
+                                        type="checkbox"
+                                        className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                                        checked={students.length > 0 && selectedStudentIds.length === students.length}
+                                        onChange={(e) => {
+                                            if (e.target.checked) {
+                                                setSelectedStudentIds(students.map(s => s.id));
+                                            } else {
+                                                setSelectedStudentIds([]);
+                                            }
+                                        }}
+                                    />
+                                </th>
                                 <th className="px-6 py-4">Student</th>
                                 <th className="px-6 py-4">Matric No.</th>
                                 <th className="px-6 py-4">Level</th>
@@ -300,19 +338,33 @@ function StudentsPageContent() {
                         <tbody className="divide-y divide-slate-100">
                             {loading ? (
                                 <tr>
-                                    <td colSpan={7} className="px-6 py-10 text-center">
+                                    <td colSpan={9} className="px-6 py-10 text-center">
                                         <Loader2 className="w-6 h-6 animate-spin mx-auto text-slate-400" />
                                     </td>
                                 </tr>
                             ) : students.length === 0 ? (
                                 <tr>
-                                    <td colSpan={7} className="px-6 py-10 text-center text-slate-500">
+                                    <td colSpan={9} className="px-6 py-10 text-center text-slate-500">
                                         No students found.
                                     </td>
                                 </tr>
                             ) : (
                                 students.map((s) => (
                                     <tr key={s.id} className="hover:bg-slate-50/50 transition-colors">
+                                        <td className="px-6 py-4">
+                                            <input
+                                                type="checkbox"
+                                                className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                                                checked={selectedStudentIds.includes(s.id)}
+                                                onChange={(e) => {
+                                                    if (e.target.checked) {
+                                                        setSelectedStudentIds(prev => [...prev, s.id]);
+                                                    } else {
+                                                        setSelectedStudentIds(prev => prev.filter(id => id !== s.id));
+                                                    }
+                                                }}
+                                            />
+                                        </td>
                                         <td className="px-6 py-4">
                                             <div className="flex flex-col">
                                                 <Link href={`/admin/students/${s.id}`} className="text-sm font-bold text-indigo-600 hover:underline hover:text-indigo-800 transition-colors cursor-pointer">
@@ -401,7 +453,7 @@ function StudentsPageContent() {
                                             <Button
                                                 variant="ghost"
                                                 size="sm"
-                                                onClick={() => setSelectedUser(s.user)}
+                                                onClick={() => setSelectedUser({ user: s.user, student: s })}
                                                 className="h-8 px-3 text-xs gap-1 rounded-lg border-slate-200 text-slate-600 hover:bg-slate-100"
                                                 title="Account Management"
                                             >
@@ -441,9 +493,21 @@ function StudentsPageContent() {
             </Card>
 
             <AccountManagementModal 
-                user={selectedUser} 
+                user={selectedUser?.user} 
+                student={selectedUser?.student}
                 onClose={() => setSelectedUser(null)}
                 onUpdate={fetchStudents}
+            />
+
+            <BulkPlacementModal
+                open={showBulkPlacement}
+                onClose={() => setShowBulkPlacement(false)}
+                selectedStudentIds={selectedStudentIds}
+                sessions={sessions}
+                onComplete={() => {
+                    setSelectedStudentIds([]);
+                    fetchStudents();
+                }}
             />
 
             {/* Student ID QR Modal */}

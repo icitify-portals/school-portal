@@ -727,3 +727,38 @@ export async function updateAdminStudentProfile(studentId: number, updatePayload
         return { success: false, error: error.message || "Failed to update student data" };
     }
 }
+
+export async function bulkUpdateStudentPlacements(studentIds: number[], data: { currentLevel?: number, status?: string, currentSessionId?: number, admissionYear?: string }) {
+    try {
+        const allowed = await hasPermission("admin.students.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("registrar");
+        if (!allowed) {
+            return { success: false, error: "Unauthorized: Insufficient permissions to modify student placements" };
+        }
+
+        if (!studentIds || studentIds.length === 0) {
+            return { success: false, error: "No students selected" };
+        }
+
+        const updateData: any = {};
+        if (data.currentLevel !== undefined && data.currentLevel !== null) {
+            updateData.currentLevel = Number(data.currentLevel);
+        }
+        if (data.status) updateData.status = data.status;
+        if (data.currentSessionId !== undefined) updateData.currentSessionId = data.currentSessionId ? Number(data.currentSessionId) : null;
+        if (data.admissionYear) updateData.admissionYear = Number(data.admissionYear);
+
+        if (Object.keys(updateData).length === 0) {
+            return { success: false, error: "No update data provided" };
+        }
+
+        await db.update(students)
+            .set(updateData)
+            .where(inArray(students.id, studentIds));
+
+        revalidatePath("/admin/students");
+        return { success: true, message: `Successfully updated placements for ${studentIds.length} student(s).` };
+    } catch (error: any) {
+        console.error("Bulk Update Placements Error:", error);
+        return { success: false, error: error.message || "Failed to update student placements." };
+    }
+}

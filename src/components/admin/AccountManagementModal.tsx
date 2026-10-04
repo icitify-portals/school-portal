@@ -21,11 +21,14 @@ import {
     ShieldAlert,
     Trash2,
     History,
-    ShieldCheck
+    ShieldCheck,
+    GraduationCap
 } from "lucide-react";
 import { resetUserPassword, updateUserStatus, verifyUserEmailManually, updateUserBaseRole } from "@/actions/user-actions";
+import { bulkUpdateStudentPlacements } from "@/actions/students";
 import { getAllRoles, assignRoleToUser, removeRoleFromUser, canManageRoles } from "@/actions/rbac";
 import { cn } from "@/lib/utils";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface AccountManagementModalProps {
     user: {
@@ -36,23 +39,40 @@ interface AccountManagementModalProps {
         status: string;
         roles?: any[];
     } | null;
+    student?: any;
     onClose: () => void;
     onUpdate?: () => void;
 }
 
-export function AccountManagementModal({ user, onClose, onUpdate }: AccountManagementModalProps) {
+export function AccountManagementModal({ user, student, onClose, onUpdate }: AccountManagementModalProps) {
     const [loading, setLoading] = useState(false);
     const [actionLoading, setActionLoading] = useState<string | null>(null);
     const [newPassword, setNewPassword] = useState("");
     const [allRoles, setAllRoles] = useState<any[]>([]);
     const [userRoles, setUserRoles] = useState<any[]>([]);
     const [canManage, setCanManage] = useState(false);
+    
+    // Academic Placement State
+    const [sessions, setSessions] = useState<any[]>([]);
+    const [isK12, setIsK12] = useState(false);
+    const [currentLevel, setCurrentLevel] = useState("");
+    const [status, setStatus] = useState("");
+    const [currentSessionId, setCurrentSessionId] = useState("");
+    const [admissionYear, setAdmissionYear] = useState("");
 
     useEffect(() => {
         if (user) {
             fetchRoles();
         }
-    }, [user]);
+        if (student) {
+            import("@/actions/students").then(m => m.getStudentSessionOptions().then(res => setSessions(res.sessions || [])));
+            import("@/providers/BranchProvider").then(m => setIsK12(false)); // Just hack it or use a default if outside context. But let's fetch settings.
+            setCurrentLevel(student.currentLevel?.toString() || "");
+            setStatus(student.status || "");
+            setCurrentSessionId(student.currentSessionId?.toString() || "");
+            setAdmissionYear(student.admissionYear?.toString() || "");
+        }
+    }, [user, student]);
 
     const fetchRoles = async () => {
         setLoading(true);
@@ -115,6 +135,34 @@ export function AccountManagementModal({ user, onClose, onUpdate }: AccountManag
         onUpdate?.();
         setActionLoading(null);
     };
+
+    const handlePlacementSave = async () => {
+        if (!student) return;
+        setActionLoading("placement");
+        const data: any = {};
+        if (currentLevel) data.currentLevel = Number(currentLevel);
+        if (status) data.status = status;
+        if (currentSessionId) data.currentSessionId = Number(currentSessionId);
+        if (admissionYear) data.admissionYear = admissionYear;
+
+        const res = await bulkUpdateStudentPlacements([student.id], data);
+        if (res.success) {
+            alert(res.message);
+            onUpdate?.();
+        } else {
+            alert(res.error);
+        }
+        setActionLoading(null);
+    };
+
+    const levels = isK12 
+        ? [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+        : [
+            { label: "ND 1", value: "1" },
+            { label: "ND 2", value: "2" },
+            { label: "HND 1", value: "1" },
+            { label: "HND 2", value: "2" }
+        ];
 
     return (
         <Dialog open={!!user} onOpenChange={(open) => !open && onClose()}>
@@ -292,6 +340,88 @@ export function AccountManagementModal({ user, onClose, onUpdate }: AccountManag
                                 <p className="text-[10px] text-slate-400 font-medium italic">Changes user dashboard layout and permissions.</p>
                             </div>
                         </>
+                    )}
+
+                    {/* Academic Placement */}
+                    {student && (
+                        <div className="space-y-4 pt-4 border-t border-slate-100">
+                            <div className="flex items-center gap-2 text-slate-900 border-b border-slate-100 pb-2">
+                                <GraduationCap className="w-4 h-4 text-indigo-600" />
+                                <h3 className="font-black uppercase text-[10px] tracking-[0.2em]">Academic Placement</h3>
+                            </div>
+                            
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="flex flex-col gap-1.5">
+                                    <label className="text-[10px] font-bold text-slate-700 uppercase">Level</label>
+                                    <select
+                                        value={currentLevel}
+                                        onChange={(e) => setCurrentLevel(e.target.value)}
+                                        className="h-10 px-3 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+                                    >
+                                        <option value="">-- Select --</option>
+                                        {isK12 ? levels.map((lvl) => (
+                                            <option key={lvl as number} value={lvl as number}>Grade {lvl}</option>
+                                        )) : (levels as {label:string, value:string}[]).map((lvl, idx) => (
+                                            <option key={idx} value={lvl.value}>{lvl.label} ({lvl.value})</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div className="flex flex-col gap-1.5">
+                                    <label className="text-[10px] font-bold text-slate-700 uppercase">Status</label>
+                                    <select
+                                        value={status}
+                                        onChange={(e) => setStatus(e.target.value)}
+                                        className="h-10 px-3 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+                                    >
+                                        <option value="">-- Select --</option>
+                                        <option value="active">Active</option>
+                                        <option value="nd_graduant">ND Graduant</option>
+                                        <option value="hnd_graduant">HND Graduant</option>
+                                        <option value="nd_graduated">ND Graduated</option>
+                                        <option value="hnd_graduated">HND Graduated</option>
+                                        <option value="withdrawn">Withdrawn</option>
+                                        <option value="suspended">Suspended</option>
+                                        <option value="rusticated">Rusticated</option>
+                                    </select>
+                                </div>
+
+                                <div className="flex flex-col gap-1.5">
+                                    <label className="text-[10px] font-bold text-slate-700 uppercase">Current Session</label>
+                                    <select
+                                        value={currentSessionId}
+                                        onChange={(e) => setCurrentSessionId(e.target.value)}
+                                        className="h-10 px-3 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+                                    >
+                                        <option value="">-- Select --</option>
+                                        {sessions.map((s) => (
+                                            <option key={s.id} value={s.id}>{s.name} {s.isCurrent ? '(Current)' : ''}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div className="flex flex-col gap-1.5">
+                                    <label className="text-[10px] font-bold text-slate-700 uppercase">Admission Year</label>
+                                    <input
+                                        type="text"
+                                        placeholder="e.g. 2026"
+                                        value={admissionYear}
+                                        onChange={(e) => setAdmissionYear(e.target.value)}
+                                        className="h-10 px-3 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                    />
+                                </div>
+                            </div>
+                            <div className="flex justify-end">
+                                <Button
+                                    onClick={handlePlacementSave}
+                                    disabled={actionLoading === "placement"}
+                                    className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold uppercase tracking-wider"
+                                >
+                                    {actionLoading === "placement" ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                                    Update Placement
+                                </Button>
+                            </div>
+                        </div>
                     )}
 
                     {/* Meta Info / Footer Action */}
