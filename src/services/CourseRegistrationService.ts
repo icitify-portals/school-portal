@@ -53,6 +53,17 @@ export class CourseRegistrationService {
 
         const studentDeptId = student.deptId;
 
+        // A student with no department must not be shown the catalogue.
+        //
+        // The department filter used to degrade to `1 = 1` here, which listed
+        // every level's courses from every department: 81 such students each
+        // saw 91 courses across all six departments. Those records have no
+        // programme, no matric number and no current session, so there is
+        // nothing to bill against and no way to tell which course is theirs.
+        // With both approval stages automated this also let a placeholder
+        // record self-register straight into an approved session.
+        if (!studentDeptId) return [];
+
         // Courses the student still owes from an earlier level.
         const carryOverCourseIds = await this.getCarryOverCourseIds(studentId);
 
@@ -73,7 +84,7 @@ export class CourseRegistrationService {
         .innerJoin(courseDepartmentSettings, eq(courses.id, courseDepartmentSettings.courseId))
         .where(and(
             eq(courseDepartmentSettings.semester, semester),
-            studentDeptId ? eq(courseDepartmentSettings.deptId, studentDeptId) : sql`1=1`,
+            eq(courseDepartmentSettings.deptId, studentDeptId),
             or(
                 // Own level: the full catalogue.
                 eq(courseDepartmentSettings.level, ownLevel),
@@ -353,7 +364,18 @@ export class CourseRegistrationService {
             .from(students)
             .where(eq(students.id, data.studentId))
             .limit(1);
-        const deptId = studentDept[0]?.deptId;
+const deptId = studentDept[0]?.deptId;
+
+        // Same reason as getAvailableCourses: without a department there is no
+        // defined credit unit for the student. The join below would otherwise
+        // match every department offering each course and add the same course
+        // into the total once per department.
+        if (!deptId) {
+            throw new Error(
+                'Your student record has no department set, so your course credits cannot be determined. ' +
+                'Please contact the registrar.'
+            );
+        }
 
         const selectedCourses = await db.select({
             courseUnits: courses.creditUnits,
@@ -362,7 +384,7 @@ export class CourseRegistrationService {
             .from(courses)
             .leftJoin(courseDepartmentSettings, and(
                 eq(courseDepartmentSettings.courseId, courses.id),
-                deptId ? eq(courseDepartmentSettings.deptId, deptId) : sql`1=1`
+                eq(courseDepartmentSettings.deptId, deptId)
             ))
             .where(inArray(courses.id, data.courseIds));
 

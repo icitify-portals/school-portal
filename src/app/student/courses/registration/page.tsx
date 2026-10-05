@@ -25,7 +25,7 @@ export default function AdvancedCourseRegistrationPortal() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [studentCtx, setStudentCtx] = useState<{ id: number; sessionId: number; semester: '1' | '2'; email: string; firstName: string; lastName: string; phone: string; levelLabel: string } | null>(null);
+  const [studentCtx, setStudentCtx] = useState<{ id: number; sessionId: number; semester: '1' | '2'; email: string; firstName: string; lastName: string; phone: string; levelLabel: string; deptId: number | null } | null>(null);
 
   const MIN_UNITS = 15;
   const MAX_UNITS = 24;
@@ -63,6 +63,7 @@ export default function AdvancedCourseRegistrationPortal() {
         lastName: p.lastName || '',
         phone: p.phone || '',
         levelLabel: resolveLevel(p.currentLevel, p.programmeType)?.label || '',
+        deptId: p.deptId ?? null,
       };
       setStudentCtx(ctx);
       await loadData(ctx);
@@ -278,10 +279,21 @@ export default function AdvancedCourseRegistrationPortal() {
                             No Courses Available Yet
                          </div>
                          <p className="text-sm font-medium text-slate-500 max-w-md mx-auto leading-relaxed">
-                            There are no courses configured for your level
-                            {studentCtx.levelLabel ? ` (${studentCtx.levelLabel})` : ''} in this semester.
-                            The registrar or your HOD has not published the course list yet. Please check back
-                            shortly or contact the department office.
+                            {!studentCtx.deptId ? (
+                                <>
+                                    No department is set on your student record, so there is no course list to show you.
+                                    Showing every department&apos;s catalogue would let you register for courses that are
+                                    not part of your programme. Please contact the registrar to have your department
+                                    assigned.
+                                </>
+                            ) : (
+                                <>
+                                    There are no courses configured for your level
+                                    {studentCtx.levelLabel ? ` (${studentCtx.levelLabel})` : ''} in this semester.
+                                    The registrar or your HOD has not published the course list yet. Please check back
+                                    shortly or contact the department office.
+                                </>
+                            )}
                          </p>
                       </div>
                    ) : availableCourses.map((course) => (
