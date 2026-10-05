@@ -366,6 +366,7 @@ const adminMenuItems: MenuItem[] = [
         icon: User,
         subItems: [
             { name: "All Students", href: "/admin/students" },
+            { name: "Placement Corrections", href: "/admin/students/placement" },
             { name: "Records Mobility", href: "/admin/students/transfer" },
             { name: "Incomplete Admissions", href: "/admin/students/orphans" },
         ]
