@@ -79,7 +79,19 @@ export default function AdvancedCourseRegistrationPortal() {
       getRegisteredCoursesAction(ctx.id, ctx.sessionId, ctx.semester)
     ]);
 
-    if (availRes.success) setAvailableCourses(availRes.data || []);
+    if (availRes.success) {
+      setAvailableCourses(availRes.data || []);
+    } else {
+      // A failed request must never be rendered as an empty catalogue. The
+      // commonest cause is a stale client bundle after a deploy: the browser
+      // calls a server action id that no longer exists, the action returns
+      // success:false, and the list silently stays empty while the page claims
+      // no courses are configured. Report what actually happened.
+      setError(
+        availRes.error ||
+          'Could not load your course list. Please refresh the page. If it still fails, contact the registrar.'
+      );
+    }
     if (regRes.success) {
       setIsPrintFeePaid(regRes.isPrintFeePaid || false);
       // @ts-expect-error - TS2345: Auto-suppressed for build
@@ -272,7 +284,20 @@ export default function AdvancedCourseRegistrationPortal() {
                       <div className="p-20 flex justify-center">
                          <Loader2 className="animate-spin text-indigo-500" size={40} />
                       </div>
-                   ) : availableCourses.length === 0 ? (
+                   ) : error ? (
+                       // The load failed, so the catalogue state is unknown.
+                       // Saying "no courses are configured" here would be a lie.
+                       <div className="p-16 text-center space-y-4">
+                          <AlertCircle className="w-12 h-12 text-rose-500 mx-auto" />
+                          <div className="font-black text-xl uppercase tracking-tight text-slate-700">
+                             Course List Unavailable
+                          </div>
+                          <p className="text-sm font-medium text-slate-500 max-w-md mx-auto leading-relaxed">
+                             We could not load your course list, so we cannot say whether courses are available.
+                             This is usually a stale page after an update - press Ctrl+F5 to reload, then try again.
+                          </p>
+                       </div>
+                    ) : availableCourses.length === 0 ? (
                       <div className="p-16 text-center space-y-4">
                          <AlertCircle className="w-12 h-12 text-amber-500 mx-auto" />
                          <div className="font-black text-xl uppercase tracking-tight text-slate-700">

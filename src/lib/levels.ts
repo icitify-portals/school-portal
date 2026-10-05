@@ -106,10 +106,16 @@ export function allLevelsFor(programmeType?: string | null) {
 }
 
 /**
- * Only an unambiguous F is treated as a carry-over. The official grading scale
- * in this portal defines A, B, C and F (F = 0 points, marks 0-49). Any other
- * letter stored in student_results is outside the scale and must not be
- * guessed at, because a wrong guess forces a student into a lower-level course.
+ * Only an unambiguous F is treated as a carry-over.
+ *
+ * The portal's scale is "FSS Standard 4.0" (grading_scales):
+ *   A 75-100 (4.00), AB 70-74 (3.50), B 65-69 (3.25), BC 60-64 (3.00),
+ *   C 55-59 (2.75), CD 50-54 (2.50), D 45-49 (2.25), E 40-44 (2.00),
+ *   F 0-39 (0.00)
+ *
+ * So D and E are passes and only a score of 39 or below fails. That makes F the
+ * single unambiguous fail grade. Treating D or E as a fail would force a passing
+ * student back into a lower-level course, so they are never guessed at here.
  */
 export const CARRY_OVER_GRADES = ['F'] as const;
 
