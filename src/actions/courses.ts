@@ -120,15 +120,16 @@ export async function addCourseToDepartment(data: {
     semester: "1" | "2";
     status: "compulsory" | "required" | "elective";
     level: number;
-    capacity?: number | null;
+capacity?: number | null;
     creditUnits?: number | null;
+    courseTitle?: string | null;
 }) {
     try {
         const session = await auth();
         const isAdmin = await hasRole(["admin", "superadmin"]) || await hasPermission("academic.courses.manage");
         let allowed = isAdmin;
 
-        if (!allowed && await hasRole("hod") && session?.user?.id) {
+        if (!allowed && await hasRole(["hod"]) && session?.user?.id) {
             const [staffProfile] = await db.select().from(staffProfiles).where(eq(staffProfiles.userId, Number(session.user.id))).limit(1);
             if (staffProfile && staffProfile.departmentId === data.deptId) {
                 allowed = true;
@@ -137,11 +138,12 @@ export async function addCourseToDepartment(data: {
 
         if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to link course to department" };
 
-         const { capacity, creditUnits, ...rest } = data;
+         const { capacity, creditUnits, courseTitle, ...rest } = data;
         await db.insert(courseDepartmentSettings).values({
             ...rest,
             capacity: capacity || null,
             creditUnits: creditUnits || null,
+            courseTitle: courseTitle || null,
         });
         revalidatePath("/admin/courses");
         return { success: true };
@@ -167,15 +169,16 @@ export async function updateCourseDepartmentSetting(courseId: number, deptId: nu
     semester?: "1" | "2";
     status?: "compulsory" | "required" | "elective";
     level?: number;
-    capacity?: number | null;
+capacity?: number | null;
     creditUnits?: number | null;
+    courseTitle?: string | null;
 }) {
     try {
         const session = await auth();
         const isAdmin = await hasRole(["admin", "superadmin"]) || await hasPermission("academic.courses.manage");
         let allowed = isAdmin;
 
-        if (!allowed && await hasRole("hod") && session?.user?.id) {
+        if (!allowed && await hasRole(["hod"]) && session?.user?.id) {
             const [staffProfile] = await db.select().from(staffProfiles).where(eq(staffProfiles.userId, Number(session.user.id))).limit(1);
             if (staffProfile && staffProfile.departmentId === deptId) {
                 allowed = true;

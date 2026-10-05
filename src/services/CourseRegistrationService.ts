@@ -71,7 +71,7 @@ export class CourseRegistrationService {
 
         let available = await db.select({
             id: courses.id,
-            name: courses.name,
+name: sql<string>`COALESCE(${courseDepartmentSettings.courseTitle}, ${courses.name})`,
             code: courses.code,
             units: sql<number>`COALESCE(${courseDepartmentSettings.creditUnits}, ${courses.creditUnits})`.mapWith(Number),
             status: courseDepartmentSettings.status,

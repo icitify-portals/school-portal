@@ -198,6 +198,12 @@ export const courseDepartmentSettings = mysqlTable('course_department_settings',
     capacity: int('capacity'),
     enrolledCount: int('enrolled_count').default(0),
     creditUnits: int('credit_units'),
+    // The same course code is taught under a different title in different
+    // departments (STA 111 is "Descriptive Statistics I" in Statistics but
+    // "Introduction to Statistics" in Computer Science and Business). The
+    // document is the authority on that, so the offering keeps its own title
+    // and courses.name stays as the fallback.
+    courseTitle: varchar('course_title', { length: 255 }),
 }, (table) => ({
     // A course can legitimately run in the same department at more than one
     // semester/level - STA 111 is ND 1 semester 1 compulsory in Business Admin

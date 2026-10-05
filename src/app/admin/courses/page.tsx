@@ -40,7 +40,7 @@ export default function CoursesPage() {
         isGroupSubject: false,
         parentCourseId: null as number | null
     });
-    const [deptSettings, setDeptSettings] = useState({ deptId: "", semester: "1", status: "compulsory", level: 100, capacity: "", creditUnits: "" });
+    const [deptSettings, setDeptSettings] = useState({ deptId: "", semester: "1", status: "compulsory", level: 100, capacity: "", creditUnits: "", courseTitle: "" });
     const [prereqId, setPrereqId] = useState("");
 
     const [editingCourse, setEditingCourse] = useState<any>(null);
@@ -189,6 +189,7 @@ export default function CoursesPage() {
             level: deptSettings.level,
             capacity: deptSettings.capacity ? parseInt(deptSettings.capacity) : null,
             creditUnits: deptSettings.creditUnits ? parseInt(deptSettings.creditUnits) : null,
+            courseTitle: deptSettings.courseTitle || null,
         });
         if (res.success) {
             fetchData();
@@ -201,13 +202,14 @@ export default function CoursesPage() {
                 level: deptSettings.level,
                 capacity: deptSettings.capacity ? parseInt(deptSettings.capacity) : null,
                 creditUnits: deptSettings.creditUnits ? parseInt(deptSettings.creditUnits) : null,
+                courseTitle: deptSettings.courseTitle || null,
                 department: dept
             };
             setEditingCourse({
                 ...editingCourse,
                 departmentSettings: [...editingCourse.departmentSettings, newSetting]
             });
-            setDeptSettings({ deptId: "", semester: "1", status: "compulsory", level: 100, capacity: "", creditUnits: "" });
+            setDeptSettings({ deptId: "", semester: "1", status: "compulsory", level: 100, capacity: "", creditUnits: "", courseTitle: "" });
         } else alert(res.error);
     };
 
@@ -888,6 +890,13 @@ export default function CoursesPage() {
                                                 className="bg-white border border-slate-200 rounded-lg p-2 text-xs placeholder:text-slate-400"
                                                 value={deptSettings.creditUnits}
                                                 onChange={e => setDeptSettings({ ...deptSettings, creditUnits: e.target.value })}
+                                            />
+                                            <input
+                                                type="text"
+                                                placeholder="Title in this Dept (optional)"
+                                                className="bg-white border border-slate-200 rounded-lg p-2 text-xs placeholder:text-slate-400 col-span-2"
+                                                value={deptSettings.courseTitle}
+                                                onChange={e => setDeptSettings({ ...deptSettings, courseTitle: e.target.value })}
                                             />
                                             <Button
                                                 onClick={handleAddDeptInEdit}
