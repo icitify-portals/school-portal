@@ -2,10 +2,9 @@
 
 import { db } from "@/db/db";
 import {
-    students, users, programmes, departments, systemAuditLogs,
-    studentBills, studentCourseRegistrations
+    students, users, programmes, departments, systemAuditLogs
 } from "@/db/schema";
-import { eq, and, or, like, isNull, notInArray, sql } from "drizzle-orm";
+import { eq, and, isNull, sql } from "drizzle-orm";
 import { auth } from "@/auth";
 import { revalidatePath } from "next/cache";
 import { resolveLevel, toProgrammeType, levelLabel } from "@/lib/levels";
@@ -102,13 +101,6 @@ export type PlacementIssue = {
     totalDependents: number;
 };
 
-const ISSUE_LABELS: Record<PlacementIssueType, string> = {
-    programme_type_mismatch: "Programme type disagrees with programme",
-    no_programme: "No programme assigned",
-    legacy_level: "Level stored as 100-500 instead of 1-2",
-    graduant_status_on_hnd: "Marked ND graduant but on an HND programme",
-};
-
 /**
  * Every student whose stored placement is self-inconsistent. Each check mirrors
  * a real failure seen in production rather than a hypothetical one.
@@ -193,10 +185,6 @@ export async function getPlacementIssues(limit = 500) {
     });
 }
 
-export function placementIssueLabel(t: PlacementIssueType) {
-    return ISSUE_LABELS[t] ?? t;
-}
-
 /**
  * Applies a placement correction.
  *
@@ -267,7 +255,11 @@ export async function correctStudentPlacement(input: {
         patch.programmeType = toProgrammeType(programmeRow!.programmeType);
         if (programmeRow!.deptId != null) patch.deptId = programmeRow!.deptId;
     } else {
+        // Clearing the programme clears the fields derived from it. Leaving a
+        // stale programme_type behind would let the record look consistent
+        // while still claiming ND or HND.
         patch.programmeId = null;
+        patch.programmeType = null;
     }
 
     const changed = (Object.keys(patch) as Array<keyof typeof patch>).filter(

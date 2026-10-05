@@ -7,8 +7,18 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import {
-    getPlacementIssues, getPlacementProgrammes, correctStudentPlacement, placementIssueLabel
+    getPlacementIssues, getPlacementProgrammes, correctStudentPlacement
 } from "@/actions/student-placement";
+import { resolveLevel } from "@/lib/levels";
+
+const ISSUE_LABELS: Record<string, string> = {
+    programme_type_mismatch: "Programme type disagrees with programme",
+    no_programme: "No programme assigned",
+    legacy_level: "Level stored as 100-500 instead of 1-2",
+    graduant_status_on_hnd: "Marked ND graduant but on an HND programme"
+};
+
+const placementIssueLabel = (t: string) => ISSUE_LABELS[t] ?? t;
 
 type Programme = {
     id: number; name: string; programmeType: string; code: string | null;
@@ -80,11 +90,11 @@ export default function StudentPlacementPage() {
     );
 
     // The label is programme + level, so show exactly what the student will see
-    // before they commit.
-    const newLabel = chosen ? `${chosen.programmeType} ${level}` : (level === "1" ? "ND 1" : "ND 2");
-    const newCourseLevel = chosen
-        ? (chosen.programmeType === "HND" ? (level === "1" ? 300 : 400) : (level === "1" ? 100 : 200))
-        : (level === "1" ? 100 : 200);
+    // before they commit. resolveLevel is the canonical bridge to the 100-400
+    // course levels, so the preview cannot drift from what registration does.
+    const newResolved = resolveLevel(level, chosen?.programmeType ?? null);
+    const newLabel = newResolved?.label ?? String(level);
+    const newCourseLevel = newResolved?.numeric ?? null;
 
     const save = async () => {
         if (!target) return;
@@ -316,7 +326,7 @@ export default function StudentPlacementPage() {
                             </div>
 
                             <div className="p-3 rounded-xl bg-blue-50 text-[11px] text-blue-900 leading-relaxed">
-                                This student's course list resolves to level <strong>{newCourseLevel}</strong>
+                                This student's course list resolves to level <strong>{newCourseLevel ?? "unknown"}</strong>
                                 {chosen && target.programmeId != null && Number(programmeId) !== target.programmeId ? (
                                     <> &mdash; <strong>their course list will change</strong>, since it follows the programme half of the label.</>
                                 ) : null}
