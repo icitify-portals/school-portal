@@ -92,6 +92,13 @@ export default function AdvancedCourseRegistrationPortal() {
   const handleSubmit = async () => {
     if (!studentCtx) return;
     if (totalUnits < MIN_UNITS || totalUnits > MAX_UNITS) return;
+    
+    if (!isPrintFeePaid) {
+      toast.info("A payment of ₦500 is required before submitting your course registration form.");
+      setShowPayment(true);
+      return;
+    }
+
     setError(null);
     setSubmitting(true);
     const res = await submitCourseRegistrationAction({
@@ -125,9 +132,24 @@ export default function AdvancedCourseRegistrationPortal() {
       500, res.reference || res.transactionReference, res.gatewayTransactionId || ""
     );
     if (r.success) {
-      toast.success("Payment successful! You can now print your form.");
+      toast.success("Payment successful! Submitting your course registration...");
       setIsPrintFeePaid(true);
       setShowPayment(false);
+
+      setSubmitting(true);
+      const subRes = await submitCourseRegistrationAction({
+        studentId: studentCtx.id,
+        sessionId: studentCtx.sessionId,
+        semester: studentCtx.semester,
+        courseIds: selectedIds
+      });
+      setSubmitting(false);
+      if (subRes.success) {
+        toast.success("Course registration submitted successfully.");
+        await loadData(studentCtx);
+      } else {
+        setError(subRes.error || "Submission failed");
+      }
     } else {
       toast.error("Failed to record payment.");
     }
@@ -168,7 +190,7 @@ export default function AdvancedCourseRegistrationPortal() {
                  }`}
                >
                    <Printer size={18} />
-                   {isPrintFeePaid ? 'Print Form' : 'Pay ₦500 to Print'}
+                   {isPrintFeePaid ? 'Print Form' : 'Pay ₦500 Fee'}
                </button>
                <button
                  onClick={handleSubmit}
@@ -176,11 +198,13 @@ export default function AdvancedCourseRegistrationPortal() {
                  className={`h-12 px-6 rounded-2xl font-bold flex items-center gap-2 transition-all shadow-lg backdrop-blur-md border disabled:opacity-50 disabled:cursor-not-allowed ${
                    isLocked
                     ? 'bg-emerald-600/90 border-emerald-500 text-white shadow-emerald-900/50'
+                    : !isPrintFeePaid
+                    ? 'bg-amber-600 border-amber-500/50 text-white hover:bg-amber-700 shadow-amber-900/50'
                     : 'bg-indigo-600 border-indigo-500/50 text-white hover:bg-indigo-700 shadow-indigo-900/50'
                  }`}
                >
                    {submitting ? <Loader2 size={18} className="animate-spin" /> : isLocked ? <ShieldCheck size={18} /> : <CheckCircle2 size={18} />}
-                   {isLocked ? 'Registration Finalized' : 'Submit for Verification'}
+                   {isLocked ? 'Registration Finalized' : !isPrintFeePaid ? 'Pay ₦500 & Submit Form' : 'Submit for Verification'}
                </button>
             </div>
         </div>
@@ -332,13 +356,13 @@ export default function AdvancedCourseRegistrationPortal() {
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
                 <div className="bg-white rounded-[2rem] p-8 max-w-md w-full shadow-2xl">
                     <div className="flex justify-between items-center mb-6">
-                        <h3 className="text-xl font-black text-slate-900">Print Course Form</h3>
+                        <h3 className="text-xl font-black text-slate-900">Course Registration Form Fee</h3>
                         <button onClick={() => setShowPayment(false)} className="text-slate-400 hover:text-slate-600">
                             <XCircle className="w-6 h-6" />
                         </button>
                     </div>
                     <div className="bg-slate-50 p-6 rounded-2xl mb-6 border border-slate-100">
-                        <p className="text-sm text-slate-600 mb-2 font-medium">To print your approved course registration form, a processing fee is required.</p>
+                        <p className="text-sm text-slate-600 mb-2 font-medium">To complete, submit, and print your course registration form, a processing fee is required.</p>
                         <div className="text-3xl font-black text-indigo-600">₦500.00</div>
                     </div>
                     <AlatpayInlineCheckout

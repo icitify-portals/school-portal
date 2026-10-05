@@ -1,8 +1,8 @@
 "use server";
 
 import { db } from "@/db/db";
-import { idCards, users, students, departments, programmes, staffProfiles, semesterSummaries, studentCourseRegistrations, courses } from "@/db/schema";
-import { eq, and, inArray, sql, desc } from "drizzle-orm";
+import { idCards, users, students, departments, programmes, staffProfiles, semesterSummaries, studentCourseRegistrations, courses, academicSessions } from "@/db/schema";
+import { eq, and, inArray, sql, desc, or } from "drizzle-orm";
 import { auth } from "@/auth";
 import { revalidatePath } from "next/cache";
 
@@ -13,7 +13,7 @@ async function ensureICTManager() {
         where: eq(users.id, session.user.id),
         columns: { role: true }
     });
-    if (!user || !["admin", "ict_manager", "registrar"].includes(user.role || "")) {
+    if (!user || !["admin", "ict_manager", "registrar", "superadmin"].includes(user.role || "")) {
         throw new Error("Access denied. ICT Manager or Admin role required.");
     }
     return session.user.id;
@@ -268,10 +268,16 @@ export async function getCourseRegistrationPrintQueue(filters?: {
 
         const limit = filters?.limit || 50;
         const offset = filters?.offset || 0;
-        const sessionId = filters?.sessionId || 6;
+        let sessionId = filters?.sessionId;
+        if (!sessionId) {
+            const activeSession = await db.query.academicSessions.findFirst({
+                where: eq(academicSessions.isCurrent, true)
+            });
+            sessionId = activeSession?.id || 41;
+        }
         const semester = filters?.semester || '1';
 
-        // Get students who have registered courses and paid print fee
+        // Get students who have registered courses or are active in session
         const rows = await db.select({
             studentId: students.id,
             studentName: users.name,
@@ -296,9 +302,11 @@ export async function getCourseRegistrationPrintQueue(filters?: {
             eq(semesterSummaries.semester, semester as any)
         ))
         .where(and(
-            eq(students.status, 'active'),
-            eq(students.deletedAt, null as any),
-            eq(students.currentSessionId, sessionId),
+            sql`${students.deletedAt} IS NULL`,
+            or(
+                eq(students.currentSessionId, sessionId),
+                sql`${students.id} IN (SELECT student_id FROM student_course_registrations WHERE session_id = ${sessionId})`
+            )
         ))
         .orderBy(users.name)
         .limit(limit)
