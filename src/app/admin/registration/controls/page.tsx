@@ -14,9 +14,10 @@ import {
 } from "lucide-react";
 import { getAcademicSessions } from "@/actions/portal";
 import { getLevelControls, setLevelControl } from "@/actions/concessions";
-import { getAutoApproveSetting, toggleAutoApproveSettingAction } from "@/actions/settings";
+import { getAutoApproveFlags, setAutoApproveFlagAction } from "@/actions/settings";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { resolveLevel } from "@/lib/levels";
 
 const LEVELS = [1, 2];
 
@@ -25,7 +26,8 @@ export default function RegistrationControlsPage() {
     const [selectedSessionId, setSelectedSessionId] = useState<number | "">("");
     const [controls, setControls] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
-    const [autoApprove, setAutoApprove] = useState(false);
+    const [autoApprove, setAutoApprove] = useState<{ advisor: boolean; hod: boolean }>({ advisor: false, hod: false });
+    const [toggling, setToggling] = useState<"advisor" | "hod" | null>(null);
 
     useEffect(() => {
         loadSessions();
@@ -42,9 +44,8 @@ export default function RegistrationControlsPage() {
         setSessions(data);
         const current = data.find(s => s.isCurrent);
         if (current) setSelectedSessionId(current.id);
-        setLoading(false);
-        const auto = await getAutoApproveSetting();
-        setAutoApprove(auto);
+setLoading(false);
+        setAutoApprove(await getAutoApproveFlags());
     };
 
     const loadControls = async () => {
@@ -53,15 +54,24 @@ export default function RegistrationControlsPage() {
         setControls(data);
     };
 
-    const handleToggleAutoApprove = async () => {
-        const newVal = !autoApprove;
-        setAutoApprove(newVal);
-        const res = await toggleAutoApproveSettingAction(newVal);
-        if (res.success) {
-            toast.success(newVal ? "Auto-approval enabled" : "Auto-approval disabled");
-        } else {
-            setAutoApprove(!newVal);
+    const handleToggleStage = async (stage: "advisor" | "hod") => {
+        const newVal = !autoApprove[stage];
+        setToggling(stage);
+        const previous = autoApprove;
+        setAutoApprove({ ...autoApprove, [stage]: newVal });
+        try {
+            const res = await setAutoApproveFlagAction(stage, newVal);
+            if (res.success) {
+                toast.success(`${stage === "advisor" ? "Advisor" : "HOD"} auto-approval ${newVal ? "enabled" : "disabled"}`);
+            } else {
+                setAutoApprove(previous);
+                toast.error("Failed to update setting");
+            }
+        } catch {
+            setAutoApprove(previous);
             toast.error("Failed to update setting");
+        } finally {
+            setToggling(null);
         }
     };
 
@@ -134,42 +144,75 @@ export default function RegistrationControlsPage() {
                     </CardContent>
                 </Card>
 
-                <Card className="border-none shadow-2xl rounded-[3rem] overflow-hidden bg-white">
+<Card className="border-none shadow-2xl rounded-[3rem] overflow-hidden bg-white">
                     <CardHeader className="p-10 border-b border-slate-50 flex flex-row justify-between items-center">
                         <div>
                             <CardTitle className="text-2xl font-black italic uppercase tracking-tighter">Auto Approval</CardTitle>
-                            <p className="text-slate-400 font-bold uppercase tracking-widest text-[9px] mt-1">Automatic course registration approval</p>
+                            <p className="text-slate-400 font-bold uppercase tracking-widest text-[9px] mt-1">Advisor and HOD stages are approved independently</p>
                         </div>
-                        <Badge variant={autoApprove ? "default" : "secondary"} className="py-2 px-4 rounded-xl font-black">
-                            {autoApprove ? "AUTO ON" : "MANUAL"}
+                        <Badge variant={autoApprove.advisor && autoApprove.hod ? "default" : "secondary"} className="py-2 px-4 rounded-xl font-black">
+                            {autoApprove.advisor && autoApprove.hod ? "FULL AUTO" : autoApprove.advisor || autoApprove.hod ? "PARTIAL" : "MANUAL"}
                         </Badge>
                     </CardHeader>
-                    <CardContent className="p-10">
+                    <CardContent className="p-10 space-y-6">
                         <div className="bg-slate-50 p-8 rounded-2xl border border-dashed border-slate-200 flex gap-6 items-center">
                             <div className={cn(
                                 "p-6 rounded-[1.5rem] shadow-2xl transition-all",
-                                autoApprove ? "bg-indigo-500 text-white" : "bg-slate-300 text-slate-600"
+                                autoApprove.advisor ? "bg-indigo-500 text-white" : "bg-slate-300 text-slate-600"
                             )}>
                                 <ShieldCheck className="w-8 h-8" />
                             </div>
                             <div className="flex-1">
-                                <h4 className="font-black italic uppercase text-slate-600">Approval Workflow</h4>
+                                <h4 className="font-black italic uppercase text-slate-600">Advisor Stage</h4>
                                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
-                                    {autoApprove
-                                        ? "Student registrations are automatically approved upon submission."
-                                        : "Registrations require manual HOD / Advisor approval."}
+                                    {autoApprove.advisor
+                                        ? "Approved automatically on submission."
+                                        : "Held for manual review by the level advisor."}
                                 </p>
                             </div>
                             <Button
-                                onClick={handleToggleAutoApprove}
+                                onClick={() => handleToggleStage("advisor")}
+                                disabled={toggling === "advisor"}
                                 className={cn(
                                     "rounded-xl font-black px-6 py-6 uppercase text-[10px] tracking-widest transition-all",
-                                    autoApprove ? "bg-rose-500 hover:bg-rose-600 text-white" : "bg-indigo-600 hover:bg-indigo-700 text-white"
+                                    autoApprove.advisor ? "bg-rose-500 hover:bg-rose-600 text-white" : "bg-indigo-600 hover:bg-indigo-700 text-white"
                                 )}
                             >
-                                {autoApprove ? "Disable Auto" : "Enable Auto"}
+                                {toggling === "advisor" ? "Saving..." : autoApprove.advisor ? "Disable Auto" : "Enable Auto"}
                             </Button>
                         </div>
+
+                        <div className="bg-slate-50 p-8 rounded-2xl border border-dashed border-slate-200 flex gap-6 items-center">
+                            <div className={cn(
+                                "p-6 rounded-[1.5rem] shadow-2xl transition-all",
+                                autoApprove.hod ? "bg-indigo-500 text-white" : "bg-slate-300 text-slate-600"
+                            )}>
+                                <ShieldCheck className="w-8 h-8" />
+                            </div>
+                            <div className="flex-1">
+                                <h4 className="font-black italic uppercase text-slate-600">HOD Stage</h4>
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+                                    {autoApprove.hod
+                                        ? "Approved automatically on submission."
+                                        : "Held for manual review by the Head of Department."}
+                                </p>
+                            </div>
+                            <Button
+                                onClick={() => handleToggleStage("hod")}
+                                disabled={toggling === "hod"}
+                                className={cn(
+                                    "rounded-xl font-black px-6 py-6 uppercase text-[10px] tracking-widest transition-all",
+                                    autoApprove.hod ? "bg-rose-500 hover:bg-rose-600 text-white" : "bg-indigo-600 hover:bg-indigo-700 text-white"
+                                )}
+                            >
+                                {toggling === "hod" ? "Saving..." : autoApprove.hod ? "Disable Auto" : "Enable Auto"}
+                            </Button>
+                        </div>
+
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-relaxed">
+                            A registration is only finalized once both stages are approved.
+                            With both on, submitting a course form completes processing immediately.
+                        </p>
                     </CardContent>
                 </Card>
 
@@ -183,14 +226,16 @@ export default function RegistrationControlsPage() {
                             {LEVELS.map(lvl => {
                                 const control = controls.find(c => c.level === lvl);
                                 const isOpen = control?.isOpen || false;
+                                const nd = resolveLevel(lvl, 'ND');
+                                const hnd = resolveLevel(lvl, 'HND');
                                 return (
                                     <div key={lvl} className="p-6 flex justify-between items-center hover:bg-white/5 transition-all">
                                         <div className="flex items-center gap-4">
                                             <div className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center font-black italic text-indigo-400">
-                                                {lvl}L
+                                                {lvl}
                                             </div>
                                             <div>
-                                                <span className="font-black italic text-sm uppercase tracking-tight">{lvl} Level Students</span>
+                                                <span className="font-black italic text-sm uppercase tracking-tight">{nd?.label} / {hnd?.label}</span>
                                                 <p className="text-[9px] font-bold text-white/30 uppercase tracking-widest">
                                                     Current Status: {isOpen ? "Override Open" : "Standard Control"}
                                                 </p>

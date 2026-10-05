@@ -34,6 +34,7 @@ import {
 } from "@/actions/promotion";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { levelLabel } from "@/lib/levels";
 
 const decisionConfig: Record<string, { color: string; icon: any; label: string }> = {
     promoted: { color: "bg-emerald-100 text-emerald-700", icon: <ArrowUpCircle className="w-3 h-3" />, label: "PROMOTED" },
@@ -358,9 +359,9 @@ export default function PromotionPage() {
                                                 </td>
                                                 <td className="p-4 text-slate-600 font-medium">{e.deptName}</td>
                                                 <td className="p-4 text-center">
-                                                    <span className="font-black">{e.currentLevel}</span>
+                                                    <span className="font-black">{levelLabel(e.currentLevel, e.studentProgrammeType)}</span>
                                                     {e.decision === 'promoted' && (
-                                                        <span className="text-emerald-600"> → {e.newLevel}</span>
+                                                        <span className="text-emerald-600"> → {levelLabel(e.newLevel, e.studentProgrammeType)}</span>
                                                     )}
                                                 </td>
                                                 <td className="p-4 text-center font-bold">
@@ -511,9 +512,19 @@ export default function PromotionPage() {
                                         onChange={e => setTargetLevel(e.target.value)}
                                         className="w-full h-11 rounded-xl border-2 border-slate-200 px-4 font-bold text-sm focus:border-indigo-500 focus:outline-none"
                                     >
-                                        {[1, 2, 3, 4, 5].map(l => <option key={l} value={l}>Level {l}</option>)}
+                                        {[1, 2].map(l => {
+                                            const nd = levelLabel(l, 'ND');
+                                            const hnd = levelLabel(l, 'HND');
+                                            return (
+                                                <option key={l} value={l}>
+                                                    {nd} / {hnd}
+                                                </option>
+                                            );
+                                        })}
                                     </select>
-                                    <p className="text-[10px] text-slate-400 font-medium mt-1">Level 1 is the floor — demotion below it is refused.</p>
+                                    <p className="text-[10px] text-slate-400 font-medium mt-1">
+                                        A student's programme type is fixed, so level 1 reads as ND 1 or HND 1 depending on the programme. Demotion below level 1 is refused.
+                                    </p>
                                 </div>
 
                                 <div>
@@ -582,7 +593,7 @@ export default function PromotionPage() {
                                                     "font-black",
                                                     p.action === 'skipped' ? "text-slate-300" : "text-indigo-700"
                                                 )}>
-                                                    {p.action === 'skipped' ? 'SKIP' : `L${p.fromLevel} → L${p.toLevel}`}
+                                                    {p.action === 'skipped' ? 'SKIP' : `${levelLabel(p.fromLevel)} → ${levelLabel(p.toLevel)}`}
                                                 </span>
                                             </span>
                                         </div>
@@ -613,7 +624,7 @@ export default function PromotionPage() {
                                                 </Badge>
                                             </div>
                                             <p className="text-[10px] text-slate-500 mt-0.5">
-                                                L{l.fromLevel} → L{l.toLevel} · {l.reason}
+                                                {levelLabel(l.fromLevel)} → {levelLabel(l.toLevel)} · {l.reason}
                                             </p>
                                         </div>
                                     ))}

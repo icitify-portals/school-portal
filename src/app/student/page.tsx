@@ -115,8 +115,8 @@ export default async function StudentDashboard() {
     const quickActions = [
         { 
             name: isK12 ? "Subject Registration" : "Course Registration", 
-            href: "/student/registration", 
-            desc: isK12 ? "Register for term subjects" : "Enroll in new semester subjects", 
+            href: "/student/courses/registration", 
+            desc: isK12 ? "Register for term subjects" : "Select and submit your semester courses", 
             icon: BookOpen, 
             color: "bg-blue-50 text-blue-600 border-blue-100 hover:border-blue-300" 
         },

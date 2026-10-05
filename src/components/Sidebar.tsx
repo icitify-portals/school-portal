@@ -85,9 +85,9 @@ const studentMenuItems: MenuItem[] = [
         subItems: [
             { name: "Admission Status", href: "/admission", module: "admission" },
             { name: "Apply for HND / New Program", href: "/applicant" },
-            { name: "Course Registration", href: "/student/registration" },
+            { name: "Course Registration", href: "/student/courses/registration" },
             { name: "Add/Drop Module", href: "/student/registration/add-drop" },
-            { name: "My Registrations", href: "/student/registration" },
+            { name: "My Registrations", href: "/student/courses/registration" },
             { name: "Academic Transcript", href: "/student/transcript", module: "results" },
             { name: "Graduate Documents", href: "/alumni/documents" },
             { name: "Terminal Report Card", href: "/student/report-card" },

@@ -10,7 +10,13 @@ import {
 import { eq, and, desc, sql, count, sum, or, like, inArray, isNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { hasPermission, hasRole } from "@/lib/rbac";
+import { resolveLevel, levelLabel } from "@/lib/levels";
 import { PromotionService } from "@/services/PromotionService";
+
+/** Renders a level as ND 1 / ND 2 / HND 1 / HND 2 for operator-facing copy. */
+function resolvedLevelLabel(programmeType: string | null | undefined, level: number): string {
+    return levelLabel(level, programmeType);
+}
 
 // --- CRITERIA ---
 
@@ -253,13 +259,19 @@ async function evaluateStudents(sessionId: number): Promise<StudentEvaluation[]>
         const hasSummary = studentSummaries.length > 0;
         const cgpa = hasSummary ? parseFloat(String(latestSummary!.cgpa || '0')) : 0;
 
-        const currentLevel = student.currentLevel || 1;
+        // Normalise first: a handful of students are still stored with legacy
+        // numeric levels (100/200/300/400). Comparing or incrementing those
+        // directly would produce nonsense such as 201.
+        const resolvedLevel = resolveLevel(student.currentLevel, student.studentProgrammeType);
+        const currentLevel = resolvedLevel?.level ?? 1;
+        const currentLevelLabel = resolvedLevel?.label ?? `Level ${student.currentLevel ?? 1}`;
+        const currentLevelNumeric = resolvedLevel?.numeric ?? 100;
         const reasons: string[] = [];
         const criteria: AppliedCriteria = (student.deptId ? criteriaMap.get(student.deptId) : null) || DEFAULT_CRITERIA;
         const allowAutoWithdraw = criteria.additionalRules.allowAutoWithdraw === true;
 
         let decision: StudentEvaluation['decision'] = 'promoted';
-        let newLevel = currentLevel;
+        let newLevel: number = currentLevel;
 
         // SAFETY: a student with no computed summary for this session is never promoted,
         // repeated, withdrawn or graduated. Absence of results is not a result.
@@ -295,7 +307,7 @@ async function evaluateStudents(sessionId: number): Promise<StudentEvaluation[]>
             if (average < 50) {
                 decision = 'repeat';
                 reasons.push(`Annual Average (${average.toFixed(2)}%) is below the required 50% threshold.`);
-            } else if ((student.currentLevel || 0) >= 400) {
+            } else if (currentLevelNumeric >= 400) {
                 const hasPassedCore = await (PromotionService as any).hasPassedCoreSubjects(student.studentId, sessionId);
                 if (!hasPassedCore) {
                     decision = 'repeat';
@@ -330,15 +342,15 @@ async function evaluateStudents(sessionId: number): Promise<StudentEvaluation[]>
         if (decision === 'promoted') {
             if (currentLevel >= maxLevel) {
                 decision = student.studentProgrammeType === 'HND' ? 'hnd_graduant' : 'nd_graduant';
-                reasons.push(`Completed max level (${maxLevel}) with a published summary — eligible for graduation`);
+                reasons.push(`Completed ${currentLevelLabel} with a published summary — eligible for graduation`);
                 newLevel = currentLevel;
             } else {
-                newLevel = currentLevel + 1;
-                reasons.push(`Promoted from ${currentLevel} to ${newLevel}`);
+                newLevel = Math.min(currentLevel + 1, maxLevel);
+                reasons.push(`Promoted from ${currentLevelLabel} to ${resolvedLevelLabel(student.studentProgrammeType, newLevel)}`);
             }
         } else if (decision === 'repeat') {
             newLevel = currentLevel;
-            if (reasons.length === 0) reasons.push('Repeating current level');
+            if (reasons.length === 0) reasons.push(`Repeating ${currentLevelLabel}`);
         }
 
         evaluations.push({
@@ -484,7 +496,7 @@ export async function runPromotion(sessionId: number, targetSessionId: number, o
                             decision: 'repeat',
                             cgpa: evaluation.cgpa.toFixed(2),
                             creditsEarned: evaluation.creditsEarned,
-                            reason: `[SPILLOVER] Final year reached with ${pendingCarryOver} pending academic carry-over(s); held at level ${evaluation.currentLevel} pending completion.`,
+                            reason: `[SPILLOVER] Final year reached with ${pendingCarryOver} pending academic carry-over(s); held at ${resolvedLevelLabel(evaluation.studentProgrammeType, evaluation.currentLevel)} pending completion.`,
                             promotedBy,
                         });
                         repeated++;
@@ -620,6 +632,7 @@ export async function generateHodReport(deptId: number, sessionId: number, type:
             lastName: students.lastName,
             matricNumber: students.matricNumber,
             currentLevel: students.currentLevel,
+            studentProgrammeType: students.programmeType,
             admissionYear: students.admissionYear,
             modeOfEntry: students.modeOfEntry,
             programmeName: programmes.name,
@@ -637,7 +650,8 @@ export async function generateHodReport(deptId: number, sessionId: number, type:
         // Filter by final/non-final year
         const filteredStudents = deptStudents.filter(s => {
             const maxLevel = (s.durationYears || 2);
-            const isFinalYear = (s.currentLevel || 1) >= maxLevel;
+            const level = resolveLevel(s.currentLevel, s.studentProgrammeType)?.level ?? 1;
+            const isFinalYear = level >= maxLevel;
             return type === 'final_year' ? isFinalYear : !isFinalYear;
         });
 
@@ -890,8 +904,8 @@ export async function bulkAdjustLevels(input: LevelAdjustmentInput) {
         if (ids.length > MAX_BULK) return { error: `Too many students selected (max ${MAX_BULK} per operation).` };
 
         const targetLevel = Number(input.targetLevel);
-        if (!Number.isInteger(targetLevel) || targetLevel < 1 || targetLevel > 9) {
-            return { error: "Target level must be a whole number between 1 and 9." };
+        if (!Number.isInteger(targetLevel) || targetLevel < 1 || targetLevel > 2) {
+            return { error: "Target level must be ND 1, ND 2, HND 1 or HND 2 (stored as level 1 or 2)." };
         }
 
         const reason = (input.reason || "").trim();
@@ -907,6 +921,7 @@ export async function bulkAdjustLevels(input: LevelAdjustmentInput) {
             name: users.name,
             matricNumber: students.matricNumber,
             currentLevel: students.currentLevel,
+            programmeType: students.programmeType,
             status: students.status,
             currentSessionId: students.currentSessionId,
         })
@@ -924,7 +939,8 @@ export async function bulkAdjustLevels(input: LevelAdjustmentInput) {
         for (const id of ids) {
             const r = found.get(id);
             if (!r) continue;
-            const fromLevel = r.currentLevel || 1;
+            // Normalise legacy 100/200/300/400 storage before comparing levels.
+            const fromLevel = resolveLevel(r.currentLevel, r.programmeType)?.level ?? 1;
 
             if (mode === 'demote' && targetLevel >= fromLevel) {
                 plan.push({ studentId: id, name: r.name, matricNumber: r.matricNumber, fromLevel, toLevel: fromLevel, action: 'skipped', warning: 'Target level is not lower than the current level' });

@@ -4,13 +4,17 @@ import React, { useState, useEffect } from 'react';
 import {
   BookOpen, CheckCircle2, AlertCircle, Plus, Trash2, ChevronRight,
   FileText, Clock, ShieldCheck, Loader2, Info, Layers, Printer,
-  Edit3, XCircle, Search, CreditCard
+  Edit3, XCircle, Search, CreditCard, RefreshCw
 } from 'lucide-react';
 import { getAvailableCoursesAction, submitCourseRegistrationAction, getRegisteredCoursesAction } from '@/actions/course-registration';
 import { recordPrintFeePaymentAction } from '@/actions/finance';
 import { getStudentProfileStatus } from '@/actions/student-profile';
+import { getCurrentSession } from '@/actions/portal';
+import { resolveLevel } from '@/lib/levels';
 import { AlatpayInlineCheckout } from '@/components/finance/AlatpayInlineCheckout';
 import { toast } from 'sonner';
+
+const COURSE_FORM_FEE = 500;
 
 export default function AdvancedCourseRegistrationPortal() {
   const [availableCourses, setAvailableCourses] = useState<any[]>([]);
@@ -21,7 +25,7 @@ export default function AdvancedCourseRegistrationPortal() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [studentCtx, setStudentCtx] = useState<{ id: number; sessionId: number; semester: '1' | '2'; email: string; firstName: string; lastName: string; phone: string } | null>(null);
+  const [studentCtx, setStudentCtx] = useState<{ id: number; sessionId: number; semester: '1' | '2'; email: string; firstName: string; lastName: string; phone: string; levelLabel: string } | null>(null);
 
   const MIN_UNITS = 15;
   const MAX_UNITS = 24;
@@ -39,15 +43,26 @@ export default function AdvancedCourseRegistrationPortal() {
         setLoading(false);
         return;
       }
-      const p = profileRes.profile;
+      const p: any = profileRes.profile;
+
+      // The session and semester come from the portal's current session, never
+      // a hardcoded id, so this keeps working when a new session is opened.
+      const currentSession = await getCurrentSession();
+      if (!currentSession) {
+        setError("No academic session is currently set. Please contact the registrar.");
+        setLoading(false);
+        return;
+      }
+
       const ctx = {
         id: p.id,
-        sessionId: p.currentSessionId || 6,
-        semester: '1' as const,
+        sessionId: currentSession.id,
+        semester: (currentSession.currentSemester === '2' ? '2' : '1') as '1' | '2',
         email: p.email || '',
         firstName: p.firstName || '',
         lastName: p.lastName || '',
         phone: p.phone || '',
+        levelLabel: resolveLevel(p.currentLevel, p.programmeType)?.label || '',
       };
       setStudentCtx(ctx);
       await loadData(ctx);
@@ -63,7 +78,7 @@ export default function AdvancedCourseRegistrationPortal() {
       getRegisteredCoursesAction(ctx.id, ctx.sessionId, ctx.semester)
     ]);
 
-    if (availRes.success) setAvailableCourses(availRes.data);
+    if (availRes.success) setAvailableCourses(availRes.data || []);
     if (regRes.success) {
       setIsPrintFeePaid(regRes.isPrintFeePaid || false);
       // @ts-expect-error - TS2345: Auto-suppressed for build
@@ -88,13 +103,20 @@ export default function AdvancedCourseRegistrationPortal() {
   const advisorStatus = registeredCourses[0]?.advisorStatus || 'pending';
   const hodStatus = registeredCourses[0]?.hodStatus || 'pending';
   const isLocked = advisorStatus === 'approved' || hodStatus === 'approved';
+  const hasSubmitted = registeredCourses.length > 0;
+  const unitProblem = totalUnits < MIN_UNITS
+    ? `Select at least ${MIN_UNITS} units (currently ${totalUnits}).`
+    : totalUnits > MAX_UNITS
+      ? `You have selected ${totalUnits} units. The maximum is ${MAX_UNITS}.`
+      : null;
 
   const handleSubmit = async () => {
     if (!studentCtx) return;
-    if (totalUnits < MIN_UNITS || totalUnits > MAX_UNITS) return;
-    
+    if (unitProblem) return toast.error(unitProblem);
+
+    // The N500 course form fee is charged at submission, and only at submission.
     if (!isPrintFeePaid) {
-      toast.info("A payment of ₦500 is required before submitting your course registration form.");
+      toast.info(`A payment of N${COURSE_FORM_FEE} is required to submit your course registration form.`);
       setShowPayment(true);
       return;
     }
@@ -117,19 +139,24 @@ export default function AdvancedCourseRegistrationPortal() {
   };
 
   const handlePrintClick = () => {
-    if (!studentCtx) return;
-    if (isPrintFeePaid) {
-      window.print();
-    } else {
-      setShowPayment(true);
+    // Printing never charges anything. The form is printable once it has been
+    // paid for and submitted.
+    if (!hasSubmitted) {
+      toast.error("Submit your course registration form before printing it.");
+      return;
     }
+    if (!isPrintFeePaid) {
+      toast.error(`The course form fee of N${COURSE_FORM_FEE} has not been paid.`);
+      return;
+    }
+    window.print();
   };
 
   const handlePaymentSuccess = async (res: any) => {
     if (!studentCtx) return;
     const r = await recordPrintFeePaymentAction(
       studentCtx.id, studentCtx.sessionId, studentCtx.semester,
-      500, res.reference || res.transactionReference, res.gatewayTransactionId || ""
+      COURSE_FORM_FEE, res.reference || res.transactionReference, res.gatewayTransactionId || ""
     );
     if (r.success) {
       toast.success("Payment successful! Submitting your course registration...");
@@ -175,26 +202,35 @@ export default function AdvancedCourseRegistrationPortal() {
                         Academic Course Registration
                     </h2>
                 </div>
-                <p className="text-slate-300 font-medium mt-1 uppercase text-sm tracking-wide opacity-90">
-                    {studentCtx.firstName} {studentCtx.lastName} • Semester {studentCtx.semester}
+<p className="text-slate-300 font-medium mt-1 uppercase text-sm tracking-wide opacity-90">
+                    {studentCtx.firstName} {studentCtx.lastName}
+                    {studentCtx.levelLabel ? ` • ${studentCtx.levelLabel}` : ''}
+                    • Semester {studentCtx.semester === '1' ? 'First' : 'Second'}
                 </p>
             </div>
 
             <div className="relative z-10 flex gap-3">
                <button
                  onClick={handlePrintClick}
-                 className={`h-12 px-4 flex items-center gap-2 rounded-2xl font-bold text-sm transition-all shadow-lg backdrop-blur-md border ${
-                   isPrintFeePaid
+                 disabled={!hasSubmitted || !isPrintFeePaid}
+                 title={!hasSubmitted
+                    ? "Submit your course registration form first"
+                    : !isPrintFeePaid
+                      ? `The course form fee of N${COURSE_FORM_FEE} has not been paid`
+                      : "Print your course registration form"}
+                 className={`h-12 px-4 flex items-center gap-2 rounded-2xl font-bold text-sm transition-all shadow-lg backdrop-blur-md border disabled:opacity-40 disabled:cursor-not-allowed ${
+                   isPrintFeePaid && hasSubmitted
                      ? 'bg-white/10 border-white/20 text-white hover:bg-white/20'
-                     : 'bg-amber-500/90 border-amber-400 text-white hover:bg-amber-600'
+                     : 'bg-white/5 border-white/10 text-slate-400'
                  }`}
                >
                    <Printer size={18} />
-                   {isPrintFeePaid ? 'Print Form' : 'Pay ₦500 Fee'}
+                   Print Form
                </button>
                <button
                  onClick={handleSubmit}
-                 disabled={submitting || totalUnits < MIN_UNITS || totalUnits > MAX_UNITS || isLocked}
+                 disabled={submitting || !!unitProblem || isLocked}
+                 title={unitProblem || undefined}
                  className={`h-12 px-6 rounded-2xl font-bold flex items-center gap-2 transition-all shadow-lg backdrop-blur-md border disabled:opacity-50 disabled:cursor-not-allowed ${
                    isLocked
                     ? 'bg-emerald-600/90 border-emerald-500 text-white shadow-emerald-900/50'
@@ -203,8 +239,8 @@ export default function AdvancedCourseRegistrationPortal() {
                     : 'bg-indigo-600 border-indigo-500/50 text-white hover:bg-indigo-700 shadow-indigo-900/50'
                  }`}
                >
-                   {submitting ? <Loader2 size={18} className="animate-spin" /> : isLocked ? <ShieldCheck size={18} /> : <CheckCircle2 size={18} />}
-                   {isLocked ? 'Registration Finalized' : !isPrintFeePaid ? 'Pay ₦500 & Submit Form' : 'Submit for Verification'}
+                  {submitting ? <Loader2 size={18} className="animate-spin" /> : isLocked ? <ShieldCheck size={18} /> : <CheckCircle2 size={18} />}
+                  {isLocked ? 'Registration Finalized' : !isPrintFeePaid ? `Pay ₦${COURSE_FORM_FEE} & Submit Form` : 'Submit Form'}
                </button>
             </div>
         </div>
@@ -235,6 +271,19 @@ export default function AdvancedCourseRegistrationPortal() {
                       <div className="p-20 flex justify-center">
                          <Loader2 className="animate-spin text-indigo-500" size={40} />
                       </div>
+                   ) : availableCourses.length === 0 ? (
+                      <div className="p-16 text-center space-y-4">
+                         <AlertCircle className="w-12 h-12 text-amber-500 mx-auto" />
+                         <div className="font-black text-xl uppercase tracking-tight text-slate-700">
+                            No Courses Available Yet
+                         </div>
+                         <p className="text-sm font-medium text-slate-500 max-w-md mx-auto leading-relaxed">
+                            There are no courses configured for your level
+                            {studentCtx.levelLabel ? ` (${studentCtx.levelLabel})` : ''} in this semester.
+                            The registrar or your HOD has not published the course list yet. Please check back
+                            shortly or contact the department office.
+                         </p>
+                      </div>
                    ) : availableCourses.map((course) => (
                       <div
                         key={course.id}
@@ -254,8 +303,14 @@ export default function AdvancedCourseRegistrationPortal() {
                                <div className="flex items-center gap-3 mt-1 flex-wrap">
                                   <span className={`text-[10px] font-black uppercase tracking-widest ${selectedIds.includes(course.id) ? 'text-indigo-200' : 'text-slate-500'}`}>{course.code}</span>
                                   <span className={`w-1 h-1 rounded-full ${selectedIds.includes(course.id) ? 'bg-indigo-400' : 'bg-slate-300'}`} />
-                                  <span className={`text-[10px] font-black uppercase tracking-widest ${selectedIds.includes(course.id) ? 'text-white' : 'text-indigo-600'}`}>{course.units} Units</span>
-                                  {course.prerequisite && (
+<span className={`text-[10px] font-black uppercase tracking-widest ${selectedIds.includes(course.id) ? 'text-white' : 'text-indigo-600'}`}>{course.units} Units</span>
+                                   {course.isCarryOver && (
+                                       <div className={`flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded border ${selectedIds.includes(course.id) ? 'text-white bg-white/20 border-white/30' : 'text-amber-800 bg-amber-100/80 border-amber-200'}`}>
+                                          <RefreshCw size={10} />
+                                          Carry-over
+                                       </div>
+                                   )}
+                                   {course.prerequisite && (
                                       <div className="flex items-center gap-1 text-[10px] text-amber-700 font-black bg-amber-100/80 px-2 py-0.5 rounded border border-amber-200">
                                          <AlertCircle size={10} />
                                          Req: {course.prerequisite}
@@ -326,16 +381,33 @@ export default function AdvancedCourseRegistrationPortal() {
                    <div className="flex justify-between items-center">
                       <div>
                          <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Units Selected</div>
-                         <div className={`text-3xl font-black ${totalUnits > MAX_UNITS ? 'text-rose-600' : 'text-slate-900'}`}>{totalUnits} Units</div>
-                      </div>
-                      {!isLocked && (
-                          <div className="p-3 bg-amber-100/80 text-amber-800 rounded-[1rem] flex items-center gap-2 border border-amber-200">
-                             <Edit3 size={16} />
-                             <span className="text-[10px] font-black uppercase tracking-wider">Editable</span>
-                          </div>
-                      )}
-                   </div>
+<div className={`text-3xl font-black ${totalUnits > MAX_UNITS ? 'text-rose-600' : 'text-slate-900'}`}>{totalUnits} Units</div>
+                       </div>
+                       {!isLocked && (
+                           <div className="p-3 bg-amber-100/80 text-amber-800 rounded-[1rem] flex items-center gap-2 border border-amber-200">
+                              <Edit3 size={16} />
+                              <span className="text-[10px] font-black uppercase tracking-wider">Editable</span>
+                           </div>
+                       )}
+                    </div>
+                    {!isLocked && (
+                        <p className={`text-[10px] font-black uppercase tracking-widest mt-2 ${unitProblem ? 'text-rose-600' : 'text-emerald-600'}`}>
+                            {unitProblem || `Within the ${MIN_UNITS}-${MAX_UNITS} unit limit`}
+                        </p>
+                    )}
                 </div>
+
+                {!isLocked && (
+                    <div className="bg-amber-50 border border-amber-100 rounded-[2rem] p-6 space-y-2">
+                        <div className="text-[10px] font-black text-amber-700 uppercase tracking-widest">Course Form Fee</div>
+                        <div className="text-sm font-bold text-amber-900">
+                            ₦{COURSE_FORM_FEE} is charged once, when you submit this form.
+                        </div>
+                        <div className="text-[10px] font-bold text-amber-700/70 uppercase tracking-widest">
+                            {isPrintFeePaid ? "Paid — submit any time." : "Not yet paid."}
+                        </div>
+                    </div>
+                )}
              </div>
 
              <div className="bg-indigo-900 text-white rounded-[3rem] p-8 space-y-4 shadow-xl border border-indigo-950 relative overflow-hidden">

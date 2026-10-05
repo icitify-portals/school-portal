@@ -9,31 +9,54 @@ import {
     resultMarks,
     gradePoints,
     users,
+    enrollments,
+    academicSessions,
     courseRegistrationWaivers
 } from "@/db/schema";
-import { eq, and, inArray, sql, exists } from "drizzle-orm";
+import { eq, and, or, inArray, isNull, sql } from "drizzle-orm";
+import { resolveLevel, COURSE_LEVELS } from "@/lib/levels";
+import { getAutoApproveFlags } from "@/actions/settings";
 import { assertActivityUnlocked, buildStudentLockContext, ACTIVITIES } from "./ActivityLockService";
 
 export class CourseRegistrationService {
 
-    /**
-     * Retrieves all available courses for a student based on their Department, Level, and Semester.
-     * ND 1 students see ND 1 courses, ND 2 students see ND 2 courses + eligible carry-overs/electives.
+/**
+     * Retrieves the courses a student may register for.
+     *
+     * A student sees their OWN level's courses only. Courses from a lower level
+     * are surfaced solely when the student has an unresolved carry-over on that
+     * exact course, so nobody is offered a whole lower level to browse.
+     *
+     * Carry-over is authoritative from academic_carry_overs, and falls back to an
+     * unambiguous F in student_results. Grades outside the portal's grading
+     * scale are never treated as failures.
      */
     static async getAvailableCourses(studentId: number, semester: '1' | '2') {
         const studentRecord = await db.select({
             id: students.id,
             deptId: students.deptId,
-            level: students.currentLevel
+            level: students.currentLevel,
+            programmeType: students.programmeType,
+            currentSessionId: students.currentSessionId
         })
         .from(students)
-        .where(eq(students.id, studentId))
+        .where(and(eq(students.id, studentId), isNull(students.deletedAt)))
         .limit(1);
 
         if (!studentRecord.length) return [];
         const student = studentRecord[0];
-        const studentLevel = student.level || 100;
+
+        const resolved = resolveLevel(student.level, student.programmeType);
+        if (!resolved) return [];
+        const ownLevel = resolved.numeric;
+        const levelName = resolved.label;
+
         const studentDeptId = student.deptId;
+
+        // Courses the student still owes from an earlier level.
+        const carryOverCourseIds = await this.getCarryOverCourseIds(studentId);
+
+        const lowerLevels = COURSE_LEVELS.filter(l => l < ownLevel);
 
         let available = await db.select({
             id: courses.id,
@@ -41,6 +64,7 @@ export class CourseRegistrationService {
             code: courses.code,
             units: sql<number>`COALESCE(${courseDepartmentSettings.creditUnits}, ${courses.creditUnits})`.mapWith(Number),
             status: courseDepartmentSettings.status,
+            level: courseDepartmentSettings.level,
             isUniversityRequired: courses.isUniversityRequired,
             capacity: (courseDepartmentSettings as any).capacity,
             enrolledCount: (courseDepartmentSettings as any).enrolledCount,
@@ -50,8 +74,26 @@ export class CourseRegistrationService {
         .where(and(
             eq(courseDepartmentSettings.semester, semester),
             studentDeptId ? eq(courseDepartmentSettings.deptId, studentDeptId) : sql`1=1`,
-            sql`(${courseDepartmentSettings.level} = ${studentLevel} OR ${courseDepartmentSettings.level} <= ${studentLevel})`
+            or(
+                // Own level: the full catalogue.
+                eq(courseDepartmentSettings.level, ownLevel),
+                // Lower level: only a specific owed course, and only when one exists.
+                carryOverCourseIds.length > 0 && lowerLevels.length > 0
+                    ? and(
+                        inArray(courseDepartmentSettings.level, lowerLevels),
+                        inArray(courses.id, carryOverCourseIds)
+                    )
+                    : undefined
+            )
         ));
+
+        // Badge the carry-overs so the UI can distinguish an owed course.
+        if (carryOverCourseIds.length > 0) {
+            const owed = new Set(carryOverCourseIds);
+            for (const c of available as any[]) {
+                if (owed.has(c.id)) c.isCarryOver = true;
+            }
+        }
 
         // Capacity filter (if flag enabled, hide full courses)
         try {
@@ -64,9 +106,17 @@ export class CourseRegistrationService {
         // Timetable clash check (non-breaking, just annotate)
         try {
             const { timetableSlots, courseLecturers } = await import("@/db/schema");
-            const studentRegs = await db.select({ courseId: studentCourseRegistrations.courseId }).from(studentCourseRegistrations).where(and(eq(studentCourseRegistrations.studentId, studentId), eq(studentCourseRegistrations.sessionId, (await db.select().from(students).where(eq(students.id, studentId)).limit(1))[0]?.currentSessionId || 0))).limit(50);
-            const registeredIds = studentRegs.map(r => r.courseId).filter(Boolean);
-            if (registeredIds.length > 0) {
+            const sessionId = student.currentSessionId;
+            const registeredIds = sessionId
+                ? (await db.select({ courseId: studentCourseRegistrations.courseId })
+                    .from(studentCourseRegistrations)
+                    .where(and(
+                        eq(studentCourseRegistrations.studentId, studentId),
+                        eq(studentCourseRegistrations.sessionId, sessionId)
+                    ))
+                ).map(r => r.courseId)
+                : [];
+            if (registeredIds.length > 0 && available.length > 0) {
                 const existingSlots = await db.select({ courseId: courseLecturers.courseId, day: timetableSlots.day, startTime: timetableSlots.startTime, endTime: timetableSlots.endTime }).from(timetableSlots).innerJoin(courseLecturers, eq(timetableSlots.courseLecturerId, courseLecturers.id)).where(inArray(courseLecturers.courseId, registeredIds as number[]));
                 const newSlots = await db.select({ courseId: courseLecturers.courseId, day: timetableSlots.day, startTime: timetableSlots.startTime, endTime: timetableSlots.endTime }).from(timetableSlots).innerJoin(courseLecturers, eq(timetableSlots.courseLecturerId, courseLecturers.id)).where(inArray(courseLecturers.courseId, available.map((c:any) => c.id)));
                 // Annotate clash (not filtering, just flag)
@@ -78,6 +128,59 @@ export class CourseRegistrationService {
         } catch {}
 
         return available;
+    }
+
+    /**
+     * Courses a student still has to clear from an earlier level.
+     *
+     * academic_carry_overs is authoritative when a row exists. Otherwise an
+     * unambiguous F in student_results counts, because the portal's grading scale
+     * defines F as 0 points. Grades outside that scale are ignored rather than
+     * guessed at. A later pass in the same course clears the carry-over.
+     */
+    private static async getCarryOverCourseIds(studentId: number): Promise<number[]> {
+        const carried = new Set<number>();
+
+        try {
+            const { academicCarryOvers } = await import("@/db/schema");
+            const rows = await db.select({ courseId: academicCarryOvers.courseId })
+                .from(academicCarryOvers)
+                .where(and(
+                    eq(academicCarryOvers.studentId, studentId),
+                    inArray(academicCarryOvers.status, ['pending', 'registered'])
+                ));
+            for (const r of rows) if (r.courseId) carried.add(r.courseId);
+        } catch {}
+
+        if (carried.size === 0) {
+            try {
+                const { studentResults } = await import("@/db/schema");
+                const failed = await db.select({ courseId: studentResults.courseId })
+                    .from(studentResults)
+                    .where(and(
+                        eq(studentResults.studentId, studentId),
+                        sql`${studentResults.grade} IN ('F')`
+                    ));
+                for (const r of failed) if (r.courseId) carried.add(r.courseId);
+            } catch {}
+        }
+
+        // Anything the student has since passed is no longer owed.
+        if (carried.size > 0) {
+            try {
+                const { studentResults } = await import("@/db/schema");
+                const cleared = await db.select({ courseId: studentResults.courseId })
+                    .from(studentResults)
+                    .where(and(
+                        eq(studentResults.studentId, studentId),
+                        inArray(studentResults.courseId, [...carried]),
+                        sql`${studentResults.grade} NOT IN ('F')`
+                    ));
+                for (const r of cleared) carried.delete(r.courseId);
+            } catch {}
+        }
+
+        return [...carried];
     }
 
     /**
@@ -269,7 +372,7 @@ export class CourseRegistrationService {
             throw new Error(`Invalid credit units: ${totalUnits}. Allowed range: 15-24 units.`);
         }
 
-        return await db.transaction(async (tx) => {
+return await db.transaction(async (tx) => {
             await tx.delete(studentCourseRegistrations).where(and(
                 eq(studentCourseRegistrations.studentId, data.studentId),
                 eq(studentCourseRegistrations.sessionId, data.sessionId),
@@ -277,12 +380,14 @@ export class CourseRegistrationService {
                 eq(studentCourseRegistrations.advisorStatus, 'pending')
             ));
 
-            const { systemSettings } = await import("@/db/schema");
-            const autoApproveSetting = await tx.select({ value: systemSettings.settingValue })
-                .from(systemSettings)
-                .where(eq(systemSettings.settingKey, 'auto_approve_course_registration'))
-                .limit(1);
-            const isAutoApprove = autoApproveSetting[0]?.value === 'true';
+            // Advisor and HOD are approved independently, so the portal can run
+            // with either stage automated and the other still reviewed by a human.
+            const { advisor: autoApproveAdvisor, hod: autoApproveHod } = await getAutoApproveFlags();
+            const now = new Date();
+
+            const advisorStatus = autoApproveAdvisor ? 'approved' as const : 'pending' as const;
+            const hodStatus = autoApproveHod ? 'approved' as const : 'pending' as const;
+            const finalStatus = autoApproveAdvisor && autoApproveHod ? 'approved' as const : 'pending' as const;
 
             const registrationEntries = data.courseIds.map(courseId => ({
                 studentId: data.studentId,
@@ -290,13 +395,43 @@ export class CourseRegistrationService {
                 sessionId: data.sessionId,
                 semester: data.semester,
                 isWaiver: waivedCourseIds.includes(courseId),
-                advisorStatus: isAutoApprove ? 'approved' as const : 'pending' as const,
-                hodStatus: isAutoApprove ? 'approved' as const : 'pending' as const,
-                finalStatus: isAutoApprove ? 'approved' as const : 'pending' as const,
-                ...(isAutoApprove ? { advisorApprovedAt: new Date(), hodApprovedAt: new Date() } : {})
+                advisorStatus,
+                hodStatus,
+                finalStatus,
+                ...(autoApproveAdvisor ? { advisorApprovedAt: now } : {}),
+                ...(autoApproveHod ? { hodApprovedAt: now } : {})
             }));
 
             await tx.insert(studentCourseRegistrations).values(registrationEntries);
+
+            // Forward-only projection into `enrollments`, which is what the
+            // timetable reads. Only the current registration is written: no
+            // historical legacy enrolment data is read, migrated or reused.
+            const [session] = await tx.select({
+                name: academicSessions.name,
+                currentSemester: academicSessions.currentSemester
+            })
+            .from(academicSessions)
+            .where(eq(academicSessions.id, data.sessionId))
+            .limit(1);
+
+            if (session?.name) {
+                const academicYear = session.name;
+                const semesterNo = data.semester === '2' || session.currentSemester === '2' ? 2 : 1;
+
+                await tx.delete(enrollments).where(and(
+                    eq(enrollments.studentId, data.studentId),
+                    eq(enrollments.academicYear, academicYear),
+                    eq(enrollments.semester, semesterNo)
+                ));
+
+                await tx.insert(enrollments).values(data.courseIds.map(courseId => ({
+                    studentId: data.studentId,
+                    courseId,
+                    academicYear,
+                    semester: semesterNo
+                })));
+            }
 
             await tx.insert(semesterSummaries).values({
                 studentId: data.studentId,

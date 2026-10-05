@@ -497,21 +497,57 @@ export async function deleteInstitutionalUnit(id: number) {
 }
 
 
-export async function getAutoApproveSetting() {
-    const res = await db.select().from(systemSettings).where(eq(systemSettings.settingKey, "auto_approve_course_registration")).limit(1);
-    return res[0]?.settingValue === "true";
+/**
+ * Course-registration approval switches.
+ *
+ * Advisor and HOD approval are separate switches so the institution can automate
+ * one stage and keep the other under human review. The legacy single key
+ * auto_approve_course_registration is still honoured as a fallback so an existing
+ * installation does not silently drop into manual review.
+ */
+const KEY_AUTO_ADVISOR = "auto_approve_course_registration_advisor";
+const KEY_AUTO_HOD = "auto_approve_course_registration_hod";
+const KEY_LEGACY_AUTO = "auto_approve_course_registration";
+
+export async function getAutoApproveFlags(): Promise<{ advisor: boolean; hod: boolean }> {
+    const rows = await db.select({ key: systemSettings.settingKey, value: systemSettings.settingValue })
+        .from(systemSettings)
+        .where(inArray(systemSettings.settingKey, [KEY_AUTO_ADVISOR, KEY_AUTO_HOD, KEY_LEGACY_AUTO]));
+
+    const map = new Map(rows.map(r => [r.key, r.value]));
+
+    // Before the split existed there was one switch; treat "on" as both stages on.
+    const legacy = map.get(KEY_LEGACY_AUTO) === "true";
+    return {
+        advisor: map.has(KEY_AUTO_ADVISOR) ? map.get(KEY_AUTO_ADVISOR) === "true" : legacy,
+        hod: map.has(KEY_AUTO_HOD) ? map.get(KEY_AUTO_HOD) === "true" : legacy
+    };
 }
 
-export async function toggleAutoApproveSettingAction(value: boolean) {
+export async function setAutoApproveFlagAction(stage: "advisor" | "hod", value: boolean) {
     const isStaff = await hasPermission("academic.registration.approve") || await hasRole("admin") || await hasRole("superadmin");
     if (!isStaff) throw new Error("Unauthorized");
 
-    const existing = await db.select().from(systemSettings).where(eq(systemSettings.settingKey, "auto_approve_course_registration")).limit(1);
+    const key = stage === "advisor" ? KEY_AUTO_ADVISOR : KEY_AUTO_HOD;
+    const existing = await db.select({ id: systemSettings.id })
+        .from(systemSettings)
+        .where(eq(systemSettings.settingKey, key))
+        .limit(1);
+
     if (existing[0]) {
-        await db.update(systemSettings).set({ settingValue: value ? "true" : "false" }).where(eq(systemSettings.settingKey, "auto_approve_course_registration"));
+        await db.update(systemSettings)
+            .set({ settingValue: value ? "true" : "false", updatedAt: new Date() })
+            .where(eq(systemSettings.settingKey, key));
     } else {
-        await db.insert(systemSettings).values({ settingKey: "auto_approve_course_registration", settingValue: value ? "true" : "false" });
+        await db.insert(systemSettings).values({
+            settingKey: key,
+            settingValue: value ? "true" : "false",
+            description: stage === "advisor"
+                ? "Auto-approve the Advisor stage of course registration"
+                : "Auto-approve the HOD stage of course registration"
+        });
     }
+
     revalidatePath("/admin/registration/controls");
-    return { success: true, value };
+    return { success: true, stage, value };
 }
