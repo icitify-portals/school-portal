@@ -153,24 +153,28 @@ export default function CoursesPage() {
         } else alert(res.error);
     };
 
-    const handleUpdateDeptInEdit = async (deptId: number, data: any) => {
-        const res = await updateCourseDepartmentSetting(editingCourse.id, deptId, data);
+    const handleUpdateDeptInEdit = async (deptId: number, semester: "1" | "2", level: number, data: any) => {
+        const res = await updateCourseDepartmentSetting(editingCourse.id, deptId, semester, level, data);
         if (res.success) {
             fetchData();
-            // Update local state to reflect change without closing modal
+            // Update local state to reflect change without closing modal.
+            // Match on the offering's identity, not just the department, so a
+            // course running at several semesters/levels stays intact.
             const updatedSettings = editingCourse.departmentSettings.map((s: any) =>
-                s.deptId === deptId ? { ...s, ...data } : s
+                s.deptId === deptId && s.semester === semester && s.level === level ? { ...s, ...data } : s
             );
             setEditingCourse({ ...editingCourse, departmentSettings: updatedSettings });
         } else alert(res.error);
     };
 
-    const handleRemoveDeptInEdit = async (deptId: number) => {
+    const handleRemoveDeptInEdit = async (deptId: number, semester: "1" | "2", level: number) => {
         if (!confirm("Remove this course from this department?")) return;
-        const res = await removeCourseFromDepartment(editingCourse.id, deptId);
+        const res = await removeCourseFromDepartment(editingCourse.id, deptId, semester, level);
         if (res.success) {
             fetchData();
-            const updatedSettings = editingCourse.departmentSettings.filter((s: any) => s.deptId !== deptId);
+            const updatedSettings = editingCourse.departmentSettings.filter(
+                (s: any) => !(s.deptId === deptId && s.semester === semester && s.level === level)
+            );
             setEditingCourse({ ...editingCourse, departmentSettings: updatedSettings });
         } else alert(res.error);
     };
@@ -805,7 +809,7 @@ export default function CoursesPage() {
                                                     variant="ghost"
                                                     size="icon"
                                                     className="h-6 w-6 text-rose-500 hover:text-rose-600 hover:bg-rose-50"
-                                                    onClick={() => handleRemoveDeptInEdit(set.deptId)}
+                                                    onClick={() => handleRemoveDeptInEdit(set.deptId, set.semester, set.level)}
                                                 >
                                                     <Trash2 className="w-3 h-3" />
                                                 </Button>
@@ -814,7 +818,7 @@ export default function CoursesPage() {
                                                 <select
                                                     className="bg-white border-slate-200 rounded-lg p-2 text-[10px] font-bold"
                                                     value={set.semester}
-                                                    onChange={(e) => handleUpdateDeptInEdit(set.deptId, { semester: e.target.value })}
+                                                    onChange={(e) => handleUpdateDeptInEdit(set.deptId, set.semester, set.level, { semester: e.target.value })}
                                                 >
                                                     {isK12 ? (
                                                         <>
@@ -832,7 +836,7 @@ export default function CoursesPage() {
                                                 <select
                                                     className="bg-white border-slate-200 rounded-lg p-2 text-[10px] font-bold"
                                                     value={set.status}
-                                                    onChange={(e) => handleUpdateDeptInEdit(set.deptId, { status: e.target.value })}
+                                                    onChange={(e) => handleUpdateDeptInEdit(set.deptId, set.semester, set.level, { status: e.target.value })}
                                                 >
                                                     <option value="compulsory">Compulsory</option>
                                                     <option value="required">Required</option>
@@ -842,7 +846,7 @@ export default function CoursesPage() {
                                                     type="number"
                                                     className="bg-white border-slate-200 rounded-lg p-2 text-[10px] font-bold"
                                                     value={set.level}
-                                                    onChange={(e) => handleUpdateDeptInEdit(set.deptId, { level: parseInt(e.target.value) })}
+                                                    onChange={(e) => handleUpdateDeptInEdit(set.deptId, set.semester, set.level, { level: parseInt(e.target.value) })}
                                                 />
                                             </div>
                                         </div>

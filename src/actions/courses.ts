@@ -147,11 +147,23 @@ export async function addCourseToDepartment(data: {
         return { success: true };
     } catch (error) {
         console.error("Failed to link course to department:", error);
-        return { success: false, error: "Course already linked to this department" };
+        // uniq_course_dept_sem_level rejects only an exact repeat of the same
+        // course/department/semester/level. The same course may still be linked
+        // to that department at a different semester or level, so a blanket
+        // "already linked" message would be misleading.
+        const isDuplicateOffering = /uniq_course_dept_sem_level|Duplicate entry/i.test(
+            error instanceof Error ? String(error.message) : String(error)
+        );
+        return {
+            success: false,
+            error: isDuplicateOffering
+                ? "This course is already offered to that department for this semester and level."
+                : "Could not link course to department.",
+        };
     }
 }
 
-export async function updateCourseDepartmentSetting(courseId: number, deptId: number, data: {
+export async function updateCourseDepartmentSetting(courseId: number, deptId: number, semester: "1" | "2", level: number, data: {
     semester?: "1" | "2";
     status?: "compulsory" | "required" | "elective";
     level?: number;
@@ -172,11 +184,16 @@ export async function updateCourseDepartmentSetting(courseId: number, deptId: nu
 
         if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to update department course setting" };
 
+        // Target exactly the offering that is being edited. Keying on
+        // courseId+deptId alone would also overwrite every other semester and
+        // level this course runs in for that department.
         await db.update(courseDepartmentSettings)
             .set(data)
             .where(and(
                 eq(courseDepartmentSettings.courseId, courseId),
-                eq(courseDepartmentSettings.deptId, deptId)
+                eq(courseDepartmentSettings.deptId, deptId),
+                eq(courseDepartmentSettings.semester, semester),
+                eq(courseDepartmentSettings.level, level)
             ));
         revalidatePath("/admin/courses");
         return { success: true };
@@ -186,7 +203,7 @@ export async function updateCourseDepartmentSetting(courseId: number, deptId: nu
     }
 }
 
-export async function removeCourseFromDepartment(courseId: number, deptId: number) {
+export async function removeCourseFromDepartment(courseId: number, deptId: number, semester: "1" | "2", level: number) {
     try {
         const session = await auth();
         const isAdmin = await hasRole(["admin", "superadmin"]) || await hasPermission("academic.courses.manage");
@@ -204,7 +221,9 @@ export async function removeCourseFromDepartment(courseId: number, deptId: numbe
         await db.delete(courseDepartmentSettings)
             .where(and(
                 eq(courseDepartmentSettings.courseId, courseId),
-                eq(courseDepartmentSettings.deptId, deptId)
+                eq(courseDepartmentSettings.deptId, deptId),
+                eq(courseDepartmentSettings.semester, semester),
+                eq(courseDepartmentSettings.level, level)
             ));
         revalidatePath("/admin/courses");
         return { success: true };

@@ -189,16 +189,25 @@ export const courseComponents = mysqlTable('course_components', {
 
 // A course can belong to multiple departments with different settings
 export const courseDepartmentSettings = mysqlTable('course_department_settings', {
-  courseId: int('course_id').references(() => courses.id).notNull(),
-  deptId: int('dept_id').references(() => departments.id).notNull(),
-  semester: mysqlEnum('semester', ['1', '2']).notNull(),
-  status: mysqlEnum('status', ['compulsory', 'required', 'elective']).default('compulsory').notNull(),
-  level: int('level').default(100), // e.g., 100, 200...
-  capacity: int('capacity'),
-  enrolledCount: int('enrolled_count').default(0),
-  creditUnits: int('credit_units'),
+    id: int('id').autoincrement().primaryKey(),
+    courseId: int('course_id').references(() => courses.id).notNull(),
+    deptId: int('dept_id').references(() => departments.id).notNull(),
+    semester: mysqlEnum('semester', ['1', '2']).notNull(),
+    status: mysqlEnum('status', ['compulsory', 'required', 'elective']).default('compulsory').notNull(),
+    level: int('level').default(100), // e.g., 100, 200...
+    capacity: int('capacity'),
+    enrolledCount: int('enrolled_count').default(0),
+    creditUnits: int('credit_units'),
 }, (table) => ({
-  pk: { columns: [table.courseId, table.deptId] },
+    // A course can legitimately run in the same department at more than one
+    // semester/level - STA 111 is ND 1 semester 1 compulsory in Business Admin
+    // and HND 1 semester 2 elective there - so uniqueness must include both.
+    // The table previously had no constraint at all, which let 30 duplicate
+    // rows accumulate and made Accountancy HND 2 list courses three times.
+    uniqCourseDeptSemLevel: {
+        unique: true,
+        columns: [table.courseId, table.deptId, table.semester, table.level],
+    },
 }));
 
 export const courseOfferings = mysqlView('courseOfferings', {
