@@ -51,6 +51,7 @@ export default function StudentPlacementPage() {
     const [rows, setRows] = useState<Issue[]>([]);
     const [programmes, setProgrammes] = useState<Programme[]>([]);
     const [loading, setLoading] = useState(true);
+    const [loadError, setLoadError] = useState<string | null>(null);
     const [query, setQuery] = useState("");
     const [only, setOnly] = useState<string>("");
 
@@ -65,10 +66,19 @@ export default function StudentPlacementPage() {
         setLoading(true);
         try {
             const [issues, progs] = await Promise.all([getPlacementIssues(), getPlacementProgrammes()]);
-            setRows(issues as Issue[]);
-            setProgrammes(progs as Programme[]);
+            // The actions report the real reason as a value, because Next.js
+            // redacts anything thrown from a server action in production.
+            if (issues.error || progs.error) {
+                setLoadError(issues.error ?? progs.error ?? "Could not load placement data.");
+                setRows([]);
+                setProgrammes([]);
+                return;
+            }
+            setLoadError(null);
+            setRows(issues.data as Issue[]);
+            setProgrammes(progs.data as Programme[]);
         } catch (e: any) {
-            toast.error(e?.message || "Failed to load placement issues");
+            setLoadError(e?.message || "Could not load placement data.");
         } finally {
             setLoading(false);
         }
@@ -190,7 +200,17 @@ export default function StudentPlacementPage() {
                 </button>
             </div>
 
-            {loading ? (
+            {loadError ? (
+                <div className="bg-white rounded-2xl border border-rose-200 p-10 text-center">
+                    <ShieldAlert className="w-12 h-12 text-rose-500 mx-auto mb-3" />
+                    <p className="font-black text-slate-800 uppercase tracking-wider">Cannot Load Placement Data</p>
+                    <p className="text-sm text-slate-600 mt-2 max-w-lg mx-auto leading-relaxed">{loadError}</p>
+                    <button onClick={load}
+                        className="mt-5 px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-50">
+                        Try again
+                    </button>
+                </div>
+            ) : loading ? (
                 <div className="py-16 text-center text-slate-400 font-semibold">Checking student records...</div>
             ) : visible.length === 0 ? (
                 <div className="bg-white rounded-2xl border border-slate-100 p-12 text-center">

@@ -22,7 +22,16 @@ import { resolveLevel, toProgrammeType, levelLabel } from "@/lib/levels";
  * currentLevel and can never move a student from ND to HND.
  */
 
-const REVIEW_ROLES = ["admin", "superadmin", "registrar", "admission_officer"];
+/**
+ * Union of the roles the portal already treats as able to correct student
+ * records, so this page behaves like its siblings:
+ *   - Sidebar.tsx grants the full admin menu to admin / superadmin / icitify_dev
+ *     and "Student Management" to registrar / admission_officer
+ *   - orphan-students.ts additionally allows ict_manager
+ * Leaving out a role here hides the nav link but still throws on the action,
+ * which surfaces as an opaque digest error rather than a permissions message.
+ */
+const REVIEW_ROLES = ["admin", "superadmin", "icitify_dev", "registrar", "admission_officer", "ict_manager"];
 
 const STATUSES = [
     "active", "nd_graduant", "hnd_graduant", "nd_graduated", "hnd_graduated",
@@ -35,18 +44,36 @@ export type PlacementIssueType =
     | "legacy_level"
     | "graduant_status_on_hnd";
 
-async function ensureReviewAdmin() {
+/**
+ * Resolves the acting user, or explains why the caller may not correct records.
+ *
+ * This returns a reason instead of throwing on purpose: Next.js replaces a
+ * thrown server-action error with a generic digest message in production
+ * builds, so a thrown authorisation failure reaches the browser as
+ * "An error occurred in the Server Components render" and the real cause is
+ * lost. Every caller still refuses to touch data when this reports an error.
+ */
+async function reviewAdmin(): Promise<{ userId: number; error: null } | { userId: null; error: string }> {
     const session = await auth();
-    if (!session?.user?.id) throw new Error("Not authenticated");
+    if (!session?.user?.id) {
+        return { userId: null, error: "You are not signed in, or your session has expired." };
+    }
 
     const user = await db.query.users.findFirst({
         where: eq(users.id, Number(session.user.id)),
         columns: { id: true, role: true }
     });
-    if (!user || !REVIEW_ROLES.includes(user.role || "")) {
-        throw new Error("Access denied. Administrator, Registrar or Admissions Officer role required.");
+    if (!user) {
+        return { userId: null, error: "Your account could not be found." };
     }
-    return user.id;
+    if (!REVIEW_ROLES.includes(user.role || "")) {
+        return {
+            userId: null,
+            error: `Your role "${user.role || "none"}" is not allowed to correct student placements. ` +
+                `Allowed roles: ${REVIEW_ROLES.join(", ")}.`
+        };
+    }
+    return { userId: user.id, error: null };
 }
 
 async function audit(actorId: number, action: string, targetId: number, details: object) {
@@ -65,8 +92,10 @@ async function audit(actorId: number, action: string, targetId: number, details:
 
 /** Programmes with their department, for the correction dropdown. */
 export async function getPlacementProgrammes() {
-    await ensureReviewAdmin();
-    return db
+    const authz = await reviewAdmin();
+    if (authz.error) return { data: [] as PlacementProgramme[], error: authz.error };
+
+    const data = await db
         .select({
             id: programmes.id,
             name: programmes.name,
@@ -79,7 +108,19 @@ export async function getPlacementProgrammes() {
         .from(programmes)
         .leftJoin(departments, eq(departments.id, programmes.deptId))
         .orderBy(programmes.programmeType, departments.name, programmes.name);
+
+    return { data, error: null };
 }
+
+export type PlacementProgramme = {
+    id: number;
+    name: string;
+    programmeType: string;
+    code: string | null;
+    deptId: number | null;
+    deptName: string | null;
+    durationYears: number | null;
+};
 
 export type PlacementIssue = {
     id: number;
@@ -106,7 +147,8 @@ export type PlacementIssue = {
  * a real failure seen in production rather than a hypothetical one.
  */
 export async function getPlacementIssues(limit = 500) {
-    await ensureReviewAdmin();
+    const authz = await reviewAdmin();
+    if (authz.error) return { data: [] as PlacementIssue[], error: authz.error };
 
     const rows = await db
         .select({
@@ -138,7 +180,7 @@ export async function getPlacementIssues(limit = 500) {
         .orderBy(students.id)
         .limit(limit);
 
-    if (rows.length === 0) return [];
+    if (rows.length === 0) return { data: [] as PlacementIssue[], error: null };
 
     const ids = rows.map((r) => r.id);
     const depRows = await db.execute(sql`
@@ -152,7 +194,7 @@ export async function getPlacementIssues(limit = 500) {
         bills: Number(d.bills ?? 0), registrations: Number(d.regs ?? 0)
     });
 
-    return rows.map((r): PlacementIssue => {
+    const data = rows.map((r): PlacementIssue => {
         const issues: PlacementIssueType[] = [];
         if (!r.programmeId) issues.push("no_programme");
         if (r.currentLevel !== 1 && r.currentLevel !== 2) issues.push("legacy_level");
@@ -183,6 +225,8 @@ export async function getPlacementIssues(limit = 500) {
             totalDependents: dep.bills + dep.registrations
         };
     });
+
+    return { data, error: null };
 }
 
 /**
@@ -199,7 +243,9 @@ export async function correctStudentPlacement(input: {
     status?: string;
     reason: string;
 }) {
-    const actorId = await ensureReviewAdmin();
+    const authz = await reviewAdmin();
+    if (authz.error) return { success: false, error: authz.error };
+    const actorId = authz.userId!;
     const { studentId, programmeId, currentLevel, status, reason } = input;
 
     if (!studentId || Number.isNaN(Number(studentId))) {
