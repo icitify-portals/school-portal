@@ -13,9 +13,9 @@ export default async function AdmissionLetterPage({ params }: { params: Promise<
         return (
             <div className="min-h-screen bg-slate-100 p-2 sm:p-4 md:p-8 print:bg-white print:p-0">
                 <div className="max-w-4xl mx-auto space-y-6">
-                    {/* Actions (Hidden on Print) */}
-                    <div className="flex justify-between items-center print:hidden bg-white p-4 rounded-xl shadow-sm border">
-                        <h2 className="text-base md:text-lg font-bold text-slate-700">Admission Letter</h2>
+                    {/* Actions (Hidden on Print). The document carries its own
+                        letterhead, so this bar no longer repeats a heading. */}
+                    <div className="flex justify-end items-center print:hidden bg-white p-4 rounded-xl shadow-sm border">
                         <Button onClick={() => window.print()} className="bg-indigo-600 text-xs md:text-sm">
                             <Printer className="h-4 w-4 mr-2" /> Print Letter
                         </Button>

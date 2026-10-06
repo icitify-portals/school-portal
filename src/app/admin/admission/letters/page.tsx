@@ -11,7 +11,6 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { saveDocumentTemplate, getDocumentTemplates } from "@/actions/result-management";
-import AdmissionLetterLayout, { DEFAULT_HEADER, DEFAULT_FOOTER } from "@/components/admission/AdmissionLetterLayout";
 import dynamic from "next/dynamic";
 
 const TiptapEditor = dynamic(() => import("@/components/cms/Editor"), { ssr: false });
@@ -96,8 +95,6 @@ export default function AdmissionLetterEditorPage() {
     const [selectedTemplate, setSelectedTemplate] = useState<any>(null);
     const [html, setHtml] = useState(DEFAULT_LETTER_HTML);
     const [css, setCss] = useState("");
-    const [headerHtml, setHeaderHtml] = useState("");
-    const [footerHtml, setFooterHtml] = useState("");
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [previewMode, setPreviewMode] = useState(false);
@@ -234,11 +231,20 @@ export default function AdmissionLetterEditorPage() {
                                     <span>Live Preview with Sample Data</span>
                                 </div>
                                 <div className="border border-slate-200 rounded-xl p-8 bg-white">
-                                    <AdmissionLetterLayout
-                                        headerHtml={headerHtml || undefined}
-                                        bodyHtml={previewHtml()}
-                                        footerHtml={footerHtml || undefined}
-                                        css={css}
+                                    {/* Rendered exactly as AdmissionLetterService returns it.
+                                        Wrapping it in a synthetic header showed a letterhead
+                                        and "Admission Letter" title that students never receive,
+                                        which is why this preview appeared to have two headers. */}
+                                    {css && <style dangerouslySetInnerHTML={{ __html: css }} />}
+                                    <div
+                                        className="admission-letter-preview"
+                                        style={{
+                                            fontFamily: "'Georgia', 'Times New Roman', serif",
+                                            color: "#1e293b",
+                                            lineHeight: 1.6,
+                                            fontSize: "13px",
+                                        }}
+                                        dangerouslySetInnerHTML={{ __html: previewHtml() }}
                                     />
                                 </div>
                             </div>
