@@ -13,20 +13,32 @@ import { revalidatePath } from "next/cache";
  */
 const PLACEHOLDER_PREFIX = "STU/";
 
-async function ensureReviewAdmin() {
+async function ensureReviewAdmin(): Promise<
+    { actorId: number; error: null } | { actorId: null; error: string }
+> {
     const session = await auth();
-    if (!session?.user) throw new Error("Not authenticated");
+    if (!session?.user) {
+        return { actorId: null, error: "You are not signed in, or your session has expired." };
+    }
 
     const user = await db.query.users.findFirst({
-        where: eq(users.id, session.user.id),
-        columns: { role: true }
+        where: eq(users.id, Number(session.user.id)),
+        columns: { id: true, role: true }
     });
 
-    const allowed = ["admin", "registrar", "admission_officer", "ict_manager"];
+    // The sidebar shows Student Management to superadmin and icitify_dev too,
+    // so leaving them out here denied the very roles that can see the link.
+    const allowed = ["admin", "superadmin", "icitify_dev", "registrar", "admission_officer", "ict_manager"];
     if (!user || !allowed.includes(user.role || "")) {
-        throw new Error("Access denied. Administrator, Registrar or Admissions Officer role required.");
+        // Returned rather than thrown: Next.js redacts a thrown error from a
+        // server action in production, so the admin would never learn why.
+        return {
+            actorId: null,
+            error: `Your role "${user?.role || "none"}" may not correct incomplete admission records. ` +
+                `Allowed roles: ${allowed.join(", ")}.`
+        };
     }
-    return user.id;
+    return { actorId: user.id, error: null };
 }
 
 async function audit(actorId: number, action: string, targetId: number, details: object) {
@@ -54,9 +66,24 @@ function orphanFilter() {
     );
 }
 
-export async function getOrphanStudents() {
-    await ensureReviewAdmin();
+export async function getOrphanStudents(): Promise<{ data: unknown[]; error: string | null }> {
+    const authz = await ensureReviewAdmin();
+    if (authz.error) return { data: [], error: authz.error };
 
+    try {
+        return { data: await loadOrphanStudents(), error: null };
+    } catch (e: any) {
+        // Returned rather than thrown: Next.js redacts a thrown server-action
+        // error in production, so the admin previously got an empty table and
+        // a message that named no cause.
+        return {
+            data: [],
+            error: e?.message || "Could not read incomplete admission records."
+        };
+    }
+}
+
+async function loadOrphanStudents() {
     const rows = await db
         .select({
             id: students.id,
@@ -82,15 +109,20 @@ export async function getOrphanStudents() {
     const ids = rows.map((r) => r.id);
     if (ids.length === 0) return [];
 
-    const depRows = await db.execute(sql`
+    // sql.join emits only a separator, so the list has to be parenthesised
+    // or MySQL rejects "IN 1,2,3" with a syntax error. mysql2 answers a raw
+    // execute with [rows, fields], so unwrap before counting.
+    const rawDep = await db.execute(sql`
         SELECT s.id AS student_id,
           (SELECT COUNT(*) FROM student_bills      WHERE student_id = s.id) AS bills,
           (SELECT COUNT(*) FROM student_course_registrations WHERE student_id = s.id) AS enrollments,
           (SELECT COUNT(*) FROM id_cards        WHERE student_id = s.id) AS id_cards,
           (SELECT COUNT(*) FROM student_medical_records WHERE student_id = s.id) AS medical,
           (SELECT COUNT(*) FROM conduct_logs    WHERE student_id = s.id) AS conduct
-        FROM students s WHERE s.id IN ${sql.join(ids.map((i) => sql`${i}`), sql`,`)}
-    `) as unknown as Array<Record<string, number | string>>;
+        FROM students s WHERE s.id IN (${sql.join(ids.map((i) => sql`${i}`), sql`,`)})
+    `);
+    const depRows = (Array.isArray(rawDep) && Array.isArray(rawDep[0])
+        ? rawDep[0] : rawDep) as Array<Record<string, number | string>>;
 
     const depMap = new Map<number, Record<string, number | string>>();
     for (const d of depRows) depMap.set(Number(d.student_id), d);
@@ -115,7 +147,9 @@ export async function getOrphanStudents() {
 }
 
 export async function blockOrphanStudents(ids: number[]) {
-    const actorId = await ensureReviewAdmin();
+    const authz = await ensureReviewAdmin();
+    if (authz.error) return { success: false, error: authz.error };
+    const actorId = authz.actorId!;
     if (!ids.length) return { success: false, error: "No records selected" };
 
     await db.update(students)
@@ -132,7 +166,9 @@ export async function blockOrphanStudents(ids: number[]) {
  * delete is unsafe. Soft delete preserves referential integrity and is reversible.
  */
 export async function deleteOrphanStudents(ids: number[]) {
-    const actorId = await ensureReviewAdmin();
+    const authz = await ensureReviewAdmin();
+    if (authz.error) return { success: false, error: authz.error };
+    const actorId = authz.actorId!;
     if (!ids.length) return { success: false, error: "No records selected" };
 
     await db.update(students)
@@ -151,7 +187,9 @@ export async function deleteOrphanStudents(ids: number[]) {
  * department, programme, level, session and matric number.
  */
 export async function enableOrphanStudents(ids: number[]) {
-    const actorId = await ensureReviewAdmin();
+    const authz = await ensureReviewAdmin();
+    if (authz.error) return { success: false, error: authz.error };
+    const actorId = authz.actorId!;
     if (!ids.length) return { success: false, error: "No records selected" };
 
     await db.update(students)

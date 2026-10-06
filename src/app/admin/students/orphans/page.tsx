@@ -35,6 +35,7 @@ type Orphan = {
 export default function OrphanStudentsPage() {
     const [rows, setRows] = useState<Orphan[]>([]);
     const [loading, setLoading] = useState(true);
+    const [loadError, setLoadError] = useState<string | null>(null);
     const [busy, setBusy] = useState(false);
     const [selected, setSelected] = useState<Set<number>>(new Set());
     const [query, setQuery] = useState("");
@@ -42,11 +43,18 @@ export default function OrphanStudentsPage() {
     const load = useCallback(async () => {
         setLoading(true);
         try {
-            const data = await getOrphanStudents();
-            setRows(data);
+            const res = await getOrphanStudents();
+            if (res.error) {
+                setLoadError(res.error);
+                setRows([]);
+                setSelected(new Set());
+                return;
+            }
+            setLoadError(null);
+            setRows(res.data as Orphan[]);
             setSelected(new Set());
         } catch (e: any) {
-            toast.error(e?.message || "Failed to load records");
+            setLoadError(e?.message || "Failed to load records");
         } finally {
             setLoading(false);
         }
@@ -142,7 +150,17 @@ export default function OrphanStudentsPage() {
                 </div>
             </div>
 
-            {loading ? (
+            {loadError ? (
+                <div className="bg-white rounded-2xl border border-rose-200 p-10 text-center">
+                    <ShieldAlert className="w-12 h-12 text-rose-500 mx-auto mb-3" />
+                    <p className="font-black text-slate-800 uppercase tracking-wider">Cannot Load Incomplete Records</p>
+                    <p className="text-sm text-slate-600 mt-2 max-w-lg mx-auto leading-relaxed">{loadError}</p>
+                    <button onClick={load}
+                        className="mt-5 px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-50">
+                        Try again
+                    </button>
+                </div>
+            ) : loading ? (
                 <div className="py-16 text-center text-slate-400 font-semibold">Loading records...</div>
             ) : visible.length === 0 ? (
                 <div className="bg-white rounded-2xl border border-slate-100 p-12 text-center">

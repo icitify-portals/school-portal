@@ -150,6 +150,20 @@ export async function getPlacementIssues(limit = 500) {
     const authz = await reviewAdmin();
     if (authz.error) return { data: [] as PlacementIssue[], error: authz.error };
 
+    try {
+        return { data: await loadPlacementIssues(limit), error: null };
+    } catch (e: any) {
+        // Returned as a value on purpose: Next.js redacts anything thrown out
+        // of a server action in production, which is what made this page fail
+        // with no visible reason.
+        return {
+            data: [] as PlacementIssue[],
+            error: `Could not read placement data: ${e?.message || e}`
+        };
+    }
+}
+
+async function loadPlacementIssues(limit: number): Promise<PlacementIssue[]> {
     const rows = await db
         .select({
             id: students.id,
@@ -180,15 +194,20 @@ export async function getPlacementIssues(limit = 500) {
         .orderBy(students.id)
         .limit(limit);
 
-    if (rows.length === 0) return { data: [] as PlacementIssue[], error: null };
+    if (rows.length === 0) return [];
 
     const ids = rows.map((r) => r.id);
-    const depRows = await db.execute(sql`
+    // The join must be parenthesised: sql.join only emits a separator, so
+    // "IN 1,2,3" is a syntax error. mysql2 answers a raw execute with
+    // [rows, fields]; unwrap it so the counts are read from the rows.
+    const rawDep = await db.execute(sql`
         SELECT s.id AS student_id,
           (SELECT COUNT(*) FROM student_bills WHERE student_id = s.id) AS bills,
           (SELECT COUNT(*) FROM student_course_registrations WHERE student_id = s.id) AS regs
-        FROM students s WHERE s.id IN ${sql.join(ids.map((i) => sql`${i}`), sql`,`)}
-    `) as unknown as Array<Record<string, number | string>>;
+        FROM students s WHERE s.id IN (${sql.join(ids.map((i) => sql`${i}`), sql`,`)})
+    `);
+    const depRows = (Array.isArray(rawDep) && Array.isArray(rawDep[0])
+        ? rawDep[0] : rawDep) as Array<Record<string, number | string>>;
     const depMap = new Map<number, { bills: number; registrations: number }>();
     for (const d of depRows) depMap.set(Number(d.student_id), {
         bills: Number(d.bills ?? 0), registrations: Number(d.regs ?? 0)
@@ -226,7 +245,7 @@ export async function getPlacementIssues(limit = 500) {
         };
     });
 
-    return { data, error: null };
+    return data;
 }
 
 /**
@@ -301,11 +320,12 @@ export async function correctStudentPlacement(input: {
         patch.programmeType = toProgrammeType(programmeRow!.programmeType);
         if (programmeRow!.deptId != null) patch.deptId = programmeRow!.deptId;
     } else {
-        // Clearing the programme clears the fields derived from it. Leaving a
-        // stale programme_type behind would let the record look consistent
-        // while still claiming ND or HND.
+        // programme_type is NOT NULL in the schema, so it cannot be cleared -
+        // MySQL rejects the write with 1048 and the whole save fails. It is
+        // deliberately left untouched: with no programme the record is already
+        // reported as "no programme" regardless of the type it carries, which
+        // is how all 121 existing programme-less students are surfaced.
         patch.programmeId = null;
-        patch.programmeType = null;
     }
 
     const changed = (Object.keys(patch) as Array<keyof typeof patch>).filter(
