@@ -204,8 +204,8 @@ export async function getStudents(options: { search?: string, page?: number, pag
 export async function getStudentSessionOptions() {
     try {
         const allowed = await hasPermission("students.view") || await hasRole("admin")
-            || await hasRole("superadmin") || await hasRole("registrar")
-            || await hasRole("admission_officer");
+            || await hasRole("superadmin") || await hasRole("icitify_dev")
+            || await hasRole("registrar") || await hasRole("admission_officer");
         if (!allowed) return { success: false, error: "Access denied", sessions: [] };
 
         const [rows] = await db.execute(sql`
@@ -740,9 +740,9 @@ export async function updateAdminStudentProfile(studentId: number, updatePayload
     }
 }
 
-export async function bulkUpdateStudentPlacements(studentIds: number[], data: { currentLevel?: number, status?: string, currentSessionId?: number, admissionYear?: string }) {
+export async function bulkUpdateStudentPlacements(studentIds: number[], data: { currentLevel?: number, status?: string, currentSessionId?: number, admissionSessionId?: number, admissionYear?: string }) {
     try {
-        const allowed = await hasPermission("admin.students.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("registrar");
+        const allowed = await hasPermission("admin.students.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("icitify_dev") || await hasRole("registrar");
         if (!allowed) {
             return { success: false, error: "Unauthorized: Insufficient permissions to modify student placements" };
         }
@@ -757,6 +757,7 @@ export async function bulkUpdateStudentPlacements(studentIds: number[], data: { 
         }
         if (data.status) updateData.status = data.status;
         if (data.currentSessionId !== undefined) updateData.currentSessionId = data.currentSessionId ? Number(data.currentSessionId) : null;
+        if (data.admissionSessionId !== undefined) updateData.admissionSessionId = data.admissionSessionId ? Number(data.admissionSessionId) : null;
         if (data.admissionYear) updateData.admissionYear = Number(data.admissionYear);
 
         if (Object.keys(updateData).length === 0) {

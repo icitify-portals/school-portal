@@ -25,7 +25,7 @@ import {
     GraduationCap
 } from "lucide-react";
 import { resetUserPassword, updateUserStatus, verifyUserEmailManually, updateUserBaseRole } from "@/actions/user-actions";
-import { bulkUpdateStudentPlacements } from "@/actions/students";
+import { bulkUpdateStudentPlacements, getStudentByUserId } from "@/actions/students";
 import { getAllRoles, assignRoleToUser, removeRoleFromUser, canManageRoles } from "@/actions/rbac";
 import { cn } from "@/lib/utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -51,28 +51,48 @@ export function AccountManagementModal({ user, student, onClose, onUpdate }: Acc
     const [allRoles, setAllRoles] = useState<any[]>([]);
     const [userRoles, setUserRoles] = useState<any[]>([]);
     const [canManage, setCanManage] = useState(false);
-    
+
+    // Student record may be passed from a student page, or fetched from the user
+    // when the modal is opened from User Management.
+    const [studentRecord, setStudentRecord] = useState<any>(student || null);
+
     // Academic Placement State
     const [sessions, setSessions] = useState<any[]>([]);
     const [isK12, setIsK12] = useState(false);
     const [currentLevel, setCurrentLevel] = useState("");
     const [status, setStatus] = useState("");
     const [currentSessionId, setCurrentSessionId] = useState("");
+    const [admissionSessionId, setAdmissionSessionId] = useState("");
     const [admissionYear, setAdmissionYear] = useState("");
 
     useEffect(() => {
         if (user) {
             fetchRoles();
-        }
-        if (student) {
-            import("@/actions/students").then(m => m.getStudentSessionOptions().then(res => setSessions(res.sessions || [])));
-            import("@/providers/BranchProvider").then(m => setIsK12(false)); // Just hack it or use a default if outside context. But let's fetch settings.
-            setCurrentLevel(student.currentLevel?.toString() || "");
-            setStatus(student.status || "");
-            setCurrentSessionId(student.currentSessionId?.toString() || "");
-            setAdmissionYear(student.admissionYear?.toString() || "");
+            // In User Management only the user is passed; fetch the linked student
+            // record so session/placement can be edited from the same modal.
+            if (!student) fetchStudentRecord();
         }
     }, [user, student]);
+
+    useEffect(() => {
+        if (studentRecord) {
+            import("@/actions/students").then(m => m.getStudentSessionOptions().then(res => setSessions(res.sessions || [])));
+            import("@/providers/BranchProvider").then(m => setIsK12(false)); // Just hack it or use a default if outside context. But let's fetch settings.
+            setCurrentLevel(studentRecord.currentLevel?.toString() || "");
+            setStatus(studentRecord.status || "");
+            setCurrentSessionId(studentRecord.currentSessionId?.toString() || "");
+            setAdmissionSessionId(studentRecord.admissionSessionId?.toString() || "");
+            setAdmissionYear(studentRecord.admissionYear?.toString() || "");
+        }
+    }, [studentRecord]);
+
+    const fetchStudentRecord = async () => {
+        if (!user) return;
+        const record = await getStudentByUserId(user.id);
+        if (record) {
+            setStudentRecord(record);
+        }
+    };
 
     const fetchRoles = async () => {
         setLoading(true);
@@ -137,15 +157,16 @@ export function AccountManagementModal({ user, student, onClose, onUpdate }: Acc
     };
 
     const handlePlacementSave = async () => {
-        if (!student) return;
+        if (!studentRecord) return;
         setActionLoading("placement");
         const data: any = {};
         if (currentLevel) data.currentLevel = Number(currentLevel);
         if (status) data.status = status;
         if (currentSessionId) data.currentSessionId = Number(currentSessionId);
+        if (admissionSessionId) data.admissionSessionId = Number(admissionSessionId);
         if (admissionYear) data.admissionYear = admissionYear;
 
-        const res = await bulkUpdateStudentPlacements([student.id], data);
+        const res = await bulkUpdateStudentPlacements([studentRecord.id], data);
         if (res.success) {
             alert(res.message);
             onUpdate?.();
@@ -343,13 +364,13 @@ export function AccountManagementModal({ user, student, onClose, onUpdate }: Acc
                     )}
 
                     {/* Academic Placement */}
-                    {student && (
+                    {studentRecord && (
                         <div className="space-y-4 pt-4 border-t border-slate-100">
                             <div className="flex items-center gap-2 text-slate-900 border-b border-slate-100 pb-2">
                                 <GraduationCap className="w-4 h-4 text-indigo-600" />
                                 <h3 className="font-black uppercase text-[10px] tracking-[0.2em]">Academic Placement</h3>
                             </div>
-                            
+
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="flex flex-col gap-1.5">
                                     <label className="text-[10px] font-bold text-slate-700 uppercase">Level</label>
@@ -359,8 +380,8 @@ export function AccountManagementModal({ user, student, onClose, onUpdate }: Acc
                                         className="h-10 px-3 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
                                     >
                                         <option value="">-- Select --</option>
-                                        {isK12 ? levels.map((lvl) => (
-                                            <option key={lvl as number} value={lvl as number}>Grade {lvl}</option>
+                                        {isK12 ? (levels as number[]).map((lvl) => (
+                                            <option key={lvl} value={lvl}>Grade {lvl}</option>
                                         )) : (levels as {label:string, value:string}[]).map((lvl, idx) => (
                                             <option key={idx} value={lvl.value}>{lvl.label} ({lvl.value})</option>
                                         ))}
@@ -391,6 +412,20 @@ export function AccountManagementModal({ user, student, onClose, onUpdate }: Acc
                                     <select
                                         value={currentSessionId}
                                         onChange={(e) => setCurrentSessionId(e.target.value)}
+                                        className="h-10 px-3 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+                                    >
+                                        <option value="">-- Select --</option>
+                                        {sessions.map((s) => (
+                                            <option key={s.id} value={s.id}>{s.name} {s.isCurrent ? '(Current)' : ''}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div className="flex flex-col gap-1.5">
+                                    <label className="text-[10px] font-bold text-slate-700 uppercase">Admission Session</label>
+                                    <select
+                                        value={admissionSessionId}
+                                        onChange={(e) => setAdmissionSessionId(e.target.value)}
                                         className="h-10 px-3 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
                                     >
                                         <option value="">-- Select --</option>

@@ -2719,6 +2719,8 @@ export async function saveApplicationDraft(applicationId: number, applicantId: n
 
         if (cleanJamb) {
             updatePayload.jambRegNumber = cleanJamb;
+            // A provided JAMB registration number always means full-time mode.
+            updatePayload.applicationMode = 'full_time';
         }
 
         // Pre-check duplicates (exclude current application)
@@ -2900,7 +2902,10 @@ export async function submitApplicationFinal(applicationId: number, applicantId:
 
         if (effectiveJamb && !application.jambRegNumber) {
             await db.update(admissionApplicationsV2)
-                .set({ jambRegNumber: effectiveJamb.toString().trim().toUpperCase() })
+                .set({
+                    jambRegNumber: effectiveJamb.toString().trim().toUpperCase(),
+                    applicationMode: 'full_time'
+                })
                 .where(eq(admissionApplicationsV2.id, applicationId));
         }
 
