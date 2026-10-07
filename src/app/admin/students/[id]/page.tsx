@@ -6,6 +6,8 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Loader2, ArrowLeft, User, Mail, Phone, Calendar, Briefcase, Droplet, Hash, BookOpen, MapPin, Activity, Edit } from "lucide-react";
 import { getStudentById, updateAdminStudentProfile } from "@/actions/students";
+import { getProgrammes } from "@/actions/programmes";
+import { getAcademicSessions } from "@/actions/transcripts";
 import { useBranch } from "@/providers/BranchProvider";
 import Image from "next/image";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -21,7 +23,9 @@ export default function StudentDetailsPage() {
 
     const [student, setStudent] = useState<any>(null);
     const [loading, setLoading] = useState(true);
-    
+    const [programmes, setProgrammes] = useState<any[]>([]);
+    const [sessions, setSessions] = useState<any[]>([]);
+
     const [editOpen, setEditOpen] = useState(false);
     const [editData, setEditData] = useState<any>({});
     const [isSaving, setIsSaving] = useState(false);
@@ -42,7 +46,15 @@ export default function StudentDetailsPage() {
                 const d = new Date(student.dob);
                 return isNaN(d.getTime()) ? '' : d.toISOString().slice(0, 10);
             })(),
-            gender: student.gender || ''
+            gender: student.gender || '',
+            programmeId: student.programmeId || '',
+            currentLevel: student.currentLevel || '',
+            admissionYear: student.admissionYear || '',
+            currentSessionId: student.currentSessionId || '',
+            admissionSessionId: student.admissionSessionId || '',
+            status: student.status || '',
+            studyMode: student.studyMode || '',
+            userStatus: student.user?.status || ''
         });
         setEditOpen(true);
     };
@@ -65,8 +77,14 @@ export default function StudentDetailsPage() {
         if (!studentId) return;
         const fetchStudent = async () => {
             setLoading(true);
-            const data = await getStudentById(studentId);
+            const [data, progs, sess] = await Promise.all([
+                getStudentById(studentId),
+                getProgrammes(),
+                getAcademicSessions()
+            ]);
             setStudent(data);
+            setProgrammes(progs || []);
+            setSessions(sess || []);
             setLoading(false);
         };
         fetchStudent();
@@ -291,7 +309,117 @@ export default function StudentDetailsPage() {
                                     <option value="">— Select —</option>
                                     <option value="male">Male</option>
                                     <option value="female">Female</option>
+                                    <option value="other">Other</option>
                                 </select>
+                            </div>
+                        </div>
+
+                        <div className="border-t pt-4 mt-2">
+                            <h4 className="text-xs font-black uppercase tracking-widest text-slate-500 mb-3">Academic Details</h4>
+                            <div className="space-y-3">
+                                <div className="space-y-2">
+                                    <Label>Programme (Course)</Label>
+                                    <select
+                                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                                        value={editData.programmeId || ''}
+                                        onChange={e => setEditData({...editData, programmeId: e.target.value})}
+                                    >
+                                        <option value="">— Select Programme —</option>
+                                        {programmes.map((p: any) => (
+                                            <option key={p.id} value={p.id}>{p.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label>Current Level</Label>
+                                        <Input type="number" value={editData.currentLevel || ''} onChange={e => setEditData({...editData, currentLevel: e.target.value})} />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label>Admission Year</Label>
+                                        <Input type="number" value={editData.admissionYear || ''} onChange={e => setEditData({...editData, admissionYear: e.target.value})} />
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label>Current Session</Label>
+                                        <select
+                                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                                            value={editData.currentSessionId || ''}
+                                            onChange={e => setEditData({...editData, currentSessionId: e.target.value})}
+                                        >
+                                            <option value="">— Select Session —</option>
+                                            {sessions.map((s: any) => (
+                                                <option key={s.id} value={s.id}>{s.name} {s.isCurrent ? '(Current)' : ''}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label>Admission Session</Label>
+                                        <select
+                                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                                            value={editData.admissionSessionId || ''}
+                                            onChange={e => setEditData({...editData, admissionSessionId: e.target.value})}
+                                        >
+                                            <option value="">— Select Session —</option>
+                                            {sessions.map((s: any) => (
+                                                <option key={s.id} value={s.id}>{s.name} {s.isCurrent ? '(Current)' : ''}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label>Student Status</Label>
+                                        <select
+                                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                                            value={editData.status || ''}
+                                            onChange={e => setEditData({...editData, status: e.target.value})}
+                                        >
+                                            <option value="">— Select Status —</option>
+                                            <option value="active">Active</option>
+                                            <option value="nd_graduant">ND Graduant</option>
+                                            <option value="hnd_graduant">HND Graduant</option>
+                                            <option value="nd_graduated">ND Graduated</option>
+                                            <option value="hnd_graduated">HND Graduated</option>
+                                            <option value="withdrawn">Withdrawn</option>
+                                            <option value="suspended">Suspended</option>
+                                            <option value="rusticated">Rusticated</option>
+                                            <option value="pending_review">Pending Review</option>
+                                        </select>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label>Study Mode</Label>
+                                        <select
+                                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                                            value={editData.studyMode || ''}
+                                            onChange={e => setEditData({...editData, studyMode: e.target.value})}
+                                        >
+                                            <option value="">— Select Mode —</option>
+                                            <option value="full-time">Full-time</option>
+                                            <option value="part-time">Part-time</option>
+                                            <option value="elearning">E-learning</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label>Account Status</Label>
+                                    <select
+                                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                                        value={editData.userStatus || ''}
+                                        onChange={e => setEditData({...editData, userStatus: e.target.value})}
+                                    >
+                                        <option value="">— Select Account Status —</option>
+                                        <option value="active">Active</option>
+                                        <option value="suspended">Suspended</option>
+                                        <option value="withdrawn">Withdrawn</option>
+                                        <option value="nd_graduant">ND Graduant</option>
+                                        <option value="hnd_graduant">HND Graduant</option>
+                                        <option value="nd_graduated">ND Graduated</option>
+                                        <option value="hnd_graduated">HND Graduated</option>
+                                        <option value="rusticated">Rusticated</option>
+                                    </select>
+                                </div>
                             </div>
                         </div>
                     </div>

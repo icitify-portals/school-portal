@@ -679,7 +679,49 @@ export async function updateAdminStudentProfile(studentId: number, updatePayload
             const g = (updatePayload.gender || '').toString().toLowerCase().trim();
             studentUpdates.gender = ['male', 'female', 'other'].includes(g) ? g : null;
         }
-        
+        if (updatePayload.programmeId !== undefined) {
+            const pid = updatePayload.programmeId ? Number(updatePayload.programmeId) : null;
+            if (pid) {
+                const [prog] = await db.select({ id: programmes.id }).from(programmes).where(eq(programmes.id, pid)).limit(1);
+                if (!prog) return { success: false, error: `Programme ID ${pid} not found.` };
+            }
+            studentUpdates.programmeId = pid;
+        }
+        if (updatePayload.currentLevel !== undefined) {
+            const lvl = updatePayload.currentLevel ? Number(updatePayload.currentLevel) : null;
+            studentUpdates.currentLevel = lvl;
+        }
+        if (updatePayload.admissionYear !== undefined) {
+            const year = updatePayload.admissionYear ? Number(updatePayload.admissionYear) : null;
+            studentUpdates.admissionYear = year;
+        }
+        if (updatePayload.currentSessionId !== undefined) {
+            const sid = updatePayload.currentSessionId ? Number(updatePayload.currentSessionId) : null;
+            if (sid) {
+                const [sess] = await db.select({ id: academicSessions.id }).from(academicSessions).where(eq(academicSessions.id, sid)).limit(1);
+                if (!sess) return { success: false, error: `Current session ID ${sid} not found.` };
+            }
+            studentUpdates.currentSessionId = sid;
+        }
+        if (updatePayload.admissionSessionId !== undefined) {
+            const sid = updatePayload.admissionSessionId ? Number(updatePayload.admissionSessionId) : null;
+            if (sid) {
+                const [sess] = await db.select({ id: academicSessions.id }).from(academicSessions).where(eq(academicSessions.id, sid)).limit(1);
+                if (!sess) return { success: false, error: `Admission session ID ${sid} not found.` };
+            }
+            studentUpdates.admissionSessionId = sid;
+        }
+        if (updatePayload.status !== undefined) {
+            const validStatuses = ['active', 'nd_graduant', 'hnd_graduant', 'nd_graduated', 'hnd_graduated', 'withdrawn', 'suspended', 'rusticated', 'pending_review'];
+            const s = (updatePayload.status || '').toString().trim();
+            studentUpdates.status = validStatuses.includes(s) ? s : null;
+        }
+        if (updatePayload.studyMode !== undefined) {
+            const validModes = ['full-time', 'part-time', 'elearning'];
+            const m = (updatePayload.studyMode || '').toString().trim();
+            studentUpdates.studyMode = validModes.includes(m) ? m : null;
+        }
+
         if (Object.keys(studentUpdates).length > 0) {
             await db.update(students).set(studentUpdates).where(eq(students.id, studentId));
         }
@@ -716,6 +758,11 @@ export async function updateAdminStudentProfile(studentId: number, updatePayload
                 userUpdates.email = newEmail;
             }
             if (updatePayload.phone !== undefined) userUpdates.phone = String(updatePayload.phone).trim() || null;
+            if (updatePayload.userStatus !== undefined) {
+                const validUserStatuses = ['active', 'suspended', 'withdrawn', 'nd_graduant', 'hnd_graduant', 'nd_graduated', 'hnd_graduated', 'rusticated'];
+                const us = (updatePayload.userStatus || '').toString().trim();
+                userUpdates.status = validUserStatuses.includes(us) ? us : null;
+            }
 
             if (Object.keys(userUpdates).length > 0) {
                 await db.update(users).set(userUpdates).where(eq(users.id, student.userId));
