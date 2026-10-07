@@ -134,6 +134,8 @@ export const authConfig = {
                     if (
                         nextUrl.pathname.startsWith("/admin/result-module") ||
                         nextUrl.pathname.startsWith("/admin/exams-records") ||
+                        nextUrl.pathname.startsWith("/admin/students") ||
+                        nextUrl.pathname.startsWith("/admin/users") ||
                         nextUrl.pathname.startsWith("/admin/communications") ||
                         nextUrl.pathname.startsWith("/admin/announcements") ||
                         nextUrl.pathname.startsWith("/admin/profile")

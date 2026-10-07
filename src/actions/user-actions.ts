@@ -170,12 +170,12 @@ export async function resetUserPassword(userId: number, newPassword?: string) {
         const session = await auth();
         const actorRole = (session?.user as any)?.role?.toLowerCase() || "";
         const actorId = session?.user?.id ? parseInt(session.user.id) : null;
-        if (!['superadmin', 'icitify_dev', 'admin', 'dvc', 'bursar', 'registrar', 'admission_officer', 'hod', 'dean'].includes(actorRole)) {
+        if (!['superadmin', 'icitify_dev', 'admin', 'dvc', 'bursar', 'registrar', 'admission_officer', 'record_officer', 'hod', 'dean'].includes(actorRole)) {
             return { success: false, error: "Unauthorized access to reset password." };
         }
 
         // Limited roles may only reset learner/applicant accounts — never staff or admin accounts.
-        if (['admission_officer', 'hod', 'dean'].includes(actorRole)) {
+        if (['admission_officer', 'record_officer', 'hod', 'dean'].includes(actorRole)) {
             const [target] = await db.select({ role: users.role }).from(users).where(eq(users.id, userId)).limit(1);
             const targetRole = (target?.role || '').toString().toLowerCase();
             if (!['student', 'applicant', 'fresher'].includes(targetRole)) {
@@ -220,7 +220,7 @@ export async function updateUserStatus(userId: number, status: 'active' | 'suspe
         const session = await auth();
         const actorRole = (session?.user as any)?.role?.toLowerCase() || "";
         const actorId = session?.user?.id ? parseInt(session.user.id) : null;
-        if (!['superadmin', 'icitify_dev', 'admin', 'dvc', 'bursar', 'registrar', 'admission_officer', 'hod', 'dean'].includes(actorRole)) {
+        if (!['superadmin', 'icitify_dev', 'admin', 'dvc', 'bursar', 'registrar', 'admission_officer', 'record_officer', 'hod', 'dean'].includes(actorRole)) {
             return { success: false, error: "Unauthorized access to update user status." };
         }
 
@@ -253,7 +253,7 @@ export async function verifyUserEmailManually(userId: number) {
         const session = await auth();
         const actorId = session?.user?.id ? parseInt(session.user.id) : null;
         const actorRole = (session?.user as any)?.role?.toLowerCase() || "";
-        if (!actorId || !['superadmin', 'icitify_dev', 'admin', 'dvc', 'bursar', 'registrar', 'admission_officer', 'hod', 'dean'].includes(actorRole)) {
+        if (!actorId || !['superadmin', 'icitify_dev', 'admin', 'dvc', 'bursar', 'registrar', 'admission_officer', 'record_officer', 'hod', 'dean'].includes(actorRole)) {
             return { success: false, error: "Unauthorized access for email verification" };
         }
         
@@ -286,7 +286,7 @@ export async function updateUserBaseRole(userId: number, role: 'applicant' | 'st
         const session = await auth();
         const actorRole = (session?.user as any)?.role?.toLowerCase() || "";
         const actorId = session?.user?.id ? parseInt(session.user.id) : null;
-        if (!['superadmin', 'icitify_dev', 'admin', 'dvc', 'bursar', 'registrar', 'admission_officer'].includes(actorRole)) {
+        if (!['superadmin', 'icitify_dev', 'admin', 'dvc', 'bursar', 'registrar', 'admission_officer', 'record_officer'].includes(actorRole)) {
             return { success: false, error: "Unauthorized: You do not have permission to change user roles." };
         }
 
@@ -318,7 +318,7 @@ export async function createSingleUser(data: { name: string; email: string; role
         const session = await auth();
         const actorRole = (session?.user as any)?.role?.toLowerCase() || "";
         const actorId = session?.user?.id ? parseInt(session.user.id) : null;
-        if (!['superadmin', 'icitify_dev', 'admin', 'dvc', 'bursar', 'registrar', 'admission_officer'].includes(actorRole)) {
+        if (!['superadmin', 'icitify_dev', 'admin', 'dvc', 'bursar', 'registrar', 'admission_officer', 'record_officer'].includes(actorRole)) {
             return { success: false, error: "Unauthorized: You do not have permission to create users." };
         }
 

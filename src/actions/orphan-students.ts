@@ -28,7 +28,7 @@ async function ensureReviewAdmin(): Promise<
 
     // The sidebar shows Student Management to superadmin and icitify_dev too,
     // so leaving them out here denied the very roles that can see the link.
-    const allowed = ["admin", "superadmin", "icitify_dev", "registrar", "admission_officer", "ict_manager"];
+    const allowed = ["admin", "superadmin", "icitify_dev", "registrar", "admission_officer", "record_officer", "ict_manager"];
     if (!user || !allowed.includes(user.role || "")) {
         // Returned rather than thrown: Next.js redacts a thrown error from a
         // server action in production, so the admin would never learn why.

@@ -31,7 +31,7 @@ import { resolveLevel, toProgrammeType, levelLabel } from "@/lib/levels";
  * Leaving out a role here hides the nav link but still throws on the action,
  * which surfaces as an opaque digest error rather than a permissions message.
  */
-const REVIEW_ROLES = ["admin", "superadmin", "icitify_dev", "registrar", "admission_officer", "ict_manager"];
+const REVIEW_ROLES = ["admin", "superadmin", "icitify_dev", "registrar", "admission_officer", "record_officer", "ict_manager"];
 
 const STATUSES = [
     "active", "nd_graduant", "hnd_graduant", "nd_graduated", "hnd_graduated",

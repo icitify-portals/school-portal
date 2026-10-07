@@ -14,7 +14,7 @@ export async function canManageRoles() {
     // icitify_dev is the dev super-role and already has full sidebar access;
     // without it here the role panel stayed hidden for the very account that
     // maintains the system.
-    return ['superadmin', 'admin', 'icitify_dev', 'dvc', 'bursar', 'registrar'].includes(actorRole);
+    return ['superadmin', 'admin', 'icitify_dev', 'dvc', 'bursar', 'registrar', 'record_officer'].includes(actorRole);
 }
 
 export async function getAllRoles() {
@@ -141,8 +141,8 @@ export async function assignRoleToUser(userId: number, roleId: number) {
         const session = await auth();
         const actorRole = (session?.user as any)?.role?.toLowerCase() || "";
         const actorId = session?.user?.id ? parseInt(session.user.id) : null;
-        if (!['superadmin', 'admin', 'icitify_dev', 'dvc', 'bursar', 'registrar'].includes(actorRole)) {
-            return { success: false, error: "Unauthorized: Only superadmin, vice chancellor, bursar, and registrar can edit." };
+        if (!['superadmin', 'admin', 'icitify_dev', 'dvc', 'bursar', 'registrar', 'record_officer'].includes(actorRole)) {
+            return { success: false, error: "Unauthorized: Only superadmin, vice chancellor, bursar, registrar, and record officer can edit." };
         }
 
         if (actorRole === 'bursar' && actorId) {
@@ -189,8 +189,8 @@ export async function removeRoleFromUser(userId: number, roleId: number) {
         const session = await auth();
         const actorRole = (session?.user as any)?.role?.toLowerCase() || "";
         const actorId = session?.user?.id ? parseInt(session.user.id) : null;
-        if (!['superadmin', 'admin', 'icitify_dev', 'dvc', 'bursar', 'registrar'].includes(actorRole)) {
-            return { success: false, error: "Unauthorized: Only superadmin, vice chancellor, bursar, and registrar can edit." };
+        if (!['superadmin', 'admin', 'icitify_dev', 'dvc', 'bursar', 'registrar', 'record_officer'].includes(actorRole)) {
+            return { success: false, error: "Unauthorized: Only superadmin, vice chancellor, bursar, registrar, and record officer can edit." };
         }
 
         if (actorRole === 'bursar' && actorId) {

@@ -607,7 +607,7 @@ export async function toggleFinancialLock(studentId: number, status: boolean) {
 
 export async function updateStudentProfile(userId: number, data: any) {
     try {
-        const allowed = await hasPermission("admin.students.manage") || await hasRole("admin") || await hasRole("superadmin");
+        const allowed = await hasPermission("admin.students.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("record_officer");
         if (!allowed) {
             return { success: false, error: "Unauthorized: Insufficient permissions to modify student profiles" };
         }
@@ -626,7 +626,7 @@ export async function updateStudentProfile(userId: number, data: any) {
 
 export async function updateAdminStudentProfile(studentId: number, updatePayload: any) {
     try {
-        const allowed = await hasPermission("admin.students.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("admission_officer") || await hasRole("registrar");
+        const allowed = await hasPermission("admin.students.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("admission_officer") || await hasRole("registrar") || await hasRole("record_officer");
         if (!allowed) return { success: false, error: "Unauthorized" };
 
         const [student] = await db.select().from(students).where(eq(students.id, studentId)).limit(1);
@@ -742,7 +742,7 @@ export async function updateAdminStudentProfile(studentId: number, updatePayload
 
 export async function bulkUpdateStudentPlacements(studentIds: number[], data: { currentLevel?: number, status?: string, currentSessionId?: number, admissionSessionId?: number, admissionYear?: string }) {
     try {
-        const allowed = await hasPermission("admin.students.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("icitify_dev") || await hasRole("registrar");
+        const allowed = await hasPermission("admin.students.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("icitify_dev") || await hasRole("registrar") || await hasRole("record_officer");
         if (!allowed) {
             return { success: false, error: "Unauthorized: Insufficient permissions to modify student placements" };
         }

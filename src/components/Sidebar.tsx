@@ -701,6 +701,17 @@ export function Sidebar({ enabledModules = {}, mobileOpen = false, onClose }: {
                     ]
                 },
                 {
+                    name: "Student Management",
+                    icon: User,
+                    subItems: [
+                        { name: "All Students", href: "/admin/students" },
+                        { name: "Placement Corrections", href: "/admin/students/placement" },
+                        { name: "Records Mobility", href: "/admin/students/transfer" },
+                        { name: "Incomplete Admissions", href: "/admin/students/orphans" },
+                    ]
+                },
+                { name: "User Management", icon: UsersIcon, href: "/admin/users" },
+                {
                     name: "Communication",
                     icon: Megaphone,
                     module: "communications",
