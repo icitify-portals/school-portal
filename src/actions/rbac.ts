@@ -11,7 +11,10 @@ import { auth } from "@/auth";
 export async function canManageRoles() {
     const session = await auth();
     const actorRole = (session?.user as any)?.role?.toLowerCase() || "";
-    return ['superadmin', 'admin', 'dvc', 'bursar', 'registrar'].includes(actorRole);
+    // icitify_dev is the dev super-role and already has full sidebar access;
+    // without it here the role panel stayed hidden for the very account that
+    // maintains the system.
+    return ['superadmin', 'admin', 'icitify_dev', 'dvc', 'bursar', 'registrar'].includes(actorRole);
 }
 
 export async function getAllRoles() {
@@ -138,7 +141,7 @@ export async function assignRoleToUser(userId: number, roleId: number) {
         const session = await auth();
         const actorRole = (session?.user as any)?.role?.toLowerCase() || "";
         const actorId = session?.user?.id ? parseInt(session.user.id) : null;
-        if (!['superadmin', 'admin', 'dvc', 'bursar', 'registrar'].includes(actorRole)) {
+        if (!['superadmin', 'admin', 'icitify_dev', 'dvc', 'bursar', 'registrar'].includes(actorRole)) {
             return { success: false, error: "Unauthorized: Only superadmin, vice chancellor, bursar, and registrar can edit." };
         }
 
@@ -186,7 +189,7 @@ export async function removeRoleFromUser(userId: number, roleId: number) {
         const session = await auth();
         const actorRole = (session?.user as any)?.role?.toLowerCase() || "";
         const actorId = session?.user?.id ? parseInt(session.user.id) : null;
-        if (!['superadmin', 'admin', 'dvc', 'bursar', 'registrar'].includes(actorRole)) {
+        if (!['superadmin', 'admin', 'icitify_dev', 'dvc', 'bursar', 'registrar'].includes(actorRole)) {
             return { success: false, error: "Unauthorized: Only superadmin, vice chancellor, bursar, and registrar can edit." };
         }
 

@@ -2,7 +2,7 @@
 
 import { db } from "@/db/db";
 import { students, users, systemAuditLogs } from "@/db/schema";
-import { eq, and, or, like, inArray, sql, isNull } from "drizzle-orm";
+import { eq, and, or, like, inArray, sql, isNull, isNotNull } from "drizzle-orm";
 import { auth } from "@/auth";
 import { revalidatePath } from "next/cache";
 
@@ -204,11 +204,32 @@ export async function enableOrphanStudents(ids: number[]) {
         })
         .where(inArray(students.id, ids));
 
+    // Reset the linked portal account to applicant so the user sees the
+    // admission flow rather than the student dashboard.
+    const userRows = await db.select({ userId: students.userId })
+        .from(students)
+        .where(and(inArray(students.id, ids), isNotNull(students.userId)));
+    const userIds = userRows.map(r => r.userId!).filter(Boolean);
+    if (userIds.length > 0) {
+        await db.update(users)
+            .set({ role: "applicant" })
+            .where(and(
+                inArray(users.id, userIds),
+                inArray(users.role, ["student", "fresher", "applicant"])
+            ));
+        for (const uid of userIds) {
+            await audit(actorId, "UPDATE_USER_BASE_ROLE", uid, {
+                reason: "Reset incomplete admission record to applicant",
+                source: "orphans.enable"
+            });
+        }
+    }
+
     await audit(actorId, "ORPHAN_STUDENT_ENABLE", ids[0], { ids, count: ids.length });
     revalidatePath("/admin/students/orphans");
     revalidatePath("/admin/students");
     return {
         success: true,
-        message: `Reset ${ids.length} record(s). Placeholder matric numbers cleared — the admission process must now assign the real details.`
+        message: `Reset ${ids.length} record(s). Linked portal account(s) set to applicant so the admission flow can re-process them.`
     };
 }
