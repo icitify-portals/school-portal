@@ -97,8 +97,7 @@ async function loadOrphanStudents() {
             currentLevel: students.currentLevel,
             studyMode: students.studyMode,
             status: students.status,
-            admissionYear: students.admissionYear,
-            createdAt: sql<string>`DATE_FORMAT(students.created_at, '%Y-%m-%d %H:%i')`
+            admissionYear: students.admissionYear
         })
         .from(students)
         .leftJoin(users, eq(users.id, students.userId))

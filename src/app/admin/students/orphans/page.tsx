@@ -24,7 +24,6 @@ type Orphan = {
     studyMode: string;
     status: string;
     admissionYear: number | null;
-    createdAt: string;
     dependentCounts: {
         bills: number; enrollments: number; idCards: number;
         medical: number; conduct: number;
