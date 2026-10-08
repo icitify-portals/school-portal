@@ -787,7 +787,7 @@ export async function updateAdminStudentProfile(studentId: number, updatePayload
     }
 }
 
-export async function bulkUpdateStudentPlacements(studentIds: number[], data: { currentLevel?: number, status?: string, currentSessionId?: number, admissionSessionId?: number, admissionYear?: string }) {
+export async function bulkUpdateStudentPlacements(studentIds: number[], data: { currentLevel?: number, programmeType?: string, status?: string, currentSessionId?: number, admissionSessionId?: number, admissionYear?: string }) {
     try {
         const allowed = await hasPermission("admin.students.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("icitify_dev") || await hasRole("registrar") || await hasRole("record_officer");
         if (!allowed) {
@@ -801,6 +801,10 @@ export async function bulkUpdateStudentPlacements(studentIds: number[], data: { 
         const updateData: any = {};
         if (data.currentLevel !== undefined && data.currentLevel !== null) {
             updateData.currentLevel = Number(data.currentLevel);
+        }
+        if (data.programmeType !== undefined) {
+            const pt = (data.programmeType || '').toString().trim().toUpperCase();
+            updateData.programmeType = ['ND', 'HND'].includes(pt) ? pt : null;
         }
         if (data.status) updateData.status = data.status;
         if (data.currentSessionId !== undefined) updateData.currentSessionId = data.currentSessionId ? Number(data.currentSessionId) : null;

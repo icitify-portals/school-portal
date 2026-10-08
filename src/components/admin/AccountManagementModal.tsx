@@ -78,7 +78,9 @@ export function AccountManagementModal({ user, student, onClose, onUpdate }: Acc
         if (studentRecord) {
             import("@/actions/students").then(m => m.getStudentSessionOptions().then(res => setSessions(res.sessions || [])));
             import("@/providers/BranchProvider").then(m => setIsK12(false)); // Just hack it or use a default if outside context. But let's fetch settings.
-            setCurrentLevel(studentRecord.currentLevel?.toString() || "");
+            const progType = (studentRecord.programmeType || 'ND').toString().toUpperCase();
+            const lvl = studentRecord.currentLevel ?? '';
+            setCurrentLevel(lvl ? `${progType}-${lvl}` : '');
             setStatus(studentRecord.status || "");
             setCurrentSessionId(studentRecord.currentSessionId?.toString() || "");
             setAdmissionSessionId(studentRecord.admissionSessionId?.toString() || "");
@@ -160,7 +162,13 @@ export function AccountManagementModal({ user, student, onClose, onUpdate }: Acc
         if (!studentRecord) return;
         setActionLoading("placement");
         const data: any = {};
-        if (currentLevel) data.currentLevel = Number(currentLevel);
+        if (currentLevel) {
+            const [progType, lvl] = currentLevel.split('-');
+            if (progType && lvl) {
+                data.programmeType = progType;
+                data.currentLevel = Number(lvl);
+            }
+        }
         if (status) data.status = status;
         if (currentSessionId) data.currentSessionId = Number(currentSessionId);
         if (admissionSessionId) data.admissionSessionId = Number(admissionSessionId);
@@ -176,13 +184,13 @@ export function AccountManagementModal({ user, student, onClose, onUpdate }: Acc
         setActionLoading(null);
     };
 
-    const levels = isK12 
+    const levels = isK12
         ? [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
         : [
-            { label: "ND 1", value: "1" },
-            { label: "ND 2", value: "2" },
-            { label: "HND 1", value: "1" },
-            { label: "HND 2", value: "2" }
+            { label: "ND 1", value: "ND-1" },
+            { label: "ND 2", value: "ND-2" },
+            { label: "HND 1", value: "HND-1" },
+            { label: "HND 2", value: "HND-2" }
         ];
 
     return (
@@ -383,7 +391,7 @@ export function AccountManagementModal({ user, student, onClose, onUpdate }: Acc
                                         {isK12 ? (levels as number[]).map((lvl) => (
                                             <option key={lvl} value={lvl}>Grade {lvl}</option>
                                         )) : (levels as {label:string, value:string}[]).map((lvl, idx) => (
-                                            <option key={idx} value={lvl.value}>{lvl.label} ({lvl.value})</option>
+                                            <option key={idx} value={lvl.value}>{lvl.label}</option>
                                         ))}
                                     </select>
                                 </div>
