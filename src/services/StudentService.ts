@@ -102,9 +102,14 @@ export class StudentService {
         if (!student) throw new Error(`Student ${admissionNumber} not found.`);
 
         const now = new Date();
+        const timestamp = Date.now();
         await db.update(students).set({ deletedAt: now }).where(eq(students.id, student.id));
         if (student.userId) {
-            await db.update(users).set({ deletedAt: now }).where(eq(users.id, student.userId));
+            const [u] = await db.select({ id: users.id, email: users.email }).from(users).where(eq(users.id, student.userId)).limit(1);
+            if (u) {
+                const releasedEmail = u.email && !u.email.includes(".deleted.") ? `${u.email}.deleted.${timestamp}` : u.email;
+                await db.update(users).set({ deletedAt: now, email: releasedEmail }).where(eq(users.id, student.userId));
+            }
         }
 
         return true;

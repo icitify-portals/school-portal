@@ -45,7 +45,6 @@ import { getBrandingSettings } from "./settings";
 import { BursaryService } from "@/services/BursaryService";
 import { NotificationService } from "@/services/NotificationService";
 import { OfficialService } from "@/services/OfficialService";
-import { ExcelBacklogService } from "@/services/ExcelBacklogService";
 import { assertActivityUnlocked, buildStudentLockContext, ACTIVITIES } from "@/services/ActivityLockService";
 
 // --- MIDDLEWARE HELPERS ---
@@ -66,21 +65,25 @@ async function ensureBursaryStaff() {
 // --- Excel Backlog ---
 export async function listBacklogs(branchId: number) {
     await ensureBursaryStaff();
+    const { ExcelBacklogService } = await import("@/services/ExcelBacklogService");
     return await ExcelBacklogService.listUploads(branchId);
 }
 
 export async function previewBacklog(filePath: string) {
     await ensureBursaryStaff();
+    const { ExcelBacklogService } = await import("@/services/ExcelBacklogService");
     return await ExcelBacklogService.previewFile(filePath);
 }
 
 export async function initiateBacklog(data: { name: string; filePath: string; branchId: number; uploadedBy: number }) {
     await ensureBursaryStaff();
+    const { ExcelBacklogService } = await import("@/services/ExcelBacklogService");
     return await ExcelBacklogService.initiateUpload(data.name, data.filePath, data.branchId, data.uploadedBy);
 }
 
 export async function processBacklog(uploadId: number, filePath: string) {
     await ensureBursaryStaff();
+    const { ExcelBacklogService } = await import("@/services/ExcelBacklogService");
     const res = await ExcelBacklogService.processFile(uploadId, filePath);
     revalidatePath("/admin/bursary/backlog");
     return res;
@@ -88,6 +91,7 @@ export async function processBacklog(uploadId: number, filePath: string) {
 
 export async function deleteBacklog(uploadId: number) {
     await ensureBursaryStaff();
+    const { ExcelBacklogService } = await import("@/services/ExcelBacklogService");
     const res = await ExcelBacklogService.deleteUpload(uploadId);
     revalidatePath("/admin/bursary/backlog");
     return res;
@@ -797,7 +801,7 @@ export async function generateBatchBills(data: {
     scope: 'all' | 'department' | 'level' | 'programme';
     filters: {
         deptId?: number;
-        level?: number;
+        level?: number | string;
         programmeId?: number;
     };
     note?: string;
@@ -3211,10 +3215,22 @@ export async function getStudentBillsAdmin(data: { search?: string; level?: stri
 
         let filtered = result;
         if (data?.level) {
-            // Apply level mapping (e.g. "1" matches level 1)
-            let levelVal: number | string = data.level;
-            if (["1","2","3","4","5","6"].includes(levelVal as string)) levelVal = parseInt(levelVal as string);
-            filtered = filtered.filter(r => r.student?.level === levelVal || r.student?.academicStatus === levelVal);
+            const levelVal = data.level;
+            filtered = filtered.filter(r => {
+                const s = r.student;
+                if (!s) return false;
+                const isHND = s.programmeType === 'HND' || (s.matricNumber && s.matricNumber.includes('/HND/'));
+                const isND = !isHND;
+
+                if (levelVal === "1") return s.currentLevel === 1 && isND; // ND 1
+                if (levelVal === "2") return s.currentLevel === 2 && isND; // ND 2
+                if (levelVal === "3") return s.currentLevel === 1 && isHND; // HND 1
+                if (levelVal === "4") return s.currentLevel === 2 && isHND; // HND 2
+                if (levelVal === "nd_graduant") return s.status === 'nd_graduated' || s.status === 'graduated';
+                if (levelVal === "hnd_graduant") return s.status === 'hnd_graduated' || s.status === 'graduated';
+                
+                return s.currentLevel === parseInt(levelVal);
+            });
         }
 
         if (data?.search) {

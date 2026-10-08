@@ -478,8 +478,25 @@ export class BursaryService {
             conditions.push(eq(students.deptId, data.filters.deptId));
         } else if (data.scope === 'programme' && data.filters.programmeId) {
             conditions.push(eq(students.programmeId, data.filters.programmeId));
-        } else if (data.scope === 'level' && data.filters.level) {
-            conditions.push(eq(students.currentLevel, data.filters.level));
+        } else if (data.scope === 'level' && data.filters.level !== undefined) {
+            const rawLevel = String(data.filters.level);
+            if (rawLevel === "1") {
+                conditions.push(eq(students.currentLevel, 1), eq(students.programmeType, 'ND'));
+            } else if (rawLevel === "2") {
+                conditions.push(eq(students.currentLevel, 2), eq(students.programmeType, 'ND'));
+            } else if (rawLevel === "3") {
+                conditions.push(eq(students.currentLevel, 1), eq(students.programmeType, 'HND'));
+            } else if (rawLevel === "4") {
+                conditions.push(eq(students.currentLevel, 2), eq(students.programmeType, 'HND'));
+            } else if (rawLevel === "nd_graduant") {
+                conditions.length = 0;
+                conditions.push(or(eq(students.status, 'nd_graduated'), eq(students.status, 'graduated')));
+            } else if (rawLevel === "hnd_graduant") {
+                conditions.length = 0;
+                conditions.push(or(eq(students.status, 'hnd_graduated'), eq(students.status, 'graduated')));
+            } else {
+                conditions.push(eq(students.currentLevel, Number(data.filters.level)));
+            }
         } else if (data.scope === 'faculty' && data.filters.facultyId) {
             const depts = await db.select({ id: departments.id })
                 .from(departments)

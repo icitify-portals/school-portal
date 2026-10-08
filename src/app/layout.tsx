@@ -126,7 +126,6 @@ export default async function RootLayout({
           <AuthProvider session={session}>
             <BranchProvider initialUnitId={initialUnitId}>
               <ImpersonationBanner />
-              <AnnouncementBanner />
               <ThemeInjector />
               <AppContent enabledModules={enabledModules}>
 

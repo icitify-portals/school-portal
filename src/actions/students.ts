@@ -749,10 +749,10 @@ export async function updateAdminStudentProfile(studentId: number, updatePayload
                     const [emailDup] = await db
                         .select({ id: users.id })
                         .from(users)
-                        .where(and(eq(users.email, newEmail), sql`${users.id} != ${student.userId}`))
+                        .where(and(eq(users.email, newEmail), isNull(users.deletedAt), sql`${users.id} != ${student.userId}`))
                         .limit(1);
                     if (emailDup) {
-                        return { success: false, error: `Email '${newEmail}' is already used by another account.` };
+                        return { success: false, error: `Email '${newEmail}' is already used by another active account.` };
                     }
                 }
                 userUpdates.email = newEmail;

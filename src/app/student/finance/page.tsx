@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect, useCallback } from "react";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,10 +19,14 @@ import {
     X,
     Coins,
     Sparkles,
-    ShieldAlert,
     BookOpen,
     GraduationCap,
-    Archive
+    Archive,
+    ExternalLink,
+    Receipt,
+    Layers,
+    ChevronRight,
+    Tag
 } from "lucide-react";
 import { 
     getStudentLedger, 
@@ -41,7 +45,6 @@ import { cn } from "@/lib/utils";
 import { AcademicNomenclature } from "@/lib/nomenclature";
 import { RemitaInlineCheckout } from "@/components/finance/RemitaInlineCheckout";
 
-
 interface LedgerEntry {
     id: number;
     createdAt: string | Date;
@@ -54,8 +57,13 @@ interface LedgerEntry {
 
 interface BillItem {
     id: number;
-    feeItem?: { name: string };
+    feeItemId?: number;
+    feeItem?: { name: string; category?: string };
     amount: string;
+    amountPaid?: string;
+    originalAmount?: string;
+    scholarshipApplied?: string;
+    discountApplied?: string;
 }
 
 interface Bill {
@@ -70,6 +78,11 @@ interface Bill {
     createdAt: string | Date;
     session?: { name: string; currentSemester?: string; id?: number };
     sessionId?: number;
+    tuitionInstallmentEnabled?: boolean;
+    tuitionInstallmentPercentage?: number | string;
+    tuitionInstallmentDeadline?: string | Date;
+    totalScholarshipApplied?: string;
+    totalDiscountApplied?: string;
     items?: BillItem[];
 }
 
@@ -77,6 +90,7 @@ interface FinancialSummary {
     walletBalance: number;
     outstandingBalance: number;
     totalPaid: number;
+    legacyBalance?: number;
 }
 
 interface StudentProfile {
@@ -97,6 +111,54 @@ function withTimeout<T>(promise: Promise<T>, fallback: T, ms: number = ACTION_TI
     ]);
 }
 
+export function getBillGatewayInfo(bill: Bill) {
+    const isProcessing = bill.items?.some(i => 
+        i.feeItem?.name?.toLowerCase().includes('processing')
+    ) || bill.note?.toLowerCase().includes('processing') || bill.billNumber?.includes('PROC');
+
+    if (isProcessing) {
+        return {
+            id: 'paystack',
+            name: 'Paystack Gateway',
+            shortName: 'Paystack',
+            categoryTitle: 'Portal Processing Fee',
+            badgeClass: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+            buttonClass: 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-200',
+            indicator: '💚',
+            description: 'Fast online card & transfer checkout via Paystack.'
+        };
+    }
+
+    const hasTuition = bill.items?.some(i => 
+        i.feeItem?.name?.toLowerCase().includes('tuition') || 
+        i.feeItem?.category === 'tuition'
+    ) || bill.note?.toLowerCase().includes('tuition') || bill.billNumber?.includes('TUI');
+
+    if (hasTuition) {
+        return {
+            id: 'remita',
+            name: 'Remita Gateway',
+            shortName: 'Remita',
+            categoryTitle: 'School Fees (Tuition)',
+            badgeClass: 'bg-rose-50 text-rose-700 border-rose-200',
+            buttonClass: 'bg-rose-600 hover:bg-rose-700 text-white shadow-rose-200',
+            indicator: '🔵',
+            description: 'Direct Remita payment for institutional tuition and academic fees.'
+        };
+    }
+
+    return {
+        id: 'alatpay',
+        name: 'ALATPay Gateway',
+        shortName: 'ALATPay',
+        categoryTitle: 'Incidental & Ancillary Fees',
+        badgeClass: 'bg-amber-50 text-amber-800 border-amber-200',
+        buttonClass: 'bg-[#8A2132] hover:bg-[#721b29] text-white shadow-red-200',
+        indicator: '🔴',
+        description: 'Dedicated ALATPay account routing for ancillary, ICT, and incidental fees.'
+    };
+}
+
 export default function StudentFinancePage() {
     const { data: session } = useSession();
     const router = useRouter();
@@ -107,7 +169,7 @@ export default function StudentFinancePage() {
     const [student, setStudent] = useState<StudentProfile | null>(null);
     const [settings, setSettings] = useState<Record<string, string>>({});
     const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState<'ledger' | 'bills' | 'payments'>('ledger');
+    const [activeTab, setActiveTab] = useState<'bills' | 'payments' | 'ledger'>('bills');
     
     // Payments State
     const [legacyPayments, setLegacyPayments] = useState<any[]>([]);
@@ -121,6 +183,7 @@ export default function StudentFinancePage() {
     const [paymentMode, setPaymentMode] = useState<'gateway' | 'wallet'>('gateway');
     const [checkoutLoading, setCheckoutLoading] = useState(false);
     const [checkoutSuccess, setCheckoutSuccess] = useState(false);
+    const [completedTransactionId, setCompletedTransactionId] = useState<number | null>(null);
     const [checkoutError, setCheckoutError] = useState("");
     const [remitaData, setRemitaData] = useState<{rrr: string, reference: string} | null>(null);
 
@@ -176,6 +239,7 @@ export default function StudentFinancePage() {
         setPaymentMode('gateway');
         setCheckoutError("");
         setCheckoutSuccess(false);
+        setCompletedTransactionId(null);
         setRemitaData(null);
         setIsCheckoutOpen(true);
     };
@@ -226,10 +290,10 @@ export default function StudentFinancePage() {
                     );
                     if (res.success) {
                         setCheckoutSuccess(true);
+                        setCompletedTransactionId((res as any).transactionId || null);
                         setTimeout(() => {
-                            setIsCheckoutOpen(false);
                             fetchData();
-                        }, 2000);
+                        }, 1000);
                     } else {
                         setCheckoutError((res as any).error || "Wallet payment failed.");
                     }
@@ -239,7 +303,7 @@ export default function StudentFinancePage() {
                     setCheckoutLoading(false);
                 }
             } else {
-                // Proceed directly to online checkout
+                // Online checkout
                 try {
                     const res = await withTimeout(
                         initializeOnlineCheckoutAction(student.id, selectedBill.id, selectedAmount),
@@ -253,7 +317,7 @@ export default function StudentFinancePage() {
                         setTimeout(() => {
                             setIsCheckoutOpen(false);
                             window.location.href = `${res.checkoutUrl}&billId=${selectedBill.id}`;
-                        }, 1500);
+                        }, 1000);
                     } else {
                         setCheckoutError(res.error || "Online checkout initialization failed.");
                     }
@@ -270,15 +334,17 @@ export default function StudentFinancePage() {
         }
     };
 
-
     const walletBalanceText = summary?.walletBalance?.toLocaleString() || "0.00";
-    const legacyBalanceText = (summary as any)?.legacyBalance?.toLocaleString() || "0.00";
     const totalOwedText = summary?.outstandingBalance?.toLocaleString() || "0.00";
     const totalPaidText = summary?.totalPaid?.toLocaleString() || "0.00";
 
-    const unpaidBill = bills.find(b => b.status !== 'paid');
+    // Filter bills and transactions
+    const filteredBills = bills.filter(b => 
+        b.billNumber.toLowerCase().includes(filterQuery.toLowerCase()) ||
+        (b.session?.name || "").toLowerCase().includes(filterQuery.toLowerCase()) ||
+        (b.note || "").toLowerCase().includes(filterQuery.toLowerCase())
+    );
 
-    // Filters transaction ledger
     const filteredLedger = ledger.filter(entry => 
         entry.description.toLowerCase().includes(filterQuery.toLowerCase()) ||
         (entry.transactionId || "").toString().includes(filterQuery)
@@ -288,7 +354,7 @@ export default function StudentFinancePage() {
         return (
             <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50/50">
                 <Loader2 className="w-10 h-10 animate-spin text-indigo-600 mb-4" />
-                <p className="text-slate-500 font-bold text-xs uppercase tracking-widest">Loading secure ledger...</p>
+                <p className="text-slate-500 font-bold text-xs uppercase tracking-widest">Loading secure billing portal...</p>
             </div>
         );
     }
@@ -307,346 +373,348 @@ export default function StudentFinancePage() {
                         </h2>
                     </div>
                     <p className="text-slate-300 font-medium mt-1 uppercase text-sm tracking-wide opacity-90">
-                        Manage your digital wallet, outstanding bills, and payment vouchers
+                        View Itemized School Bills • Modular Multi-Gateway Payments • Instant Receipts
                     </p>
                 </div>
-                <div className="relative z-10 flex gap-3 mt-6 md:mt-0">
+                <div className="relative z-10 flex flex-wrap gap-3 mt-6 md:mt-0">
                     <Button
                         variant="outline"
-                        className="gap-2 h-11 px-6 rounded-xl border-white/20 text-white bg-white/10 hover:bg-white/20 hover:text-white font-bold text-xs transition-all shadow-sm backdrop-blur-md"
-                        onClick={() => router.push("/student/finance/library")}
+                        className="gap-2 h-11 px-5 rounded-xl border-white/20 text-white bg-white/10 hover:bg-white/20 hover:text-white font-bold text-xs transition-all shadow-sm backdrop-blur-md"
+                        onClick={() => router.push("/student/finance/receipts")}
                     >
-                        <BookOpen className="w-4 h-4" />
-                        Library Fines
+                        <Receipt className="w-4 h-4 text-emerald-400" />
+                        All Receipts
                     </Button>
                     <Button
                         variant="outline"
-                        className="gap-2 h-11 px-6 rounded-xl border-white/20 text-white bg-white/10 hover:bg-white/20 hover:text-white font-bold text-xs transition-all shadow-sm backdrop-blur-md"
+                        className="gap-2 h-11 px-5 rounded-xl border-white/20 text-white bg-white/10 hover:bg-white/20 hover:text-white font-bold text-xs transition-all shadow-sm backdrop-blur-md"
                         onClick={() => router.push("/student/finance/refund")}
                     >
                         <Undo2 className="w-4 h-4" />
-                        Request Refund
+                        Refunds
                     </Button>
                     <Button
                         variant="outline"
-                        className="gap-2 h-11 px-6 rounded-xl border-white/20 text-white bg-white/10 hover:bg-white/20 hover:text-white font-bold text-xs transition-all shadow-sm backdrop-blur-md"
+                        className="gap-2 h-11 px-5 rounded-xl border-white/20 text-white bg-white/10 hover:bg-white/20 hover:text-white font-bold text-xs transition-all shadow-sm backdrop-blur-md"
                         onClick={() => window.print()}
                     >
-                        <Download className="w-4 h-4" />
-                        Export Statement
+                        <Printer className="w-4 h-4" />
+                        Print Statement
                     </Button>
                 </div>
             </div>
 
             {/* KPI Cards */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* Wallet Balance Card */}
-                <div className="bg-indigo-600 rounded-[2.5rem] p-8 text-white relative overflow-hidden shadow-2xl shadow-indigo-100 group transition-all duration-300 hover:shadow-indigo-200">
-                    <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform duration-700">
-                        <Wallet className="w-32 h-32" />
+                {/* Total Outstanding Card */}
+                <div className="bg-white rounded-[2.5rem] p-8 relative overflow-hidden shadow-xl shadow-slate-100 border border-slate-100 group transition-all duration-300">
+                    <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:scale-110 transition-transform duration-700">
+                        <ArrowDownCircle className="w-32 h-32 text-red-600" />
                     </div>
-                    <p className="text-indigo-100 text-[10px] font-black uppercase tracking-widest mb-2 opacity-80 flex items-center gap-1.5">
-                        <Coins className="w-4 h-4" /> Available Wallet Balance
+                    <div className="flex items-center gap-2 text-red-600 bg-red-50 w-fit px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest mb-4 border border-red-100">
+                        <ArrowDownCircle className="w-3.5 h-3.5" />
+                        Outstanding School Bills
+                    </div>
+                    <h3 className="text-4xl font-black text-slate-900 mb-4 tracking-tight">₦{totalOwedText}</h3>
+                    <p className="text-xs text-slate-500 font-medium leading-relaxed">
+                        {bills.filter(b => b.status !== 'paid').length} unpaid / partial bill(s) currently pending settlement.
                     </p>
-                    <h3 className="text-4xl font-black mb-10 tracking-tight">₦{walletBalanceText}</h3>
+                </div>
+
+                {/* Total Paid / Settled Card */}
+                <div className="bg-emerald-600 rounded-[2.5rem] p-8 text-white relative overflow-hidden shadow-2xl shadow-emerald-100 group transition-all duration-300">
+                    <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform duration-700">
+                        <CheckCircle2 className="w-32 h-32 text-white" />
+                    </div>
+                    <p className="text-emerald-100 text-[10px] font-black uppercase tracking-widest mb-2 opacity-90 flex items-center gap-1.5">
+                        <Sparkles className="w-4 h-4 text-emerald-200" /> Total Payments Settled
+                    </p>
+                    <h3 className="text-4xl font-black mb-4 tracking-tight">₦{totalPaidText}</h3>
                     <div className="flex gap-2">
                         <Button 
-                            className="bg-white text-indigo-600 hover:bg-indigo-50 w-full font-black rounded-2xl h-12 shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all"
-                            onClick={() => router.push("/student/finance/wallet")}
+                            className="bg-white text-emerald-700 hover:bg-emerald-50 w-full font-black rounded-2xl h-12 shadow-md transition-all text-xs"
+                            onClick={() => router.push("/student/finance/receipts")}
                         >
-                            Go to Wallet Hub
+                            View All Payment Receipts
                         </Button>
                     </div>
                 </div>
 
-                {/* Outstanding Debt Card */}
-                <div className="bg-white rounded-[2.5rem] p-8 relative overflow-hidden shadow-xl shadow-slate-100 border border-slate-100/50 group transition-all duration-300">
-                    <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:scale-110 transition-transform duration-700">
-                        <ArrowDownCircle className="w-32 h-32 text-red-600" />
-                    </div>
-                    <div className="flex items-center gap-2 text-red-600 bg-red-50 w-fit px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest mb-4">
-                        <ArrowDownCircle className="w-3.5 h-3.5" />
-                        Outstanding Balance
-                    </div>
-                    <h3 className="text-4xl font-black text-slate-900 mb-10 tracking-tight">₦{totalOwedText}</h3>
-                    <Button 
-                        disabled={!unpaidBill}
-                        onClick={() => unpaidBill && openCheckout(unpaidBill)}
-                        className="bg-slate-900 hover:bg-slate-800 text-white w-full font-black rounded-2xl h-12 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:pointer-events-none shadow-lg"
-                    >
-                        {unpaidBill ? "Pay Fees Now" : "All Fees Settled"}
-                    </Button>
-                </div>
-
-                {/* Information Card / Quick Insights */}
+                {/* Multi-Gateway Policy Insight */}
                 <div className="bg-slate-900 rounded-[2.5rem] p-8 text-white relative overflow-hidden shadow-2xl group transition-all duration-300">
                     <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:scale-110 transition-transform duration-700">
                         <CreditCard className="w-32 h-32 text-indigo-400" />
                     </div>
-                    <CardHeader className="p-0 mb-4">
-                        <CardTitle className="text-lg flex items-center gap-2 font-bold tracking-tight">
-                            <Sparkles className="w-5 h-5 text-indigo-400" />
-                            Financial Insights
+                    <CardHeader className="p-0 mb-3">
+                        <CardTitle className="text-base flex items-center gap-2 font-bold tracking-tight text-indigo-300">
+                            <Tag className="w-4 h-4" />
+                            Smart Multi-Gateway Channels
                         </CardTitle>
                     </CardHeader>
-                    <div className="space-y-4">
-                        <p className="text-xs text-slate-400 leading-relaxed">
-                            Your payment mode is locked to secure online gateways and digital wallet checkout to eliminate manual deposit delays.
-                        </p>
-                        <div className="p-4 bg-slate-800/80 rounded-2xl border border-slate-700 space-y-2">
-                            <div className="flex justify-between items-center">
-                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Paid:</span>
-                                <span className="font-extrabold text-sm text-indigo-400">₦{totalPaidText}</span>
+                    <div className="space-y-3 text-xs">
+                        <div className="p-3 bg-slate-800/90 rounded-xl border border-slate-700/60 flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <span className="text-base">🔵</span>
+                                <span className="font-bold text-slate-200">School Fees (Tuition)</span>
                             </div>
-                            <div className="flex justify-between items-center pt-2 border-t border-slate-700/50">
-                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Previous Payments:</span>
-                                <span className="font-extrabold text-sm text-slate-300">₦{legacyBalanceText}</span>
+                            <span className="text-[10px] font-black bg-rose-500/20 text-rose-300 px-2.5 py-0.5 rounded-full border border-rose-500/30">
+                                Remita Gateway
+                            </span>
+                        </div>
+                        <div className="p-3 bg-slate-800/90 rounded-xl border border-slate-700/60 flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <span className="text-base">🔴</span>
+                                <span className="font-bold text-slate-200">Incidental / Ancillary</span>
                             </div>
+                            <span className="text-[10px] font-black bg-red-500/20 text-red-300 px-2.5 py-0.5 rounded-full border border-red-500/30">
+                                ALATPay Gateway
+                            </span>
                         </div>
                     </div>
                 </div>
             </div>
 
-            {/* Transaction Ledger Card */}
+            {/* Main Tabs Navigation */}
             <Card className="border-none shadow-xl shadow-slate-100/50 rounded-[2.5rem] overflow-hidden border border-slate-100">
-                <CardHeader className="border-b border-slate-50 bg-white/50 backdrop-blur-sm p-8 flex flex-col md:flex-row items-center justify-between gap-4">
-                    <CardTitle className="text-lg flex items-center gap-2 font-bold tracking-tight text-slate-900">
-                        <History className="w-5 h-5 text-indigo-600" />
-                        Transaction Ledger
-                    </CardTitle>
-                    <div className="relative w-full md:w-72">
+                <CardHeader className="border-b border-slate-100 bg-white/70 backdrop-blur-sm p-6 sm:p-8 flex flex-col md:flex-row items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-black">
+                            <Layers className="w-5 h-5" />
+                        </div>
+                        <div>
+                            <CardTitle className="text-xl font-black tracking-tight text-slate-900">
+                                Student Payment &amp; Bills Hub
+                            </CardTitle>
+                            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                                Select individual bills to pay or print receipts
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="relative w-full md:w-80">
                         <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
                         <input
-                            className="pl-11 pr-4 py-2 bg-slate-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 w-full h-11 transition-all outline-none"
-                            placeholder="Filter transactions by details..."
+                            className="pl-11 pr-4 py-2 bg-slate-50 border border-slate-200/60 rounded-2xl text-sm focus:ring-2 focus:ring-indigo-500 w-full h-11 transition-all outline-none font-medium"
+                            placeholder="Search bills, items, or reference..."
                             value={filterQuery}
                             onChange={(e) => setFilterQuery(e.target.value)}
                         />
                     </div>
                 </CardHeader>
 
-                <div className="bg-white border-b border-slate-50 flex justify-between items-center px-8">
-                    <div className="flex">
-                        <button
-                            onClick={() => setActiveTab('ledger')}
-                            className={cn("py-4 text-[10px] font-black uppercase tracking-widest border-b-2 px-4 transition-all", activeTab === 'ledger' ? "border-indigo-600 text-indigo-600" : "border-transparent text-slate-400")}
-                        >
-                            Transaction Ledger
-                        </button>
+                <div className="bg-white border-b border-slate-100 flex justify-between items-center px-6 sm:px-8">
+                    <div className="flex gap-2">
                         <button
                             onClick={() => setActiveTab('bills')}
-                            className={cn("py-4 text-[10px] font-black uppercase tracking-widest border-b-2 px-4 transition-all", activeTab === 'bills' ? "border-indigo-600 text-indigo-600" : "border-transparent text-slate-400")}
+                            className={cn(
+                                "py-4 text-xs font-black uppercase tracking-wider border-b-2 px-4 transition-all flex items-center gap-2",
+                                activeTab === 'bills' ? "border-indigo-600 text-indigo-600" : "border-transparent text-slate-400 hover:text-slate-600"
+                            )}
                         >
-                            My School Bills
+                            <Layers className="w-4 h-4" />
+                            My School Bills ({bills.length})
                         </button>
                         <button
                             onClick={() => setActiveTab('payments')}
-                            className={cn("py-4 text-[10px] font-black uppercase tracking-widest border-b-2 px-4 transition-all", activeTab === 'payments' ? "border-indigo-600 text-indigo-600" : "border-transparent text-slate-400")}
+                            className={cn(
+                                "py-4 text-xs font-black uppercase tracking-wider border-b-2 px-4 transition-all flex items-center gap-2",
+                                activeTab === 'payments' ? "border-indigo-600 text-indigo-600" : "border-transparent text-slate-400 hover:text-slate-600"
+                            )}
                         >
-                            Payment History
+                            <Receipt className="w-4 h-4" />
+                            Payment Receipts &amp; History ({subsequentOnlinePayments.length + subsequentWalletPayments.length})
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('ledger')}
+                            className={cn(
+                                "py-4 text-xs font-black uppercase tracking-wider border-b-2 px-4 transition-all flex items-center gap-2",
+                                activeTab === 'ledger' ? "border-indigo-600 text-indigo-600" : "border-transparent text-slate-400 hover:text-slate-600"
+                            )}
+                        >
+                            <History className="w-4 h-4" />
+                            Account Ledger
                         </button>
                     </div>
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => window.print()}
-                        className="text-[9px] font-black uppercase tracking-widest gap-2 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 border border-indigo-200 rounded-xl px-4 py-2"
-                    >
-                        <Printer className="w-3.5 h-3.5" />
-                        Print statement
-                    </Button>
                 </div>
 
-                <div className="overflow-x-auto print:border-none print:shadow-none bg-white">
-                    {activeTab === 'ledger' ? (
-                        <table className="w-full text-left">
-                            <thead>
-                                <tr className="bg-slate-50/50 text-slate-500 text-[10px] font-black uppercase tracking-widest border-b border-slate-100">
-                                    <th className="px-8 py-5">Date</th>
-                                    <th className="px-8 py-5">Description</th>
-                                    <th className="px-8 py-5">Debit</th>
-                                    <th className="px-8 py-5">Credit</th>
-                                    <th className="px-8 py-5">Balance</th>
-                                    <th className="px-8 py-5">Reference</th>
-                                    <th className="px-8 py-5 text-right">Receipt</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100">
-                                {filteredLedger.length === 0 ? (
-                                    <tr>
-                                        <td colSpan={7} className="px-8 py-20 text-center text-slate-400 italic text-sm">
-                                            No transactions found matching the filter.
-                                        </td>
-                                    </tr>
-                                ) : (
-                                    filteredLedger.map((entry) => (
-                                        <tr key={entry.id} className="hover:bg-slate-50/50 transition-colors group">
-                                            <td className="px-8 py-5 text-xs font-bold text-slate-500">
-                                                {new Date(entry.createdAt).toLocaleDateString('en-US')}
-                                            </td>
-                                            <td className="px-8 py-5">
-                                                <p className="text-sm font-extrabold text-slate-800">{entry.description}</p>
-                                            </td>
-                                            <td className="px-8 py-5">
-                                                {parseFloat(entry.debit) > 0 ? (
-                                                    <span className="text-sm font-black text-rose-600">₦{parseFloat(entry.debit).toLocaleString()}</span>
-                                                ) : "-"}
-                                            </td>
-                                            <td className="px-8 py-5">
-                                                {parseFloat(entry.credit) > 0 ? (
-                                                    <span className="text-sm font-black text-emerald-600">₦{parseFloat(entry.credit).toLocaleString()}</span>
-                                                ) : "-"}
-                                            </td>
-                                            <td className="px-8 py-5 text-sm font-black text-slate-900">
-                                                {String(entry.id).startsWith('w-') ? (
-                                                    <span className="text-xs text-slate-400 uppercase tracking-widest font-bold">Wallet Tx</span>
-                                                ) : (
-                                                    `₦${parseFloat(entry.balance).toLocaleString()}`
-                                                )}
-                                            </td>
-                                            <td className="px-8 py-5 font-mono text-[10px] text-slate-400 group-hover:text-slate-600">
-                                                #{entry.transactionId || "SYS-" + entry.id}
-                                            </td>
-                                            <td className="px-8 py-5 text-right">
-                                                {parseFloat(entry.credit) > 0 && entry.transactionId && (
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        className="h-8 px-3 rounded-lg text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 font-black text-[9px] gap-1.5 uppercase tracking-wider"
-                                                        onClick={() => window.open(`/finance/receipt/${entry.transactionId}`, '_blank')}
-                                                    >
-                                                        <FileText className="w-3 h-3" />
-                                                        Receipt
-                                                    </Button>
-                                                )}
-                                            </td>
-                                        </tr>
-                                    ))
-                                )}
-                            </tbody>
-                        </table>
-                    ) : activeTab === 'bills' ? (
-                        <div className="p-8 space-y-6">
-                            {bills.length === 0 ? (
-                                <div className="py-20 text-center text-slate-400 italic text-sm">No bills generated for your account yet.</div>
+                <div className="p-6 sm:p-8 bg-slate-50/50 min-h-[400px]">
+                    {/* TAB 1: MODULAR SCHOOL BILLS */}
+                    {activeTab === 'bills' ? (
+                        <div className="space-y-6">
+                            {filteredBills.length === 0 ? (
+                                <div className="text-center py-20 bg-white rounded-3xl border border-slate-100 shadow-sm">
+                                    <FileText className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+                                    <h4 className="text-lg font-bold text-slate-700">No School Bills Generated</h4>
+                                    <p className="text-xs text-slate-400 mt-1 max-w-md mx-auto">
+                                        You currently do not have any invoices assigned. Once bursary assigns fee structures for your session and level, they will appear here.
+                                    </p>
+                                </div>
                             ) : (
-                                bills.map((bill) => {
-                                    const outstanding = parseFloat(bill.totalAmount) - parseFloat(bill.amountPaid || "0.00");
-                                    const termLabel = AcademicNomenclature.getLabel(
-                                        bill.session?.currentSemester || "1",
-                                        settings
-                                    );
-                                    
+                                filteredBills.map((bill) => {
+                                    const total = parseFloat(bill.totalAmount);
+                                    const paid = parseFloat(bill.amountPaid || "0.00");
+                                    const outstanding = total - paid;
+                                    const isPaid = outstanding <= 0;
+                                    const gateway = getBillGatewayInfo(bill);
+
                                     return (
-                                        <div key={bill.id} className="bg-slate-50/50 hover:bg-slate-50 rounded-2xl p-8 border border-slate-100 relative overflow-hidden group transition-all duration-300">
-                                            <div className="absolute top-0 right-0 p-6 opacity-5 group-hover:opacity-10 transition-opacity">
-                                                <FileText className="w-24 h-24" />
-                                            </div>
-                                            <div className="flex flex-col md:flex-row justify-between gap-6 mb-6">
-                                                <div>
-                                                    <div className="flex items-center gap-2 mb-2">
-                                                        <span className="text-[9px] font-black text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full uppercase tracking-wider">Bill ID</span>
-                                                        <span className="text-xs font-mono font-bold text-slate-600">{bill.billNumber}</span>
-                                                    </div>
-                                                    <h4 className="text-xl font-black text-slate-900">{bill.session?.name} School Fees</h4>
-                                                    <p className="text-xs text-slate-500 mt-1 uppercase font-bold tracking-widest text-indigo-500/80">{termLabel}</p>
-                                                </div>
-                                                <div className="text-right">
-                                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Outstanding Balance</p>
-                                                    <h3 className="text-2xl font-black text-slate-900">₦{outstanding.toLocaleString()}</h3>
-                                                    <span className={cn("inline-block px-3 py-1 rounded-full text-[9px] font-black uppercase mt-3 tracking-wider",
-                                                        bill.status === 'paid' ? "bg-emerald-100 text-emerald-800" : bill.status === 'partially_paid' ? "bg-amber-100 text-amber-800" : "bg-rose-100 text-rose-800")}>
-                                                        {bill.status === 'partially_paid' ? 'Part-Paid' : bill.status}
-                                                    </span>
-                                                </div>
-                                            </div>
-
-                                            <div className="border-t border-slate-200/60 pt-4 mb-4">
-                                                <table className="w-full text-xs">
-                                                    <thead>
-                                                        <tr className="text-[9px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">
-                                                            <th className="pb-2 text-left">Fee Item</th>
-                                                            <th className="pb-2 text-right">Original</th>
-                                                            <th className="pb-2 text-right">Aid</th>
-                                                            <th className="pb-2 text-right">Net Due</th>
-                                                            <th className="pb-2 text-right">Paid</th>
-                                                            <th className="pb-2 text-center">Status</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        {bill.items?.map((item) => {
-                                                            const itemPaid = parseFloat(item.amountPaid || "0.00");
-                                                            const itemNet = parseFloat(item.amount);
-                                                            const itemAid = (parseFloat(item.scholarshipApplied || "0.00") + parseFloat(item.discountApplied || "0.00"));
-                                                            const itemOrig = parseFloat(item.originalAmount || item.amount);
-                                                            const itemStatus = itemPaid >= itemNet ? 'paid' : itemPaid > 0 ? 'partial' : 'unpaid';
-                                                            return (
-                                                                <tr key={item.id} className="border-b border-slate-50">
-                                                                    <td className="py-2 pr-2 font-semibold text-slate-700 truncate max-w-[140px]" title={item.feeItem?.name}>
-                                                                        {item.feeItem?.name || `Item #${item.feeItemId}`}
-                                                                    </td>
-                                                                    <td className="py-2 text-right text-slate-400">₦{itemOrig.toLocaleString()}</td>
-                                                                    <td className="py-2 text-right text-indigo-500">{itemAid > 0 ? `-₦${itemAid.toLocaleString()}` : '-'}</td>
-                                                                    <td className="py-2 text-right font-bold text-slate-800">₦{itemNet.toLocaleString()}</td>
-                                                                    <td className="py-2 text-right font-bold text-emerald-600">₦{itemPaid.toLocaleString()}</td>
-                                                                    <td className="py-2 text-center">
-                                                                        <span className={cn(
-                                                                            "inline-block px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider",
-                                                                            itemStatus === 'paid' ? "text-emerald-600 bg-emerald-50" :
-                                                                            itemStatus === 'partial' ? "text-amber-600 bg-amber-50" : "text-slate-400 bg-slate-50"
-                                                                        )}>
-                                                                            {itemStatus === 'paid' ? 'Paid' : itemStatus === 'partial' ? 'Part' : 'Due'}
-                                                                        </span>
-                                                                    </td>
-                                                                </tr>
-                                                            );
-                                                        })}
-                                                    </tbody>
-                                                </table>
-                                                {bill.tuitionInstallmentEnabled && (
-                                                    <div className="mt-2 flex items-center gap-2 text-[9px] font-bold text-amber-600 bg-amber-50 px-3 py-1.5 rounded-lg">
-                                                        <GraduationCap className="w-3 h-3" />
-                                                        Tuition Installment Mode: {bill.tuitionInstallmentPercentage || 60}% of tuition due now. Balance by {bill.tuitionInstallmentDeadline ? new Date(bill.tuitionInstallmentDeadline).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'End of Semester'}.
-                                                    </div>
-                                                )}
-                                                {(parseFloat(bill.totalScholarshipApplied || "0") > 0 || parseFloat(bill.totalDiscountApplied || "0") > 0) && (
-                                                    <div className="mt-1 flex gap-3 text-[9px] font-bold text-slate-500">
-                                                        {parseFloat(bill.totalScholarshipApplied || "0") > 0 && (
-                                                            <span className="text-indigo-500">Scholarship: -₦{parseFloat(bill.totalScholarshipApplied).toLocaleString()}</span>
-                                                        )}
-                                                        {parseFloat(bill.totalDiscountApplied || "0") > 0 && (
-                                                            <span className="text-blue-500">Discount: -₦{parseFloat(bill.totalDiscountApplied).toLocaleString()}</span>
-                                                        )}
-                                                    </div>
-                                                )}
-                                            </div>
-
-                                            {bill.note && (
-                                                <div className="bg-white p-4 rounded-2xl border border-slate-100 mt-4">
-                                                    <div className="flex items-center gap-2 mb-2 text-indigo-600 font-bold text-xs">
-                                                        <AlertCircle className="w-3.5 h-3.5" />
-                                                        Note:
-                                                    </div>
-                                                    <p className="text-xs text-slate-500 italic leading-relaxed">{bill.note}</p>
-                                                </div>
+                                        <div 
+                                            key={bill.id} 
+                                            className={cn(
+                                                "bg-white rounded-[2rem] p-6 sm:p-8 border shadow-sm transition-all duration-300 hover:shadow-md",
+                                                isPaid ? "border-emerald-100 bg-emerald-50/10" : "border-slate-200"
                                             )}
+                                        >
+                                            {/* Top Banner of Bill Card */}
+                                            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 pb-6 border-b border-slate-100">
+                                                <div className="space-y-1">
+                                                    <div className="flex flex-wrap items-center gap-2.5">
+                                                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                                                            Invoice #{bill.billNumber}
+                                                        </span>
+                                                        <span className={cn(
+                                                            "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border flex items-center gap-1.5",
+                                                            gateway.badgeClass
+                                                        )}>
+                                                            <span>{gateway.indicator}</span>
+                                                            <span>{gateway.name}</span>
+                                                        </span>
+                                                        <span className={cn(
+                                                            "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider",
+                                                            isPaid ? "bg-emerald-100 text-emerald-800" :
+                                                            paid > 0 ? "bg-amber-100 text-amber-800" : "bg-rose-100 text-rose-800"
+                                                        )}>
+                                                            {isPaid ? "Settled / Paid" : paid > 0 ? "Partially Paid" : "Unpaid / Due"}
+                                                        </span>
+                                                    </div>
+                                                    <h3 className="text-2xl font-black text-slate-900 mt-1">
+                                                        {bill.session?.name || "2026/2027"} {bill.note || gateway.categoryTitle}
+                                                    </h3>
+                                                    <p className="text-xs text-slate-500 font-medium">
+                                                        {gateway.description}
+                                                    </p>
+                                                </div>
 
-                                            <div className="mt-6 flex justify-end gap-3">
-                                                <Button
-                                                    variant="outline"
-                                                    onClick={() => router.push(`/finance/bill/${bill.id}`)}
-                                                    className="h-10 px-5 text-xs font-black rounded-xl border-slate-200 text-slate-600 hover:bg-slate-50 gap-2 transition-all"
-                                                >
-                                                    <Printer className="w-3.5 h-3.5" />
-                                                    View &amp; Print Bill
-                                                </Button>
-                                                <Button 
-                                                    disabled={outstanding <= 0}
-                                                    onClick={() => openCheckout(bill)}
-                                                    className="h-10 px-5 text-xs font-black bg-slate-900 rounded-xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-md"
-                                                >
-                                                    Pay This Bill
-                                                </Button>
+                                                {/* Outstanding / Total Display */}
+                                                <div className="flex items-center gap-6 self-end lg:self-auto bg-slate-50 px-6 py-4 rounded-2xl border border-slate-100">
+                                                    <div className="text-right">
+                                                        <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Total Billed</p>
+                                                        <p className="text-lg font-bold text-slate-700">₦{total.toLocaleString()}</p>
+                                                    </div>
+                                                    <div className="h-8 w-px bg-slate-200" />
+                                                    <div className="text-right">
+                                                        <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Paid So Far</p>
+                                                        <p className="text-lg font-bold text-emerald-600">₦{paid.toLocaleString()}</p>
+                                                    </div>
+                                                    <div className="h-8 w-px bg-slate-200" />
+                                                    <div className="text-right">
+                                                        <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Balance Due</p>
+                                                        <p className={cn("text-xl font-black", isPaid ? "text-emerald-600" : "text-rose-600")}>
+                                                            ₦{outstanding.toLocaleString()}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Itemized Breakdown Table */}
+                                            <div className="py-6">
+                                                <h4 className="text-[11px] font-black uppercase tracking-widest text-slate-400 mb-3 flex items-center gap-2">
+                                                    <FileText className="w-3.5 h-3.5 text-slate-400" />
+                                                    Itemized Fee Breakdown
+                                                </h4>
+                                                <div className="overflow-x-auto rounded-xl border border-slate-100">
+                                                    <table className="w-full text-xs text-left">
+                                                        <thead className="bg-slate-50 text-[9px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">
+                                                            <tr>
+                                                                <th className="py-3 px-4">Fee Item</th>
+                                                                <th className="py-3 px-4 text-right">Standard Amount</th>
+                                                                <th className="py-3 px-4 text-right">Scholarship/Discount</th>
+                                                                <th className="py-3 px-4 text-right">Net Payable</th>
+                                                                <th className="py-3 px-4 text-right">Amount Paid</th>
+                                                                <th className="py-3 px-4 text-center">Item Status</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody className="divide-y divide-slate-100 bg-white">
+                                                            {bill.items?.map((item) => {
+                                                                const itemPaid = parseFloat(item.amountPaid || "0.00");
+                                                                const itemNet = parseFloat(item.amount);
+                                                                const itemAid = (parseFloat(item.scholarshipApplied || "0.00") + parseFloat(item.discountApplied || "0.00"));
+                                                                const itemOrig = parseFloat(item.originalAmount || item.amount);
+                                                                const itemStatus = itemPaid >= itemNet ? 'paid' : itemPaid > 0 ? 'partial' : 'unpaid';
+
+                                                                return (
+                                                                    <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
+                                                                        <td className="py-3 px-4 font-bold text-slate-800">
+                                                                            {item.feeItem?.name || `Item #${item.feeItemId}`}
+                                                                        </td>
+                                                                        <td className="py-3 px-4 text-right text-slate-400">
+                                                                            ₦{itemOrig.toLocaleString()}
+                                                                        </td>
+                                                                        <td className="py-3 px-4 text-right text-indigo-600 font-medium">
+                                                                            {itemAid > 0 ? `-₦${itemAid.toLocaleString()}` : '—'}
+                                                                        </td>
+                                                                        <td className="py-3 px-4 text-right font-black text-slate-900">
+                                                                            ₦{itemNet.toLocaleString()}
+                                                                        </td>
+                                                                        <td className="py-3 px-4 text-right font-black text-emerald-600">
+                                                                            ₦{itemPaid.toLocaleString()}
+                                                                        </td>
+                                                                        <td className="py-3 px-4 text-center">
+                                                                            <span className={cn(
+                                                                                "inline-block px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider",
+                                                                                itemStatus === 'paid' ? "text-emerald-700 bg-emerald-50 border border-emerald-200" :
+                                                                                itemStatus === 'partial' ? "text-amber-700 bg-amber-50 border border-amber-200" :
+                                                                                "text-slate-500 bg-slate-100 border border-slate-200"
+                                                                            )}>
+                                                                                {itemStatus === 'paid' ? 'Settled' : itemStatus === 'partial' ? 'Part' : 'Pending'}
+                                                                            </span>
+                                                                        </td>
+                                                                    </tr>
+                                                                );
+                                                            })}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+
+                                            {/* Action Buttons Footer */}
+                                            <div className="flex flex-col sm:flex-row justify-between items-center gap-4 pt-4 border-t border-slate-100">
+                                                <div className="flex items-center gap-2 text-xs text-slate-500">
+                                                    <span className="font-bold text-slate-700">Payment Gateway:</span>
+                                                    <span className="font-medium">{gateway.name}</span>
+                                                </div>
+
+                                                <div className="flex flex-wrap items-center gap-3">
+                                                    <Button
+                                                        variant="outline"
+                                                        onClick={() => router.push(`/finance/bill/${bill.id}`)}
+                                                        className="h-11 px-5 text-xs font-black rounded-xl border-slate-200 text-slate-600 hover:bg-slate-100 gap-2"
+                                                    >
+                                                        <Printer className="w-3.5 h-3.5" />
+                                                        View &amp; Print Bill
+                                                    </Button>
+
+                                                    {isPaid ? (
+                                                        <Button
+                                                            onClick={() => router.push("/student/finance/receipts")}
+                                                            className="h-11 px-6 text-xs font-black rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white gap-2 shadow-md shadow-emerald-100"
+                                                        >
+                                                            <Receipt className="w-4 h-4" />
+                                                            View Payment Receipts
+                                                        </Button>
+                                                    ) : (
+                                                        <Button
+                                                            onClick={() => openCheckout(bill)}
+                                                            className={cn(
+                                                                "h-11 px-6 text-xs font-black rounded-xl shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all gap-2",
+                                                                gateway.buttonClass
+                                                            )}
+                                                        >
+                                                            <CreditCard className="w-4 h-4" />
+                                                            Pay via {gateway.shortName} (₦{outstanding.toLocaleString()})
+                                                        </Button>
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
                                     );
@@ -654,123 +722,181 @@ export default function StudentFinancePage() {
                             )}
                         </div>
                     ) : activeTab === 'payments' ? (
-                        <div className="p-8 space-y-12">
-                            {/* Subsequent Payments */}
-                            <div>
-                                <h4 className="text-sm font-black uppercase tracking-widest text-slate-800 mb-6 flex items-center gap-2">
-                                    <Sparkles className="w-4 h-4 text-indigo-600" /> Recent Portal Payments
-                                </h4>
-                                {subsequentOnlinePayments.length === 0 && subsequentWalletPayments.length === 0 ? (
-                                    <div className="py-10 text-center text-slate-400 italic text-sm border border-slate-100 rounded-2xl bg-slate-50">No recent payments recorded.</div>
-                                ) : (
-                                    <div className="space-y-4">
-                                        {/* Online Payments */}
-                                        {subsequentOnlinePayments.map(p => (
-                                            <div key={p.id} className="flex justify-between items-center p-5 rounded-2xl border border-slate-100 hover:shadow-md transition-all bg-white">
-                                                <div className="flex gap-4 items-center">
-                                                    <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600">
-                                                        <CreditCard className="w-5 h-5" />
-                                                    </div>
-                                                    <div>
-                                                        <h5 className="font-extrabold text-sm text-slate-900">{p.transactionType}</h5>
-                                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
-                                                            {new Date(p.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })} • {p.paymentMethod}
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                                <div className="text-right">
-                                                    <h4 className="font-black text-lg text-emerald-600">₦{parseFloat(p.amount).toLocaleString()}</h4>
-                                                    <span className="text-[9px] font-black bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-full uppercase">{p.status}</span>
-                                                    <div className="mt-2">
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            className="h-7 px-3 rounded-lg text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 font-black text-[9px] gap-1.5 uppercase tracking-wider"
-                                                            onClick={() => window.open(`/finance/receipt/${p.id}`, '_blank')}
-                                                        >
-                                                            <FileText className="w-3 h-3" />
-                                                            Receipt
-                                                        </Button>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        ))}
-                                        {/* Wallet Payments (transactions) */}
-                                        {subsequentWalletPayments.map(p => (
-                                            <div key={p.id} className="flex justify-between items-center p-5 rounded-2xl border border-slate-100 hover:shadow-md transition-all bg-white">
-                                                <div className="flex gap-4 items-center">
-                                                    <div className="w-10 h-10 rounded-xl bg-teal-50 flex items-center justify-center text-teal-600">
-                                                        <Wallet className="w-5 h-5" />
-                                                    </div>
-                                                    <div>
-                                                        <h5 className="font-extrabold text-sm text-slate-900">{p.purpose}</h5>
-                                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
-                                                            {new Date(p.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })} • Wallet Deduct
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                                <div className="text-right">
-                                                    <h4 className="font-black text-lg text-teal-600">₦{parseFloat(p.amount).toLocaleString()}</h4>
-                                                    <span className="text-[9px] font-black bg-teal-50 text-teal-600 px-2 py-0.5 rounded-full uppercase">{p.status}</span>
-                                                    <div className="mt-2">
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            className="h-7 px-3 rounded-lg text-teal-600 hover:text-teal-700 hover:bg-teal-50 font-black text-[9px] gap-1.5 uppercase tracking-wider"
-                                                            onClick={() => window.open(`/finance/receipt/${p.id}`, '_blank')}
-                                                        >
-                                                            <FileText className="w-3 h-3" />
-                                                            Receipt
-                                                        </Button>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
+                        /* TAB 2: COMPREHENSIVE PAYMENT HISTORY & RECEIPTS */
+                        <div className="space-y-6">
+                            <div className="flex justify-between items-center">
+                                <div>
+                                    <h3 className="text-xl font-black text-slate-900 uppercase italic">
+                                        Receipts &amp; Successful Payments
+                                    </h3>
+                                    <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mt-0.5">
+                                        Each payment generates an official verifiable digital receipt
+                                    </p>
+                                </div>
+                                <Button
+                                    variant="outline"
+                                    onClick={() => router.push("/student/finance/receipts")}
+                                    className="gap-2 rounded-xl text-xs font-black"
+                                >
+                                    <ExternalLink className="w-3.5 h-3.5" />
+                                    Dedicated Receipt Portal
+                                </Button>
                             </div>
 
-                            {/* Legacy Payments */}
-                            <div>
-                                <h4 className="text-sm font-black uppercase tracking-widest text-slate-800 mb-6 flex items-center gap-2">
-                                    <History className="w-4 h-4 text-slate-500" /> Legacy Previous Payments
-                                </h4>
-                                {legacyPayments.length === 0 ? (
-                                    <div className="py-10 text-center text-slate-400 italic text-sm border border-slate-100 rounded-2xl bg-slate-50">No previous legacy payments found.</div>
-                                ) : (
-                                    <div className="space-y-4">
-                                        {legacyPayments.map(p => {
-                                            const metadata = p.metadata ? JSON.parse(p.metadata) : {};
-                                            return (
-                                                <div key={p.id} className="flex justify-between items-center p-5 rounded-2xl border border-slate-200 bg-slate-50 hover:border-slate-300 transition-all">
-                                                    <div className="flex gap-4 items-center">
-                                                        <div className="w-10 h-10 rounded-xl bg-slate-200 flex items-center justify-center text-slate-500">
-                                                            <Archive className="w-5 h-5" />
-                                                        </div>
-                                                        <div>
-                                                            <h5 className="font-extrabold text-sm text-slate-700">{p.transactionType.replace('Legacy FSS ', '')}</h5>
-                                                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">
-                                                                Session: {metadata.session || 'N/A'} • Legacy ID: {metadata.legacyId || 'N/A'}
-                                                            </p>
-                                                        </div>
+                            {subsequentOnlinePayments.length === 0 && subsequentWalletPayments.length === 0 ? (
+                                <div className="text-center py-20 bg-white rounded-3xl border border-slate-100 shadow-sm">
+                                    <Receipt className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+                                    <h4 className="text-lg font-bold text-slate-700">No Payments Recorded Yet</h4>
+                                    <p className="text-xs text-slate-400 mt-1 max-w-md mx-auto">
+                                        Once you make a payment via Remita or ALATPay, your official receipt with transaction RRR/reference will appear here instantly.
+                                    </p>
+                                </div>
+                            ) : (
+                                <div className="space-y-4">
+                                    {/* Online Payments (Remita & ALATPay) */}
+                                    {subsequentOnlinePayments.map((p) => {
+                                        const isRemita = p.paymentMethod?.toLowerCase().includes('remita') || p.transactionType?.toLowerCase().includes('tuition');
+                                        return (
+                                            <div 
+                                                key={p.id} 
+                                                className="bg-white p-6 rounded-[1.8rem] border border-slate-200/80 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4 hover:shadow-md transition-all"
+                                            >
+                                                <div className="flex items-center gap-4">
+                                                    <div className={cn(
+                                                        "w-12 h-12 rounded-2xl flex items-center justify-center font-black text-lg",
+                                                        isRemita ? "bg-rose-50 text-rose-600" : "bg-red-50 text-red-700"
+                                                    )}>
+                                                        {isRemita ? "🔵" : "🔴"}
                                                     </div>
-                                                    <div className="text-right">
-                                                        <h4 className="font-black text-lg text-slate-700">₦{parseFloat(p.amount).toLocaleString()}</h4>
-                                                        <span className="text-[9px] font-black bg-slate-200 text-slate-600 px-2 py-0.5 rounded-full uppercase">Migrated</span>
-                                                        <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-1">No receipt — migrated record</p>
+                                                    <div>
+                                                        <div className="flex items-center gap-2">
+                                                            <h4 className="font-extrabold text-base text-slate-900">{p.transactionType}</h4>
+                                                            <span className={cn(
+                                                                "text-[9px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full border",
+                                                                isRemita ? "bg-rose-50 text-rose-700 border-rose-200" : "bg-red-50 text-red-700 border-red-200"
+                                                            )}>
+                                                                {isRemita ? "Remita" : "ALATPay"}
+                                                            </span>
+                                                        </div>
+                                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+                                                            {new Date(p.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })} • Ref: {p.transactionReference || p.id}
+                                                        </p>
                                                     </div>
                                                 </div>
-                                            );
-                                        })}
-                                    </div>
-                                )}
+
+                                                <div className="flex items-center gap-6 self-end md:self-auto">
+                                                    <div className="text-right">
+                                                        <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Amount Settled</p>
+                                                        <h3 className="text-2xl font-black text-emerald-600">₦{parseFloat(p.amount).toLocaleString()}</h3>
+                                                    </div>
+
+                                                    <Button
+                                                        onClick={() => window.open(`/finance/receipt/${p.id}`, '_blank')}
+                                                        className="h-11 px-5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-black gap-2 shadow-md"
+                                                    >
+                                                        <Printer className="w-3.5 h-3.5" />
+                                                        Print Receipt
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+
+                                    {/* Wallet Payments */}
+                                    {subsequentWalletPayments.map((p) => (
+                                        <div 
+                                            key={p.id} 
+                                            className="bg-white p-6 rounded-[1.8rem] border border-slate-200/80 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4 hover:shadow-md transition-all"
+                                        >
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-12 h-12 rounded-2xl bg-teal-50 text-teal-600 flex items-center justify-center font-black">
+                                                    <Wallet className="w-6 h-6" />
+                                                </div>
+                                                <div>
+                                                    <div className="flex items-center gap-2">
+                                                        <h4 className="font-extrabold text-base text-slate-900">{p.purpose}</h4>
+                                                        <span className="text-[9px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-teal-50 text-teal-700 border border-teal-200">
+                                                            Digital Wallet
+                                                        </span>
+                                                    </div>
+                                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+                                                        {new Date(p.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })} • Ref: {p.gatewayReference || p.id}
+                                                    </p>
+                                                </div>
+                                            </div>
+
+                                            <div className="flex items-center gap-6 self-end md:self-auto">
+                                                <div className="text-right">
+                                                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Amount Deducted</p>
+                                                    <h3 className="text-2xl font-black text-teal-600">₦{parseFloat(p.amount).toLocaleString()}</h3>
+                                                </div>
+
+                                                <Button
+                                                    onClick={() => window.open(`/finance/receipt/${p.id}`, '_blank')}
+                                                    className="h-11 px-5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-black gap-2 shadow-md"
+                                                >
+                                                    <Printer className="w-3.5 h-3.5" />
+                                                    Print Receipt
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    ) : (
+                        /* TAB 3: TRANSACTION LEDGER */
+                        <div className="space-y-6">
+                            <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-xs text-left">
+                                        <thead className="bg-slate-50 text-[9px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">
+                                            <tr>
+                                                <th className="py-4 px-6">Date</th>
+                                                <th className="py-4 px-6">Description</th>
+                                                <th className="py-4 px-6 text-right">Debit (Owed)</th>
+                                                <th className="py-4 px-6 text-right">Credit (Paid)</th>
+                                                <th className="py-4 px-6 text-right">Balance</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-100">
+                                            {filteredLedger.length === 0 ? (
+                                                <tr>
+                                                    <td colSpan={5} className="py-12 text-center text-slate-400 font-medium">
+                                                        No transactions recorded in ledger.
+                                                    </td>
+                                                </tr>
+                                            ) : (
+                                                filteredLedger.map((entry) => (
+                                                    <tr key={entry.id} className="hover:bg-slate-50/50">
+                                                        <td className="py-4 px-6 text-slate-500 font-bold whitespace-nowrap">
+                                                            {new Date(entry.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                                        </td>
+                                                        <td className="py-4 px-6 font-semibold text-slate-800">
+                                                            {entry.description}
+                                                        </td>
+                                                        <td className="py-4 px-6 text-right font-bold text-rose-600">
+                                                            {parseFloat(entry.debit) > 0 ? `₦${parseFloat(entry.debit).toLocaleString()}` : "—"}
+                                                        </td>
+                                                        <td className="py-4 px-6 text-right font-bold text-emerald-600">
+                                                            {parseFloat(entry.credit) > 0 ? `₦${parseFloat(entry.credit).toLocaleString()}` : "—"}
+                                                        </td>
+                                                        <td className="py-4 px-6 text-right font-black text-slate-900 whitespace-nowrap">
+                                                            ₦{parseFloat(entry.balance).toLocaleString()}
+                                                        </td>
+                                                    </tr>
+                                                ))
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                         </div>
-                    ) : null}
+                    )}
                 </div>
             </Card>
 
-            {/* Premium Checkout Modal */}
+            {/* Premium Multi-Gateway Checkout Modal */}
             {isCheckoutOpen && selectedBill && (
                 <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-50 flex items-center justify-center p-4">
                     <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-lg overflow-hidden border border-slate-100 relative animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col">
@@ -782,249 +908,238 @@ export default function StudentFinancePage() {
                             <X className="w-5 h-5" />
                         </button>
 
-                        <div className="p-6 overflow-y-auto">
-                            <div className="flex items-center gap-3 mb-4">
-                                <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
-                                    <CreditCard className="w-5 h-5" />
-                                </div>
-                                <div>
-                                    <h3 className="text-lg font-black text-slate-900">Secure Checkout</h3>
-                                    <p className="text-[10px] text-slate-500">Bill ID: {selectedBill.billNumber}</p>
-                                </div>
-                            </div>
+                        <div className="p-6 sm:p-8 overflow-y-auto">
+                            {(() => {
+                                const gateway = getBillGatewayInfo(selectedBill);
+                                return (
+                                    <>
+                                        <div className="flex items-center gap-3 mb-6">
+                                            <div className={cn(
+                                                "w-12 h-12 rounded-2xl flex items-center justify-center text-xl font-black shrink-0",
+                                                gateway.id === 'remita' ? "bg-rose-50 text-rose-600" : "bg-red-50 text-red-700"
+                                            )}>
+                                                {gateway.indicator}
+                                            </div>
+                                            <div>
+                                                <h3 className="text-lg font-black text-slate-900">
+                                                    Secure Payment Checkout
+                                                </h3>
+                                                <p className="text-xs text-slate-500 font-medium">
+                                                    Designated Gateway: <strong className="text-slate-800">{gateway.name}</strong>
+                                                </p>
+                                            </div>
+                                        </div>
 
-                            {checkoutSuccess ? (
-                                <div className="py-12 flex flex-col items-center justify-center text-center space-y-4">
-                                    <div className="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center text-emerald-500 animate-bounce">
-                                        <CheckCircle2 className="w-12 h-12" />
-                                    </div>
-                                    <h4 className="text-xl font-black text-slate-900">Payment Authorized!</h4>
-                                    <p className="text-xs text-slate-400">Your student ledger balance has been credited successfully. Receipts are now viewable.</p>
-                                </div>
-                            ) : remitaData ? (
-                                <div className="py-6 flex flex-col items-center justify-center text-center space-y-4">
-                                    <h4 className="text-xl font-black text-slate-900">Complete Remita Payment</h4>
-                                    <p className="text-xs text-slate-500 mb-4">Please complete your payment using the secure Remita gateway.</p>
-                                    <div className="w-full">
-                                        <RemitaInlineCheckout 
-                                            rrr={remitaData.rrr} 
-                                            amount={selectedAmount} 
-                                            email={session?.user?.email || "student@fssibadan.edu.ng"} 
-                                            firstName={student.firstName} 
-                                            lastName={student.lastName} 
-                                            onSuccess={async () => {
-                                                setCheckoutLoading(true);
-                                                try {
-                                                    const verify = await resolveOnlinePaymentAction(remitaData.reference, 'completed', selectedBill.id);
-                                                    if (verify.success) {
-                                                        setCheckoutSuccess(true);
-                                                        setTimeout(() => {
-                                                            setIsCheckoutOpen(false);
-                                                            if (verify.transactionId) {
-                                                                window.location.href = `/finance/receipt/${verify.transactionId}`;
-                                                            } else {
-                                                                fetchData();
+                                        {checkoutSuccess ? (
+                                            <div className="py-8 flex flex-col items-center justify-center text-center space-y-4">
+                                                <div className="w-20 h-20 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center">
+                                                    <CheckCircle2 className="w-12 h-12" />
+                                                </div>
+                                                <h4 className="text-2xl font-black text-slate-900">Payment Completed!</h4>
+                                                <p className="text-xs text-slate-500 max-w-sm">
+                                                    Your payment for <strong>{selectedBill.billNumber}</strong> was successfully verified and applied to your account.
+                                                </p>
+                                                {completedTransactionId && (
+                                                    <Button
+                                                        onClick={() => window.open(`/finance/receipt/${completedTransactionId}`, '_blank')}
+                                                        className="mt-4 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl h-11 px-6 text-xs gap-2 shadow-lg shadow-emerald-100"
+                                                    >
+                                                        <Printer className="w-4 h-4" />
+                                                        Print Official Receipt
+                                                    </Button>
+                                                )}
+                                                <Button
+                                                    variant="outline"
+                                                    onClick={() => {
+                                                        setIsCheckoutOpen(false);
+                                                        fetchData();
+                                                    }}
+                                                    className="text-xs font-bold"
+                                                >
+                                                    Done
+                                                </Button>
+                                            </div>
+                                        ) : remitaData ? (
+                                            <div className="py-4 flex flex-col items-center justify-center text-center space-y-4">
+                                                <h4 className="text-lg font-black text-slate-900">Complete Remita Tuition Payment</h4>
+                                                <p className="text-xs text-slate-500 mb-2">
+                                                    RRR: <strong className="text-slate-900 font-mono text-sm">{remitaData.rrr}</strong>
+                                                </p>
+                                                <div className="w-full">
+                                                    <RemitaInlineCheckout 
+                                                        rrr={remitaData.rrr} 
+                                                        amount={selectedAmount} 
+                                                        email={session?.user?.email || "student@fssibadan.edu.ng"} 
+                                                        firstName={student?.firstName || "Student"} 
+                                                        lastName={student?.lastName || "Payer"} 
+                                                        onSuccess={async () => {
+                                                            setCheckoutLoading(true);
+                                                            try {
+                                                                const verify = await resolveOnlinePaymentAction(remitaData.reference, 'completed', selectedBill.id);
+                                                                if (verify.success) {
+                                                                    setCheckoutSuccess(true);
+                                                                    setCompletedTransactionId((verify as any).transactionId || null);
+                                                                    setTimeout(() => {
+                                                                        fetchData();
+                                                                    }, 1000);
+                                                                } else {
+                                                                    setCheckoutError("Payment verification failed. Please contact bursary.");
+                                                                    setRemitaData(null);
+                                                                }
+                                                            } catch (err) {
+                                                                setCheckoutError("Error verifying payment.");
+                                                                setRemitaData(null);
                                                             }
-                                                        }, 1500);
-                                                    } else {
-                                                        setCheckoutError("Payment verification failed. Please contact admin.");
-                                                        setRemitaData(null);
-                                                    }
-                                                } catch (err) {
-                                                    setCheckoutError("Error verifying payment.");
-                                                    setRemitaData(null);
-                                                }
-                                                setCheckoutLoading(false);
-                                            }} 
-                                            onError={() => {
-                                                setCheckoutError("Remita payment failed or was cancelled.");
-                                                setRemitaData(null);
-                                            }} 
-                                            onClose={() => {
-                                                // Handle close
-                                            }} 
-                                        />
-                                    </div>
-                                    <Button variant="ghost" className="mt-4 text-xs font-bold text-slate-500" onClick={() => setRemitaData(null)}>
-                                        Cancel Payment
-                                    </Button>
-                                </div>
-                            ) : (
-                                <form onSubmit={handleCheckoutSubmit} className="space-y-4">
-                                    {/* Bill summary box */}
-                                    <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100 space-y-2">
-                                        <div className="flex justify-between items-center text-xs">
-                                            <span className="text-slate-400 font-bold uppercase tracking-wider text-[9px]">Academic Term:</span>
-                                            <span className="font-extrabold text-indigo-600 uppercase">
-                                                {AcademicNomenclature.getLabel(selectedBill.session?.currentSemester || "1", settings)}
-                                            </span>
-                                        </div>
-                                        <div className="flex justify-between items-center text-xs">
-                                            <span className="text-slate-400 font-bold uppercase tracking-wider text-[9px]">Outstanding:</span>
-                                            <span className="font-extrabold text-slate-800">
-                                                ₦{(parseFloat(selectedBill.totalAmount) - parseFloat(selectedBill.amountPaid || "0.00")).toLocaleString()}
-                                            </span>
-                                        </div>
-                                    </div>
-
-                                    {/* Installment / Amount selector */}
-                                    {(() => {
-                                        const outstanding = parseFloat(selectedBill.totalAmount) - parseFloat(selectedBill.amountPaid || "0.00");
-                                        const partPaymentEnabled = selectedBill.partPaymentAllowed !== false && settings['part_payment_enabled'] !== 'false';
-                                        const minPercentage = parseFloat(selectedBill.partPaymentMinPercent?.toString() || settings['min_part_payment_percentage'] || "60");
-                                        const minFlatAmount = parseFloat(settings['min_part_payment_amount'] || "5000");
-                                        const isInitialPayment = parseFloat(selectedBill.amountPaid || "0.00") < 0.01;
-                                        const pctAmount = (parseFloat(selectedBill.totalAmount) * minPercentage) / 100;
-                                        const minPayment = (partPaymentEnabled && isInitialPayment)
-                                            ? Math.min(outstanding, Math.max(pctAmount, minFlatAmount))
-                                            : Math.min(outstanding, 1000);
-
-                                        return (
-                                            <div className="space-y-4">
-                                                <div className="flex justify-between items-center">
-                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Amount to Settle (₦)</label>
-                                                    {partPaymentEnabled && (
-                                                        <span className="text-[10px] text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full font-black uppercase tracking-wider">
-                                                            Installments Allowed (Min: {minPercentage}%)
+                                                            setCheckoutLoading(false);
+                                                        }} 
+                                                        onError={() => {
+                                                            setCheckoutError("Remita payment failed or was cancelled.");
+                                                            setRemitaData(null);
+                                                        }} 
+                                                        onClose={() => {}} 
+                                                    />
+                                                </div>
+                                                <Button variant="ghost" className="mt-2 text-xs font-bold text-slate-500" onClick={() => setRemitaData(null)}>
+                                                    Cancel Payment
+                                                </Button>
+                                            </div>
+                                        ) : (
+                                            <form onSubmit={handleCheckoutSubmit} className="space-y-4">
+                                                {/* Bill details */}
+                                                <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100 space-y-2">
+                                                    <div className="flex justify-between items-center text-xs">
+                                                        <span className="text-slate-400 font-bold uppercase tracking-wider text-[9px]">Bill Purpose:</span>
+                                                        <span className="font-extrabold text-slate-800">
+                                                            {selectedBill.note || gateway.categoryTitle}
                                                         </span>
-                                                    )}
+                                                    </div>
+                                                    <div className="flex justify-between items-center text-xs">
+                                                        <span className="text-slate-400 font-bold uppercase tracking-wider text-[9px]">Payment Channel:</span>
+                                                        <span className="font-black text-indigo-600 uppercase">
+                                                            {gateway.name}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex justify-between items-center text-xs pt-1 border-t border-slate-200/60">
+                                                        <span className="text-slate-400 font-bold uppercase tracking-wider text-[9px]">Total Outstanding:</span>
+                                                        <span className="font-black text-slate-900 text-sm">
+                                                            ₦{(parseFloat(selectedBill.totalAmount) - parseFloat(selectedBill.amountPaid || "0.00")).toLocaleString()}
+                                                        </span>
+                                                    </div>
                                                 </div>
 
-                                                <input
-                                                    type="number"
-                                                    required
-                                                    min={minPayment}
-                                                    max={outstanding}
-                                                    className="w-full bg-slate-50 border border-slate-100 rounded-2xl h-12 px-4 focus:ring-2 focus:ring-indigo-500 transition-all font-black text-slate-800 placeholder:text-slate-400 text-lg"
-                                                    placeholder="Enter amount (NGN)"
-                                                    value={selectedAmount || ""}
-                                                    onChange={(e) => {
-                                                        const val = parseFloat(e.target.value);
-                                                        setSelectedAmount(isNaN(val) ? 0 : val);
-                                                    }}
-                                                    onBlur={() => {
-                                                        if (selectedAmount < minPayment) {
-                                                            setSelectedAmount(minPayment);
-                                                        } else if (selectedAmount > outstanding) {
-                                                            setSelectedAmount(outstanding);
-                                                        }
-                                                    }}
-                                                />
+                                                {/* Amount selector */}
+                                                {(() => {
+                                                    const outstanding = parseFloat(selectedBill.totalAmount) - parseFloat(selectedBill.amountPaid || "0.00");
+                                                    const partPaymentEnabled = selectedBill.partPaymentAllowed !== false && settings['part_payment_enabled'] !== 'false';
+                                                    const minPercentage = parseFloat(selectedBill.partPaymentMinPercent?.toString() || settings['min_part_payment_percentage'] || "60");
+                                                    const minFlatAmount = parseFloat(settings['min_part_payment_amount'] || "5000");
+                                                    const isInitialPayment = parseFloat(selectedBill.amountPaid || "0.00") < 0.01;
+                                                    const pctAmount = (parseFloat(selectedBill.totalAmount) * minPercentage) / 100;
+                                                    const minPayment = (partPaymentEnabled && isInitialPayment)
+                                                        ? Math.min(outstanding, Math.max(pctAmount, minFlatAmount))
+                                                        : Math.min(outstanding, 1000);
 
-                                                {partPaymentEnabled && outstanding > minPayment && (
-                                                    <div className="space-y-2">
-                                                        <input
-                                                            type="range"
-                                                            min={minPayment}
-                                                            max={outstanding}
-                                                            step={100}
-                                                            value={selectedAmount || minPayment}
-                                                            onChange={(e) => setSelectedAmount(parseFloat(e.target.value))}
-                                                            className="w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-indigo-600"
-                                                        />
-                                                        <div className="flex justify-between text-[9px] font-bold text-slate-400 uppercase tracking-wider">
-                                                            <span>Min: ₦{minPayment.toLocaleString()}</span>
-                                                            <span>Max: ₦{outstanding.toLocaleString()}</span>
+                                                    return (
+                                                        <div className="space-y-3">
+                                                            <div className="flex justify-between items-center">
+                                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                                                    Amount to Pay (₦)
+                                                                </label>
+                                                                {partPaymentEnabled && (
+                                                                    <span className="text-[9px] text-indigo-600 bg-indigo-50 px-2.5 py-0.5 rounded-full font-black uppercase tracking-wider">
+                                                                        Installment (Min {minPercentage}%)
+                                                                    </span>
+                                                                )}
+                                                            </div>
+
+                                                            <input
+                                                                type="number"
+                                                                required
+                                                                min={minPayment}
+                                                                max={outstanding}
+                                                                className="w-full bg-slate-50 border border-slate-200 rounded-2xl h-12 px-4 focus:ring-2 focus:ring-indigo-500 transition-all font-black text-slate-900 text-lg outline-none"
+                                                                placeholder="Enter amount (NGN)"
+                                                                value={selectedAmount || ""}
+                                                                onChange={(e) => {
+                                                                    const val = parseFloat(e.target.value);
+                                                                    setSelectedAmount(isNaN(val) ? 0 : val);
+                                                                }}
+                                                                onBlur={() => {
+                                                                    if (selectedAmount < minPayment) {
+                                                                        setSelectedAmount(minPayment);
+                                                                    } else if (selectedAmount > outstanding) {
+                                                                        setSelectedAmount(outstanding);
+                                                                    }
+                                                                }}
+                                                            />
                                                         </div>
+                                                    );
+                                                })()}
+
+                                                {/* Secure Gateway / Wallet selection */}
+                                                <div className="space-y-2">
+                                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Payment Method</label>
+                                                    <div className="grid grid-cols-2 gap-3">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setPaymentMode('gateway')}
+                                                            className={cn(
+                                                                "p-4 rounded-2xl border-2 text-left transition-all",
+                                                                paymentMode === 'gateway'
+                                                                    ? "border-indigo-600 bg-white shadow-md shadow-indigo-50"
+                                                                    : "border-slate-100 bg-slate-50/50 hover:border-slate-200"
+                                                            )}
+                                                        >
+                                                            <CreditCard className={cn("w-5 h-5 mb-2", paymentMode === 'gateway' ? "text-indigo-600" : "text-slate-400")} />
+                                                            <p className="font-extrabold text-slate-800 text-xs">{gateway.name}</p>
+                                                            <p className="text-[9px] text-slate-400 leading-tight mt-1">Cards, Transfer, USSD</p>
+                                                        </button>
+
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setPaymentMode('wallet')}
+                                                            className={cn(
+                                                                "p-4 rounded-2xl border-2 text-left transition-all",
+                                                                paymentMode === 'wallet'
+                                                                    ? "border-indigo-600 bg-white shadow-md shadow-indigo-50"
+                                                                    : "border-slate-100 bg-slate-50/50 hover:border-slate-200"
+                                                            )}
+                                                        >
+                                                            <Wallet className={cn("w-5 h-5 mb-2", paymentMode === 'wallet' ? "text-indigo-600" : "text-slate-400")} />
+                                                            <p className="font-extrabold text-slate-800 text-xs">Digital Wallet</p>
+                                                            <p className="text-[9px] text-slate-400 leading-tight mt-1">Bal: ₦{walletBalanceText}</p>
+                                                        </button>
+                                                    </div>
+                                                </div>
+
+                                                {checkoutError && (
+                                                    <div className="p-4 bg-rose-50 text-rose-600 border border-rose-100 rounded-2xl text-xs font-bold flex items-center gap-2">
+                                                        <AlertCircle className="w-4 h-4 shrink-0" />
+                                                        {checkoutError}
                                                     </div>
                                                 )}
 
-                                                {selectedAmount < minPayment && (
-                                                    <div className="flex items-start gap-2 text-amber-600 bg-amber-50/50 p-4 rounded-2xl border border-amber-100/50 text-xs">
-                                                        <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                                                        <p className="leading-relaxed">
-                                                            Amount is below the minimum required installment of <strong>₦{minPayment.toLocaleString()}</strong> ({minPercentage}% setting threshold).
-                                                        </p>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        );
-                                    })()}
-
-                                    {/* Secure Payment Mode Select */}
-                                    <div className="space-y-2">
-                                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Select Secure Payment Mode</label>
-                                        <div className="grid grid-cols-2 gap-3">
-                                            <button
-                                                type="button"
-                                                onClick={() => setPaymentMode('gateway')}
-                                                className={cn(
-                                                    "p-4 rounded-2xl border-2 text-left transition-all",
-                                                    paymentMode === 'gateway'
-                                                        ? "border-indigo-600 bg-white shadow-md shadow-indigo-50"
-                                                        : "border-slate-100 bg-slate-50/50 hover:border-slate-200"
-                                                )}
-                                            >
-                                                <CreditCard className={cn("w-5 h-5 mb-2", paymentMode === 'gateway' ? "text-indigo-600" : "text-slate-400")} />
-                                                <p className="font-extrabold text-slate-800 text-xs">Online Gateway</p>
-                                                <p className="text-[9px] text-slate-400 leading-tight mt-1">Paystack, Remita, ALATPay secure checkout</p>
-                                            </button>
-
-                                            <button
-                                                type="button"
-                                                onClick={() => setPaymentMode('wallet')}
-                                                className={cn(
-                                                    "p-4 rounded-2xl border-2 text-left transition-all",
-                                                    paymentMode === 'wallet'
-                                                        ? "border-indigo-600 bg-white shadow-md shadow-indigo-50"
-                                                        : "border-slate-100 bg-slate-50/50 hover:border-slate-200"
-                                                )}
-                                            >
-                                                <Wallet className={cn("w-5 h-5 mb-2", paymentMode === 'wallet' ? "text-indigo-600" : "text-slate-400")} />
-                                                <p className="font-extrabold text-slate-800 text-xs">Digital Wallet</p>
-                                                <p className="text-[9px] text-slate-400 leading-tight mt-1">Instant debit (Bal: ₦{walletBalanceText})</p>
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    {/* Wallet validation message */}
-                                    {paymentMode === 'wallet' && (summary?.walletBalance || 0) < selectedAmount && (
-                                        <div className="flex items-start gap-2 text-rose-600 bg-rose-50/50 p-4 rounded-2xl border border-rose-100/50 text-xs">
-                                            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                                            <p className="leading-relaxed">
-                                                Your digital wallet has insufficient funds (₦{walletBalanceText} available). Please fund your wallet in the Wallet Portal before finalizing.
-                                            </p>
-                                        </div>
-                                    )}
-
-                                    {checkoutError && (
-                                        <div className="p-4 bg-rose-50 text-rose-600 border border-rose-100 rounded-2xl text-xs font-bold flex items-center gap-2">
-                                            <AlertCircle className="w-4 h-4" />
-                                            {checkoutError}
-                                        </div>
-                                    )}
-
-                                    <Button
-                                        type="submit"
-                                        disabled={
-                                            checkoutLoading || 
-                                            selectedAmount <= 0 || 
-                                            (paymentMode === 'wallet' && (summary?.walletBalance || 0) < selectedAmount) ||
-                                            (() => {
-                                                const outstanding = parseFloat(selectedBill.totalAmount) - parseFloat(selectedBill.amountPaid || "0.00");
-                                                const partPaymentEnabled = selectedBill.partPaymentAllowed !== false && settings['part_payment_enabled'] !== 'false';
-                                                const minPercentage = parseFloat(selectedBill.partPaymentMinPercent?.toString() || settings['min_part_payment_percentage'] || "60");
-                                                const minFlatAmount = parseFloat(settings['min_part_payment_amount'] || "5000");
-                                                const isInitialPayment = parseFloat(selectedBill.amountPaid || "0.00") < 0.01;
-                                                const pctAmount = (parseFloat(selectedBill.totalAmount) * minPercentage) / 100;
-                                                const minPayment = (partPaymentEnabled && isInitialPayment)
-                                                    ? Math.min(outstanding, Math.max(pctAmount, minFlatAmount))
-                                                    : Math.min(outstanding, 1000);
-                                                return selectedAmount < minPayment || selectedAmount > outstanding + 0.01;
-                                            })()
-                                        }
-                                        className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black h-12 rounded-2xl shadow-lg shadow-indigo-100 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:pointer-events-none"
-                                    >
-                                        {checkoutLoading ? (
-                                            <Loader2 className="w-5 h-5 animate-spin mx-auto" />
-                                        ) : paymentMode === 'wallet' ? (
-                                            "Debit Wallet & Settle"
-                                        ) : (
-                                            "Authorize Gateway Payment"
+                                                <Button
+                                                    type="submit"
+                                                    disabled={checkoutLoading || selectedAmount <= 0}
+                                                    className={cn(
+                                                        "w-full text-white font-black h-12 rounded-2xl shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:pointer-events-none mt-2",
+                                                        gateway.buttonClass
+                                                    )}
+                                                >
+                                                    {checkoutLoading ? (
+                                                        <Loader2 className="w-5 h-5 animate-spin mx-auto" />
+                                                    ) : paymentMode === 'wallet' ? (
+                                                        `Debit Wallet (₦${selectedAmount.toLocaleString()})`
+                                                    ) : (
+                                                        `Proceed to ${gateway.shortName} Checkout (₦${selectedAmount.toLocaleString()})`
+                                                    )}
+                                                </Button>
+                                            </form>
                                         )}
-                                    </Button>
-                                </form>
-                            )}
+                                    </>
+                                );
+                            })()}
                         </div>
                     </div>
                 </div>

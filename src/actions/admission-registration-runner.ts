@@ -246,6 +246,7 @@ export async function getRegistrationPreview(
                     id: app.id,
                     applicantId: app.applicantId,
                     acceptancePaymentStatus: app.acceptancePaymentStatus,
+                    acceptancePaymentReference: app.acceptancePaymentReference,
                 },
                 gatewayTxs,
                 app.applicantId ? legacyByUser.get(app.applicantId) ?? [] : [],

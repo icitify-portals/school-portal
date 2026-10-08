@@ -552,21 +552,18 @@ export class SplitPaymentEngine {
         };
 
         const isTuitionFee = billItemRows.some(bi => bi.feeItem?.category === 'tuition' || bi.feeItem?.name?.toLowerCase().includes('tuition'));
-        if (isTuitionFee) {
-            activeGateway = 'remita';
-            console.log("Gateway Override: Enforcing Remita for Tuition bill.");
-        }
+        const isProcessingFee = billItemRows.some(bi => bi.feeItem?.name?.toLowerCase().includes('processing')) || bill.note?.toLowerCase().includes('processing') || bill.billNumber?.includes('PROC');
 
-        const isAlatpayRequired = billItemRows.some(bi => 
-            bi.feeItem?.name?.includes('Certificate') || 
-            bi.feeItem?.name?.includes('Convocation') || 
-            bi.feeItem?.name?.includes('Incidental') || 
-            bi.feeItem?.name?.includes('ICT') || 
-            bi.feeItem?.name?.includes('Course Form')
-        );
-        if (isAlatpayRequired && !isTuitionFee) {
+        if (isProcessingFee) {
+            activeGateway = 'paystack';
+            console.log("Gateway Override: Enforcing Paystack for Portal Processing Fee bill.");
+        } else if (isTuitionFee) {
+            activeGateway = 'remita';
+            console.log("Gateway Override: Enforcing Remita for Tuition / School Fees bill.");
+        } else {
+            // Other payments (incidental, ancillary, etc.) are paid via ALATPay
             activeGateway = 'alatpay';
-            console.log("Gateway Override: Enforcing Alatpay for Ancillary/Graduation fees.");
+            console.log("Gateway Override: Enforcing ALATPay for non-tuition / incidental bill.");
         }
 
         const billTotal = parseFloat(billWithItems.totalAmount);
@@ -877,7 +874,8 @@ export class SplitPaymentEngine {
             // Record main transaction as completed
             await db.insert(transactions).values({
                 amount: billTotal.toFixed(2),
-                gatewayName: 'wallet',
+                type: 'debit',
+                gateway: 'manual',
                 purpose: `Admission Form Application ID: ${applicationId}`,
                 studentId: student.id,
                 status: 'completed',
@@ -1002,7 +1000,7 @@ export class SplitPaymentEngine {
                 studentLevel: "Applicant", 
                 payerName: applicantName, 
                 payerFirstName: applicantUser?.firstName || "",
-                payerLastName: applicantUser?.lastName || "",
+                payerLastName: applicantUser?.surname || "",
                 payerPhone: applicantPhone || applicantUser?.phone || "",
                 description: structure.name 
             }
@@ -1019,7 +1017,7 @@ export class SplitPaymentEngine {
     async checkoutAcceptanceFee(applicationId: number, applicantEmail: string, applicantName: string, applicantPhone?: string) {
         const settingsRecords = await db.query.bursarySettings.findMany();
         const settings: any = {};
-        for (const s of settingsRecords) settings[s.settingKey] = s.settingValue;
+        for (const s of settingsRecords) settings[s.key] = s.value;
 
         const activeGateway = 'alatpay';
         const feeBearerRule = settings[`${activeGateway}_fee_bearer`] || 'default';
@@ -1044,13 +1042,13 @@ export class SplitPaymentEngine {
         let student: any = null;
         if (applicantEmail) {
             const user = await db.query.users.findFirst({ where: eq(users.email, applicantEmail) });
-            if (user?.studentId) student = await db.query.students.findFirst({ where: eq(students.id, user.studentId) });
+            if (user?.id) student = await db.query.students.findFirst({ where: eq(students.userId, user.id) });
         }
         if (student && parseFloat(student.walletBalance?.toString() || "0") >= billTotal) {
             const txReference = `WAL-ACC-${Date.now()}`;
             await db.update(students).set({ walletBalance: (parseFloat(student.walletBalance.toString()) - billTotal).toString() }).where(eq(students.id, student.id));
-            await db.insert(walletTransactions).values({ studentId: student.id, amount: billTotal.toString(), type: 'debit', description: `Acceptance Fee Payment - Application ID: ${applicationId}`, reference: txReference });
-            await db.insert(transactions).values({ amount: billTotal.toFixed(2), gatewayName: 'wallet', purpose: `Acceptance Fee Payment - Application ID: ${applicationId}`, studentId: student.id, status: 'completed', gatewayReference: txReference });
+            await db.insert(walletTransactions).values({ studentId: student.id, amount: billTotal.toString(), type: 'debit', reference: txReference });
+            await db.insert(transactions).values({ amount: billTotal.toFixed(2), type: 'debit', gateway: 'manual', purpose: `Acceptance Fee Payment - Application ID: ${applicationId}`, studentId: student.id, status: 'completed', gatewayReference: txReference });
             await db.update(admissionApplicationsV2).set({ acceptancePaymentStatus: 'paid', acceptancePaymentReference: txReference }).where(eq(admissionApplicationsV2.id, applicationId));
             const callbackUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/admission/status/${applicationId}`;
             return { success: true, checkoutUrl: callbackUrl, reference: txReference };
@@ -1117,7 +1115,7 @@ export class SplitPaymentEngine {
             txRef,
             splits,
             feeBearerRule,
-            { payerName: applicantName, payerFirstName: applicantUser?.firstName || "", payerLastName: applicantUser?.lastName || "", payerPhone: applicantPhone || applicantUser?.phone || "", description: "Acceptance Fee Payment" }
+            { payerName: applicantName, payerFirstName: applicantUser?.firstName || "", payerLastName: applicantUser?.surname || "", payerPhone: applicantPhone || applicantUser?.phone || "", description: "Acceptance Fee Payment" }
         );
         return result;
     }

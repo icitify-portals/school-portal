@@ -170,9 +170,27 @@ export async function deleteOrphanStudents(ids: number[]) {
     const actorId = authz.actorId!;
     if (!ids.length) return { success: false, error: "No records selected" };
 
-    await db.update(students)
-        .set({ deletedAt: new Date(), status: "withdrawn" })
+    const studentRows = await db.select({ id: students.id, userId: students.userId, matricNumber: students.matricNumber })
+        .from(students)
         .where(inArray(students.id, ids));
+
+    const userIds = studentRows.map(r => r.userId!).filter(Boolean);
+    const now = new Date();
+    const timestamp = Date.now();
+
+    await db.update(students)
+        .set({ deletedAt: now, status: "withdrawn" })
+        .where(inArray(students.id, ids));
+
+    if (userIds.length > 0) {
+        const userList = await db.select({ id: users.id, email: users.email }).from(users).where(inArray(users.id, userIds));
+        for (const u of userList) {
+            const releasedEmail = u.email && !u.email.includes(".deleted.") ? `${u.email}.deleted.${timestamp}` : u.email;
+            await db.update(users)
+                .set({ deletedAt: now, email: releasedEmail })
+                .where(eq(users.id, u.id));
+        }
+    }
 
     await audit(actorId, "ORPHAN_STUDENT_DELETE", ids[0], { ids, count: ids.length });
     revalidatePath("/admin/students/orphans");

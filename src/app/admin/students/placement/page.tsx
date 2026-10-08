@@ -3,11 +3,13 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import {
     AlertTriangle, RefreshCw, Search, Users, ShieldAlert,
-    CheckCircle2, PencilLine, GraduationCap, Layers, Link2Off, Info
+    CheckCircle2, PencilLine, GraduationCap, Layers, Link2Off, Info,
+    Trash2
 } from "lucide-react";
 import { toast } from "sonner";
 import {
-    getPlacementIssues, getPlacementProgrammes, correctStudentPlacement
+    getPlacementIssues, getPlacementProgrammes, correctStudentPlacement,
+    deleteStudentPlacement
 } from "@/actions/student-placement";
 import { resolveLevel } from "@/lib/levels";
 
@@ -62,6 +64,11 @@ export default function StudentPlacementPage() {
     const [reason, setReason] = useState("");
     const [saving, setSaving] = useState(false);
 
+    // Delete confirmation state
+    const [deleteTarget, setDeleteTarget] = useState<Issue | null>(null);
+    const [deleteReason, setDeleteReason] = useState("");
+    const [deleting, setDeleting] = useState(false);
+
     const load = useCallback(async () => {
         setLoading(true);
         try {
@@ -94,6 +101,11 @@ export default function StudentPlacementPage() {
         setReason("");
     };
 
+    const openDelete = (r: Issue) => {
+        setDeleteTarget(r);
+        setDeleteReason("");
+    };
+
     const chosen = useMemo(
         () => programmes.find((p) => String(p.id) === programmeId) || null,
         [programmes, programmeId]
@@ -123,6 +135,29 @@ export default function StudentPlacementPage() {
             toast.error(e?.message || "Could not apply the correction");
         } finally {
             setSaving(false);
+        }
+    };
+
+    const handleDelete = async () => {
+        if (!deleteTarget) return;
+        setDeleting(true);
+        try {
+            const res = await deleteStudentPlacement({
+                studentId: deleteTarget.id,
+                reason: deleteReason
+            });
+            if (res.success) {
+                toast.success(res.message);
+                setDeleteTarget(null);
+                if (target?.id === deleteTarget.id) setTarget(null);
+                await load();
+            } else {
+                toast.error(res.error || "Could not delete student");
+            }
+        } catch (e: any) {
+            toast.error(e?.message || "Could not delete student");
+        } finally {
+            setDeleting(false);
         }
     };
 
@@ -231,7 +266,7 @@ export default function StudentPlacementPage() {
                                     <th className="p-3 text-left">Programme Row</th>
                                     <th className="p-3 text-left">Issues</th>
                                     <th className="p-3 text-left">Linked</th>
-                                    <th className="p-3"></th>
+                                    <th className="p-3 text-right">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100">
@@ -272,10 +307,17 @@ export default function StudentPlacementPage() {
                                             )}
                                         </td>
                                         <td className="p-3">
-                                            <button onClick={() => open(r)}
-                                                className="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold flex items-center gap-1.5">
-                                                <PencilLine className="w-3.5 h-3.5" /> Correct
-                                            </button>
+                                            <div className="flex items-center justify-end gap-1.5">
+                                                <button onClick={() => open(r)}
+                                                    className="px-2.5 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold flex items-center gap-1 transition-colors">
+                                                    <PencilLine className="w-3.5 h-3.5" /> Correct
+                                                </button>
+                                                <button onClick={() => openDelete(r)}
+                                                    title="Delete unnecessary account"
+                                                    className="px-2.5 py-1.5 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 text-xs font-bold flex items-center gap-1 transition-colors">
+                                                    <Trash2 className="w-3.5 h-3.5" /> Delete
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))}
@@ -288,11 +330,23 @@ export default function StudentPlacementPage() {
             {target && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4">
                     <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-                        <div className="p-6 border-b border-slate-100">
-                            <h2 className="text-lg font-black uppercase tracking-wider text-slate-900">Correct Placement</h2>
-                            <p className="text-xs text-slate-500 mt-1">
-                                {target.matricNumber || `ID ${target.id}`} · {target.name}
-                            </p>
+                        <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+                            <div>
+                                <h2 className="text-lg font-black uppercase tracking-wider text-slate-900">Correct Placement</h2>
+                                <p className="text-xs text-slate-500 mt-1">
+                                    {target.matricNumber || `ID ${target.id}`} · {target.name}
+                                </p>
+                            </div>
+                            <button
+                                onClick={() => {
+                                    const curr = target;
+                                    setTarget(null);
+                                    openDelete(curr);
+                                }}
+                                className="px-3 py-1.5 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 text-xs font-bold flex items-center gap-1.5 transition-colors"
+                            >
+                                <Trash2 className="w-3.5 h-3.5" /> Delete Account
+                            </button>
                         </div>
 
                         <div className="p-6 space-y-4">
@@ -371,6 +425,99 @@ export default function StudentPlacementPage() {
                             <button onClick={save} disabled={saving || reason.trim().length < 5}
                                 className="flex-1 px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-sm disabled:opacity-50">
                                 {saving ? "Applying..." : "Apply Correction"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {deleteTarget && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-100">
+                        <div className="p-6 bg-red-50/50 border-b border-red-100 flex items-start gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-red-100 text-red-600 flex items-center justify-center shrink-0">
+                                <Trash2 className="w-5 h-5" />
+                            </div>
+                            <div>
+                                <h2 className="text-base font-black uppercase tracking-wider text-slate-900">Delete Student Account</h2>
+                                <p className="text-xs text-slate-500 mt-0.5">
+                                    This will remove the student account from placement review and active student directories.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="p-6 space-y-4">
+                            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100 space-y-1.5 text-xs">
+                                <div className="flex justify-between">
+                                    <span className="text-slate-400 font-medium">Name:</span>
+                                    <span className="font-bold text-slate-800">{deleteTarget.name}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-slate-400 font-medium">Matric / ID:</span>
+                                    <span className="font-mono font-bold text-slate-700">{deleteTarget.matricNumber || `ID ${deleteTarget.id}`}</span>
+                                </div>
+                                {deleteTarget.email && (
+                                    <div className="flex justify-between">
+                                        <span className="text-slate-400 font-medium">Email:</span>
+                                        <span className="text-slate-600">{deleteTarget.email}</span>
+                                    </div>
+                                )}
+                                <div className="flex justify-between">
+                                    <span className="text-slate-400 font-medium">Programme:</span>
+                                    <span className="text-slate-700">{deleteTarget.programmeName || "None"}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-slate-400 font-medium">Level / Status:</span>
+                                    <span className="text-slate-700">{deleteTarget.displayLabel} · {deleteTarget.status}</span>
+                                </div>
+                            </div>
+
+                            {deleteTarget.totalDependents > 0 && (
+                                <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-900 flex items-start gap-2.5">
+                                    <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                                    <div>
+                                        <strong>Notice:</strong> This student has <strong>{deleteTarget.dependentCounts.bills} bill(s)</strong> and <strong>{deleteTarget.dependentCounts.registrations} course registration(s)</strong> linked. Soft-deleting will preserve historical audit integrity while deactivating the account.
+                                    </div>
+                                </div>
+                            )}
+
+                            <div>
+                                <label className="block text-[10px] uppercase tracking-wider text-slate-500 font-bold mb-1.5">
+                                    Reason for Deletion (Optional)
+                                </label>
+                                <input
+                                    value={deleteReason}
+                                    onChange={(e) => setDeleteReason(e.target.value)}
+                                    placeholder="e.g. Unnecessary test account / duplicate entry"
+                                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:red-500"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="p-4 bg-slate-50 border-t border-slate-100 flex gap-3">
+                            <button
+                                onClick={() => setDeleteTarget(null)}
+                                disabled={deleting}
+                                className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-100 disabled:opacity-50 transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleDelete}
+                                disabled={deleting}
+                                className="flex-1 px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-sm disabled:opacity-50 transition-colors shadow-sm flex items-center justify-center gap-2"
+                            >
+                                {deleting ? (
+                                    <>
+                                        <RefreshCw className="w-4 h-4 animate-spin" />
+                                        Deleting...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Trash2 className="w-4 h-4" />
+                                        Confirm Delete
+                                    </>
+                                )}
                             </button>
                         </div>
                     </div>

@@ -120,12 +120,24 @@ export function isEvidenceInScope(paidAt: Date | null, notBefore: Date | null): 
  * is treated as "not paid".
  */
 export function classifyTransactionForApplication(
-  tx: { purpose: string | null; gatewayReference: string | null },
-  applicationId: number
+  tx: { purpose: string | null; gatewayReference: string | null; gatewayTransactionId?: string | null },
+  applicationId: number,
+  acceptancePaymentReference?: string | null
 ): AdmissionFeeKind | null {
   const ref = (tx.gatewayReference || "").trim();
+  const txId = (tx.gatewayTransactionId || "").trim();
   const purpose = (tx.purpose || "").trim();
   const lowerPurpose = purpose.toLowerCase();
+
+  // Match explicitly stored acceptance payment reference (e.g. earlier ALATPay payments)
+  if (acceptancePaymentReference) {
+    const targetRef = acceptancePaymentReference.trim();
+    if (targetRef && (ref === targetRef || txId === targetRef)) {
+      if (lowerPurpose.includes("acceptance") || lowerPurpose.includes("acc") || !lowerPurpose.includes("school")) {
+        return "acceptance";
+      }
+    }
+  }
 
   const refMatch = REF_PATTERN.exec(ref);
   if (refMatch) {
@@ -184,6 +196,7 @@ export interface ApplicationRef {
   id: number;
   applicantId: number | null;
   acceptancePaymentStatus?: string | null;
+  acceptancePaymentReference?: string | null;
 }
 
 function toAmountString(amount: unknown): string | null {
@@ -207,7 +220,7 @@ export function verifyAgainstEvidence(
   const staleEvidence: FeeEvidence[] = [];
 
   for (const tx of gatewayTxs) {
-    const kind = classifyTransactionForApplication(tx, application.id);
+    const kind = classifyTransactionForApplication(tx, application.id, application.acceptancePaymentReference);
     if (!kind) continue;
     const evidence: FeeEvidence = {
       source: "transactions",

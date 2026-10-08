@@ -61,6 +61,16 @@ describe('classifyTransactionForApplication', () => {
         ).toBe('school');
     });
 
+    it('matches acceptance payment when acceptancePaymentReference is provided', () => {
+        expect(
+            classifyTransactionForApplication(
+                { purpose: 'Acceptance Fee Payment', gatewayReference: '23010871-7e8b-42a6-86ed-11814bc6caa5' },
+                316,
+                '23010871-7e8b-42a6-86ed-11814bc6caa5'
+            )
+        ).toBe('acceptance');
+    });
+
     it('returns null for rows with no reference and no application id', () => {
         expect(classifyTransactionForApplication(tx('School Fees', null), 99)).toBeNull();
         expect(classifyTransactionForApplication(tx(null, null), 99)).toBeNull();

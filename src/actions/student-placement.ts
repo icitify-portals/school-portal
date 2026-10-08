@@ -387,3 +387,75 @@ export async function correctStudentPlacement(input: {
         }${programmeRow ? ` (${programmeRow.name})` : ""}.`
     };
 }
+
+/**
+ * Deletes a student account and marks both the student and linked user as deleted.
+ */
+export async function deleteStudentPlacement(input: {
+    studentId: number;
+    reason?: string;
+}) {
+    const authz = await reviewAdmin();
+    if (authz.error) return { success: false, error: authz.error };
+    const actorId = authz.userId!;
+    const { studentId, reason } = input;
+
+    if (!studentId || Number.isNaN(Number(studentId))) {
+        return { success: false, error: "Invalid student." };
+    }
+
+    const [student] = await db
+        .select({
+            id: students.id,
+            matricNumber: students.matricNumber,
+            userId: students.userId,
+            firstName: students.firstName,
+            lastName: students.lastName,
+            programmeId: students.programmeId,
+            currentLevel: students.currentLevel,
+        })
+        .from(students)
+        .where(eq(students.id, studentId))
+        .limit(1);
+
+    if (!student) {
+        return { success: false, error: "Student record not found." };
+    }
+
+    const now = new Date();
+    const timestamp = Date.now();
+    // Soft delete the student record
+    await db.update(students).set({ deletedAt: now }).where(eq(students.id, studentId));
+
+    // Also soft delete linked user account and release email so it can be reused immediately
+    if (student.userId) {
+        const [u] = await db.select({ id: users.id, email: users.email }).from(users).where(eq(users.id, student.userId)).limit(1);
+        if (u) {
+            const releasedEmail = u.email && !u.email.includes(".deleted.") ? `${u.email}.deleted.${timestamp}` : u.email;
+            await db.update(users).set({ deletedAt: now, email: releasedEmail }).where(eq(users.id, student.userId));
+        }
+    }
+
+    const trimmedReason = (reason || "").trim() || "Account removed from placement review as unnecessary";
+
+    await audit(actorId, "placement.delete", studentId, {
+        reason: trimmedReason,
+        student: {
+            id: student.id,
+            matricNumber: student.matricNumber,
+            name: [student.firstName, student.lastName].filter(Boolean).join(" ").trim(),
+            userId: student.userId,
+            currentLevel: student.currentLevel,
+            programmeId: student.programmeId
+        }
+    });
+
+    revalidatePath("/admin/students");
+    revalidatePath("/admin/students/placement");
+    revalidatePath(`/admin/students/${studentId}`);
+
+    return {
+        success: true,
+        message: `Student ${student.matricNumber || `ID ${student.id}`} successfully deleted.`
+    };
+}

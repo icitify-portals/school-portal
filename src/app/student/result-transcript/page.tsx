@@ -59,23 +59,18 @@ export default function StudentTranscriptPage() {
     if (!session?.user) return;
     setLoading(true);
 
-    // Get the student ID from the session - typical pattern in this portal
-    const studentId = (session.user as any).studentId;
-    if (!studentId) {
-      setError("Student profile not found.");
-      setLoading(false);
-      return;
-    }
-
+    const studentId = (session.user as any).studentId ? Number((session.user as any).studentId) : undefined;
     const res = await getMyTranscript(studentId, { viewForStudent: true });
-    if (res.success) {
+    if (res.success && res.data) {
       setTranscriptData(res.data);
-      logTranscriptActivity({
-        action: "student_view",
-        targetType: "transcript",
-        targetId: studentId,
-        targetLabel: res.data?.student?.matricNumber || `Student #${studentId}`,
-      });
+      if (res.data.student?.id) {
+        logTranscriptActivity({
+          action: "student_view",
+          targetType: "transcript",
+          targetId: res.data.student.id,
+          targetLabel: res.data?.student?.matricNumber || `Student #${res.data.student.id}`,
+        });
+      }
     } else {
       setError(res.error || "Failed to load transcript");
     }

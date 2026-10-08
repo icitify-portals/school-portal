@@ -233,7 +233,7 @@ export default function BursaryBillsPage() {
                     scope: batchScope as any,
                     filters: {
                         deptId: selectedDept ? parseInt(selectedDept) : undefined,
-                        level: selectedLevel ? parseInt(selectedLevel) : undefined,
+                        level: selectedLevel || undefined,
                         programmeId: selectedProg ? parseInt(selectedProg) : undefined
                     },
                     note: billNote,

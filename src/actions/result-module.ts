@@ -679,9 +679,22 @@ export async function getCoursesList() {
 // STUDENT: Get own transcript
 // ──────────────────────────────────────────────
 
-export async function getMyTranscript(studentId: number, options?: { viewForStudent?: boolean }) {
+export async function getMyTranscript(studentId?: number, options?: { viewForStudent?: boolean }) {
   try {
-    const data = await getStudentTranscriptData(studentId, options);
+    let resolvedStudentId = studentId;
+    if (!resolvedStudentId) {
+      const session = await auth();
+      if (!session?.user?.id) return { success: false, error: "Unauthorized" };
+      const userId = parseInt(session.user.id);
+      const student = await db.query.students.findFirst({
+        where: eq(students.userId, userId),
+        columns: { id: true }
+      });
+      if (!student) return { success: false, error: "Student profile not found" };
+      resolvedStudentId = student.id;
+    }
+
+    const data = await getStudentTranscriptData(resolvedStudentId, options);
     return { success: true, data };
   } catch (e: any) {
     return { success: false, error: e.message };

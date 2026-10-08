@@ -2106,6 +2106,7 @@ export async function finalizeStudentAdmission(applicationId: number) {
                 id: application.id,
                 applicantId: application.applicantId,
                 acceptancePaymentStatus: application.acceptancePaymentStatus,
+                acceptancePaymentReference: application.acceptancePaymentReference,
             },
             { notBefore: new Date(sessionYear, 0, 1), sessionName: targetSession?.name ?? null, remitaOnlySchoolFee: true }
         );

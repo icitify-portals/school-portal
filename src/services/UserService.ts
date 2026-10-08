@@ -120,8 +120,12 @@ export class UserService {
      * Ported from Rust 'User::delete'.
      */
     static async deleteUser(userId: number) {
+        const now = new Date();
+        const timestamp = Date.now();
+        const [u] = await db.select({ id: users.id, email: users.email }).from(users).where(eq(users.id, userId)).limit(1);
+        const releasedEmail = u?.email && !u?.email.includes(".deleted.") ? `${u.email}.deleted.${timestamp}` : u?.email;
         return await db.update(users)
-            .set({ deletedAt: new Date() })
+            .set({ deletedAt: now, email: releasedEmail })
             .where(eq(users.id, userId));
     }
 }

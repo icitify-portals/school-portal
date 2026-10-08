@@ -323,6 +323,7 @@ export async function transitionUserRole(
           id: application.id,
           applicantId: application.applicantId,
           acceptancePaymentStatus: application.acceptancePaymentStatus,
+          acceptancePaymentReference: application.acceptancePaymentReference,
         },
         { notBefore: new Date(sessionYear, 0, 1), sessionName: academicSession || null, remitaOnlySchoolFee: true }
       );

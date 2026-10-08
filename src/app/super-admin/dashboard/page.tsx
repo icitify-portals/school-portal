@@ -157,14 +157,49 @@ export default async function SuperAdminDashboardPage() {
             {/* Bento Grid: Movement Logs & Management Tools */}
             <div className="grid grid-cols-1 xl:grid-cols-4 gap-4">
                 <div className="xl:col-span-3 space-y-4">
-                    {/* Management Tools */}
-                    <div className="flex items-center gap-3 px-2">
-                        <h3 className="text-xs font-black uppercase tracking-widest text-slate-400">Governance Tools</h3>
+                    {/* Payment Gateways & Financial Infrastructure */}
+                    <div className="flex items-center gap-3 px-2 pt-2">
+                        <h3 className="text-xs font-black uppercase tracking-widest text-indigo-600 flex items-center gap-1.5">
+                            <CreditCard className="w-3.5 h-3.5" />
+                            Payment Gateways & Financial Control
+                        </h3>
+                        <div className="h-px bg-indigo-100 flex-1"></div>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                        {[
+                            { title: "API Keys & Secrets", desc: "Update Remita, Paystack & ALATPay keys", href: "/admin/settings/env", icon: Zap, color: "bg-amber-600" },
+                            { title: "Payment Gateways", desc: "Gateways, test mode & webhooks", href: "/admin/settings/payment-gateways", icon: CreditCard, color: "bg-indigo-600" },
+                            { title: "Processing Fees", desc: "Paystack & Remita fee rules", href: "/super-admin/processing-fees", icon: Wallet, color: "bg-emerald-600" },
+                            { title: "Manual Re-Query", desc: "Force-verify pending transactions", href: "/super-admin/remita-manual-update", icon: Activity, color: "bg-rose-600" },
+                            { title: "Bursary & Settlement", desc: "Bank accounts & subaccount splits", href: "/admin/bursary/settings", icon: Building2, color: "bg-blue-600" },
+                        ].map((tool) => (
+                            <Link key={tool.title} href={tool.href} className="active:scale-95 transition-transform">
+                                <Card className="border border-indigo-50 shadow-sm hover:shadow-xl transition-all group overflow-hidden bg-white h-full rounded-[1.5rem]">
+                                    <CardContent className="p-4 flex flex-col justify-between h-full gap-3">
+                                        <div className={cn("w-10 h-10 rounded-xl text-white shadow-md flex items-center justify-center group-hover:rotate-6 transition-transform", tool.color)}>
+                                            <tool.icon className="w-5 h-5" />
+                                        </div>
+                                        <div>
+                                            <h4 className="text-[12px] font-black text-slate-900 tracking-tight leading-tight mb-0.5">{tool.title}</h4>
+                                            <p className="text-[10px] font-medium text-slate-500 leading-snug">{tool.desc}</p>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            </Link>
+                        ))}
+                    </div>
+
+                    {/* Management & Governance Tools */}
+                    <div className="flex items-center gap-3 px-2 pt-2">
+                        <h3 className="text-xs font-black uppercase tracking-widest text-slate-400">Governance & Academic Tools</h3>
                         <div className="h-px bg-slate-200 flex-1"></div>
                     </div>
                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                         {[
                             { title: "Role Management", desc: "RBAC & super-admin roles", href: "/super-admin/users/roles", icon: UserCog, color: "bg-slate-900" },
+                            { title: "Placement Corrections", desc: "Level & programme alignment", href: "/admin/students/placement", icon: UserCheck, color: "bg-rose-600" },
+                            { title: "Incomplete Records", desc: "Review & reset incomplete accounts", href: "/admin/students/orphans", icon: Users, color: "bg-amber-600" },
+                            { title: "Bursary Billing", desc: "Generate & manage student bills", href: "/admin/bursary/bills", icon: Wallet, color: "bg-emerald-600" },
                             { title: "Recycle Bin", desc: "Restore or purge deleted records", href: "/super-admin/recycle-bin", icon: Trash2, color: "bg-rose-600" },
                             { title: "User Management", desc: "Manage all users across branches", href: "/admin/users", icon: Users, color: "bg-blue-600" },
                             { title: "System Backups", desc: "Database & file backups", href: "/admin/system/backup", icon: Database, color: "bg-indigo-600" },
@@ -172,10 +207,7 @@ export default async function SuperAdminDashboardPage() {
                             { title: "Audit Trail", desc: "Action logs & security events", href: "/admin/audit", icon: Shield, color: "bg-amber-600" },
                             { title: "Module Settings", desc: "Enable/disable portal modules", href: "/admin/settings/modules", icon: Settings2, color: "bg-purple-600" },
                             { title: "Analytics Hub", desc: "Cross-branch analytics", href: "/admin/analytics", icon: TrendingUp, color: "bg-emerald-600" },
-                            { title: "Developer Console", desc: "API keys, env & integrations", href: "/admin/settings/developer", icon: Zap, color: "bg-cyan-600" },
                             { title: "Admission Desk", desc: "All branches admission oversight", href: "/admin/admission", icon: UserCheck, color: "bg-emerald-600" },
-                            { title: "Bursary Overview", desc: "Cross-branch financials", href: "/admin/bursary", icon: Wallet, color: "bg-amber-600" },
-                            { title: "CBT Assessments", desc: "Quiz engine across branches", href: "/admin/cbt", icon: Brain, color: "bg-purple-600" },
                             { title: "Academic Sessions", desc: "Session & term management", href: "/admin/settings/portal", icon: Calendar, color: "bg-orange-500" },
                             { title: "Health Dashboard", desc: "System resource monitoring", href: "/admin/health", icon: Activity, color: "bg-teal-600" },
                         ].map((tool) => (
@@ -264,6 +296,24 @@ export default async function SuperAdminDashboardPage() {
                             <CardTitle className="text-sm font-black uppercase tracking-widest">Quick Actions</CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-3">
+                            <Link href="/admin/settings/env" className="flex items-center justify-between p-4 rounded-2xl bg-white/80 hover:bg-white group transition-all">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 bg-amber-100 rounded-xl group-hover:bg-amber-600 group-hover:text-white transition-all">
+                                        <Zap className="w-4 h-4 text-amber-600 group-hover:text-white" />
+                                    </div>
+                                    <span className="text-xs font-black text-slate-700">API & Gateway Keys</span>
+                                </div>
+                                <ExternalLink className="w-4 h-4 text-slate-300" />
+                            </Link>
+                            <Link href="/super-admin/processing-fees" className="flex items-center justify-between p-4 rounded-2xl bg-white/80 hover:bg-white group transition-all">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 bg-emerald-100 rounded-xl group-hover:bg-emerald-600 group-hover:text-white transition-all">
+                                        <Wallet className="w-4 h-4 text-emerald-600 group-hover:text-white" />
+                                    </div>
+                                    <span className="text-xs font-black text-slate-700">Processing Fees</span>
+                                </div>
+                                <ExternalLink className="w-4 h-4 text-slate-300" />
+                            </Link>
                             <Link href="/super-admin/users/roles" className="flex items-center justify-between p-4 rounded-2xl bg-white/80 hover:bg-white group transition-all">
                                 <div className="flex items-center gap-3">
                                     <div className="p-2 bg-indigo-100 rounded-xl group-hover:bg-indigo-600 group-hover:text-white transition-all">
@@ -275,8 +325,8 @@ export default async function SuperAdminDashboardPage() {
                             </Link>
                             <Link href="/super-admin/recycle-bin" className="flex items-center justify-between p-4 rounded-2xl bg-white/80 hover:bg-white group transition-all">
                                 <div className="flex items-center gap-3">
-                                    <div className="p-2 bg-indigo-100 rounded-xl group-hover:bg-indigo-600 group-hover:text-white transition-all">
-                                        <Trash2 className="w-4 h-4 text-indigo-600 group-hover:text-white" />
+                                    <div className="p-2 bg-rose-100 rounded-xl group-hover:bg-rose-600 group-hover:text-white transition-all">
+                                        <Trash2 className="w-4 h-4 text-rose-600 group-hover:text-white" />
                                     </div>
                                     <span className="text-xs font-black text-slate-700">Recycle Bin</span>
                                 </div>
