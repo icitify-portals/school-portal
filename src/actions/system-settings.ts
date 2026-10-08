@@ -57,7 +57,19 @@ const internalGetSystemSettings = unstable_cache(
 );
 
 export async function getSystemSettings() {
-    return internalGetSystemSettings();
+    try {
+        return await internalGetSystemSettings();
+    } catch {
+        const settings = await db.select().from(systemSettings);
+        const settingsMap = new Map<string, string>();
+        Object.entries(DEFAULT_SETTINGS).forEach(([k, v]) => settingsMap.set(k, v));
+        settings.forEach(s => {
+            if (s.settingValue !== null) {
+                settingsMap.set(s.settingKey, s.settingValue);
+            }
+        });
+        return Array.from(settingsMap.entries()).map(([key, value]) => ({ key, value }));
+    }
 }
 
 const internalGetEnabledModules = unstable_cache(
@@ -95,7 +107,29 @@ const internalGetEnabledModules = unstable_cache(
 );
 
 export async function getEnabledModules() {
-    return internalGetEnabledModules();
+    try {
+        return await internalGetEnabledModules();
+    } catch {
+        const modules: Record<string, boolean> = {};
+        Object.keys(DEFAULT_SETTINGS).filter(k => k.startsWith('module.')).forEach(k => {
+            const shortName = k.replace('module.', '');
+            modules[shortName] = DEFAULT_SETTINGS[k] === 'true';
+        });
+        try {
+            const settings = await db.select().from(systemSettings).where(
+                inArray(systemSettings.settingKey, Object.keys(DEFAULT_SETTINGS).filter(k => k.startsWith('module.')))
+            );
+            settings.forEach(s => {
+                const shortName = s.settingKey.replace('module.', '');
+                modules[shortName] = s.settingValue === 'true';
+            });
+            const registeredModules = await db.select().from(systemModules);
+            registeredModules.forEach(m => {
+                modules[m.key] = m.isEnabled || false;
+            });
+        } catch {}
+        return modules;
+    }
 }
 
 export async function getLiveKitCredentials() {

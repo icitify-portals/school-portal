@@ -959,7 +959,15 @@ const _getBursarySettingsCached = unstable_cache(
     { revalidate: 60, tags: ["bursary-settings"] }
 );
 export async function getBursarySettings() {
-    return _getBursarySettingsCached();
+    try {
+        return await _getBursarySettingsCached();
+    } catch {
+        const settings = await db.select().from(bursarySettings);
+        return settings.reduce((acc, curr) => {
+            acc[curr.key] = curr.value;
+            return acc;
+        }, {} as Record<string, string>);
+    }
 }
 
 export async function updateBursarySetting(key: string, value: string) {
