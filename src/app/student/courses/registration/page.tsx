@@ -482,6 +482,8 @@ export default function AdvancedCourseRegistrationPortal() {
                         phone={studentCtx.phone}
                         reference={`PRINT_${studentCtx.id}_${Date.now()}`}
                         description="Course Registration Print Fee"
+                        targetBusinessId="181087d9-ec63-4efa-e9f3-08dddfe20b95"
+                        publicKey="84d105bdef7f420b887c442ff7092027"
                         onSuccess={handlePaymentSuccess}
                         onClose={() => setShowPayment(false)}
                     />
