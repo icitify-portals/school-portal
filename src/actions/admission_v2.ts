@@ -27,6 +27,12 @@ import {
 } from "@/db/schema";
 import { eq, and, desc, asc, sql, inArray, like, or, isNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+
+function safeRevalidatePath(path: string, type?: "page" | "layout") {
+    try {
+        revalidatePath(path, type);
+    } catch {}
+}
 import { auth } from "@/auth";
 import crypto from "crypto";
 import { sendInAppNotification } from "./notifications";
@@ -204,7 +210,7 @@ export async function linkProgrammesToTemplate(templateId: number, programmeIds:
                 programmeIds.map(pid => ({ templateId, programmeId: pid }))
             );
         }
-        revalidatePath(`/admin/admission/forms/${templateId}`);
+        safeRevalidatePath(`/admin/admission/forms/${templateId}`);
         return { success: true };
     } catch (error: any) {
         console.error("Failed to link programmes:", error);
@@ -229,13 +235,13 @@ export async function saveFormTemplate(data: any) {
             await db.update(admissionFormTemplates)
                 .set({ name, level, slug, description, flowType, feeStructureId, applicationFee, processingFee, requireAcceptanceFee, acceptanceFee, idCardFee, cutoffPercent: effectiveCutoff, lateFee, startDate, endDate, lateEndDate, minAge, isActive, ninVerificationConfig })
                 .where(eq(admissionFormTemplates.id, id));
-            revalidatePath(`/admin/admission/forms/${id}`);
+            safeRevalidatePath(`/admin/admission/forms/${id}`);
             return { success: true, id };
         } else {
             const [result] = await db.insert(admissionFormTemplates).values({
                 name, level, slug, description, flowType, feeStructureId, applicationFee, processingFee, requireAcceptanceFee, acceptanceFee, idCardFee, cutoffPercent: effectiveCutoff, lateFee, startDate, endDate, lateEndDate, minAge, isActive, ninVerificationConfig
             });
-            revalidatePath("/admin/admission/forms");
+            safeRevalidatePath("/admin/admission/forms");
             return { success: true, id: result.insertId };
         }
     } catch (error: any) {
@@ -305,7 +311,7 @@ export async function cloneFormTemplate(templateId: number) {
             }
         }
 
-        revalidatePath("/admin/admission/forms");
+        safeRevalidatePath("/admin/admission/forms");
         return { success: true, id: newTemplateId };
 
     } catch (error: any) {
@@ -326,7 +332,7 @@ export async function deleteFormTemplate(id: number) {
         }
         await db.delete(admissionFormSections).where(eq(admissionFormSections.templateId, id));
         await db.delete(admissionFormTemplates).where(eq(admissionFormTemplates.id, id));
-        revalidatePath("/admin/admission/forms");
+        safeRevalidatePath("/admin/admission/forms");
         return { success: true };
     } catch (error: any) {
         console.error("Failed to delete form template:", error);
@@ -347,7 +353,7 @@ export async function bulkDeleteFormTemplates(ids: number[]) {
         }
         await db.delete(admissionFormSections).where(inArray(admissionFormSections.templateId, ids));
         await db.delete(admissionFormTemplates).where(inArray(admissionFormTemplates.id, ids));
-        revalidatePath("/admin/admission/forms");
+        safeRevalidatePath("/admin/admission/forms");
         return { success: true };
     } catch (error: any) {
         console.error("Failed to bulk delete form templates:", error);
@@ -372,7 +378,7 @@ export async function saveFormSection(data: any) {
                 templateId, title, order
             });
         }
-        revalidatePath(`/admin/admission/forms/${templateId}`);
+        safeRevalidatePath(`/admin/admission/forms/${templateId}`);
         return { success: true };
     } catch (error) {
         console.error("Failed to save form section:", error);
@@ -384,7 +390,7 @@ export async function deleteFormSection(id: number, templateId: number) {
     try {
         await requireAdmin();
         await db.delete(admissionFormSections).where(eq(admissionFormSections.id, id));
-        revalidatePath(`/admin/admission/forms/${templateId}`);
+        safeRevalidatePath(`/admin/admission/forms/${templateId}`);
         return { success: true };
     } catch (error) {
         console.error("Failed to delete form section:", error);
@@ -409,7 +415,7 @@ export async function saveFormField(data: any) {
                 sectionId, label, type, placeholder, options, isRequired, order, isSystemField, systemKey, helpText, defaultValue, validationRules, conditionalLogic, width
             });
         }
-        revalidatePath(`/admin/admission/forms/${templateId}`);
+        safeRevalidatePath(`/admin/admission/forms/${templateId}`);
         return { success: true };
     } catch (error) {
         console.error("Failed to save form field:", error);
@@ -421,7 +427,7 @@ export async function deleteFormField(id: number, templateId: number) {
     try {
         await requireAdmin();
         await db.delete(admissionFormFields).where(eq(admissionFormFields.id, id));
-        revalidatePath(`/admin/admission/forms/${templateId}`);
+        safeRevalidatePath(`/admin/admission/forms/${templateId}`);
         return { success: true };
     } catch (error) {
         console.error("Failed to delete form field:", error);
@@ -439,7 +445,7 @@ export async function updateFieldsOrder(fields: { id: number, order: number }[],
                     .where(eq(admissionFormFields.id, field.id));
             }
         });
-        revalidatePath(`/admin/admission/forms/${templateId}`);
+        safeRevalidatePath(`/admin/admission/forms/${templateId}`);
         return { success: true };
     } catch (error) {
         console.error("Failed to update fields order:", error);
@@ -623,9 +629,9 @@ export async function reverseAdmissionPayment(applicationId: number) {
             })
             .where(eq(admissionApplicationsV2.id, applicationId));
 
-        revalidatePath('/admin/admission/v2');
-        revalidatePath(`/admin/admission/v2/${applicationId}`);
-        revalidatePath('/admin/admission/payments');
+        safeRevalidatePath('/admin/admission/v2');
+        safeRevalidatePath(`/admin/admission/v2/${applicationId}`);
+        safeRevalidatePath('/admin/admission/payments');
         
         return { success: true };
     } catch (e: any) {
@@ -663,7 +669,7 @@ export async function confirmAdmissionPayment(applicationId: number, reference: 
             }
         }
 
-        revalidatePath("/admin/admission/payments");
+        safeRevalidatePath("/admin/admission/payments");
         return { success: true };
     } catch (error) {
         console.error("Failed to confirm admission payment:", error);
@@ -689,7 +695,7 @@ export async function adminConfirmProcessingFeePayment(applicationId: number) {
             .set({ processingFeeStatus: 'paid' })
             .where(eq(admissionApplicationsV2.id, applicationId));
         
-        revalidatePath(`/admin/admission/v2/${applicationId}`);
+        safeRevalidatePath(`/admin/admission/v2/${applicationId}`);
         return { success: true };
     } catch (error) {
         console.error("Failed to confirm processing fee:", error);
@@ -704,7 +710,7 @@ export async function reverseProcessingFeePayment(applicationId: number) {
             .set({ processingFeeStatus: 'pending' })
             .where(eq(admissionApplicationsV2.id, applicationId));
         
-        revalidatePath(`/admin/admission/v2/${applicationId}`);
+        safeRevalidatePath(`/admin/admission/v2/${applicationId}`);
         return { success: true };
     } catch (error) {
         console.error("Failed to reverse processing fee:", error);
@@ -753,11 +759,11 @@ export async function adminConfirmAcceptancePayment(applicationId: number, refer
             }
         }
 
-        revalidatePath(`/admin/admission/v2/${applicationId}`);
-        revalidatePath(`/admin/admission/v2`);
-        revalidatePath(`/admin/bursary/admission-payments`);
-        revalidatePath(`/admin/bursary/acceptance-payments`);
-        revalidatePath(`/admission/status/${applicationId}`);
+        safeRevalidatePath(`/admin/admission/v2/${applicationId}`);
+        safeRevalidatePath(`/admin/admission/v2`);
+        safeRevalidatePath(`/admin/bursary/admission-payments`);
+        safeRevalidatePath(`/admin/bursary/acceptance-payments`);
+        safeRevalidatePath(`/admission/status/${applicationId}`);
         return { success: true };
     } catch (error) {
         console.error("Failed to confirm acceptance payment:", error);
@@ -780,11 +786,11 @@ export async function reverseAcceptancePayment(applicationId: number) {
                 like(transactions.gatewayReference, `%${applicationId}%`)
             ));
 
-        revalidatePath(`/admin/admission/v2/${applicationId}`);
-        revalidatePath(`/admin/admission/v2`);
-        revalidatePath(`/admin/bursary/admission-payments`);
-        revalidatePath(`/admin/bursary/acceptance-payments`);
-        revalidatePath(`/admission/status/${applicationId}`);
+        safeRevalidatePath(`/admin/admission/v2/${applicationId}`);
+        safeRevalidatePath(`/admin/admission/v2`);
+        safeRevalidatePath(`/admin/bursary/admission-payments`);
+        safeRevalidatePath(`/admin/bursary/acceptance-payments`);
+        safeRevalidatePath(`/admission/status/${applicationId}`);
         return { success: true };
     } catch (error) {
         console.error("Failed to reverse acceptance payment:", error);
@@ -871,9 +877,9 @@ export async function syncAcceptancePaymentsFromTransactions() {
             }
         }
 
-        revalidatePath('/admin/bursary/admission-payments');
-        revalidatePath('/admin/bursary/acceptance-payments');
-        revalidatePath('/admin/admission/v2');
+        safeRevalidatePath('/admin/bursary/admission-payments');
+        safeRevalidatePath('/admin/bursary/acceptance-payments');
+        safeRevalidatePath('/admin/admission/v2');
 
         return { success: true, synced };
     } catch (error) {
@@ -1181,7 +1187,7 @@ export async function updateExamVisibility(examId: number, showInstantly: boolea
         await db.update(admissionEntranceExams)
             .set({ showResultsInstantly: showInstantly })
             .where(eq(admissionEntranceExams.id, examId));
-        revalidatePath(`/admin/admission/exams/${examId}`);
+        safeRevalidatePath(`/admin/admission/exams/${examId}`);
         return { success: true };
     } catch (error) {
         console.error("Failed to update exam visibility:", error);
@@ -1195,7 +1201,7 @@ export async function releaseResults(examId: number) {
         await db.update(admissionEntranceExams)
             .set({ resultsReleased: true })
             .where(eq(admissionEntranceExams.id, examId));
-        revalidatePath(`/admin/admission/exams/${examId}`);
+        safeRevalidatePath(`/admin/admission/exams/${examId}`);
         return { success: true };
     } catch (error) {
         console.error("Failed to release results:", error);
@@ -1262,7 +1268,7 @@ export async function updateAdmissionStatus(applicationId: number, status: any, 
             }
         }
         
-        revalidatePath("/admin/admission/reports");
+        safeRevalidatePath("/admin/admission/reports");
         return { success: true };
     } catch (error) {
         console.error("Failed to update admission status:", error);
@@ -1375,7 +1381,7 @@ export async function uploadApplicantDocument(applicationId: number, docType: 'b
             })
             .where(eq(admissionApplicationsV2.id, applicationId));
 
-        revalidatePath(`/admission/status/${applicationId}`);
+        safeRevalidatePath(`/admission/status/${applicationId}`);
         return { success: true, uploadedDocuments: uploadedDocs };
     } catch (error: any) {
         console.error("Failed to upload document:", error);
@@ -1470,12 +1476,12 @@ export async function confirmAcceptancePayment(applicationId: number, reference:
             console.error("Failed to send admission letter email:", mailErr);
         }
 
-        revalidatePath(`/admission/status/${applicationId}`);
-        revalidatePath(`/admin/admission/v2/${applicationId}`);
-        revalidatePath(`/admin/admission/v2`);
-        revalidatePath(`/admin/bursary/admission-payments`);
-        revalidatePath(`/admin/bursary/acceptance-payments`);
-        revalidatePath(`/admission/status/${applicationId}`);
+        safeRevalidatePath(`/admission/status/${applicationId}`);
+        safeRevalidatePath(`/admin/admission/v2/${applicationId}`);
+        safeRevalidatePath(`/admin/admission/v2`);
+        safeRevalidatePath(`/admin/bursary/admission-payments`);
+        safeRevalidatePath(`/admin/bursary/acceptance-payments`);
+        safeRevalidatePath(`/admission/status/${applicationId}`);
         return { success: true };
     } catch (error) {
         console.error("Failed to confirm acceptance payment:", error);
@@ -1694,8 +1700,8 @@ export async function updateApplicantMatricNumber(applicationId: number, newMatr
             })
             .where(eq(admissionApplicationsV2.id, applicationId));
 
-        revalidatePath(`/admin/admission/v2/${applicationId}`);
-        revalidatePath("/admin/admission/v2");
+        safeRevalidatePath(`/admin/admission/v2/${applicationId}`);
+        safeRevalidatePath("/admin/admission/v2");
         return { success: true, matricNumber: trimmedMatric };
     } catch (error: any) {
         console.error("Failed to update matriculation number:", error);
@@ -1895,7 +1901,7 @@ export async function confirmSchoolFeesPayment(applicationId: number, reference:
             .set(updatePayload)
             .where(eq(transactions.gatewayReference, reference));
 
-        revalidatePath(`/admission/status/${applicationId}`);
+        safeRevalidatePath(`/admission/status/${applicationId}`);
         return { success: true };
     } catch (error) {
         console.error("Failed to confirm school fees payment:", error);
@@ -1994,7 +2000,7 @@ export async function confirmProcessingFeePayment(applicationId: number, referen
                 .where(eq(transactions.gatewayReference, reference));
         }
 
-        revalidatePath(`/admission/status/${applicationId}`);
+        safeRevalidatePath(`/admission/status/${applicationId}`);
         return finalization;
     } catch (error) {
         console.error("Failed to confirm processing fee payment:", error);
@@ -2314,8 +2320,8 @@ export async function finalizeStudentAdmission(applicationId: number) {
             })
             .where(eq(admissionApplicationsV2.id, applicationId));
 
-        revalidatePath(`/admission/status/${applicationId}`);
-        revalidatePath("/admin/admission/reports");
+        safeRevalidatePath(`/admission/status/${applicationId}`);
+        safeRevalidatePath("/admin/admission/reports");
         
         // Send admission accepted email
         const applicantName = buildFullName(nameParts) || 'Applicant';
@@ -3237,8 +3243,8 @@ export async function saveAdmissionEngineSetting(engineType: string) {
             });
         }
 
-        revalidatePath("/admin/admission/settings");
-        revalidatePath("/admission");
+        safeRevalidatePath("/admin/admission/settings");
+        safeRevalidatePath("/admission");
         return { success: true };
     } catch (error) {
         console.error("Failed to save admission engine setting:", error);
@@ -3256,7 +3262,7 @@ export async function updateSectionsOrder(sections: { id: number, order: number 
                     .where(eq(admissionFormSections.id, sec.id));
             }
         });
-        revalidatePath(`/admin/admission/forms/${templateId}`);
+        safeRevalidatePath(`/admin/admission/forms/${templateId}`);
         return { success: true };
     } catch (error) {
         console.error("Failed to update sections order:", error);
@@ -3277,7 +3283,7 @@ export async function addExaminationBody(name: string) {
     await requireAdmin();
     try {
         await db.insert(examinationBodies).values({ name, isActive: true });
-        revalidatePath("/admin/admission/settings");
+        safeRevalidatePath("/admin/admission/settings");
         return { success: true };
     } catch (e: any) {
         return { success: false, error: "Failed to add examination body. It might already exist." };
@@ -3288,7 +3294,7 @@ export async function updateExaminationBody(id: number, isActive: boolean) {
     await requireAdmin();
     try {
         await db.update(examinationBodies).set({ isActive }).where(eq(examinationBodies.id, id));
-        revalidatePath("/admin/admission/settings");
+        safeRevalidatePath("/admin/admission/settings");
         return { success: true };
     } catch (e: any) {
         return { success: false, error: e.message };
@@ -3299,7 +3305,7 @@ export async function deleteExaminationBody(id: number) {
     await requireAdmin();
     try {
         await db.delete(examinationBodies).where(eq(examinationBodies.id, id));
-        revalidatePath("/admin/admission/settings");
+        safeRevalidatePath("/admin/admission/settings");
         return { success: true };
     } catch (e: any) {
         return { success: false, error: "Cannot delete this exam body because it is currently in use by applicants." };
@@ -3833,7 +3839,7 @@ export async function markExamAttendanceAction(applicationIds: number[], status:
             })
             .where(inArray(admissionApplicationsV2.id, applicationIds));
 
-        revalidatePath("/admin/admission/v2");
+        safeRevalidatePath("/admin/admission/v2");
         return { success: true, count: applicationIds.length };
     } catch (error: any) {
         console.error("markExamAttendanceAction error:", error);
@@ -4021,8 +4027,8 @@ export async function bulkUpdateAdmissionStatus(ids: number[], status: string, n
             }
         }
 
-        revalidatePath("/admin/admission/v2");
-        revalidatePath("/admin/admission/reports");
+        safeRevalidatePath("/admin/admission/v2");
+        safeRevalidatePath("/admin/admission/reports");
         return { success: true, count: ids.length };
     } catch (error: any) {
         console.error("[bulkUpdateAdmissionStatus] Failed:", error);
@@ -4066,7 +4072,7 @@ export async function bulkDeleteAdmissionApplications(ids: number[]) {
     try {
         if (!ids || ids.length === 0) return { success: true };
         await db.delete(admissionApplicationsV2).where(inArray(admissionApplicationsV2.id, ids));
-        revalidatePath("/admin/admission/payments");
+        safeRevalidatePath("/admin/admission/payments");
         return { success: true };
     } catch (error) {
         console.error("Failed to bulk delete applications:", error);
@@ -4253,8 +4259,8 @@ export async function admitFromRegister(applicationId: number, notes?: string) {
             } catch (e) { /* non-blocking */ }
         }
 
-        revalidatePath("/admin/admission/register");
-        revalidatePath("/admin/admission/v2");
+        safeRevalidatePath("/admin/admission/register");
+        safeRevalidatePath("/admin/admission/v2");
         return { success: true };
     } catch (error) {
         console.error("[admitFromRegister] Failed:", error);
@@ -4298,8 +4304,8 @@ export async function rejectFromRegister(applicationId: number, reason: string) 
             } catch (e) { /* non-blocking */ }
         }
 
-        revalidatePath("/admin/admission/register");
-        revalidatePath("/admin/admission/v2");
+        safeRevalidatePath("/admin/admission/register");
+        safeRevalidatePath("/admin/admission/v2");
         return { success: true };
     } catch (error) {
         console.error("[rejectFromRegister] Failed:", error);
@@ -4317,7 +4323,7 @@ export async function updatePendingReason(applicationId: number, reason: string)
             })
             .where(eq(admissionApplicationsV2.id, applicationId));
 
-        revalidatePath("/admin/admission/register");
+        safeRevalidatePath("/admin/admission/register");
         return { success: true };
     } catch (error) {
         console.error("[updatePendingReason] Failed:", error);
@@ -4393,7 +4399,7 @@ export async function updateApplicantData(appId: number, updatePayload: any) {
                 await db.update(users).set(updates).where(eq(users.id, targetUserId));
             }
         }
-        revalidatePath(`/admin/admission/v2/${appId}`);
+        safeRevalidatePath(`/admin/admission/v2/${appId}`);
         return { success: true };
     } catch (error: any) {
         console.error("Failed to update applicant data:", error);
@@ -4462,8 +4468,8 @@ export async function syncApplicantProfileDataFromForms(limit = 5000) {
             }
         }
 
-        revalidatePath('/admin/admission/v2');
-        revalidatePath('/admin/admission/v2/[id]');
+        safeRevalidatePath('/admin/admission/v2');
+        safeRevalidatePath('/admin/admission/v2/[id]');
         return { success: true, appsUpdated, usersUpdated };
     } catch (error: any) {
         console.error("[syncApplicantProfileDataFromForms] Failed:", error);
@@ -4597,7 +4603,7 @@ export async function changeApplicantProgramme(appId: number, departmentId: numb
             ).catch((err: any) => console.error("Failed to send course change email:", err));
         }
 
-        revalidatePath(`/admin/admission/v2/${appId}`);
+        safeRevalidatePath(`/admin/admission/v2/${appId}`);
         return { success: true };
     } catch (error: any) {
         console.error("Failed to change applicant programme:", error);
