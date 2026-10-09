@@ -99,7 +99,6 @@ export default async function StudentDashboard() {
         )
     });
 
-    const now = new Date();
     const hasActiveExcuse = activeExcuse && new Date(activeExcuse.startDate) <= now && new Date(activeExcuse.endDate) >= now;
 
     // Fetch library fines
