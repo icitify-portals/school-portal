@@ -258,6 +258,7 @@ export async function seedPrincipalRoles() {
                     "students.view",
                     "students.transfer",
                     "students.enroll",
+                    "admin.students.manage",
                     "communication.broadcast.manage",
                     "communication.announcements.manage",
                     "registry.documents.view",
@@ -284,7 +285,9 @@ export async function seedPrincipalRoles() {
                     "admission.exams.manage",
                     "students.manage",
                     "students.view",
+                    "students.transfer",
                     "students.enroll",
+                    "admin.students.manage",
                     "communication.broadcast.manage",
                     "communication.announcements.manage"
                 ]

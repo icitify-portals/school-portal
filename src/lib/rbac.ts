@@ -8,15 +8,17 @@ export async function getSessionPermissions() {
 export async function hasPermission(permission: string) {
     const session = await auth();
     const baseRole = ((session?.user as any)?.role || "").toString().toLowerCase();
+    const userRoles = (((session?.user as any)?.roles || []) as string[]).map(r => r.toLowerCase());
     
     // Absolute power for developer, superadmin, admin, and registrar (full access except dev-only)
-    if (baseRole === "icitify_dev" || baseRole === "superadmin" || baseRole === "admin" || baseRole === "registrar") return true;
+    if (baseRole === "icitify_dev" || baseRole === "superadmin" || baseRole === "admin" || baseRole === "registrar" || userRoles.includes("registrar") || userRoles.includes("superadmin") || userRoles.includes("admin")) return true;
 
     // Registrar automatically has access to all academic, admission, student, registry, and communication features
-    if (baseRole === "registrar" && (
+    if ((baseRole === "registrar" || userRoles.includes("registrar")) && (
         permission.startsWith("admission.") || 
         permission.startsWith("academic.") || 
         permission.startsWith("students.") || 
+        permission.startsWith("admin.students.") || 
         permission.startsWith("registry.") || 
         permission.startsWith("communication.") ||
         permission.startsWith("officers.")
@@ -25,9 +27,10 @@ export async function hasPermission(permission: string) {
     }
 
     // Admission Officer automatically has access to all admission, student, and communication features
-    if ((baseRole === "admission_officer" || baseRole === "admission officer" || baseRole === "admission") && (
+    if ((baseRole === "admission_officer" || baseRole === "admission officer" || baseRole === "admission" || userRoles.includes("admission_officer") || userRoles.includes("admission officer") || userRoles.includes("admission")) && (
         permission.startsWith("admission.") || 
         permission.startsWith("students.") || 
+        permission.startsWith("admin.students.") || 
         permission.startsWith("communication.")
     )) {
         return true;

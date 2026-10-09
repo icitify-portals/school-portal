@@ -71,6 +71,12 @@ export default function AdminAdmissionDashboard() {
                     </div>
 
                     <div className="relative z-10 flex flex-wrap gap-3 shrink-0">
+                        <Link href="/admin/students">
+                            <Button className="font-black px-6 py-6 rounded-2xl shadow-lg transition-all flex gap-3 uppercase text-xs tracking-widest bg-blue-600 hover:bg-blue-700 text-white border border-white/10 active:scale-95">
+                                <Users className="w-5 h-5" />
+                                Student Management
+                            </Button>
+                        </Link>
                         <Link href="/admin/admission/v2">
                             <Button className="font-black px-6 py-6 rounded-2xl shadow-lg transition-all flex gap-3 uppercase text-xs tracking-widest bg-emerald-600 hover:bg-emerald-700 text-white border border-white/10 active:scale-95">
                                 <Users className="w-5 h-5" />

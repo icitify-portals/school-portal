@@ -217,6 +217,9 @@ const adminMenuItems: MenuItem[] = [
         icon: Award,
         subItems: [
             { name: "Registrar Dashboard", href: "/admin/registrar" },
+            { name: "All Students", href: "/admin/students" },
+            { name: "Placement Corrections", href: "/admin/students/placement" },
+            { name: "Incomplete Admissions", href: "/admin/students/orphans" },
             { name: "Graduation & Clearance", href: "/admin/registrar/clearance" },
             { name: "Senate & Conduct", href: "/admin/registrar/conduct" },
             { name: "Grievances & Appeals", href: "/admin/registrar/grievances" },
@@ -347,6 +350,9 @@ const adminMenuItems: MenuItem[] = [
             { name: "Programmes", href: "/admin/programmes" },
 
             { name: "Intake Analytics", href: "/admin/admission/reports" },
+            { name: "All Students", href: "/admin/students" },
+            { name: "Placement Corrections", href: "/admin/students/placement" },
+            { name: "Incomplete Admissions", href: "/admin/students/orphans" },
             { name: "Admission Settings", href: "/admin/admission/settings" },
             { name: "Admission Guide", href: "/admin/admission/guide" },
         ]
@@ -604,13 +610,20 @@ export function Sidebar({ enabledModules = {}, mobileOpen = false, onClose }: {
         getBrandingSettings().then(setBranding);
     }, []);
 
-    const role = (session?.user as any)?.role || 'student';
-    const userPermissions = (session?.user as any)?.permissions || [];
-    const userRolesList = (session?.user as any)?.roles || [];
+    const rawRole = (session?.user as any)?.role || 'student';
+    const role = rawRole.toLowerCase();
+    const userPermissions: string[] = (session?.user as any)?.permissions || [];
+    const userRolesList: string[] = (((session?.user as any)?.roles || []) as string[]).map(r => r.toLowerCase());
+
+    const isRegistrar = role === 'registrar' || userRolesList.includes('registrar');
+    const isAdmissionOfficer = role === 'admission_officer' || role === 'admission officer' || role === 'admission' || userRolesList.includes('admission_officer') || userRolesList.includes('admission officer') || userRolesList.includes('admission');
+    const isBursar = role === 'bursar' || role === 'bursary' || userRolesList.includes('bursar') || userRolesList.includes('bursary') || userRolesList.includes('accountant');
+    const isRecordOfficer = role === 'record_officer' || role === 'record officer' || role === 'recordofficer' || userRolesList.includes('record_officer') || userRolesList.includes('record officer');
+    const isSuperAdminOrDev = role === 'admin' || role === 'superadmin' || role === 'icitify_dev' || userRolesList.includes('superadmin') || userRolesList.includes('admin') || userRolesList.includes('developer');
 
     const hasResultModulePermission = userPermissions.includes("result_module.manage");
     const isRestrictedResultOfficer = hasResultModulePermission && !['admin', 'superadmin', 'dvc', 'icitify_dev'].includes(role);
-    const hasCbtPermission = userPermissions.includes("cbt.manage") || userPermissions.includes("lms.quizzes.manage") || userRolesList.includes("CBT Manager");
+    const hasCbtPermission = userPermissions.includes("cbt.manage") || userPermissions.includes("lms.quizzes.manage") || userRolesList.includes("cbt manager");
     const isRestrictedCbtOfficer = hasCbtPermission && !['admin', 'superadmin', 'dvc', 'icitify_dev', 'registrar'].includes(role);
 
     // Close mobile sidebar on navigation
@@ -752,12 +765,12 @@ export function Sidebar({ enabledModules = {}, mobileOpen = false, onClose }: {
             ];
         }
 
-        if (role === 'admin' || role === 'superadmin' || role === 'icitify_dev') {
+        if (isSuperAdminOrDev) {
             return adminMenuItems;
-        } else if (role === 'bursar' || role === 'registrar' || role === 'admission_officer') {
-            const allowedItems = role === 'bursar'
+        } else if (isBursar || isRegistrar || isAdmissionOfficer) {
+            const allowedItems = isBursar
                 ? ["Admin Dashboard", "Finance & Accounting", "Bursary & Fees", "Accounting & Reports", "Admission Management", "Analytics & Reports", "Inventory & Stock", "Communication"]
-                : role === 'registrar'
+                : isRegistrar
                 ? ["Admin Dashboard", "Academics", "Office of the Registrar", "Admission Management", "Student Management", "Academic Calendar", "Student Promotion", "Communication", "Registration Concessions", "SIWES Management"]
                 : ["Admin Dashboard", "Admission Management", "Student Management", "Communication"];
 
