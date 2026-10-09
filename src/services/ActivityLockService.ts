@@ -144,9 +144,23 @@ const internalGetLocks = unstable_cache(
     { tags: ['activity-locks'], revalidate: 60 }
 );
 
+async function getLocksSafe(): Promise<ActivityLockRow[]> {
+    try {
+        return await internalGetLocks();
+    } catch {
+        try {
+            const rows = await db.select().from(activityLocks).orderBy(activityLocks.activity, activityLocks.id);
+            return rows as ActivityLockRow[];
+        } catch (err) {
+            console.error("[ActivityLockService] Direct query fallback failed:", err);
+            return [];
+        }
+    }
+}
+
 /** All lock rows (cached 60s, invalidated on any write). */
 export async function getActivityLocks(): Promise<ActivityLockRow[]> {
-    return internalGetLocks();
+    return getLocksSafe();
 }
 
 export interface ActivityUnlockResult {
@@ -162,7 +176,7 @@ export interface ActivityUnlockResult {
  * provided for user-facing blocks.
  */
 export async function isActivityUnlocked(activity: string, ctx: ActivityLockContext = {}): Promise<ActivityUnlockResult> {
-    const locks = await internalGetLocks();
+    const locks = await getLocksSafe();
     const matching = locks.filter(l => l.activity === activity && lockMatchesScope(l, ctx));
     if (matching.length === 0) return { unlocked: true };
 
