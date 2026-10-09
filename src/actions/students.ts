@@ -67,22 +67,44 @@ export async function getStudents(options: { search?: string, page?: number, pag
         if (typeof level === 'string') {
             switch(level) {
                 case "ND 1":
-                    levelCondition = and(eq(students.currentLevel, 1), eq(programmes.programmeType, 'ND'));
+                    levelCondition = and(
+                        eq(students.currentLevel, 1), 
+                        eq(programmes.programmeType, 'ND'),
+                        sql`(${students.status} NOT IN ('nd_graduant', 'nd_graduated', 'hnd_graduant', 'hnd_graduated') OR ${students.status} IS NULL)`
+                    );
                     break;
                 case "ND 2":
-                    levelCondition = and(eq(students.currentLevel, 2), eq(programmes.programmeType, 'ND'));
+                    levelCondition = and(
+                        eq(students.currentLevel, 2), 
+                        eq(programmes.programmeType, 'ND'),
+                        sql`(${students.status} NOT IN ('nd_graduant', 'nd_graduated', 'hnd_graduant', 'hnd_graduated') OR ${students.status} IS NULL)`
+                    );
                     break;
+                case "ND_GRADUANT":
                 case "ND_GRADUATED":
-                    levelCondition = eq(students.status, 'nd_graduant');
+                case "ND Graduant":
+                case "ND Graduated":
+                    levelCondition = or(eq(students.status, 'nd_graduant'), eq(students.status, 'nd_graduated'));
                     break;
                 case "HND 1":
-                    levelCondition = and(eq(students.currentLevel, 1), eq(programmes.programmeType, 'HND'));
+                    levelCondition = and(
+                        eq(students.currentLevel, 1), 
+                        eq(programmes.programmeType, 'HND'),
+                        sql`(${students.status} NOT IN ('nd_graduant', 'nd_graduated', 'hnd_graduant', 'hnd_graduated') OR ${students.status} IS NULL)`
+                    );
                     break;
                 case "HND 2":
-                    levelCondition = and(eq(students.currentLevel, 2), eq(programmes.programmeType, 'HND'));
+                    levelCondition = and(
+                        eq(students.currentLevel, 2), 
+                        eq(programmes.programmeType, 'HND'),
+                        sql`(${students.status} NOT IN ('nd_graduant', 'nd_graduated', 'hnd_graduant', 'hnd_graduated') OR ${students.status} IS NULL)`
+                    );
                     break;
+                case "HND_GRADUANT":
                 case "HND_GRADUATED":
-                    levelCondition = eq(students.status, 'hnd_graduant');
+                case "HND Graduant":
+                case "HND Graduated":
+                    levelCondition = or(eq(students.status, 'hnd_graduant'), eq(students.status, 'hnd_graduated'));
                     break;
                 default:
                     if (!isNaN(Number(level))) {

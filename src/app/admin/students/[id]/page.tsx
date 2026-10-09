@@ -168,7 +168,19 @@ export default function StudentDetailsPage() {
                             </div>
                             <div className="space-y-1">
                                 <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Current Level</span>
-                                <p className="text-sm font-medium text-slate-900">{isK12 ? `Grade ${student.currentLevel}` : `Level ${student.currentLevel}`}</p>
+                                <p className="text-sm font-medium text-slate-900">
+                                    {student.status === 'nd_graduant'
+                                        ? 'ND Graduant'
+                                        : student.status === 'nd_graduated'
+                                        ? 'ND Graduated'
+                                        : student.status === 'hnd_graduant'
+                                        ? 'HND Graduant'
+                                        : student.status === 'hnd_graduated'
+                                        ? 'HND Graduated'
+                                        : isK12
+                                        ? `Grade ${student.currentLevel}`
+                                        : `${student.programme?.programmeType || ''} ${student.currentLevel}`.trim()}
+                                </p>
                             </div>
                             <div className="space-y-1">
                                 <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Admission Year</span>

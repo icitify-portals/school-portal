@@ -52,8 +52,15 @@ function StudentsPageContent() {
     const deptIdParam = searchParams.get("deptId") || undefined;
 
     const levels = isK12 
-        ? [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
-        : ["ND 1", "ND 2", "ND_GRADUATED", "HND 1", "HND 2", "HND_GRADUATED"];
+        ? [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(l => ({ value: String(l), label: `Grade ${l}` }))
+        : [
+            { value: "ND 1", label: "ND 1" },
+            { value: "ND 2", label: "ND 2" },
+            { value: "ND_GRADUANT", label: "ND Graduant" },
+            { value: "HND 1", label: "HND 1" },
+            { value: "HND 2", label: "HND 2" },
+            { value: "HND_GRADUANT", label: "HND Graduant" },
+          ];
 
     const fetchStudents = useCallback(async () => {
         setLoading(true);
@@ -199,8 +206,8 @@ function StudentsPageContent() {
                     >
                         <option value="">All Levels</option>
                         {levels.map((lvl) => (
-                            <option key={lvl} value={lvl}>
-                                {isK12 ? `Grade ${lvl}` : lvl}
+                            <option key={lvl.value} value={lvl.value}>
+                                {lvl.label}
                             </option>
                         ))}
                     </select>
@@ -383,9 +390,27 @@ function StudentsPageContent() {
                                             )}
                                         </td>
                                         <td className="px-6 py-4">
-                                            <span className="text-sm font-bold text-slate-600">
-                                                {isK12 ? `Grade ${s.currentLevel}` : `${s.programme?.programmeType || ''} ${s.currentLevel}`.trim()}
-                                            </span>
+                                            {s.status === 'nd_graduant' ? (
+                                                <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200 shadow-sm">
+                                                    ND Graduant
+                                                </span>
+                                            ) : s.status === 'nd_graduated' ? (
+                                                <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 shadow-sm">
+                                                    ND Graduated
+                                                </span>
+                                            ) : s.status === 'hnd_graduant' ? (
+                                                <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold bg-purple-50 text-purple-800 border border-purple-200 shadow-sm">
+                                                    HND Graduant
+                                                </span>
+                                            ) : s.status === 'hnd_graduated' ? (
+                                                <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold bg-indigo-50 text-indigo-800 border border-indigo-200 shadow-sm">
+                                                    HND Graduated
+                                                </span>
+                                            ) : (
+                                                <span className="text-sm font-bold text-slate-700">
+                                                    {isK12 ? `Grade ${s.currentLevel}` : `${s.programme?.programmeType || ''} ${s.currentLevel}`.trim()}
+                                                </span>
+                                            )}
                                         </td>
                                         <td className="px-6 py-4">
                                             {s.currentSession ? (
