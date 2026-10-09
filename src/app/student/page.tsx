@@ -38,8 +38,8 @@ import { getStudentLibraryFines } from "@/actions/library";
 import { ToggleableStatCard } from "@/components/student/ToggleableStatCard";
 import { cookies } from "next/headers";
 import { db } from "@/db/db";
-import { eq, and } from "drizzle-orm";
-import { institutionalUnits, medicalExcuses } from "@/db/schema";
+import { eq, and, or, like } from "drizzle-orm";
+import { institutionalUnits, medicalExcuses, admissionFormTemplates } from "@/db/schema";
 
 import { PushSubscriptionToggle } from "@/components/notifications/PushSubscriptionToggle";
 
@@ -61,12 +61,33 @@ export default async function StudentDashboard() {
     // Dynamic auto-healing check for student profile
     const studentRecord = await getStudentByUserId(userId);
     const isGraduated = isGraduatedStatus(studentRecord?.status);
-    // ND 2 (or ND 200 legacy level) and ND graduates can apply for HND admissions
-    const canApplyHND =
-        studentRecord?.status === 'nd_graduant' ||
-        studentRecord?.status === 'graduated' ||
-        (studentRecord?.programmeType === 'ND' &&
-            (studentRecord?.currentLevel === 2 || studentRecord?.currentLevel === 200));
+
+    // Apply for HND should ONLY show for students currently in ND 2 alone during the open admission window
+    const isND2Active =
+        studentRecord?.programmeType?.toUpperCase() === 'ND' &&
+        (studentRecord?.currentLevel === 2 || studentRecord?.currentLevel === 200) &&
+        (!studentRecord?.status || studentRecord?.status === 'active');
+
+    const now = new Date();
+    const activeHndTemplate = await db.query.admissionFormTemplates.findFirst({
+        where: and(
+            eq(admissionFormTemplates.isActive, true),
+            or(
+                like(admissionFormTemplates.name, '%HND%'),
+                like(admissionFormTemplates.slug, '%hnd%')
+            )
+        )
+    });
+
+    const isAdmissionWindowOpen = Boolean(
+        activeHndTemplate &&
+        new Date(activeHndTemplate.startDate) <= now &&
+        (activeHndTemplate.lateEndDate
+            ? new Date(activeHndTemplate.lateEndDate) >= now
+            : new Date(activeHndTemplate.endDate) >= now)
+    );
+
+    const canApplyHND = isND2Active && isAdmissionWindowOpen;
     const statsData = await getStudentDashboardStats(userId);
     
     // Fetch active medical excuse if any
