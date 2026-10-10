@@ -694,9 +694,19 @@ export async function adminConfirmProcessingFeePayment(applicationId: number) {
         await db.update(admissionApplicationsV2)
             .set({ processingFeeStatus: 'paid' })
             .where(eq(admissionApplicationsV2.id, applicationId));
-        
+
+        // Setting the flag alone never mints a matriculation number, so the
+        // applicant stayed on the "pay processing fee" screen with a locked
+        // admission letter. Run the same registration the Paystack callback
+        // runs and report its outcome to the admin.
+        const finalization = await finalizeStudentAdmission(applicationId);
+
         safeRevalidatePath(`/admin/admission/v2/${applicationId}`);
-        return { success: true };
+        return {
+            success: true,
+            matricNumber: finalization.success ? finalization.matricNumber : undefined,
+            registrationError: finalization.success ? null : finalization.error,
+        };
     } catch (error) {
         console.error("Failed to confirm processing fee:", error);
         return { success: false, error: "Failed to confirm fee" };

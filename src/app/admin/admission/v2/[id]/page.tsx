@@ -237,7 +237,13 @@ export default function V2ApplicationDetailPage() {
         const res = await adminConfirmProcessingFeePayment(app.id);
         
         if (res?.success) {
-            toast.success("Processing fee confirmed manually.", { id: toastId });
+            if (res.matricNumber) {
+                toast.success(`Processing fee confirmed. Matric Number: ${res.matricNumber}`, { id: toastId });
+            } else if (res.registrationError) {
+                toast.warning(`Processing fee confirmed, but registration is incomplete: ${res.registrationError}`, { id: toastId, duration: 10000 });
+            } else {
+                toast.success("Processing fee confirmed manually.", { id: toastId });
+            }
             const data = await getAdminV2ApplicationDetail(app.id);
             setApp(data);
         } else {

@@ -1,5 +1,6 @@
 "use server";
 
+import crypto from "crypto";
 import { auth } from "@/auth";
 import { logActivity } from "./audit";
 
@@ -119,7 +120,6 @@ export async function initiatePayment(gateway: string, amount: number, reference
             const merchantId = isLive ? "19201597339" : (process.env.REMITA_MERCHANT_ID || "19201597339");
             const serviceTypeId = isLive ? "8817651539" : (process.env.REMITA_SERVICE_TYPE_ID || "8817651539"); // ND1 Default
             const apiKey = isLive ? "6NYU4646" : (process.env.REMITA_API_KEY || "6NYU4646");
-            const crypto = require('crypto');
             const hash = crypto.createHash('sha512').update(`${merchantId}${serviceTypeId}${reference}${amount}${apiKey}`).digest('hex');
             
             const baseUrl = isLive ? 'https://login.remita.net' : 'https://demo.remita.net';
@@ -223,7 +223,6 @@ export async function verifyPayment(gateway: string, reference: string, rrr?: st
             const isLive = process.env.REMITA_ENV !== 'demo';
             const merchantId = isLive ? "19201597339" : (process.env.REMITA_MERCHANT_ID || "19201597339");
             const apiKey = isLive ? "6NYU4646" : (process.env.REMITA_API_KEY || "6NYU4646");
-            const crypto = require('crypto');
             
             const baseUrl = isLive ? 'https://login.remita.net' : 'https://demo.remita.net';
             
