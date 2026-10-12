@@ -116,23 +116,36 @@ export function matchStudent(
     }
   }
 
-  // ─── Strategy 3: Serial number match (70-85%) ───
-  if (candidates.length === 0) {
+  // ─── Strategy 3: Serial number match (Strict: same department only) ───
+  // Note: Unchecked serial number matching previously caused cross-department
+  // misattribution (e.g. matching HND Statistics to ND Computer Science because both ended in 120546).
+  // Cross-matric serial matching is disabled to preserve the authentic uploaded matric number.
+  if (candidates.length === 0 && options?.strictMatricOnly !== true) {
     const serial = extractSerial(identifier, 5);
-    if (serial) {
+    const parsedId = parseMatric(identifier);
+    if (serial && parsedId.department) {
       for (const s of students) {
         if (s.matricNumber) {
-          const sSerial = extractSerial(s.matricNumber, 5);
-          if (sSerial === serial) {
-            candidates.push({ student: s, confidence: 0.75, strategy: 'serial_match' });
+          const sParsed = parseMatric(s.matricNumber);
+          // Only permit serial match if department and programmeType strictly match!
+          if (
+            sParsed.department &&
+            sParsed.department.toUpperCase() === parsedId.department.toUpperCase() &&
+            sParsed.programmeType === parsedId.programmeType
+          ) {
+            const sSerial = extractSerial(s.matricNumber, 5);
+            if (sSerial === serial) {
+              candidates.push({ student: s, confidence: 0.85, strategy: 'serial_dept_match' });
+            }
           }
         }
       }
     }
   }
 
-  // ─── Strategy 4: Name + Department + Level match (60-80%) ───
-  if (candidates.length === 0 && options?.rowName) {
+  // ─── Strategy 4: Name + Department + Level match (Only if NO identifier was provided in CSV) ───
+  // If an explicit matric identifier was provided in the CSV, never rebind to a different student by name.
+  if (candidates.length === 0 && options?.rowName && !identifier) {
     for (const s of students) {
       const nameSim = nameSimilarity(options.rowName, s.name || s.firstName + ' ' + s.lastName);
       if (nameSim >= 0.7) {
@@ -154,20 +167,6 @@ export function matchStudent(
           student: s,
           confidence: Math.min(nameSim * 0.8 + boost, 0.85),
           strategy: 'name_dept_match',
-        });
-      }
-    }
-  }
-
-  // ─── Strategy 5: Name-only fuzzy match (50-70%) ───
-  if (candidates.length === 0 && options?.rowName) {
-    for (const s of students) {
-      const nameSim = nameSimilarity(options.rowName, s.name || s.firstName + ' ' + s.lastName);
-      if (nameSim >= 0.8) {
-        candidates.push({
-          student: s,
-          confidence: nameSim * 0.7,
-          strategy: 'name_fuzzy',
         });
       }
     }

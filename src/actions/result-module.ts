@@ -1049,6 +1049,21 @@ async function findOrCreateStudentForSession(
       deptId = dept?.id;
     }
 
+    // Resolve programme from department and programmeType if not supplied explicitly
+    let programmeId = options.autoCreateProgrammeId;
+    if (!programmeId && deptId) {
+      const progs = await db.query.programmes.findMany({
+        where: eq(programmes.deptId, deptId),
+      });
+      const targetProgType = parsedMatric?.programmeType || 'ND';
+      const matchingProg = progs.find((p) => p.programmeType === targetProgType) || progs[0];
+      if (matchingProg) {
+        programmeId = matchingProg.id;
+      }
+    }
+
+    const initialLevel = parsedMatric?.programmeType === 'HND' ? 3 : 1;
+
     const email = `${matric.toLowerCase().replace(/\//g, "_")}@student.fss.edu.ng`;
 
     const [existingUser] = await db
@@ -1077,9 +1092,10 @@ async function findOrCreateStudentForSession(
       matricNumber: matric,
       admissionYear: year,
       currentSessionId: options.autoCreateForSession,
-      currentLevel: 1,
+      currentLevel: initialLevel,
+      programmeType: parsedMatric?.programmeType || 'ND',
       deptId: deptId || null,
-      programmeId: options.autoCreateProgrammeId || null,
+      programmeId: programmeId || null,
       status: "active",
     } as any);
 
