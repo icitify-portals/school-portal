@@ -32,6 +32,7 @@ function StudentsPageContent() {
     const [sessions, setSessions] = useState<any[]>([]);
     const [departmentsList, setDepartmentsList] = useState<any[]>([]);
     const [unassignedCount, setUnassignedCount] = useState(0);
+    const [graduationYears, setGraduationYears] = useState<number[]>([]);
     const [showImporter, setShowImporter] = useState(false);
     const [selectedUser, setSelectedUser] = useState<any | null>(null);
 
@@ -50,6 +51,18 @@ function StudentsPageContent() {
     const sessionParam = searchParams.get("session") || undefined;
     const semesterParam = searchParams.get("semester") || undefined;
     const deptIdParam = searchParams.get("deptId") || undefined;
+    const statusParam = searchParams.get("status") || "active";
+    const gradYearParam = searchParams.get("gradYear") || undefined;
+
+    const graduantLevels = ["ND_GRADUANT", "ND_GRADUATED", "ND Graduant", "ND Graduated", "HND_GRADUANT", "HND_GRADUATED", "HND Graduant", "HND Graduated"];
+    const levelIsGraduant = !!level && graduantLevels.includes(level);
+    const statusOptions = [
+        { value: "active", label: "Active" },
+        { value: "graduant", label: "Graduant" },
+        { value: "suspended", label: "Suspended" },
+        { value: "pending_review", label: "Pending Review" },
+        { value: "all", label: "All Statuses" },
+    ];
 
     const levels = isK12 
         ? [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(l => ({ value: String(l), label: `Grade ${l}` }))
@@ -64,13 +77,13 @@ function StudentsPageContent() {
 
     const fetchStudents = useCallback(async () => {
         setLoading(true);
-        const res = await getStudents({ search, page, pageSize, level, sessionId: sessionParam, semester: semesterParam, departmentId: deptIdParam ? parseInt(deptIdParam) : undefined });
+        const res = await getStudents({ search, page, pageSize, level, sessionId: sessionParam, semester: semesterParam, departmentId: deptIdParam ? parseInt(deptIdParam) : undefined, status: levelIsGraduant ? undefined : statusParam, graduationYear: gradYearParam });
         if (res.success) {
             setStudents(res.data);
             setTotalCount(res.totalCount);
         }
         setLoading(false);
-    }, [search, page, pageSize, level, sessionParam, semesterParam, deptIdParam]);
+    }, [search, page, pageSize, level, sessionParam, semesterParam, deptIdParam, statusParam, gradYearParam, levelIsGraduant]);
 
     useEffect(() => {
         fetchStudents();
@@ -83,6 +96,7 @@ function StudentsPageContent() {
             if (res.success) {
                 setSessions(res.sessions);
                 setUnassignedCount(res.unassignedCount);
+                setGraduationYears(res.graduationYears || []);
             }
         })();
     }, []);
@@ -137,6 +151,28 @@ function StudentsPageContent() {
             params.set("semester", value);
         } else {
             params.delete("semester");
+        }
+        params.set("page", "1");
+        router.push(`${pathname}?${params.toString()}`);
+    };
+
+    const handleStatusChange = (value: string) => {
+        const params = new URLSearchParams(searchParams);
+        if (value && value !== "active") {
+            params.set("status", value);
+        } else {
+            params.delete("status");
+        }
+        params.set("page", "1");
+        router.push(`${pathname}?${params.toString()}`);
+    };
+
+    const handleGradYearChange = (value: string) => {
+        const params = new URLSearchParams(searchParams);
+        if (value) {
+            params.set("gradYear", value);
+        } else {
+            params.delete("gradYear");
         }
         params.set("page", "1");
         router.push(`${pathname}?${params.toString()}`);
@@ -209,6 +245,29 @@ function StudentsPageContent() {
                             <option key={lvl.value} value={lvl.value}>
                                 {lvl.label}
                             </option>
+                        ))}
+                    </select>
+                    <select
+                        className="px-3 h-10 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white shadow-sm text-xs font-bold uppercase tracking-wider text-slate-700 cursor-pointer"
+                        value={statusParam}
+                        onChange={(e) => handleStatusChange(e.target.value)}
+                        title="Filter by student status"
+                    >
+                        {statusOptions.map((opt) => (
+                            <option key={opt.value} value={opt.value}>
+                                {opt.value === "active" ? "Status: Active" : `Status: ${opt.label}`}
+                            </option>
+                        ))}
+                    </select>
+                    <select
+                        className="px-3 h-10 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white shadow-sm text-xs font-bold uppercase tracking-wider text-slate-700 cursor-pointer"
+                        value={gradYearParam || ""}
+                        onChange={(e) => handleGradYearChange(e.target.value)}
+                        title="Filter graduants by year of graduation"
+                    >
+                        <option value="">All Graduation Years</option>
+                        {graduationYears.map((y) => (
+                            <option key={y} value={y.toString()}>{`Graduated ${y}`}</option>
                         ))}
                     </select>
                     <select

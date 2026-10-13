@@ -10,7 +10,7 @@ import { auth } from "@/auth";
 import { generateMatricNumber } from "@/actions/matriculation";
 import { hasPermission, hasRole } from "@/lib/rbac";
 
-export async function getStudents(options: { search?: string, page?: number, pageSize?: number, level?: number | string, sessionId?: string, semester?: string, departmentId?: number, programmeId?: number } = {}) {
+export async function getStudents(options: { search?: string, page?: number, pageSize?: number, level?: number | string, sessionId?: string, semester?: string, departmentId?: number, programmeId?: number, status?: string, graduationYear?: number | string } = {}) {
     try {
         const allowed = await hasPermission("students.view") || await hasRole("admin") || await hasRole("superadmin");
         if (!allowed) {
@@ -118,6 +118,27 @@ export async function getStudents(options: { search?: string, page?: number, pag
         const departmentCondition = options.departmentId ? eq(students.deptId, options.departmentId) : undefined;
         const programmeCondition = options.programmeId ? eq(students.programmeId, options.programmeId) : undefined;
 
+        // Status filter. A graduant *level* already encodes a status, so when one
+        // of those levels is selected we skip this to avoid an impossible
+        // ACTIVE + graduant combination.
+        const levelImpliesGraduantStatus = level === "ND_GRADUANT" || level === "ND_GRADUATED"
+            || level === "ND Graduant" || level === "ND Graduated"
+            || level === "HND_GRADUANT" || level === "HND_GRADUATED"
+            || level === "HND Graduant" || level === "HND Graduated";
+
+        let statusCondition: any = undefined;
+        if (!levelImpliesGraduantStatus && options.status && options.status !== "all") {
+            if (options.status === "graduant") {
+                statusCondition = sql`${students.status} IN ('nd_graduant','hnd_graduant','nd_graduated','hnd_graduated')`;
+            } else {
+                statusCondition = sql`${students.status} = ${options.status}`;
+            }
+        }
+
+        const graduationYearCondition = options.graduationYear && !isNaN(Number(options.graduationYear))
+            ? sql`YEAR(${students.graduatedAt}) = ${Number(options.graduationYear)}`
+            : undefined;
+
         // Session filter. "unassigned" buckets students with no current session,
         // which is the single largest cohort in the legacy data.
         let sessionCondition: any = undefined;
@@ -148,6 +169,8 @@ export async function getStudents(options: { search?: string, page?: number, pag
             levelCondition,
             departmentCondition,
             programmeCondition,
+            statusCondition,
+            graduationYearCondition,
             sessionCondition,
             semesterCondition,
             search ? or(
@@ -228,8 +251,12 @@ export async function getStudentSessionOptions() {
         const allowed = await hasPermission("students.view") || await hasRole("admin")
             || await hasRole("superadmin") || await hasRole("icitify_dev")
             || await hasRole("registrar") || await hasRole("admission_officer");
-        if (!allowed) return { success: false, error: "Access denied", sessions: [] };
+        if (!allowed) return { success: false, error: "Access denied", sessions: [], unassignedCount: 0, graduationYears: [] };
 
+        // Counts are intentionally restricted to ACTIVE students: graduants and
+        // other non-active statuses are excluded from the per-session tally so
+        // it matches the active-student count. Graduants are reached instead via
+        // the Status filter + graduation year.
         const [rows] = await db.execute(sql`
             SELECT s.id,
                    s.name,
@@ -242,6 +269,7 @@ export async function getStudentSessionOptions() {
                        WHERE (current_session_id = s.id 
                               OR id IN (SELECT student_id FROM enrollments WHERE session_id = s.id))
                          AND deleted_at IS NULL
+                         AND status = 'active'
                    ) AS student_count
             FROM academic_sessions s
             ORDER BY s.is_current DESC, s.id DESC
@@ -249,7 +277,16 @@ export async function getStudentSessionOptions() {
 
         const [unassigned] = await db.execute(sql`
             SELECT COUNT(*) AS c FROM students
-            WHERE current_session_id IS NULL AND deleted_at IS NULL
+            WHERE current_session_id IS NULL AND deleted_at IS NULL AND status = 'active'
+        `) as unknown as [Array<Record<string, any>>];
+
+        // Distinct graduation years available among graduants (for the filter).
+        const [yearRows] = await db.execute(sql`
+            SELECT DISTINCT YEAR(graduated_at) AS y
+            FROM students
+            WHERE graduated_at IS NOT NULL AND deleted_at IS NULL
+              AND status IN ('nd_graduant','hnd_graduant','nd_graduated','hnd_graduated')
+            ORDER BY y DESC
         `) as unknown as [Array<Record<string, any>>];
 
         return {
@@ -262,11 +299,12 @@ export async function getStudentSessionOptions() {
                 startDate: r.start_date ? new Date(r.start_date).toISOString() : null,
                 studentCount: Number(r.student_count || 0)
             })),
-            unassignedCount: Number(unassigned[0]?.c || 0)
+            unassignedCount: Number(unassigned[0]?.c || 0),
+            graduationYears: yearRows.map((r) => Number(r.y)).filter((y) => !isNaN(y))
         };
     } catch (error) {
         console.error("Failed to fetch student session options:", error);
-        return { success: false, error: "Failed to fetch sessions", sessions: [], unassignedCount: 0 };
+            return { success: false, error: "Failed to fetch sessions", sessions: [], unassignedCount: 0, graduationYears: [] };
     }
 }
 
