@@ -375,6 +375,7 @@ const adminMenuItems: MenuItem[] = [
             { name: "Placement Corrections", href: "/admin/students/placement" },
             { name: "Records Mobility", href: "/admin/students/transfer" },
             { name: "Incomplete Admissions", href: "/admin/students/orphans" },
+            { name: "Record Resolutions", href: "/admin/student-resolutions" },
         ]
     },
     {
@@ -721,6 +722,7 @@ export function Sidebar({ enabledModules = {}, mobileOpen = false, onClose }: {
                         { name: "Placement Corrections", href: "/admin/students/placement" },
                         { name: "Records Mobility", href: "/admin/students/transfer" },
                         { name: "Incomplete Admissions", href: "/admin/students/orphans" },
+                        { name: "Record Resolutions", href: "/admin/student-resolutions" },
                     ]
                 },
                 { name: "User Management", icon: UsersIcon, href: "/admin/users" },
