@@ -743,6 +743,11 @@ export async function updateAdminStudentProfile(studentId: number, updatePayload
             const m = (updatePayload.studyMode || '').toString().trim();
             studentUpdates.studyMode = validModes.includes(m) ? m : null;
         }
+        if (updatePayload.modeOfEntry !== undefined) {
+            const validEntries = ['JAMB', 'Direct', 'UTME', 'Transfer', 'Conversion'];
+            const me = (updatePayload.modeOfEntry || '').toString().trim();
+            studentUpdates.modeOfEntry = validEntries.includes(me) ? me : null;
+        }
 
         if (Object.keys(studentUpdates).length > 0) {
             await db.update(students).set(studentUpdates).where(eq(students.id, studentId));

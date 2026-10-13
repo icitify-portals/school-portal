@@ -54,6 +54,7 @@ export default function StudentDetailsPage() {
             admissionSessionId: student.admissionSessionId || '',
             status: student.status || '',
             studyMode: student.studyMode || '',
+            modeOfEntry: student.modeOfEntry || '',
             userStatus: student.user?.status || ''
         });
         setEditOpen(true);
@@ -189,6 +190,14 @@ export default function StudentDetailsPage() {
                             <div className="space-y-1">
                                 <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">JAMB / Admission Number</span>
                                 <p className="text-sm font-medium text-slate-900">{student.jambNumber || student.admissionNumber || 'N/A'}</p>
+                            </div>
+                            <div className="space-y-1">
+                                <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Study Mode</span>
+                                <p className="text-sm font-medium text-slate-900 capitalize">{student.studyMode || 'N/A'}</p>
+                            </div>
+                            <div className="space-y-1">
+                                <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Mode of Entry</span>
+                                <p className="text-sm font-medium text-slate-900">{student.modeOfEntry || 'N/A'}</p>
                             </div>
                         </CardContent>
                     </Card>
@@ -411,6 +420,18 @@ export default function StudentDetailsPage() {
                                             <option value="full-time">Full-time</option>
                                             <option value="part-time">Part-time</option>
                                             <option value="elearning">E-learning</option>
+                                        </select>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label>Mode of Entry</Label>
+                                        <select
+                                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                                            value={editData.modeOfEntry || ''}
+                                            onChange={e => setEditData({...editData, modeOfEntry: e.target.value})}
+                                        >
+                                            <option value="">— Select —</option>
+                                            <option value="JAMB">JAMB (UTME)</option>
+                                            <option value="Direct">Direct Entry</option>
                                         </select>
                                     </div>
                                 </div>
