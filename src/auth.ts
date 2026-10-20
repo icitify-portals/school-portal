@@ -17,7 +17,7 @@ import Google from "next-auth/providers/google";
 import MicrosoftEntraID from "next-auth/providers/microsoft-entra-id";
 import { db } from "@/db/db";
 import { users, roles, permissions, rolePermissions, userRoles, students, staffProfiles, userPermissions } from "@/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, or } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { authConfig } from "./auth.config";
 import { normalizeEmail } from "@/lib/email";
@@ -123,12 +123,18 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                 user = userByEmail;
 
                 if (!user) {
-                    // Try finding student by matric number
+                    // Try finding student by matric number or admission number
+                    const normLoginId = (credentials.email as string).trim().toUpperCase();
                     const [studentRec] = await db
                         .select({ user: users, student: students })
                         .from(students)
                         .innerJoin(users, eq(students.userId, users.id))
-                        .where(eq(students.matricNumber, (credentials.email as string).trim().toUpperCase()))
+                        .where(
+                            or(
+                                eq(students.matricNumber, normLoginId),
+                                eq(students.admissionNumber, normLoginId)
+                            )
+                        )
                         .limit(1);
                         
                     if (studentRec) {
@@ -162,26 +168,54 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
                 if (!isAuthenticated) {
                     let passwordMatched = false;
+                    const rawPassword = String(credentials.password ?? '');
                     
                     if (user.password) {
-                        passwordMatched = await bcrypt.compare(
-                            credentials.password as string,
-                            user.password
-                        );
+                        if (user.password.startsWith('$2')) {
+                            passwordMatched = await bcrypt.compare(
+                                rawPassword,
+                                user.password
+                            );
+                            if (!passwordMatched && rawPassword.trim() !== rawPassword) {
+                                passwordMatched = await bcrypt.compare(
+                                    rawPassword.trim(),
+                                    user.password
+                                );
+                            }
+                        } else if (/^[a-f0-9]{64}$/i.test(user.password)) {
+                            const crypto = await import("crypto");
+                            const shaExact = crypto.createHash("sha256").update(rawPassword.trim()).digest("hex");
+                            const shaUpper = crypto.createHash("sha256").update(rawPassword.trim().toUpperCase()).digest("hex");
+                            passwordMatched =
+                                user.password.toLowerCase() === shaExact.toLowerCase() ||
+                                user.password.toLowerCase() === shaUpper.toLowerCase();
+                        } else {
+                            // Direct plain comparison fallback for legacy unhashed entries
+                            passwordMatched =
+                                user.password === rawPassword ||
+                                user.password === rawPassword.trim();
+                        }
                     }
                     
                     if (passwordMatched) {
                         isAuthenticated = true;
                     } else {
                         // Check for default fallback passwords
-                        const providedPassword = credentials.password as string;
+                        const providedPassword = rawPassword.trim();
+                        const providedUpper = providedPassword.toUpperCase();
                         
                         if (user.role === 'student') {
                             if (!studentRecord) {
                                 const [sr] = await db.select().from(students).where(eq(students.userId, user.id)).limit(1);
                                 studentRecord = sr;
                             }
-                            if (studentRecord && (providedPassword === studentRecord.matricNumber || providedPassword === studentRecord.admissionNumber)) {
+                            const matricUpper = studentRecord?.matricNumber?.trim().toUpperCase();
+                            const admUpper = studentRecord?.admissionNumber?.trim().toUpperCase();
+                            if (
+                                studentRecord &&
+                                ((matricUpper && providedUpper === matricUpper) ||
+                                 (admUpper && providedUpper === admUpper))
+                            ) {
                                 isAuthenticated = true;
                                 user.requiresPasswordChange = true;
                                 // Enforce it in the DB immediately

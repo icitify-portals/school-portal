@@ -8,24 +8,11 @@ import crypto from "crypto";
 import { sendEmail } from "@/lib/mail";
 import { emailVerificationTokens } from "@/db/schema";
 import { normalizeEmail, isValidEmailFormat } from "@/lib/email";
+import { validatePasswordStrength } from "@/lib/password-validator";
 
 export async function POST(req: Request) {
     try {
-        // SECURITY FIX H-1a: Rate-limit registrations to prevent bulk account creation.
-        // Rate limiting removed per user request
-        // const forwarded = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
-        // const ip = forwarded.split(',')[0].trim();
-        // const rateCheck = await checkRateLimit(`register:${ip}`);
-        // if (!rateCheck.allowed) {
-        //     return NextResponse.json(
-        //         { message: "Too many requests. Please try again later." },
-        //         { status: 429, headers: { 'Retry-After': '60' } }
-        //     );
-        // }
-
         const body = await req.json();
-        // SECURITY FIX H-1b: Destructure only the fields we trust from the request body.
-        // 'role' is intentionally excluded — public registrations are always 'student'.
         const { email, password, name, surname, firstName, middleName } = body;
 
         if (!email || !password || !name) {
@@ -35,9 +22,7 @@ export async function POST(req: Request) {
             );
         }
 
-        // SECURITY FIX H-1c: Validate email format server-side.
-        // Normalize FIRST — copy-pasted emails often carry invisible
-        // trailing spaces / NBSP that would otherwise fail validation.
+        // Validate email format server-side
         const emailNorm = normalizeEmail(email);
         if (!isValidEmailFormat(emailNorm)) {
             return NextResponse.json(
@@ -46,10 +31,12 @@ export async function POST(req: Request) {
             );
         }
 
-        // Enforce minimum password length
-        if (typeof password !== 'string' || password.length < 8) {
+        // Enforce password strength and rules (minimum 8 chars, letters and numbers, not numbers alone)
+        const cleanPassword = String(password ?? '').trim();
+        const validation = validatePasswordStrength(cleanPassword);
+        if (!validation.isValid) {
             return NextResponse.json(
-                { message: "Password must be at least 8 characters" },
+                { message: validation.firstError || "Password must be at least 8 characters and include both letters and numbers." },
                 { status: 400 }
             );
         }
@@ -71,7 +58,7 @@ export async function POST(req: Request) {
         }
 
         // Hash password
-        const hashedPassword = await bcrypt.hash(password, 10);
+        const hashedPassword = await bcrypt.hash(cleanPassword, 10);
 
         // Insert user — role is always 'applicant' for public self-registration
         const [insertResult] = await db.insert(users).values({
@@ -141,4 +128,3 @@ export async function POST(req: Request) {
         );
     }
 }
-

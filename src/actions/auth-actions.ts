@@ -8,6 +8,7 @@ import bcrypt from "bcryptjs";
 import { NotificationService } from "@/services/NotificationService";
 import { sendEmail } from "@/lib/mail";
 import { auth } from "@/auth";
+import { validatePasswordStrength } from "@/lib/password-validator";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
@@ -22,7 +23,12 @@ export async function getAuthUser() {
 
 export async function forgotPassword(email: string) {
     try {
-        const [user] = await db.select().from(users).where(eq(users.email, email.toLowerCase())).limit(1);
+        const cleanEmail = (email || '').trim().toLowerCase();
+        if (!cleanEmail) {
+            return { success: false, error: "Please provide a valid email address." };
+        }
+
+        const [user] = await db.select().from(users).where(eq(users.email, cleanEmail)).limit(1);
         if (!user) {
             // For security, don't reveal if user exists
             return { success: true, message: "If an account with that email exists, we have sent a reset link." };
@@ -74,23 +80,50 @@ export async function forgotPassword(email: string) {
 
 export async function resetPasswordWithToken(token: string, password: string) {
     try {
-        // Find valid token
+        const cleanToken = String(token ?? '').trim();
+        const cleanPassword = String(password ?? '').trim();
+
+        if (!cleanToken) {
+            return { success: false, error: "Reset token is missing or invalid. Please request a new link." };
+        }
+
+        // Validate password strength & rules
+        const validation = validatePasswordStrength(cleanPassword);
+        if (!validation.isValid) {
+            return {
+                success: false,
+                error: validation.firstError || "Password does not meet the security requirements."
+            };
+        }
+
+        // Find token record
         const [tokenRecord] = await db.select()
             .from(passwordResetTokens)
-            .where(and(
-                eq(passwordResetTokens.token, token),
-                gt(passwordResetTokens.expiresAt, new Date())
-            ))
+            .where(eq(passwordResetTokens.token, cleanToken))
             .limit(1);
 
         if (!tokenRecord) {
-            return { success: false, error: "Invalid or expired reset token." };
+            return {
+                success: false,
+                error: "This password reset link is invalid or has already been used. Please request a new link."
+            };
+        }
+
+        // Check if token has expired
+        const now = new Date();
+        const expiresAt = new Date(tokenRecord.expiresAt);
+        if (expiresAt.getTime() <= now.getTime()) {
+            await db.delete(passwordResetTokens).where(eq(passwordResetTokens.id, tokenRecord.id));
+            return {
+                success: false,
+                error: "This password reset link has expired. Reset links are valid for 1 hour. Please request a new link."
+            };
         }
 
         // Hash new password
-        const passwordHash = await bcrypt.hash(password, 10);
+        const passwordHash = await bcrypt.hash(cleanPassword, 10);
 
-        // Update user
+        // Update user, unlock account, and reset failed attempts
         await db.update(users).set({
             password: passwordHash,
             requiresPasswordChange: false,
@@ -98,22 +131,38 @@ export async function resetPasswordWithToken(token: string, password: string) {
             lockoutUntil: null
         }).where(eq(users.id, tokenRecord.userId));
 
-        // Delete token
+        // Delete used token
         await db.delete(passwordResetTokens).where(eq(passwordResetTokens.id, tokenRecord.id));
 
-        return { success: true, message: "Your password has been reset successfully. You can now log in." };
-    } catch (error) {
+        return {
+            success: true,
+            message: "Your password has been reset successfully. You can now log in with your new password."
+        };
+    } catch (error: any) {
         console.error("Reset Password Error:", error);
-        return { success: false, error: "An unexpected error occurred. Please try again later." };
+        return {
+            success: false,
+            error: error?.message || "An unexpected error occurred while resetting your password. Please try again."
+        };
     }
 }
 
 export async function changePasswordForced(password: string, dob?: string) {
     try {
         const session = await auth();
-        if (!session?.user?.id) return { success: false, error: 'Unauthorized' };
+        if (!session?.user?.id) return { success: false, error: 'Unauthorized. Please log in first.' };
 
         const userId = parseInt(session.user.id);
+        const cleanPassword = String(password ?? '').trim();
+
+        // Validate password strength & rules
+        const validation = validatePasswordStrength(cleanPassword);
+        if (!validation.isValid) {
+            return {
+                success: false,
+                error: validation.firstError || "Password does not meet the security requirements."
+            };
+        }
         
         // If user is a student, check for DOB
         const [userRecord] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
@@ -133,16 +182,21 @@ export async function changePasswordForced(password: string, dob?: string) {
             }
         }
 
-        const passwordHash = await bcrypt.hash(password, 10);
+        const passwordHash = await bcrypt.hash(cleanPassword, 10);
 
         await db.update(users).set({
             password: passwordHash,
-            requiresPasswordChange: false
+            requiresPasswordChange: false,
+            failedLoginAttempts: 0,
+            lockoutUntil: null
         }).where(eq(users.id, userId));
 
-        return { success: true, message: 'Password changed successfully.' };
-    } catch (error) {
+        return { success: true, message: 'Password updated successfully.' };
+    } catch (error: any) {
         console.error('Forced Change Password Error:', error);
-        return { success: false, error: 'An unexpected error occurred. Please try again.' };
+        return {
+            success: false,
+            error: error?.message || 'An unexpected error occurred while changing your password. Please try again.'
+        };
     }
 }
