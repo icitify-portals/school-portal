@@ -2,7 +2,7 @@
 
 import { db } from "@/db/db";
 import { students, users, staffProfiles } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, ne, and, or, isNull, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { getStaffProfileByUserId } from "@/actions/hr_leave";
@@ -381,4 +381,79 @@ export async function completeStudentProfile(data: {
     revalidatePath("/student");
     revalidatePath("/student/complete-profile");
     return { success: true, message: "Profile completed successfully." };
+}
+
+export async function updateUserEmail(newEmail: string) {
+    try {
+        const session = await auth();
+        if (!session?.user?.id) {
+            return { success: false, error: "Not authenticated. Please log in." };
+        }
+
+        const userId = Number(session.user.id);
+        const cleanEmail = String(newEmail ?? '').trim().toLowerCase();
+
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!cleanEmail || !emailRegex.test(cleanEmail)) {
+            return { success: false, error: "Please provide a valid email address (e.g. yourname@gmail.com)." };
+        }
+
+        // Check if email is already in use by another active account
+        const [existing] = await db.select({ id: users.id })
+            .from(users)
+            .where(and(eq(users.email, cleanEmail), ne(users.id, userId)))
+            .limit(1);
+
+        if (existing) {
+            return { success: false, error: "This email address is already in use by another account." };
+        }
+
+        // Update user email
+        await db.update(users)
+            .set({ email: cleanEmail })
+            .where(eq(users.id, userId));
+
+        // Sync with student record companion twins if applicable
+        try {
+            const [student] = await db.select().from(students).where(eq(students.userId, userId)).limit(1);
+            if (student) {
+                const twinConditions = [];
+                if (student.admissionNumber) {
+                    twinConditions.push(eq(students.admissionNumber, student.admissionNumber));
+                }
+                if (student.firstName && student.lastName) {
+                    twinConditions.push(
+                        and(
+                            eq(students.firstName, student.firstName),
+                            eq(students.lastName, student.lastName)
+                        )
+                    );
+                }
+                if (twinConditions.length > 0) {
+                    const twins = await db.select({ id: students.id, userId: students.userId })
+                        .from(students)
+                        .where(and(or(...twinConditions), isNull(students.deletedAt)));
+
+                    const companionUserIds = twins
+                        .map(t => t.userId)
+                        .filter((uid): uid is number => !!uid && uid !== userId);
+
+                    if (companionUserIds.length > 0) {
+                        await db.update(users)
+                            .set({ email: cleanEmail })
+                            .where(inArray(users.id, companionUserIds));
+                    }
+                }
+            }
+        } catch (twinErr) {
+            console.warn("Twin email sync warning:", twinErr);
+        }
+
+        revalidatePath("/profile");
+        revalidatePath("/student");
+        return { success: true, message: "Email address updated successfully! You can now use this email to log in." };
+    } catch (error: any) {
+        console.error("Failed to update email:", error);
+        return { success: false, error: error.message || "Failed to update email address." };
+    }
 }

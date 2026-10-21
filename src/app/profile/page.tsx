@@ -28,7 +28,8 @@ import {
     Bell,
     FileText
 } from "lucide-react";
-import { updateStudentProfile, updateStaffProfile, getLoggedUserProfile, uploadProfileImage, uploadSignatureImage } from "@/actions/student-profile";
+import { updateStudentProfile, updateStaffProfile, getLoggedUserProfile, uploadProfileImage, uploadSignatureImage, updateUserEmail } from "@/actions/student-profile";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { verifyNin } from "@/actions/nin-actions";
 import { IdentityCard } from "@/components/IdentityCard";
 import { toast } from "sonner";
@@ -43,6 +44,28 @@ export default function ProfilePage() {
     const [profile, setProfile] = useState<any>(null);
     const [activeTab, setActiveTab] = useState<"personal" | "guardian" | "kin" | "health" | "notifications" | "security">("personal");
     const [ninInput, setNinInput] = useState("");
+    const [emailModalOpen, setEmailModalOpen] = useState(false);
+    const [newEmailInput, setNewEmailInput] = useState("");
+    const [isUpdatingEmail, setIsUpdatingEmail] = useState(false);
+
+    async function handleUpdateEmail(e: React.FormEvent) {
+        e.preventDefault();
+        if (!newEmailInput.trim()) return;
+        setIsUpdatingEmail(true);
+        const res = await updateUserEmail(newEmailInput);
+        setIsUpdatingEmail(false);
+        if (res.success) {
+            toast.success(res.message);
+            setProfile((prev: any) => ({
+                ...prev,
+                user: { ...prev.user, email: newEmailInput.trim().toLowerCase() }
+            }));
+            setEmailModalOpen(false);
+            setNewEmailInput("");
+        } else {
+            toast.error(res.error || "Failed to update email.");
+        }
+    }
     const [isVerifyingNin, setIsVerifyingNin] = useState(false);
     const [isUpdatingImage, setIsUpdatingImage] = useState(false);
 const [isUpdatingSignature, setIsUpdatingSignature] = useState(false);
@@ -306,8 +329,34 @@ const [isUpdatingSignature, setIsUpdatingSignature] = useState(false);
                                     </div>
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pt-6 border-t border-slate-50">
                                         <div className="space-y-3">
-                                            <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 italic">User Reference</Label>
-                                            <Input readOnly value={profile.user?.email || ""} className="bg-slate-50 h-14 rounded-2xl font-bold text-slate-400 border-slate-100" />
+                                            <div className="flex items-center justify-between">
+                                                <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 italic">Login Email Address</Label>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setNewEmailInput(profile.user?.email || "");
+                                                        setEmailModalOpen(true);
+                                                    }}
+                                                    className="text-[10px] font-bold text-emerald-600 hover:text-emerald-800 underline uppercase tracking-wider"
+                                                >
+                                                    Change
+                                                </button>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <Input readOnly value={profile.user?.email || ""} className="bg-slate-50 h-14 rounded-2xl font-bold text-slate-700 border-slate-100 flex-1 truncate text-xs" />
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    onClick={() => {
+                                                        setNewEmailInput(profile.user?.email || "");
+                                                        setEmailModalOpen(true);
+                                                    }}
+                                                    className="h-14 px-3 rounded-2xl font-bold text-[11px] uppercase tracking-wider border-slate-200 hover:bg-emerald-50 hover:text-emerald-700 transition-all shrink-0 gap-1.5"
+                                                >
+                                                    <Mail className="w-3.5 h-3.5 text-emerald-600" />
+                                                    <span>Update</span>
+                                                </Button>
+                                            </div>
                                         </div>
                                         <div className="space-y-3">
                                             <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 italic">{isStaff ? "Staff ID" : "Admission Year"}</Label>
@@ -702,6 +751,54 @@ const [isUpdatingSignature, setIsUpdatingSignature] = useState(false);
                     </Card>
                 </div>
             </div>
+            {/* Email Update Modal */}
+            <Dialog open={emailModalOpen} onOpenChange={setEmailModalOpen}>
+                <DialogContent className="max-w-md rounded-3xl p-6 sm:p-8">
+                    <DialogHeader>
+                        <DialogTitle className="text-xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+                            <Mail className="w-5 h-5 text-emerald-600" /> Update Registered Email
+                        </DialogTitle>
+                        <DialogDescription className="text-xs text-slate-500 pt-1 leading-relaxed">
+                            Enter your preferred personal email address (e.g. Gmail or Yahoo). This will become your primary portal login email and the destination for all payment receipts and notices.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <form onSubmit={handleUpdateEmail} className="space-y-4 pt-2">
+                        <div className="space-y-2">
+                            <Label className="text-xs font-bold text-slate-700">New Email Address</Label>
+                            <Input
+                                type="email"
+                                required
+                                placeholder="e.g. myname@gmail.com"
+                                value={newEmailInput}
+                                onChange={(e) => setNewEmailInput(e.target.value)}
+                                className="h-12 rounded-xl text-sm"
+                                autoFocus
+                            />
+                        </div>
+
+                        <DialogFooter className="gap-2 sm:gap-0 pt-2">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => setEmailModalOpen(false)}
+                                className="rounded-xl h-11"
+                                disabled={isUpdatingEmail}
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                type="submit"
+                                disabled={isUpdatingEmail}
+                                className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl h-11 font-bold gap-2"
+                            >
+                                {isUpdatingEmail ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                                {isUpdatingEmail ? "Saving..." : "Save New Email"}
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

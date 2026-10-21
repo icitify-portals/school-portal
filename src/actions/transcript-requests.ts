@@ -1,14 +1,14 @@
 "use server";
 
 import { db } from "@/db/db";
-import { transcriptRequests, transactions, students, users } from "@/db/schema";
-import { eq, desc } from "drizzle-orm";
+import { transcriptRequests, transactions, students, users, studentBills } from "@/db/schema";
+import { eq, desc, and, like, ne, sql } from "drizzle-orm";
 import { initiatePayment, verifyPayment } from "./payment-gateways";
 import { sendEmail } from "@/lib/mail";
 import { getSettingByKey } from "@/actions/settings";
 // Fallback Constants for Fees (Now dynamically fetched from DB)
 const DEFAULT_TRANSCRIPT_FEE = 15000; // ALATPay fee
-const DEFAULT_PROCESSING_FEE = 5000;  // Paystack fee
+const DEFAULT_PROCESSING_FEE = 4000;  // Paystack fee (reduced to ₦4,000)
 
 export async function getTranscriptFees() {
     const tFeeStr = await getSettingByKey('transcript_fee');
@@ -17,6 +17,108 @@ export async function getTranscriptFees() {
         transcriptFee: tFeeStr !== null ? parseInt(tFeeStr) : DEFAULT_TRANSCRIPT_FEE,
         processingFee: pFeeStr !== null ? parseInt(pFeeStr) : DEFAULT_PROCESSING_FEE,
     };
+}
+
+export async function checkStudentGraduationClearance(matricNumber: string) {
+    if (!matricNumber || !matricNumber.trim()) {
+        return { success: false, error: "Matriculation number is required" };
+    }
+    const cleanMatric = matricNumber.trim().toUpperCase();
+
+    try {
+        const [student] = await db
+            .select({
+                id: students.id,
+                matricNumber: students.matricNumber,
+                status: students.status,
+                programmeType: students.programmeType,
+                userName: users.name,
+                userEmail: users.email,
+            })
+            .from(students)
+            .leftJoin(users, eq(students.userId, users.id))
+            .where(eq(students.matricNumber, cleanMatric))
+            .limit(1);
+
+        if (!student) {
+            return {
+                success: true,
+                found: false,
+                isGraduant: false,
+                isCleared: true,
+                message: "Student record not found in portal database (external/legacy applicant)."
+            };
+        }
+
+        const graduantStatuses = ['nd_graduant', 'hnd_graduant', 'nd_graduated', 'hnd_graduated'];
+        const isGraduant = graduantStatuses.includes(String(student.status || '').toLowerCase());
+
+        // Query graduation & clearance bills
+        const bills = await db
+            .select({
+                id: studentBills.id,
+                totalAmount: studentBills.totalAmount,
+                amountPaid: studentBills.amountPaid,
+                status: studentBills.status,
+                note: studentBills.note,
+            })
+            .from(studentBills)
+            .where(
+                and(
+                    eq(studentBills.studentId, student.id),
+                    like(studentBills.note, '%Graduation & Clearance%')
+                )
+            );
+
+        let totalOwed = 0;
+        let hasUnpaidGraduationBill = false;
+        const billDetails: string[] = [];
+
+        for (const b of bills) {
+            const total = parseFloat(b.totalAmount || "0");
+            const paid = parseFloat(b.amountPaid || "0");
+            const outstanding = total - paid;
+            if (b.status !== 'paid' && outstanding > 0) {
+                hasUnpaidGraduationBill = true;
+                totalOwed += outstanding;
+                billDetails.push(`${b.note}: ₦${outstanding.toLocaleString()} outstanding`);
+            }
+        }
+
+        // If student is marked as graduant but has no bill generated yet, default to standard rate
+        if (isGraduant && bills.length === 0) {
+            const defaultAmt = student.status?.includes('hnd') ? 49500 : 39500;
+            return {
+                success: true,
+                found: true,
+                studentId: student.id,
+                studentName: student.userName,
+                isGraduant: true,
+                isCleared: false,
+                totalOwed: defaultAmt,
+                message: `Compulsory graduation clearance fees (Convocation, Certificate, and Incidental Fee: ₦${defaultAmt.toLocaleString()}) must be settled before an official transcript can be requested.`
+            };
+        }
+
+        const isCleared = !hasUnpaidGraduationBill;
+
+        return {
+            success: true,
+            found: true,
+            studentId: student.id,
+            studentName: student.userName,
+            isGraduant,
+            isCleared,
+            totalOwed,
+            billDetails,
+            message: isCleared
+                ? "Student is financially cleared for graduation."
+                : `Outstanding graduation clearance fees: ₦${totalOwed.toLocaleString()} (Convocation, Certificate, and Incidental Fee must be paid).`
+        };
+    } catch (e: any) {
+        console.error("checkStudentGraduationClearance error:", e);
+        return { success: false, error: e.message || "Failed to check clearance" };
+    }
 }
 
 export async function submitTranscriptApplication(data: {
@@ -29,8 +131,19 @@ export async function submitTranscriptApplication(data: {
     deliveryMethod: 'email' | 'courier' | 'pickup';
 }) {
     try {
+        // Compulsory Graduation Clearance check for graduants/alumni
+        const clearance = await checkStudentGraduationClearance(data.matricNumber);
+        if (clearance.found && clearance.isGraduant && !clearance.isCleared) {
+            return {
+                success: false,
+                clearanceBlocked: true,
+                totalOwed: clearance.totalOwed,
+                error: `Graduation Clearance Required: You have unpaid compulsory graduation fees (Convocation, Certificate & Incidental Fee totaling ₦${clearance.totalOwed?.toLocaleString()}). All graduation fees must be settled in your student portal before an official transcript application can be submitted.`
+            };
+        }
+
         // Look up student by matric if they exist
-        const [student] = await db.select().from(students).where(eq(students.matricNumber, data.matricNumber)).limit(1);
+        const [student] = await db.select().from(students).where(eq(students.matricNumber, data.matricNumber.trim().toUpperCase())).limit(1);
 
         const tFeeStr = await getSettingByKey('transcript_fee');
         const pFeeStr = await getSettingByKey('transcript_processing_fee');
@@ -189,12 +302,45 @@ export async function verifyTranscriptPaystack(reference: string) {
 
 export async function getAdminTranscriptRequests() {
     try {
-        // Return only paid ones for processing
+        const rows = await db
+            .select({
+                request: transcriptRequests,
+                studentId: students.id,
+                studentStatus: students.status,
+                studentMatric: students.matricNumber,
+            })
+            .from(transcriptRequests)
+            .leftJoin(students, eq(transcriptRequests.studentId, students.id))
+            .where(eq(transcriptRequests.paymentStatus, 'paid'))
+            .orderBy(desc(transcriptRequests.requestedAt));
+
+        // Enrich each request with their real-time graduation clearance status
+        const enriched = await Promise.all(
+            rows.map(async (row) => {
+                let isCleared = true;
+                let debt = 0;
+                const reqMatric = row.request.matricNumber || row.studentMatric;
+
+                if (reqMatric) {
+                    const cl = await checkStudentGraduationClearance(reqMatric);
+                    if (cl.found && cl.isGraduant && !cl.isCleared) {
+                        isCleared = false;
+                        debt = cl.totalOwed || 0;
+                    }
+                }
+
+                return {
+                    ...row.request,
+                    studentStatus: row.studentStatus,
+                    isGraduationCleared: isCleared,
+                    graduationDebt: debt,
+                };
+            })
+        );
+
         return { 
             success: true, 
-            data: await db.select().from(transcriptRequests)
-                        .where(eq(transcriptRequests.paymentStatus, 'paid'))
-                        .orderBy(desc(transcriptRequests.requestedAt)) 
+            data: enriched
         };
     } catch (e: any) {
         return { success: false, error: e.message };
@@ -205,6 +351,17 @@ export async function dispatchTranscript(requestId: number, dispatchedByUserId: 
     try {
         const [req] = await db.select().from(transcriptRequests).where(eq(transcriptRequests.id, requestId)).limit(1);
         if (!req) return { success: false, error: "Request not found" };
+
+        // Verify graduation clearance before dispatching
+        if (req.matricNumber) {
+            const cl = await checkStudentGraduationClearance(req.matricNumber);
+            if (cl.found && cl.isGraduant && !cl.isCleared) {
+                return {
+                    success: false,
+                    error: `Cannot dispatch transcript: Student has outstanding graduation clearance fees (₦${(cl.totalOwed || 0).toLocaleString()} unpaid for Convocation, Certificate, or Incidental Fee). Student must be cleared before dispatch.`
+                };
+            }
+        }
 
         // Resolve dispatcher from auth if not provided (0 means use auth)
         let dispatcherId = dispatchedByUserId;

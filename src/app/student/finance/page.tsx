@@ -970,8 +970,8 @@ export default function StudentFinancePage() {
                                                         rrr={remitaData.rrr} 
                                                         amount={selectedAmount} 
                                                         email={session?.user?.email || "student@fssibadan.edu.ng"} 
-                                                        firstName={student?.firstName || "Student"} 
-                                                        lastName={student?.lastName || "Payer"} 
+                                                        firstName={student?.firstName || session?.user?.name?.split(' ')[0] || "Student"} 
+                                                        lastName={student?.lastName || session?.user?.name?.split(' ').slice(1).join(' ') || "Payer"} 
                                                         onSuccess={async () => {
                                                             setCheckoutLoading(true);
                                                             try {

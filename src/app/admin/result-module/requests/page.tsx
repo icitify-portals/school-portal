@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { getAdminTranscriptRequests, dispatchTranscript } from "@/actions/transcript-requests";
 import { getMyTranscript } from "@/actions/result-module";
-import { Loader2, Send, CheckCircle2, FileText, Search } from "lucide-react";
+import { Loader2, Send, CheckCircle2, FileText, Search, AlertCircle, ShieldAlert } from "lucide-react";
 import Link from "next/link";
 
 import html2canvas from "html2canvas";
@@ -25,6 +25,11 @@ export default function AdminTranscriptRequestsPage() {
     }
 
     async function handleDispatch(req: any) {
+        if (!req.isGraduationCleared) {
+            alert(`Cannot Dispatch Transcript!\n\nThis student has outstanding graduation clearance fees (₦${(req.graduationDebt || 0).toLocaleString()} unpaid for Convocation, Certificate, or Incidental Fee).\n\nAll compulsory graduation fees must be settled before official transcripts can be released.`);
+            return;
+        }
+
         if (!confirm(`Are you sure you want to mark this transcript for ${req.applicantName} as Dispatched? An email with the student copy will be sent automatically.`)) return;
 
         setDispatchingId(req.id);
@@ -141,6 +146,7 @@ export default function AdminTranscriptRequestsPage() {
                                     <th className="py-4 px-6">Applicant</th>
                                     <th className="py-4 px-6">Destination</th>
                                     <th className="py-4 px-6">Payment</th>
+                                    <th className="py-4 px-6">Graduation Clearance</th>
                                     <th className="py-4 px-6">Status</th>
                                     <th className="py-4 px-6">Date</th>
                                     <th className="py-4 px-6 text-right">Action</th>
@@ -171,6 +177,22 @@ export default function AdminTranscriptRequestsPage() {
                                                 <span>Transcript: <span className={req.alatpayStatus === 'paid' ? 'text-emerald-600 font-bold uppercase' : 'text-rose-600 font-bold uppercase'}>{req.alatpayStatus}</span></span>
                                                 <span>Processing: <span className={req.paystackStatus === 'paid' ? 'text-emerald-600 font-bold uppercase' : 'text-rose-600 font-bold uppercase'}>{req.paystackStatus}</span></span>
                                             </div>
+                                        </td>
+                                        <td className="py-4 px-6">
+                                            {req.isGraduationCleared ? (
+                                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-bold border border-emerald-200">
+                                                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Cleared
+                                                </span>
+                                            ) : (
+                                                <div className="flex flex-col gap-1">
+                                                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-rose-100 text-rose-800 text-xs font-bold border border-rose-200">
+                                                        <ShieldAlert className="w-3.5 h-3.5 text-rose-600" /> Fees Owed
+                                                    </span>
+                                                    <span className="text-[11px] font-bold text-rose-600">
+                                                        ₦{(req.graduationDebt || 0).toLocaleString()} Unpaid
+                                                    </span>
+                                                </div>
+                                            )}
                                         </td>
                                         <td className="py-4 px-6">
                                             {req.approvalStatus === 'dispatched' ? (

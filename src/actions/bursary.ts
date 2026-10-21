@@ -688,7 +688,7 @@ export async function processPayment(data: {
                         date: new Date().toLocaleDateString(),
                         amount: Number(data.amount),
                         purpose: data.purpose,
-                        payerName: `${student.user.firstName} ${student.user.surname}`,
+                        payerName: student.user.name || `${student.firstName || ''} ${student.lastName || ''}`.trim() || student.user.email,
                         payerEmail: student.user.email,
                         type: 'student',
                         additionalInfo: {
@@ -1607,18 +1607,31 @@ export async function getTransactionForReceipt(id: number) {
         let data = await db.select({
             transaction: transactions,
             student: students,
+            user: users,
             programme: {
                 name: programmes.name
             }
         })
             .from(transactions)
             .leftJoin(students, eq(transactions.studentId, students.id))
+            .leftJoin(users, eq(students.userId, users.id))
             .leftJoin(programmes, eq(students.programmeId, programmes.id))
             .where(eq(transactions.id, id))
             .limit(1);
 
         let txData: any = data.length > 0 ? data[0] : null;
         if (txData && !isStaff && Number(txData.student?.userId || 0) !== sessionUserId) return null;
+
+        if (txData && txData.student) {
+            const userName = txData.user?.name || '';
+            const userParts = userName.trim().split(/\s+/).filter(Boolean);
+            if (!txData.student.firstName && userParts[0]) {
+                txData.student.firstName = userParts[0];
+            }
+            if (!txData.student.lastName && userParts.slice(1).join(' ')) {
+                txData.student.lastName = userParts.slice(1).join(' ');
+            }
+        }
 
         if (!txData) {
             // Check payment_transactions for wallet topups
@@ -1636,9 +1649,11 @@ export async function getTransactionForReceipt(id: number) {
             // Get student info using userId
             const studentData = await db.select({
                 student: students,
+                user: users,
                 programme: { name: programmes.name }
             })
             .from(students)
+            .leftJoin(users, eq(students.userId, users.id))
             .leftJoin(programmes, eq(students.programmeId, programmes.id))
             .where(eq(students.userId, pt.userId))
             .limit(1);
@@ -1647,6 +1662,13 @@ export async function getTransactionForReceipt(id: number) {
 
             let student = studentData.length > 0 ? studentData[0].student : null;
             let programme = studentData.length > 0 ? studentData[0].programme : null;
+
+            if (student && studentData[0].user) {
+                const uName = studentData[0].user.name || '';
+                const uParts = uName.trim().split(/\s+/).filter(Boolean);
+                if (!student.firstName && uParts[0]) student.firstName = uParts[0];
+                if (!student.lastName && uParts.slice(1).join(' ')) student.lastName = uParts.slice(1).join(' ');
+            }
 
             if (!student) {
                 // Fallback for applicants or legacy users without a student record
@@ -2924,7 +2946,7 @@ export async function resolveOnlinePaymentAction(reference: string, status: 'com
                                 date: new Date().toLocaleDateString(),
                                 amount: paymentAmount,
                                 purpose: txRecord.purpose,
-                                payerName: `${user.firstName} ${user.surname}`,
+                                payerName: user.name || `${(user as any).firstName || ''} ${(user as any).surname || ''}`.trim() || user.email,
                                 payerEmail: user.email,
                                 type: 'admission',
                                 additionalInfo: {
@@ -3038,7 +3060,7 @@ export async function resolveOnlinePaymentAction(reference: string, status: 'com
                         date: new Date().toLocaleDateString(),
                         amount: paymentAmount,
                         purpose: txRecord.purpose || "Payment",
-                        payerName: `${user.firstName} ${user.surname}`,
+                        payerName: user.name || `${student.firstName || ''} ${student.lastName || ''}`.trim() || user.email,
                         payerEmail: user.email,
                         type: 'student',
                         additionalInfo: {

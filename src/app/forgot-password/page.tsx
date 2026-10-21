@@ -8,7 +8,7 @@ import { GraduationCap, AlertCircle, CheckCircle2, Loader2, ArrowLeft } from "lu
 import Link from "next/link";
 
 export default function ForgotPasswordPage() {
-    const [email, setEmail] = useState("");
+    const [identifier, setIdentifier] = useState("");
     const [status, setStatus] = useState<{ success?: boolean; message?: string; error?: string } | null>(null);
     const [loading, setLoading] = useState(false);
 
@@ -18,10 +18,10 @@ export default function ForgotPasswordPage() {
         setStatus(null);
 
         try {
-            const result = await forgotPassword(email);
+            const result = await forgotPassword(identifier);
             setStatus(result);
-        } catch (err) {
-            setStatus({ success: false, message: "An error occurred. Please try again." });
+        } catch (err: any) {
+            setStatus({ success: false, error: err?.message || "An error occurred. Please try again." });
         } finally {
             setLoading(false);
         }
@@ -37,29 +37,37 @@ export default function ForgotPasswordPage() {
                         </div>
                     </div>
                     <CardTitle className="text-2xl font-bold text-slate-900">Forgot Password?</CardTitle>
-                    <CardDescription>Enter your email address and we&apos;ll send you a link to reset your password.</CardDescription>
+                    <CardDescription>
+                        Enter your registered email address or your Matric / Admission Number and we&apos;ll send a password reset link.
+                    </CardDescription>
                 </CardHeader>
-                <CardContent className=" p-6">
+                <CardContent className="p-6">
                     <form onSubmit={handleSubmit} className="space-y-4">
                         {status && (
-                            <div className={`p-4 rounded-xl text-sm flex gap-3 ${status.success ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>
-                                {status.success ? <CheckCircle2 className="w-5 h-5 shrink-0" /> : <AlertCircle className="w-5 h-5 shrink-0" />}
-                                <span>{status.message || status.error}</span>
+                            <div className={`p-4 rounded-xl text-sm flex gap-3 ${status.success ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-rose-50 text-rose-800 border border-rose-200'}`}>
+                                {status.success ? <CheckCircle2 className="w-5 h-5 shrink-0 text-emerald-600 mt-0.5" /> : <AlertCircle className="w-5 h-5 shrink-0 text-rose-600 mt-0.5" />}
+                                <span className="font-medium leading-relaxed">{status.message || status.error}</span>
                             </div>
                         )}
                         
                         {!status?.success && (
                             <>
                                 <div className="space-y-2">
-                                    <label className="text-sm font-semibold text-slate-700">Email Address</label>
+                                    <label className="text-sm font-semibold text-slate-700">
+                                        Email Address or Matric / Admission Number
+                                    </label>
                                     <input
-                                        type="email"
+                                        type="text"
                                         required
                                         className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-slate-900 bg-white"
-                                        placeholder="name@school.edu"
-                                        value={email}
-                                        onChange={(e) => setEmail(e.target.value)}
+                                        placeholder="e.g. name@example.com or HND/BAM/..."
+                                        value={identifier}
+                                        onChange={(e) => setIdentifier(e.target.value)}
+                                        autoComplete="username"
                                     />
+                                    <p className="text-[11px] text-slate-500">
+                                        Returning students can enter their Matric Number, Admission Number, or personal email.
+                                    </p>
                                 </div>
                                 <Button
                                     type="submit"

@@ -289,6 +289,12 @@ export function PublicNavbar() {
 
                         {/* Right Actions */}
                         <div className="flex items-center gap-3">
+                            <Button asChild variant="outline" className="hidden lg:flex border-white/20 text-slate-200 hover:text-white hover:bg-white/10 rounded-full px-4 h-10 font-bold text-xs uppercase tracking-wider">
+                                <Link href="/student-lookup">
+                                    🔍 Find Account
+                                </Link>
+                            </Button>
+
                             <Button variant="ghost" size="icon" className="text-slate-400 rounded-full hover:bg-slate-800 hover:text-white">
                                 <Search className="w-5 h-5" />
                             </Button>
@@ -365,7 +371,12 @@ export function PublicNavbar() {
                             </div>
                         )}
 
-                        <div className="pt-4 border-t border-white/10">
+                        <div className="pt-4 border-t border-white/10 space-y-2">
+                            <Button asChild variant="outline" className="w-full border-white/20 text-slate-200 hover:text-white hover:bg-white/10 rounded-xl h-11 font-bold text-xs uppercase tracking-wider">
+                                <Link href="/student-lookup" onClick={() => setMobileOpen(false)}>
+                                    🔍 Find Account & Reset Password
+                                </Link>
+                            </Button>
                             <Button asChild className="w-full bg-indigo-500 hover:bg-indigo-600 text-white rounded-xl h-12 font-bold">
                                 <Link href={session ? "/dashboard" : "/login"}>
                                     <User className="w-4 h-4 mr-2" />

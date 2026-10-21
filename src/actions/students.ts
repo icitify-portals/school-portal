@@ -130,6 +130,10 @@ export async function getStudents(options: { search?: string, page?: number, pag
         if (!levelImpliesGraduantStatus && options.status && options.status !== "all") {
             if (options.status === "graduant") {
                 statusCondition = sql`${students.status} IN ('nd_graduant','hnd_graduant','nd_graduated','hnd_graduated')`;
+            } else if (options.status === "nd_graduant") {
+                statusCondition = sql`${students.status} IN ('nd_graduant', 'nd_graduated')`;
+            } else if (options.status === "hnd_graduant") {
+                statusCondition = sql`${students.status} IN ('hnd_graduant', 'hnd_graduated')`;
             } else {
                 statusCondition = sql`${students.status} = ${options.status}`;
             }
@@ -218,6 +222,7 @@ export async function getStudents(options: { search?: string, page?: number, pag
             .leftJoin(academicSessions, eq(students.currentSessionId, academicSessions.id))
             .leftJoin(admissionSession, eq(students.admissionSessionId, admissionSession.id))
             .where(countWhere)
+            .orderBy(desc(students.id))
             .limit(pageSize)
             .offset(offset);
 
@@ -289,6 +294,33 @@ export async function getStudentSessionOptions() {
             ORDER BY y DESC
         `) as unknown as [Array<Record<string, any>>];
 
+        // Status counts for quick filter tabs
+        const [rawStatusCounts] = await db.execute(sql`
+            SELECT status, COUNT(*) AS c
+            FROM students
+            WHERE deleted_at IS NULL
+            GROUP BY status
+        `) as unknown as [Array<Record<string, any>>];
+
+        const statusCountsMap: Record<string, number> = {
+            all: 0,
+            active: 0,
+            nd_graduant: 0,
+            hnd_graduant: 0,
+            suspended: 0,
+            pending_review: 0
+        };
+        for (const row of rawStatusCounts) {
+            const st = String(row.status || '').toLowerCase();
+            const cnt = Number(row.c || 0);
+            statusCountsMap.all += cnt;
+            if (st === 'active') statusCountsMap.active += cnt;
+            else if (st === 'nd_graduant' || st === 'nd_graduated') statusCountsMap.nd_graduant += cnt;
+            else if (st === 'hnd_graduant' || st === 'hnd_graduated') statusCountsMap.hnd_graduant += cnt;
+            else if (st === 'suspended') statusCountsMap.suspended += cnt;
+            else if (st === 'pending_review') statusCountsMap.pending_review += cnt;
+        }
+
         return {
             success: true,
             sessions: rows.map((r) => ({
@@ -300,7 +332,8 @@ export async function getStudentSessionOptions() {
                 studentCount: Number(r.student_count || 0)
             })),
             unassignedCount: Number(unassigned[0]?.c || 0),
-            graduationYears: yearRows.map((r) => Number(r.y)).filter((y) => !isNaN(y))
+            graduationYears: yearRows.map((r) => Number(r.y)).filter((y) => !isNaN(y)),
+            statusCounts: statusCountsMap
         };
     } catch (error) {
         console.error("Failed to fetch student session options:", error);
@@ -473,10 +506,23 @@ export async function bulkImportStudents(data: any[]) {
 
 export async function getStudentByUserId(userId: number) {
     try {
-        const studentRows = await db.select().from(students).where(eq(students.userId, userId)).limit(1);
+        const studentRows = await db.select({
+            student: students,
+            userName: users.name,
+        }).from(students)
+          .leftJoin(users, eq(students.userId, users.id))
+          .where(eq(students.userId, userId))
+          .limit(1);
 
         if (!studentRows.length) return null;
-        return studentRows[0];
+        const row = studentRows[0];
+        const student = row.student;
+        if ((!student.firstName || !student.lastName) && row.userName) {
+            const parts = row.userName.trim().split(/\s+/).filter(Boolean);
+            if (!student.firstName) student.firstName = parts[0] || '';
+            if (!student.lastName) student.lastName = parts.slice(1).join(' ') || parts[0] || '';
+        }
+        return student;
     } catch (error) {
         console.error("Failed to fetch student profile:", error);
         return null;
@@ -889,5 +935,120 @@ export async function bulkUpdateStudentPlacements(studentIds: number[], data: { 
     } catch (error: any) {
         console.error("Bulk Update Placements Error:", error);
         return { success: false, error: error.message || "Failed to update student placements." };
+    }
+}
+
+export async function deleteStudentAccount(
+    studentId: number,
+    options: { permanent?: boolean; reason?: string } = {}
+) {
+    try {
+        const allowed = await hasPermission("admin.students.manage") ||
+                        await hasRole("admin") ||
+                        await hasRole("superadmin") ||
+                        await hasRole("icitify_dev") ||
+                        await hasRole("registrar");
+        if (!allowed) {
+            return { success: false, error: "Unauthorized: You do not have permission to delete student accounts." };
+        }
+
+        const [student] = await db.select().from(students).where(eq(students.id, studentId)).limit(1);
+        if (!student) {
+            return { success: false, error: "Student record not found." };
+        }
+
+        const now = new Date();
+        const timestamp = Date.now();
+
+        if (options.permanent) {
+            try {
+                const { studentBills, enrollments } = await import("@/db/schema");
+                await db.delete(studentBills).where(eq(studentBills.studentId, studentId));
+                await db.delete(enrollments).where(eq(enrollments.studentId, studentId));
+                await db.delete(students).where(eq(students.id, studentId));
+
+                if (student.userId) {
+                    await db.delete(users).where(and(eq(users.id, student.userId), eq(users.role, 'student')));
+                }
+
+                revalidatePath("/admin/students");
+                return { success: true, message: `Student account permanently deleted.` };
+            } catch (err: any) {
+                console.warn("Permanent deletion had constraint, falling back to soft delete:", err);
+            }
+        }
+
+        // Soft delete: release email and matric so they can be re-used
+        const releasedMatric = student.matricNumber && !student.matricNumber.includes(".deleted.")
+            ? `${student.matricNumber}.deleted.${timestamp}`
+            : student.matricNumber;
+
+        const releasedAdm = student.admissionNumber && !student.admissionNumber.includes(".deleted.")
+            ? `${student.admissionNumber}.deleted.${timestamp}`
+            : student.admissionNumber;
+
+        await db.update(students).set({
+            deletedAt: now,
+            matricNumber: releasedMatric,
+            admissionNumber: releasedAdm,
+            status: 'withdrawn'
+        }).where(eq(students.id, studentId));
+
+        if (student.userId) {
+            const [u] = await db.select({ id: users.id, email: users.email }).from(users).where(eq(users.id, student.userId)).limit(1);
+            if (u) {
+                const releasedEmail = u.email && !u.email.includes(".deleted.")
+                    ? `${u.email}.deleted.${timestamp}`
+                    : u.email;
+                await db.update(users).set({
+                    deletedAt: now,
+                    email: releasedEmail
+                }).where(eq(users.id, student.userId));
+            }
+        }
+
+        revalidatePath("/admin/students");
+        return {
+            success: true,
+            message: `Account has been removed and email/matric has been released.`
+        };
+    } catch (error: any) {
+        console.error("Delete Student Error:", error);
+        return { success: false, error: error.message || "Failed to delete student account." };
+    }
+}
+
+export async function bulkDeleteStudentAccounts(
+    studentIds: number[],
+    options: { permanent?: boolean } = {}
+) {
+    try {
+        const allowed = await hasPermission("admin.students.manage") ||
+                        await hasRole("admin") ||
+                        await hasRole("superadmin") ||
+                        await hasRole("icitify_dev") ||
+                        await hasRole("registrar");
+        if (!allowed) {
+            return { success: false, error: "Unauthorized: Insufficient permissions to delete student accounts." };
+        }
+
+        if (!studentIds || studentIds.length === 0) {
+            return { success: false, error: "No students selected." };
+        }
+
+        let successCount = 0;
+        for (const id of studentIds) {
+            const res = await deleteStudentAccount(id, options);
+            if (res.success) successCount++;
+        }
+
+        revalidatePath("/admin/students");
+        return {
+            success: true,
+            message: `Successfully removed ${successCount} of ${studentIds.length} selected student account(s).`
+        };
+    } catch (error: any) {
+        console.error("Bulk Delete Student Error:", error);
+        return { success: false, error: error.message || "Failed to remove selected student accounts." };
     }
 }

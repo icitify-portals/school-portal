@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React from "react";
 import { cn } from "@/lib/utils";
@@ -70,7 +70,7 @@ export const ModernReceipt = ({ transaction, student, branding, bursar, arrears 
                                 <img src={student.imageUrl} alt="Student Photo" className="w-16 h-16 rounded-xl object-cover border-2 border-slate-100 shadow-sm print:shadow-none" />
                             )}
                             <div className="space-y-1">
-                                <p className="text-lg font-black text-slate-900 leading-none">{student.firstName} {student.lastName}</p>
+                                <p className="text-lg font-black text-slate-900 leading-none">{(student.firstName && student.lastName ? `${student.firstName} ${student.lastName}` : (student as any).name || `${student.firstName || ''} ${student.lastName || ''}`.trim() || "Student").trim()}</p>
                                 <p className="text-sm font-bold text-slate-500 uppercase">{student.matricNumber || "NOT REGISTERED"}</p>
                                 <p className="text-xs text-slate-400">{student.programme?.name || "General Course"}</p>
                             </div>
@@ -196,7 +196,7 @@ export const ClassicReceipt = ({ transaction, student, branding, bursar, arrears
                 <tbody>
                     <tr className="border-b border-slate-100">
                         <td className="py-3 text-[10px] font-bold text-slate-400 uppercase">Student Name:</td>
-                        <td className="py-3 text-right font-bold text-slate-900">{student.firstName} {student.lastName}</td>
+                        <td className="py-3 text-right font-bold text-slate-900">{(student.firstName && student.lastName ? `${student.firstName} ${student.lastName}` : (student as any).name || `${student.firstName || ''} ${student.lastName || ''}`.trim() || "Student").trim()}</td>
                     </tr>
                     <tr className="border-b border-slate-100">
                         <td className="py-3 text-[10px] font-bold text-slate-400 uppercase">Registration No:</td>
@@ -441,7 +441,7 @@ export const HeritageReceipt = ({ transaction, student, branding, bursar, arrear
                 <div className="flex items-end gap-2 pr-20">
                     <span className="whitespace-nowrap font-bold text-slate-700">Received from:</span>
                     <div className="flex-1 border-b border-dashed border-slate-600 pb-0.5 px-4 text-left italic font-bold text-blue-950 font-sans tracking-wide">
-                        {student.firstName} {student.lastName} ({student.matricNumber || student.id})
+                        {(student.firstName && student.lastName ? `${student.firstName} ${student.lastName}` : (student as any).name || `${student.firstName || ''} ${student.lastName || ''}`.trim() || "Student").trim()} ({student.matricNumber || student.id})
                     </div>
                 </div>
 

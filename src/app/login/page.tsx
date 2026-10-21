@@ -24,6 +24,14 @@ export default function LoginPage() {
         getBrandingSettings()
             .then(data => setBranding(data))
             .catch(err => console.error(err));
+
+        if (typeof window !== "undefined") {
+            const params = new URLSearchParams(window.location.search);
+            const loginId = params.get("loginId");
+            if (loginId) {
+                setEmail(loginId);
+            }
+        }
     }, []);
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -166,6 +174,17 @@ export default function LoginPage() {
                         >
                             {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : "Sign In"}
                         </Button>
+
+                        {/* Student Account Lookup & Activation */}
+                        <div className="mt-4 p-3 bg-indigo-50/80 border border-indigo-100 rounded-xl text-center space-y-1">
+                            <p className="text-xs text-slate-600 font-medium">Returning student or having trouble logging in?</p>
+                            <Link
+                                href="/student-lookup"
+                                className="text-xs font-bold text-indigo-700 hover:text-indigo-900 inline-flex items-center gap-1.5 hover:underline"
+                            >
+                                <span>🔍 Find Account & Reset Password to welcome123</span>
+                            </Link>
+                        </div>
                     </form>
 
                     {/* Back to Homepage Button */}

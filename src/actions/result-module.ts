@@ -704,8 +704,8 @@ export async function getMyTranscript(studentId?: number, options?: { viewForStu
 export async function getBulkTranscripts(filters: { programmeId?: number, departmentId?: number, facultyId?: number, studentIds?: number[], all?: boolean, level?: string, sessionId?: number, semester?: string, batchId?: number }) {
   try {
     let queryConditions = [];
-    // Only active students in bulk transcripts
-    queryConditions.push(eq(students.status, "active" as any));
+    // Include active and graduant/graduated students in bulk transcripts
+    queryConditions.push(inArray(students.status, ["active", "nd_graduant", "hnd_graduant", "nd_graduated", "hnd_graduated"] as any));
     
     if (filters.batchId) {
       const entries = await db.query.studentResults.findMany({

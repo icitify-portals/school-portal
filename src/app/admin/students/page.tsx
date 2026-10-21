@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Users, CheckCircle, Loader2, Search, FileUp, X, FileText, ShieldAlert, QrCode } from "lucide-react";
+import { Users, CheckCircle, Loader2, Search, FileUp, X, FileText, ShieldAlert, QrCode, Trash2, AlertTriangle } from "lucide-react";
 import { getDepartments } from "@/actions/departments";
-import { getStudents, approveStudent, bulkImportStudents, toggleFinancialLock, getStudentSessionOptions } from "@/actions/students";
+import { getStudents, approveStudent, bulkImportStudents, toggleFinancialLock, getStudentSessionOptions, deleteStudentAccount, bulkDeleteStudentAccounts } from "@/actions/students";
 import { impersonateUser } from "@/actions/impersonation";
 import { generateIdentityQRCodeAction } from "@/actions/utility-actions";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
@@ -42,6 +42,11 @@ function StudentsPageContent() {
     const [qrStudent, setQrStudent] = useState<any | null>(null);
     const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
     const [qrLoading, setQrLoading] = useState(false);
+    const [studentToDelete, setStudentToDelete] = useState<any | null>(null);
+    const [deletePermanent, setDeletePermanent] = useState(false);
+    const [deletingStudent, setDeletingStudent] = useState(false);
+    const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
+    const [bulkDeleting, setBulkDeleting] = useState(false);
 
     const page = parseInt(searchParams.get("page") || "1");
     const pageSize = parseInt(searchParams.get("pageSize") || "10");
@@ -51,17 +56,45 @@ function StudentsPageContent() {
     const sessionParam = searchParams.get("session") || undefined;
     const semesterParam = searchParams.get("semester") || undefined;
     const deptIdParam = searchParams.get("deptId") || undefined;
-    const statusParam = searchParams.get("status") || "active";
+    const statusParam = searchParams.get("status") || "all";
     const gradYearParam = searchParams.get("gradYear") || undefined;
+
+    const [statusCounts, setStatusCounts] = useState<{
+        all: number;
+        active: number;
+        nd_graduant: number;
+        hnd_graduant: number;
+        suspended: number;
+        pending_review: number;
+    } | null>(null);
+
+    const [searchInput, setSearchInput] = useState(search);
+    const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+    // Sync input when search query param changes externally (e.g. browser back/forward or reset)
+    useEffect(() => {
+        setSearchInput(search);
+    }, [search]);
+
+    // Clean up timer on unmount
+    useEffect(() => {
+        return () => {
+            if (searchTimeoutRef.current) {
+                clearTimeout(searchTimeoutRef.current);
+            }
+        };
+    }, []);
 
     const graduantLevels = ["ND_GRADUANT", "ND_GRADUATED", "ND Graduant", "ND Graduated", "HND_GRADUANT", "HND_GRADUATED", "HND Graduant", "HND Graduated"];
     const levelIsGraduant = !!level && graduantLevels.includes(level);
     const statusOptions = [
+        { value: "all", label: "All Statuses" },
         { value: "active", label: "Active" },
-        { value: "graduant", label: "Graduant" },
+        { value: "nd_graduant", label: "ND Graduant" },
+        { value: "hnd_graduant", label: "HND Graduant" },
+        { value: "graduant", label: "All Graduants (ND & HND)" },
         { value: "suspended", label: "Suspended" },
         { value: "pending_review", label: "Pending Review" },
-        { value: "all", label: "All Statuses" },
     ];
 
     const levels = isK12 
@@ -75,15 +108,18 @@ function StudentsPageContent() {
             { value: "HND_GRADUANT", label: "HND Graduant" },
           ];
 
+    const hasExplicitStatus = searchParams.has("status");
+    const effectiveStatus = levelIsGraduant ? undefined : (search.trim() && !hasExplicitStatus ? "all" : statusParam);
+
     const fetchStudents = useCallback(async () => {
         setLoading(true);
-        const res = await getStudents({ search, page, pageSize, level, sessionId: sessionParam, semester: semesterParam, departmentId: deptIdParam ? parseInt(deptIdParam) : undefined, status: levelIsGraduant ? undefined : statusParam, graduationYear: gradYearParam });
+        const res = await getStudents({ search, page, pageSize, level, sessionId: sessionParam, semester: semesterParam, departmentId: deptIdParam ? parseInt(deptIdParam) : undefined, status: effectiveStatus, graduationYear: gradYearParam });
         if (res.success) {
             setStudents(res.data);
             setTotalCount(res.totalCount);
         }
         setLoading(false);
-    }, [search, page, pageSize, level, sessionParam, semesterParam, deptIdParam, statusParam, gradYearParam, levelIsGraduant]);
+    }, [search, page, pageSize, level, sessionParam, semesterParam, deptIdParam, effectiveStatus, gradYearParam]);
 
     useEffect(() => {
         fetchStudents();
@@ -97,19 +133,77 @@ function StudentsPageContent() {
                 setSessions(res.sessions);
                 setUnassignedCount(res.unassignedCount);
                 setGraduationYears(res.graduationYears || []);
+                if (res.statusCounts) {
+                    setStatusCounts(res.statusCounts);
+                }
             }
         })();
     }, []);
 
-    const handleSearch = (value: string) => {
-        const params = new URLSearchParams(searchParams);
-        if (value) {
-            params.set("search", value);
+    const handleSearch = useCallback((value: string) => {
+        const params = new URLSearchParams(searchParams.toString());
+        const trimmed = value.trim();
+        if (trimmed) {
+            params.set("search", trimmed);
         } else {
             params.delete("search");
         }
         params.set("page", "1");
-        router.push(`${pathname}?${params.toString()}`);
+        const qs = params.toString();
+        router.push(qs ? `${pathname}?${qs}` : pathname);
+    }, [searchParams, pathname, router]);
+
+    const handleSearchChange = (val: string) => {
+        setSearchInput(val);
+        if (searchTimeoutRef.current) {
+            clearTimeout(searchTimeoutRef.current);
+        }
+
+        // When content is erased from the search box, IMMEDIATELY load the entire data!
+        if (val.trim() === "") {
+            handleSearch("");
+            return;
+        }
+
+        // Live debounce (350ms) so typing naturally updates search without waiting for enter
+        searchTimeoutRef.current = setTimeout(() => {
+            handleSearch(val);
+        }, 350);
+    };
+
+    const handleClearSearch = () => {
+        if (searchTimeoutRef.current) {
+            clearTimeout(searchTimeoutRef.current);
+        }
+        setSearchInput("");
+        handleSearch("");
+    };
+
+    const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === "Enter") {
+            if (searchTimeoutRef.current) {
+                clearTimeout(searchTimeoutRef.current);
+            }
+            handleSearch(searchInput);
+        }
+    };
+
+    const hasActiveFilters = Boolean(
+        search ||
+        levelParam ||
+        sessionParam ||
+        semesterParam ||
+        deptIdParam ||
+        gradYearParam ||
+        (searchParams.has("status") && statusParam !== "all")
+    );
+
+    const handleResetAllFilters = () => {
+        if (searchTimeoutRef.current) {
+            clearTimeout(searchTimeoutRef.current);
+        }
+        setSearchInput("");
+        router.push(pathname);
     };
 
     const handleLevelChange = (value: string) => {
@@ -158,7 +252,7 @@ function StudentsPageContent() {
 
     const handleStatusChange = (value: string) => {
         const params = new URLSearchParams(searchParams);
-        if (value && value !== "active") {
+        if (value && value !== "all") {
             params.set("status", value);
         } else {
             params.delete("status");
@@ -255,7 +349,7 @@ function StudentsPageContent() {
                     >
                         {statusOptions.map((opt) => (
                             <option key={opt.value} value={opt.value}>
-                                {opt.value === "active" ? "Status: Active" : `Status: ${opt.label}`}
+                                {opt.value === "all" ? "All Statuses" : `Status: ${opt.label}`}
                             </option>
                         ))}
                     </select>
@@ -310,24 +404,82 @@ function StudentsPageContent() {
                     </select>
 
                       <div className="relative w-full md:w-64">
-                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
                           <input
-                              className="w-full pl-10 pr-20 py-2 h-10 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white shadow-sm text-sm"
+                              className="w-full pl-10 pr-16 py-2 h-10 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white shadow-sm text-sm"
                               placeholder="Search students..."
-                              defaultValue={search}
-                              onKeyDown={(e) => {
-                                  if (e.key === "Enter") {
-                                      handleSearch((e.target as HTMLInputElement).value);
-                                  }
-                              }}
+                              value={searchInput}
+                              onChange={(e) => handleSearchChange(e.target.value)}
+                              onKeyDown={handleSearchKeyDown}
                           />
-                          {search && (
-                              <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-md pointer-events-none">
-                                  {totalCount}
-                              </div>
-                          )}
+                          <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                              {searchInput && (
+                                  <button
+                                      type="button"
+                                      onClick={handleClearSearch}
+                                      className="p-1 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+                                      title="Clear search"
+                                  >
+                                      <X className="w-3.5 h-3.5" />
+                                  </button>
+                              )}
+                              {search && (
+                                  <div className="text-[10px] font-bold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-md pointer-events-none">
+                                      {totalCount.toLocaleString()}
+                                  </div>
+                              )}
+                          </div>
                       </div>
+
+                      {hasActiveFilters && (
+                          <Button
+                              variant="outline"
+                              onClick={handleResetAllFilters}
+                              className="rounded-xl font-bold text-xs uppercase tracking-wider h-10 border-rose-200 bg-rose-50 text-rose-600 hover:bg-rose-100 gap-1.5 shadow-sm"
+                              title="Reset all filters and search"
+                          >
+                              <X className="w-3.5 h-3.5" />
+                              Reset Filters
+                          </Button>
+                      )}
                 </div>
+            </div>
+
+            {/* Quick Status Filter Tabs */}
+            <div className="flex flex-wrap items-center gap-2">
+                {[
+                    { id: "all", label: "All Students", count: statusCounts?.all },
+                    { id: "active", label: "Active", count: statusCounts?.active },
+                    { id: "nd_graduant", label: "ND Graduants", count: statusCounts?.nd_graduant },
+                    { id: "hnd_graduant", label: "HND Graduants", count: statusCounts?.hnd_graduant },
+                    { id: "suspended", label: "Suspended", count: statusCounts?.suspended },
+                    { id: "pending_review", label: "Pending Review", count: statusCounts?.pending_review },
+                ].map((tab) => {
+                    const isSelected = (!searchParams.get("status") && tab.id === "all") || searchParams.get("status") === tab.id;
+                    return (
+                        <button
+                            key={tab.id}
+                            type="button"
+                            onClick={() => handleStatusChange(tab.id)}
+                            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all shadow-sm ${
+                                isSelected
+                                    ? "bg-indigo-600 text-white shadow-indigo-200"
+                                    : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 hover:text-slate-900"
+                            }`}
+                        >
+                            <span>{tab.label}</span>
+                            {typeof tab.count === "number" && (
+                                <span
+                                    className={`text-[10px] px-1.5 py-0.5 rounded-full font-black ${
+                                        isSelected ? "bg-white/20 text-white" : "bg-slate-100 text-slate-500"
+                                    }`}
+                                >
+                                    {tab.count.toLocaleString()}
+                                </span>
+                            )}
+                        </button>
+                    );
+                })}
             </div>
 
             {showImporter && (
@@ -364,6 +516,14 @@ function StudentsPageContent() {
                                 className="bg-indigo-600 hover:bg-indigo-700 text-white h-10 px-4 rounded-xl text-xs font-bold uppercase tracking-wider"
                             >
                                 Bulk Placement
+                            </Button>
+                            <Button
+                                onClick={() => setShowBulkDeleteModal(true)}
+                                variant="outline"
+                                className="h-10 px-4 rounded-xl text-xs font-bold uppercase tracking-wider border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 gap-1.5"
+                            >
+                                <Trash2 className="w-3.5 h-3.5" />
+                                Remove Selected
                             </Button>
                         </div>
                     </div>
@@ -465,6 +625,14 @@ function StudentsPageContent() {
                                                 <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold bg-indigo-50 text-indigo-800 border border-indigo-200 shadow-sm">
                                                     HND Graduated
                                                 </span>
+                                            ) : s.status === 'suspended' ? (
+                                                <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold bg-rose-50 text-rose-800 border border-rose-200 shadow-sm">
+                                                    Suspended
+                                                </span>
+                                            ) : s.status === 'pending_review' ? (
+                                                <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold bg-blue-50 text-blue-800 border border-blue-200 shadow-sm">
+                                                    Pending Review
+                                                </span>
                                             ) : (
                                                 <span className="text-sm font-bold text-slate-700">
                                                     {isK12 ? `Grade ${s.currentLevel}` : `${s.programme?.programmeType || ''} ${s.currentLevel}`.trim()}
@@ -552,6 +720,18 @@ function StudentsPageContent() {
                                             >
                                                 <FileText className="w-3 h-3" />
                                                 Ledger
+                                            </Button>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => {
+                                                    setStudentToDelete(s);
+                                                    setDeletePermanent(false);
+                                                }}
+                                                className="h-8 w-8 p-0 rounded-lg text-rose-500 hover:text-rose-700 hover:bg-rose-50"
+                                                title="Remove Student Account"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
                                             </Button>
                                             {!s.matricNumber && (
                                                 <Button

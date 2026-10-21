@@ -8,6 +8,7 @@ export async function getSuccessfulPaymentsGrouped() {
     try {
         const admissionTxs = await db.select({
             id: transactions.id,
+            studentId: transactions.studentId,
             amount: transactions.amount,
             gateway: transactions.gateway,
             gatewayReference: transactions.gatewayReference,
@@ -15,12 +16,15 @@ export async function getSuccessfulPaymentsGrouped() {
             gatewayTransactionId: transactions.gatewayTransactionId,
             createdAt: transactions.createdAt,
             purpose: transactions.purpose,
+            serviceTypeId: transactions.serviceTypeId,
+            tuitionProfile: transactions.tuitionProfile,
             type: sql<string>`'admission'`,
             userId: sql<number | null>`null`,
         }).from(transactions).where(eq(transactions.status, 'completed'));
 
         const bursaryTxs = await db.select({
             id: payment_transactions.id,
+            studentId: sql<number | null>`null`,
             amount: payment_transactions.amount,
             gateway: payment_transactions.paymentGateway,
             gatewayReference: payment_transactions.transactionReference,
@@ -28,6 +32,8 @@ export async function getSuccessfulPaymentsGrouped() {
             metadata: payment_transactions.metadata,
             createdAt: payment_transactions.createdAt,
             purpose: payment_transactions.transactionType,
+            serviceTypeId: sql<string | null>`null`,
+            tuitionProfile: sql<string | null>`null`,
             type: sql<string>`'bursary'`,
             userId: payment_transactions.userId,
         }).from(payment_transactions).where(eq(payment_transactions.status, 'completed'));
@@ -47,10 +53,15 @@ export async function getSuccessfulPaymentsGrouped() {
         });
 
         const appIds = new Set<number>();
+        const studentIds = new Set<number>();
         const userIds = new Set<number>();
         const unknownRefs: string[] = [];
 
         txs.forEach(tx => {
+            if (tx.studentId) {
+                studentIds.add(tx.studentId);
+            }
+
             const match = tx.gatewayReference?.match(/^(?:SCH|ACC|PROC|FORM)-(\d+)-/);
             if (match) {
                 appIds.add(parseInt(match[1]));
@@ -68,6 +79,7 @@ export async function getSuccessfulPaymentsGrouped() {
 
         const refToNameMap = new Map<string, string>();
         const appMap = new Map<number, string>();
+        const studentMap = new Map<number, string>();
 
         const extractName = (app: any) => {
             let fallback = 'Applicant';
@@ -86,6 +98,23 @@ export async function getSuccessfulPaymentsGrouped() {
             
             apps.forEach(app => {
                 appMap.set(app.id, extractName(app));
+            });
+        }
+
+        if (studentIds.size > 0) {
+            const studentsData = await db.select({ 
+                id: students.id, 
+                firstName: students.firstName, 
+                lastName: students.lastName, 
+                userName: users.name 
+            })
+            .from(students)
+            .leftJoin(users, eq(students.userId, users.id))
+            .where(inArray(students.id, Array.from(studentIds)));
+
+            studentsData.forEach(s => {
+                const fullName = (s.userName || `${s.firstName || ''} ${s.lastName || ''}`.trim() || 'Student').trim();
+                studentMap.set(s.id, fullName);
             });
         }
 
@@ -120,12 +149,18 @@ export async function getSuccessfulPaymentsGrouped() {
 
         const userMap = new Map<number, string>();
         if (userIds.size > 0) {
-            const usersData = await db.select({ id: users.id, name: users.name, firstName: users.firstName, surname: users.surname })
-                .from(users)
-                .where(inArray(users.id, Array.from(userIds)));
+            const usersData = await db.select({ 
+                id: users.id, 
+                name: users.name,
+                studentFirstName: students.firstName,
+                studentLastName: students.lastName
+            })
+            .from(users)
+            .leftJoin(students, eq(students.userId, users.id))
+            .where(inArray(users.id, Array.from(userIds)));
             
             usersData.forEach(u => {
-                const fullName = u.name || `${u.firstName || ''} ${u.surname || ''}`.trim() || 'Student';
+                const fullName = (u.name || `${u.studentFirstName || ''} ${u.studentLastName || ''}`.trim() || 'Student').trim();
                 userMap.set(u.id, fullName);
             });
         }
@@ -141,9 +176,9 @@ export async function getSuccessfulPaymentsGrouped() {
             if (p.includes('acceptance')) {
                 category = 'Acceptance Fee';
                 itemBreakdown = 'Acceptance Fee & ID Card (N2,000)';
-            } else if (p.includes('school fee') || p.includes('tuition')) {
+            } else if (p.includes('school fee') || p.includes('tuition') || tx.tuitionProfile || (tx.gateway === 'remita' && parseFloat(tx.amount) > 10000)) {
                 category = 'School Fees';
-                itemBreakdown = 'Tuition / School Fees';
+                itemBreakdown = tx.tuitionProfile || tx.purpose || 'Tuition / School Fees';
             } else if (p.includes('processing')) {
                 category = 'Processing Fee';
                 itemBreakdown = 'Processing Fee';
@@ -165,7 +200,9 @@ export async function getSuccessfulPaymentsGrouped() {
             const purposeMatch = tx.purpose?.match(/Application ID:?\s*(\d+)/i);
             if (purposeMatch) matchedAppId = parseInt(purposeMatch[1]);
 
-            if (matchedAppId !== null && appMap.has(matchedAppId)) {
+            if (tx.studentId && studentMap.has(tx.studentId)) {
+                studentName = studentMap.get(tx.studentId)!;
+            } else if (matchedAppId !== null && appMap.has(matchedAppId)) {
                 studentName = appMap.get(matchedAppId)!;
             } else if (tx.gatewayReference && refToNameMap.has(tx.gatewayReference)) {
                 studentName = refToNameMap.get(tx.gatewayReference)!;

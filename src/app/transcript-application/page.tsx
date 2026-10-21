@@ -1,9 +1,9 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useEffect } from "react";
-import { submitTranscriptApplication, getTranscriptFees } from "@/actions/transcript-requests";
+import { submitTranscriptApplication, getTranscriptFees, checkStudentGraduationClearance } from "@/actions/transcript-requests";
 import { useRouter } from "next/navigation";
-import { Loader2, FileText, Send, Building } from "lucide-react";
+import { Loader2, FileText, Send, Building, AlertTriangle, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 
 export default function TranscriptApplicationPage() {
@@ -11,8 +11,16 @@ export default function TranscriptApplicationPage() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
     
-    const [fees, setFees] = useState({ transcriptFee: 15000, processingFee: 5000 });
+    const [fees, setFees] = useState({ transcriptFee: 15000, processingFee: 4000 });
     
+    const [clearanceChecking, setClearanceChecking] = useState(false);
+    const [clearanceInfo, setClearanceInfo] = useState<{
+        isGraduant: boolean;
+        isCleared: boolean;
+        totalOwed?: number;
+        message?: string;
+    } | null>(null);
+
     useEffect(() => {
         getTranscriptFees().then(setFees);
     }, []);
@@ -26,6 +34,32 @@ export default function TranscriptApplicationPage() {
         destinationAddress: "",
         deliveryMethod: "email" as "email" | "courier" | "pickup"
     });
+
+    const handleMatricBlur = async () => {
+        const matric = formData.matricNumber.trim();
+        if (!matric || matric.length < 5) return;
+        setClearanceChecking(true);
+        try {
+            const res = await checkStudentGraduationClearance(matric);
+            if (res.success && res.found) {
+                setClearanceInfo({
+                    isGraduant: !!res.isGraduant,
+                    isCleared: !!res.isCleared,
+                    totalOwed: res.totalOwed,
+                    message: res.message
+                });
+                if (res.studentName && !formData.applicantName) {
+                    setFormData(prev => ({ ...prev, applicantName: res.studentName || prev.applicantName }));
+                }
+            } else {
+                setClearanceInfo(null);
+            }
+        } catch (err) {
+            console.error("Clearance check error:", err);
+        } finally {
+            setClearanceChecking(false);
+        }
+    };
 
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
@@ -75,12 +109,48 @@ export default function TranscriptApplicationPage() {
                     <form onSubmit={handleSubmit} className="space-y-6">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
-                                <label className="block text-sm font-semibold text-slate-700 mb-2">Full Name</label>
-                                <input required type="text" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500" value={formData.applicantName} onChange={e => setFormData({...formData, applicantName: e.target.value})} placeholder="e.g. John Doe" />
+                                <label className="block text-sm font-semibold text-slate-700 mb-2">Matriculation Number</label>
+                                <div className="relative">
+                                    <input 
+                                        required 
+                                        type="text" 
+                                        className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono uppercase" 
+                                        value={formData.matricNumber} 
+                                        onChange={e => setFormData({...formData, matricNumber: e.target.value.toUpperCase()})} 
+                                        onBlur={handleMatricBlur}
+                                        placeholder="e.g. BAM/FSS/IB/2023/10929" 
+                                    />
+                                    {clearanceChecking && (
+                                        <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5 text-xs text-slate-400">
+                                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                            <span>Verifying...</span>
+                                        </div>
+                                    )}
+                                </div>
+                                {clearanceInfo?.isGraduant && (
+                                    <div className="mt-2">
+                                        {clearanceInfo.isCleared ? (
+                                            <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-200">
+                                                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                                                <span>Graduation Clearance Status: Cleared</span>
+                                            </div>
+                                        ) : (
+                                            <div className="flex flex-col gap-1 text-xs text-rose-700 bg-rose-50 p-2.5 rounded-lg border border-rose-200">
+                                                <div className="flex items-center gap-1.5 font-bold">
+                                                    <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+                                                    <span>Compulsory Graduation Clearance Required</span>
+                                                </div>
+                                                <p className="text-[11px] text-rose-600">
+                                                    Outstanding: <strong>₦{clearanceInfo.totalOwed?.toLocaleString()}</strong> (Convocation, Certificate & Incidental Fee).
+                                                </p>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                             </div>
                             <div>
-                                <label className="block text-sm font-semibold text-slate-700 mb-2">Matriculation Number</label>
-                                <input required type="text" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500" value={formData.matricNumber} onChange={e => setFormData({...formData, matricNumber: e.target.value})} placeholder="e.g. FSS/19/1234" />
+                                <label className="block text-sm font-semibold text-slate-700 mb-2">Full Name</label>
+                                <input required type="text" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500" value={formData.applicantName} onChange={e => setFormData({...formData, applicantName: e.target.value})} placeholder="e.g. John Doe" />
                             </div>
                             <div>
                                 <label className="block text-sm font-semibold text-slate-700 mb-2">Email Address</label>
@@ -91,6 +161,27 @@ export default function TranscriptApplicationPage() {
                                 <input required type="text" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500" value={formData.applicantPhone} onChange={e => setFormData({...formData, applicantPhone: e.target.value})} placeholder="e.g. 08012345678" />
                             </div>
                         </div>
+
+                        {clearanceInfo?.isGraduant && !clearanceInfo.isCleared && (
+                            <div className="bg-amber-50 border-2 border-amber-300 p-5 rounded-2xl flex flex-col gap-2">
+                                <div className="flex items-center gap-2 text-amber-900 font-bold text-sm sm:text-base">
+                                    <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0" />
+                                    <span>Compulsory Graduation Fees Must Be Settled</span>
+                                </div>
+                                <p className="text-xs sm:text-sm text-amber-800">
+                                    Our records show outstanding graduation fees totaling <strong>₦{clearanceInfo.totalOwed?.toLocaleString()}</strong> for Convocation, Certificate, and Incidental Fee. All graduants must be financially cleared before their transcript can be approved and dispatched.
+                                </p>
+                                <div className="pt-2 flex flex-wrap gap-2">
+                                    <Link 
+                                        href="/login" 
+                                        target="_blank"
+                                        className="text-xs font-bold bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-xl transition-all shadow-sm"
+                                    >
+                                        Log In to Pay Graduation Fees →
+                                    </Link>
+                                </div>
+                            </div>
+                        )}
 
                         <div className="border-t border-slate-200 pt-6 mt-6">
                             <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2 mb-4">
@@ -121,13 +212,17 @@ export default function TranscriptApplicationPage() {
                             <div>
                                 <p className="text-sm text-indigo-800 font-semibold mb-1">Total Fee Required</p>
                                 <p className="text-2xl font-black text-indigo-900">
-                                    {(fees.transcriptFee === 0 && fees.processingFee === 0) ? "Free" : `₦${((fees.transcriptFee + fees.processingFee)/1000).toLocaleString()}k`}
+                                    {(fees.transcriptFee === 0 && fees.processingFee === 0) ? "Free" : `₦${(fees.transcriptFee + fees.processingFee).toLocaleString()}`}
                                 </p>
                                 <p className="text-xs text-indigo-600 mt-1">
-                                    Transcript Fee (₦{(fees.transcriptFee/1000).toLocaleString()}k) + Processing (₦{(fees.processingFee/1000).toLocaleString()}k)
+                                    Transcript Fee (₦{fees.transcriptFee.toLocaleString()}) + Processing Fee (₦{fees.processingFee.toLocaleString()})
                                 </p>
                             </div>
-                            <button disabled={loading} type="submit" className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-8 rounded-xl flex items-center gap-2 transition-all shadow-md shadow-indigo-600/30 disabled:opacity-70 disabled:cursor-not-allowed">
+                            <button 
+                                disabled={loading || (clearanceInfo?.isGraduant && !clearanceInfo.isCleared)} 
+                                type="submit" 
+                                className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-8 rounded-xl flex items-center gap-2 transition-all shadow-md shadow-indigo-600/30 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
                                 {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
                                 {(fees.transcriptFee === 0 && fees.processingFee === 0) ? "Submit Application" : "Proceed to Payment"}
                             </button>

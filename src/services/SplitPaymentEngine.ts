@@ -32,35 +32,47 @@ const REMITA_TUITION_PROFILES: Record<string, { serviceTypeId: string; label: st
 };
 
 export function resolveRemitaServiceType(options: {
-    programmeType: string;
-    level: number | string;
+    programmeType?: string | null;
+    level?: number | string | null;
+    programmeName?: string | null;
+    matricNumber?: string | null;
 }): { serviceTypeId: string; tuitionProfile: string } {
-    const ptype = (options.programmeType || "").toUpperCase().trim();
+    let ptype = (options.programmeType || "").toUpperCase().trim();
+    const progName = (options.programmeName || "").toUpperCase().trim();
+    const matric = (options.matricNumber || "").toUpperCase().trim();
     const rawLevel = String(options.level ?? "").trim();
 
-    // Normalise level: accept both legacy (100/200) and canonical (1/2)
-    let level: number;
-    if (rawLevel === "100" || rawLevel === "1") level = 1;
-    else if (rawLevel === "200" || rawLevel === "2") level = 2;
-    else {
-        throw new Error(
-            `Cannot resolve Remita tuition profile: unsupported level "${rawLevel}". ` +
-            `Only ND 1/2 and HND 1/2 have tuition profiles.`
-        );
+    // Deduce programmeType if missing or vague
+    if (!ptype || (ptype !== "ND" && ptype !== "HND")) {
+        if (ptype.includes("HND") || progName.includes("HND") || matric.includes("/HND/")) {
+            ptype = "HND";
+        } else if (ptype.includes("OND") || ptype.includes("ND") || progName.includes("OND") || progName.includes("ND") || matric.includes("/ND/")) {
+            ptype = "ND";
+        }
     }
 
-    if (ptype !== "ND" && ptype !== "HND") {
-        throw new Error(
-            `Cannot resolve Remita tuition profile: invalid programmeType "${ptype}". ` +
-            `Must be "ND" or "HND".`
-        );
+    // Normalise level: accept both legacy (100/200/300/400) and canonical (1/2/3/4)
+    let level = 1;
+    if (rawLevel === "100" || rawLevel === "1") {
+        level = 1;
+    } else if (rawLevel === "200" || rawLevel === "2") {
+        level = 2;
+    } else if (rawLevel === "300" || rawLevel === "3") {
+        ptype = "HND";
+        level = 1;
+    } else if (rawLevel === "400" || rawLevel === "4") {
+        ptype = "HND";
+        level = 2;
+    } else {
+        level = 1;
+    }
+
+    if (ptype !== "HND") {
+        ptype = "ND";
     }
 
     const key = `${ptype}_${level}`;
-    const profile = REMITA_TUITION_PROFILES[key];
-    if (!profile) {
-        throw new Error(`No Remita tuition profile defined for ${key}`);
-    }
+    const profile = REMITA_TUITION_PROFILES[key] || REMITA_TUITION_PROFILES["ND_1"];
 
     return { serviceTypeId: profile.serviceTypeId, tuitionProfile: profile.label };
 }
@@ -282,16 +294,18 @@ export class RemitaAdapter implements PaymentGatewayAdapter {
         const merchantId = isLive ? "19201597339" : (process.env.REMITA_MERCHANT_ID || "19201597339");
         const apiKey = isLive ? "6NYU4646" : (process.env.REMITA_API_KEY || "6NYU4646");
 
-        // Resolve tuition profile from programme type and level
+        // Resolve tuition profile from programme type, level, programmeName, and matricNumber
         let serviceTypeId = "8817651539"; // safe default for non-tuition payments
-        const metaLevel = meta?.studentLevel;
-        const metaPType = meta?.programmeType;
-        if (metaLevel != null && metaLevel !== "" && metaPType) {
+        try {
             const resolved = resolveRemitaServiceType({
-                programmeType: String(metaPType),
-                level: String(metaLevel),
+                programmeType: meta?.programmeType,
+                level: meta?.studentLevel,
+                programmeName: meta?.programmeName,
+                matricNumber: meta?.matricNumber,
             });
             serviceTypeId = resolved.serviceTypeId;
+        } catch {
+            // Keep default
         }
 
         const payload: any = {
@@ -507,9 +521,11 @@ export class SplitPaymentEngine {
         // 1. Fetch Student details
         const studentRows = await db.select({
             student: students,
-            user: users
+            user: users,
+            programme: programmes
         }).from(students)
           .leftJoin(users, eq(students.userId, users.id))
+          .leftJoin(programmes, eq(students.programmeId, programmes.id))
           .where(eq(students.id, studentId))
           .limit(1);
 
@@ -517,7 +533,11 @@ export class SplitPaymentEngine {
             return { success: false, reference: "", error: "Student or User profile not found." };
         }
         
-        const student = { ...studentRows[0].student, user: studentRows[0].user };
+        const student = { 
+            ...studentRows[0].student, 
+            user: studentRows[0].user,
+            programme: studentRows[0].programme 
+        };
 
         // 1.5 Activity lock check (e.g. school fee freeze)
         const lockCheck = await assertActivityUnlocked(ACTIVITIES.SCHOOL_FEE_PAYMENT, buildStudentLockContext(student));
@@ -765,11 +785,13 @@ export class SplitPaymentEngine {
         // Resolve Remita tuition profile when gateway is remita and student context exists
         let remitServiceTypeId: string | null = null;
         let remitTuitionProfile: string | null = null;
-        if (activeGateway === 'remita' && student.programmeType && student.currentLevel != null) {
+        if (activeGateway === 'remita') {
             try {
                 const resolved = resolveRemitaServiceType({
                     programmeType: student.programmeType,
                     level: student.currentLevel,
+                    programmeName: student.programme?.name,
+                    matricNumber: student.matricNumber,
                 });
                 remitServiceTypeId = resolved.serviceTypeId;
                 remitTuitionProfile = resolved.tuitionProfile;
@@ -790,6 +812,19 @@ export class SplitPaymentEngine {
             tuitionProfile: remitTuitionProfile,
         });
 
+        // Resolve student name properly: users.name or students.firstName + lastName
+        const studentFullName = (
+            student.user?.name || 
+            `${student.firstName || ''} ${student.lastName || ''}`.trim() || 
+            student.user?.email || 
+            'Student'
+        ).trim();
+
+        const nameParts = studentFullName.split(/\s+/).filter(Boolean);
+        const payerFirstName = student.firstName || nameParts[0] || "Student";
+        const payerLastName = student.lastName || nameParts.slice(1).join(' ') || "Payer";
+        const payerPhone = student.user?.phone || (student as any).guardianPhone || "09000000000";
+
         // 7. Invoke active gateway adapter
         const adapter = SplitPaymentEngine.getAdapter(activeGateway);
         const result = await adapter.initializeSplitPayment(
@@ -800,11 +835,13 @@ export class SplitPaymentEngine {
             feeBearerRule,
             { 
                 studentLevel: student.currentLevel ?? "",
-                programmeType: student.programmeType || "",
-                payerName: `${student.user.firstName || ''} ${student.user.lastName || ''}`.trim() || student.user.email,
-                payerFirstName: student.user.firstName || "",
-                payerLastName: student.user.lastName || "",
-                payerPhone: student.user.phone || ""
+                programmeType: student.programmeType || (student.programme?.name?.toUpperCase().includes('HND') ? 'HND' : 'ND'),
+                programmeName: student.programme?.name || "",
+                matricNumber: student.matricNumber || "",
+                payerName: studentFullName,
+                payerFirstName: payerFirstName,
+                payerLastName: payerLastName,
+                payerPhone: payerPhone
             }
         );
         

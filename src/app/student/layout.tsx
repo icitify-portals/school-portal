@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { Lock, ShieldAlert } from "lucide-react";
 import { ProfileCompletionGuard } from "@/components/auth/ProfileCompletionGuard";
 import { OathMedicalBanner } from "@/components/auth/OathMedicalBanner";
+import { StudentDailyReminderToast } from "@/components/student/StudentDailyReminderToast";
 
 export default async function StudentLayout({
     children,
@@ -145,6 +146,9 @@ export default async function StudentLayout({
         // @ts-expect-error - TS2322: Auto-suppressed for build
         <ProfileCompletionGuard>
             <>
+                {/* Daily toast notification reminder for Dossier, Health Form, Course Registration */}
+                <StudentDailyReminderToast />
+
                 {/* Reminder banner for pending oath/medical (before deadline) */}
                 {(oathRequired || medicalRequired) && !deadlinePassed && (
                     <OathMedicalBanner
