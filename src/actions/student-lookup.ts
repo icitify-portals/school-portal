@@ -4,6 +4,7 @@ import { db } from "@/db/db";
 import { students, users, departments, programmes } from "@/db/schema";
 import { eq, or, like, notLike, and, sql, isNull, inArray, ne } from "drizzle-orm";
 import bcrypt from "bcryptjs";
+import { levelLabel } from "@/lib/levels";
 
 function maskEmail(email: string | null | undefined): string {
     if (!email || !email.includes('@')) return email || 'Not assigned';
@@ -177,6 +178,7 @@ export async function searchPublicStudents(query: string) {
                 department: r.deptName || 'Not Assigned',
                 programme: r.programmeName || `${r.programmeType || ''} Level ${r.currentLevel || 1}`,
                 programmeType: r.programmeType || 'ND',
+                levelLabel: levelLabel(r.currentLevel, r.programmeType),
                 level: r.currentLevel || 1,
                 status: r.status || 'active',
                 email: rawEmail,

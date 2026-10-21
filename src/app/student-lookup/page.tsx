@@ -267,7 +267,7 @@ export default function StudentLookupPage() {
                                                 </div>
                                                 <div className="flex items-center gap-2 text-slate-600 pl-5 text-[11px]">
                                                     <BookOpen className="w-3 h-3 text-slate-400 shrink-0" />
-                                                    <span>{student.programme} ({student.programmeType} Level {student.level})</span>
+                                                    <span>{student.programme} &bull; <strong className="text-slate-800">{student.levelLabel || `${student.programmeType} ${student.level}`}</strong></span>
                                                 </div>
                                             </div>
 

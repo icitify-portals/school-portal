@@ -184,6 +184,13 @@ export class BursaryService {
                 billingSessionId = student.admissionSessionId;
             }
 
+            const targetLevelGroup = student.programmeType === 'HND'
+                ? (student.currentLevel === 2 ? 'HND 2' : 'HND 1')
+                : (student.currentLevel === 2 ? 'ND 2' : 'ND 1');
+            const targetNumericGroup = student.programmeType === 'HND'
+                ? (student.currentLevel === 2 ? '4' : '3')
+                : (student.currentLevel === 2 ? '2' : '1');
+
             let allocation = null;
             let directFeeStructureId = null;
 
@@ -199,6 +206,8 @@ export class BursaryService {
                         or(
                             eq(feeStructures.level, student.currentLevel || 1),
                             sql`FIND_IN_SET(${student.currentLevel?.toString() || '1'}, ${feeStructures.targetGroups}) > 0`,
+                            sql`FIND_IN_SET(${targetLevelGroup}, ${feeStructures.targetGroups}) > 0`,
+                            sql`FIND_IN_SET(${targetNumericGroup}, ${feeStructures.targetGroups}) > 0`,
                             sql`FIND_IN_SET(${student.status}, ${feeStructures.targetGroups}) > 0`,
                             sql`FIND_IN_SET('all', ${feeStructures.targetGroups}) > 0`,
                               sql`FIND_IN_SET(${student.studyMode}, ${feeStructures.targetGroups}) > 0`
@@ -234,6 +243,8 @@ export class BursaryService {
                         or(
                             eq(feeStructures.level, student.currentLevel || 1),
                             sql`FIND_IN_SET(${student.currentLevel?.toString() || '1'}, ${feeStructures.targetGroups}) > 0`,
+                            sql`FIND_IN_SET(${targetLevelGroup}, ${feeStructures.targetGroups}) > 0`,
+                            sql`FIND_IN_SET(${targetNumericGroup}, ${feeStructures.targetGroups}) > 0`,
                             sql`FIND_IN_SET(${student.status}, ${feeStructures.targetGroups}) > 0`,
                             sql`FIND_IN_SET('all', ${feeStructures.targetGroups}) > 0`,
                               sql`FIND_IN_SET(${student.studyMode}, ${feeStructures.targetGroups}) > 0`
@@ -255,6 +266,8 @@ export class BursaryService {
                         or(
                             eq(feeStructures.level, student.currentLevel || 1),
                             sql`FIND_IN_SET(${student.currentLevel?.toString() || '1'}, ${feeStructures.targetGroups}) > 0`,
+                            sql`FIND_IN_SET(${targetLevelGroup}, ${feeStructures.targetGroups}) > 0`,
+                            sql`FIND_IN_SET(${targetNumericGroup}, ${feeStructures.targetGroups}) > 0`,
                             sql`FIND_IN_SET(${student.status}, ${feeStructures.targetGroups}) > 0`,
                             sql`FIND_IN_SET('all', ${feeStructures.targetGroups}) > 0`,
                               sql`FIND_IN_SET(${student.studyMode}, ${feeStructures.targetGroups}) > 0`
@@ -279,6 +292,8 @@ export class BursaryService {
                         or(
                             eq(feeStructures.level, student.currentLevel || 1),
                             sql`FIND_IN_SET(${student.currentLevel?.toString() || '1'}, ${feeStructures.targetGroups}) > 0`,
+                            sql`FIND_IN_SET(${targetLevelGroup}, ${feeStructures.targetGroups}) > 0`,
+                            sql`FIND_IN_SET(${targetNumericGroup}, ${feeStructures.targetGroups}) > 0`,
                             sql`FIND_IN_SET(${student.status}, ${feeStructures.targetGroups}) > 0`,
                             sql`FIND_IN_SET('all', ${feeStructures.targetGroups}) > 0`,
                               sql`FIND_IN_SET(${student.studyMode}, ${feeStructures.targetGroups}) > 0`
