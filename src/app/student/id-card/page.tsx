@@ -1,12 +1,13 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
+import { db } from "@/db/db";
+import { students, users, departments, programmes, idCards } from "@/db/schema";
+import { eq } from "drizzle-orm";
 import { IDCardService } from "@/services/IDCardService";
-import { getMyIDCardAction, generateQRAction } from "@/actions/id-cards";
 import { getIDCardSettings } from "@/actions/settings";
-import { IDCardVisual } from "@/components/credentials/IDCardVisual";
-import { IDCardDownloader } from "@/components/credentials/IDCardDownloader";
+import IDCardTemplate1 from "@/components/id-cards/IDCardTemplate1";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { ShieldCheck, Info, AlertTriangle, Printer, Download, Lock } from "lucide-react";
+import { ShieldCheck, Info, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { requestIDCardAction } from "@/actions/id-cards";
 import { Badge } from "@/components/ui/badge";
@@ -25,16 +26,57 @@ export default async function StudentIDCardPage() {
     // Logic for window availability
     const isWindowOpen = settings.enabled && settings.studentWindow === 'open';
 
-    // Fetch user details for the visual
-    const verificationData = card ? await IDCardService.verifyIDCard(card.verificationCode) : null;
-    const qrCode = card ? await IDCardService.generateVerificationQR(card.verificationCode) : undefined;
+    // Fetch full student record with relations
+    const [studentRecord] = await db
+        .select({
+            id: students.id,
+            firstName: students.firstName,
+            lastName: students.lastName,
+            otherNames: students.otherNames,
+            matricNumber: students.matricNumber,
+            currentLevel: students.currentLevel,
+            programmeType: students.programmeType,
+            bloodGroup: students.bloodGroup,
+            genotype: students.genotype,
+            barcode: students.barcode,
+            photoUrl: students.imageUrl,
+            signatureUrl: students.signatureUrl,
+            deptName: departments.name,
+            programmeName: programmes.name,
+            phone: users.phone,
+            name: users.name,
+        })
+        .from(students)
+        .leftJoin(users, eq(students.userId, users.id))
+        .leftJoin(departments, eq(students.deptId, departments.id))
+        .leftJoin(programmes, eq(students.programmeId, programmes.id))
+        .where(eq(students.userId, userId))
+        .limit(1);
+
+    const studentFullName = studentRecord 
+        ? [studentRecord.firstName, studentRecord.lastName, studentRecord.otherNames].filter(Boolean).join(" ") || studentRecord.name || user.name
+        : user.name || "STUDENT NAME";
+
+    const matricNo = studentRecord?.matricNumber || "PENDING";
+    const deptName = studentRecord?.deptName || "ACADEMIC DEPARTMENT";
+    const progName = studentRecord?.programmeName || `${studentRecord?.programmeType || "ND"} Programme`;
+    const levelLabel = studentRecord?.programmeType 
+        ? `${studentRecord.programmeType} ${studentRecord.currentLevel || 1}` 
+        : `Level ${studentRecord?.currentLevel || 1}`;
+
+    const barcodeVal = studentRecord?.barcode || matricNo;
 
     return (
-        <div className="p-8 max-w-[1600px] w-full mx-auto space-y-12 bg-slate-50 min-h-screen">
+        <div className="p-6 md:p-8 max-w-[1600px] w-full mx-auto space-y-8 bg-slate-50 min-h-screen">
+            {/* Header */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
                 <div>
-                    <h1 className="text-4xl font-black text-slate-900 tracking-tight uppercase italic">ID Card Services</h1>
-                    <p className="text-slate-500 font-medium tracking-tight">Generate and manage your official institutional identity credential.</p>
+                    <h1 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight uppercase italic">
+                        Digital ID Card &amp; Attendance Credential
+                    </h1>
+                    <p className="text-slate-500 font-medium tracking-tight text-sm mt-1">
+                        Your official institutional identity credential for academic identification, exam clearance, and attendance clock-in.
+                    </p>
                 </div>
                 {!isWindowOpen && (
                     <Badge variant="outline" className="rounded-xl border-amber-200 bg-amber-50 text-amber-600 font-black uppercase text-[10px] tracking-widest px-4 py-2 flex gap-2">
@@ -43,104 +85,76 @@ export default async function StudentIDCardPage() {
                 )}
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
-                {/* Visual Preview */}
-                <div className="flex justify-center lg:sticky lg:top-8">
-                    {verificationData?.success ? (
-                        <div className="space-y-6 flex flex-col items-center">
-                            <IDCardVisual
-                                data={{
-                                    name: (verificationData as any).user.name,
-                                    identifier: (verificationData as any).user.identifier!,
-                                    designation: "Student",
-                                    department: (verificationData as any).user.department,
-                                    issueDate: new Date((verificationData as any).card.issuedAt!).toLocaleDateString('en-GB'),
-                                    expiryDate: new Date((verificationData as any).card.expiresAt!).toLocaleDateString('en-GB'),
-                                    image: (verificationData as any).user.image || undefined,
-                                    qrCode: qrCode || undefined
-                                }}
-                                userType="student"
-                            />
-                            <div className="w-full max-w-[340px]">
-                                {isWindowOpen ? (
-                                    <IDCardDownloader
-                                        card={{
-                                            name: (verificationData as any).user.name,
-                                            image: (verificationData as any).user.image || undefined,
-                                            identifier: (verificationData as any).user.identifier!,
-                                            designation: "Student",
-                                            department: (verificationData as any).user.department,
-                                            issueDate: new Date((verificationData as any).card.issuedAt!).toLocaleDateString('en-GB'),
-                                            expiryDate: new Date((verificationData as any).card.expiresAt!).toLocaleDateString('en-GB'),
-                                            verificationCode: (verificationData as any).card.verificationCode
-                                        }}
-                                        userType="student"
-                                    />
-                                ) : (
-                                    <div className="p-4 bg-white border border-slate-200 rounded-2xl flex items-center justify-center gap-3 shadow-sm opacity-60">
-                                        <Lock className="w-4 h-4 text-slate-400" />
-                                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 italic">Downloads Disabled by HR</span>
-                                    </div>
-                                )}
-                            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                {/* Visual Preview Section (7 cols) */}
+                <div className="lg:col-span-7 flex flex-col items-center justify-center bg-white p-6 md:p-8 rounded-[2rem] shadow-xl border border-slate-200/80">
+                    <div className="w-full mb-4 flex items-center justify-between border-b border-slate-100 pb-3">
+                        <div className="flex items-center gap-2">
+                            <ShieldCheck className="w-5 h-5 text-emerald-600" />
+                            <span className="text-xs font-black uppercase tracking-wider text-slate-700">
+                                Official PVC Card Proof
+                            </span>
                         </div>
-                    ) : (
-                        <div className="w-[340px] h-[540px] bg-white rounded-[32px] border-4 border-dashed border-slate-200 flex flex-col items-center justify-center p-8 text-center gap-4">
-                            <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center">
-                                <ShieldCheck className="w-10 h-10 text-slate-200" />
-                            </div>
-                            <div>
-                                <h3 className="text-lg font-black text-slate-400 uppercase italic">No Active Card</h3>
-                                <p className="text-xs text-slate-400 font-medium mt-1">
-                                    {isWindowOpen ? "Request your digital ID card to verify your status." : "Issuance is currently closed by HR."}
-                                </p>
-                            </div>
-                        </div>
-                    )}
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                            ISO CR80 Standard &bull; High DPI
+                        </span>
+                    </div>
+
+                    <IDCardTemplate1
+                        studentName={studentFullName}
+                        matricNumber={matricNo}
+                        department={deptName}
+                        programmeName={progName}
+                        currentLevel={levelLabel}
+                        phoneNumber={studentRecord?.phone || undefined}
+                        bloodGroup={studentRecord?.bloodGroup || undefined}
+                        genotype={studentRecord?.genotype || undefined}
+                        photoUrl={studentRecord?.photoUrl || undefined}
+                        signatureUrl={studentRecord?.signatureUrl || undefined}
+                        barcode={barcodeVal}
+                        verificationCode={card?.verificationCode || matricNo}
+                        showControls={true}
+                    />
                 </div>
 
-                {/* Information & Actions */}
-                <div className="space-y-8">
-                    <Card className="-[32px] overflow-hidden border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
-                        <CardHeader className="bg-slate-900 text-white p-8">
-                            <CardTitle className="text-xl font-black uppercase italic tracking-tight">HR Issuance Policy</CardTitle>
-                            <CardDescription className="text-slate-400 font-medium">Identity governance and access control guidelines.</CardDescription>
+                {/* Information & Guidelines (5 cols) */}
+                <div className="lg:col-span-5 space-y-6">
+                    <Card className="rounded-[2rem] overflow-hidden border-none shadow-xl bg-white">
+                        <CardHeader className="bg-slate-900 text-white p-6">
+                            <CardTitle className="text-lg font-black uppercase italic tracking-tight">
+                                Card Usage Guidelines
+                            </CardTitle>
+                            <CardDescription className="text-slate-400 font-medium text-xs">
+                                Rules and protocols governing your official ID credential.
+                            </CardDescription>
                         </CardHeader>
-                        <CardContent className="p-8 space-y-6">
-                            {!isWindowOpen && (
-                                <div className="flex gap-4 p-4 bg-amber-50 rounded-2xl border border-amber-100">
-                                    <Info className="w-10 h-10 text-amber-500 shrink-0" />
-                                    <div>
-                                        <p className="text-xs font-black text-amber-900 uppercase tracking-widest leading-none mb-1">Window Status: Closed</p>
-                                        <p className="text-sm text-amber-700 font-medium">The Human Resources unit opens ID card issuance windows at the start of new sessions. Please check back during official registration periods.</p>
-                                    </div>
-                                </div>
-                            )}
-
+                        <CardContent className="p-6 space-y-5">
                             <div className="space-y-4">
-                                <h4 className="font-black text-xs uppercase tracking-widest text-slate-400">Governance Protocols:</h4>
-                                <ul className="grid grid-cols-1 gap-4">
-                                    <SecurityFeatureItem
-                                        icon={<Lock className="w-4 h-4 text-amber-600" />}
-                                        title="HR Authorized Only"
-                                        desc="Issuance is strictly managed during approved administrative windows."
-                                    />
-                                    <SecurityFeatureItem
-                                        icon={<ShieldCheck className="w-4 h-4 text-emerald-600" />}
-                                        title="Status Verification"
-                                        desc="Requires active enrollment status confirmed by the registry."
-                                    />
-                                </ul>
+                                <SecurityFeatureItem
+                                    icon={<ShieldCheck className="w-4 h-4 text-emerald-600" />}
+                                    title="Attendance & Access Control"
+                                    desc="The Code-128 barcode on the back is scanned at lecture halls, laboratories, and the library to log attendance."
+                                />
+                                <SecurityFeatureItem
+                                    icon={<ShieldCheck className="w-4 h-4 text-indigo-600" />}
+                                    title="Instant QR Verification"
+                                    desc="Any invigilator or security personnel can scan the front or back QR code to verify your bona fide student enrollment status."
+                                />
+                                <SecurityFeatureItem
+                                    icon={<Info className="w-4 h-4 text-amber-600" />}
+                                    title="Physical PVC Card Collection"
+                                    desc="The physical laminated plastic card is printed by the ICT unit. You will be notified when your batch is printed and ready for pickup."
+                                />
                             </div>
 
                             {!card && isWindowOpen && (
-                                <div className="pt-8">
+                                <div className="pt-4 border-t border-slate-100">
                                     <form action={async () => {
                                         "use server";
                                         await requestIDCardAction('student');
                                     }}>
-                                        <Button className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black uppercase tracking-widest h-14 rounded-2xl shadow-xl shadow-indigo-100 transition-all active:scale-95">
-                                            Request My ID Card
+                                        <Button className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black uppercase tracking-widest h-12 rounded-xl shadow-lg shadow-indigo-100 transition-all active:scale-95 text-xs">
+                                            Request Physical ID Card
                                         </Button>
                                     </form>
                                 </div>
@@ -148,15 +162,13 @@ export default async function StudentIDCardPage() {
                         </CardContent>
                     </Card>
 
-                    <Card className="-[32px] overflow-hidden border-none shadow-xl rounded-[2rem] bg-white group overflow-hidden hover:shadow-2xl transition-all duration-300">
-                        <CardHeader className="p-8 border-b border-slate-50">
-                            <CardTitle className="text-lg font-black uppercase italic tracking-tight">Coordination Services</CardTitle>
-                        </CardHeader>
-                        <CardContent className="p-8">
-                            <p className="text-sm text-slate-600 font-medium leading-relaxed">
-                                While digital requests are managed by the **Human Resources (HR) Unit**, physical printing and hardware standardisation are co-ordinated by the **ICT Unit**.
-                            </p>
-                        </CardContent>
+                    <Card className="rounded-[2rem] overflow-hidden border border-slate-200/80 shadow-md bg-white p-6">
+                        <h4 className="text-xs font-black uppercase tracking-wider text-slate-700 mb-2">
+                            Need a Photo or Signature Correction?
+                        </h4>
+                        <p className="text-xs text-slate-500 leading-relaxed">
+                            If your photograph or signature is missing or needs updating, visit your <strong>Profile Settings</strong> to upload your specimen, or stop by the <strong>ICT Directorate (Photo Capture Unit)</strong> on campus.
+                        </p>
                     </Card>
                 </div>
             </div>
@@ -166,15 +178,14 @@ export default async function StudentIDCardPage() {
 
 function SecurityFeatureItem({ icon, title, desc }: { icon: React.ReactNode, title: string, desc: string }) {
     return (
-        <li className="flex gap-4 items-start group">
-            <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center shrink-0 group-hover:bg-white group-hover:shadow-md transition-all">
+        <div className="flex gap-3.5 items-start">
+            <div className="w-9 h-9 rounded-xl bg-slate-50 border border-slate-200/60 flex items-center justify-center shrink-0">
                 {icon}
             </div>
             <div>
-                <p className="text-sm font-black text-slate-900 uppercase italic tracking-tight">{title}</p>
-                <p className="text-xs text-slate-500 font-medium">{desc}</p>
+                <p className="text-xs font-black text-slate-900 uppercase italic tracking-tight">{title}</p>
+                <p className="text-xs text-slate-500 font-medium leading-relaxed mt-0.5">{desc}</p>
             </div>
-        </li>
+        </div>
     );
 }
-
