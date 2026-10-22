@@ -800,30 +800,45 @@ export class SplitPaymentEngine {
             }
         }
 
+        // Helper to clean literal 'null' or 'undefined' from names
+        const cleanName = (val?: string | null) => {
+            if (!val) return '';
+            const t = val.trim();
+            if (t.toLowerCase() === 'null' || t.toLowerCase() === 'undefined') return '';
+            return t.replace(/\bnull\b/gi, '').replace(/\bundefined\b/gi, '').replace(/\s+/g, ' ').trim();
+        };
+
+        const cleanFirst = cleanName(student.firstName);
+        const cleanLast = cleanName(student.lastName);
+        const cleanUserName = cleanName(student.user?.name);
+        const studentFullName = (
+            cleanUserName || 
+            `${cleanFirst} ${cleanLast}`.trim() || 
+            student.user?.email || 
+            'Student'
+        ).trim();
+
+        const nameParts = studentFullName.split(/\s+/).filter(Boolean);
+        const payerFirstName = cleanFirst || nameParts[0] || "Student";
+        const payerLastName = cleanLast || nameParts.slice(1).join(' ') || "Payer";
+        const payerPhone = student.user?.phone || (student as any).guardianPhone || "09000000000";
+
+        const studentTag = `${studentFullName}${student.matricNumber ? ` (${student.matricNumber})` : ''} [Student ID: ${studentId}]`;
+        const enrichedPurpose = bill.note
+            ? `${bill.note} - ${studentTag}`
+            : `Tuition / School Fees - ${studentTag}`;
+
         await db.insert(transactions).values({
             studentId,
             amount: checkoutTotal.toFixed(2),
             type: 'credit',
-            purpose: bill.note || "School Fees Online Payment",
+            purpose: enrichedPurpose,
             status: 'pending',
             gateway: activeGateway as 'paystack' | 'flutterwave' | 'remita' | 'opay' | 'manual' | 'alatpay',
             gatewayReference: txRef,
             serviceTypeId: remitServiceTypeId,
             tuitionProfile: remitTuitionProfile,
         });
-
-        // Resolve student name properly: users.name or students.firstName + lastName
-        const studentFullName = (
-            student.user?.name || 
-            `${student.firstName || ''} ${student.lastName || ''}`.trim() || 
-            student.user?.email || 
-            'Student'
-        ).trim();
-
-        const nameParts = studentFullName.split(/\s+/).filter(Boolean);
-        const payerFirstName = student.firstName || nameParts[0] || "Student";
-        const payerLastName = student.lastName || nameParts.slice(1).join(' ') || "Payer";
-        const payerPhone = student.user?.phone || (student as any).guardianPhone || "09000000000";
 
         // 7. Invoke active gateway adapter
         const adapter = SplitPaymentEngine.getAdapter(activeGateway);

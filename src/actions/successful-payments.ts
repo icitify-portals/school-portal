@@ -1,8 +1,58 @@
 "use server";
 import { db } from "@/db/db";
-import { transactions, payment_transactions, students, admissionApplicationsV2, users } from "@/db/schema";
-import { eq, inArray, desc, sql, or } from "drizzle-orm";
+import { transactions, payment_transactions, students, admissionApplicationsV2, users, studentLedger, studentBills } from "@/db/schema";
+import { eq, inArray, desc, sql, or, like } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+
+function cleanStudentName(rawName?: string | null): string {
+    if (!rawName) return '';
+    const trimmed = rawName.trim();
+    if (trimmed.toLowerCase() === 'null' || trimmed.toLowerCase() === 'undefined') return '';
+    return trimmed.replace(/\bnull\b/gi, '').replace(/\bundefined\b/gi, '').replace(/\s+/g, ' ').trim();
+}
+
+async function resolveRemitaPayer(rrr?: string | null, reference?: string | null) {
+    try {
+        const isLive = process.env.REMITA_ENV !== 'demo';
+        const merchantId = isLive ? "19201597339" : (process.env.REMITA_MERCHANT_ID || "19201597339");
+        const apiKey = isLive ? "6NYU4646" : (process.env.REMITA_API_KEY || "6NYU4646");
+        const baseUrl = isLive ? 'https://login.remita.net' : 'https://demo.remita.net';
+        const crypto = await import('crypto');
+
+        let hash = '';
+        let url = '';
+        if (rrr && rrr.trim().length > 0) {
+            hash = crypto.createHash('sha512').update(`${rrr.trim()}${apiKey}${merchantId}`).digest('hex');
+            url = `${baseUrl}/remita/exapp/api/v1/send/api/echannelsvc/${merchantId}/${rrr.trim()}/${hash}/status.reg`;
+        } else if (reference && reference.trim().length > 0) {
+            hash = crypto.createHash('sha512').update(`${reference.trim()}${apiKey}${merchantId}`).digest('hex');
+            url = `${baseUrl}/remita/exapp/api/v1/send/api/echannelsvc/${merchantId}/${reference.trim()}/${hash}/status.reg`;
+        } else {
+            return null;
+        }
+
+        const res = await fetch(url, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `remitaConsumerKey=${merchantId},remitaConsumerToken=${hash}`
+            },
+            signal: AbortSignal.timeout(6000)
+        });
+        if (!res.ok) return null;
+        const data = await res.json();
+        return {
+            payerName: data.payerName ? cleanStudentName(data.payerName) : null,
+            payerEmail: data.payerEmail || null,
+            payerPhone: data.payerPhoneNumber || null,
+            paymentDescription: data.paymentDescription || null,
+            amount: data.amount || null,
+            orderId: data.orderId || null,
+        };
+    } catch {
+        return null;
+    }
+}
 
 export async function getSuccessfulPaymentsGrouped() {
     try {
@@ -36,15 +86,33 @@ export async function getSuccessfulPaymentsGrouped() {
             tuitionProfile: sql<string | null>`null`,
             type: sql<string>`'bursary'`,
             userId: payment_transactions.userId,
-        }).from(payment_transactions).where(eq(payment_transactions.status, 'completed'));
+        }).from(payment_transactions).where(
+            or(
+                eq(payment_transactions.status, 'completed'),
+                eq(payment_transactions.status, 'paid')
+            )
+        );
 
-        // Dedupe by gatewayReference (and fallback rrr) — same logical payment can exist in both tables
+        // Dedupe by gatewayReference (and fallback rrr) — merge so studentId or userId from either table is preserved
         const seen = new Map<string, any>();
         for (const tx of [...admissionTxs, ...bursaryTxs]) {
             const anyTx: any = tx;
             const rrr = anyTx.rrr || (() => { try { const m = typeof anyTx.metadata === 'string' ? JSON.parse(anyTx.metadata) : anyTx.metadata; return m?.rrr || m?.RRR || null; } catch { return null; } })() || anyTx.gatewayTransactionId || null;
             const key = (tx.gatewayReference || rrr || `${tx.type}-${tx.id}`).toString().trim();
-            if (!seen.has(key)) seen.set(key, { ...tx, rrr });
+            if (seen.has(key)) {
+                const existing = seen.get(key);
+                seen.set(key, {
+                    ...existing,
+                    ...tx,
+                    studentId: tx.studentId || existing.studentId || null,
+                    userId: tx.userId || existing.userId || null,
+                    rrr: rrr || existing.rrr || null,
+                    purpose: tx.purpose || existing.purpose,
+                    tuitionProfile: tx.tuitionProfile || existing.tuitionProfile,
+                });
+            } else {
+                seen.set(key, { ...tx, rrr });
+            }
         }
         const txs = Array.from(seen.values()).sort((a, b) => {
             const dA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
@@ -55,11 +123,14 @@ export async function getSuccessfulPaymentsGrouped() {
         const appIds = new Set<number>();
         const studentIds = new Set<number>();
         const userIds = new Set<number>();
+        const txIdsWithoutStudentId: number[] = [];
         const unknownRefs: string[] = [];
 
         txs.forEach(tx => {
             if (tx.studentId) {
-                studentIds.add(tx.studentId);
+                studentIds.add(Number(tx.studentId));
+            } else if (tx.type === 'admission') {
+                txIdsWithoutStudentId.push(tx.id);
             }
 
             const match = tx.gatewayReference?.match(/^(?:SCH|ACC|PROC|FORM)-(\d+)-/);
@@ -74,12 +145,41 @@ export async function getSuccessfulPaymentsGrouped() {
                 appIds.add(parseInt(purposeMatch[1]));
             }
 
-            if (tx.userId) userIds.add(tx.userId);
+            const studentIdInPurpose = tx.purpose?.match(/(?:Student ID|ID):\s*(\d+)/i);
+            if (studentIdInPurpose) {
+                studentIds.add(parseInt(studentIdInPurpose[1]));
+            }
+
+            if (tx.userId) userIds.add(Number(tx.userId));
         });
+
+        // Fallback: Check studentLedger for transactions without studentId
+        const txIdToStudentId = new Map<number, number>();
+        if (txIdsWithoutStudentId.length > 0) {
+            const chunkedTxIds = [];
+            for (let i = 0; i < txIdsWithoutStudentId.length; i += 100) {
+                chunkedTxIds.push(txIdsWithoutStudentId.slice(i, i + 100));
+            }
+            for (const chunk of chunkedTxIds) {
+                const ledgerRows = await db.select({
+                    transactionId: studentLedger.transactionId,
+                    studentId: studentLedger.studentId,
+                })
+                .from(studentLedger)
+                .where(inArray(studentLedger.transactionId, chunk));
+
+                ledgerRows.forEach(l => {
+                    if (l.transactionId && l.studentId) {
+                        txIdToStudentId.set(l.transactionId, Number(l.studentId));
+                        studentIds.add(Number(l.studentId));
+                    }
+                });
+            }
+        }
 
         const refToNameMap = new Map<string, string>();
         const appMap = new Map<number, string>();
-        const studentMap = new Map<number, string>();
+        const studentMap = new Map<number | string, string>();
 
         const extractName = (app: any) => {
             let fallback = 'Applicant';
@@ -106,15 +206,25 @@ export async function getSuccessfulPaymentsGrouped() {
                 id: students.id, 
                 firstName: students.firstName, 
                 lastName: students.lastName, 
-                userName: users.name 
+                matricNumber: students.matricNumber,
+                userName: users.name,
+                userEmail: users.email
             })
             .from(students)
             .leftJoin(users, eq(students.userId, users.id))
             .where(inArray(students.id, Array.from(studentIds)));
 
             studentsData.forEach(s => {
-                const fullName = (s.userName || `${s.firstName || ''} ${s.lastName || ''}`.trim() || 'Student').trim();
-                studentMap.set(s.id, fullName);
+                const cleanU = cleanStudentName(s.userName);
+                const cleanF = cleanStudentName(s.firstName);
+                const cleanL = cleanStudentName(s.lastName);
+                let fullName = cleanU || `${cleanF} ${cleanL}`.trim();
+                if (!fullName) fullName = s.matricNumber || s.userEmail || 'Student';
+                const display = s.matricNumber && !fullName.includes(s.matricNumber)
+                    ? `${fullName} (${s.matricNumber})`
+                    : fullName;
+                studentMap.set(Number(s.id), display);
+                studentMap.set(String(s.id), display);
             });
         }
 
@@ -147,21 +257,30 @@ export async function getSuccessfulPaymentsGrouped() {
             }
         }
 
-        const userMap = new Map<number, string>();
+        const userMap = new Map<number | string, string>();
         if (userIds.size > 0) {
             const usersData = await db.select({ 
                 id: users.id, 
                 name: users.name,
+                studentId: students.id,
                 studentFirstName: students.firstName,
-                studentLastName: students.lastName
+                studentLastName: students.lastName,
+                matricNumber: students.matricNumber,
             })
             .from(users)
             .leftJoin(students, eq(students.userId, users.id))
             .where(inArray(users.id, Array.from(userIds)));
             
             usersData.forEach(u => {
-                const fullName = (u.name || `${u.studentFirstName || ''} ${u.studentLastName || ''}`.trim() || 'Student').trim();
-                userMap.set(u.id, fullName);
+                const cleanU = cleanStudentName(u.name);
+                const cleanF = cleanStudentName(u.studentFirstName);
+                const cleanL = cleanStudentName(u.studentLastName);
+                let fullName = cleanU || `${cleanF} ${cleanL}`.trim() || 'Student';
+                if (u.matricNumber && !fullName.includes(u.matricNumber)) {
+                    fullName = `${fullName} (${u.matricNumber})`;
+                }
+                userMap.set(Number(u.id), fullName);
+                userMap.set(String(u.id), fullName);
             });
         }
 
@@ -200,14 +319,93 @@ export async function getSuccessfulPaymentsGrouped() {
             const purposeMatch = tx.purpose?.match(/Application ID:?\s*(\d+)/i);
             if (purposeMatch) matchedAppId = parseInt(purposeMatch[1]);
 
-            if (tx.studentId && studentMap.has(tx.studentId)) {
-                studentName = studentMap.get(tx.studentId)!;
+            const sId = tx.studentId ? Number(tx.studentId) : (txIdToStudentId.get(tx.id) || null);
+            const uId = tx.userId ? Number(tx.userId) : null;
+
+            if (sId && studentMap.has(sId)) {
+                studentName = studentMap.get(sId)!;
             } else if (matchedAppId !== null && appMap.has(matchedAppId)) {
                 studentName = appMap.get(matchedAppId)!;
             } else if (tx.gatewayReference && refToNameMap.has(tx.gatewayReference)) {
                 studentName = refToNameMap.get(tx.gatewayReference)!;
-            } else if (tx.userId && userMap.has(tx.userId)) {
-                studentName = userMap.get(tx.userId)!;
+            } else if (uId && userMap.has(uId)) {
+                studentName = userMap.get(uId)!;
+            }
+
+            // Fallback 1: Extract Student details embedded in purpose
+            if (studentName === 'N/A' && tx.purpose) {
+                const embeddedMatch = tx.purpose.match(/-\s*([A-Za-z\s]+)\s*\(([^)]+)\)/);
+                if (embeddedMatch) {
+                    const candidateName = cleanStudentName(embeddedMatch[1]);
+                    const matric = embeddedMatch[2].trim();
+                    if (candidateName && candidateName.length > 2) {
+                        studentName = `${candidateName} (${matric})`;
+                    }
+                } else {
+                    const idMatch = tx.purpose.match(/(?:Student ID|ID):\s*(\d+)/i);
+                    if (idMatch && studentMap.has(Number(idMatch[1]))) {
+                        studentName = studentMap.get(Number(idMatch[1]))!;
+                    }
+                }
+            }
+
+            // Fallback 2: For Remita transactions still showing N/A, query Remita status API to resolve payer
+            if (studentName === 'N/A' && tx.gateway === 'remita' && (tx.rrr || tx.gatewayReference)) {
+                try {
+                    const remitaPayer = await resolveRemitaPayer(tx.rrr, tx.gatewayReference);
+                    if (remitaPayer) {
+                        let matchedUser = null;
+                        const emailCandidate = (remitaPayer.payerEmail || '').replace(/^retired\.\d+\./, '').trim();
+                        const phoneCandidate = (remitaPayer.payerPhone || '').trim();
+
+                        if (emailCandidate || phoneCandidate) {
+                            const foundUsers = await db.select({
+                                id: users.id,
+                                name: users.name,
+                                studentId: students.id,
+                                firstName: students.firstName,
+                                lastName: students.lastName,
+                                matricNumber: students.matricNumber,
+                            })
+                            .from(users)
+                            .leftJoin(students, eq(students.userId, users.id))
+                            .where(
+                                or(
+                                    emailCandidate ? like(users.email, `%${emailCandidate}%`) : undefined,
+                                    phoneCandidate ? eq(users.phone, phoneCandidate) : undefined
+                                )
+                            )
+                            .limit(1);
+
+                            if (foundUsers.length > 0) {
+                                matchedUser = foundUsers[0];
+                            }
+                        }
+
+                        if (matchedUser) {
+                            const cleanU = cleanStudentName(matchedUser.name);
+                            const cleanF = cleanStudentName(matchedUser.firstName);
+                            const cleanL = cleanStudentName(matchedUser.lastName);
+                            let resolved = cleanU || `${cleanF} ${cleanL}`.trim() || cleanStudentName(remitaPayer.payerName) || 'Student';
+                            if (matchedUser.matricNumber && !resolved.includes(matchedUser.matricNumber)) {
+                                resolved = `${resolved} (${matchedUser.matricNumber})`;
+                            }
+                            studentName = resolved;
+
+                            // Backfill studentId on the transaction record if missing
+                            if (matchedUser.studentId && tx.type === 'admission' && !tx.studentId) {
+                                db.update(transactions)
+                                    .set({ studentId: matchedUser.studentId })
+                                    .where(eq(transactions.id, tx.id))
+                                    .catch(err => console.error("Failed to backfill studentId:", err));
+                            }
+                        } else if (remitaPayer.payerName) {
+                            studentName = remitaPayer.payerName;
+                        }
+                    }
+                } catch (remitaErr) {
+                    console.error("Remita payer fallback resolution error:", remitaErr);
+                }
             }
 
             if (!grouped[category]) grouped[category] = [];

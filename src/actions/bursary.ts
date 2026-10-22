@@ -1372,6 +1372,23 @@ export async function getAllUnifiedTransactions(filters?: { status?: string, cat
                             }
                         }
                     }
+
+                    // Fallback: Check for embedded student tag in purpose (e.g. "... - Name (Matric) [Student ID: 123]")
+                    if (!txEntry.student?.id && txEntry.purpose) {
+                        const embeddedMatch = txEntry.purpose.match(/-\s*([A-Za-z\s]+)\s*\(([^)]+)\)/);
+                        if (embeddedMatch) {
+                            const candidateName = embeddedMatch[1].trim();
+                            const matric = embeddedMatch[2].trim();
+                            const names = candidateName.split(/\s+/);
+                            txEntry.student = {
+                                id: 0,
+                                firstName: names[0] || candidateName,
+                                lastName: names.slice(1).join(" ") || "",
+                                matricNumber: matric,
+                                contactEmail: ""
+                            };
+                        }
+                    }
                 }
 
                 results.push(txEntry);
@@ -2979,7 +2996,19 @@ export async function resolveOnlinePaymentAction(reference: string, status: 'com
             }
 
             // 4. Update Student wallet & ledger
-            const studentId = txRecord.studentId!;
+            let studentId = txRecord.studentId;
+            if (!studentId && billId) {
+                const [b] = await tx.select().from(studentBills).where(eq(studentBills.id, billId)).limit(1);
+                if (b && b.studentId) {
+                    studentId = b.studentId;
+                    await tx.update(transactions).set({ studentId }).where(eq(transactions.id, txRecord.id));
+                }
+            }
+
+            if (!studentId) {
+                throw new Error(`Student ID could not be identified for transaction ${reference}.`);
+            }
+
             const [student] = await tx.select().from(students).where(eq(students.id, studentId)).limit(1);
             if (!student) {
                 throw new Error(`Student #${studentId} not found.`);
