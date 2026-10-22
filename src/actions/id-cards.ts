@@ -155,7 +155,7 @@ export async function getIdCardStudents(options?: {
                         : s.applicationData || {};
                 } catch {}
 
-                const signature = formData.signature
+                const signature = s.signatureUrl || formData.signature
                     || formData["Signature"]
                     || formData["Applicant Signature"]
                     || formData["Student Signature"]
