@@ -113,6 +113,7 @@ export default function SuccessfulPaymentsPage() {
         amount: '',
         purpose: '',
         createdAt: '',
+        studentId: '',
     });
     const [isSaving, setIsSaving] = useState(false);
 
@@ -125,6 +126,7 @@ export default function SuccessfulPaymentsPage() {
             amount: tx.amount?.toString() || '',
             purpose: tx.purpose || '',
             createdAt: tx.createdAt ? new Date(tx.createdAt).toISOString().slice(0, 10) : '',
+            studentId: tx.studentId ? String(tx.studentId) : (tx.userId ? String(tx.userId) : ''),
         });
     };
 
@@ -223,7 +225,13 @@ export default function SuccessfulPaymentsPage() {
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4 font-bold text-slate-800">
-                                                {tx.studentName}
+                                                {tx.studentName && tx.studentName !== 'N/A' ? (
+                                                    <span>{tx.studentName}</span>
+                                                ) : (
+                                                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                                                        Unassigned (N/A)
+                                                    </span>
+                                                )}
                                             </td>
                                             <td className="px-6 py-4 text-slate-600 text-xs">
                                                 {tx.itemBreakdown}
@@ -306,6 +314,18 @@ export default function SuccessfulPaymentsPage() {
                         <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
                             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Student Name</p>
                             <p className="text-sm font-bold text-slate-700">{editTx?.studentName || 'N/A'}</p>
+                        </div>
+                        <div>
+                            <Label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Student ID / User ID</Label>
+                            <Input
+                                value={editData.studentId}
+                                onChange={(e) => setEditData({ ...editData, studentId: e.target.value })}
+                                placeholder="e.g. 7360 or 12589"
+                                className="mt-1 p-3 rounded-xl border border-slate-200 text-sm font-mono"
+                            />
+                            <p className="text-[10px] text-slate-400 mt-1">
+                                Enter Student ID or User ID to manually link this payment to a student.
+                            </p>
                         </div>
                         <div>
                             <Label className="text-xs font-bold text-slate-600 uppercase tracking-wider">RRR</Label>

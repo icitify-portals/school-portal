@@ -1377,7 +1377,7 @@ export async function getAllUnifiedTransactions(filters?: { status?: string, cat
                     if (!txEntry.student?.id && txEntry.purpose) {
                         const embeddedMatch = txEntry.purpose.match(/-\s*([A-Za-z\s]+)\s*\(([^)]+)\)/);
                         if (embeddedMatch) {
-                            const candidateName = embeddedMatch[1].trim();
+                            const candidateName = embeddedMatch[1].replace(/\bnull\b/gi, '').replace(/\bundefined\b/gi, '').replace(/\s+/g, ' ').trim();
                             const matric = embeddedMatch[2].trim();
                             const names = candidateName.split(/\s+/);
                             txEntry.student = {
