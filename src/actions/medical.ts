@@ -23,7 +23,7 @@ export async function submitMedicalForm(formData: any) {
       return { success: false, message: "Student record not found." };
     }
 
-    // 1. Update students table (kin, blood, genotype, healthStatus)
+    // 1. Update students table (kin, blood, genotype, healthStatus, medicalFormSubmittedAt)
     await db
       .update(students)
       .set({
@@ -33,6 +33,7 @@ export async function submitMedicalForm(formData: any) {
         bloodGroup: formData.bloodGroup,
         genotype: formData.genotype,
         healthStatus: "cleared", // Mark as cleared
+        medicalFormSubmittedAt: new Date(),
       })
       .where(eq(students.id, student.id));
 

@@ -36,7 +36,7 @@ export function StudentDailyReminderToast() {
                                         type="button"
                                         onClick={() => {
                                             toast.dismiss(t);
-                                            router.push("/profile");
+                                            router.push("/student/dossier");
                                         }}
                                         className="px-2 py-1.5 text-xs font-semibold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg text-center transition-colors flex items-center justify-center gap-1"
                                     >

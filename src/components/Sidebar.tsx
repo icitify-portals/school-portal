@@ -79,7 +79,8 @@ const applicantMenuItems: MenuItem[] = [
 
 const studentMenuItems: MenuItem[] = [
     { name: "Dashboard", icon: LayoutDashboard, href: "/" },
-    { name: "Student Dossier", icon: FileText, href: "/profile" },
+    { name: "Student Dossier", icon: FileText, href: "/student/dossier" },
+    { name: "Matriculation Oath", icon: ScrollText, href: "/student/matriculation" },
     { name: "Health & Medical Form", icon: Stethoscope, href: "/student/medical" },
     { name: "Course Registration", icon: BookOpen, href: "/student/courses/registration" },
     {

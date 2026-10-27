@@ -26,7 +26,11 @@ import {
     ShieldOff,
     Award,
     Users as UsersIcon,
-    Brain
+    Brain,
+    PenTool,
+    Stethoscope,
+    ScrollText,
+    Printer
 } from "lucide-react";
 import Link from "next/link";
 import { AIRecommendations } from "@/components/ai/AIRecommendations";
@@ -133,6 +137,27 @@ export default async function StudentDashboard() {
     }
 
     const quickActions = [
+        { 
+            name: "Student Dossier", 
+            href: "/student/dossier", 
+            desc: "Official bio-data & records printout", 
+            icon: FileText, 
+            color: "bg-indigo-50 text-indigo-600 border-indigo-100 hover:border-indigo-300" 
+        },
+        { 
+            name: "Matriculation Oath", 
+            href: "/student/matriculation", 
+            desc: "ND 1 & HND 1 sign & print slip", 
+            icon: ScrollText, 
+            color: "bg-violet-50 text-violet-600 border-violet-100 hover:border-violet-300" 
+        },
+        { 
+            name: "Health & Medical Form", 
+            href: "/student/medical", 
+            desc: "Clinic record & clearance printout", 
+            icon: Stethoscope, 
+            color: "bg-emerald-50 text-emerald-600 border-emerald-100 hover:border-emerald-300" 
+        },
         { 
             name: isK12 ? "Subject Registration" : "Course Registration", 
             href: "/student/courses/registration", 
@@ -274,6 +299,117 @@ export default async function StudentDashboard() {
                             </div>
                         )}
                         <PushSubscriptionToggle />
+                    </div>
+                </div>
+            </div>
+
+            {/* Mandatory Documentation & Clearance Status Cards */}
+            <div className="bg-white rounded-[2.5rem] p-6 lg:p-8 border border-slate-200/80 shadow-sm space-y-4">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                    <div>
+                        <h3 className="text-lg font-black text-slate-900 tracking-tight uppercase flex items-center gap-2">
+                            <FileText className="w-5 h-5 text-indigo-600" />
+                            Mandatory Student Documentation & Clearance
+                        </h3>
+                        <p className="text-xs text-slate-500 font-medium">
+                            Official institutional registration records, oath slips, and health clearances.
+                        </p>
+                    </div>
+                    <span className="text-[10px] font-black uppercase tracking-wider bg-slate-100 text-slate-600 px-3 py-1 rounded-full">
+                        Session 2026/2027
+                    </span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+                    {/* Student Dossier */}
+                    <div className="bg-slate-50 hover:bg-slate-100/80 transition-all rounded-2xl p-5 border border-slate-200/60 flex flex-col justify-between space-y-4">
+                        <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                                <div className="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold">
+                                    <FileText className="w-5 h-5" />
+                                </div>
+                                <span className="text-[10px] font-black uppercase tracking-widest text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full">
+                                    Official Dossier
+                                </span>
+                            </div>
+                            <h4 className="font-bold text-slate-900 text-sm">Student Bio-data Dossier</h4>
+                            <p className="text-xs text-slate-500 leading-relaxed">
+                                Complete institutional bio-data, academic records, guardian, and attestation form.
+                            </p>
+                        </div>
+                        <div className="flex items-center gap-2 pt-2 border-t border-slate-200/50">
+                            <Link href="/student/dossier" className="flex-1">
+                                <Button size="sm" className="w-full bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl gap-1.5">
+                                    <Printer className="w-3.5 h-3.5" /> View & Print Dossier
+                                </Button>
+                            </Link>
+                        </div>
+                    </div>
+
+                    {/* Matriculation Oath */}
+                    <div className="bg-slate-50 hover:bg-slate-100/80 transition-all rounded-2xl p-5 border border-slate-200/60 flex flex-col justify-between space-y-4">
+                        <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                                <div className="w-10 h-10 rounded-xl bg-violet-100 text-violet-600 flex items-center justify-center font-bold">
+                                    <ScrollText className="w-5 h-5" />
+                                </div>
+                                <span className={`text-[10px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-full border ${studentRecord?.oathSignedAt ? 'text-emerald-700 bg-emerald-50 border-emerald-200' : 'text-amber-700 bg-amber-50 border-amber-200'}`}>
+                                    {studentRecord?.oathSignedAt ? 'Signed & Verified' : 'ND 1 & HND 1 Oath'}
+                                </span>
+                            </div>
+                            <h4 className="font-bold text-slate-900 text-sm">Matriculation Oath Register</h4>
+                            <p className="text-xs text-slate-500 leading-relaxed">
+                                Statutory oath of allegiance for all admitted freshers (ND 1 & HND 1).
+                            </p>
+                        </div>
+                        <div className="flex items-center gap-2 pt-2 border-t border-slate-200/50">
+                            <Link href="/student/matriculation" className="flex-1">
+                                <Button size="sm" className={`w-full text-xs font-bold rounded-xl gap-1.5 ${studentRecord?.oathSignedAt ? 'bg-violet-600 hover:bg-violet-700 text-white' : 'bg-amber-600 hover:bg-amber-700 text-white'}`}>
+                                    {studentRecord?.oathSignedAt ? (
+                                        <>
+                                            <Printer className="w-3.5 h-3.5" /> Print Oath Slip
+                                        </>
+                                    ) : (
+                                        <>
+                                            <PenTool className="w-3.5 h-3.5" /> Sign Oath Register
+                                        </>
+                                    )}
+                                </Button>
+                            </Link>
+                        </div>
+                    </div>
+
+                    {/* Medical Health Form */}
+                    <div className="bg-slate-50 hover:bg-slate-100/80 transition-all rounded-2xl p-5 border border-slate-200/60 flex flex-col justify-between space-y-4">
+                        <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                                <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold">
+                                    <Stethoscope className="w-5 h-5" />
+                                </div>
+                                <span className={`text-[10px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-full border ${studentRecord?.medicalFormSubmittedAt ? 'text-emerald-700 bg-emerald-50 border-emerald-200' : 'text-amber-700 bg-amber-50 border-amber-200'}`}>
+                                    {studentRecord?.medicalFormSubmittedAt ? 'Submitted & Cleared' : 'Pending Submission'}
+                                </span>
+                            </div>
+                            <h4 className="font-bold text-slate-900 text-sm">Medical & Health Form</h4>
+                            <p className="text-xs text-slate-500 leading-relaxed">
+                                Clinical health history, blood group, genotype, and institutional clearance.
+                            </p>
+                        </div>
+                        <div className="flex items-center gap-2 pt-2 border-t border-slate-200/50">
+                            <Link href="/student/medical" className="flex-1">
+                                <Button size="sm" className="w-full bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-xl gap-1.5">
+                                    {studentRecord?.medicalFormSubmittedAt ? (
+                                        <>
+                                            <Printer className="w-3.5 h-3.5" /> View & Print Form
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Stethoscope className="w-3.5 h-3.5" /> Complete Health Form
+                                        </>
+                                    )}
+                                </Button>
+                            </Link>
+                        </div>
                     </div>
                 </div>
             </div>

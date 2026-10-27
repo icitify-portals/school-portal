@@ -32,9 +32,14 @@ export async function signMatriculationOathAction(data: {
 
 export async function checkMatriculationStatusAction(studentId: number, sessionId: number) {
     try {
-        // @ts-expect-error - TS2339: Auto-suppressed for build
-        const status = await MatriculationRegisterService.checkStatus(studentId, sessionId);
-        return { success: true, signed: status };
+        const status = await MatriculationRegisterService.getStatusWithDeadline(studentId, sessionId);
+        return { 
+            success: true, 
+            signed: status.signed, 
+            record: status.record, 
+            deadline: status.deadline, 
+            isExpired: status.isExpired 
+        };
     } catch (error) {
         return { success: false, error: (error as Error).message };
     }

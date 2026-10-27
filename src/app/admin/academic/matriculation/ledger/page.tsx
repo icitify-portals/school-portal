@@ -24,12 +24,12 @@ export default function MatriculationLedgerDashboard() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Configuration
-  const sessionId = 1;
+  // Configuration (Default active session 2026/2027)
+  const [sessionId, setSessionId] = useState(6);
 
   useEffect(() => {
     loadLedger();
-  }, []);
+  }, [sessionId]);
 
   async function loadLedger() {
     setLoading(true);
@@ -64,8 +64,8 @@ export default function MatriculationLedgerDashboard() {
                 </div>
                 
                 <div className="flex bg-white/10 p-1.5 rounded-2xl backdrop-blur-md border border-white/10 shadow-inner gap-2 flex-wrap">
-                    <button className="flex items-center gap-2 px-4 py-4 text-xs font-black uppercase tracking-widest rounded-xl transition-all whitespace-nowrap bg-white/10 text-white hover:bg-white/20 shadow-lg hover:-translate-y-1">
-                        <Printer size={16} /> Print
+                    <button onClick={() => window.print()} className="flex items-center gap-2 px-4 py-4 text-xs font-black uppercase tracking-widest rounded-xl transition-all whitespace-nowrap bg-white/10 text-white hover:bg-white/20 shadow-lg hover:-translate-y-1">
+                        <Printer size={16} /> Print Register
                     </button>
                     <button className="flex items-center gap-2 px-6 py-4 text-xs font-black uppercase tracking-widest rounded-xl transition-all whitespace-nowrap bg-indigo-600 text-white hover:bg-indigo-500 shadow-lg hover:-translate-y-1">
                         <Download size={16} /> Export Register
@@ -138,7 +138,7 @@ export default function MatriculationLedgerDashboard() {
                           <th className="px-8 py-5">Matriculant Details</th>
                           <th className="px-8 py-5">Official Signature</th>
                           <th className="px-8 py-5">Signing Metadata</th>
-                          <th className="px-8 py-5 text-right">Verification</th>
+                          <th className="px-8 py-5 text-right">Verification & Slip</th>
                        </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
@@ -172,9 +172,22 @@ export default function MatriculationLedgerDashboard() {
                                 </div>
                              </td>
                              <td className="px-8 py-6 text-right">
-                                <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-600 rounded-full text-[10px] font-black uppercase tracking-widest border border-emerald-100">
-                                   <ShieldCheck size={12} />
-                                   Verified
+                                <div className="flex items-center justify-end gap-2">
+                                   <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-600 rounded-full text-[10px] font-black uppercase tracking-widest border border-emerald-100">
+                                      <ShieldCheck size={12} />
+                                      Verified
+                                   </div>
+                                   {entry.studentId && (
+                                      <a 
+                                         href={`/admin/students/${entry.studentId}/matriculation-oath`}
+                                         target="_blank"
+                                         rel="noreferrer"
+                                         className="inline-flex items-center gap-1 px-3 py-1 text-xs font-bold text-indigo-600 hover:text-white bg-indigo-50 hover:bg-indigo-600 rounded-lg transition-all border border-indigo-100"
+                                         title="Print Oath Slip"
+                                      >
+                                         <Printer size={13} /> Print Slip
+                                      </a>
+                                   )}
                                 </div>
                              </td>
                           </tr>

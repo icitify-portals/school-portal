@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import {
     Stethoscope, Loader2, Search, FileText, CheckCircle2,
-    XCircle, Download, Eye, Filter
+    XCircle, Download, Eye, Filter, Printer
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -210,6 +210,16 @@ export default function MedicalRecordsPage() {
                                 {selected.allergies && <div><span className="text-slate-500">Allergies:</span> <span className="font-medium">{selected.allergies}</span></div>}
                                 {selected.medicalHistory && <div><span className="text-slate-500">Medical History:</span> <span className="font-medium">{selected.medicalHistory}</span></div>}
                                 {selected.currentMedications && <div><span className="text-slate-500">Current Medications:</span> <span className="font-medium">{selected.currentMedications}</span></div>}
+                                <div className="pt-4 border-t border-slate-200 flex justify-end gap-2">
+                                    <Button variant="outline" size="sm" onClick={() => setSelected(null)}>Close</Button>
+                                    {selected.studentId && (
+                                        <a href={`/admin/students/${selected.studentId}/medical`} target="_blank" rel="noreferrer">
+                                            <Button size="sm" className="bg-emerald-700 hover:bg-emerald-800 text-white gap-1.5">
+                                                <Printer className="w-3.5 h-3.5" /> Print Form
+                                            </Button>
+                                        </a>
+                                    )}
+                                </div>
                             </div>
                         </div>
                     </div>

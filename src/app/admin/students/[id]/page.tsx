@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, ArrowLeft, User, Mail, Phone, Calendar, Briefcase, Droplet, Hash, BookOpen, MapPin, Activity, Edit } from "lucide-react";
+import { Loader2, ArrowLeft, User, Mail, Phone, Calendar, Briefcase, Droplet, Hash, BookOpen, MapPin, Activity, Edit, Printer, FileText, ScrollText, Stethoscope } from "lucide-react";
 import { getStudentById, updateAdminStudentProfile } from "@/actions/students";
 import { getProgrammes } from "@/actions/programmes";
 import { getAcademicSessions } from "@/actions/transcripts";
@@ -150,6 +150,38 @@ export default function StudentDetailsPage() {
                                 )}
                             </div>
                         </div>
+                    </CardContent>
+                </Card>
+
+                {/* Printable Official Documents */}
+                <Card className="border-none shadow-sm md:col-span-1 h-fit">
+                    <CardHeader className="bg-slate-50 border-b border-slate-100 p-4">
+                        <CardTitle className="text-xs font-black uppercase tracking-widest text-slate-700 flex items-center gap-2">
+                            <Printer className="w-4 h-4 text-indigo-600" /> Official Printouts
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-4 space-y-2">
+                        <Button 
+                            variant="outline" 
+                            className="w-full justify-start text-xs font-bold rounded-xl gap-2 hover:bg-indigo-50 hover:text-indigo-700"
+                            onClick={() => router.push(`/admin/students/${studentId}/dossier`)}
+                        >
+                            <FileText className="w-4 h-4 text-indigo-600" /> Print Student Dossier
+                        </Button>
+                        <Button 
+                            variant="outline" 
+                            className="w-full justify-start text-xs font-bold rounded-xl gap-2 hover:bg-indigo-50 hover:text-indigo-700"
+                            onClick={() => router.push(`/admin/students/${studentId}/matriculation-oath`)}
+                        >
+                            <ScrollText className="w-4 h-4 text-indigo-600" /> Print Matriculation Oath
+                        </Button>
+                        <Button 
+                            variant="outline" 
+                            className="w-full justify-start text-xs font-bold rounded-xl gap-2 hover:bg-emerald-50 hover:text-emerald-700"
+                            onClick={() => router.push(`/admin/students/${studentId}/medical`)}
+                        >
+                            <Stethoscope className="w-4 h-4 text-emerald-600" /> Print Medical Form
+                        </Button>
                     </CardContent>
                 </Card>
 

@@ -45,13 +45,20 @@ export class MatriculationRegisterService {
         if (existing[0]) throw new Error("You have already signed the matriculation register for this session.");
 
         // 3. Insert into register
-        return await db.insert(matriculationRegister).values({
+        const insertRes = await db.insert(matriculationRegister).values({
             studentId: data.studentId,
             sessionId: data.sessionId,
             oathSignature: data.signature,
             ipAddress: data.ipAddress,
             userAgent: data.userAgent
         });
+
+        // 4. Update student record oathSignedAt
+        await db.update(students)
+            .set({ oathSignedAt: new Date() })
+            .where(eq(students.id, data.studentId));
+
+        return insertRes;
     }
 
     /**
@@ -60,6 +67,7 @@ export class MatriculationRegisterService {
     static async getSessionLedger(sessionId: number) {
         return await db.select({
             id: matriculationRegister.id,
+            studentId: matriculationRegister.studentId,
             studentName: users.name,
             matricNumber: students.matricNumber,
             signature: matriculationRegister.oathSignature,
@@ -71,6 +79,13 @@ export class MatriculationRegisterService {
         .innerJoin(users, eq(students.userId, users.id))
         .where(eq(matriculationRegister.sessionId, sessionId))
         .orderBy(desc(matriculationRegister.signedAt));
+    }
+
+    /**
+     * Checks if a student has signed and provides deadline context.
+     */
+    static async checkStatus(studentId: number, sessionId: number) {
+        return await this.getStatusWithDeadline(studentId, sessionId);
     }
 
     /**
@@ -92,6 +107,12 @@ export class MatriculationRegisterService {
         
         return {
             signed: !!record[0],
+            record: record[0] ? {
+                id: record[0].id,
+                signedAt: record[0].signedAt,
+                signature: record[0].oathSignature,
+                ip: record[0].ipAddress
+            } : null,
             deadline: session[0]?.matriculationDeadline,
             isExpired: session[0]?.matriculationDeadline ? new Date() > new Date(session[0].matriculationDeadline) : false
         };

@@ -130,18 +130,6 @@ export default async function StudentLayout({
         console.error("[Layout] Oath/medical deadline check failed:", e);
     }
 
-    // Redirect if deadline passed and requirements not met
-    // Skip redirect for the oath/medical pages themselves
-    // Note: pathname check is done client-side via ProfileCompletionGuard
-    // Server-side redirect for hard enforcement:
-    if (deadlinePassed && oathRequired && !studentRecord.oathSignedAt) {
-        redirect("/student/matriculation");
-    }
-    if (deadlinePassed && medicalRequired && !studentRecord.medicalFormSubmittedAt && !studentRecord.oathSignedAt) {
-        // Only redirect to medical if oath is already done
-        // If both are pending, oath takes priority
-    }
-
     return (
         // @ts-expect-error - TS2322: Auto-suppressed for build
         <ProfileCompletionGuard>
@@ -149,8 +137,8 @@ export default async function StudentLayout({
                 {/* Daily toast notification reminder for Dossier, Health Form, Course Registration */}
                 <StudentDailyReminderToast />
 
-                {/* Reminder banner for pending oath/medical (before deadline) */}
-                {(oathRequired || medicalRequired) && !deadlinePassed && (
+                {/* Reminder banner for pending oath/medical */}
+                {(oathRequired || medicalRequired) && (
                     <OathMedicalBanner
                         oathRequired={oathRequired}
                         medicalRequired={medicalRequired}

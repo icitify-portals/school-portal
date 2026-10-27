@@ -5,7 +5,7 @@ import { submitMedicalForm } from "@/actions/medical";
 import { Loader2, CheckCircle, AlertCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 
-export default function MedicalFormClient({ initialData }: { initialData: any }) {
+export default function MedicalFormClient({ initialData, onSuccess }: { initialData: any; onSuccess?: () => void }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState("");
@@ -37,9 +37,15 @@ export default function MedicalFormClient({ initialData }: { initialData: any })
       const res = await submitMedicalForm(data);
       if (res.success) {
         setSuccess(true);
-        setTimeout(() => {
-          router.push("/student/dashboard"); // Redirect to dashboard or next step
-        }, 2000);
+        if (onSuccess) {
+          setTimeout(() => {
+            onSuccess();
+          }, 1200);
+        } else {
+          setTimeout(() => {
+            router.refresh();
+          }, 1500);
+        }
       } else {
         setError(res.message);
       }
