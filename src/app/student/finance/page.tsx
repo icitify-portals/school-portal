@@ -100,6 +100,7 @@ interface StudentProfile {
     matricNumber?: string;
     userId: number;
     programme?: { name: string };
+    isPaymentLocked?: boolean;
 }
 
 const ACTION_TIMEOUT_MS = 25000;
@@ -233,6 +234,10 @@ export default function StudentFinancePage() {
     }, [session, fetchData]);
 
     const openCheckout = (bill: Bill) => {
+        if ((student as any)?.isPaymentLocked) {
+            alert("Your account is locked for self-service payments by Administration. Please contact Bursary to make payments on your behalf.");
+            return;
+        }
         setSelectedBill(bill);
         const outstanding = parseFloat(bill.totalAmount) - parseFloat(bill.amountPaid || "0.00");
         setSelectedAmount(outstanding);
@@ -403,6 +408,19 @@ export default function StudentFinancePage() {
                     </Button>
                 </div>
             </div>
+
+            {/* Payment Lock Warning Banner */}
+            {(student as any)?.isPaymentLocked && (
+                <div className="bg-amber-500/10 border-2 border-amber-500/40 rounded-2xl p-5 flex items-start gap-4 text-amber-900 shadow-md">
+                    <AlertCircle className="w-6 h-6 text-amber-600 shrink-0 mt-0.5" />
+                    <div>
+                        <h3 className="text-base font-black text-amber-900">Account Locked for Online Payment</h3>
+                        <p className="text-sm text-amber-800 font-medium mt-1 leading-relaxed">
+                            Your student account has been locked for online self-service payments by Administration. You cannot pay bills directly through this portal. Please visit the Bursary or contact the administrative office to process payments on your behalf.
+                        </p>
+                    </div>
+                </div>
+            )}
 
             {/* KPI Cards */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -704,14 +722,18 @@ export default function StudentFinancePage() {
                                                         </Button>
                                                     ) : (
                                                         <Button
+                                                            disabled={Boolean((student as any)?.isPaymentLocked)}
                                                             onClick={() => openCheckout(bill)}
                                                             className={cn(
-                                                                "h-11 px-6 text-xs font-black rounded-xl shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all gap-2",
-                                                                gateway.buttonClass
+                                                                "h-11 px-6 text-xs font-black rounded-xl shadow-lg gap-2 transition-all",
+                                                                (student as any)?.isPaymentLocked
+                                                                    ? "bg-slate-200 text-slate-500 cursor-not-allowed hover:bg-slate-200 shadow-none border border-slate-300"
+                                                                    : cn("hover:scale-[1.02] active:scale-[0.98]", gateway.buttonClass)
                                                             )}
+                                                            title={(student as any)?.isPaymentLocked ? "Online payment locked by Administration" : undefined}
                                                         >
                                                             <CreditCard className="w-4 h-4" />
-                                                            Pay via {gateway.shortName} (₦{outstanding.toLocaleString()})
+                                                            {(student as any)?.isPaymentLocked ? "Payment Locked by Admin" : `Pay via ${gateway.shortName} (₦${outstanding.toLocaleString()})`}
                                                         </Button>
                                                     )}
                                                 </div>

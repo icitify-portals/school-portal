@@ -25,8 +25,9 @@ export const authConfig = {
                 if (session.twoFactorVerified !== undefined) {
                     token.twoFactorPending = !session.twoFactorVerified;
                 }
-                if (session.requiresPasswordChange !== undefined) {
-                    token.requiresPasswordChange = session.requiresPasswordChange;
+                const rpc = session.requiresPasswordChange !== undefined ? session.requiresPasswordChange : session.user?.requiresPasswordChange;
+                if (rpc !== undefined) {
+                    token.requiresPasswordChange = rpc;
                 }
                 if (session.matricNumber !== undefined) {
                     token.matricNumber = session.matricNumber;
@@ -165,16 +166,16 @@ export const authConfig = {
 
                 if (nextUrl.pathname.startsWith("/admin/cms") && hasCmsAccess) return true;
 
-                if (isBursar && (
-                    nextUrl.pathname === "/admin/dashboard" || 
-                    nextUrl.pathname.startsWith("/admin/bursary") || 
-                    nextUrl.pathname.startsWith("/admin/accounting") || 
-                    nextUrl.pathname.startsWith("/admin/analytics") || 
-                    nextUrl.pathname.startsWith("/admin/inventory") || 
-                    nextUrl.pathname.startsWith("/admin/communications") || 
-                    nextUrl.pathname.startsWith("/admin/announcements") || 
-                    nextUrl.pathname.startsWith("/admin/admission")
-                )) return true;
+                if (isBursar && !isRegistrar && !['admin', 'superadmin', 'dvc', 'icitify_dev'].includes(userRole)) {
+                    if (
+                        nextUrl.pathname.startsWith("/admin/bursary") || 
+                        nextUrl.pathname.startsWith("/admin/accounting") ||
+                        nextUrl.pathname.startsWith("/admin/profile") ||
+                        nextUrl.pathname.startsWith("/profile") ||
+                        nextUrl.pathname.startsWith("/change-password")
+                    ) return true;
+                    return Response.redirect(new URL("/admin/bursary", nextUrl));
+                }
 
                 if (isRegistrar && (
                     nextUrl.pathname === "/admin/dashboard" || 

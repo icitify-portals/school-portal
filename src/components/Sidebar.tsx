@@ -774,7 +774,7 @@ export function Sidebar({ enabledModules = {}, mobileOpen = false, onClose }: {
             return adminMenuItems;
         } else if (isBursar || isRegistrar || isAdmissionOfficer) {
             const allowedItems = isBursar
-                ? ["Admin Dashboard", "Finance & Accounting", "Bursary & Fees", "Accounting & Reports", "Admission Management", "Analytics & Reports", "Inventory & Stock", "Communication"]
+                ? ["Bursary & Fees", "Finance & Accounting", "Accounting & Reports"]
                 : isRegistrar
                 ? ["Admin Dashboard", "Academics", "Office of the Registrar", "Admission Management", "Student Management", "Academic Calendar", "Student Promotion", "Communication", "Registration Concessions", "SIWES Management"]
                 : ["Admin Dashboard", "Admission Management", "Student Management", "Communication"];

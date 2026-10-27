@@ -38,7 +38,7 @@ export function TranscriptVisual({ data, onEditResult }: TranscriptVisualProps) 
                     <InfoRow label="Date of Birth" value={student.dob || 'N/A'} />
                     <InfoRow label="Year of Admission" value={student.admissionYear?.toString() || 'N/A'} />
                     <InfoRow label="Class of Degree" value={student.classOfDegree || '---'} />
-                    <InfoRow label="Mode of Entry" value={student.modeOfEntry || 'UTME'} />
+                    <InfoRow label="Mode of Entry" value={student.modeOfEntry || 'Full Time'} />
                 </div>
                 <div className="space-y-1">
                     <InfoRow label="Name" value={student.name} />
@@ -141,11 +141,21 @@ export function TranscriptVisual({ data, onEditResult }: TranscriptVisualProps) 
     );
 }
 
+function cleanTranscriptText(val: string | null | undefined): string {
+    if (!val) return '';
+    return val
+        .replace(/\.retired\./gi, '.')
+        .replace(/retired\s*\d*/gi, '')
+        .replace(/\bretired\b/gi, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
 function InfoRow({ label, value }: { label: string; value: string }) {
     return (
         <div className="flex items-baseline">
             <span className="w-32 font-bold">{label}:</span>
-            <span className="uppercase">{value}</span>
+            <span className="uppercase">{cleanTranscriptText(value)}</span>
         </div>
     );
 }

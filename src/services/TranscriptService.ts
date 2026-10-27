@@ -18,6 +18,16 @@ import {
 import { eq, and, sql, desc, inArray } from "drizzle-orm";
 import { GradingService } from "./GradingService";
 
+function cleanTranscriptString(val: string | null | undefined): string {
+    if (!val) return '';
+    return val
+        .replace(/\.retired\./gi, '.')
+        .replace(/retired\s*\d*/gi, '')
+        .replace(/\bretired\b/gi, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
 export interface TranscriptData {
     student: {
         name: string;
@@ -177,28 +187,60 @@ export class TranscriptService {
 
             const transcriptResults = Array.from(sessionsMap.values());
 
+            // Compute per-semester summary when not present in semester_summaries table
+            transcriptResults.forEach(group => {
+                if (!group.semesterSummary && group.courses.length > 0) {
+                    let semTCR = 0;
+                    let semTCE = 0;
+                    let semTWGP = 0;
+                    group.courses.forEach(c => {
+                        semTCR += c.units;
+                        if (c.score >= 40) semTCE += c.units;
+                        semTWGP += c.wgp;
+                    });
+                    const semGPA = semTCR > 0 ? parseFloat((semTWGP / semTCR).toFixed(2)) : 0;
+                    group.semesterSummary = {
+                        tcr: semTCR,
+                        tce: semTCE,
+                        twgp: semTWGP,
+                        gpa: semGPA,
+                        cgpa: semGPA
+                    };
+                }
+            });
+
             // 5. Calculate Grand Totals
             let totalTCR = 0;
             let totalTCE = 0;
             let totalTWGP = 0;
 
-            summaries.forEach(sum => {
-                totalTCR += sum.tcr || 0;
-                totalTCE += sum.tce || 0;
-                totalTWGP += parseFloat(sum.twgp?.toString() || '0');
-            });
+            if (summaries.length > 0) {
+                summaries.forEach(sum => {
+                    totalTCR += sum.tcr || 0;
+                    totalTCE += sum.tce || 0;
+                    totalTWGP += parseFloat(sum.twgp?.toString() || '0');
+                });
+            } else {
+                transcriptResults.forEach(period => {
+                    period.courses.forEach(c => {
+                        totalTCR += c.units;
+                        if (c.score >= 40) totalTCE += c.units;
+                        totalTWGP += c.wgp;
+                    });
+                });
+            }
 
             const finalCGPA = totalTCR > 0 ? totalTWGP / totalTCR : 0;
 
             return {
                 student: {
-                    name: s.user.name,
-                    matricNumber: s.student.matricNumber || "N/A",
+                    name: cleanTranscriptString(s.user.name),
+                    matricNumber: cleanTranscriptString(s.student.matricNumber) || "N/A",
                     dob: s.student.dob,
                     gender: s.student.gender,
                     nationality: (s.student as any).nationality,
                     admissionYear: s.student.admissionYear,
-                    modeOfEntry: (s.student as any).modeOfEntry,
+                    modeOfEntry: cleanTranscriptString((s.student as any).modeOfEntry) || "Full Time",
                     programme: s.prog?.name || "N/A",
                     department: s.dept?.name || "N/A",
                     faculty: s.fac?.name || "N/A",

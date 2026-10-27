@@ -91,6 +91,11 @@ export function AppContent({ children, enabledModules }: { children: React.React
 
     if (!pathname) return null;
 
+    // Standalone security checkpoint: never render sidebar or public chrome
+    if (pathname === "/change-password") {
+        return <>{children}</>;
+    }
+
     const isPublic = pathname === "/" || 
                      pathname === "/about" || 
                      pathname === "/contact" || 

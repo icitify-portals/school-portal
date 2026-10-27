@@ -5,7 +5,7 @@ import { changePasswordForced } from "@/actions/auth-actions";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ShieldAlert, AlertCircle, CheckCircle2, Loader2, Lock, Eye, EyeOff, Check, X, AlertTriangle } from "lucide-react";
-import { signOut, useSession } from "next-auth/react";
+import { signIn, signOut, useSession } from "next-auth/react";
 import { validatePasswordStrength } from "@/lib/password-validator";
 
 export default function ChangePasswordPage() {
@@ -59,16 +59,38 @@ export default function ChangePasswordPage() {
             if (result.requireDob) {
                 setRequireDob(true);
                 setStatus({ success: false, error: result.error });
+            } else if (result.success) {
+                setStatus({ 
+                    success: true, 
+                    message: "Password updated successfully! Logging you in..." 
+                });
+
+                // Re-authenticate with new credentials so NextAuth issues a fresh session
+                // token where requiresPasswordChange is false in the cookie.
+                const loginEmail = result.email || session?.user?.email;
+                if (loginEmail) {
+                    try {
+                        await signIn("credentials", {
+                            email: loginEmail,
+                            password: cleanPassword,
+                            redirect: false
+                        });
+                    } catch (signInErr) {
+                        console.error("Re-authentication error:", signInErr);
+                    }
+                }
+
+                try {
+                    await update({ requiresPasswordChange: false, user: { requiresPasswordChange: false } });
+                } catch (updateErr) {
+                    // non-blocking
+                }
+
+                setTimeout(() => {
+                    window.location.href = "/dashboard";
+                }, 1000);
             } else {
                 setStatus(result);
-                if (result.success) {
-                    await update({ requiresPasswordChange: false });
-                    const role = session?.user?.role;
-                    const isAdmin = role && !['student', 'applicant', 'fresher', 'parent'].includes(role);
-                    setTimeout(() => {
-                        window.location.href = isAdmin ? '/admin/dashboard' : '/dashboard';
-                    }, 1500);
-                }
             }
         } catch (err: any) {
             setStatus({

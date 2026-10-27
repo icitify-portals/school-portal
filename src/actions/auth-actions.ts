@@ -375,7 +375,11 @@ export async function changePasswordForced(password: string, dob?: string) {
             console.error("Twin account password sync in changePasswordForced error:", syncErr);
         }
 
-        return { success: true, message: 'Password updated successfully.' };
+        return { 
+            success: true, 
+            message: 'Password updated successfully.',
+            email: userRecord?.email || session?.user?.email 
+        };
     } catch (error: any) {
         console.error('Forced Change Password Error:', error);
         return {

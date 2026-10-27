@@ -539,6 +539,15 @@ export class SplitPaymentEngine {
             programme: studentRows[0].programme 
         };
 
+        // 1.4 Student Payment Lock Check
+        if ((student as any).isPaymentLocked) {
+            return {
+                success: false,
+                reference: "",
+                error: "Your student account has been locked for online payments by Administration. Please contact Bursary to make payments on your behalf."
+            };
+        }
+
         // 1.5 Activity lock check (e.g. school fee freeze)
         const lockCheck = await assertActivityUnlocked(ACTIVITIES.SCHOOL_FEE_PAYMENT, buildStudentLockContext(student));
         if (!lockCheck.success) {

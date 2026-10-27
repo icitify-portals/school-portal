@@ -364,7 +364,7 @@ const [isUpdatingSignature, setIsUpdatingSignature] = useState(false);
                                         </div>
                                         <div className="space-y-3">
                                             <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 italic">{isStaff ? "Job Title" : "Mode of Entry"}</Label>
-                                            <Input readOnly value={(isStaff ? profile.jobTitle : profile.modeOfEntry) || (isStaff ? "Lecturer" : "UTME")} className="bg-slate-50 h-14 rounded-2xl font-bold text-slate-900 border-slate-100" />
+                                            <Input readOnly value={(isStaff ? profile.jobTitle : profile.modeOfEntry) || (isStaff ? "Lecturer" : "Full Time")} className="bg-slate-50 h-14 rounded-2xl font-bold text-slate-900 border-slate-100" />
                                         </div>
                                         <div className="space-y-3">
                                             <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 italic flex items-center justify-between">

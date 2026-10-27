@@ -78,6 +78,8 @@ import {
   resolveGrade,
   publishResultBatch,
   getStudentTranscriptData,
+  calculateSemesterGPA,
+  calculateCumulativeCGPA,
 } from "@/services/results.service";
 
 type ResultRowInput = {
@@ -1148,7 +1150,26 @@ export async function addMultiCourseBulkResults(
 
       if (!identifier) { errors.push(`Row ${i + 2}: missing matric_number`); continue; }
       if (!courseCode) { errors.push(`Row ${i + 2}: missing course_code`); continue; }
-      if (isNaN(row.score)) { errors.push(`Row ${i + 2}: invalid score '${row.score}'`); continue; }
+      
+      const rawScoreStr = String(row.score ?? "").trim();
+      if (
+        rawScoreStr === "" ||
+        rawScoreStr === "-" ||
+        rawScoreStr === "--" ||
+        rawScoreStr.toLowerCase() === "n/a" ||
+        rawScoreStr.toLowerCase() === "abs" ||
+        rawScoreStr.toLowerCase() === "null" ||
+        rawScoreStr.toLowerCase() === "undefined" ||
+        isNaN(Number(rawScoreStr))
+      ) {
+        // Skip unentered/blank course cells cleanly without creating phantom entries
+        continue;
+      }
+      const validScore = Number(rawScoreStr);
+      if (validScore < 0 || validScore > 100) {
+        errors.push(`Row ${i + 2}: Score '${validScore}' out of valid range (0-100) for course '${courseCode}'`);
+        continue;
+      }
 
       let student = allStudents.find(
         (s) =>
@@ -1195,12 +1216,12 @@ export async function addMultiCourseBulkResults(
       }
 
       const creditLoad = course.creditUnits;
-      const { grade, gradePoint } = resolveGrade(row.score, gradingScaleRules);
+      const { grade, gradePoint } = resolveGrade(validScore, gradingScaleRules);
 
       toInsert.push({
         studentId: student.id,
         courseId: course.id,
-        score: row.score.toString(),
+        score: validScore.toString(),
         grade,
         gradePoint: gradePoint.toString(),
         creditLoad,
@@ -1630,24 +1651,183 @@ export async function clearBatchResults(batchId: number) {
   }
 }
 
-export async function clearBatchResultsByCourse(batchId: number, courseId: number) {
+export async function clearBatchResultsByCourses(batchId: number, courseIds: number[]) {
   try {
-    const allowed = await hasRole("admin") || await hasRole("superadmin") || await hasRole("registrar") || await hasPermission("result_module.manage");
+    const allowed = await hasRole("admin") || await hasRole("superadmin") || await hasRole("registrar") || await hasRole("record_officer") || await hasPermission("result_module.manage");
     if (!allowed) return { success: false, error: "Unauthorized" };
 
+    if (!Array.isArray(courseIds) || courseIds.length === 0) {
+      return { success: false, error: "No courses selected for deletion" };
+    }
+
+    const batch = await db.query.resultBatches.findFirst({
+      where: eq(resultBatches.id, batchId),
+    });
+    if (!batch) return { success: false, error: "Batch not found" };
+
+    // 1. Find all student results in this batch matching the target courses
+    const matchingResults = await db
+      .select({
+        id: studentResults.id,
+        studentId: studentResults.studentId,
+        courseId: studentResults.courseId,
+      })
+      .from(studentResults)
+      .where(
+        and(
+          eq(studentResults.batchId, batchId),
+          inArray(studentResults.courseId, courseIds)
+        )
+      );
+
+    if (matchingResults.length === 0) {
+      return { success: true, count: 0, coursesCount: courseIds.length };
+    }
+
+    const affectedStudentIds = Array.from(new Set(matchingResults.map((r) => r.studentId)));
+
+    // 2. Delete from studentResults
     await db.delete(studentResults).where(
       and(
         eq(studentResults.batchId, batchId),
-        eq(studentResults.courseId, courseId)
+        inArray(studentResults.courseId, courseIds)
       )
     );
 
+    // 3. Cascade delete bridged records (resultMarks, enrollments, results) if session & semester exist
+    if (batch.academicSessionId && batch.semester) {
+      const semesterNum = parseInt(batch.semester) as 1 | 2 | 3;
+
+      // Clean resultMarks
+      try {
+        await db.delete(resultMarks).where(
+          and(
+            inArray(resultMarks.studentId, affectedStudentIds),
+            inArray(resultMarks.courseId, courseIds),
+            eq(resultMarks.sessionId, batch.academicSessionId),
+            eq(resultMarks.semester, batch.semester as "1" | "2")
+          )
+        );
+      } catch (err) {
+        console.error("clearBatchResultsByCourses: resultMarks clean error", err);
+      }
+
+      // Clean enrollments & results
+      try {
+        const matchingEnrollments = await db
+          .select({ id: enrollments.id })
+          .from(enrollments)
+          .where(
+            and(
+              inArray(enrollments.studentId, affectedStudentIds),
+              inArray(enrollments.courseId, courseIds),
+              eq(enrollments.sessionId, batch.academicSessionId),
+              eq(enrollments.semester, semesterNum)
+            )
+          );
+
+        if (matchingEnrollments.length > 0) {
+          const enrIds = matchingEnrollments.map((e) => e.id);
+          await db.delete(results).where(inArray(results.enrollmentId, enrIds));
+          await db.delete(enrollments).where(inArray(enrollments.id, enrIds));
+        }
+      } catch (err) {
+        console.error("clearBatchResultsByCourses: enrollment bridge clean error", err);
+      }
+
+      // 4. Recalculate GPAs for affected students
+      for (const sId of affectedStudentIds) {
+        const remainingBatchResults = await db
+          .select()
+          .from(studentResults)
+          .where(
+            and(
+              eq(studentResults.batchId, batchId),
+              eq(studentResults.studentId, sId)
+            )
+          );
+
+        if (remainingBatchResults.length > 0) {
+          const { gpa, credits } = calculateSemesterGPA(remainingBatchResults);
+          const { cgpa, totalCredits } = await calculateCumulativeCGPA(sId);
+
+          await db
+            .update(studentTranscripts)
+            .set({
+              cgpa: cgpa.toFixed(2),
+              gpa: gpa.toFixed(2),
+              totalCreditsEarned: totalCredits,
+              totalCreditsAttempted: credits,
+              updatedAt: new Date(),
+            })
+            .where(
+              and(
+                eq(studentTranscripts.studentId, sId),
+                eq(studentTranscripts.academicSessionId, batch.academicSessionId),
+                eq(studentTranscripts.semester, batch.semester)
+              )
+            );
+
+          if (batch.semester === "1" || batch.semester === "2") {
+            const twgp = remainingBatchResults.reduce(
+              (acc, r) => acc + (parseFloat(r.score) || 0) * (r.creditLoad || 0),
+              0
+            );
+            await db
+              .update(semesterSummaries)
+              .set({
+                tcr: credits,
+                tce: credits,
+                twgp: twgp.toString(),
+                gpa: gpa.toFixed(2),
+                cgpa: cgpa.toFixed(2),
+                updatedAt: new Date(),
+              })
+              .where(
+                and(
+                  eq(semesterSummaries.studentId, sId),
+                  eq(semesterSummaries.sessionId, batch.academicSessionId),
+                  eq(semesterSummaries.semester, batch.semester)
+                )
+              );
+          }
+        } else {
+          // No more results for this student in this batch
+          await db.delete(studentTranscripts).where(
+            and(
+              eq(studentTranscripts.studentId, sId),
+              eq(studentTranscripts.academicSessionId, batch.academicSessionId),
+              eq(studentTranscripts.semester, batch.semester)
+            )
+          );
+          if (batch.semester === "1" || batch.semester === "2") {
+            await db.delete(semesterSummaries).where(
+              and(
+                eq(semesterSummaries.studentId, sId),
+                eq(semesterSummaries.sessionId, batch.academicSessionId),
+                eq(semesterSummaries.semester, batch.semester)
+              )
+            );
+          }
+        }
+      }
+    }
+
     revalidatePath(`/admin/result-module/${batchId}`);
     revalidatePath("/admin/result-module");
-    return { success: true };
+    revalidatePath("/admin/result-module/print");
+    return {
+      success: true,
+      count: matchingResults.length,
+      coursesCount: courseIds.length,
+    };
   } catch (e: any) {
     return { success: false, error: e.message };
   }
+}
+
+export async function clearBatchResultsByCourse(batchId: number, courseId: number) {
+  return clearBatchResultsByCourses(batchId, [courseId]);
 }
 
 // ──────────────────────────────────────────────

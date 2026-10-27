@@ -453,7 +453,8 @@ export async function bulkImportStudents(data: any[]) {
                 }
 
                 // Determine final level based on Mode of Entry
-                const entryMode = row.modeOfEntry?.toString().trim().toUpperCase() === 'DE' ? 'DE' : 'UTME';
+                const rawMode = (row.modeOfEntry || row.studyMode || '').toString().trim().toLowerCase();
+                const entryMode = rawMode.includes('part') ? 'Part Time' : 'Full Time';
                 const parsedLevel = parseInt(level);
                 let finalLevel = isNaN(parsedLevel) ? 1 : parsedLevel;
                 if (entryMode === 'DE' && finalLevel === 1) {
@@ -695,6 +696,58 @@ export async function getPersonalizedRecommendations() {
     }
 }
 
+export async function togglePaymentLock(studentId: number, status: boolean) {
+    try {
+        const allowed = await hasPermission("admin.students.manage") ||
+                        await hasPermission("finance.lock.manage") ||
+                        await hasRole("admin") ||
+                        await hasRole("superadmin") ||
+                        await hasRole("bursar") ||
+                        await hasRole("icitify_dev");
+        if (!allowed) {
+            return { success: false, error: "Unauthorized: Insufficient permissions to modify payment lock" };
+        }
+
+        await db.update(students).set({ isPaymentLocked: status }).where(eq(students.id, studentId));
+        revalidatePath("/admin/students");
+        return { success: true, message: `Payment ${status ? 'locked' : 'unlocked'} successfully.` };
+    } catch (error: any) {
+        console.error("togglePaymentLock error:", error);
+        return { success: false, error: error.message || "Failed to update payment lock status." };
+    }
+}
+
+export async function bulkTogglePaymentLock(studentIds: number[], status: boolean) {
+    try {
+        const allowed = await hasPermission("admin.students.manage") ||
+                        await hasPermission("finance.lock.manage") ||
+                        await hasRole("admin") ||
+                        await hasRole("superadmin") ||
+                        await hasRole("bursar") ||
+                        await hasRole("icitify_dev");
+        if (!allowed) {
+            return { success: false, error: "Unauthorized: Insufficient permissions to modify payment lock" };
+        }
+
+        if (!studentIds || studentIds.length === 0) {
+            return { success: false, error: "No students selected." };
+        }
+
+        await db.update(students)
+            .set({ isPaymentLocked: status })
+            .where(inArray(students.id, studentIds));
+
+        revalidatePath("/admin/students");
+        return { 
+            success: true, 
+            message: `Successfully ${status ? 'locked' : 'unlocked'} payment for ${studentIds.length} student(s).` 
+        };
+    } catch (error: any) {
+        console.error("bulkTogglePaymentLock error:", error);
+        return { success: false, error: error.message || "Failed to update payment lock status for selected students." };
+    }
+}
+
 export async function toggleFinancialLock(studentId: number, status: boolean) {
     try {
         const allowed = await hasPermission("finance.lock.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("bursar");
@@ -828,9 +881,14 @@ export async function updateAdminStudentProfile(studentId: number, updatePayload
             studentUpdates.studyMode = validModes.includes(m) ? m : null;
         }
         if (updatePayload.modeOfEntry !== undefined) {
-            const validEntries = ['JAMB', 'Direct', 'UTME', 'Transfer', 'Conversion'];
-            const me = (updatePayload.modeOfEntry || '').toString().trim();
-            studentUpdates.modeOfEntry = validEntries.includes(me) ? me : null;
+            const rawMe = (updatePayload.modeOfEntry || '').toString().trim().toLowerCase();
+            if (rawMe.includes('part')) {
+                studentUpdates.modeOfEntry = 'Part Time';
+            } else if (rawMe.includes('full') || rawMe === 'utme' || rawMe === 'jamb' || rawMe === 'direct') {
+                studentUpdates.modeOfEntry = 'Full Time';
+            } else if (rawMe) {
+                studentUpdates.modeOfEntry = updatePayload.modeOfEntry.trim();
+            }
         }
 
         if (Object.keys(studentUpdates).length > 0) {
@@ -962,11 +1020,50 @@ export async function deleteStudentAccount(
 
         if (options.permanent) {
             try {
-                const { studentBills, enrollments } = await import("@/db/schema");
+                const { 
+                    studentBills, 
+                    studentBillItems, 
+                    studentLedger, 
+                    enrollments, 
+                    results, 
+                    studentResults, 
+                    studentTranscripts, 
+                    semesterSummaries, 
+                    walletTransactions, 
+                    promotionLogs,
+                    parentStudentMappings
+                } = await import("@/db/schema");
+
+                // 1. Delete student bill items
+                const bills = await db.select({ id: studentBills.id }).from(studentBills).where(eq(studentBills.studentId, studentId));
+                const billIds = bills.map(b => b.id);
+                if (billIds.length > 0) {
+                    await db.delete(studentBillItems).where(inArray(studentBillItems.billId, billIds));
+                }
+                // 2. Delete student bills and ledger
                 await db.delete(studentBills).where(eq(studentBills.studentId, studentId));
+                await db.delete(studentLedger).where(eq(studentLedger.studentId, studentId));
+
+                // 3. Delete results and enrollments
+                const studentEnrollments = await db.select({ id: enrollments.id }).from(enrollments).where(eq(enrollments.studentId, studentId));
+                const enrollmentIds = studentEnrollments.map(e => e.id);
+                if (enrollmentIds.length > 0) {
+                    await db.delete(results).where(inArray(results.enrollmentId, enrollmentIds));
+                }
                 await db.delete(enrollments).where(eq(enrollments.studentId, studentId));
+
+                // 4. Delete result marks, transcripts, wallet txs, logs
+                await db.delete(studentResults).where(eq(studentResults.studentId, studentId));
+                await db.delete(studentTranscripts).where(eq(studentTranscripts.studentId, studentId));
+                await db.delete(semesterSummaries).where(eq(semesterSummaries.studentId, studentId));
+                await db.delete(walletTransactions).where(eq(walletTransactions.studentId, studentId));
+                await db.delete(promotionLogs).where(eq(promotionLogs.studentId, studentId));
+                await db.delete(parentStudentMappings).where(eq(parentStudentMappings.studentId, studentId));
+
+                // 5. Delete student record
                 await db.delete(students).where(eq(students.id, studentId));
 
+                // 6. Delete user account
                 if (student.userId) {
                     await db.delete(users).where(and(eq(users.id, student.userId), eq(users.role, 'student')));
                 }
@@ -974,7 +1071,8 @@ export async function deleteStudentAccount(
                 revalidatePath("/admin/students");
                 return { success: true, message: `Student account permanently deleted.` };
             } catch (err: any) {
-                console.warn("Permanent deletion had constraint, falling back to soft delete:", err);
+                console.error("Permanent deletion error:", err);
+                return { success: false, error: `Failed to permanently delete student: ${err.message}` };
             }
         }
 

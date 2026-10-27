@@ -2691,6 +2691,13 @@ export async function getAccountsReceivableAging() {
 
 export async function payBillWithWalletAction(studentId: number, billId: number, amount: number) {
     try {
+        const [studentCheck] = await db.select({ isPaymentLocked: students.isPaymentLocked }).from(students).where(eq(students.id, studentId)).limit(1);
+        if (studentCheck?.isPaymentLocked) {
+            return {
+                success: false,
+                error: "Your student account has been locked for online payments by Administration. Please contact Bursary to make payments."
+            };
+        }
         const { PaymentService } = await import("@/services/PaymentService");
         const session = await auth();
         if (!session?.user?.id) throw new Error("Unauthorized");
@@ -2816,6 +2823,13 @@ export async function postDirectPayment(studentId: number, billId: number, amoun
 
 export async function initializeOnlineCheckoutAction(studentId: number, billId: number, amount: number) {
     try {
+        const [studentCheck] = await db.select({ isPaymentLocked: students.isPaymentLocked }).from(students).where(eq(students.id, studentId)).limit(1);
+        if (studentCheck?.isPaymentLocked) {
+            return {
+                success: false,
+                error: "Your student account has been locked for online payments by Administration. Please contact Bursary to make payments."
+            };
+        }
         const { SplitPaymentEngine } = await import("@/services/SplitPaymentEngine");
         const res = await SplitPaymentEngine.checkoutBill(studentId, billId, amount);
         return {

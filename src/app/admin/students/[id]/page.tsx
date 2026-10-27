@@ -430,8 +430,8 @@ export default function StudentDetailsPage() {
                                             onChange={e => setEditData({...editData, modeOfEntry: e.target.value})}
                                         >
                                             <option value="">— Select —</option>
-                                            <option value="JAMB">JAMB (UTME)</option>
-                                            <option value="Direct">Direct Entry</option>
+                                            <option value="Full Time">Full Time</option>
+                                            <option value="Part Time">Part Time</option>
                                         </select>
                                     </div>
                                 </div>

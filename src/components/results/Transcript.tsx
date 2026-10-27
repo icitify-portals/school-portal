@@ -2,6 +2,16 @@
 
 import React from "react";
 
+function cleanTranscriptText(val: string | null | undefined): string {
+  if (!val) return '';
+  return val
+    .replace(/\.retired\./gi, '.')
+    .replace(/retired\s*\d*/gi, '')
+    .replace(/\bretired\b/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 interface CourseResult {
   courseCode: string;
   courseTitle: string;
@@ -147,7 +157,7 @@ export function StandardTranscript({
   const validTranscripts = transcripts.filter(tr => tr.results && tr.results.length > 0);
   const finalCGPA = validTranscripts.length > 0 ? validTranscripts[validTranscripts.length - 1].cgpa : "N/A";
   const fullName = student
-    ? `${student.lastName || ""} ${student.firstName || ""} ${student.otherNames || ""}`.trim()
+    ? cleanTranscriptText(`${student.lastName || ""} ${student.firstName || ""} ${student.otherNames || ""}`)
     : "N/A";
 
   if (template === "standard") {
@@ -194,7 +204,7 @@ export function StandardTranscript({
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px 24px", fontSize: 12, marginBottom: 20, background: "#f9f9f9", border: "1px solid #eee", borderRadius: 4, padding: "12px 16px" }}>
             {[
               ["Student Name", fullName],
-              ["Matric Number", student?.matricNumber || student?.admissionNumber || "N/A"],
+              ["Matric Number", cleanTranscriptText(student?.matricNumber || student?.admissionNumber) || "N/A"],
               ["Programme", student?.programme?.name || "N/A"],
               ["Level", student?.currentLevel ? `${student.currentLevel} Level` : "N/A"],
               ["Date Issued", new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" })],
@@ -342,7 +352,7 @@ export function StandardTranscript({
         }}>
           {[
             ["Full Name", fullName],
-            ["Matric Number", student?.matricNumber || student?.admissionNumber || "N/A"],
+            ["Matric Number", cleanTranscriptText(student?.matricNumber || student?.admissionNumber) || "N/A"],
             ["Programme", student?.programme?.name || "N/A"],
             ["Level", student?.currentLevel ? `${student.currentLevel} Level` : "N/A"],
             ["Date of Issue", new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" })],

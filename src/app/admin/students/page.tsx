@@ -4,9 +4,9 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Users, CheckCircle, Loader2, Search, FileUp, X, FileText, ShieldAlert, QrCode, Trash2, AlertTriangle } from "lucide-react";
+import { Users, CheckCircle, Loader2, Search, FileUp, X, FileText, ShieldAlert, QrCode, Trash2, AlertTriangle, Lock, Unlock, CreditCard } from "lucide-react";
 import { getDepartments } from "@/actions/departments";
-import { getStudents, approveStudent, bulkImportStudents, toggleFinancialLock, getStudentSessionOptions, deleteStudentAccount, bulkDeleteStudentAccounts } from "@/actions/students";
+import { getStudents, approveStudent, bulkImportStudents, toggleFinancialLock, togglePaymentLock, bulkTogglePaymentLock, getStudentSessionOptions, deleteStudentAccount, bulkDeleteStudentAccounts } from "@/actions/students";
 import { impersonateUser } from "@/actions/impersonation";
 import { generateIdentityQRCodeAction } from "@/actions/utility-actions";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
@@ -290,6 +290,70 @@ function StudentsPageContent() {
         }
     };
 
+    const handleTogglePaymentLock = async (studentId: number, currentStatus: boolean, name: string) => {
+        if (confirm(`Are you sure you want to ${currentStatus ? 'unlock' : 'lock'} payment for ${name}? When locked, the student cannot pay online, but administrators can post payments on their behalf.`)) {
+            const res = await togglePaymentLock(studentId, !currentStatus);
+            if (res.success) {
+                fetchStudents();
+            } else {
+                alert(res.error || "Failed to update payment lock");
+            }
+        }
+    };
+
+    const handleBulkPaymentLock = async (status: boolean) => {
+        if (selectedStudentIds.length === 0) return;
+        const actionLabel = status ? "lock payment for" : "unlock payment for";
+        if (confirm(`Are you sure you want to ${actionLabel} ${selectedStudentIds.length} selected student(s)?`)) {
+            const res = await bulkTogglePaymentLock(selectedStudentIds, status);
+            if (res.success) {
+                setSelectedStudentIds([]);
+                fetchStudents();
+            } else {
+                alert(res.error || "Failed to update payment locks");
+            }
+        }
+    };
+
+    const handleDeleteStudent = async () => {
+        if (!studentToDelete) return;
+        setDeletingStudent(true);
+        try {
+            const res = await deleteStudentAccount(studentToDelete.id, { permanent: deletePermanent });
+            if (res.success) {
+                setStudentToDelete(null);
+                setDeletePermanent(false);
+                fetchStudents();
+            } else {
+                alert(res.error || "Failed to delete student account");
+            }
+        } catch (err: any) {
+            alert(err?.message || "An error occurred while deleting the student");
+        } finally {
+            setDeletingStudent(false);
+        }
+    };
+
+    const handleBulkDeleteStudents = async () => {
+        if (selectedStudentIds.length === 0) return;
+        setBulkDeleting(true);
+        try {
+            const res = await bulkDeleteStudentAccounts(selectedStudentIds, { permanent: deletePermanent });
+            if (res.success) {
+                setShowBulkDeleteModal(false);
+                setSelectedStudentIds([]);
+                setDeletePermanent(false);
+                fetchStudents();
+            } else {
+                alert(res.error || "Failed to delete selected students");
+            }
+        } catch (err: any) {
+            alert(err?.message || "An error occurred during bulk deletion");
+        } finally {
+            setBulkDeleting(false);
+        }
+    };
+
     const handleViewQR = async (student: any) => {
         setQrStudent(student);
         setQrLoading(true);
@@ -486,7 +550,7 @@ function StudentsPageContent() {
                 <div className="mb-8 animate-in fade-in slide-in-from-top-4 duration-500">
                     <UniversalImporter
                         title="Bulk Student Import"
-                        description="Upload an Excel or CSV file containing student names, emails, matriculation numbers, entry modes (UTME/DE), and admission years."
+                        description="Upload an Excel or CSV file containing student names, emails, matriculation numbers, entry modes (Full Time/Part Time), and admission years."
                         templateColumns={["name", "email", "matricNumber", "level", "programmeId", "modeOfEntry", "admissionYear"]}
                         onImport={bulkImportStudents}
                         onComplete={() => {
@@ -510,6 +574,24 @@ function StudentsPageContent() {
                                 className="h-10 px-4 rounded-xl text-xs font-bold uppercase tracking-wider bg-white"
                             >
                                 Clear
+                            </Button>
+                            <Button
+                                onClick={() => handleBulkPaymentLock(true)}
+                                variant="outline"
+                                className="h-10 px-4 rounded-xl text-xs font-bold uppercase tracking-wider border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 gap-1.5"
+                                title="Lock self-service payment for selected students"
+                            >
+                                <Lock className="w-3.5 h-3.5" />
+                                Lock Payment
+                            </Button>
+                            <Button
+                                onClick={() => handleBulkPaymentLock(false)}
+                                variant="outline"
+                                className="h-10 px-4 rounded-xl text-xs font-bold uppercase tracking-wider border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 gap-1.5"
+                                title="Unlock self-service payment for selected students"
+                            >
+                                <Unlock className="w-3.5 h-3.5" />
+                                Unlock Payment
                             </Button>
                             <Button
                                 onClick={() => setShowBulkPlacement(true)}
@@ -558,13 +640,14 @@ function StudentsPageContent() {
                                 <th className="px-6 py-4">Programme</th>
                                 <th className="px-6 py-4">Wallet</th>
                                 <th className="px-6 py-4">Fin Status</th>
+                                <th className="px-4 py-4 text-center">Pay Lock</th>
                                 <th className="px-6 py-4 text-right">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
                             {loading ? (
                                 <tr>
-                                    <td colSpan={9} className="px-6 py-10 text-center">
+                                    <td colSpan={10} className="px-6 py-10 text-center">
                                         <Loader2 className="w-6 h-6 animate-spin mx-auto text-slate-400" />
                                     </td>
                                 </tr>
@@ -672,6 +755,27 @@ function StudentsPageContent() {
                                                 className={`h-8 px-2 text-xs gap-1 rounded-lg border font-bold ${s.isFinanciallyLocked ? 'border-rose-200 text-rose-600 bg-rose-50 hover:bg-rose-100' : 'border-emerald-200 text-emerald-600 bg-emerald-50 hover:bg-emerald-100'}`}
                                             >
                                                 {s.isFinanciallyLocked ? 'Locked' : 'Clear'}
+                                            </Button>
+                                        </td>
+                                        <td className="px-4 py-4 text-center">
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => handleTogglePaymentLock(s.id, Boolean(s.isPaymentLocked), s.user?.name)}
+                                                className={`h-7 px-2.5 text-[11px] gap-1 rounded-lg border font-bold ${s.isPaymentLocked ? 'border-amber-300 text-amber-700 bg-amber-50 hover:bg-amber-100' : 'border-slate-200 text-slate-500 bg-slate-50 hover:bg-slate-100'}`}
+                                                title={s.isPaymentLocked ? 'Online payment locked: student cannot pay, admin can pay' : 'Online payment allowed'}
+                                            >
+                                                {s.isPaymentLocked ? (
+                                                    <>
+                                                        <Lock className="w-3 h-3 text-amber-600" />
+                                                        Locked
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <Unlock className="w-3 h-3 text-slate-400" />
+                                                        Unlocked
+                                                    </>
+                                                )}
                                             </Button>
                                         </td>
                                         <td className="px-6 py-4 text-right flex justify-end gap-2 items-center">
@@ -833,6 +937,136 @@ function StudentsPageContent() {
                             className="w-full bg-slate-900 hover:bg-black text-white h-12 rounded-xl font-black uppercase tracking-widest text-xs transition-all shadow-xl shadow-slate-100"
                         >
                             Close
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Single Student Delete Confirmation Dialog */}
+            <Dialog open={!!studentToDelete} onOpenChange={(open) => {
+                if (!open) {
+                    setStudentToDelete(null);
+                    setDeletePermanent(false);
+                }
+            }}>
+                <DialogContent className="border-none shadow-2xl rounded-2xl bg-white max-w-md p-6">
+                    <DialogHeader className="space-y-2">
+                        <div className="w-12 h-12 bg-rose-50 text-rose-600 rounded-full flex items-center justify-center">
+                            <Trash2 className="w-6 h-6" />
+                        </div>
+                        <DialogTitle className="text-xl font-bold text-slate-900">
+                            Remove Student Account
+                        </DialogTitle>
+                        <DialogDescription className="text-slate-500 text-xs">
+                            Are you sure you want to remove <strong className="text-slate-800">{studentToDelete?.user?.name || studentToDelete?.matricNumber}</strong>?
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="space-y-4 py-3">
+                        <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-xs">
+                            <p className="font-semibold">Notice:</p>
+                            <p className="mt-0.5">
+                                Soft delete releases the email and matric number so they can be re-registered, while keeping audit logs intact. Permanent delete completely wipes all bills, records, and login credentials.
+                            </p>
+                        </div>
+
+                        <label className="flex items-center gap-2 cursor-pointer p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                            <input
+                                type="checkbox"
+                                checked={deletePermanent}
+                                onChange={(e) => setDeletePermanent(e.target.checked)}
+                                className="w-4 h-4 rounded border-slate-300 text-rose-600 focus:ring-rose-500"
+                            />
+                            <div className="text-xs">
+                                <span className="font-bold text-slate-900 block">Permanent Deletion</span>
+                                <span className="text-slate-500">Purge student record and associated fee bills completely</span>
+                            </div>
+                        </label>
+                    </div>
+
+                    <DialogFooter className="gap-2 sm:gap-0">
+                        <Button
+                            variant="outline"
+                            onClick={() => {
+                                setStudentToDelete(null);
+                                setDeletePermanent(false);
+                            }}
+                            className="rounded-xl font-bold text-xs"
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            onClick={handleDeleteStudent}
+                            disabled={deletingStudent}
+                            className="bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold text-xs gap-1.5"
+                        >
+                            {deletingStudent && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                            {deletePermanent ? "Permanently Delete" : "Remove Account"}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Bulk Student Delete Confirmation Dialog */}
+            <Dialog open={showBulkDeleteModal} onOpenChange={(open) => {
+                if (!open) {
+                    setShowBulkDeleteModal(false);
+                    setDeletePermanent(false);
+                }
+            }}>
+                <DialogContent className="border-none shadow-2xl rounded-2xl bg-white max-w-md p-6">
+                    <DialogHeader className="space-y-2">
+                        <div className="w-12 h-12 bg-rose-50 text-rose-600 rounded-full flex items-center justify-center">
+                            <AlertTriangle className="w-6 h-6" />
+                        </div>
+                        <DialogTitle className="text-xl font-bold text-slate-900">
+                            Remove Selected Students
+                        </DialogTitle>
+                        <DialogDescription className="text-slate-500 text-xs">
+                            You are about to remove <strong className="text-slate-900">{selectedStudentIds.length}</strong> selected student account(s).
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="space-y-4 py-3">
+                        <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-xs">
+                            <p className="font-semibold">Bulk Operation Warning:</p>
+                            <p className="mt-0.5">
+                                This will apply to all {selectedStudentIds.length} chosen students. Make sure you have reviewed the selection carefully before proceeding.
+                            </p>
+                        </div>
+
+                        <label className="flex items-center gap-2 cursor-pointer p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                            <input
+                                type="checkbox"
+                                checked={deletePermanent}
+                                onChange={(e) => setDeletePermanent(e.target.checked)}
+                                className="w-4 h-4 rounded border-slate-300 text-rose-600 focus:ring-rose-500"
+                            />
+                            <div className="text-xs">
+                                <span className="font-bold text-slate-900 block">Permanent Deletion</span>
+                                <span className="text-slate-500">Purge records and associated student bills completely</span>
+                            </div>
+                        </label>
+                    </div>
+
+                    <DialogFooter className="gap-2 sm:gap-0">
+                        <Button
+                            variant="outline"
+                            onClick={() => {
+                                setShowBulkDeleteModal(false);
+                                setDeletePermanent(false);
+                            }}
+                            className="rounded-xl font-bold text-xs"
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            onClick={handleBulkDeleteStudents}
+                            disabled={bulkDeleting}
+                            className="bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold text-xs gap-1.5"
+                        >
+                            {bulkDeleting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                            {deletePermanent ? `Permanently Delete (${selectedStudentIds.length})` : `Remove (${selectedStudentIds.length})`}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

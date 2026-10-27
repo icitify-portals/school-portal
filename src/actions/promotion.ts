@@ -761,7 +761,7 @@ export async function generateHodReport(deptId: number, sessionId: number, type:
                 studentId: s.studentId,
                 matricNumber: s.matricNumber || '—',
                 yearOfEntry,
-                modeOfEntry: s.modeOfEntry || 'UTME',
+                modeOfEntry: s.modeOfEntry || 'Full Time',
                 studentName: formattedName,
                 sortName: (s.lastName || nameParts[nameParts.length - 1] || '').toUpperCase(),
                 currentLevel: s.currentLevel || 1,

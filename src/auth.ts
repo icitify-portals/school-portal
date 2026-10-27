@@ -187,6 +187,25 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                     }
                 }
 
+                // If not an email, check if rawInput matches username, portal ID, or username@fssibadan.edu.ng directly
+                if (!user && !isEmail) {
+                    const normLogin = rawInput.toLowerCase();
+                    const [userByUsername] = await db
+                        .select()
+                        .from(users)
+                        .where(
+                            or(
+                                eq(users.email, normLogin),
+                                eq(users.email, `${normLogin}@fssibadan.edu.ng`),
+                                eq(users.schoolPortalId, normLogin)
+                            )
+                        )
+                        .limit(1);
+                    if (userByUsername) {
+                        user = userByUsername;
+                    }
+                }
+
                 if (!user) {
                     // Try finding student by matric number or admission number (flexible matching)
                     const normLoginId = rawInput.toUpperCase().replace(/\s+/g, '');
@@ -446,6 +465,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             // Call the base jwt from authConfig
             if (authConfig.callbacks?.jwt) {
                 token = await authConfig.callbacks.jwt({ token, user, trigger, account, session } as any) as any;
+            }
+
+            // Synchronize requiresPasswordChange with DB if currently flagged true
+            if (token.id && token.requiresPasswordChange) {
+                try {
+                    const [dbCheck] = await db.select({ requiresPasswordChange: users.requiresPasswordChange })
+                        .from(users)
+                        .where(eq(users.id, Number(token.id)))
+                        .limit(1);
+                    if (dbCheck) {
+                        token.requiresPasswordChange = Boolean(dbCheck.requiresPasswordChange);
+                    }
+                } catch (e) {
+                    // non-blocking
+                }
             }
 
             // For OAuth sign-ins, fetch from DB on first OAuth token creation

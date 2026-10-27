@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Papa from "papaparse";
 import {
@@ -23,13 +23,14 @@ import {
   deleteStudentResult,
   clearBatchResults,
   clearBatchResultsByCourse,
+  clearBatchResultsByCourses,
   deleteResultBatch,
   toggleBatchPublication,
   toggleStudentView,
 } from "@/actions/result-module";
 import {
   ArrowLeft, Upload, UserPlus, CheckCircle2, Loader2, Search,
-  Plus, FileUp, Trash2, AlertTriangle, BookOpen, X, Eye, EyeOff, Lock, ChevronDown, Edit3, Printer,
+  Plus, FileUp, Trash2, AlertTriangle, BookOpen, X, Eye, EyeOff, Lock, ChevronDown, Edit3, Printer, CheckSquare, Square, Check,
 } from "lucide-react";
 import Link from "next/link";
 import { ImportPreviewModal } from "@/components/result-module/ImportPreviewModal";
@@ -138,6 +139,13 @@ export default function BatchDetailPage() {
   const [clearingByCourse, setClearingByCourse] = useState(false);
   const [deletingBatch, setDeletingBatch] = useState(false);
 
+  // Multi-Course Deletion Modal States
+  const [showClearCoursesModal, setShowClearCoursesModal] = useState(false);
+  const [clearCoursesSearch, setClearCoursesSearch] = useState("");
+  const [selectedCourseIdsToDelete, setSelectedCourseIdsToDelete] = useState<number[]>([]);
+  const [clearingCourses, setClearingCourses] = useState(false);
+  const [clearCourseTab, setClearCourseTab] = useState<"batch" | "all">("batch");
+
   // Smart import preview state
   const [showPreview, setShowPreview] = useState(false);
   const [previewData, setPreviewData] = useState<any>(null);
@@ -184,50 +192,152 @@ export default function BatchDetailPage() {
     }
   }
 
-  async function handleClearResultsByCourse() {
-    if (resultsInBatch.length === 0) return;
-    // Group by normalised course code: a course can exist as several rows
-    // (e.g. "STA 111" and "STA 111\t"), and clearing only one ID used to leave
-    // the other ID's results behind.
-    const byCode = new Map<string, { label: string; ids: number[] }>();
-    for (const r of resultsInBatch as BatchResultRow[]) {
+  // Strict helper: only extracts cells that contain an explicit, valid numerical score
+  function extractScoreRowsFromCsv(data: any[], courseCols: string[]) {
+    const rows: { identifier: string; courseCode: string; score: number; name?: string }[] = [];
+    data.forEach((r) => {
+      for (const cc of courseCols) {
+        const val = r[cc];
+        const raw = val !== undefined && val !== null ? String(val).trim() : "";
+        if (
+          raw === "" ||
+          raw === "-" ||
+          raw === "--" ||
+          raw.toLowerCase() === "n/a" ||
+          raw.toLowerCase() === "null" ||
+          raw.toLowerCase() === "undefined" ||
+          raw.toLowerCase() === "abs" ||
+          isNaN(Number(raw))
+        ) {
+          // Strictly skip blank or non-score cells
+          continue;
+        }
+        const numScore = Number(raw);
+        if (numScore >= 0 && numScore <= 100) {
+          const name =
+            r.name || r.student_name || r["student name"] || r.full_name || r["full name"] || r.surname ||
+            r.last_name || r["last name"] || r.first_name || r["first name"] || undefined;
+          rows.push({
+            identifier: r.matric_number,
+            courseCode: cc,
+            score: numScore,
+            name: name ? String(name).trim() : undefined,
+          });
+        }
+      }
+    });
+    return rows;
+  }
+
+  // Multi-Course list for batch deletion
+  const batchCoursesList = useMemo(() => {
+    const map = new Map<string, {
+      key: string;
+      label: string;
+      name: string;
+      ids: number[];
+      creditUnits: number | null;
+      count: number;
+    }>();
+    for (const r of (batch?.studentResults || []) as BatchResultRow[]) {
       const key = courseCodeKey(r.course?.code) || `id-${r.courseId}`;
-      const existing = byCode.get(key);
+      const existing = map.get(key);
       if (existing) {
         if (!existing.ids.includes(r.courseId)) existing.ids.push(r.courseId);
+        existing.count++;
       } else {
-        byCode.set(key, { label: r.course?.code || `Course ${r.courseId}`, ids: [r.courseId] });
+        map.set(key, {
+          key,
+          label: r.course?.code || `Course ${r.courseId}`,
+          name: r.course?.name || "Untitled Course",
+          ids: [r.courseId],
+          creditUnits: r.course?.creditUnits ?? r.creditLoad ?? null,
+          count: 1,
+        });
       }
     }
-    if (byCode.size === 0) return;
+    return Array.from(map.values()).sort((a, b) => a.label.localeCompare(b.label));
+  }, [batch?.studentResults]);
 
-    const options = Array.from(byCode.values());
-    const courseCodeStr = options
-      .map((c, i) => `${i + 1}. ${c.label} (ID: ${c.ids.join(", ")})`)
-      .join("\n");
-    const input = prompt(
-      `Enter the number of the course to delete for ALL students in this batch.\n\n${courseCodeStr}`
+  const allCoursesList = useMemo(() => {
+    return (courses || []).map((c: any) => ({
+      key: courseCodeKey(c.code) || `id-${c.id}`,
+      label: c.code,
+      name: c.name || "Untitled Course",
+      ids: [c.id],
+      creditUnits: c.creditUnits ?? null,
+      count: ((batch?.studentResults || []) as BatchResultRow[]).filter((r) => r.courseId === c.id).length,
+    })).sort((a: any, b: any) => a.label.localeCompare(b.label));
+  }, [courses, batch?.studentResults]);
+
+  const activeCourseItems = clearCourseTab === "batch" ? batchCoursesList : allCoursesList;
+
+  const filteredActiveCourses = useMemo(() => {
+    const q = clearCoursesSearch.trim().toLowerCase();
+    if (!q) return activeCourseItems;
+    return activeCourseItems.filter(
+      (c) =>
+        c.label.toLowerCase().includes(q) ||
+        c.name.toLowerCase().includes(q) ||
+        c.ids.some((id) => String(id).includes(q))
     );
+  }, [activeCourseItems, clearCoursesSearch]);
 
-    if (!input || isNaN(Number(input))) return;
+  function toggleCourseSelection(item: { ids: number[] }) {
+    setSelectedCourseIdsToDelete((prev) => {
+      const hasAny = item.ids.some((id) => prev.includes(id));
+      if (hasAny) {
+        return prev.filter((id) => !item.ids.includes(id));
+      } else {
+        return Array.from(new Set([...prev, ...item.ids]));
+      }
+    });
+  }
 
-    const choice = options[Number(input) - 1];
-    if (!choice) return;
+  function handleSelectAllFiltered() {
+    const allFilteredIds = filteredActiveCourses.flatMap((c) => c.ids);
+    setSelectedCourseIdsToDelete((prev) => Array.from(new Set([...prev, ...allFilteredIds])));
+  }
 
-    if (!confirm(`Are you sure you want to delete ALL results for ${choice.label} (ID: ${choice.ids.join(", ")}) in this batch? This action cannot be undone.`)) return;
+  function handleClearSelection() {
+    setSelectedCourseIdsToDelete([]);
+  }
 
-    setClearingByCourse(true);
-    let last: any = { success: false, error: "No course selected" };
-    for (const id of choice.ids) {
-      last = await clearBatchResultsByCourse(batchId, id);
-    }
-    setClearingByCourse(false);
-    if (last.success) {
+  const selectedRecordCount = useMemo(() => {
+    const set = new Set(selectedCourseIdsToDelete);
+    return ((batch?.studentResults || []) as BatchResultRow[]).filter((r) => set.has(r.courseId)).length;
+  }, [batch?.studentResults, selectedCourseIdsToDelete]);
+
+  async function handleExecuteClearCourses() {
+    if (selectedCourseIdsToDelete.length === 0) return;
+    const selectedItems = activeCourseItems.filter((c) =>
+      c.ids.some((id) => selectedCourseIdsToDelete.includes(id))
+    );
+    const courseLabels = selectedItems.map((c) => c.label).join(", ");
+    const count = selectedItems.length;
+
+    const confirmMsg = `Are you sure you want to delete ALL results for ${count} course(s) (${courseLabels}) in this batch?\n\nThis will remove ${selectedRecordCount} student result record(s) and automatically recalculate affected GPAs/transcripts.\n\nThis action cannot be undone.`;
+    if (!confirm(confirmMsg)) return;
+
+    setClearingCourses(true);
+    const res = await clearBatchResultsByCourses(batchId, selectedCourseIdsToDelete);
+    setClearingCourses(false);
+
+    if (res.success) {
+      setShowClearCoursesModal(false);
+      setSelectedCourseIdsToDelete([]);
+      setClearCoursesSearch("");
       fetchBatch();
-      alert(`✓ All results for ${choice.label} cleared successfully!`);
+      alert(`✓ Successfully deleted ${count} course(s) from this batch (${res.count ?? selectedRecordCount} student records removed).`);
     } else {
-      alert("Error: " + last.error);
+      alert("Error: " + res.error);
     }
+  }
+
+  function handleOpenClearCoursesModal() {
+    setSelectedCourseIdsToDelete([]);
+    setClearCoursesSearch("");
+    setShowClearCoursesModal(true);
   }
 
   const [togglingPublication, setTogglingPublication] = useState(false);
@@ -527,24 +637,8 @@ export default function BatchDetailPage() {
     setSkippedRows([]);
     setShowPreview(false);
 
-    // Transform pivot format into row-per-result
-    const rows: { identifier: string; courseCode: string; score: number; name?: string }[] = [];
-    csvData.forEach(r => {
-      for (const cc of csvCourseColumns) {
-        const val = r[cc];
-        if (val !== undefined && val !== null && val !== "") {
-          const name =
-            r.name || r.student_name || r["student name"] || r.full_name || r["full name"] || r.surname ||
-            r.last_name || r["last name"] || r.first_name || r["first name"] || undefined;
-          rows.push({
-            identifier: r.matric_number,
-            courseCode: cc,
-            score: Number(val),
-            name: name ? String(name).trim() : undefined,
-          });
-        }
-      }
-    });
+    // Transform pivot format into row-per-result using strict cell extraction
+    const rows = extractScoreRowsFromCsv(csvData, csvCourseColumns);
 
     // Filter rows based on mode
     let filteredRows = rows;
@@ -617,24 +711,8 @@ export default function BatchDetailPage() {
     setPreviewLoading(true);
     setShowPreview(true);
 
-    // Transform pivot format into row-per-result
-    const rows: { identifier: string; courseCode: string; score: number; name?: string }[] = [];
-    csvData.forEach(r => {
-      for (const cc of csvCourseColumns) {
-        const val = r[cc];
-        if (val !== undefined && val !== null && val !== "") {
-          const name =
-            r.name || r.student_name || r["student name"] || r.full_name || r["full name"] || r.surname ||
-            r.last_name || r["last name"] || r.first_name || r["first name"] || undefined;
-          rows.push({
-            identifier: r.matric_number,
-            courseCode: cc,
-            score: Number(val),
-            name: name ? String(name).trim() : undefined,
-          });
-        }
-      }
-    });
+    // Transform pivot format into row-per-result using strict cell extraction
+    const rows = extractScoreRowsFromCsv(csvData, csvCourseColumns);
 
     setPreviewRows(rows);
 
@@ -805,10 +883,10 @@ export default function BatchDetailPage() {
           <div className="flex items-center gap-3">
             {resultsInBatch.length > 0 && (
               <>
-                <button onClick={handleClearResultsByCourse} disabled={clearingByCourse}
+                <button onClick={handleOpenClearCoursesModal} disabled={clearingCourses}
                   className="flex items-center gap-2 px-4 py-2 rounded-xl bg-orange-500/20 hover:bg-orange-500/30 border border-orange-500/30 text-orange-300 font-semibold text-xs transition-all disabled:opacity-60">
-                  {clearingByCourse ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
-                  Clear by Course
+                  {clearingCourses ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                  Clear Courses
                 </button>
                 <button onClick={handleClearAllResults} disabled={clearingBatch}
                   className="flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/30 text-amber-300 font-semibold text-xs transition-all disabled:opacity-60">
@@ -1670,6 +1748,202 @@ export default function BatchDetailPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Multi-Course Deletion Modal */}
+      {showClearCoursesModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" onClick={() => setShowClearCoursesModal(false)}>
+          <div className="bg-slate-900 border border-white/10 rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 bg-white/5">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-rose-500/20 border border-rose-500/30 flex items-center justify-center text-rose-400">
+                  <Trash2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-white font-bold text-lg">Clear Results by Course</h3>
+                  <p className="text-xs text-slate-400">
+                    Select one or multiple courses to delete all associated student results in this batch
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowClearCoursesModal(false)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Tabs & Search */}
+            <div className="p-6 border-b border-white/10 space-y-4">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex bg-white/5 p-1 rounded-lg">
+                  <button
+                    type="button"
+                    onClick={() => setClearCourseTab("batch")}
+                    className={`py-1.5 px-3 rounded-md text-xs font-semibold transition-colors ${
+                      clearCourseTab === "batch"
+                        ? "bg-rose-600/30 border border-rose-500/40 text-rose-300"
+                        : "text-slate-400 hover:text-white"
+                    }`}
+                  >
+                    Courses in Batch ({batchCoursesList.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setClearCourseTab("all")}
+                    className={`py-1.5 px-3 rounded-md text-xs font-semibold transition-colors ${
+                      clearCourseTab === "all"
+                        ? "bg-rose-600/30 border border-rose-500/40 text-rose-300"
+                        : "text-slate-400 hover:text-white"
+                    }`}
+                  >
+                    All Institution Courses ({courses.length})
+                  </button>
+                </div>
+
+                <div className="text-xs text-slate-400">
+                  {selectedCourseIdsToDelete.length > 0 ? (
+                    <span className="font-semibold text-rose-400">
+                      {selectedCourseIdsToDelete.length} course(s) selected ({selectedRecordCount} records)
+                    </span>
+                  ) : (
+                    <span>0 selected</span>
+                  )}
+                </div>
+              </div>
+
+              {/* Search Bar */}
+              <div className="relative">
+                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Search by course code (e.g. BAM, ACC, STA) or title..."
+                  value={clearCoursesSearch}
+                  onChange={(e) => setClearCoursesSearch(e.target.value)}
+                  className="w-full bg-white/5 border border-white/10 rounded-xl pl-9 pr-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-rose-400/60"
+                />
+                {clearCoursesSearch && (
+                  <button
+                    type="button"
+                    onClick={() => setClearCoursesSearch("")}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+
+              {/* Selection Tools */}
+              <div className="flex items-center justify-between text-xs text-slate-400 pt-1">
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleSelectAllFiltered}
+                    className="px-2.5 py-1 rounded-md bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 hover:text-white transition-colors"
+                  >
+                    Select All Filtered ({filteredActiveCourses.length})
+                  </button>
+                  {selectedCourseIdsToDelete.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={handleClearSelection}
+                      className="px-2.5 py-1 rounded-md bg-white/5 hover:bg-white/10 border border-white/10 text-slate-400 hover:text-white transition-colors"
+                    >
+                      Clear Selection
+                    </button>
+                  )}
+                </div>
+                <span>Showing {filteredActiveCourses.length} of {activeCourseItems.length}</span>
+              </div>
+            </div>
+
+            {/* Course List Scroll Area */}
+            <div className="flex-1 overflow-y-auto max-h-[360px] divide-y divide-white/5 px-6">
+              {filteredActiveCourses.length === 0 ? (
+                <div className="py-12 text-center text-slate-500">
+                  <BookOpen className="w-8 h-8 mx-auto mb-2 opacity-40" />
+                  <p className="text-sm">No courses matching \"{clearCoursesSearch}\"</p>
+                </div>
+              ) : (
+                filteredActiveCourses.map((c) => {
+                  const isSelected = c.ids.some((id) => selectedCourseIdsToDelete.includes(id));
+                  return (
+                    <div
+                      key={c.key}
+                      onClick={() => toggleCourseSelection(c)}
+                      className={`py-3 px-3 -mx-3 rounded-xl flex items-center justify-between gap-4 cursor-pointer transition-colors ${
+                        isSelected ? "bg-rose-500/15 border border-rose-500/30" : "hover:bg-white/5 border border-transparent"
+                      }`}
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className={`w-5 h-5 rounded flex items-center justify-center border transition-colors ${
+                          isSelected ? "bg-rose-500 border-rose-500 text-white" : "border-slate-600 bg-white/5 text-transparent"
+                        }`}>
+                          {isSelected && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono font-bold text-sm text-white">{c.label}</span>
+                            {c.creditUnits != null && (
+                              <span className="text-[10px] uppercase font-semibold px-1.5 py-0.5 rounded bg-white/10 text-slate-300">
+                                {c.creditUnits} CU
+                              </span>
+                            )}
+                            <span className="text-[10px] text-slate-500 font-mono">
+                              (ID: {c.ids.join(", ")})
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-400 truncate">{c.name}</p>
+                        </div>
+                      </div>
+
+                      <div className="text-right shrink-0">
+                        <span className={`text-xs font-semibold px-2 py-1 rounded-full ${
+                          c.count > 0 ? "bg-amber-500/15 text-amber-300 border border-amber-500/30" : "bg-slate-800 text-slate-500"
+                        }`}>
+                          {c.count} {c.count === 1 ? "record" : "records"}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-between px-6 py-4 border-t border-white/10 bg-white/5">
+              <button
+                type="button"
+                onClick={() => setShowClearCoursesModal(false)}
+                className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-slate-300 font-semibold text-xs transition-colors"
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                onClick={handleExecuteClearCourses}
+                disabled={selectedCourseIdsToDelete.length === 0 || clearingCourses}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-semibold text-xs transition-all shadow-lg shadow-rose-600/30 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {clearingCourses ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    Deleting {selectedCourseIdsToDelete.length} Course(s)...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-3.5 h-3.5" />
+                    Delete Selected Courses ({selectedCourseIdsToDelete.length})
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}
