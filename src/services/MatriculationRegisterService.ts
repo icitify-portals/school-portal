@@ -33,7 +33,7 @@ export class MatriculationRegisterService {
             throw new Error(`The matriculation register for ${session[0].name} has closed. Deadline was ${new Date(deadline).toLocaleDateString()}.`);
         }
 
-        // 2. Check if already signed
+        // 2. Check if already signed — allow updating signature if already signed
         const existing = await db.select()
             .from(matriculationRegister)
             .where(and(
@@ -42,23 +42,33 @@ export class MatriculationRegisterService {
             ))
             .limit(1);
 
-        if (existing[0]) throw new Error("You have already signed the matriculation register for this session.");
-
-        // 3. Insert into register
-        const insertRes = await db.insert(matriculationRegister).values({
-            studentId: data.studentId,
-            sessionId: data.sessionId,
-            oathSignature: data.signature,
-            ipAddress: data.ipAddress,
-            userAgent: data.userAgent
-        });
+        let result;
+        if (existing[0]) {
+            result = await db.update(matriculationRegister)
+                .set({
+                    oathSignature: data.signature,
+                    signedAt: new Date(),
+                    ipAddress: data.ipAddress,
+                    userAgent: data.userAgent,
+                })
+                .where(eq(matriculationRegister.id, existing[0].id));
+        } else {
+            // 3. Insert into register
+            result = await db.insert(matriculationRegister).values({
+                studentId: data.studentId,
+                sessionId: data.sessionId,
+                oathSignature: data.signature,
+                ipAddress: data.ipAddress,
+                userAgent: data.userAgent
+            });
+        }
 
         // 4. Update student record oathSignedAt
         await db.update(students)
             .set({ oathSignedAt: new Date() })
             .where(eq(students.id, data.studentId));
 
-        return insertRes;
+        return result;
     }
 
     /**

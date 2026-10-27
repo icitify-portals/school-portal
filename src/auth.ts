@@ -414,7 +414,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                     roles: roleNames,
                     permissions: permissionNames,
                     schoolPortalId: (user as any).schoolPortalId,
-                    requiresPasswordChange: (user as any).requiresPasswordChange,
+                    requiresPasswordChange: Boolean((user as any).requiresPasswordChange) && user.role !== 'bursar',
                     twoFactorPending: false, // Temporarily disabled for all users to allow quick login & registration
                     matricNumber: studentRecord?.matricNumber || undefined
                 };

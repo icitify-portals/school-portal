@@ -11,7 +11,7 @@ export default function TranscriptApplicationPage() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
     
-    const [fees, setFees] = useState({ transcriptFee: 15000, processingFee: 4000 });
+    const [fees, setFees] = useState({ transcriptFee: 15000, incidentalFee: 5500, processingFee: 4000 });
     
     const [clearanceChecking, setClearanceChecking] = useState(false);
     const [clearanceInfo, setClearanceInfo] = useState<{
@@ -208,24 +208,43 @@ export default function TranscriptApplicationPage() {
                             </div>
                         </div>
 
-                        <div className="bg-indigo-50 border border-indigo-100 p-6 rounded-2xl flex flex-col sm:flex-row justify-between items-center gap-4 mt-8">
-                            <div>
-                                <p className="text-sm text-indigo-800 font-semibold mb-1">Total Fee Required</p>
-                                <p className="text-2xl font-black text-indigo-900">
-                                    {(fees.transcriptFee === 0 && fees.processingFee === 0) ? "Free" : `₦${(fees.transcriptFee + fees.processingFee).toLocaleString()}`}
-                                </p>
-                                <p className="text-xs text-indigo-600 mt-1">
-                                    Transcript Fee (₦{fees.transcriptFee.toLocaleString()}) + Processing Fee (₦{fees.processingFee.toLocaleString()})
-                                </p>
+                        <div className="bg-indigo-50 border border-indigo-100 p-6 rounded-2xl flex flex-col gap-4 mt-8">
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+                                <div className="bg-white p-3 rounded-xl border border-indigo-100 flex justify-between items-center">
+                                    <span className="text-slate-600 font-medium">Transcript Fee:</span>
+                                    <span className="font-bold text-slate-900">₦{fees.transcriptFee.toLocaleString()}</span>
+                                </div>
+                                <div className="bg-white p-3 rounded-xl border border-indigo-100 flex justify-between items-center">
+                                    <span className="text-slate-600 font-medium">Incidental Fee:</span>
+                                    <span className="font-bold text-slate-900">₦{(fees.incidentalFee || 5500).toLocaleString()}</span>
+                                </div>
+                                <div className="bg-white p-3 rounded-xl border border-indigo-100 flex justify-between items-center">
+                                    <span className="text-slate-600 font-medium">Processing Fee:</span>
+                                    <span className="font-bold text-slate-900">₦{fees.processingFee.toLocaleString()}</span>
+                                </div>
                             </div>
-                            <button 
-                                disabled={loading || (clearanceInfo?.isGraduant && !clearanceInfo.isCleared)} 
-                                type="submit" 
-                                className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-8 rounded-xl flex items-center gap-2 transition-all shadow-md shadow-indigo-600/30 disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
-                                {(fees.transcriptFee === 0 && fees.processingFee === 0) ? "Submit Application" : "Proceed to Payment"}
-                            </button>
+                            <p className="text-xs text-indigo-700 font-medium">
+                                Note: Incidental Payment (₦{(fees.incidentalFee || 5500).toLocaleString()}) is compulsory for all students, including those applying for certificates and transcripts.
+                            </p>
+                            <div className="flex flex-col sm:flex-row justify-between items-center gap-4 pt-3 border-t border-indigo-200/60">
+                                <div>
+                                    <p className="text-sm text-indigo-800 font-semibold mb-1">Total Fee Required</p>
+                                    <p className="text-2xl font-black text-indigo-900">
+                                        {(fees.transcriptFee === 0 && (fees.incidentalFee || 0) === 0 && fees.processingFee === 0) ? "Free" : `₦${(fees.transcriptFee + (fees.incidentalFee || 5500) + fees.processingFee).toLocaleString()}`}
+                                    </p>
+                                    <p className="text-xs text-indigo-600 mt-1">
+                                        Transcript Fee (₦{fees.transcriptFee.toLocaleString()}) + Incidental Fee (₦{(fees.incidentalFee || 5500).toLocaleString()}) + Processing Fee (₦{fees.processingFee.toLocaleString()})
+                                    </p>
+                                </div>
+                                <button 
+                                    disabled={loading || (clearanceInfo?.isGraduant && !clearanceInfo.isCleared)} 
+                                    type="submit" 
+                                    className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-8 rounded-xl flex items-center gap-2 transition-all shadow-md shadow-indigo-600/30 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
+                                    {(fees.transcriptFee === 0 && (fees.incidentalFee || 0) === 0 && fees.processingFee === 0) ? "Submit Application" : "Proceed to Payment"}
+                                </button>
+                            </div>
                         </div>
                     </form>
                 </div>

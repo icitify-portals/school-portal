@@ -1,20 +1,29 @@
 "use server";
 
 import { db } from "@/db/db";
-import { transcriptRequests, transactions, students, users, studentBills } from "@/db/schema";
-import { eq, desc, and, like, ne, sql } from "drizzle-orm";
+import { transcriptRequests, transactions, students, users, studentBills, feeItems } from "@/db/schema";
+import { eq, desc, and, like, ne, or, sql } from "drizzle-orm";
 import { initiatePayment, verifyPayment } from "./payment-gateways";
 import { sendEmail } from "@/lib/mail";
 import { getSettingByKey } from "@/actions/settings";
 // Fallback Constants for Fees (Now dynamically fetched from DB)
 const DEFAULT_TRANSCRIPT_FEE = 15000; // ALATPay fee
+const DEFAULT_INCIDENTAL_FEE = 5500;  // Compulsory Incidental Fee for all students
 const DEFAULT_PROCESSING_FEE = 4000;  // Paystack fee (reduced to ₦4,000)
 
 export async function getTranscriptFees() {
     const tFeeStr = await getSettingByKey('transcript_fee');
     const pFeeStr = await getSettingByKey('transcript_processing_fee');
+    let incidentalFee = DEFAULT_INCIDENTAL_FEE;
+    try {
+        const [incItem] = await db.select().from(feeItems).where(eq(feeItems.name, 'Incidental Fee')).limit(1);
+        if (incItem && Number(incItem.defaultAmount) > 0) {
+            incidentalFee = Number(incItem.defaultAmount);
+        }
+    } catch {}
     return {
         transcriptFee: tFeeStr !== null ? parseInt(tFeeStr) : DEFAULT_TRANSCRIPT_FEE,
+        incidentalFee,
         processingFee: pFeeStr !== null ? parseInt(pFeeStr) : DEFAULT_PROCESSING_FEE,
     };
 }
@@ -145,12 +154,9 @@ export async function submitTranscriptApplication(data: {
         // Look up student by matric if they exist
         const [student] = await db.select().from(students).where(eq(students.matricNumber, data.matricNumber.trim().toUpperCase())).limit(1);
 
-        const tFeeStr = await getSettingByKey('transcript_fee');
-        const pFeeStr = await getSettingByKey('transcript_processing_fee');
-        
-        // If not set, they fall back to the default. If explicitly '0', they become 0.
-        const transcriptFee = tFeeStr !== null ? parseInt(tFeeStr) : DEFAULT_TRANSCRIPT_FEE;
-        const processingFee = pFeeStr !== null ? parseInt(pFeeStr) : DEFAULT_PROCESSING_FEE;
+        const fees = await getTranscriptFees();
+        const transcriptFee = fees.transcriptFee + fees.incidentalFee;
+        const processingFee = fees.processingFee;
 
         if (transcriptFee === 0 && processingFee === 0) {
             // Bypass all payments
@@ -289,7 +295,7 @@ export async function verifyTranscriptPaystack(reference: string) {
             .set({ 
                 paystackStatus: 'paid', 
                 paymentStatus: 'paid',
-                feePaid: (fees.transcriptFee + fees.processingFee).toString()
+                feePaid: (fees.transcriptFee + fees.incidentalFee + fees.processingFee).toString()
             })
             .where(eq(transcriptRequests.id, req.id));
 

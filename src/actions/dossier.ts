@@ -12,6 +12,107 @@ import {
 } from "@/db/schema";
 import { eq, and, desc } from "drizzle-orm";
 import { auth } from "@/auth";
+import { revalidatePath } from "next/cache";
+
+export async function saveStudentDossierAction(formData: {
+    firstName: string;
+    lastName: string;
+    otherNames?: string;
+    gender: string;
+    dob: string;
+    phone: string;
+    email: string;
+    nin: string;
+    jambNumber: string;
+    stateOfOrigin: string;
+    lga: string;
+    guardianName: string;
+    guardianOccupation: string;
+    guardianPhone: string;
+    guardianAddress: string;
+    kinName: string;
+    kinPhone: string;
+    kinAddress: string;
+}) {
+    try {
+        const session = await auth();
+        if (!session?.user?.id) {
+            return { success: false, error: "Authentication required" };
+        }
+
+        const requiredChecks: { key: keyof typeof formData; label: string }[] = [
+            { key: "firstName", label: "First Name" },
+            { key: "lastName", label: "Surname / Last Name" },
+            { key: "gender", label: "Gender" },
+            { key: "dob", label: "Date of Birth" },
+            { key: "phone", label: "Phone Number" },
+            { key: "email", label: "Email Address" },
+            { key: "nin", label: "National Identification Number (NIN)" },
+            { key: "jambNumber", label: "JAMB / Admission Number" },
+            { key: "stateOfOrigin", label: "State of Origin" },
+            { key: "lga", label: "Local Government Area (LGA)" },
+            { key: "guardianName", label: "Parent / Guardian Full Name" },
+            { key: "guardianOccupation", label: "Guardian Occupation" },
+            { key: "guardianPhone", label: "Guardian Phone Number" },
+            { key: "guardianAddress", label: "Guardian Residential Address" },
+            { key: "kinName", label: "Next of Kin Full Name" },
+            { key: "kinPhone", label: "Next of Kin Phone Number" },
+            { key: "kinAddress", label: "Next of Kin Address" },
+        ];
+
+        for (const item of requiredChecks) {
+            const val = String(formData[item.key] ?? "").trim();
+            if (!val) {
+                return {
+                    success: false,
+                    error: `All dossier fields must be filled before submission. Missing: ${item.label}.`,
+                };
+            }
+        }
+
+        const userId = parseInt(session.user.id);
+        const [student] = await db.select().from(students).where(eq(students.userId, userId)).limit(1);
+        if (!student) {
+            return { success: false, error: "Student record not found." };
+        }
+
+        await db.update(students).set({
+            firstName: formData.firstName.trim(),
+            lastName: formData.lastName.trim(),
+            otherNames: formData.otherNames?.trim() || null,
+            gender: formData.gender.trim() as any,
+            dob: formData.dob.trim(),
+            phone: formData.phone.trim(),
+            nin: formData.nin.trim(),
+            jambNumber: formData.jambNumber.trim(),
+            stateOfOrigin: formData.stateOfOrigin.trim(),
+            lga: formData.lga.trim(),
+            guardianName: formData.guardianName.trim(),
+            guardianOccupation: formData.guardianOccupation.trim(),
+            guardianPhone: formData.guardianPhone.trim(),
+            guardianAddress: formData.guardianAddress.trim(),
+            kinName: formData.kinName.trim(),
+            kinPhone: formData.kinPhone.trim(),
+            kinAddress: formData.kinAddress.trim(),
+            profileCompleted: true,
+        }).where(eq(students.id, student.id));
+
+        await db.update(users).set({
+            firstName: formData.firstName.trim(),
+            surname: formData.lastName.trim(),
+            name: `${formData.lastName.trim()} ${formData.firstName.trim()} ${formData.otherNames?.trim() || ""}`.replace(/\s+/g, " ").trim(),
+            phone: formData.phone.trim(),
+        }).where(eq(users.id, userId));
+
+        revalidatePath("/student/dossier");
+        revalidatePath("/profile");
+        revalidatePath("/student");
+        return { success: true, message: "Student Dossier updated successfully." };
+    } catch (e: any) {
+        console.error("saveStudentDossierAction error:", e);
+        return { success: false, error: e.message || "Failed to update student dossier." };
+    }
+}
 
 export async function getStudentDossierData(targetStudentId?: number) {
     try {

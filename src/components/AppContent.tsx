@@ -91,8 +91,13 @@ export function AppContent({ children, enabledModules }: { children: React.React
 
     if (!pathname) return null;
 
-    // Standalone security checkpoint: never render sidebar or public chrome
-    if (pathname === "/change-password") {
+    // Standalone security checkpoint or public application portals with their own header: never render left sidebar
+    if (
+        pathname === "/change-password" ||
+        pathname.startsWith("/alumni/certificate") ||
+        pathname.startsWith("/transcript-application") ||
+        pathname.startsWith("/verify/certificate")
+    ) {
         return <>{children}</>;
     }
 

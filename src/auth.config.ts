@@ -74,6 +74,8 @@ export const authConfig = {
                 nextUrl.pathname.startsWith("/reset-password") ||
                 nextUrl.pathname === "/student-lookup" ||
                 nextUrl.pathname === "/find-account" ||
+                nextUrl.pathname === "/find-account" ||
+                nextUrl.pathname.startsWith("/alumni/certificate") ||
                 nextUrl.pathname.startsWith("/transcript-application") ||
                 nextUrl.pathname.startsWith("/verify");
             // Allow public API routes and public pages
@@ -112,7 +114,7 @@ export const authConfig = {
             }
 
             // Forced Password Change logic
-            const requiresPasswordChange = (auth?.user as any)?.requiresPasswordChange;
+            const requiresPasswordChange = Boolean((auth?.user as any)?.requiresPasswordChange) && (auth?.user as any)?.role?.toLowerCase() !== 'bursar';
             const isChangePasswordPage = nextUrl.pathname === "/change-password";
 
             if (requiresPasswordChange && !isChangePasswordPage) {

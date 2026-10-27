@@ -1,10 +1,20 @@
 "use client";
 
-import React from "react";
-import { Printer, ArrowLeft, Edit3, User, ShieldCheck, CheckCircle2, QrCode } from "lucide-react";
+import React, { useState } from "react";
+import { Printer, ArrowLeft, Edit3, User, ShieldCheck, CheckCircle2, QrCode, Loader2, Save, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { viewableAssetUrl } from "@/lib/assets";
+import { saveStudentDossierAction } from "@/actions/dossier";
+import { toast } from "sonner";
+
+const NIGERIAN_STATES = [
+    "Abia","Adamawa","Akwa Ibom","Anambra","Bauchi","Bayelsa","Benue","Borno",
+    "Cross River","Delta","Ebonyi","Edo","Ekiti","Enugu","FCT","Gombe","Imo",
+    "Jigawa","Kaduna","Kano","Katsina","Kebbi","Kogi","Kwara","Lagos","Nasarawa",
+    "Niger","Ogun","Ondo","Osun","Oyo","Plateau","Rivers","Sokoto","Taraba","Yobe","Zamfara"
+];
 
 interface StudentDossierPrintableProps {
     data: any;
@@ -12,6 +22,7 @@ interface StudentDossierPrintableProps {
 }
 
 export function StudentDossierPrintable({ data, isStaffView = false }: StudentDossierPrintableProps) {
+    const router = useRouter();
     if (!data || !data.student) {
         return (
             <div className="p-8 text-center text-slate-500">
@@ -22,14 +33,193 @@ export function StudentDossierPrintable({ data, isStaffView = false }: StudentDo
 
     const { student, user, programme, department, currentSession, admissionSession, medicalRecord, matricRecord } = data;
 
+    const [isEditing, setIsEditing] = useState(false);
+    const [saving, setSaving] = useState(false);
+    const [error, setError] = useState("");
+
+    const [form, setForm] = useState({
+        firstName: student.firstName || "",
+        lastName: student.lastName || "",
+        otherNames: student.otherNames || "",
+        gender: student.gender || "",
+        dob: student.dob ? new Date(student.dob).toISOString().split("T")[0] : "",
+        phone: student.phone || user?.phone || "",
+        email: user?.email || "",
+        nin: student.nin || "",
+        jambNumber: student.jambNumber || student.admissionNumber || "",
+        stateOfOrigin: student.stateOfOrigin || "",
+        lga: student.lga || "",
+        guardianName: student.guardianName || "",
+        guardianOccupation: student.guardianOccupation || "",
+        guardianPhone: student.guardianPhone || "",
+        guardianAddress: student.guardianAddress || "",
+        kinName: student.kinName || "",
+        kinPhone: student.kinPhone || "",
+        kinAddress: student.kinAddress || "",
+    });
+
     const handlePrint = () => {
         window.print();
+    };
+
+    const handleSaveDossier = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setError("");
+        setSaving(true);
+        const res = await saveStudentDossierAction(form);
+        setSaving(false);
+        if (res.success) {
+            toast.success(res.message || "Student Dossier saved successfully.");
+            setIsEditing(false);
+            router.refresh();
+        } else {
+            setError(res.error || "Please fill in all required fields.");
+            toast.error(res.error || "Please fill in all required fields.");
+        }
     };
 
     const fullName = `${student.lastName || ''} ${student.firstName || ''} ${student.otherNames || ''}`.trim() || user?.name || "Student";
     const photoUrl = student.imageUrl ? (viewableAssetUrl(student.imageUrl) || student.imageUrl) : null;
     const sessionName = currentSession?.name || "2026/2027";
     const refCode = `FSS-DOS-${student.id}-${sessionName.replace('/', '-')}`;
+
+    if (isEditing && !isStaffView) {
+        return (
+            <div className="min-h-screen bg-slate-100 py-8 px-4 text-slate-900">
+                <div className="max-w-4xl mx-auto space-y-6">
+                    <div className="flex items-center justify-between bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
+                        <Button variant="outline" size="sm" onClick={() => setIsEditing(false)} className="rounded-xl flex items-center gap-1.5">
+                            <ArrowLeft className="w-4 h-4" /> View Printable Dossier
+                        </Button>
+                        <span className="text-xs font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full">
+                            All Fields Marked * Are Compulsory
+                        </span>
+                    </div>
+
+                    <div className="bg-white rounded-3xl shadow-xl border border-slate-200 p-6 sm:p-10">
+                        <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tight mb-1">Edit Official Student Dossier</h2>
+                        <p className="text-sm text-slate-500 mb-6">Ensure all personal, guardian, and next-of-kin fields are filled accurately before saving and printing.</p>
+
+                        {error && (
+                            <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-xl mb-6 flex items-center gap-3 text-sm text-red-700 font-medium">
+                                <AlertCircle className="w-5 h-5 text-red-500 shrink-0" />
+                                <span>{error}</span>
+                            </div>
+                        )}
+
+                        <form onSubmit={handleSaveDossier} className="space-y-8">
+                            <div>
+                                <h3 className="text-xs font-black uppercase tracking-widest text-white bg-emerald-700 px-4 py-2 rounded-t-xl">Section 1: Personal Bio-Data</h3>
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-5 border border-t-0 border-slate-200 rounded-b-xl bg-slate-50/50">
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Surname / Last Name *</label>
+                                        <input required value={form.lastName} onChange={e => setForm({...form, lastName: e.target.value})} className="w-full p-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-600 uppercase mb-1">First Name *</label>
+                                        <input required value={form.firstName} onChange={e => setForm({...form, firstName: e.target.value})} className="w-full p-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Other Names</label>
+                                        <input value={form.otherNames} onChange={e => setForm({...form, otherNames: e.target.value})} placeholder="Middle name (optional)" className="w-full p-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Gender *</label>
+                                        <select required value={form.gender} onChange={e => setForm({...form, gender: e.target.value})} className="w-full p-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium">
+                                            <option value="">Select Gender...</option>
+                                            <option value="male">Male</option>
+                                            <option value="female">Female</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Date of Birth *</label>
+                                        <input required type="date" value={form.dob} onChange={e => setForm({...form, dob: e.target.value})} className="w-full p-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Phone Number *</label>
+                                        <input required value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} placeholder="e.g. 08012345678" className="w-full p-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Email Address *</label>
+                                        <input required type="email" value={form.email} onChange={e => setForm({...form, email: e.target.value})} className="w-full p-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-600 uppercase mb-1">NIN (11 Digits) *</label>
+                                        <input required maxLength={11} value={form.nin} onChange={e => setForm({...form, nin: e.target.value.replace(/\D/g, '').slice(0, 11)})} placeholder="11-digit NIN" className="w-full p-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-600 uppercase mb-1">JAMB / Admission No *</label>
+                                        <input required value={form.jambNumber} onChange={e => setForm({...form, jambNumber: e.target.value.toUpperCase()})} className="w-full p-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-600 uppercase mb-1">State of Origin *</label>
+                                        <select required value={form.stateOfOrigin} onChange={e => setForm({...form, stateOfOrigin: e.target.value})} className="w-full p-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium">
+                                            <option value="">Select State...</option>
+                                            {NIGERIAN_STATES.map(s => <option key={s} value={s}>{s}</option>)}
+                                        </select>
+                                    </div>
+                                    <div className="sm:col-span-2">
+                                        <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Local Government Area (LGA) *</label>
+                                        <input required value={form.lga} onChange={e => setForm({...form, lga: e.target.value})} className="w-full p-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium" />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <h3 className="text-xs font-black uppercase tracking-widest text-white bg-emerald-700 px-4 py-2 rounded-t-xl">Section 2: Parent / Guardian Information</h3>
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-5 border border-t-0 border-slate-200 rounded-b-xl bg-slate-50/50">
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Guardian Full Name *</label>
+                                        <input required value={form.guardianName} onChange={e => setForm({...form, guardianName: e.target.value})} className="w-full p-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Occupation *</label>
+                                        <input required value={form.guardianOccupation} onChange={e => setForm({...form, guardianOccupation: e.target.value})} className="w-full p-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Guardian Phone *</label>
+                                        <input required value={form.guardianPhone} onChange={e => setForm({...form, guardianPhone: e.target.value})} className="w-full p-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium" />
+                                    </div>
+                                    <div className="sm:col-span-3">
+                                        <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Guardian Residential Address *</label>
+                                        <input required value={form.guardianAddress} onChange={e => setForm({...form, guardianAddress: e.target.value})} className="w-full p-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium" />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <h3 className="text-xs font-black uppercase tracking-widest text-white bg-emerald-700 px-4 py-2 rounded-t-xl">Section 3: Next of Kin Details</h3>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-5 border border-t-0 border-slate-200 rounded-b-xl bg-slate-50/50">
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Next of Kin Full Name *</label>
+                                        <input required value={form.kinName} onChange={e => setForm({...form, kinName: e.target.value})} className="w-full p-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Next of Kin Phone *</label>
+                                        <input required value={form.kinPhone} onChange={e => setForm({...form, kinPhone: e.target.value})} className="w-full p-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium" />
+                                    </div>
+                                    <div className="sm:col-span-2">
+                                        <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Next of Kin Address *</label>
+                                        <input required value={form.kinAddress} onChange={e => setForm({...form, kinAddress: e.target.value})} className="w-full p-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium" />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="flex justify-end gap-3">
+                                <Button type="button" variant="outline" onClick={() => setIsEditing(false)} className="rounded-xl px-6">
+                                    Cancel
+                                </Button>
+                                <Button type="submit" disabled={saving} className="bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-xl px-8 flex items-center gap-2">
+                                    {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                                    {saving ? "Saving Dossier..." : "Save & View Printable Dossier"}
+                                </Button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-slate-100 py-8 px-4 print:p-0 print:bg-white text-slate-900">
@@ -46,11 +236,14 @@ export function StudentDossierPrintable({ data, isStaffView = false }: StudentDo
                             <ArrowLeft className="w-4 h-4" /> Back
                         </Button>
                         {!isStaffView && (
-                            <Link href="/profile">
-                                <Button variant="outline" size="sm" className="rounded-xl flex items-center gap-1.5 text-indigo-600 hover:text-indigo-700">
-                                    <Edit3 className="w-4 h-4" /> Edit Bio-Data
-                                </Button>
-                            </Link>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setIsEditing(true)}
+                                className="rounded-xl flex items-center gap-1.5 text-indigo-600 hover:text-indigo-700"
+                            >
+                                <Edit3 className="w-4 h-4" /> Edit / Update Dossier
+                            </Button>
                         )}
                     </div>
                     <Button 

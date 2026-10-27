@@ -1,33 +1,77 @@
 "use server";
 
 import { db } from "@/db/db";
-import { alumniCertificateRequests, processingFeeRules, feeItems } from "@/db/schema";
-import { eq, like, or, desc } from "drizzle-orm";
+import { alumniCertificateRequests, processingFeeRules, feeItems, students, studentBills } from "@/db/schema";
+import { eq, like, or, desc, and } from "drizzle-orm";
 import { initiatePayment } from "./payment-gateways";
+import { getSettingByKey } from "@/actions/settings";
+
+const DEFAULT_CERT_FEE_ND = 18500;
+const DEFAULT_CERT_FEE_HND = 28500;
+const DEFAULT_CONVOCATION_FEE = 15500;
+const DEFAULT_INCIDENTAL_FEE = 5500;
+const DEFAULT_PROCESSING_FEE = 4000;
 
 export async function getDynamicAlumniFees() {
-    let convocationFee = 0;
-    let processingFee = 0;
+    let certificateFeeND = DEFAULT_CERT_FEE_ND;
+    let certificateFeeHND = DEFAULT_CERT_FEE_HND;
+    let convocationFee = DEFAULT_CONVOCATION_FEE;
+    let incidentalFee = DEFAULT_INCIDENTAL_FEE;
+    let processingFee = DEFAULT_PROCESSING_FEE;
 
-    // 1. Fetch Convocation Fee from feeItems (matching by name)
-    const convocationFeeItem = await db.select().from(feeItems).where(
-        or(
-            like(feeItems.name, '%Convocation%'),
-            like(feeItems.name, '%Graduation%')
-        )
-    ).limit(1);
-    
-    if (convocationFeeItem.length > 0) {
-        convocationFee = Number(convocationFeeItem[0].amount) || 0;
+    try {
+        const items = await db.select().from(feeItems).where(
+            or(
+                eq(feeItems.name, 'Certificate Fee (ND)'),
+                eq(feeItems.name, 'Certificate Fee (HND)'),
+                eq(feeItems.name, 'Convocation Fee'),
+                eq(feeItems.name, 'Incidental Fee')
+            )
+        );
+
+        for (const item of items) {
+            const amt = Number(item.defaultAmount) || 0;
+            if (amt <= 0) continue;
+            if (item.name === 'Certificate Fee (ND)') certificateFeeND = amt;
+            else if (item.name === 'Certificate Fee (HND)') certificateFeeHND = amt;
+            else if (item.name === 'Convocation Fee') convocationFee = amt;
+            else if (item.name === 'Incidental Fee') incidentalFee = amt;
+        }
+    } catch (e) {
+        console.warn("Fallback to default alumni fee items:", e);
     }
 
-    // 2. Fetch Processing Fee from our new processingFeeRules table
-    const processingRule = await db.select().from(processingFeeRules).where(eq(processingFeeRules.serviceType, 'CERTIFICATE_REQUEST')).limit(1);
-    if (processingRule.length > 0 && processingRule[0].isActive) {
-        processingFee = Number(processingRule[0].amount) || 0;
+    try {
+        const processingRule = await db
+            .select()
+            .from(processingFeeRules)
+            .where(eq(processingFeeRules.serviceType, 'CERTIFICATE_REQUEST'))
+            .limit(1);
+        if (processingRule.length > 0 && processingRule[0].isActive && Number(processingRule[0].amount) > 0) {
+            processingFee = Number(processingRule[0].amount);
+        } else {
+            const pFeeStr = await getSettingByKey('transcript_processing_fee');
+            if (pFeeStr !== null && !isNaN(parseInt(pFeeStr))) {
+                processingFee = parseInt(pFeeStr);
+            }
+        }
+    } catch (e) {
+        // Fallback if processing_fee_rules table is not accessible
+        try {
+            const pFeeStr = await getSettingByKey('transcript_processing_fee');
+            if (pFeeStr !== null && !isNaN(parseInt(pFeeStr))) {
+                processingFee = parseInt(pFeeStr);
+            }
+        } catch {}
     }
 
-    return { convocationFee, processingFee };
+    return {
+        certificateFeeND,
+        certificateFeeHND,
+        convocationFee,
+        incidentalFee,
+        processingFee,
+    };
 }
 
 export async function submitCertificateApplication(data: {
@@ -42,10 +86,12 @@ export async function submitCertificateApplication(data: {
     deliveryAddress: string;
 }) {
     try {
-        const { convocationFee, processingFee } = await getDynamicAlumniFees();
+        const fees = await getDynamicAlumniFees();
+        const certificateFee = data.programmeType === "HND" ? fees.certificateFeeHND : fees.certificateFeeND;
+        const institutionalFee = certificateFee + fees.convocationFee + fees.incidentalFee;
+        const processingFee = fees.processingFee;
 
-        if (convocationFee === 0 && processingFee === 0) {
-            // Bypass all payments if free
+        if (institutionalFee === 0 && processingFee === 0) {
             const [result] = await db.insert(alumniCertificateRequests).values({
                 ...data,
                 convocationFeeRef: 'FREE-BYPASS',
@@ -63,7 +109,7 @@ export async function submitCertificateApplication(data: {
         const [result] = await db.insert(alumniCertificateRequests).values({
             ...data,
             convocationFeeRef: alatRef,
-            convocationFeeStatus: convocationFee === 0 ? 'paid' : 'unpaid',
+            convocationFeeStatus: institutionalFee === 0 ? 'paid' : 'unpaid',
             processingFeeStatus: processingFee === 0 ? 'paid' : 'unpaid',
             paymentStatus: 'unpaid',
             approvalStatus: 'pending'
@@ -71,8 +117,8 @@ export async function submitCertificateApplication(data: {
 
         const insertId = result.insertId;
         
-        // If convocation fee is 0 but processing fee is > 0, skip to paystack
-        if (convocationFee === 0) {
+        // If institutional fee is 0 but processing fee is > 0, skip to paystack
+        if (institutionalFee === 0) {
              const paystackRef = `ALUMNI-PAY-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
              await db.update(alumniCertificateRequests).set({ processingFeeRef: paystackRef }).where(eq(alumniCertificateRequests.id, insertId));
              const initRes = await initiatePayment(paystackRef, processingFee, 'paystack', data.email, data.applicantName, '');
@@ -82,8 +128,8 @@ export async function submitCertificateApplication(data: {
              return { success: true, url: initRes.paymentUrl, requestId: insertId };
         }
 
-        // Initialize ALATPay (Step 1)
-        const initRes = await initiatePayment(alatRef, convocationFee, 'alatpay', data.email, data.applicantName, '');
+        // Initialize ALATPay (Step 1: Certificate + Convocation + Incidental Fee)
+        const initRes = await initiatePayment(alatRef, institutionalFee, 'alatpay', data.email, data.applicantName, '');
         if (initRes.error) {
             return { success: false, error: initRes.error };
         }
@@ -106,14 +152,10 @@ export async function verifyCertificatePayment(reference: string) {
 
         if (!request) return { success: false, error: "Request not found for this reference" };
 
-        const { convocationFee, processingFee } = await getDynamicAlumniFees();
+        const { processingFee } = await getDynamicAlumniFees();
 
         // If ALATPay just finished
         if (request.convocationFeeRef === reference && request.convocationFeeStatus === 'unpaid') {
-            // Wait, we need to verify with ALATPay
-            // Assuming alatpay updates happen via webhook, or we call verifyPayment if imported
-            // (Note: skipping actual API call for brevity/since alatpay doesn't always have a sync verify)
-            
             await db.update(alumniCertificateRequests).set({
                 convocationFeeStatus: 'paid',
                 paymentStatus: processingFee === 0 ? 'paid' : 'partial'
@@ -169,4 +211,3 @@ export async function updateAlumniRequestStatus(id: number, status: "pending" | 
         return { success: false, error: "Failed to update status." };
     }
 }
-

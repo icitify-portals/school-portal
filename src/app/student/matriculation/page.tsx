@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
   PenTool, ShieldCheck, CheckCircle2, AlertCircle, RefreshCcw,
-  Trash2, Loader2, Lock, Calendar, XCircle, Printer
+  Trash2, Loader2, Lock, Calendar, XCircle, Printer, ArrowLeft
 } from 'lucide-react';
 import { signMatriculationOathAction, checkMatriculationStatusAction } from '@/actions/matriculation-register';
 import { getStudentProfileStatus } from '@/actions/student-profile';
@@ -16,6 +16,9 @@ export default function MatriculationOathPortal() {
   const [oathData, setOathData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [acceptedOath, setAcceptedOath] = useState(false);
+  const [confirmedDetails, setConfirmedDetails] = useState(false);
   const [studentCtx, setStudentCtx] = useState<{ id: number; sessionId: number; name: string } | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
@@ -58,9 +61,13 @@ export default function MatriculationOathPortal() {
     setLoading(false);
   }
 
+  const hasSigned = Boolean(status?.signed || oathData?.matricRecord);
+
   useEffect(() => {
-    if (status && !status.signed && !status.isExpired) initCanvas();
-  }, [status]);
+    if ((!hasSigned || isEditing) && !status?.isExpired) {
+      setTimeout(() => initCanvas(), 50);
+    }
+  }, [hasSigned, isEditing, status]);
 
   const initCanvas = () => {
     const canvas = canvasRef.current;
@@ -120,6 +127,17 @@ export default function MatriculationOathPortal() {
 
   const handleSubmit = async () => {
     if (!studentCtx) return;
+
+    if (!confirmedDetails) {
+      toast.error("Please confirm that your student identity details are accurate.");
+      return;
+    }
+
+    if (!acceptedOath) {
+      toast.error("Please check the box to solemnly accept the Matriculation Oath declaration.");
+      return;
+    }
+
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -127,7 +145,7 @@ export default function MatriculationOathPortal() {
     blank.width = canvas.width;
     blank.height = canvas.height;
     if (canvas.toDataURL() === blank.toDataURL()) {
-      toast.error("Please provide your signature before submitting.");
+      toast.error("Please draw your signature in the signature box before submitting.");
       return;
     }
 
@@ -140,7 +158,8 @@ export default function MatriculationOathPortal() {
     });
     setSubmitting(false);
     if (res.success) {
-      toast.success("Matriculation oath signed successfully.");
+      toast.success("Matriculation oath signed and saved successfully.");
+      setIsEditing(false);
       await init();
     } else {
       toast.error(res.error || "Failed to sign oath.");
@@ -156,9 +175,19 @@ export default function MatriculationOathPortal() {
     );
   }
 
-  // If already signed, present the official printable certificate directly!
-  if (status?.signed || oathData?.matricRecord) {
-    return <MatriculationOathPrintable data={oathData} isStaffView={false} />;
+  // If already signed and not in edit mode, present the official printable certificate!
+  if (hasSigned && !isEditing) {
+    return (
+      <MatriculationOathPrintable
+        data={oathData}
+        isStaffView={false}
+        onEdit={() => {
+          setAcceptedOath(true);
+          setConfirmedDetails(true);
+          setIsEditing(true);
+        }}
+      />
+    );
   }
 
   return (
@@ -174,9 +203,20 @@ export default function MatriculationOathPortal() {
           </div>
         </div>
 
-        <div className="px-4 py-2 bg-amber-50 text-amber-700 rounded-xl border border-amber-200 flex items-center gap-2 font-bold text-xs uppercase tracking-wider">
-          <Calendar size={16} />
-          Action Required for ND 1 & HND 1 Freshers
+        <div className="flex items-center gap-3">
+          {hasSigned && (
+            <button
+              type="button"
+              onClick={() => setIsEditing(false)}
+              className="px-4 py-2 bg-white text-slate-700 hover:bg-slate-100 rounded-xl border border-slate-200 flex items-center gap-2 font-bold text-xs shadow-sm"
+            >
+              <ArrowLeft size={16} /> View Printable Oath Slip
+            </button>
+          )}
+          <div className="px-4 py-2 bg-amber-50 text-amber-700 rounded-xl border border-amber-200 flex items-center gap-2 font-bold text-xs uppercase tracking-wider">
+            <Calendar size={16} />
+            Action Required for ND 1 & HND 1 Freshers
+          </div>
         </div>
       </div>
 
@@ -190,11 +230,38 @@ export default function MatriculationOathPortal() {
               </p>
             </div>
 
+            {/* Required Confirmations */}
+            <div className="space-y-3 bg-slate-50 p-4 rounded-2xl border border-slate-200">
+              <label className="flex items-start gap-3 cursor-pointer text-sm text-slate-700 font-medium">
+                <input
+                  type="checkbox"
+                  checked={confirmedDetails}
+                  onChange={(e) => setConfirmedDetails(e.target.checked)}
+                  className="mt-1 h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                />
+                <span>
+                  I confirm that my full name (<strong>{studentCtx?.name}</strong>), programme (<strong>{oathData?.programme?.name || 'Assigned'}</strong>), and level (<strong>{oathData?.student?.programmeType || 'ND/HND'} {oathData?.student?.currentLevel || 1}</strong>) are accurate. <span className="text-rose-500">*</span>
+                </span>
+              </label>
+
+              <label className="flex items-start gap-3 cursor-pointer text-sm text-slate-700 font-medium">
+                <input
+                  type="checkbox"
+                  checked={acceptedOath}
+                  onChange={(e) => setAcceptedOath(e.target.checked)}
+                  className="mt-1 h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                />
+                <span>
+                  I have read, understood, and solemnly agree to abide by all provisions of the Institutional Matriculation Oath above. <span className="text-rose-500">*</span>
+                </span>
+              </label>
+            </div>
+
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-base font-black text-slate-900 flex items-center gap-2">
                   <PenTool size={18} className="text-indigo-600" />
-                  Draw Your Signature Here
+                  Draw Your Signature Here <span className="text-rose-500">*</span>
                 </h3>
                 <button 
                   onClick={clearCanvas} 
@@ -229,7 +296,7 @@ export default function MatriculationOathPortal() {
               className="w-full h-14 bg-indigo-600 text-white font-black rounded-2xl shadow-xl shadow-indigo-100 flex items-center justify-center gap-3 hover:bg-indigo-700 transition-all disabled:opacity-50 text-base uppercase tracking-wide"
             >
               {submitting ? <Loader2 className="animate-spin" size={20} /> : <ShieldCheck size={20} />}
-              {submitting ? 'Recording Official Signature...' : 'Sign Oath & Generate Certificate'}
+              {submitting ? 'Recording Official Signature...' : (hasSigned ? 'Update Signature & Save Oath' : 'Sign Oath & Generate Certificate')}
             </button>
           </div>
         </div>
@@ -243,7 +310,7 @@ export default function MatriculationOathPortal() {
               Every newly admitted student (ND 1 and HND 1) must execute this oath before full matriculation status and access are granted.
             </p>
             <p className="text-xs text-slate-400 pt-2 border-t border-slate-800">
-              Once signed, you will be able to print and download your official Matriculation Oath Slip at any time.
+              Once signed, you will be able to print, download, or update your official Matriculation Oath Slip at any time.
             </p>
           </div>
 
@@ -259,7 +326,9 @@ export default function MatriculationOathPortal() {
             </div>
             <div className="flex justify-between items-center text-xs py-2">
               <span className="text-slate-600 font-medium">Oath Status</span>
-              <span className="text-amber-600 font-bold bg-amber-50 px-2.5 py-0.5 rounded-full">Pending Signature</span>
+              <span className={`font-bold px-2.5 py-0.5 rounded-full ${hasSigned ? 'text-emerald-700 bg-emerald-50' : 'text-amber-600 bg-amber-50'}`}>
+                {hasSigned ? 'Signed (Editable)' : 'Pending Signature'}
+              </span>
             </div>
           </div>
         </div>

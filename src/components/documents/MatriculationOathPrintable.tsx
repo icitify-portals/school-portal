@@ -1,16 +1,17 @@
 "use client";
 
 import React from "react";
-import { Printer, ArrowLeft, ShieldCheck, CheckCircle2 } from "lucide-react";
+import { Printer, ArrowLeft, ShieldCheck, CheckCircle2, Edit3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { viewableAssetUrl } from "@/lib/assets";
 
 interface MatriculationOathPrintableProps {
     data: any;
     isStaffView?: boolean;
+    onEdit?: () => void;
 }
 
-export function MatriculationOathPrintable({ data, isStaffView = false }: MatriculationOathPrintableProps) {
+export function MatriculationOathPrintable({ data, isStaffView = false, onEdit }: MatriculationOathPrintableProps) {
     if (!data || !data.student) {
         return (
             <div className="p-8 text-center text-slate-500">
@@ -38,15 +39,27 @@ export function MatriculationOathPrintable({ data, isStaffView = false }: Matric
         <div className="min-h-screen bg-slate-100 py-8 px-4 print:p-0 print:bg-white text-slate-900">
             <div className="max-w-3xl mx-auto space-y-6">
                 {/* Print Control (Hidden on Print) */}
-                <div className="flex items-center justify-between gap-4 bg-white p-4 rounded-2xl shadow-sm border border-slate-200 print:hidden">
-                    <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={() => window.history.back()}
-                        className="rounded-xl flex items-center gap-1.5"
-                    >
-                        <ArrowLeft className="w-4 h-4" /> Back
-                    </Button>
+                <div className="flex flex-wrap items-center justify-between gap-4 bg-white p-4 rounded-2xl shadow-sm border border-slate-200 print:hidden">
+                    <div className="flex items-center gap-3">
+                        <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => window.history.back()}
+                            className="rounded-xl flex items-center gap-1.5"
+                        >
+                            <ArrowLeft className="w-4 h-4" /> Back
+                        </Button>
+                        {!isStaffView && onEdit && (
+                            <Button 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={onEdit}
+                                className="rounded-xl flex items-center gap-1.5 text-indigo-600 hover:text-indigo-700"
+                            >
+                                <Edit3 className="w-4 h-4" /> Edit / Re-sign Oath
+                            </Button>
+                        )}
+                    </div>
                     <Button 
                         onClick={handlePrint}
                         className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg flex items-center gap-2 px-6"

@@ -65,8 +65,14 @@ export default function ChangePasswordPage() {
                     message: "Password updated successfully! Logging you in..." 
                 });
 
-                // Re-authenticate with new credentials so NextAuth issues a fresh session
-                // token where requiresPasswordChange is false in the cookie.
+                try {
+                    await update({ requiresPasswordChange: false, user: { requiresPasswordChange: false } });
+                } catch (updateErr) {
+                    // non-blocking
+                }
+
+                // Re-authenticate with new credentials LAST so NextAuth issues a fresh session
+                // cookie where requiresPasswordChange is false and it is not overwritten by update().
                 const loginEmail = result.email || session?.user?.email;
                 if (loginEmail) {
                     try {
@@ -80,15 +86,9 @@ export default function ChangePasswordPage() {
                     }
                 }
 
-                try {
-                    await update({ requiresPasswordChange: false, user: { requiresPasswordChange: false } });
-                } catch (updateErr) {
-                    // non-blocking
-                }
-
                 setTimeout(() => {
                     window.location.href = "/dashboard";
-                }, 1000);
+                }, 800);
             } else {
                 setStatus(result);
             }
