@@ -147,16 +147,20 @@ export async function getStudents(options: { search?: string, page?: number, pag
         // which is the single largest cohort in the legacy data.
         let sessionCondition: any = undefined;
         if (sessionId === "unassigned") {
-            sessionCondition = isNull(students.currentSessionId);
+            sessionCondition = and(
+                isNull(students.currentSessionId),
+                isNull(students.admissionSessionId)
+            );
         } else if (sessionId && !isNaN(Number(sessionId))) {
             const sid = Number(sessionId);
-            // Match students whose current session is this session, OR who have an enrollment in this session
+            // Match students whose current session is this session, admission session is this session, OR who have an enrollment in this session
             const hasEnrollmentsQuery = db.select({ studentId: enrollments.studentId })
                 .from(enrollments)
                 .where(eq(enrollments.sessionId, sid));
             
             sessionCondition = or(
                 eq(students.currentSessionId, sid),
+                eq(students.admissionSessionId, sid),
                 inArray(students.id, hasEnrollmentsQuery)
             );
         }
@@ -272,9 +276,9 @@ export async function getStudentSessionOptions() {
                        SELECT COUNT(DISTINCT id)
                        FROM students
                        WHERE (current_session_id = s.id 
+                              OR admission_session_id = s.id
                               OR id IN (SELECT student_id FROM enrollments WHERE session_id = s.id))
                          AND deleted_at IS NULL
-                         AND status = 'active'
                    ) AS student_count
             FROM academic_sessions s
             ORDER BY s.is_current DESC, s.id DESC
@@ -282,7 +286,7 @@ export async function getStudentSessionOptions() {
 
         const [unassigned] = await db.execute(sql`
             SELECT COUNT(*) AS c FROM students
-            WHERE current_session_id IS NULL AND deleted_at IS NULL AND status = 'active'
+            WHERE current_session_id IS NULL AND admission_session_id IS NULL AND deleted_at IS NULL
         `) as unknown as [Array<Record<string, any>>];
 
         // Distinct graduation years available among graduants (for the filter).
