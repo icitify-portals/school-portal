@@ -52,7 +52,9 @@ export async function submitCourseRegistrationAction(data: {
 
 export async function getRegisteredCoursesAction(studentId: number, sessionId: number, semester: '1' | '2') {
     try {
-        const { semesterSummaries } = await import("@/db/schema");
+        const { semesterSummaries, departments, academicSessions, transactions, studentBills } = await import("@/db/schema");
+        const { resolveLevel } = await import("@/lib/levels");
+
         const summary = await db.select({ isPrintFeePaid: semesterSummaries.isPrintFeePaid })
             .from(semesterSummaries)
             .where(and(
@@ -61,13 +63,75 @@ export async function getRegisteredCoursesAction(studentId: number, sessionId: n
                 eq(semesterSummaries.semester, semester)
             ))
             .limit(1);
-        const isPrintFeePaid = summary[0]?.isPrintFeePaid || false;
+        let isPrintFeePaid = summary[0]?.isPrintFeePaid || false;
+
+        if (!isPrintFeePaid) {
+            const paidTx = await db.select({ id: transactions.id })
+                .from(transactions)
+                .where(and(
+                    eq(transactions.studentId, studentId),
+                    eq(transactions.status, "completed"),
+                    sql`(${transactions.purpose} LIKE '%Print Fee%' OR ${transactions.purpose} LIKE '%Course Form%' OR ${transactions.gatewayReference} LIKE 'PRINT_%')`
+                ))
+                .limit(1);
+            if (paidTx.length > 0) {
+                isPrintFeePaid = true;
+            } else {
+                const paidBill = await db.select({ id: studentBills.id })
+                    .from(studentBills)
+                    .where(and(
+                        eq(studentBills.studentId, studentId),
+                        eq(studentBills.sessionId, sessionId),
+                        eq(studentBills.paymentStatus, "paid"),
+                        sql`(${studentBills.feeItemId} = 52 OR ${studentBills.description} LIKE '%Course Form%')`
+                    ))
+                    .limit(1);
+                if (paidBill.length > 0) {
+                    isPrintFeePaid = true;
+                }
+            }
+        }
+
+        // Fetch student info & session for official printout
+        const [studentRow] = await db.select({
+            id: students.id,
+            matricNumber: students.matricNumber,
+            admissionNumber: students.admissionNumber,
+            jambNumber: students.jambNumber,
+            firstName: students.firstName,
+            lastName: students.lastName,
+            otherNames: students.otherNames,
+            programmeType: students.programmeType,
+            currentLevel: students.currentLevel,
+            studyMode: students.studyMode,
+            imageUrl: students.imageUrl,
+            signatureUrl: students.signatureUrl,
+            deptName: departments.name,
+            userName: users.name,
+        })
+        .from(students)
+        .leftJoin(users, eq(students.userId, users.id))
+        .leftJoin(departments, eq(students.deptId, departments.id))
+        .where(eq(students.id, studentId))
+        .limit(1);
+
+        const [sessionRow] = await db.select({
+            name: academicSessions.name,
+        })
+        .from(academicSessions)
+        .where(eq(academicSessions.id, sessionId))
+        .limit(1);
+
+        const resolvedLvl = studentRow ? resolveLevel(studentRow.currentLevel, studentRow.programmeType) : null;
+        const ownNumericLevel = resolvedLvl?.numeric || 100;
 
         const registered = await db.select({
             id: courses.id,
-            name: courses.name,
+            name: sql<string>`COALESCE(${courseDepartmentSettings.courseTitle}, ${courses.name})`,
             code: courses.code,
             units: sql<number>`COALESCE(${courseDepartmentSettings.creditUnits}, ${courses.creditUnits})`.mapWith(Number),
+            status: courseDepartmentSettings.status,
+            courseLevel: courseDepartmentSettings.level,
             finalStatus: studentCourseRegistrations.finalStatus,
             advisorStatus: studentCourseRegistrations.advisorStatus,
             hodStatus: studentCourseRegistrations.hodStatus
@@ -86,7 +150,41 @@ export async function getRegisteredCoursesAction(studentId: number, sessionId: n
             eq(studentCourseRegistrations.semester, semester)
         ));
 
-        return { success: true, data: registered, isPrintFeePaid };
+        const formattedRegistered = registered.map((c) => ({
+            ...c,
+            statusCode: c.status === 'elective' ? 'E' : c.status === 'required' ? 'R' : 'C',
+            isCarryOver: Boolean(c.courseLevel && c.courseLevel < ownNumericLevel),
+        }));
+
+        const matricOrReg = studentRow?.matricNumber || studentRow?.admissionNumber || studentRow?.jambNumber || '';
+        const fullName = studentRow
+            ? (`${studentRow.lastName || ''} ${studentRow.firstName || ''} ${studentRow.otherNames || ''}`.trim() || studentRow.userName || '').toUpperCase()
+            : '';
+        let programLabel = 'FULL-TIME';
+        if (matricOrReg.toUpperCase().includes('/DPP/')) {
+            programLabel = 'DPP';
+        } else if (matricOrReg.toUpperCase().includes('/PT/') || studentRow?.studyMode === 'part_time') {
+            programLabel = 'PART-TIME';
+        } else if (studentRow?.studyMode) {
+            programLabel = studentRow.studyMode.replace('_', '-').toUpperCase();
+        }
+
+        const rawSessionName = sessionRow?.name || '2026/2027';
+        const formattedSession = rawSessionName.replace('/', '-');
+        const semesterLabel = semester === '2' ? 'Second Semester' : 'First Semester';
+
+        const studentInfo = studentRow ? {
+            matricNumber: matricOrReg,
+            fullName,
+            levelLabel: resolvedLvl?.label || `${studentRow.programmeType || ''} ${studentRow.currentLevel || ''}`.trim(),
+            program: programLabel,
+            sessionSemester: `${formattedSession} ${semesterLabel}`,
+            departmentName: studentRow.deptName || '',
+            imageUrl: studentRow.imageUrl || null,
+            signatureUrl: studentRow.signatureUrl || null,
+        } : null;
+
+        return { success: true, data: formattedRegistered, isPrintFeePaid, studentInfo };
     } catch (error) {
         return { success: false, error: (error as Error).message };
     }

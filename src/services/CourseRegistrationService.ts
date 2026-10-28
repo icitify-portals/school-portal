@@ -390,8 +390,8 @@ const deptId = studentDept[0]?.deptId;
 
         const totalUnits = selectedCourses.reduce((sum, c) => sum + (c.deptUnits ?? c.courseUnits ?? 0), 0);
         
-        if (totalUnits < 15 || totalUnits > 24) {
-            throw new Error(`Invalid credit units: ${totalUnits}. Allowed range: 15-24 units.`);
+        if (totalUnits < 9 || totalUnits > 36) {
+            throw new Error(`Invalid credit units: ${totalUnits}. Allowed range: 9-36 units.`);
         }
 
 return await db.transaction(async (tx) => {

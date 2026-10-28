@@ -265,17 +265,21 @@ export async function getCourseRegistrationPrintQueue(filters?: {
 }) {
     try {
         await ensureICTManager();
+        const { courseDepartmentSettings, transactions } = await import("@/db/schema");
+        const { resolveLevel } = await import("@/lib/levels");
 
-        const limit = filters?.limit || 50;
+        const limit = filters?.limit || 100;
         const offset = filters?.offset || 0;
-        let sessionId = filters?.sessionId;
-        if (!sessionId) {
-            const activeSession = await db.query.academicSessions.findFirst({
-                where: eq(academicSessions.isCurrent, true)
-            });
-            sessionId = activeSession?.id || 41;
-        }
-        const semester = filters?.semester || '1';
+        const activeSession = await db.query.academicSessions.findFirst({
+            where: eq(academicSessions.isCurrent, true)
+        });
+        const sessionId = filters?.sessionId || activeSession?.id || 41;
+        const sessionRow = filters?.sessionId
+            ? await db.query.academicSessions.findFirst({ where: eq(academicSessions.id, sessionId) })
+            : activeSession;
+        const sessionName = (sessionRow?.name || activeSession?.name || "2026/2027").replace("/", "-");
+        const semester = filters?.semester || activeSession?.currentSemester || '1';
+        const semesterLabel = semester === '2' ? 'Second Semester' : 'First Semester';
 
         // Get students who have registered courses or are active in session
         const rows = await db.select({
@@ -283,9 +287,15 @@ export async function getCourseRegistrationPrintQueue(filters?: {
             studentName: users.name,
             firstName: students.firstName,
             lastName: students.lastName,
+            otherNames: students.otherNames,
             matricNumber: students.matricNumber,
+            admissionNumber: students.admissionNumber,
+            jambNumber: students.jambNumber,
             programmeType: students.programmeType,
             currentLevel: students.currentLevel,
+            studyMode: students.studyMode,
+            imageUrl: students.imageUrl,
+            signatureUrl: students.signatureUrl,
             deptId: students.deptId,
             deptName: departments.name,
             sessionId: semesterSummaries.sessionId,
@@ -318,7 +328,8 @@ export async function getCourseRegistrationPrintQueue(filters?: {
             const q = filters.search.toLowerCase();
             filtered = rows.filter(r =>
                 (r.studentName || '').toLowerCase().includes(q) ||
-                (r.matricNumber || '').toLowerCase().includes(q)
+                (r.matricNumber || '').toLowerCase().includes(q) ||
+                (r.admissionNumber || '').toLowerCase().includes(q)
             );
         }
         if (filters?.departmentId) {
@@ -334,19 +345,39 @@ export async function getCourseRegistrationPrintQueue(filters?: {
             studentId: studentCourseRegistrations.studentId,
             courseId: studentCourseRegistrations.courseId,
             courseCode: courses.code,
-            courseName: courses.name,
-            creditUnits: courses.creditUnits,
+            courseName: sql<string>`COALESCE(${courseDepartmentSettings.courseTitle}, ${courses.name})`,
+            creditUnits: sql<number>`COALESCE(${courseDepartmentSettings.creditUnits}, ${courses.creditUnits})`.mapWith(Number),
+            status: courseDepartmentSettings.status,
+            courseLevel: courseDepartmentSettings.level,
             advisorStatus: studentCourseRegistrations.advisorStatus,
             hodStatus: studentCourseRegistrations.hodStatus,
             finalStatus: studentCourseRegistrations.finalStatus,
         })
         .from(studentCourseRegistrations)
         .innerJoin(courses, eq(studentCourseRegistrations.courseId, courses.id))
+        .innerJoin(students, eq(studentCourseRegistrations.studentId, students.id))
+        .leftJoin(courseDepartmentSettings, and(
+            eq(courseDepartmentSettings.courseId, courses.id),
+            eq(courseDepartmentSettings.deptId, students.deptId),
+            sql`${studentCourseRegistrations.semester} = ${courseDepartmentSettings.semester}`
+        ))
         .where(and(
             inArray(studentCourseRegistrations.studentId, studentIds),
             eq(studentCourseRegistrations.sessionId, sessionId),
             eq(studentCourseRegistrations.semester, semester as any)
         )) : [];
+
+        // Also check completed print fee transactions
+        const paidPrintTxs = studentIds.length > 0 ? await db.select({
+            studentId: transactions.studentId
+        })
+        .from(transactions)
+        .where(and(
+            inArray(transactions.studentId, studentIds),
+            eq(transactions.status, "completed"),
+            sql`(${transactions.purpose} LIKE '%Print Fee%' OR ${transactions.purpose} LIKE '%Course Form%' OR ${transactions.gatewayReference} LIKE 'PRINT_%')`
+        )) : [];
+        const paidStudentIds = new Set(paidPrintTxs.map(t => t.studentId));
 
         // Group registrations by student
         const regMap = new Map<number, any[]>();
@@ -355,12 +386,39 @@ export async function getCourseRegistrationPrintQueue(filters?: {
             regMap.get(reg.studentId)!.push(reg);
         }
 
-        const result = filtered.map(r => ({
-            ...r,
-            courses: regMap.get(r.studentId) || [],
-            courseCount: (regMap.get(r.studentId) || []).length,
-            totalUnits: (regMap.get(r.studentId) || []).reduce((sum, c) => sum + (c.creditUnits || 0), 0),
-        }));
+        const result = filtered.map(r => {
+            const resolvedLvl = resolveLevel(r.currentLevel, r.programmeType);
+            const ownNumericLevel = resolvedLvl?.numeric || 100;
+            const matricOrReg = r.matricNumber || r.admissionNumber || r.jambNumber || '';
+            const fullName = (`${r.lastName || ''} ${r.firstName || ''} ${r.otherNames || ''}`.trim() || r.studentName || '').toUpperCase();
+            let programLabel = 'FULL-TIME';
+            if (matricOrReg.toUpperCase().includes('/DPP/')) {
+                programLabel = 'DPP';
+            } else if (matricOrReg.toUpperCase().includes('/PT/') || r.studyMode === 'part_time') {
+                programLabel = 'PART-TIME';
+            } else if (r.studyMode) {
+                programLabel = r.studyMode.replace('_', '-').toUpperCase();
+            }
+
+            const studentCourses = (regMap.get(r.studentId) || []).map((c: any) => ({
+                ...c,
+                statusCode: c.status === 'elective' ? 'E' : c.status === 'required' ? 'R' : 'C',
+                isCarryOver: Boolean(c.courseLevel && c.courseLevel < ownNumericLevel),
+            }));
+
+            return {
+                ...r,
+                matricNumber: matricOrReg,
+                fullName,
+                levelLabel: resolvedLvl?.label || `${r.programmeType || ''} ${r.currentLevel || ''}`.trim(),
+                program: programLabel,
+                sessionSemester: `${sessionName} ${semesterLabel}`,
+                isPrintFeePaid: Boolean(r.isPrintFeePaid || paidStudentIds.has(r.studentId)),
+                courses: studentCourses,
+                courseCount: studentCourses.length,
+                totalUnits: studentCourses.reduce((sum: number, c: any) => sum + (c.creditUnits || 0), 0),
+            };
+        });
 
         return { success: true, data: result };
     } catch (error) {

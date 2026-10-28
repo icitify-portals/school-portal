@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { getCourseRegistrationPrintQueue } from "@/actions/ict-manager";
+import { printOfficialCourseForms, type CourseFormData } from "@/components/documents/CourseFormPrintable";
 
 const DEPARTMENTS = [
     { id: 54, name: "Computer Science", code: "COM" },
@@ -40,7 +41,6 @@ export default function CourseRegistrationPrintPage() {
             departmentId: filterDept !== "all" ? parseInt(filterDept) : undefined,
             programmeType: filterProgramme !== "all" ? filterProgramme : undefined,
             search: search || undefined,
-            sessionId: 6,
             semester: '1',
         });
         if (res.success) setRegistrations(res.data);
@@ -72,70 +72,25 @@ export default function CourseRegistrationPrintPage() {
     }
 
     function generatePrintHTML(regs: any[]) {
-        const html = regs.map(reg => `
-            <div style="page-break-after: always; font-family: Georgia, serif; padding: 30px; max-width: 800px; margin: 0 auto;">
-                <div style="text-align: center; border-bottom: 3px solid #1e3a5f; padding-bottom: 12px; margin-bottom: 20px;">
-                    <h2 style="margin: 0; color: #1e3a5f; font-size: 18px;">FEDERAL SCHOOL OF STATISTICS, IBADAN</h2>
-                    <p style="margin: 4px 0 0; color: #64748b; font-size: 12px;">Course Registration Form — 2026/2027 Semester 1</p>
-                </div>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 13px; margin-bottom: 20px;">
-                    <div><strong>Name:</strong> ${reg.studentName || ''}</div>
-                    <div><strong>Matric No:</strong> ${reg.matricNumber || ''}</div>
-                    <div><strong>Department:</strong> ${reg.deptName || ''}</div>
-                    <div><strong>Programme:</strong> ${reg.programmeType || ''} Level ${reg.currentLevel || ''}</div>
-                    <div><strong>Total Courses:</strong> ${reg.courseCount || 0}</div>
-                    <div><strong>Total Units:</strong> ${reg.totalUnits || 0}</div>
-                </div>
-                <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
-                    <thead>
-                        <tr style="background: #1e3a5f; color: white;">
-                            <th style="padding: 8px; text-align: left; border: 1px solid #1e3a5f;">S/N</th>
-                            <th style="padding: 8px; text-align: left; border: 1px solid #1e3a5f;">Course Code</th>
-                            <th style="padding: 8px; text-align: left; border: 1px solid #1e3a5f;">Course Title</th>
-                            <th style="padding: 8px; text-align: center; border: 1px solid #1e3a5f;">Units</th>
-                            <th style="padding: 8px; text-align: center; border: 1px solid #1e3a5f;">Status</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${(reg.courses || []).map((c: any, i: number) => `
-                            <tr style="background: ${i % 2 === 0 ? '#f8fafc' : 'white'};">
-                                <td style="padding: 6px 8px; border: 1px solid #e2e8f0;">${i + 1}</td>
-                                <td style="padding: 6px 8px; border: 1px solid #e2e8f0; font-weight: bold;">${c.courseCode || ''}</td>
-                                <td style="padding: 6px 8px; border: 1px solid #e2e8f0;">${c.courseName || ''}</td>
-                                <td style="padding: 6px 8px; border: 1px solid #e2e8f0; text-align: center;">${c.creditUnits || ''}</td>
-                                <td style="padding: 6px 8px; border: 1px solid #e2e8f0; text-align: center;">${c.advisorStatus || 'pending'}</td>
-                            </tr>
-                        `).join('')}
-                    </tbody>
-                </table>
-                <div style="margin-top: 40px; display: flex; justify-content: space-between;">
-                    <div style="text-align: center;">
-                        <div style="width: 150px; border-top: 1px solid #1e3a5f; margin-bottom: 4px;"></div>
-                        <p style="font-size: 11px; margin: 0;">Student's Signature</p>
-                    </div>
-                    <div style="text-align: center;">
-                        <div style="width: 150px; border-top: 1px solid #1e3a5f; margin-bottom: 4px;"></div>
-                        <p style="font-size: 11px; margin: 0;">Level Advisor</p>
-                    </div>
-                    <div style="text-align: center;">
-                        <div style="width: 150px; border-top: 1px solid #1e3a5f; margin-bottom: 4px;"></div>
-                        <p style="font-size: 11px; margin: 0;">HOD</p>
-                    </div>
-                </div>
-            </div>
-        `).join('');
-
-        const printWindow = window.open('', '_blank');
-        if (printWindow) {
-            printWindow.document.write(`
-                <!DOCTYPE html>
-                <html><head><title>Course Registration Forms</title>
-                <style>@media print { @page { size: A4 portrait; margin: 15mm; } }</style>
-                </head><body>${html}</body></html>
-            `);
-            printWindow.document.close();
-            printWindow.print();
-        }
+        const forms: CourseFormData[] = regs.map((reg) => ({
+            matricNumber: reg.matricNumber || '',
+            fullName: reg.fullName || (reg.studentName || '').toUpperCase(),
+            levelLabel: reg.levelLabel || `${reg.programmeType || ''} ${reg.currentLevel || ''}`.trim(),
+            program: reg.program || 'FULL-TIME',
+            sessionSemester: reg.sessionSemester || '2026-2027 First Semester',
+            departmentName: reg.deptName || '',
+            imageUrl: reg.imageUrl || null,
+            signatureUrl: reg.signatureUrl || null,
+            courses: (reg.courses || []).map((c: any) => ({
+                id: c.courseId,
+                code: c.courseCode || '',
+                title: c.courseName || '',
+                units: Number(c.creditUnits) || 0,
+                statusCode: c.statusCode || (c.status === 'elective' ? 'E' : c.status === 'required' ? 'R' : 'C'),
+                isCarryOver: Boolean(c.isCarryOver),
+            })),
+        }));
+        printOfficialCourseForms(forms);
         setPrinting(false);
     }
 

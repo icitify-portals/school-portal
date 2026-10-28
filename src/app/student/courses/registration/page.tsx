@@ -12,6 +12,7 @@ import { getStudentProfileStatus } from '@/actions/student-profile';
 import { getCurrentSession } from '@/actions/portal';
 import { resolveLevel } from '@/lib/levels';
 import { AlatpayInlineCheckout } from '@/components/finance/AlatpayInlineCheckout';
+import { CourseFormPrintable, printOfficialCourseForms, type CourseFormData } from '@/components/documents/CourseFormPrintable';
 import { toast } from 'sonner';
 
 const COURSE_FORM_FEE = 500;
@@ -20,15 +21,17 @@ export default function AdvancedCourseRegistrationPortal() {
   const [availableCourses, setAvailableCourses] = useState<any[]>([]);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [registeredCourses, setRegisteredCourses] = useState<any[]>([]);
+  const [studentInfo, setStudentInfo] = useState<any>(null);
   const [isPrintFeePaid, setIsPrintFeePaid] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [studentCtx, setStudentCtx] = useState<{ id: number; sessionId: number; semester: '1' | '2'; email: string; firstName: string; lastName: string; phone: string; levelLabel: string; deptId: number | null } | null>(null);
 
-  const MIN_UNITS = 15;
-  const MAX_UNITS = 24;
+  const MIN_UNITS = 9;
+  const MAX_UNITS = 36;
 
   useEffect(() => {
     initContext();
@@ -94,6 +97,9 @@ export default function AdvancedCourseRegistrationPortal() {
     }
     if (regRes.success) {
       setIsPrintFeePaid(regRes.isPrintFeePaid || false);
+      if ((regRes as any).studentInfo) {
+        setStudentInfo((regRes as any).studentInfo);
+      }
       // @ts-expect-error - TS2345: Auto-suppressed for build
       setRegisteredCourses(regRes.data);
       // @ts-expect-error - TS18048: Auto-suppressed for build
@@ -123,6 +129,25 @@ export default function AdvancedCourseRegistrationPortal() {
       ? `You have selected ${totalUnits} units. The maximum is ${MAX_UNITS}.`
       : null;
 
+  const courseFormData: CourseFormData | null = studentCtx ? {
+    matricNumber: studentInfo?.matricNumber || '',
+    fullName: studentInfo?.fullName || `${studentCtx.lastName} ${studentCtx.firstName}`.trim().toUpperCase(),
+    levelLabel: studentInfo?.levelLabel || studentCtx.levelLabel || '',
+    program: studentInfo?.program || 'FULL-TIME',
+    sessionSemester: studentInfo?.sessionSemester || `2026-2027 ${studentCtx.semester === '2' ? 'Second Semester' : 'First Semester'}`,
+    departmentName: studentInfo?.departmentName || '',
+    imageUrl: studentInfo?.imageUrl || null,
+    signatureUrl: studentInfo?.signatureUrl || null,
+    courses: registeredCourses.map((c: any) => ({
+      id: c.id,
+      code: c.code || '',
+      title: c.name || '',
+      units: Number(c.units) || 0,
+      statusCode: c.statusCode || (c.status === 'elective' ? 'E' : c.status === 'required' ? 'R' : 'C'),
+      isCarryOver: Boolean(c.isCarryOver),
+    })),
+  } : null;
+
   const handleSubmit = async () => {
     if (!studentCtx) return;
     if (unitProblem) return toast.error(unitProblem);
@@ -146,6 +171,7 @@ export default function AdvancedCourseRegistrationPortal() {
     if (res.success) {
       toast.success("Course registration submitted successfully.");
       await loadData(studentCtx);
+      setShowPreview(true);
     } else {
       setError(res.error || "Submission failed");
     }
@@ -162,7 +188,11 @@ export default function AdvancedCourseRegistrationPortal() {
       toast.error(`The course form fee of N${COURSE_FORM_FEE} has not been paid.`);
       return;
     }
-    window.print();
+    if (courseFormData) {
+      printOfficialCourseForms([courseFormData]);
+    } else {
+      window.print();
+    }
   };
 
   const handlePaymentSuccess = async (res: any) => {
@@ -187,6 +217,7 @@ export default function AdvancedCourseRegistrationPortal() {
       if (subRes.success) {
         toast.success("Course registration submitted successfully.");
         await loadData(studentCtx);
+        setShowPreview(true);
       } else {
         setError(subRes.error || "Submission failed");
       }
@@ -205,7 +236,21 @@ export default function AdvancedCourseRegistrationPortal() {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 min-h-screen bg-transparent">
-      <div className="max-w-[1600px] w-full mx-auto space-y-10 text-slate-800">
+      <style dangerouslySetInnerHTML={{ __html: `
+        @media print {
+          aside, nav, header, footer, .no-print { display: none !important; }
+          body, main { background: #fff !important; padding: 0 !important; margin: 0 !important; }
+        }
+      ` }} />
+
+      {/* Always-available print-only Official Course Form when Ctrl+P is used */}
+      {hasSubmitted && isPrintFeePaid && courseFormData && (
+        <div className="hidden print:block">
+          <CourseFormPrintable data={courseFormData} />
+        </div>
+      )}
+
+      <div className="max-w-[1600px] w-full mx-auto space-y-10 text-slate-800 print:hidden">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 bg-slate-900 text-white rounded-[3rem] p-8 lg:p-12 shadow-2xl relative overflow-hidden border border-slate-800">
             <div className="absolute inset-0 bg-gradient-to-r from-indigo-600/30 to-slate-600/30 opacity-50 mix-blend-overlay" />
             <div className="relative z-10">
@@ -222,7 +267,16 @@ export default function AdvancedCourseRegistrationPortal() {
                 </p>
             </div>
 
-            <div className="relative z-10 flex gap-3">
+            <div className="relative z-10 flex flex-wrap gap-3">
+               {hasSubmitted && isPrintFeePaid && (
+                 <button
+                   onClick={() => setShowPreview(prev => !prev)}
+                   className="h-12 px-4 flex items-center gap-2 rounded-2xl font-bold text-sm transition-all shadow-lg backdrop-blur-md border bg-white/10 border-white/20 text-white hover:bg-white/20"
+                 >
+                   <FileText size={18} />
+                   {showPreview ? 'Back to Course Selection' : 'View Official Course Form'}
+                 </button>
+               )}
                <button
                  onClick={handlePrintClick}
                  disabled={!hasSubmitted || !isPrintFeePaid}
@@ -230,15 +284,15 @@ export default function AdvancedCourseRegistrationPortal() {
                     ? "Submit your course registration form first"
                     : !isPrintFeePaid
                       ? `The course form fee of N${COURSE_FORM_FEE} has not been paid`
-                      : "Print your course registration form"}
+                      : "Print your official course registration form"}
                  className={`h-12 px-4 flex items-center gap-2 rounded-2xl font-bold text-sm transition-all shadow-lg backdrop-blur-md border disabled:opacity-40 disabled:cursor-not-allowed ${
                    isPrintFeePaid && hasSubmitted
-                     ? 'bg-white/10 border-white/20 text-white hover:bg-white/20'
+                     ? 'bg-emerald-600 border-emerald-500 text-white hover:bg-emerald-700'
                      : 'bg-white/5 border-white/10 text-slate-400'
                  }`}
                >
                    <Printer size={18} />
-                   Print Form
+                   Print Course Form
                </button>
                <button
                  onClick={handleSubmit}
@@ -257,6 +311,37 @@ export default function AdvancedCourseRegistrationPortal() {
                </button>
             </div>
         </div>
+
+        {showPreview && hasSubmitted && isPrintFeePaid && courseFormData && (
+          <div className="bg-slate-100 border border-slate-200 rounded-[2.5rem] p-6 sm:p-10 space-y-6 shadow-xl">
+            <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-4">
+              <div>
+                <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">
+                  Official Course Registration Form Preview
+                </h3>
+                <p className="text-xs font-medium text-slate-500">
+                  Federal School of Statistics, Ibadan Campus — Ready for printing and official stamp/sign-off.
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setShowPreview(false)}
+                  className="px-4 py-2 rounded-xl border border-slate-300 bg-white text-slate-700 text-xs font-bold hover:bg-slate-50"
+                >
+                  Close Preview
+                </button>
+                <button
+                  onClick={handlePrintClick}
+                  className="px-5 py-2.5 rounded-xl bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-700 flex items-center gap-2 shadow-md"
+                >
+                  <Printer size={16} />
+                  Print Official Form
+                </button>
+              </div>
+            </div>
+            <CourseFormPrintable data={courseFormData} />
+          </div>
+        )}
 
         {error && (
            <div className="p-6 bg-rose-500/10 border border-rose-500/30 rounded-[2rem] flex items-start gap-4 text-rose-900 animate-in fade-in duration-300 backdrop-blur-md shadow-lg shadow-rose-500/5">
