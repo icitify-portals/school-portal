@@ -4,8 +4,8 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, ArrowLeft, User, Mail, Phone, Calendar, Briefcase, Droplet, Hash, BookOpen, MapPin, Activity, Edit, Printer, FileText, ScrollText, Stethoscope } from "lucide-react";
-import { getStudentById, updateAdminStudentProfile } from "@/actions/students";
+import { Loader2, ArrowLeft, User, Mail, Phone, Calendar, Briefcase, Droplet, Hash, BookOpen, MapPin, Activity, Edit, Printer, FileText, ScrollText, Stethoscope, Lock, Unlock } from "lucide-react";
+import { getStudentById, updateAdminStudentProfile, togglePaymentLock, toggleFinancialLock } from "@/actions/students";
 import { getProgrammes } from "@/actions/programmes";
 import { getAcademicSessions } from "@/actions/transcripts";
 import { useBranch } from "@/providers/BranchProvider";
@@ -55,9 +55,35 @@ export default function StudentDetailsPage() {
             status: student.status || '',
             studyMode: student.studyMode || '',
             modeOfEntry: student.modeOfEntry || '',
-            userStatus: student.user?.status || ''
+            userStatus: student.user?.status || '',
+            isPaymentLocked: Boolean(student.isPaymentLocked),
+            isFinanciallyLocked: Boolean(student.isFinanciallyLocked)
         });
         setEditOpen(true);
+    };
+
+    const handleQuickPaymentLockToggle = async () => {
+        if (!student) return;
+        const nextStatus = !Boolean(student.isPaymentLocked);
+        const res = await togglePaymentLock(studentId, nextStatus);
+        if (res.success) {
+            toast.success(res.message || `Payment ${nextStatus ? 'locked' : 'unlocked'}`);
+            setStudent((prev: any) => prev ? { ...prev, isPaymentLocked: nextStatus } : prev);
+        } else {
+            toast.error(res.error || "Failed to update payment lock");
+        }
+    };
+
+    const handleQuickFinancialLockToggle = async () => {
+        if (!student) return;
+        const nextStatus = !Boolean(student.isFinanciallyLocked);
+        const res = await toggleFinancialLock(studentId, nextStatus);
+        if (res.success) {
+            toast.success(`Financial status ${nextStatus ? 'locked' : 'cleared'}`);
+            setStudent((prev: any) => prev ? { ...prev, isFinanciallyLocked: nextStatus } : prev);
+        } else {
+            toast.error(res.error || "Failed to update financial lock");
+        }
     };
 
     const handleSaveEdit = async () => {
@@ -139,15 +165,36 @@ export default function StudentDetailsPage() {
                         <div>
                             <h3 className="text-xl font-bold text-slate-900">{student.user?.name}</h3>
                             <p className="text-sm font-medium text-slate-500 mt-1">{student.matricNumber || 'No Matric Number'}</p>
-                            <div className="flex items-center justify-center gap-2 mt-3">
+                            <div className="flex flex-wrap items-center justify-center gap-2 mt-3">
                                 <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${student.status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
                                     {student.status}
                                 </span>
-                                {student.isFinanciallyLocked && (
-                                    <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-rose-100 text-rose-700">
-                                        Fin Locked
-                                    </span>
-                                )}
+                                <button
+                                    type="button"
+                                    onClick={handleQuickFinancialLockToggle}
+                                    title="Click to toggle financial lock"
+                                    className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest transition-colors flex items-center gap-1 cursor-pointer border ${
+                                        student.isFinanciallyLocked
+                                            ? 'bg-rose-100 text-rose-700 border-rose-200 hover:bg-rose-200'
+                                            : 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                                    }`}
+                                >
+                                    {student.isFinanciallyLocked ? <Lock className="w-3 h-3" /> : <Unlock className="w-3 h-3" />}
+                                    {student.isFinanciallyLocked ? 'Fin Locked' : 'Fin Clear'}
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={handleQuickPaymentLockToggle}
+                                    title="Click to lock/unlock student online payment"
+                                    className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest transition-colors flex items-center gap-1 cursor-pointer border ${
+                                        student.isPaymentLocked
+                                            ? 'bg-amber-100 text-amber-800 border-amber-300 hover:bg-amber-200'
+                                            : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'
+                                    }`}
+                                >
+                                    {student.isPaymentLocked ? <Lock className="w-3 h-3" /> : <Unlock className="w-3 h-3" />}
+                                    {student.isPaymentLocked ? 'Payment Locked' : 'Payment Allowed'}
+                                </button>
                             </div>
                         </div>
                     </CardContent>
@@ -484,6 +531,30 @@ export default function StudentDetailsPage() {
                                         <option value="hnd_graduated">HND Graduated</option>
                                         <option value="rusticated">Rusticated</option>
                                     </select>
+                                </div>
+                                <div className="grid grid-cols-2 gap-4 pt-1">
+                                    <div className="space-y-2">
+                                        <Label>Online Payment Lock</Label>
+                                        <select
+                                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                                            value={editData.isPaymentLocked ? 'locked' : 'unlocked'}
+                                            onChange={e => setEditData({...editData, isPaymentLocked: e.target.value === 'locked'})}
+                                        >
+                                            <option value="unlocked">Unlocked (Student Can Pay)</option>
+                                            <option value="locked">Locked (Admin Only)</option>
+                                        </select>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label>Financial Lock</Label>
+                                        <select
+                                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                                            value={editData.isFinanciallyLocked ? 'locked' : 'unlocked'}
+                                            onChange={e => setEditData({...editData, isFinanciallyLocked: e.target.value === 'locked'})}
+                                        >
+                                            <option value="unlocked">Clear</option>
+                                            <option value="locked">Financially Locked</option>
+                                        </select>
+                                    </div>
                                 </div>
                             </div>
                         </div>

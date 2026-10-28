@@ -13,7 +13,7 @@ export async function hasPermission(permission: string) {
     // Absolute power for developer, superadmin, admin, and registrar (full access except dev-only)
     if (baseRole === "icitify_dev" || baseRole === "superadmin" || baseRole === "admin" || baseRole === "registrar" || userRoles.includes("registrar") || userRoles.includes("superadmin") || userRoles.includes("admin")) return true;
 
-    // Registrar automatically has access to all academic, admission, student, registry, and communication features
+    // Registrar automatically has access to all academic, admission, student, registry, payment lock, and communication features
     if ((baseRole === "registrar" || userRoles.includes("registrar")) && (
         permission.startsWith("admission.") || 
         permission.startsWith("academic.") || 
@@ -21,7 +21,18 @@ export async function hasPermission(permission: string) {
         permission.startsWith("admin.students.") || 
         permission.startsWith("registry.") || 
         permission.startsWith("communication.") ||
-        permission.startsWith("officers.")
+        permission.startsWith("officers.") ||
+        permission === "finance.lock.manage"
+    )) {
+        return true;
+    }
+
+    // Specific privilege for the head Bursar account (bursar@fssibadan.edu.ng) to access the Student Management module,
+    // without granting it to other bursary accounts (e.g., bursary2@, bursary3@).
+    const userEmail = ((session?.user as any)?.email || "").toString().toLowerCase();
+    if (userEmail === "bursar@fssibadan.edu.ng" && (
+        permission.startsWith("students.") ||
+        permission.startsWith("admin.students.")
     )) {
         return true;
     }

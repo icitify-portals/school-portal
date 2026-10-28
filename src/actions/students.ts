@@ -717,6 +717,7 @@ export async function togglePaymentLock(studentId: number, status: boolean) {
                         await hasRole("admin") ||
                         await hasRole("superadmin") ||
                         await hasRole("bursar") ||
+                        await hasRole("registrar") ||
                         await hasRole("icitify_dev");
         if (!allowed) {
             return { success: false, error: "Unauthorized: Insufficient permissions to modify payment lock" };
@@ -724,6 +725,7 @@ export async function togglePaymentLock(studentId: number, status: boolean) {
 
         await db.update(students).set({ isPaymentLocked: status }).where(eq(students.id, studentId));
         revalidatePath("/admin/students");
+        revalidatePath(`/admin/students/${studentId}`);
         return { success: true, message: `Payment ${status ? 'locked' : 'unlocked'} successfully.` };
     } catch (error: any) {
         console.error("togglePaymentLock error:", error);
@@ -738,6 +740,7 @@ export async function bulkTogglePaymentLock(studentIds: number[], status: boolea
                         await hasRole("admin") ||
                         await hasRole("superadmin") ||
                         await hasRole("bursar") ||
+                        await hasRole("registrar") ||
                         await hasRole("icitify_dev");
         if (!allowed) {
             return { success: false, error: "Unauthorized: Insufficient permissions to modify payment lock" };
@@ -764,13 +767,20 @@ export async function bulkTogglePaymentLock(studentIds: number[], status: boolea
 
 export async function toggleFinancialLock(studentId: number, status: boolean) {
     try {
-        const allowed = await hasPermission("finance.lock.manage") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("bursar");
+        const allowed = await hasPermission("finance.lock.manage") ||
+                        await hasPermission("admin.students.manage") ||
+                        await hasRole("admin") ||
+                        await hasRole("superadmin") ||
+                        await hasRole("bursar") ||
+                        await hasRole("registrar") ||
+                        await hasRole("icitify_dev");
         if (!allowed) {
             return { success: false, error: "Unauthorized: Insufficient permissions to modify financial lock" };
         }
 
         await db.update(students).set({ isFinanciallyLocked: status }).where(eq(students.id, studentId));
         revalidatePath("/admin/students");
+        revalidatePath(`/admin/students/${studentId}`);
         return { success: true };
     } catch (error) {
         console.error(error);
@@ -903,6 +913,12 @@ export async function updateAdminStudentProfile(studentId: number, updatePayload
             } else if (rawMe) {
                 studentUpdates.modeOfEntry = updatePayload.modeOfEntry.trim();
             }
+        }
+        if (updatePayload.isPaymentLocked !== undefined) {
+            studentUpdates.isPaymentLocked = Boolean(updatePayload.isPaymentLocked);
+        }
+        if (updatePayload.isFinanciallyLocked !== undefined) {
+            studentUpdates.isFinanciallyLocked = Boolean(updatePayload.isFinanciallyLocked);
         }
 
         if (Object.keys(studentUpdates).length > 0) {

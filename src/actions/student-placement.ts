@@ -61,12 +61,14 @@ async function reviewAdmin(): Promise<{ userId: number; error: null } | { userId
 
     const user = await db.query.users.findFirst({
         where: eq(users.id, Number(session.user.id)),
-        columns: { id: true, role: true }
+        columns: { id: true, role: true, email: true }
     });
     if (!user) {
         return { userId: null, error: "Your account could not be found." };
     }
-    if (!REVIEW_ROLES.includes(user.role || "")) {
+    const { hasPermission } = await import("@/lib/rbac");
+    const hasStudentManagePerm = await hasPermission("admin.students.manage") || (user.email || "").toLowerCase() === "bursar@fssibadan.edu.ng";
+    if (!REVIEW_ROLES.includes(user.role || "") && !hasStudentManagePerm) {
         return {
             userId: null,
             error: `Your role "${user.role || "none"}" is not allowed to correct student placements. ` +

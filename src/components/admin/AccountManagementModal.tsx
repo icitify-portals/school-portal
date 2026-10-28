@@ -15,6 +15,7 @@ import { Switch } from "@/components/ui/switch";
 import {
     Shield,
     Lock,
+    Unlock,
     UserX,
     UserCheck,
     Loader2,
@@ -25,7 +26,7 @@ import {
     GraduationCap
 } from "lucide-react";
 import { resetUserPassword, updateUserStatus, verifyUserEmailManually, updateUserBaseRole } from "@/actions/user-actions";
-import { bulkUpdateStudentPlacements, getStudentByUserId } from "@/actions/students";
+import { bulkUpdateStudentPlacements, getStudentByUserId, togglePaymentLock } from "@/actions/students";
 import { getAllRoles, assignRoleToUser, removeRoleFromUser, canManageRoles } from "@/actions/rbac";
 import { cn } from "@/lib/utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -68,9 +69,16 @@ export function AccountManagementModal({ user, student, onClose, onUpdate }: Acc
     useEffect(() => {
         if (user) {
             fetchRoles();
-            // In User Management only the user is passed; fetch the linked student
-            // record so session/placement can be edited from the same modal.
-            if (!student) fetchStudentRecord();
+            if (student) {
+                setStudentRecord(student);
+            } else {
+                // In User Management only the user is passed; fetch the linked student
+                // record so session/placement can be edited from the same modal.
+                setStudentRecord(null);
+                fetchStudentRecord();
+            }
+        } else {
+            setStudentRecord(null);
         }
     }, [user, student]);
 
@@ -131,6 +139,19 @@ export function AccountManagementModal({ user, student, onClose, onUpdate }: Acc
             onUpdate?.();
         } else {
             alert(res.error);
+        }
+        setActionLoading(null);
+    };
+
+    const handlePaymentLockToggle = async (checked: boolean) => {
+        if (!studentRecord?.id) return;
+        setActionLoading("paymentLock");
+        const res = await togglePaymentLock(studentRecord.id, checked);
+        if (res.success) {
+            setStudentRecord((prev: any) => prev ? { ...prev, isPaymentLocked: checked } : prev);
+            onUpdate?.();
+        } else {
+            alert(res.error || "Failed to update payment lock");
         }
         setActionLoading(null);
     };
@@ -235,6 +256,32 @@ export function AccountManagementModal({ user, student, onClose, onUpdate }: Acc
                             disabled={actionLoading === "status"}
                         />
                     </div>
+
+                    {/* Student Account Payment Lock */}
+                    {studentRecord && (
+                        <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                            <div className="flex items-center gap-3">
+                                <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center", 
+                                    studentRecord.isPaymentLocked ? "bg-amber-100 text-amber-600" : "bg-emerald-100 text-emerald-600"
+                                )}>
+                                    {studentRecord.isPaymentLocked ? <Lock className="w-5 h-5" /> : <Unlock className="w-5 h-5" />}
+                                </div>
+                                <div>
+                                    <p className="text-sm font-black text-slate-900 leading-none mb-1 uppercase tracking-tighter">Student Payment Lock</p>
+                                    <p className={cn("text-[10px] font-bold uppercase", 
+                                        studentRecord.isPaymentLocked ? "text-amber-600" : "text-emerald-600"
+                                    )}>
+                                        {studentRecord.isPaymentLocked ? "Online Payment Locked (Admin Only)" : "Online Payment Allowed"}
+                                    </p>
+                                </div>
+                            </div>
+                            <Switch 
+                                checked={Boolean(studentRecord.isPaymentLocked)}
+                                onCheckedChange={handlePaymentLockToggle}
+                                disabled={actionLoading === "paymentLock"}
+                            />
+                        </div>
+                    )}
 
                     {/* Manual Email Verification */}
                     <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">

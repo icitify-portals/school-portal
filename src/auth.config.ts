@@ -169,12 +169,22 @@ export const authConfig = {
                 if (nextUrl.pathname.startsWith("/admin/cms") && hasCmsAccess) return true;
 
                 if (isBursar && !isRegistrar && !['admin', 'superadmin', 'dvc', 'icitify_dev'].includes(userRole)) {
+                    const userEmail = ((auth?.user as any)?.email || "").toString().toLowerCase();
+                    const canBursarAccessStudents =
+                        userEmail === "bursar@fssibadan.edu.ng" ||
+                        userPermissions.includes("students.view") ||
+                        userPermissions.includes("students.manage") ||
+                        userPermissions.includes("admin.students.manage");
                     if (
                         nextUrl.pathname.startsWith("/admin/bursary") || 
                         nextUrl.pathname.startsWith("/admin/accounting") ||
                         nextUrl.pathname.startsWith("/admin/profile") ||
                         nextUrl.pathname.startsWith("/profile") ||
-                        nextUrl.pathname.startsWith("/change-password")
+                        nextUrl.pathname.startsWith("/change-password") ||
+                        (canBursarAccessStudents && (
+                            nextUrl.pathname.startsWith("/admin/students") ||
+                            nextUrl.pathname.startsWith("/admin/student-resolutions")
+                        ))
                     ) return true;
                     return Response.redirect(new URL("/admin/bursary", nextUrl));
                 }

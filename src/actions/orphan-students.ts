@@ -23,13 +23,15 @@ async function ensureReviewAdmin(): Promise<
 
     const user = await db.query.users.findFirst({
         where: eq(users.id, Number(session.user.id)),
-        columns: { id: true, role: true }
+        columns: { id: true, role: true, email: true }
     });
 
     // The sidebar shows Student Management to superadmin and icitify_dev too,
     // so leaving them out here denied the very roles that can see the link.
     const allowed = ["admin", "superadmin", "icitify_dev", "registrar", "admission_officer", "record_officer", "ict_manager"];
-    if (!user || !allowed.includes(user.role || "")) {
+    const { hasPermission } = await import("@/lib/rbac");
+    const hasStudentManagePerm = await hasPermission("admin.students.manage") || (user?.email || "").toLowerCase() === "bursar@fssibadan.edu.ng";
+    if (!user || (!allowed.includes(user.role || "") && !hasStudentManagePerm)) {
         // Returned rather than thrown: Next.js redacts a thrown error from a
         // server action in production, so the admin would never learn why.
         return {

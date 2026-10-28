@@ -774,8 +774,20 @@ export function Sidebar({ enabledModules = {}, mobileOpen = false, onClose }: {
         if (isSuperAdminOrDev) {
             return adminMenuItems;
         } else if (isBursar || isRegistrar || isAdmissionOfficer) {
+            const userEmail = ((session?.user as any)?.email || "").toString().toLowerCase();
+            const canBursarAccessStudents =
+                userEmail === "bursar@fssibadan.edu.ng" ||
+                userPermissions.includes("students.view") ||
+                userPermissions.includes("students.manage") ||
+                userPermissions.includes("admin.students.manage");
+
             const allowedItems = isBursar
-                ? ["Bursary & Fees", "Finance & Accounting", "Accounting & Reports"]
+                ? [
+                      "Bursary & Fees",
+                      "Finance & Accounting",
+                      "Accounting & Reports",
+                      ...(canBursarAccessStudents ? ["Student Management"] : []),
+                  ]
                 : isRegistrar
                 ? ["Admin Dashboard", "Academics", "Office of the Registrar", "Admission Management", "Student Management", "Academic Calendar", "Student Promotion", "Communication", "Registration Concessions", "SIWES Management"]
                 : ["Admin Dashboard", "Admission Management", "Student Management", "Communication"];
