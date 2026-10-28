@@ -21,7 +21,8 @@ import {
     Trash2,
     Database,
     UserCog,
-    ExternalLink
+    ExternalLink,
+    CreditCard
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { db } from "@/db/db";

@@ -15,7 +15,8 @@ import {
     studentBillItems,
     walletTransactions,
     academicSessions,
-    processingFeeRules
+    processingFeeRules,
+    programmes
 } from "@/db/schema";
 import { eq, and, desc } from "drizzle-orm";
 import { assertActivityUnlocked, buildStudentLockContext, ACTIVITIES } from "./ActivityLockService";

@@ -128,10 +128,10 @@ export async function getStudentDossierData(targetStudentId?: number) {
 
         // If no target ID provided or user is student, resolve student's own ID
         if (!studentId || currentUserRole === "student") {
-            const studentRecord = await db.query.students.findFirst({
-                where: eq(students.userId, currentUserId),
-                columns: { id: true },
-            });
+            const [studentRecord] = await db.select({ id: students.id })
+                .from(students)
+                .where(eq(students.userId, currentUserId))
+                .limit(1);
             if (!studentRecord) {
                 return { success: false, error: "Student record not found" };
             }
@@ -153,7 +153,6 @@ export async function getStudentDossierData(targetStudentId?: number) {
                 email: users.email,
                 phone: users.phone,
                 role: users.role,
-                image: users.image,
                 status: users.status,
             }).from(users).where(eq(users.id, student.userId)).limit(1)
             : [null];
@@ -217,10 +216,10 @@ export async function getStudentMatriculationOathData(targetStudentId?: number) 
 
         let studentId = targetStudentId;
         if (!studentId || currentUserRole === "student") {
-            const studentRecord = await db.query.students.findFirst({
-                where: eq(students.userId, currentUserId),
-                columns: { id: true },
-            });
+            const [studentRecord] = await db.select({ id: students.id })
+                .from(students)
+                .where(eq(students.userId, currentUserId))
+                .limit(1);
             if (!studentRecord) return { success: false, error: "Student record not found" };
             if (currentUserRole === "student" || !studentId) {
                 studentId = studentRecord.id;
@@ -282,10 +281,10 @@ export async function getStudentMedicalFormData(targetStudentId?: number) {
 
         let studentId = targetStudentId;
         if (!studentId || currentUserRole === "student") {
-            const studentRecord = await db.query.students.findFirst({
-                where: eq(students.userId, currentUserId),
-                columns: { id: true },
-            });
+            const [studentRecord] = await db.select({ id: students.id })
+                .from(students)
+                .where(eq(students.userId, currentUserId))
+                .limit(1);
             if (!studentRecord) return { success: false, error: "Student record not found" };
             if (currentUserRole === "student" || !studentId) {
                 studentId = studentRecord.id;
