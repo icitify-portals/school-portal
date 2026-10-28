@@ -17,7 +17,7 @@ import Google from "next-auth/providers/google";
 import MicrosoftEntraID from "next-auth/providers/microsoft-entra-id";
 import { db } from "@/db/db";
 import { users, roles, permissions, rolePermissions, userRoles, students, staffProfiles, userPermissions } from "@/db/schema";
-import { eq, and, or, ne, like, sql } from "drizzle-orm";
+import { eq, and, or, ne, like, isNull, desc, sql } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { authConfig } from "./auth.config";
 import { normalizeEmail } from "@/lib/email";
@@ -147,20 +147,35 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
                     user = userByEmail;
 
-                    if (user && user.role === 'student') {
-                        const [stu] = await db.select().from(students).where(eq(students.userId, user.id)).limit(1);
+                    if (user && (user.role === 'student' || user.role === 'applicant' || user.role === 'fresher')) {
+                        const [stu] = await db.select().from(students)
+                            .where(and(eq(students.userId, user.id), isNull(students.deletedAt)))
+                            .orderBy(
+                                sql`CASE WHEN ${students.status} = 'active' THEN 0 ELSE 1 END`,
+                                sql`CASE WHEN ${students.programmeType} = 'HND' THEN 0 ELSE 1 END`,
+                                desc(students.id)
+                            )
+                            .limit(1);
                         if (stu) {
                             studentRecord = stu;
                         } else {
                             const [matchedStudent] = await db.select().from(students)
-                                .where(or(
-                                    eq(students.guardianEmail, user.email),
-                                    eq(students.kinEmail, user.email),
-                                    and(
-                                        eq(students.firstName, user.firstName || ''),
-                                        eq(students.lastName, user.surname || '')
+                                .where(and(
+                                    isNull(students.deletedAt),
+                                    or(
+                                        eq(students.guardianEmail, user.email),
+                                        eq(students.kinEmail, user.email),
+                                        and(
+                                            eq(students.firstName, user.firstName || ''),
+                                            eq(students.lastName, user.surname || '')
+                                        )
                                     )
                                 ))
+                                .orderBy(
+                                    sql`CASE WHEN ${students.status} = 'active' THEN 0 ELSE 1 END`,
+                                    sql`CASE WHEN ${students.programmeType} = 'HND' THEN 0 ELSE 1 END`,
+                                    desc(students.id)
+                                )
                                 .limit(1);
 
                             if (matchedStudent) {
@@ -178,10 +193,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                                     ne(users.id, user.id),
                                     or(
                                         eq(users.name, user.name),
-                                        studentRecord.matricNumber ? like(users.email, `%${studentRecord.matricNumber.replace(/[\/\_\s]/g, '').toLowerCase()}%`) : sql`FALSE`
+                                        studentRecord.matricNumber ? like(users.email, `%${studentRecord.matricNumber.replace(/[\/\_\s]/g, '').toLowerCase()}%`) : sql`FALSE`,
+                                        (studentRecord.firstName && studentRecord.lastName)
+                                            ? and(like(users.name, `%${studentRecord.firstName}%`), like(users.name, `%${studentRecord.lastName}%`))
+                                            : sql`FALSE`
                                     )
                                 ))
-                                .limit(2);
+                                .limit(3);
                             companionUsers.push(...comps);
                         }
                     }
@@ -258,10 +276,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                                     ne(users.id, user.id),
                                     or(
                                         eq(users.name, user.name),
-                                        studentRecord.matricNumber ? like(users.email, `%${studentRecord.matricNumber.replace(/[\/\_\s]/g, '').toLowerCase()}%`) : sql`FALSE`
+                                        studentRecord.matricNumber ? like(users.email, `%${studentRecord.matricNumber.replace(/[\/\_\s]/g, '').toLowerCase()}%`) : sql`FALSE`,
+                                        (studentRecord.firstName && studentRecord.lastName)
+                                            ? and(like(users.name, `%${studentRecord.firstName}%`), like(users.name, `%${studentRecord.lastName}%`))
+                                            : sql`FALSE`
                                     )
                                 ))
-                                .limit(2);
+                                .limit(3);
                             companionUsers.push(...comps);
                         }
                     }
@@ -326,7 +347,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
                         if (user.role === 'student' || studentRecord) {
                             if (!studentRecord) {
-                                const [sr] = await db.select().from(students).where(eq(students.userId, user.id)).limit(1);
+                                const [sr] = await db.select().from(students)
+                                    .where(and(eq(students.userId, user.id), isNull(students.deletedAt)))
+                                    .orderBy(
+                                        sql`CASE WHEN ${students.status} = 'active' THEN 0 ELSE 1 END`,
+                                        sql`CASE WHEN ${students.programmeType} = 'HND' THEN 0 ELSE 1 END`,
+                                        desc(students.id)
+                                    )
+                                    .limit(1);
                                 studentRecord = sr;
                             }
 

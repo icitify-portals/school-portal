@@ -516,7 +516,12 @@ export async function getStudentByUserId(userId: number) {
             userName: users.name,
         }).from(students)
           .leftJoin(users, eq(students.userId, users.id))
-          .where(eq(students.userId, userId))
+          .where(and(eq(students.userId, userId), isNull(students.deletedAt)))
+          .orderBy(
+              sql`CASE WHEN ${students.status} = 'active' THEN 0 ELSE 1 END`,
+              sql`CASE WHEN ${students.programmeType} = 'HND' THEN 0 ELSE 1 END`,
+              desc(students.id)
+          )
           .limit(1);
 
         if (!studentRows.length) return null;
@@ -567,7 +572,12 @@ export async function getStudentProfile() {
             .from(students)
             .leftJoin(users, eq(students.userId, users.id))
             .leftJoin(programmes, eq(students.programmeId, programmes.id))
-            .where(eq(students.userId, userId))
+            .where(and(eq(students.userId, userId), isNull(students.deletedAt)))
+            .orderBy(
+                sql`CASE WHEN ${students.status} = 'active' THEN 0 ELSE 1 END`,
+                sql`CASE WHEN ${students.programmeType} = 'HND' THEN 0 ELSE 1 END`,
+                desc(students.id)
+            )
             .limit(1);
 
         // JIT Profile Creation: If no student record exists but user is a student, create one.
@@ -577,7 +587,7 @@ export async function getStudentProfile() {
                 const barcode = `${user.name} | PENDING`;
                 await db.insert(students).values({
                     userId: userId,
-                    currentLevel: 100,
+                    currentLevel: 1,
                     barcode: barcode
                 });
 
@@ -590,7 +600,7 @@ export async function getStudentProfile() {
                     .from(students)
                     .leftJoin(users, eq(students.userId, users.id))
                     .leftJoin(programmes, eq(students.programmeId, programmes.id))
-                    .where(eq(students.userId, userId))
+                    .where(and(eq(students.userId, userId), isNull(students.deletedAt)))
                     .limit(1);
             }
         }

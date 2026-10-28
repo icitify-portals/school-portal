@@ -1064,7 +1064,7 @@ async function findOrCreateStudentForSession(
       }
     }
 
-    const initialLevel = parsedMatric?.programmeType === 'HND' ? 3 : 1;
+    const initialLevel = 1;
 
     const email = `${matric.toLowerCase().replace(/\//g, "_")}@student.fss.edu.ng`;
 

@@ -71,6 +71,18 @@ export function resolveLevel(
         return { level: lvl, numeric, programmeType: type, label: `${type} ${lvl}`, normalised: true };
     }
 
+    if (raw === 3 || raw === 4) {
+        const lvl: CanonicalLevel = raw === 3 ? 1 : 2;
+        const numeric: CourseLevel = raw === 3 ? 300 : 400;
+        return {
+            level: lvl,
+            numeric,
+            programmeType: 'HND',
+            label: `HND ${lvl}`,
+            normalised: true
+        };
+    }
+
     if (raw === 1 || raw === 2) {
         const type = toProgrammeType(programmeType);
         const numeric: CourseLevel = type === 'HND'

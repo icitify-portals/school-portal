@@ -1,7 +1,7 @@
 import { auth } from "@/auth";
 import { db } from "@/db";
 import { students, conductLogs, academicSessions, systemSettings } from "@/db/schema";
-import { eq, and, inArray } from "drizzle-orm";
+import { eq, and, inArray, isNull, desc, sql } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { Lock, ShieldAlert } from "lucide-react";
 import { ProfileCompletionGuard } from "@/components/auth/ProfileCompletionGuard";
@@ -19,10 +19,15 @@ export default async function StudentLayout({
         return <>{children}</>;
     }
 
-    const studentRecord = await db.query.students.findFirst({
+    const [studentRecord] = await db.select().from(students)
         // @ts-expect-error - TS2769: Auto-suppressed for build
-        where: eq(students.userId, session.user.id),
-    });
+        .where(and(eq(students.userId, session.user.id), isNull(students.deletedAt)))
+        .orderBy(
+            sql`CASE WHEN ${students.status} = 'active' THEN 0 ELSE 1 END`,
+            sql`CASE WHEN ${students.programmeType} = 'HND' THEN 0 ELSE 1 END`,
+            desc(students.id)
+        )
+        .limit(1);
 
     if (!studentRecord) {
         return <>{children}</>;
