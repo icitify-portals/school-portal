@@ -222,8 +222,9 @@ export function StudentDossierPrintable({ data, isStaffView = false }: StudentDo
     }
 
     return (
-        <div className="min-h-screen bg-slate-100 py-8 px-4 print:p-0 print:bg-white text-slate-900">
-            <div className="max-w-4xl mx-auto space-y-6">
+        <div className="min-h-screen print:min-h-0 bg-slate-100 py-8 px-4 print:p-0 print:bg-white text-slate-900">
+            <style>{`@media print { @page { size: A4 portrait; margin: 8mm; } html, body { height: auto !important; } .one-page-print { zoom: 0.66; break-inside: avoid; page-break-inside: avoid; page-break-after: avoid; } }`}</style>
+            <div className="max-w-4xl mx-auto space-y-6 one-page-print">
                 {/* Action Bar (Hidden on Print) */}
                 <div className="flex flex-wrap items-center justify-between gap-4 bg-white p-4 rounded-2xl shadow-sm border border-slate-200 print:hidden">
                     <div className="flex items-center gap-3">

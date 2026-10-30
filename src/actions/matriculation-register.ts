@@ -11,10 +11,10 @@ export async function signMatriculationOathAction(data: {
     signature: string
 }) {
     try {
-        const headerList = headers();
-        // @ts-expect-error - TS2339: Auto-suppressed for build
-        const ip = headerList.get("x-forwarded-for") || "unknown";
-        // @ts-expect-error - TS2339: Auto-suppressed for build
+        // headers() is async in Next 15+/16; calling .get on the un-awaited
+        // Promise threw and made every oath submission fail.
+        const headerList = await headers();
+        const ip = (headerList.get("x-forwarded-for") || "unknown").split(",")[0].trim().slice(0, 45);
         const ua = headerList.get("user-agent") || "unknown";
 
         await MatriculationRegisterService.signRegister({
