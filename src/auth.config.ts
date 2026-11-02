@@ -114,7 +114,7 @@ export const authConfig = {
             }
 
             // Forced Password Change logic
-            const requiresPasswordChange = Boolean((auth?.user as any)?.requiresPasswordChange) && (auth?.user as any)?.role?.toLowerCase() !== 'bursar';
+            const requiresPasswordChange = Boolean((auth?.user as any)?.requiresPasswordChange);
             const isChangePasswordPage = nextUrl.pathname === "/change-password";
 
             if (requiresPasswordChange && !isChangePasswordPage) {
