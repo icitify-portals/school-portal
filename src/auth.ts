@@ -17,7 +17,7 @@ import Google from "next-auth/providers/google";
 import MicrosoftEntraID from "next-auth/providers/microsoft-entra-id";
 import { db } from "@/db/db";
 import { users, roles, permissions, rolePermissions, userRoles, students, staffProfiles, userPermissions } from "@/db/schema";
-import { eq, and, or, ne, like, isNull, desc, sql } from "drizzle-orm";
+import { eq, and, or, ne, like, notLike, isNull, desc, sql } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { authConfig } from "./auth.config";
 import { normalizeEmail } from "@/lib/email";
@@ -235,16 +235,26 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                         .from(students)
                         .leftJoin(users, eq(students.userId, users.id))
                         .where(
-                            or(
-                                eq(students.matricNumber, normLoginId),
-                                eq(students.matricNumber, slashNorm),
-                                eq(students.matricNumber, underNorm),
-                                eq(students.admissionNumber, normLoginId),
-                                eq(students.admissionNumber, slashNorm),
-                                eq(students.admissionNumber, underNorm),
-                                normLoginId.length >= 4 ? like(students.matricNumber, `%${normLoginId}%`) : sql`FALSE`,
-                                normLoginId.length >= 4 ? like(students.admissionNumber, `%${normLoginId}%`) : sql`FALSE`
+                            and(
+                                isNull(students.deletedAt),
+                                ne(students.status, 'withdrawn'),
+                                notLike(students.matricNumber, '%.retired.%'),
+                                or(
+                                    eq(students.matricNumber, normLoginId),
+                                    eq(students.matricNumber, slashNorm),
+                                    eq(students.matricNumber, underNorm),
+                                    eq(students.admissionNumber, normLoginId),
+                                    eq(students.admissionNumber, slashNorm),
+                                    eq(students.admissionNumber, underNorm),
+                                    normLoginId.length >= 4 ? like(students.matricNumber, `%${normLoginId}%`) : sql`FALSE`,
+                                    normLoginId.length >= 4 ? like(students.admissionNumber, `%${normLoginId}%`) : sql`FALSE`
+                                )
                             )
+                        )
+                        .orderBy(
+                            sql`CASE WHEN ${students.status} = 'active' THEN 0 ELSE 1 END`,
+                            sql`CASE WHEN ${students.programmeType} = 'HND' THEN 0 ELSE 1 END`,
+                            desc(students.id)
                         )
                         .limit(1);
                         
