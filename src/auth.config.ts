@@ -89,10 +89,19 @@ export const authConfig = {
                 return Response.redirect(new URL("/login/2fa", nextUrl));
             }
 
+            // Forced Password Change flag check
+            const requiresPasswordChange = Boolean((auth?.user as any)?.requiresPasswordChange);
+            const isChangePasswordPage = nextUrl.pathname === "/change-password";
+
             // Handle login/register pages
             if (isLoginPage || isRegisterPage) {
                 // If already logged in, redirect to 2FA page if pending, else dashboard
                 if (isLoggedIn) {
+                    if (requiresPasswordChange) {
+                        // Do not redirect to /dashboard (which redirects back to /change-password).
+                        // Allow access to /login so the user can re-authenticate or sign out cleanly.
+                        return true;
+                    }
                     if (twoFactorPending) {
                         return Response.redirect(new URL("/login/2fa", nextUrl));
                     }
@@ -112,10 +121,6 @@ export const authConfig = {
                 }
                 return true;
             }
-
-            // Forced Password Change logic
-            const requiresPasswordChange = Boolean((auth?.user as any)?.requiresPasswordChange);
-            const isChangePasswordPage = nextUrl.pathname === "/change-password";
 
             if (requiresPasswordChange && !isChangePasswordPage) {
                 return Response.redirect(new URL("/change-password", nextUrl));

@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { changePasswordForced } from "@/actions/auth-actions";
+import { useState, useMemo, useEffect } from "react";
+import { changePasswordForced, checkRequiresPasswordChange } from "@/actions/auth-actions";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ShieldAlert, AlertCircle, CheckCircle2, Loader2, Lock, Eye, EyeOff, Check, X, AlertTriangle } from "lucide-react";
@@ -18,6 +18,20 @@ export default function ChangePasswordPage() {
     const [requireDob, setRequireDob] = useState(false);
     const [status, setStatus] = useState<{ success?: boolean; message?: string; error?: string; requireDob?: boolean } | null>(null);
     const [loading, setLoading] = useState(false);
+
+    // If the database already shows requiresPasswordChange = false, escape the stale session trap immediately
+    useEffect(() => {
+        let mounted = true;
+        checkRequiresPasswordChange().then(async (needsChange) => {
+            if (mounted && !needsChange && session?.user) {
+                try {
+                    await signOut({ redirect: false });
+                } catch (e) {}
+                window.location.href = "/login?notice=password_updated";
+            }
+        });
+        return () => { mounted = false; };
+    }, [session?.user]);
 
     const strength = useMemo(() => {
         return validatePasswordStrength(password);
@@ -65,30 +79,32 @@ export default function ChangePasswordPage() {
                     message: "Password updated successfully! Logging you in..." 
                 });
 
+                // Clear stale client session so the old requiresPasswordChange token is destroyed
                 try {
-                    await update({ requiresPasswordChange: false, user: { requiresPasswordChange: false } });
-                } catch (updateErr) {
-                    // non-blocking
-                }
+                    await signOut({ redirect: false });
+                } catch (e) {}
 
-                // Re-authenticate with new credentials LAST so NextAuth issues a fresh session
-                // cookie where requiresPasswordChange is false and it is not overwritten by update().
+                // Immediately re-authenticate with the fresh credentials
                 const loginEmail = result.email || session?.user?.email;
                 if (loginEmail) {
                     try {
-                        await signIn("credentials", {
+                        const signInRes = await signIn("credentials", {
                             email: loginEmail,
                             password: cleanPassword,
                             redirect: false
                         });
+                        if (signInRes?.ok && !signInRes?.error) {
+                            window.location.href = "/dashboard";
+                            return;
+                        }
                     } catch (signInErr) {
                         console.error("Re-authentication error:", signInErr);
                     }
                 }
 
-                setTimeout(() => {
-                    window.location.href = "/dashboard";
-                }, 800);
+                // If not automatically signed in, redirect to login cleanly
+                window.location.href = "/login?notice=password_updated";
+                return;
             } else {
                 setStatus(result);
             }

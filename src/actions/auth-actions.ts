@@ -9,6 +9,7 @@ import { NotificationService } from "@/services/NotificationService";
 import { sendEmail } from "@/lib/mail";
 import { auth } from "@/auth";
 import { validatePasswordStrength } from "@/lib/password-validator";
+import { cookies } from "next/headers";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
@@ -375,6 +376,15 @@ export async function changePasswordForced(password: string, dob?: string) {
             console.error("Twin account password sync in changePasswordForced error:", syncErr);
         }
 
+                // Clear stale session cookies so middleware will not loop back to /change-password
+        try {
+            const cookieStore = await cookies();
+            cookieStore.delete("authjs.session-token");
+            cookieStore.delete("__Secure-authjs.session-token");
+        } catch (cookieErr) {
+            // non-blocking
+        }
+
         return { 
             success: true, 
             message: 'Password updated successfully.',
@@ -386,5 +396,24 @@ export async function changePasswordForced(password: string, dob?: string) {
             success: false,
             error: error?.message || 'An unexpected error occurred while changing your password. Please try again.'
         };
+    }
+}
+
+
+/**
+ * Checks whether the current authenticated user genuinely requires a password change in the database.
+ * Used by /change-password to avoid trapped redirect loops if the DB was already updated.
+ */
+export async function checkRequiresPasswordChange(): Promise<boolean> {
+    try {
+        const session = await auth();
+        if (!session?.user?.id) return false;
+        const [u] = await db.select({ requiresPasswordChange: users.requiresPasswordChange })
+            .from(users)
+            .where(eq(users.id, Number(session.user.id)))
+            .limit(1);
+        return Boolean(u?.requiresPasswordChange);
+    } catch {
+        return false;
     }
 }

@@ -6,13 +6,14 @@ import { useRouter } from "next/navigation";
 import { getBrandingSettings } from "@/actions/settings";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { GraduationCap, AlertCircle, Loader2, Mail } from "lucide-react";
+import { GraduationCap, AlertCircle, Loader2, Mail, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 
 export default function LoginPage() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [error, setError] = useState("");
+    const [notice, setNotice] = useState("");
     const [loading, setLoading] = useState(false);
     const [branding, setBranding] = useState<any>(null);
     const [resending, setResending] = useState(false);
@@ -30,6 +31,10 @@ export default function LoginPage() {
             const loginId = params.get("loginId");
             if (loginId) {
                 setEmail(loginId);
+            }
+            const noticeParam = params.get("notice");
+            if (noticeParam === "password_updated") {
+                setNotice("Password updated successfully. Please log in with your new password.");
             }
         }
     }, []);
@@ -108,6 +113,12 @@ export default function LoginPage() {
                 </CardHeader>
                 <CardContent className=" p-6">
                     <form onSubmit={handleSubmit} className="space-y-4" suppressHydrationWarning>
+                        {notice && (
+                            <div className="p-3 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg text-sm flex gap-2 items-center">
+                                <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
+                                <span>{notice}</span>
+                            </div>
+                        )}
                         {error && (
                             <div className="p-3 bg-red-50 text-red-600 rounded-lg text-sm space-y-2">
                                 <div className="flex gap-2 items-center">
