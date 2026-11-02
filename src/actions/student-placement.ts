@@ -475,7 +475,7 @@ export async function deleteStudentPlacement(input: {
 /**
  * Detects the correct target HND programme for a student based on their matriculation code.
  */
-export function detectCorrectProgrammeFromMatric(matricNumber: string, currentProgId?: number | null) {
+function detectCorrectProgrammeFromMatric(matricNumber: string, currentProgId?: number | null) {
     const m = (matricNumber || '').toUpperCase();
     if (m.includes('/NCC/') || m.includes('/NETWORKING/')) return { progId: 16, deptId: 56, programmeType: 'HND', name: "HND Networking and cloud computing" };
     if (m.includes('/AI/') || m.includes('/ARTIFICIAL/')) return { progId: 15, deptId: 56, programmeType: 'HND', name: "HND Artificial Intelligence" };
