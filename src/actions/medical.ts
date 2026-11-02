@@ -14,7 +14,7 @@ export async function submitMedicalForm(formData: any) {
       return { success: false, message: "Unauthorized. Please log in as a student." };
     }
 
-    // Validate all required fields before submission
+    // Validate essential contact and health background fields
     const requiredFields: { key: string; label: string }[] = [
       { key: "kinName", label: "Next of Kin Name" },
       { key: "kinPhone", label: "Next of Kin Phone" },
@@ -23,11 +23,6 @@ export async function submitMedicalForm(formData: any) {
       { key: "illnessFrequency", label: "Illness Frequency (enter 'None' or 'N/A' if not applicable)" },
       { key: "lastOccurrence", label: "Last Occurrence (enter 'None' or 'N/A' if not applicable)" },
       { key: "illnessDescription", label: "Illness Description (enter 'None' or 'N/A' if not applicable)" },
-      { key: "weight", label: "Weight" },
-      { key: "height", label: "Height" },
-      { key: "bloodPressure", label: "Blood Pressure" },
-      { key: "bloodGroup", label: "Blood Group" },
-      { key: "genotype", label: "Genotype" },
       { key: "allergies", label: "Allergies (enter 'None' if not applicable)" },
       { key: "medicalHistory", label: "Medical History (enter 'None' if not applicable)" },
       { key: "currentMedications", label: "Current Medications (enter 'None' if not applicable)" },
@@ -38,7 +33,7 @@ export async function submitMedicalForm(formData: any) {
       if (!val) {
         return {
           success: false,
-          message: `All fields are required. Please fill in: ${f.label}.`,
+          message: `Please fill in: ${f.label}. (Enter "None" or "N/A" if not applicable).`,
         };
       }
     }
@@ -54,16 +49,19 @@ export async function submitMedicalForm(formData: any) {
     }
 
     // 1. Update students table (kin, blood, genotype, healthStatus, medicalFormSubmittedAt)
+    const bloodGroup = String(formData.bloodGroup ?? "").trim() || student.bloodGroup || "Pending Test";
+    const genotype = String(formData.genotype ?? "").trim() || student.genotype || "Pending Test";
+
     await db
       .update(students)
       .set({
         kinName: String(formData.kinName).trim(),
         kinPhone: String(formData.kinPhone).trim(),
         kinAddress: String(formData.kinAddress).trim(),
-        bloodGroup: String(formData.bloodGroup).trim(),
-        genotype: String(formData.genotype).trim(),
-        healthStatus: "cleared",
-        medicalFormSubmittedAt: new Date(),
+        bloodGroup,
+        genotype,
+        healthStatus: student.healthStatus === "cleared" ? "cleared" : "pending",
+        medicalFormSubmittedAt: student.medicalFormSubmittedAt || new Date(),
       })
       .where(eq(students.id, student.id));
 
@@ -73,14 +71,19 @@ export async function submitMedicalForm(formData: any) {
       .from(studentMedicalRecords)
       .where(eq(studentMedicalRecords.studentId, student.id));
 
+    // Height, weight, blood pressure can be filled by student or measured later by clinic officer
+    const height = String(formData.height ?? "").trim() || existingRecord?.height || "Pending Clinic Measurement";
+    const weight = String(formData.weight ?? "").trim() || existingRecord?.weight || "Pending Clinic Measurement";
+    const bloodPressure = String(formData.bloodPressure ?? "").trim() || existingRecord?.bloodPressure || "Pending Clinic Measurement";
+
     const medicalPayload = {
       commonIllness: String(formData.commonIllness).trim(),
       illnessFrequency: String(formData.illnessFrequency).trim(),
       lastOccurrence: String(formData.lastOccurrence).trim(),
       illnessDescription: String(formData.illnessDescription).trim(),
-      weight: String(formData.weight).trim(),
-      height: String(formData.height).trim(),
-      bloodPressure: String(formData.bloodPressure).trim(),
+      weight,
+      height,
+      bloodPressure,
       allergies: String(formData.allergies).trim(),
       medicalHistory: String(formData.medicalHistory).trim(),
       currentMedications: String(formData.currentMedications).trim(),
@@ -99,10 +102,19 @@ export async function submitMedicalForm(formData: any) {
     }
 
     revalidatePath("/student/medical");
-    revalidatePath("/student/dossier");
-    return { success: true, message: "Medical records updated successfully." };
+    revalidatePath("/student");
+    revalidatePath(`/admin/students/${student.id}/medical`);
+    revalidatePath("/admin/health/medical-records");
+
+    return {
+      success: true,
+      message: "Medical form submitted successfully.",
+    };
   } catch (error: any) {
     console.error("Error submitting medical form:", error);
-    return { success: false, message: error.message || "Failed to submit medical records." };
+    return {
+      success: false,
+      message: error?.message || "An unexpected error occurred while saving your medical form.",
+    };
   }
 }
