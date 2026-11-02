@@ -358,7 +358,7 @@ export default function IDCardTemplate1({
 // ──────────────────────────────────────────────────────────────
 // FRONT CARD COMPONENT
 // ──────────────────────────────────────────────────────────────
-function FrontCard({
+export function FrontCard({
     studentName,
     matricNumber,
     department,
@@ -538,7 +538,7 @@ function FrontCard({
 // ──────────────────────────────────────────────────────────────
 // BACK CARD COMPONENT (WITH ATTENDANCE CLOCK-IN/OUT BARCODE)
 // ──────────────────────────────────────────────────────────────
-function BackCard({
+export function BackCard({
     barcodeCanvasRef,
     barcodeValue,
     qrDataUrl,

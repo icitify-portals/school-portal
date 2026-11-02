@@ -127,6 +127,8 @@ function CheckoutSimulatorContent() {
                         setTimeout(() => router.push('/applicant'), 3000);
                     } else if (reference?.startsWith('TR-')) {
                         setTimeout(() => router.push(`/transcript-application/verify?ref=${reference}`), 3000);
+                    } else if (reference?.startsWith('ALUMNI-')) {
+                        setTimeout(() => router.push(`/alumni/certificate/verify?ref=${reference}`), 3000);
                     } else {
                         setTimeout(() => router.push('/student/finance'), 3000);
                     }
@@ -190,11 +192,12 @@ function CheckoutSimulatorContent() {
                                     } else {
                                         if (reference?.startsWith('PAY-ADM-')) router.push("/applicant");
                                         else if (reference?.startsWith('TR-')) router.push(`/transcript-application/verify?ref=${reference}`);
+                                        else if (reference?.startsWith('ALUMNI-')) router.push(`/alumni/certificate/verify?ref=${reference}`);
                                         else router.push("/student/finance");
                                     }
                                 }}
                             >
-                                {reference?.startsWith('PAY-ADM-') ? "Return to Application" : "Return to Dashboard"}
+                                {reference?.startsWith('PAY-ADM-') ? "Return to Application" : reference?.startsWith('TR-') ? "Return to Transcript Verification" : reference?.startsWith('ALUMNI-') ? "Return to Certificate Verification" : "Return to Dashboard"}
                             </Button>
                     </CardContent>
                 </Card>
@@ -283,6 +286,7 @@ function CheckoutSimulatorContent() {
                                 onClick={() => {
                                     if (reference?.startsWith('PAY-ADM-')) router.push("/applicant");
                                     else if (reference?.startsWith('TR-')) router.push(`/transcript-application/verify?ref=${reference}`);
+                                    else if (reference?.startsWith('ALUMNI-')) router.push(`/alumni/certificate/verify?ref=${reference}`);
                                     else router.push("/student/finance");
                                 }}
                             >

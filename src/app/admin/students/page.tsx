@@ -1,3 +1,4 @@
+import { toast } from "sonner";
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
@@ -113,12 +114,23 @@ function StudentsPageContent() {
 
     const fetchStudents = useCallback(async () => {
         setLoading(true);
-        const res = await getStudents({ search, page, pageSize, level, sessionId: sessionParam, semester: semesterParam, departmentId: deptIdParam ? parseInt(deptIdParam) : undefined, status: effectiveStatus, graduationYear: gradYearParam });
-        if (res.success) {
-            setStudents(res.data);
-            setTotalCount(res.totalCount);
+        try {
+            const res = await getStudents({ search, page, pageSize, level, sessionId: sessionParam, semester: semesterParam, departmentId: deptIdParam ? parseInt(deptIdParam) : undefined, status: effectiveStatus, graduationYear: gradYearParam });
+            if (res.success) {
+                setStudents(res.data);
+                setTotalCount(res.totalCount);
+            } else if (res.error) {
+                toast.error(res.error);
+                setStudents([]);
+                setTotalCount(0);
+            }
+        } catch (err: any) {
+            toast.error(err?.message || "Failed to load students");
+            setStudents([]);
+            setTotalCount(0);
+        } finally {
+            setLoading(false);
         }
-        setLoading(false);
     }, [search, page, pageSize, level, sessionParam, semesterParam, deptIdParam, effectiveStatus, gradYearParam]);
 
     useEffect(() => {
@@ -384,6 +396,15 @@ function StudentsPageContent() {
                     <p className="text-slate-500 mt-1">Review and manage student records</p>
                 </div>
                 <div className="flex flex-wrap gap-2 w-full md:w-auto items-center">
+                    <Link href="/admin/students/placement">
+                        <Button
+                            variant="outline"
+                            className="rounded-xl font-bold text-xs uppercase tracking-widest h-10 border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 gap-2"
+                        >
+                            <ShieldAlert className="w-4 h-4" />
+                            Placement Review
+                        </Button>
+                    </Link>
                     <Button
                         onClick={() => setShowImporter(!showImporter)}
                         variant="outline"
@@ -718,7 +739,14 @@ function StudentsPageContent() {
                                                 </span>
                                             ) : (
                                                 <span className="text-sm font-bold text-slate-700">
-                                                    {isK12 ? `Grade ${s.currentLevel}` : `${s.programme?.programmeType || ''} ${s.currentLevel}`.trim()}
+                                                    {(() => {
+                                                        if (isK12) return `Grade ${s.currentLevel}`;
+                                                        const isHnd = s.matricNumber && (s.matricNumber.includes('/HND/') || s.matricNumber.startsWith('HND/') || s.matricNumber.startsWith('DPP/HND/'));
+                                                        const isNd = s.matricNumber && (s.matricNumber.includes('/ND/') || s.matricNumber.startsWith('ND/') || (s.matricNumber.startsWith('DPP/ND/') && !s.matricNumber.includes('HND')));
+                                                        const type = isHnd ? 'HND' : (isNd ? 'ND' : (s.programme?.programmeType || s.programmeType || ''));
+                                                        const lvl = (s.currentLevel === 300 || s.currentLevel === 100 || s.currentLevel === 1) ? 1 : ((s.currentLevel === 400 || s.currentLevel === 200 || s.currentLevel === 2) ? 2 : s.currentLevel);
+                                                        return `${type} ${lvl}`.trim();
+                                                    })()}
                                                 </span>
                                             )}
                                         </td>
@@ -743,6 +771,11 @@ function StudentsPageContent() {
                                         </td>
                                         <td className="px-6 py-4">
                                             <span className="text-sm text-slate-600">{s.programme?.name || 'Not Assigned'}</span>
+                                            {s.matricNumber && (s.matricNumber.includes('/HND/') || s.matricNumber.startsWith('HND/') || s.matricNumber.startsWith('DPP/HND/')) && (s.programme?.programmeType === 'ND' || s.programme?.name?.startsWith('OND')) && (
+                                                <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-100 text-amber-800" title="Matric indicates HND programme">
+                                                    Needs Sync
+                                                </span>
+                                            )}
                                         </td>
                                         <td className="px-6 py-4">
                                             <span className="text-sm font-bold text-slate-700">{settings?.base_currency || "\u20A6"}{parseFloat(s.digitalWalletBalance || '0').toLocaleString()}</span>

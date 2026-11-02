@@ -9,7 +9,7 @@ import { getSettingByKey } from "@/actions/settings";
 // Fallback Constants for Fees (Now dynamically fetched from DB)
 const DEFAULT_TRANSCRIPT_FEE = 15000; // ALATPay fee
 const DEFAULT_INCIDENTAL_FEE = 5500;  // Compulsory Incidental Fee for all students
-const DEFAULT_PROCESSING_FEE = 4000;  // Paystack fee (reduced to ₦4,000)
+const DEFAULT_PROCESSING_FEE = 3000;  // Paystack fee (reduced to ₦3,000)
 
 export async function getTranscriptFees() {
     const tFeeStr = await getSettingByKey('transcript_fee');
@@ -21,10 +21,17 @@ export async function getTranscriptFees() {
             incidentalFee = Number(incItem.defaultAmount);
         }
     } catch {}
+
+    let processingFee = DEFAULT_PROCESSING_FEE;
+    if (pFeeStr !== null && !isNaN(parseInt(pFeeStr))) {
+        const parsed = parseInt(pFeeStr);
+        processingFee = (parsed === 4000 || parsed === 5000) ? DEFAULT_PROCESSING_FEE : parsed;
+    }
+
     return {
         transcriptFee: tFeeStr !== null ? parseInt(tFeeStr) : DEFAULT_TRANSCRIPT_FEE,
         incidentalFee,
-        processingFee: pFeeStr !== null ? parseInt(pFeeStr) : DEFAULT_PROCESSING_FEE,
+        processingFee,
     };
 }
 
@@ -138,6 +145,7 @@ export async function submitTranscriptApplication(data: {
     destinationName: string;
     destinationAddress: string;
     deliveryMethod: 'email' | 'courier' | 'pickup';
+    selectedItems?: string[];
 }) {
     try {
         // Compulsory Graduation Clearance check for graduants/alumni
@@ -155,10 +163,17 @@ export async function submitTranscriptApplication(data: {
         const [student] = await db.select().from(students).where(eq(students.matricNumber, data.matricNumber.trim().toUpperCase())).limit(1);
 
         const fees = await getTranscriptFees();
-        const transcriptFee = fees.transcriptFee + fees.incidentalFee;
-        const processingFee = fees.processingFee;
+        
+        // Determine selected fee components
+        const payTranscript = !data.selectedItems || data.selectedItems.includes('transcript');
+        const payIncidental = !data.selectedItems || data.selectedItems.includes('incidental');
+        const payProcessing = !data.selectedItems || data.selectedItems.includes('processing');
 
-        if (transcriptFee === 0 && processingFee === 0) {
+        const transcriptFee = (payTranscript ? fees.transcriptFee : 0) + (payIncidental ? fees.incidentalFee : 0);
+        const processingFee = payProcessing ? fees.processingFee : 0;
+        const totalFee = transcriptFee + processingFee;
+
+        if (totalFee === 0) {
             // Bypass all payments
             const [result] = await db.insert(transcriptRequests).values({
                 studentId: student?.id || null,
@@ -174,9 +189,38 @@ export async function submitTranscriptApplication(data: {
                 alatpayStatus: 'paid',
                 paystackStatus: 'paid',
                 paymentStatus: 'paid',
-                approvalStatus: 'pending'
+                approvalStatus: 'pending',
+                feePaid: '0.00'
             });
             return { success: true, url: '/transcript-application/verify?ref=FREE-BYPASS', requestId: result.insertId };
+        }
+
+        // If institutional fee is 0 but processing fee is > 0, bypass ALATPay and initiate Paystack directly
+        if (transcriptFee === 0 && processingFee > 0) {
+            const paystackRef = `TR-PAY-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+            const [result] = await db.insert(transcriptRequests).values({
+                studentId: student?.id || null,
+                applicantName: data.applicantName,
+                matricNumber: data.matricNumber,
+                applicantEmail: data.applicantEmail,
+                applicantPhone: data.applicantPhone,
+                destinationName: data.destinationName,
+                destinationAddress: data.destinationAddress,
+                deliveryMethod: data.deliveryMethod,
+                alatpayRef: 'BYPASSED',
+                paystackRef: paystackRef,
+                alatpayStatus: 'paid',
+                paystackStatus: 'unpaid',
+                paymentStatus: 'unpaid',
+                approvalStatus: 'pending',
+                feePaid: '0.00'
+            });
+            const insertId = result.insertId;
+            const initRes = await initiatePayment('paystack', processingFee, paystackRef, data.applicantEmail, data.applicantName, '');
+            if (initRes.error) {
+                return { success: false, error: initRes.error };
+            }
+            return { success: true, url: initRes.paymentUrl, requestId: insertId };
         }
 
         const alatRef = `TR-ALAT-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
@@ -191,27 +235,17 @@ export async function submitTranscriptApplication(data: {
             destinationAddress: data.destinationAddress,
             deliveryMethod: data.deliveryMethod,
             alatpayRef: alatRef,
-            alatpayStatus: transcriptFee === 0 ? 'paid' : 'unpaid',
+            alatpayStatus: 'unpaid',
             paystackStatus: processingFee === 0 ? 'paid' : 'unpaid',
             paymentStatus: 'unpaid',
-            approvalStatus: 'pending'
+            approvalStatus: 'pending',
+            feePaid: '0.00'
         });
 
         const insertId = result.insertId;
-        
-        // If transcript fee is 0 but processing fee is > 0, we can skip alatpay and jump to paystack
-        if (transcriptFee === 0) {
-             const paystackRef = `TR-PAY-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-             await db.update(transcriptRequests).set({ paystackRef }).where(eq(transcriptRequests.id, insertId));
-             const initRes = await initiatePayment(paystackRef, processingFee, 'paystack', data.applicantEmail, data.applicantName, '');
-             if (initRes.error) {
-                 return { success: false, error: initRes.error };
-             }
-             return { success: true, url: initRes.paymentUrl, requestId: insertId };
-        }
 
         // Initialize ALATPay (Step 1)
-        const initRes = await initiatePayment(alatRef, transcriptFee, 'alatpay', data.applicantEmail, data.applicantName, '');
+        const initRes = await initiatePayment('alatpay', transcriptFee, alatRef, data.applicantEmail, data.applicantName, '');
         if (initRes.error) {
             return { success: false, error: initRes.error };
         }
@@ -229,6 +263,9 @@ export async function verifyTranscriptAlatpay(reference: string) {
         if (!req) return { success: false, error: "Request not found" };
 
         if (req.alatpayStatus === 'paid') {
+            if (req.paystackStatus === 'paid') {
+                return { success: true, nextStep: 'completed', data: req };
+            }
             return preparePaystackStep(req);
         }
 
@@ -237,9 +274,22 @@ export async function verifyTranscriptAlatpay(reference: string) {
             return { success: false, error: verify.error };
         }
 
+        const paidAmount = verify.amount || 0;
+        const currentPaid = parseFloat(req.feePaid || '0');
+        const newPaid = currentPaid + paidAmount;
+        const isPaystackDone = req.paystackStatus === 'paid';
+
         await db.update(transcriptRequests)
-            .set({ alatpayStatus: 'paid', paymentStatus: 'partial' })
+            .set({ 
+                alatpayStatus: 'paid', 
+                paymentStatus: isPaystackDone ? 'paid' : 'partial',
+                feePaid: newPaid.toString()
+            })
             .where(eq(transcriptRequests.id, req.id));
+
+        if (isPaystackDone) {
+            return { success: true, nextStep: 'completed', data: req };
+        }
 
         return preparePaystackStep(req);
     } catch (e: any) {
@@ -249,8 +299,16 @@ export async function verifyTranscriptAlatpay(reference: string) {
 }
 
 async function preparePaystackStep(req: any) {
+    if (req.paystackStatus === 'paid') {
+        return { success: true, nextStep: 'completed', data: req };
+    }
+
     const pFeeStr = await getSettingByKey('transcript_processing_fee');
-    const processingFee = pFeeStr !== null ? parseInt(pFeeStr) : DEFAULT_PROCESSING_FEE;
+    let processingFee = DEFAULT_PROCESSING_FEE;
+    if (pFeeStr !== null && !isNaN(parseInt(pFeeStr))) {
+        const parsed = parseInt(pFeeStr);
+        processingFee = (parsed === 4000 || parsed === 5000) ? DEFAULT_PROCESSING_FEE : parsed;
+    }
     
     if (processingFee === 0) {
         // Skip paystack
@@ -258,7 +316,7 @@ async function preparePaystackStep(req: any) {
             paystackStatus: 'paid',
             paymentStatus: 'paid'
         }).where(eq(transcriptRequests.id, req.id));
-        return { success: true, nextStep: 'success', url: '/transcript-application/verify?ref=FREE-BYPASS' };
+        return { success: true, nextStep: 'completed', url: '/transcript-application/verify?ref=FREE-BYPASS' };
     }
 
     let paystackRef = req.paystackRef;
@@ -267,7 +325,7 @@ async function preparePaystackStep(req: any) {
         await db.update(transcriptRequests).set({ paystackRef }).where(eq(transcriptRequests.id, req.id));
     }
 
-    const initRes = await initiatePayment(paystackRef, processingFee, 'paystack', req.applicantEmail, req.applicantName, '');
+    const initRes = await initiatePayment('paystack', processingFee, paystackRef, req.applicantEmail, req.applicantName, '');
     if (initRes.error) {
         return { success: false, error: initRes.error };
     }
@@ -290,12 +348,15 @@ export async function verifyTranscriptPaystack(reference: string) {
             return { success: false, error: verify.error };
         }
 
-        const fees = await getTranscriptFees();
+        const prevPaid = parseFloat(req.feePaid || '0');
+        const addedPaid = verify.amount || 0;
+        const totalPaid = prevPaid + addedPaid;
+
         await db.update(transcriptRequests)
             .set({ 
                 paystackStatus: 'paid', 
                 paymentStatus: 'paid',
-                feePaid: (fees.transcriptFee + fees.incidentalFee + fees.processingFee).toString()
+                feePaid: totalPaid > 0 ? totalPaid.toFixed(2) : (req.feePaid || '0.00')
             })
             .where(eq(transcriptRequests.id, req.id));
 

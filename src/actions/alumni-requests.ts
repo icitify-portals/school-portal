@@ -10,7 +10,7 @@ const DEFAULT_CERT_FEE_ND = 18500;
 const DEFAULT_CERT_FEE_HND = 28500;
 const DEFAULT_CONVOCATION_FEE = 15500;
 const DEFAULT_INCIDENTAL_FEE = 5500;
-const DEFAULT_PROCESSING_FEE = 4000;
+const DEFAULT_PROCESSING_FEE = 3000;
 
 export async function getDynamicAlumniFees() {
     let certificateFeeND = DEFAULT_CERT_FEE_ND;
@@ -48,11 +48,13 @@ export async function getDynamicAlumniFees() {
             .where(eq(processingFeeRules.serviceType, 'CERTIFICATE_REQUEST'))
             .limit(1);
         if (processingRule.length > 0 && processingRule[0].isActive && Number(processingRule[0].amount) > 0) {
-            processingFee = Number(processingRule[0].amount);
+            const ruleAmt = Number(processingRule[0].amount);
+            processingFee = (ruleAmt === 4000 || ruleAmt === 5000) ? DEFAULT_PROCESSING_FEE : ruleAmt;
         } else {
             const pFeeStr = await getSettingByKey('transcript_processing_fee');
             if (pFeeStr !== null && !isNaN(parseInt(pFeeStr))) {
-                processingFee = parseInt(pFeeStr);
+                const parsed = parseInt(pFeeStr);
+                processingFee = (parsed === 4000 || parsed === 5000) ? DEFAULT_PROCESSING_FEE : parsed;
             }
         }
     } catch (e) {
@@ -60,7 +62,8 @@ export async function getDynamicAlumniFees() {
         try {
             const pFeeStr = await getSettingByKey('transcript_processing_fee');
             if (pFeeStr !== null && !isNaN(parseInt(pFeeStr))) {
-                processingFee = parseInt(pFeeStr);
+                const parsed = parseInt(pFeeStr);
+                processingFee = (parsed === 4000 || parsed === 5000) ? DEFAULT_PROCESSING_FEE : parsed;
             }
         } catch {}
     }
@@ -84,16 +87,29 @@ export async function submitCertificateApplication(data: {
     yearOfGraduation: string;
     deliveryMethod: "email" | "courier" | "pickup";
     deliveryAddress: string;
+    selectedItems?: string[];
 }) {
     try {
         const fees = await getDynamicAlumniFees();
-        const certificateFee = data.programmeType === "HND" ? fees.certificateFeeHND : fees.certificateFeeND;
-        const institutionalFee = certificateFee + fees.convocationFee + fees.incidentalFee;
-        const processingFee = fees.processingFee;
+        const certFee = data.programmeType === "HND" ? fees.certificateFeeHND : fees.certificateFeeND;
 
-        if (institutionalFee === 0 && processingFee === 0) {
+        const payCertificate = !data.selectedItems || data.selectedItems.includes('certificate');
+        const payConvocation = !data.selectedItems || data.selectedItems.includes('convocation');
+        const payIncidental = !data.selectedItems || data.selectedItems.includes('incidental');
+        const payProcessing = !data.selectedItems || data.selectedItems.includes('processing');
+
+        const institutionalFee = (payCertificate ? certFee : 0) +
+            (payConvocation ? fees.convocationFee : 0) +
+            (payIncidental ? fees.incidentalFee : 0);
+        const processingFee = payProcessing ? fees.processingFee : 0;
+        const totalFee = institutionalFee + processingFee;
+
+        // Clean up data for insert (omit selectedItems from db values)
+        const { selectedItems: _, ...dbData } = data;
+
+        if (totalFee === 0) {
             const [result] = await db.insert(alumniCertificateRequests).values({
-                ...data,
+                ...dbData,
                 convocationFeeRef: 'FREE-BYPASS',
                 processingFeeRef: 'FREE-BYPASS',
                 convocationFeeStatus: 'paid',
@@ -104,32 +120,41 @@ export async function submitCertificateApplication(data: {
             return { success: true, url: '/alumni/certificate/verify?ref=FREE-BYPASS', requestId: result.insertId };
         }
 
+        // If institutional fee is 0 but processing fee is > 0, bypass ALATPay and initialize Paystack directly
+        if (institutionalFee === 0 && processingFee > 0) {
+            const paystackRef = `ALUMNI-PAY-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+            const [result] = await db.insert(alumniCertificateRequests).values({
+                ...dbData,
+                convocationFeeRef: 'BYPASSED',
+                processingFeeRef: paystackRef,
+                convocationFeeStatus: 'paid',
+                processingFeeStatus: 'unpaid',
+                paymentStatus: 'unpaid',
+                approvalStatus: 'pending'
+            });
+            const insertId = result.insertId;
+            const initRes = await initiatePayment('paystack', processingFee, paystackRef, data.email, data.applicantName, '');
+            if (initRes.error) {
+                return { success: false, error: initRes.error };
+            }
+            return { success: true, url: initRes.paymentUrl, requestId: insertId };
+        }
+
         const alatRef = `ALUMNI-ALAT-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 
         const [result] = await db.insert(alumniCertificateRequests).values({
-            ...data,
+            ...dbData,
             convocationFeeRef: alatRef,
-            convocationFeeStatus: institutionalFee === 0 ? 'paid' : 'unpaid',
+            convocationFeeStatus: 'unpaid',
             processingFeeStatus: processingFee === 0 ? 'paid' : 'unpaid',
             paymentStatus: 'unpaid',
             approvalStatus: 'pending'
         });
 
         const insertId = result.insertId;
-        
-        // If institutional fee is 0 but processing fee is > 0, skip to paystack
-        if (institutionalFee === 0) {
-             const paystackRef = `ALUMNI-PAY-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-             await db.update(alumniCertificateRequests).set({ processingFeeRef: paystackRef }).where(eq(alumniCertificateRequests.id, insertId));
-             const initRes = await initiatePayment(paystackRef, processingFee, 'paystack', data.email, data.applicantName, '');
-             if (initRes.error) {
-                 return { success: false, error: initRes.error };
-             }
-             return { success: true, url: initRes.paymentUrl, requestId: insertId };
-        }
 
-        // Initialize ALATPay (Step 1: Certificate + Convocation + Incidental Fee)
-        const initRes = await initiatePayment(alatRef, institutionalFee, 'alatpay', data.email, data.applicantName, '');
+        // Initialize ALATPay (Step 1: Selected Institutional Fees)
+        const initRes = await initiatePayment('alatpay', institutionalFee, alatRef, data.email, data.applicantName, '');
         if (initRes.error) {
             return { success: false, error: initRes.error };
         }
@@ -152,24 +177,27 @@ export async function verifyCertificatePayment(reference: string) {
 
         if (!request) return { success: false, error: "Request not found for this reference" };
 
-        const { processingFee } = await getDynamicAlumniFees();
-
         // If ALATPay just finished
         if (request.convocationFeeRef === reference && request.convocationFeeStatus === 'unpaid') {
+            const isProcessingAlreadyPaid = request.processingFeeStatus === 'paid';
+
             await db.update(alumniCertificateRequests).set({
                 convocationFeeStatus: 'paid',
-                paymentStatus: processingFee === 0 ? 'paid' : 'partial'
+                paymentStatus: isProcessingAlreadyPaid ? 'paid' : 'partial'
             }).where(eq(alumniCertificateRequests.id, request.id));
 
-            // If there is a processing fee, initialize Paystack now
-            if (processingFee > 0) {
-                const paystackRef = `ALUMNI-PAY-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-                await db.update(alumniCertificateRequests).set({ processingFeeRef: paystackRef }).where(eq(alumniCertificateRequests.id, request.id));
-                const initRes = await initiatePayment(paystackRef, processingFee, 'paystack', request.email, request.applicantName, '');
-                if (initRes.error) {
-                    return { success: false, error: "Failed to init Paystack: " + initRes.error };
+            // If there is an unpaid processing fee, initialize Paystack now
+            if (!isProcessingAlreadyPaid) {
+                const { processingFee } = await getDynamicAlumniFees();
+                if (processingFee > 0) {
+                    const paystackRef = `ALUMNI-PAY-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+                    await db.update(alumniCertificateRequests).set({ processingFeeRef: paystackRef }).where(eq(alumniCertificateRequests.id, request.id));
+                    const initRes = await initiatePayment('paystack', processingFee, paystackRef, request.email, request.applicantName, '');
+                    if (initRes.error) {
+                        return { success: false, error: "Failed to init Paystack: " + initRes.error };
+                    }
+                    return { success: true, nextPaymentUrl: initRes.paymentUrl };
                 }
-                return { success: true, nextPaymentUrl: initRes.paymentUrl };
             }
 
             return { success: true, message: "Payment complete", fullyPaid: true };

@@ -9,6 +9,20 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 
+const TAB_ORDER = [
+    'School Fees',
+    'ICT Fee',
+    'Incidental Fee',
+    'Acceptance Fee',
+    'Application Form Fee',
+    'Processing Fee',
+    'Transcript Fee',
+    'Certificate Fee',
+    'ID Card Fee',
+    'Wallet Topup',
+    'Others'
+];
+
 export default function SuccessfulPaymentsPage() {
     const [groupedData, setGroupedData] = useState<Record<string, any[]>>({});
     const [loading, setLoading] = useState(true);
@@ -19,13 +33,25 @@ export default function SuccessfulPaymentsPage() {
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 50;
 
+    const sortTabKeys = (keys: string[]) => {
+        return keys.sort((a, b) => {
+            let idxA = TAB_ORDER.indexOf(a);
+            let idxB = TAB_ORDER.indexOf(b);
+            if (idxA === -1) idxA = a.toLowerCase().includes('other') ? 999 : 50;
+            if (idxB === -1) idxB = b.toLowerCase().includes('other') ? 999 : 50;
+            return idxA - idxB;
+        });
+    };
+
     const loadData = () => {
         setLoading(true);
         getSuccessfulPaymentsGrouped().then((res) => {
             if (res.success && res.data) {
                 setGroupedData(res.data);
-                const keys = Object.keys(res.data);
-                if (keys.length > 0 && !keys.includes(activeTab)) setActiveTab(keys[0]);
+                const sortedKeys = sortTabKeys(Object.keys(res.data));
+                if (sortedKeys.length > 0 && !sortedKeys.includes(activeTab)) {
+                    setActiveTab(sortedKeys[0]);
+                }
             }
             setLoading(false);
             setSelectedIds(new Set());
@@ -146,7 +172,11 @@ export default function SuccessfulPaymentsPage() {
 
     if (loading) return <div className="p-10 flex justify-center"><Loader2 className="w-8 h-8 animate-spin text-indigo-500" /></div>;
 
-    const tabs = Object.keys(groupedData);
+    const tabs = useMemo(() => sortTabKeys(Object.keys(groupedData)), [groupedData]);
+
+    const activeTabTotalAmount = useMemo(() => {
+        return currentTabData.reduce((sum, tx) => sum + (parseFloat(tx.amount) || 0), 0);
+    }, [currentTabData]);
 
     return (
         <div className="p-6 md:p-10 max-w-7xl mx-auto space-y-8">
@@ -183,6 +213,27 @@ export default function SuccessfulPaymentsPage() {
                         ))}
                     </div>
 
+                    {/* Active Tab Summary Banner */}
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-4 px-6 rounded-xl border border-slate-200 shadow-sm gap-3">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 font-black text-lg">
+                                ₦
+                            </div>
+                            <div>
+                                <h2 className="text-base font-black text-slate-800">{activeTab} Collections</h2>
+                                <p className="text-xs text-slate-500 font-medium">
+                                    {currentTabData.length} settled transaction{currentTabData.length === 1 ? '' : 's'} recorded
+                                </p>
+                            </div>
+                        </div>
+                        <div className="text-left sm:text-right">
+                            <span className="text-[11px] text-slate-400 font-bold uppercase tracking-wider block">Total Collected</span>
+                            <span className="text-xl font-black text-emerald-600">
+                                ₦{activeTabTotalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </span>
+                        </div>
+                    </div>
+
                     {/* Table */}
                     <Card className="overflow-hidden border-slate-200 shadow-sm">
                         <div className="overflow-x-auto">
@@ -208,7 +259,14 @@ export default function SuccessfulPaymentsPage() {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100">
-                                    {paginatedData.map((tx) => (
+                                    {paginatedData.length === 0 ? (
+                                        <tr>
+                                            <td colSpan={9} className="px-6 py-12 text-center text-slate-400 font-medium">
+                                                No settled {activeTab} transactions found.
+                                            </td>
+                                        </tr>
+                                    ) : (
+                                        paginatedData.map((tx) => (
                                         <tr key={`${tx.type}-${tx.id}`} className="hover:bg-slate-50 transition-colors">
                                             <td className="px-6 py-4">
                                                 <input 
@@ -265,7 +323,7 @@ export default function SuccessfulPaymentsPage() {
                                                 </div>
                                             </td>
                                         </tr>
-                                    ))}
+                                    )))}
                                 </tbody>
                             </table>
                         </div>

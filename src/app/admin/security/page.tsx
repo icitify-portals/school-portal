@@ -44,6 +44,14 @@ export default function SecurityDashboard() {
             bgColor: "bg-green-50 border-green-100",
         },
         {
+            title: "Password Reset Centre",
+            description: "Search any user and reset their password with forced change at next login",
+            icon: Lock,
+            href: "/admin/security/password-reset",
+            color: "bg-rose-500",
+            bgColor: "bg-rose-50 border-rose-100",
+        },
+        {
             title: "Role & Permissions",
             description: "Manage user roles and granular permission assignments",
             icon: Users,

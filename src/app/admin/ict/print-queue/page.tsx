@@ -17,7 +17,7 @@ import {
 import { toast } from "sonner";
 import {
     getPrintQueue, getICTStaff, assignPrintJob,
-    bulkUpdatePrintStatus, getPrintQueueStats, issueBatchIDCards
+    bulkUpdatePrintStatus, getPrintQueueStats, issueBatchIDCards, getStudentsWithoutCards, processAcceptancePaidFreshmenIDCards
 } from "@/actions/ict-manager";
 import IDCardTemplate1 from "@/components/id-cards/IDCardTemplate1";
 
@@ -150,6 +150,64 @@ export default function ICTPrintQueuePage() {
     }
 
     const totalPages = Math.ceil(total / pageSize);
+
+    // ── Issue cards (students without an active card) ──
+    const [showIssue, setShowIssue] = useState(false);
+    const [issueSearch, setIssueSearch] = useState("");
+    const [issueList, setIssueList] = useState<any[]>([]);
+    const [issueSelected, setIssueSelected] = useState<number[]>([]);
+    const [issueLoading, setIssueLoading] = useState(false);
+    const [issuing, setIssuing] = useState(false);
+    const [processingFreshmen, setProcessingFreshmen] = useState(false);
+    const [issueLevelFilter, setIssueLevelFilter] = useState<'all' | 'freshmen' | 'returning_ready' | 'returning_incomplete'>('all');
+
+    const loadIssueList = useCallback(async () => {
+        setIssueLoading(true);
+        const res = await getStudentsWithoutCards({ search: issueSearch || undefined, levelFilter: issueLevelFilter, limit: 200 });
+        if (res.success) setIssueList(res.data);
+        else toast.error(res.error);
+        setIssueLoading(false);
+    }, [issueSearch, issueLevelFilter]);
+
+    useEffect(() => {
+        if (showIssue) loadIssueList();
+    }, [showIssue, loadIssueList]);
+
+    async function handleProcessAcceptancePaid() {
+        if (!window.confirm("Process ID cards for all ND 1 & HND 1 students with confirmed acceptance fee payment?")) return;
+        setProcessingFreshmen(true);
+        const res = await processAcceptancePaidFreshmenIDCards();
+        setProcessingFreshmen(false);
+        if (res.success) {
+            toast.success(res.message);
+            loadIssueList();
+            loadQueue();
+            getPrintQueueStats().then((r) => r.success && setStats(r.data));
+        } else {
+            toast.error(res.error);
+        }
+    }
+
+    async function handleIssue() {
+        if (!issueSelected.length) return toast.error("Select students first");
+        setIssuing(true);
+        const res = await issueBatchIDCards(issueSelected);
+        setIssuing(false);
+        if (res.success) {
+            toast.success(res.message);
+            setIssueSelected([]);
+            loadIssueList();
+            loadQueue();
+            getPrintQueueStats().then((r) => r.success && setStats(r.data));
+        } else {
+            toast.error(res.error);
+        }
+    }
+
+    function handlePrintSelected() {
+        if (!selected.length) return toast.error("Select cards first");
+        window.open(`/admin/ict/print-queue/print?ids=${selected.join(",")}`, "_blank");
+    }
     const statMap = Object.fromEntries(stats.map((s) => [s.status, s.count]));
 
     return (
@@ -239,6 +297,145 @@ export default function ICTPrintQueuePage() {
                     )}
                 </Card>
 
+                {/* Issue Cards Panel */}
+                <Card className="rounded-2xl border-slate-200">
+                    <CardHeader className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-3">
+                        <div>
+                            <div className="flex items-center gap-2">
+                                <CardTitle className="text-base font-black text-slate-900 uppercase">Issue & Queue ID Cards</CardTitle>
+                                <span className="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-full">Automated Gating Active</span>
+                            </div>
+                            <CardDescription className="text-xs mt-1">
+                                ND 1 &amp; HND 1 require acceptance fee payment. ND 2 &amp; HND 2 must have photograph &amp; signature captured before being queued.
+                            </CardDescription>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <Button
+                                size="sm"
+                                onClick={handleProcessAcceptancePaid}
+                                disabled={processingFreshmen}
+                                className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg gap-1.5 text-xs font-bold"
+                            >
+                                {processingFreshmen ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                                Auto-Process ND 1 &amp; HND 1 (Acceptance Paid)
+                            </Button>
+                            <Button size="sm" variant="outline" onClick={() => setShowIssue(!showIssue)} className="rounded-lg gap-1 text-xs">
+                                {showIssue ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                                {showIssue ? "Hide Panel" : "Select Students"}
+                            </Button>
+                        </div>
+                    </CardHeader>
+                    {showIssue && (
+                        <CardContent className="p-4 pt-0 space-y-3">
+                            {/* Filter Bar */}
+                            <div className="flex gap-2 flex-wrap items-center justify-between border-b border-slate-100 pb-3">
+                                <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl text-xs">
+                                    <button
+                                        type="button"
+                                        onClick={() => setIssueLevelFilter('all')}
+                                        className={`px-2.5 py-1 rounded-lg font-bold transition-all ${issueLevelFilter === 'all' ? 'bg-white shadow-xs text-indigo-700' : 'text-slate-600'}`}
+                                    >
+                                        All
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setIssueLevelFilter('freshmen')}
+                                        className={`px-2.5 py-1 rounded-lg font-bold transition-all ${issueLevelFilter === 'freshmen' ? 'bg-white shadow-xs text-emerald-700' : 'text-slate-600'}`}
+                                    >
+                                        ND 1 / HND 1 (Acceptance Paid)
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setIssueLevelFilter('returning_ready')}
+                                        className={`px-2.5 py-1 rounded-lg font-bold transition-all ${issueLevelFilter === 'returning_ready' ? 'bg-white shadow-xs text-indigo-700' : 'text-slate-600'}`}
+                                    >
+                                        ND 2 / HND 2 (Ready to Print)
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setIssueLevelFilter('returning_incomplete')}
+                                        className={`px-2.5 py-1 rounded-lg font-bold transition-all ${issueLevelFilter === 'returning_incomplete' ? 'bg-white shadow-xs text-amber-700' : 'text-slate-600'}`}
+                                    >
+                                        ND 2 / HND 2 (Needs Photo/Signature)
+                                    </button>
+                                </div>
+                                <a
+                                    href="/admin/ict/photo-capture"
+                                    target="_blank"
+                                    className="text-xs text-indigo-600 font-bold hover:underline flex items-center gap-1"
+                                >
+                                    Open Photo &amp; Signature Capture Unit &rarr;
+                                </a>
+                            </div>
+
+                            <div className="flex gap-3 items-center flex-wrap">
+                                <Input
+                                    placeholder="Search name or matric number..."
+                                    value={issueSearch}
+                                    onChange={(e) => setIssueSearch(e.target.value)}
+                                    className="h-10 rounded-xl max-w-sm"
+                                />
+                                <Button size="sm" variant="outline" className="rounded-lg text-xs"
+                                    onClick={() => {
+                                        const eligibleIds = issueList.filter(s => s.isEligible).map(s => s.userId);
+                                        setIssueSelected(issueSelected.length === eligibleIds.length ? [] : eligibleIds);
+                                    }}>
+                                    {issueSelected.length > 0 ? "Clear Selection" : "Select All Eligible"}
+                                </Button>
+                                <Button size="sm" onClick={handleIssue} disabled={issuing || !issueSelected.length} className="rounded-lg gap-1 text-xs font-bold">
+                                    {issuing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                                    Issue {issueSelected.length || ""} Selected Card(s)
+                                </Button>
+                            </div>
+
+                            <div className="max-h-72 overflow-auto border border-slate-200 rounded-xl">
+                                {issueLoading ? (
+                                    <div className="p-6 text-center"><Loader2 className="w-6 h-6 animate-spin text-indigo-500 mx-auto" /></div>
+                                ) : issueList.length === 0 ? (
+                                    <p className="p-6 text-center text-sm text-slate-400">No students matching this filter.</p>
+                                ) : (
+                                    issueList.map((s) => (
+                                        <label
+                                            key={s.userId}
+                                            className={`flex items-center gap-3 px-3 py-2 border-b border-slate-100 text-sm ${s.isEligible ? 'cursor-pointer hover:bg-slate-50' : 'opacity-65 bg-slate-50/50 cursor-not-allowed'}`}
+                                        >
+                                            <input
+                                                type="checkbox"
+                                                disabled={!s.isEligible}
+                                                checked={issueSelected.includes(s.userId)}
+                                                onChange={() => {
+                                                    if (!s.isEligible) return;
+                                                    setIssueSelected((p) => p.includes(s.userId) ? p.filter((x) => x !== s.userId) : [...p, s.userId]);
+                                                }}
+                                            />
+                                            <span className="font-bold text-slate-900 flex-1">{s.studentName}</span>
+                                            <Badge variant="outline" className="text-[10px] font-mono">{s.levelLabel}</Badge>
+                                            <span className="font-mono text-xs text-slate-600">{s.matricNumber || "-"}</span>
+                                            <span className="text-xs text-slate-500 w-36 truncate">{s.deptName || "-"}</span>
+                                            
+                                            {s.isFreshman ? (
+                                                s.hasPaidAcceptance ? (
+                                                    <Badge className="bg-emerald-100 text-emerald-800 text-[10px] border-emerald-200">Acceptance Paid</Badge>
+                                                ) : (
+                                                    <Badge className="bg-rose-100 text-rose-700 text-[10px] border-rose-200">Acceptance Pending</Badge>
+                                                )
+                                            ) : (
+                                                s.isEligible ? (
+                                                    <Badge className="bg-indigo-100 text-indigo-800 text-[10px] border-indigo-200">Verified</Badge>
+                                                ) : (
+                                                    <Badge className="bg-amber-100 text-amber-800 text-[10px] border-amber-200" title={s.eligibilityNote}>
+                                                        Profile Incomplete
+                                                    </Badge>
+                                                )
+                                            )}
+                                        </label>
+                                    ))
+                                )}
+                            </div>
+                        </CardContent>
+                    )}
+                </Card>
+
                 {/* Filters & Actions Bar */}
                 <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 space-y-4">
                     <div className="flex gap-4 items-end flex-wrap">
@@ -286,6 +483,9 @@ export default function ICTPrintQueuePage() {
                                 <Button size="sm" onClick={handleAssign} disabled={assigning} className="gap-1 rounded-lg">
                                     {assigning ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
                                     Assign
+                                </Button>
+                                <Button size="sm" onClick={handlePrintSelected} className="gap-1 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white">
+                                    <Printer className="w-4 h-4" /> Print Selected (PVC)
                                 </Button>
                                 <Button size="sm" variant="outline" onClick={() => handleStatusUpdate("printing")} disabled={updating} className="gap-1 rounded-lg">
                                     <Printer className="w-4 h-4" /> Mark Printing

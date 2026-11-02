@@ -2,7 +2,7 @@
 
 import { db } from "@/db/db";
 import { idCards, users, students, departments, programmes, staffProfiles, semesterSummaries, studentCourseRegistrations, courses, academicSessions } from "@/db/schema";
-import { eq, and, inArray, sql, desc, or } from "drizzle-orm";
+import { eq, and, inArray, sql, desc, or, like } from "drizzle-orm";
 import { auth } from "@/auth";
 import { revalidatePath } from "next/cache";
 
@@ -39,6 +39,14 @@ export async function getPrintQueue(filters?: {
             whereConditions = and(whereConditions, eq(idCards.printStatus, filters.status as any));
         }
 
+        if (filters?.search) {
+            const q = `%${filters.search}%`;
+            whereConditions = and(
+                whereConditions,
+                or(like(users.name, q), like(students.matricNumber, q), like(idCards.issueId, q))
+            );
+        }
+
         const cards = await db.select({
             id: idCards.id,
             userId: idCards.userId,
@@ -72,6 +80,8 @@ export async function getPrintQueue(filters?: {
 
         const [{ count }] = await db.select({ count: sql<number>`count(*)` })
             .from(idCards)
+            .innerJoin(users, eq(idCards.userId, users.id))
+            .leftJoin(students, eq(users.id, students.userId))
             .where(whereConditions);
 
         return { success: true, data: cards, total: count };
@@ -203,6 +213,33 @@ export async function issueBatchIDCards(userIds: number[]) {
 
         if (!userIds.length) throw new Error("No users selected");
 
+        // Fetch students to check level & eligibility rules
+        const studentRows = await db.select({
+            userId: students.userId,
+            currentLevel: students.currentLevel,
+            programmeType: students.programmeType,
+            hasPhoto: sql<number>`(${students.imageUrl} IS NOT NULL AND ${students.imageUrl} <> '')`,
+            hasSignature: sql<number>`(${students.signatureUrl} IS NOT NULL AND ${students.signatureUrl} <> '')`,
+            studentName: users.name,
+        })
+        .from(students)
+        .innerJoin(users, eq(students.userId, users.id))
+        .where(inArray(students.userId, userIds));
+
+        const studentMap = new Map(studentRows.map(s => [s.userId, s]));
+
+        // Check ND 2 / HND 2 restriction: must have photo AND signature
+        for (const uid of userIds) {
+            const s = studentMap.get(uid);
+            if (s) {
+                const lvl = parseInt(String(s.currentLevel || 1));
+                const isReturning = lvl === 2 || lvl === 200 || lvl === 400 || lvl === 4;
+                if (isReturning && (!Number(s.hasPhoto) || !Number(s.hasSignature))) {
+                    throw new Error(`Student ${s.studentName} (ND 2 / HND 2) cannot be processed without both photograph and signature. Please update via Profile or ICT Photo Capture.`);
+                }
+            }
+        }
+
         const issued = [];
         for (const userId of userIds) {
             // Check if already has active card
@@ -217,7 +254,7 @@ export async function issueBatchIDCards(userIds: number[]) {
                 // Update to physical_print if not already
                 if (existing.cardType !== "physical_print") {
                     await db.update(idCards)
-                        .set({ cardType: "physical_print" })
+                        .set({ cardType: "physical_print", printStatus: "pending" })
                         .where(eq(idCards.id, existing.id));
                 }
                 issued.push({ userId, issueId: existing.issueId, status: "updated" });
@@ -250,9 +287,237 @@ export async function issueBatchIDCards(userIds: number[]) {
     }
 }
 
-// ──────────────────────────────────────────────────────────────
-// Course Registration Print Management
-// ──────────────────────────────────────────────────────────────
+/** Full card data for the PVC batch print view (front + back per card). */
+export async function getPrintCardsByIds(cardIds: number[]) {
+    try {
+        await ensureICTManager();
+        if (!cardIds.length) throw new Error("No cards selected");
+
+        const cards = await db.select({
+            id: idCards.id,
+            issueId: idCards.issueId,
+            verificationCode: idCards.verificationCode,
+            studentName: users.name,
+            matricNumber: students.matricNumber,
+            programmeType: students.programmeType,
+            currentLevel: students.currentLevel,
+            deptName: departments.name,
+            photoUrl: students.imageUrl,
+            signatureUrl: students.signatureUrl,
+            phoneNumber: users.phone,
+        })
+        .from(idCards)
+        .innerJoin(users, eq(idCards.userId, users.id))
+        .leftJoin(students, eq(users.id, students.userId))
+        .leftJoin(departments, eq(students.deptId, departments.id))
+        .where(inArray(idCards.id, cardIds))
+        .orderBy(users.name);
+
+        return { success: true, data: cards };
+    } catch (error) {
+        return { success: false, error: (error as Error).message, data: [] };
+    }
+}
+
+/** Active students that do not yet have an active ID card (for ICT bulk issuing). */
+export async function getStudentsWithoutCards(filters?: {
+    search?: string;
+    departmentId?: number;
+    levelFilter?: 'all' | 'freshmen' | 'returning_ready' | 'returning_incomplete';
+    limit?: number;
+}) {
+    try {
+        await ensureICTManager();
+        let where: any = and(
+            sql`${students.deletedAt} IS NULL`,
+            sql`NOT EXISTS (SELECT 1 FROM id_cards ic WHERE ic.user_id = ${students.userId} AND ic.status = 'active')`
+        );
+        if (filters?.departmentId) where = and(where, eq(students.deptId, filters.departmentId));
+        if (filters?.search) {
+            const q = `%${filters.search}%`;
+            where = and(where, or(like(users.name, q), like(students.matricNumber, q)));
+        }
+
+        const rows = await db.select({
+            userId: students.userId,
+            studentName: users.name,
+            matricNumber: students.matricNumber,
+            deptName: departments.name,
+            currentLevel: students.currentLevel,
+            programmeType: students.programmeType,
+            hasPhoto: sql<number>`(${students.imageUrl} IS NOT NULL AND ${students.imageUrl} <> '')`,
+            hasSignature: sql<number>`(${students.signatureUrl} IS NOT NULL AND ${students.signatureUrl} <> '')`,
+            isPaymentLocked: students.isPaymentLocked,
+            hasPaidAcceptance: sql<number>`(
+                EXISTS (
+                    SELECT 1 FROM payment_transactions pt 
+                    WHERE pt.user_id = ${students.userId} 
+                      AND pt.transaction_type LIKE '%acceptance%' 
+                      AND pt.status = 'completed'
+                ) OR EXISTS (
+                    SELECT 1 FROM admission_applications_v2 a 
+                    WHERE a.applicant_id = ${students.userId} 
+                      AND a.acceptance_payment_status = 'paid'
+                )
+            )`,
+        })
+        .from(students)
+        .innerJoin(users, eq(students.userId, users.id))
+        .leftJoin(departments, eq(students.deptId, departments.id))
+        .where(where)
+        .orderBy(users.name)
+        .limit(filters?.limit || 150);
+
+        const data = rows.map(r => {
+            const rawLvl = parseInt(String(r.currentLevel || 1));
+            const prog = (r.programmeType || '').toUpperCase();
+            const isFreshman = rawLvl === 100 || (rawLvl === 1 && prog === 'ND') || rawLvl === 300 || rawLvl === 3 || (rawLvl === 1 && prog === 'HND');
+            const levelLabel = isFreshman ? (prog === 'HND' ? 'HND 1' : 'ND 1') : (prog === 'HND' ? 'HND 2' : 'ND 2');
+            const hasPhoto = Boolean(Number(r.hasPhoto));
+            const hasSignature = Boolean(Number(r.hasSignature));
+            const hasPaidAcceptance = Boolean(Number(r.hasPaidAcceptance));
+            const isPaymentLocked = Boolean(r.isPaymentLocked);
+
+            let isEligible = false;
+            let statusTag: 'freshman_paid' | 'freshman_unpaid' | 'returning_ready' | 'returning_incomplete' = 'returning_incomplete';
+            let eligibilityNote = '';
+
+            if (isFreshman) {
+                if (hasPaidAcceptance) {
+                    isEligible = true;
+                    statusTag = 'freshman_paid';
+                    eligibilityNote = 'Acceptance Fee Paid — Ready for ID Card';
+                } else {
+                    isEligible = false;
+                    statusTag = 'freshman_unpaid';
+                    eligibilityNote = 'Awaiting Acceptance Payment';
+                }
+            } else {
+                // ND 2 / HND 2
+                if (!hasPhoto && !hasSignature) {
+                    isEligible = false;
+                    statusTag = 'returning_incomplete';
+                    eligibilityNote = 'Awaiting Photograph & Signature (update on profile or ICT capture unit)';
+                } else if (!hasPhoto) {
+                    isEligible = false;
+                    statusTag = 'returning_incomplete';
+                    eligibilityNote = 'Awaiting Photograph upload';
+                } else if (!hasSignature) {
+                    isEligible = false;
+                    statusTag = 'returning_incomplete';
+                    eligibilityNote = 'Awaiting Specimen Signature';
+                } else if (isPaymentLocked) {
+                    isEligible = false;
+                    statusTag = 'returning_incomplete';
+                    eligibilityNote = 'Fee Payment Required';
+                } else {
+                    isEligible = true;
+                    statusTag = 'returning_ready';
+                    eligibilityNote = 'Profile & Payment Verified';
+                }
+            }
+
+            return {
+                ...r,
+                levelLabel,
+                isFreshman,
+                hasPhoto,
+                hasSignature,
+                hasPaidAcceptance,
+                isEligible,
+                statusTag,
+                eligibilityNote
+            };
+        });
+
+        // Filter if requested
+        let filtered = data;
+        if (filters?.levelFilter === 'freshmen') {
+            filtered = data.filter(d => d.isFreshman && d.isEligible);
+        } else if (filters?.levelFilter === 'returning_ready') {
+            filtered = data.filter(d => !d.isFreshman && d.isEligible);
+        } else if (filters?.levelFilter === 'returning_incomplete') {
+            filtered = data.filter(d => !d.isFreshman && !d.isEligible);
+        }
+
+        return { success: true, data: filtered };
+    } catch (error) {
+        return { success: false, error: (error as Error).message, data: [] };
+    }
+}
+
+/** Automatically process all eligible ND 1 and HND 1 students who paid acceptance fee into the print queue. */
+export async function processAcceptancePaidFreshmenIDCards() {
+    try {
+        await ensureICTManager();
+
+        // Find all ND 1 and HND 1 students who paid acceptance fee and don't have an active card
+        const eligibleRows = await db.select({
+            userId: students.userId,
+            name: users.name,
+            matricNumber: students.matricNumber,
+        })
+        .from(students)
+        .innerJoin(users, eq(students.userId, users.id))
+        .where(and(
+            sql`${students.deletedAt} IS NULL`,
+            sql`NOT EXISTS (SELECT 1 FROM id_cards ic WHERE ic.user_id = ${students.userId} AND ic.status = 'active')`,
+            sql`(
+                EXISTS (
+                    SELECT 1 FROM payment_transactions pt 
+                    WHERE pt.user_id = ${students.userId} 
+                      AND pt.transaction_type LIKE '%acceptance%' 
+                      AND pt.status = 'completed'
+                ) OR EXISTS (
+                    SELECT 1 FROM admission_applications_v2 a 
+                    WHERE a.applicant_id = ${students.userId} 
+                      AND a.acceptance_payment_status = 'paid'
+                )
+            )`
+        ));
+
+        if (!eligibleRows.length) {
+            return { success: true, count: 0, message: "All students with paid acceptance fees already have active cards in queue." };
+        }
+
+        const { v4: uuidv4 } = await import("uuid");
+        const userIds = eligibleRows.map(r => r.userId);
+        
+        // Batch insert in chunks of 50
+        const chunkSize = 50;
+        let insertedCount = 0;
+        for (let i = 0; i < userIds.length; i += chunkSize) {
+            const chunk = userIds.slice(i, i + chunkSize);
+            const values = chunk.map(uid => {
+                const issueId = `ID-${Date.now()}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
+                const verificationCode = uuidv4();
+                const expiresAt = new Date();
+                expiresAt.setFullYear(expiresAt.getFullYear() + 4);
+                return {
+                    userId: uid,
+                    userType: "student" as const,
+                    cardType: "physical_print" as const,
+                    issueId,
+                    verificationCode,
+                    expiresAt,
+                    status: "active" as const,
+                    printStatus: "pending" as const,
+                };
+            });
+            await db.insert(idCards).values(values);
+            insertedCount += chunk.length;
+        }
+
+        revalidatePath("/admin/ict/print-queue");
+        return {
+            success: true,
+            count: insertedCount,
+            message: `Successfully processed ${insertedCount} ID card(s) for acceptance-paid students into the print queue.`
+        };
+    } catch (error) {
+        return { success: false, error: (error as Error).message };
+    }
+}
 
 export async function getCourseRegistrationPrintQueue(filters?: {
     departmentId?: number;

@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/db/db";
 import {
     students, programmes, departments,
-    admissionApplicationsV2, admissionFormTemplates,
+    admissionApplicationsV2, admissionFormTemplates, idCards,
 } from "@/db/schema";
 import { eq, and, or, like, isNotNull, isNull, desc, asc, sql, count } from "drizzle-orm";
 
@@ -31,11 +31,56 @@ export async function requestIDCardAction(userType: 'student' | 'staff') {
     const existing = await IDCardService.getActiveCard(userId);
     if (existing) return { success: true, message: "ID Card already issued", card: existing };
 
+    // Students do not self-issue: the ICT unit issues cards for all students.
+    // A lost card is handled through requestReplacementIDCardAction.
+    if (userType === 'student') {
+        return { success: false, error: "Your ID card has not been issued yet. The ICT unit issues cards for all students." };
+    }
+
     const res = await IDCardService.issueIDCard(userId, userType);
     if (res.success) {
         revalidatePath(`/${userType}/id-card`);
     }
     return res;
+}
+
+/**
+ * Student reports a lost card: the current card is revoked and a replacement
+ * is queued for ICT to print. Only allowed once the current card was already printed.
+ */
+export async function requestReplacementIDCardAction(reason: string) {
+    const session = await auth();
+    const user = session?.user as any;
+    if (!user?.id || user.role !== 'student') return { success: false, error: "Unauthorized" };
+    const userId = parseInt(user.id);
+
+    const cleanReason = (reason || "").trim().slice(0, 300);
+    if (cleanReason.length < 5) return { success: false, error: "Please state how the card was lost (at least 5 characters)." };
+
+    const current: any = await IDCardService.getActiveCard(userId);
+    if (!current) return { success: false, error: "You have no issued card yet. ICT will issue your card." };
+    if (!['printed', 'delivered'].includes(current.printStatus)) {
+        return { success: false, error: "Your card is still being processed by ICT. A replacement can only be requested after it has been printed." };
+    }
+
+    const revoked = await IDCardService.revokeCard(current.id);
+    if (!revoked.success) return revoked;
+
+    const res: any = await IDCardService.issueIDCard(userId, 'student');
+    if (!res.success) return res;
+
+    const fresh: any = await IDCardService.getActiveCard(userId);
+    if (fresh) {
+        await db.update(idCards).set({
+            cardType: 'physical_print',
+            printStatus: 'pending',
+            printNotes: `REPLACEMENT (lost card): ${cleanReason}`,
+        }).where(eq(idCards.id, fresh.id));
+    }
+
+    revalidatePath("/student/id-card");
+    revalidatePath("/admin/ict/print-queue");
+    return { success: true, message: "Replacement requested. ICT will print your new card." };
 }
 
 export async function getMyIDCardAction() {

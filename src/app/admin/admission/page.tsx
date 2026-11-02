@@ -158,6 +158,9 @@ export default function AdminAdmissionDashboard() {
                                         <div>
                                             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Total Applicants</p>
                                             <p className="text-3xl font-black text-slate-900 tracking-tighter">{stats?.totalApplicants || 0}</p>
+                                            <p className="text-[10px] font-bold text-slate-500 mt-1">
+                                                {Object.entries((stats as any)?.byStatus || {}).map(([k, v]) => `${v} ${k}`).join(' • ') || 'No applications yet'}
+                                            </p>
                                             <p className="text-[9px] font-bold text-indigo-600 mt-1 flex items-center gap-1 group-hover:underline">Open in Applications Page <ExternalLink className="w-3 h-3" /></p>
                                         </div>
                                     </div>

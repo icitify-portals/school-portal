@@ -50,13 +50,26 @@ export async function getPaymentGatewayConfigs() {
     }
 }
 
-export async function initiatePayment(gateway: string, amount: number, reference: string, email: string, firstName?: string, lastName?: string, phone?: string, description?: string) {
+export async function initiatePayment(gatewayOrRef: string, amount: number, refOrGateway: string, email: string, firstName?: string, lastName?: string, phone?: string, description?: string) {
     try {
-        const def = GATEWAY_DEFS[gateway];
-        if (!def) return { error: "Unknown payment gateway" };
+        let gateway = gatewayOrRef;
+        let reference = refOrGateway;
 
-        const publicKey = process.env[`${def.envPrefix}_PUBLIC_KEY`];
-        const secretKey = process.env[`${def.envPrefix}_SECRET_KEY`];
+        // Auto-detect swapped gateway and reference arguments
+        if (!GATEWAY_DEFS[gateway?.toLowerCase()] && GATEWAY_DEFS[reference?.toLowerCase()]) {
+            const temp = gateway;
+            gateway = reference;
+            reference = temp;
+        }
+
+        const normalizedGateway = gateway?.toLowerCase();
+        const def = GATEWAY_DEFS[normalizedGateway];
+        if (!def) return { error: `Unknown payment gateway: "${gateway}"` };
+
+        const publicKey = process.env[`${def.envPrefix}_PUBLIC_KEY`] || 
+            (normalizedGateway === 'alatpay' ? (process.env.NEXT_PUBLIC_ALATPAY_API_KEY_MAIN || process.env.NEXT_PUBLIC_ALATPAY_API_KEY_CERT || process.env.NEXT_PUBLIC_ALATPAY_API_KEY_1) : undefined);
+        const secretKey = process.env[`${def.envPrefix}_SECRET_KEY`] || 
+            (normalizedGateway === 'alatpay' ? (process.env.ALATPAY_SECRET_KEY_MAIN || process.env.ALATPAY_SECRET_KEY_CERT || process.env.ALATPAY_SECRET_KEY_1) : undefined);
 
         if (!publicKey || !secretKey) {
             return { error: `${def.name} is not configured. Add ${def.envPrefix}_PUBLIC_KEY and ${def.envPrefix}_SECRET_KEY to .env` };
@@ -64,7 +77,7 @@ export async function initiatePayment(gateway: string, amount: number, reference
 
         let paymentUrl = '';
 
-        if (gateway === 'paystack') {
+        if (normalizedGateway === 'paystack') {
             const res = await fetch('https://api.paystack.co/transaction/initialize', {
                 method: 'POST',
                 headers: {
@@ -92,7 +105,7 @@ export async function initiatePayment(gateway: string, amount: number, reference
             if (data.status) paymentUrl = data.data.authorization_url;
             else return { error: data.message || "Paystack initialization failed" };
 
-        } else if (gateway === 'flutterwave') {
+        } else if (normalizedGateway === 'flutterwave') {
             const res = await fetch('https://api.flutterwave.com/v3/payments', {
                 method: 'POST',
                 headers: {
@@ -115,7 +128,7 @@ export async function initiatePayment(gateway: string, amount: number, reference
             if (data.status === 'success') paymentUrl = data.data.link;
             else return { error: data.message || "Flutterwave initialization failed" };
 
-        } else if (gateway === 'remita') {
+        } else if (normalizedGateway === 'remita') {
             const isLive = process.env.REMITA_ENV !== 'demo';
             const merchantId = isLive ? "19201597339" : (process.env.REMITA_MERCHANT_ID || "19201597339");
             const serviceTypeId = isLive ? "8817651539" : (process.env.REMITA_SERVICE_TYPE_ID || "8817651539"); // ND1 Default
@@ -161,7 +174,7 @@ export async function initiatePayment(gateway: string, amount: number, reference
             } else {
                 return { error: data.message || data.status || "Remita initialization failed" };
             }
-        } else if (gateway === 'alatpay') {
+        } else if (normalizedGateway === 'alatpay') {
             // Return a simulated checkout URL that handles ALATPay inline JS
             paymentUrl = `/finance/checkout/simulate?gateway=alatpay&reference=${reference}&amount=${amount}&firstName=${encodeURIComponent(firstName || 'Student')}&lastName=${encodeURIComponent(lastName || 'Payer')}&email=${encodeURIComponent(email)}&phone=${encodeURIComponent(phone || '')}&description=${encodeURIComponent(description || '')}`;
         } else {
@@ -169,7 +182,7 @@ export async function initiatePayment(gateway: string, amount: number, reference
             return { error: `${def.name} integration coming soon.` };
         }
 
-        await logActivity('initiate_payment', 'payment', undefined, { gateway, amount, reference });
+        await logActivity('initiate_payment', 'payment', undefined, { gateway: normalizedGateway, amount, reference });
 
         return { success: true, paymentUrl };
     } catch (error: any) {

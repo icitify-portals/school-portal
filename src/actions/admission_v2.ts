@@ -4500,8 +4500,11 @@ export async function getAdmissionV2Stats() {
         let byLevel: Record<string, number> = { ND: 0, HND: 0 };
         let byProgramme: Record<string, number> = {};
         let byProgrammeDetails: Record<string, { count: number; id: number | null }> = {};
+        const byStatus: Record<string, number> = {};
 
         for (const app of apps) {
+            const st = String(app.status || 'unknown');
+            byStatus[st] = (byStatus[st] || 0) + 1;
             let levelAssigned = false;
             const progName = app.programme?.name || 'Pending Course Selection';
             const progId = app.programme?.id || null;
@@ -4551,13 +4554,15 @@ export async function getAdmissionV2Stats() {
             totalApplicants,
             byLevel,
             byProgramme,
-            byProgrammeDetails
+            byProgrammeDetails,
+            byStatus
         };
 
     } catch (error: any) {
         console.error("[getAdmissionV2Stats] Failed:", error);
         return {
             totalApplicants: 0,
+            byStatus: {} as Record<string, number>,
             byLevel: { ND: 0, HND: 0 },
             byProgramme: {},
             byProgrammeDetails: {}

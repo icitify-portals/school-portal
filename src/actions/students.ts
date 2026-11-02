@@ -12,7 +12,10 @@ import { hasPermission, hasRole } from "@/lib/rbac";
 
 export async function getStudents(options: { search?: string, page?: number, pageSize?: number, level?: number | string, sessionId?: string, semester?: string, departmentId?: number, programmeId?: number, status?: string, graduationYear?: number | string } = {}) {
     try {
-        const allowed = await hasPermission("students.view") || await hasRole("admin") || await hasRole("superadmin");
+        const allowed = await hasPermission("students.view") || 
+            await hasPermission("students.manage") || 
+            await hasPermission("admin.students.manage") || 
+            await hasRole(["admin", "superadmin", "icitify_dev", "registrar", "admission_officer", "record_officer", "ict_manager", "bursar", "bursary", "accountant"]);
         if (!allowed) {
             // Check if user is HOD/Dean or has relevant roles as fallback
             const session = await auth();
@@ -186,6 +189,8 @@ export async function getStudents(options: { search?: string, page?: number, pag
                 like(users.email, searchPattern),
                 like(users.phone, searchPattern),
                 like(students.matricNumber, searchPattern),
+                like(students.firstName, searchPattern),
+                like(students.lastName, searchPattern),
                 like(programmes.name, searchPattern)
             ) : undefined,
             scopeCondition
@@ -196,7 +201,7 @@ export async function getStudents(options: { search?: string, page?: number, pag
         // 1. Get total count
         const [countRes] = await db.select({ count: sql<number>`count(*)` })
             .from(students)
-            .innerJoin(users, eq(students.userId, users.id))
+            .leftJoin(users, eq(students.userId, users.id))
             .leftJoin(programmes, eq(students.programmeId, programmes.id))
             .where(countWhere);
         const totalCount = countRes?.count || 0;
@@ -221,7 +226,7 @@ export async function getStudents(options: { search?: string, page?: number, pag
             }
         })
             .from(students)
-            .innerJoin(users, eq(students.userId, users.id))
+            .leftJoin(users, eq(students.userId, users.id))
             .leftJoin(programmes, eq(students.programmeId, programmes.id))
             .leftJoin(academicSessions, eq(students.currentSessionId, academicSessions.id))
             .leftJoin(admissionSession, eq(students.admissionSessionId, admissionSession.id))
@@ -257,9 +262,10 @@ export async function getStudents(options: { search?: string, page?: number, pag
  */
 export async function getStudentSessionOptions() {
     try {
-        const allowed = await hasPermission("students.view") || await hasRole("admin")
-            || await hasRole("superadmin") || await hasRole("icitify_dev")
-            || await hasRole("registrar") || await hasRole("admission_officer");
+        const allowed = await hasPermission("students.view") || 
+            await hasPermission("students.manage") || 
+            await hasPermission("admin.students.manage") || 
+            await hasRole(["admin", "superadmin", "icitify_dev", "registrar", "admission_officer", "record_officer", "ict_manager", "bursar", "bursary", "accountant"]);
         if (!allowed) return { success: false, error: "Access denied", sessions: [], unassignedCount: 0, graduationYears: [] };
 
         // Counts are intentionally restricted to ACTIVE students: graduants and
@@ -865,8 +871,10 @@ export async function updateAdminStudentProfile(studentId: number, updatePayload
         if (updatePayload.programmeId !== undefined) {
             const pid = updatePayload.programmeId ? Number(updatePayload.programmeId) : null;
             if (pid) {
-                const [prog] = await db.select({ id: programmes.id }).from(programmes).where(eq(programmes.id, pid)).limit(1);
+                const [prog] = await db.select({ id: programmes.id, programmeType: programmes.programmeType, deptId: programmes.deptId }).from(programmes).where(eq(programmes.id, pid)).limit(1);
                 if (!prog) return { success: false, error: `Programme ID ${pid} not found.` };
+                studentUpdates.programmeType = prog.programmeType;
+                if (prog.deptId) studentUpdates.deptId = prog.deptId;
             }
             studentUpdates.programmeId = pid;
         }

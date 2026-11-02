@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { submitTranscriptApplication, getTranscriptFees, checkStudentGraduationClearance } from "@/actions/transcript-requests";
 import { useRouter } from "next/navigation";
-import { Loader2, FileText, Send, Building, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { Loader2, FileText, Send, Building, AlertTriangle, CheckCircle2, CheckSquare, Square, Layers, ListChecks, Check } from "lucide-react";
 import Link from "next/link";
 
 export default function TranscriptApplicationPage() {
@@ -11,7 +11,9 @@ export default function TranscriptApplicationPage() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
     
-    const [fees, setFees] = useState({ transcriptFee: 15000, incidentalFee: 5500, processingFee: 4000 });
+    const [fees, setFees] = useState({ transcriptFee: 15000, incidentalFee: 5500, processingFee: 3000 });
+    const [paymentMode, setPaymentMode] = useState<'all' | 'individual'>('all');
+    const [selectedFeeKeys, setSelectedFeeKeys] = useState<string[]>(['transcript', 'incidental', 'processing']);
     
     const [clearanceChecking, setClearanceChecking] = useState(false);
     const [clearanceInfo, setClearanceInfo] = useState<{
@@ -34,6 +36,21 @@ export default function TranscriptApplicationPage() {
         destinationAddress: "",
         deliveryMethod: "email" as "email" | "courier" | "pickup"
     });
+
+    const activeKeys = paymentMode === 'all' ? ['transcript', 'incidental', 'processing'] : selectedFeeKeys;
+    const isTranscriptSelected = activeKeys.includes('transcript');
+    const isIncidentalSelected = activeKeys.includes('incidental');
+    const isProcessingSelected = activeKeys.includes('processing');
+
+    const totalPayable = (isTranscriptSelected ? fees.transcriptFee : 0) +
+        (isIncidentalSelected ? (fees.incidentalFee || 5500) : 0) +
+        (isProcessingSelected ? fees.processingFee : 0);
+
+    const toggleFeeKey = (key: string) => {
+        setSelectedFeeKeys(prev => 
+            prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
+        );
+    };
 
     const handleMatricBlur = async () => {
         const matric = formData.matricNumber.trim();
@@ -63,13 +80,21 @@ export default function TranscriptApplicationPage() {
 
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
+        if (paymentMode === 'individual' && activeKeys.length === 0) {
+            setError("Please select at least one fee item to proceed with payment.");
+            return;
+        }
+
         setLoading(true);
         setError("");
 
         try {
-            const res = await submitTranscriptApplication(formData);
+            const res = await submitTranscriptApplication({
+                ...formData,
+                selectedItems: activeKeys
+            });
             if (res.success && res.url) {
-                // Redirect to Alatpay checkout
+                // Redirect to Alatpay/Paystack checkout
                 router.push(res.url);
             } else {
                 setError(res.error || "Application failed. Please try again.");
@@ -208,41 +233,237 @@ export default function TranscriptApplicationPage() {
                             </div>
                         </div>
 
-                        <div className="bg-indigo-50 border border-indigo-100 p-6 rounded-2xl flex flex-col gap-4 mt-8">
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
-                                <div className="bg-white p-3 rounded-xl border border-indigo-100 flex justify-between items-center">
-                                    <span className="text-slate-600 font-medium">Transcript Fee:</span>
-                                    <span className="font-bold text-slate-900">₦{fees.transcriptFee.toLocaleString()}</span>
+                        {/* Payment Options: Pay All vs Pay Individual */}
+                        <div className="bg-gradient-to-br from-indigo-50/90 to-slate-50 border border-indigo-100 p-6 md:p-8 rounded-3xl flex flex-col gap-6 mt-8 shadow-sm">
+                            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-indigo-100 pb-5">
+                                <div>
+                                    <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                                        <Layers className="w-5 h-5 text-indigo-600" />
+                                        Payment Method & Fee Options
+                                    </h3>
+                                    <p className="text-xs text-slate-500 mt-1">
+                                        Choose whether to pay all associated fees at once or select specific individual items to settle now.
+                                    </p>
                                 </div>
-                                <div className="bg-white p-3 rounded-xl border border-indigo-100 flex justify-between items-center">
-                                    <span className="text-slate-600 font-medium">Incidental Fee:</span>
-                                    <span className="font-bold text-slate-900">₦{(fees.incidentalFee || 5500).toLocaleString()}</span>
-                                </div>
-                                <div className="bg-white p-3 rounded-xl border border-indigo-100 flex justify-between items-center">
-                                    <span className="text-slate-600 font-medium">Processing Fee:</span>
-                                    <span className="font-bold text-slate-900">₦{fees.processingFee.toLocaleString()}</span>
+
+                                {/* Toggle Buttons */}
+                                <div className="inline-flex p-1 bg-white border border-indigo-200/80 rounded-2xl shadow-sm">
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setPaymentMode('all');
+                                            setSelectedFeeKeys(['transcript', 'incidental', 'processing']);
+                                        }}
+                                        className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                                            paymentMode === 'all'
+                                                ? 'bg-indigo-600 text-white shadow-sm'
+                                                : 'text-slate-600 hover:text-indigo-600 hover:bg-slate-50'
+                                        }`}
+                                    >
+                                        <Check className="w-3.5 h-3.5" />
+                                        Pay All Fees
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setPaymentMode('individual')}
+                                        className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                                            paymentMode === 'individual'
+                                                ? 'bg-indigo-600 text-white shadow-sm'
+                                                : 'text-slate-600 hover:text-indigo-600 hover:bg-slate-50'
+                                        }`}
+                                    >
+                                        <ListChecks className="w-3.5 h-3.5" />
+                                        Pay Individual Items
+                                    </button>
                                 </div>
                             </div>
-                            <p className="text-xs text-indigo-700 font-medium">
-                                Note: Incidental Payment (₦{(fees.incidentalFee || 5500).toLocaleString()}) is compulsory for all students, including those applying for certificates and transcripts.
-                            </p>
-                            <div className="flex flex-col sm:flex-row justify-between items-center gap-4 pt-3 border-t border-indigo-200/60">
-                                <div>
-                                    <p className="text-sm text-indigo-800 font-semibold mb-1">Total Fee Required</p>
-                                    <p className="text-2xl font-black text-indigo-900">
-                                        {(fees.transcriptFee === 0 && (fees.incidentalFee || 0) === 0 && fees.processingFee === 0) ? "Free" : `₦${(fees.transcriptFee + (fees.incidentalFee || 5500) + fees.processingFee).toLocaleString()}`}
-                                    </p>
-                                    <p className="text-xs text-indigo-600 mt-1">
-                                        Transcript Fee (₦{fees.transcriptFee.toLocaleString()}) + Incidental Fee (₦{(fees.incidentalFee || 5500).toLocaleString()}) + Processing Fee (₦{fees.processingFee.toLocaleString()})
+
+                            {paymentMode === 'individual' && (
+                                <div className="flex items-center justify-between bg-indigo-100/50 px-4 py-2.5 rounded-xl border border-indigo-200/60 text-xs">
+                                    <span className="text-indigo-900 font-medium">
+                                        Click any item below to check/uncheck it for payment.
+                                    </span>
+                                    <div className="flex gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => setSelectedFeeKeys(['transcript', 'incidental', 'processing'])}
+                                            className="text-[11px] font-bold text-indigo-700 hover:underline"
+                                        >
+                                            Select All
+                                        </button>
+                                        <span className="text-indigo-300">|</span>
+                                        <button
+                                            type="button"
+                                            onClick={() => setSelectedFeeKeys([])}
+                                            className="text-[11px] font-bold text-indigo-700 hover:underline"
+                                        >
+                                            Clear All
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Fee Item Cards */}
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                {/* Item 1: Transcript Fee */}
+                                <div
+                                    onClick={() => paymentMode === 'individual' && toggleFeeKey('transcript')}
+                                    className={`relative p-4 rounded-2xl border transition-all ${
+                                        paymentMode === 'individual' ? 'cursor-pointer' : 'cursor-default'
+                                    } ${
+                                        isTranscriptSelected
+                                            ? 'bg-white border-indigo-400 shadow-sm ring-2 ring-indigo-500/10'
+                                            : 'bg-white/50 border-slate-200 opacity-60'
+                                    }`}
+                                >
+                                    <div className="flex items-start justify-between gap-3 mb-2">
+                                        <div className="flex items-center gap-2">
+                                            {paymentMode === 'individual' ? (
+                                                isTranscriptSelected ? (
+                                                    <CheckSquare className="w-5 h-5 text-indigo-600 shrink-0" />
+                                                ) : (
+                                                    <Square className="w-5 h-5 text-slate-400 shrink-0" />
+                                                )
+                                            ) : (
+                                                <div className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-xs font-black">
+                                                    ✓
+                                                </div>
+                                            )}
+                                            <h4 className="font-bold text-sm text-slate-800">Transcript Fee</h4>
+                                        </div>
+                                        <span className="text-sm font-black text-slate-900">
+                                            ₦{fees.transcriptFee.toLocaleString()}
+                                        </span>
+                                    </div>
+                                    <p className="text-xs text-slate-500 leading-relaxed pl-7">
+                                        Official student academic record search, compilation, and transcript issuance fee.
                                     </p>
                                 </div>
-                                <button 
-                                    disabled={loading || (clearanceInfo?.isGraduant && !clearanceInfo.isCleared)} 
-                                    type="submit" 
-                                    className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-8 rounded-xl flex items-center gap-2 transition-all shadow-md shadow-indigo-600/30 disabled:opacity-50 disabled:cursor-not-allowed"
+
+                                {/* Item 2: Incidental Fee */}
+                                <div
+                                    onClick={() => paymentMode === 'individual' && toggleFeeKey('incidental')}
+                                    className={`relative p-4 rounded-2xl border transition-all ${
+                                        paymentMode === 'individual' ? 'cursor-pointer' : 'cursor-default'
+                                    } ${
+                                        isIncidentalSelected
+                                            ? 'bg-white border-indigo-400 shadow-sm ring-2 ring-indigo-500/10'
+                                            : 'bg-white/50 border-slate-200 opacity-60'
+                                    }`}
                                 >
-                                    {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
-                                    {(fees.transcriptFee === 0 && (fees.incidentalFee || 0) === 0 && fees.processingFee === 0) ? "Submit Application" : "Proceed to Payment"}
+                                    <div className="flex items-start justify-between gap-3 mb-2">
+                                        <div className="flex items-center gap-2">
+                                            {paymentMode === 'individual' ? (
+                                                isIncidentalSelected ? (
+                                                    <CheckSquare className="w-5 h-5 text-indigo-600 shrink-0" />
+                                                ) : (
+                                                    <Square className="w-5 h-5 text-slate-400 shrink-0" />
+                                                )
+                                            ) : (
+                                                <div className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-xs font-black">
+                                                    ✓
+                                                </div>
+                                            )}
+                                            <h4 className="font-bold text-sm text-slate-800">Incidental Fee</h4>
+                                        </div>
+                                        <span className="text-sm font-black text-slate-900">
+                                            ₦{(fees.incidentalFee || 5500).toLocaleString()}
+                                        </span>
+                                    </div>
+                                    <p className="text-xs text-slate-500 leading-relaxed pl-7">
+                                        Statutory institutional clearance fee. Can be deselected if already settled previously.
+                                    </p>
+                                </div>
+
+                                {/* Item 3: Processing Fee */}
+                                <div
+                                    onClick={() => paymentMode === 'individual' && toggleFeeKey('processing')}
+                                    className={`relative p-4 rounded-2xl border transition-all ${
+                                        paymentMode === 'individual' ? 'cursor-pointer' : 'cursor-default'
+                                    } ${
+                                        isProcessingSelected
+                                            ? 'bg-white border-indigo-400 shadow-sm ring-2 ring-indigo-500/10'
+                                            : 'bg-white/50 border-slate-200 opacity-60'
+                                    }`}
+                                >
+                                    <div className="flex items-start justify-between gap-3 mb-2">
+                                        <div className="flex items-center gap-2">
+                                            {paymentMode === 'individual' ? (
+                                                isProcessingSelected ? (
+                                                    <CheckSquare className="w-5 h-5 text-indigo-600 shrink-0" />
+                                                ) : (
+                                                    <Square className="w-5 h-5 text-slate-400 shrink-0" />
+                                                )
+                                            ) : (
+                                                <div className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-xs font-black">
+                                                    ✓
+                                                </div>
+                                            )}
+                                            <h4 className="font-bold text-sm text-slate-800">Processing Fee</h4>
+                                        </div>
+                                        <span className="text-sm font-black text-slate-900">
+                                            ₦{fees.processingFee.toLocaleString()}
+                                        </span>
+                                    </div>
+                                    <p className="text-xs text-slate-500 leading-relaxed pl-7">
+                                        Online transaction gateway verification, automated processing, and support levy.
+                                    </p>
+                                </div>
+                            </div>
+
+                            {paymentMode === 'individual' && activeKeys.length === 0 && (
+                                <div className="bg-rose-50 border border-rose-200 p-3 rounded-xl text-rose-700 text-xs font-semibold flex items-center gap-2">
+                                    <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0" />
+                                    <span>Please select at least one fee item to proceed with payment.</span>
+                                </div>
+                            )}
+
+                            {/* Summary & Checkout Action */}
+                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pt-4 border-t border-indigo-200/60">
+                                <div>
+                                    <div className="flex items-center gap-2">
+                                        <p className="text-xs text-indigo-800 font-bold uppercase tracking-wider">
+                                            {paymentMode === 'all'
+                                                ? 'Total Amount (All Items Included)'
+                                                : `Selected Items Total (${activeKeys.length} of 3 items)`}
+                                        </p>
+                                        {paymentMode === 'all' && (
+                                            <span className="bg-indigo-100 text-indigo-700 text-[10px] font-extrabold px-2 py-0.5 rounded-full uppercase">
+                                                Full Package
+                                            </span>
+                                        )}
+                                    </div>
+                                    <p className="text-3xl font-black text-indigo-950 mt-1">
+                                        {totalPayable === 0 ? "Free / Waived" : `₦${totalPayable.toLocaleString()}`}
+                                    </p>
+                                    <p className="text-[11px] text-slate-500 mt-1 font-medium">
+                                        {activeKeys.length === 0
+                                            ? "No items currently selected."
+                                            : [
+                                                  isTranscriptSelected && `Transcript (₦${fees.transcriptFee.toLocaleString()})`,
+                                                  isIncidentalSelected && `Incidental (₦${(fees.incidentalFee || 5500).toLocaleString()})`,
+                                                  isProcessingSelected && `Processing (₦${fees.processingFee.toLocaleString()})`
+                                              ]
+                                                  .filter(Boolean)
+                                                  .join(" + ")}
+                                    </p>
+                                </div>
+
+                                <button 
+                                    disabled={loading || (clearanceInfo?.isGraduant && !clearanceInfo.isCleared) || (paymentMode === 'individual' && activeKeys.length === 0)} 
+                                    type="submit" 
+                                    className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 px-8 rounded-2xl flex items-center justify-center gap-2 transition-all shadow-md shadow-indigo-600/30 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {loading ? (
+                                        <Loader2 className="w-5 h-5 animate-spin" />
+                                    ) : (
+                                        <Send className="w-5 h-5" />
+                                    )}
+                                    {totalPayable === 0
+                                        ? "Submit Application (Free)"
+                                        : paymentMode === 'all'
+                                        ? `Proceed to Pay All (₦${totalPayable.toLocaleString()})`
+                                        : `Pay Selected (${activeKeys.length}) • ₦${totalPayable.toLocaleString()}`}
                                 </button>
                             </div>
                         </div>

@@ -445,6 +445,7 @@ const adminMenuItems: MenuItem[] = [
         module: "security",
         subItems: [
             { name: "Security Dashboard", href: "/admin/security" },
+            { name: "Password Reset Centre", href: "/admin/security/password-reset" },
             { name: "Audit Logs", href: "/admin/security/audit" },
             { name: "Exam Security", href: "/admin/security/exams" },
             { name: "GDPR Tools", href: "/admin/security/gdpr" },

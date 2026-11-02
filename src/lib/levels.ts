@@ -34,7 +34,12 @@ export interface ResolvedLevel {
  * Reads the programme type defensively. HND is detected from any spelling so
  * that a stray "HND", "hnd" or "H.N.D" still resolves correctly.
  */
-export function toProgrammeType(value: string | null | undefined): ProgrammeType {
+export function toProgrammeType(value: string | null | undefined, matricNumber?: string | null): ProgrammeType {
+    if (matricNumber) {
+        const m = matricNumber.toUpperCase();
+        if (m.includes('/HND/') || m.startsWith('HND/') || m.startsWith('DPP/HND/')) return 'HND';
+        if (m.includes('/ND/') || m.startsWith('ND/') || m.startsWith('DPP/ND/')) return 'ND';
+    }
     return String(value ?? '').toUpperCase().replace(/[^A-Z]/g, '').includes('HND')
         ? 'HND'
         : 'ND';
@@ -52,7 +57,8 @@ export function toProgrammeType(value: string | null | undefined): ProgrammeType
  */
 export function resolveLevel(
     level: number | string | null | undefined,
-    programmeType?: string | null
+    programmeType?: string | null,
+    matricNumber?: string | null
 ): ResolvedLevel | null {
     if (level === null || level === undefined || level === '') return null;
 
@@ -84,7 +90,7 @@ export function resolveLevel(
     }
 
     if (raw === 1 || raw === 2) {
-        const type = toProgrammeType(programmeType);
+        const type = toProgrammeType(programmeType, matricNumber);
         const numeric: CourseLevel = type === 'HND'
             ? (raw === 1 ? 300 : 400)
             : (raw === 1 ? 100 : 200);
@@ -103,9 +109,10 @@ export function resolveLevel(
 /** Display label, e.g. "ND 2". Falls back to the raw value rather than lying. */
 export function levelLabel(
     level: number | string | null | undefined,
-    programmeType?: string | null
+    programmeType?: string | null,
+    matricNumber?: string | null
 ): string {
-    const resolved = resolveLevel(level, programmeType);
+    const resolved = resolveLevel(level, programmeType, matricNumber);
     if (resolved) return resolved.label;
     if (level === null || level === undefined || level === '') return 'N/A';
     return String(level);

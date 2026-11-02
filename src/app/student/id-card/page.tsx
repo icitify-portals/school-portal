@@ -9,7 +9,7 @@ import IDCardTemplate1 from "@/components/id-cards/IDCardTemplate1";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { ShieldCheck, Info, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { requestIDCardAction } from "@/actions/id-cards";
+import { requestReplacementIDCardAction } from "@/actions/id-cards";
 import { Badge } from "@/components/ui/badge";
 
 export default async function StudentIDCardPage() {
@@ -147,16 +147,50 @@ export default async function StudentIDCardPage() {
                                 />
                             </div>
 
-                            {!card && isWindowOpen && (
-                                <div className="pt-4 border-t border-slate-100">
-                                    <form action={async () => {
+                            {!card && (
+                                <div className="pt-4 border-t border-slate-100 space-y-3">
+                                    {(!studentRecord?.photoUrl || !studentRecord?.signatureUrl) ? (
+                                        <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-xl space-y-1.5">
+                                            <p className="text-xs font-black uppercase tracking-wide text-amber-900">
+                                                Profile Update Required for ID Card
+                                            </p>
+                                            <p className="text-xs text-amber-700 leading-relaxed">
+                                                To have your ID card processed and printed, returning students (ND 2 / HND 2) must have both an official photograph and signature on file. Please update your profile or visit the <strong>ICT Directorate (Photo Capture Unit)</strong> on campus.
+                                            </p>
+                                            <div className="pt-1">
+                                                <a href="/profile" className="text-xs font-bold text-amber-900 underline">
+                                                    Go to Profile Settings &rarr;
+                                                </a>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <p className="text-xs text-slate-500 leading-relaxed">
+                                            Your profile and credentials are on file. The ICT unit is processing your batch and will notify you once printing begins.
+                                        </p>
+                                    )}
+                                </div>
+                            )}
+
+                            {card && ['printed', 'delivered'].includes((card as any).printStatus) && (
+                                <div className="pt-4 border-t border-slate-100 space-y-3">
+                                    <p className="text-xs font-black uppercase tracking-wider text-slate-700">Lost your card?</p>
+                                    <form action={async (formData: FormData) => {
                                         "use server";
-                                        await requestIDCardAction('student');
-                                    }}>
-                                        <Button className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black uppercase tracking-widest h-12 rounded-xl shadow-lg shadow-indigo-100 transition-all active:scale-95 text-xs">
-                                            Request Physical ID Card
+                                        await requestReplacementIDCardAction(String(formData.get("reason") || ""));
+                                    }} className="space-y-3">
+                                        <input
+                                            name="reason"
+                                            required
+                                            minLength={5}
+                                            maxLength={300}
+                                            placeholder="How was the card lost?"
+                                            className="w-full h-10 rounded-xl border border-slate-300 px-3 text-sm"
+                                        />
+                                        <Button className="w-full bg-rose-600 hover:bg-rose-700 text-white font-black uppercase tracking-widest h-12 rounded-xl text-xs">
+                                            Report Lost &amp; Request Replacement
                                         </Button>
                                     </form>
+                                    <p className="text-[11px] text-slate-400">Your current card will be deactivated immediately.</p>
                                 </div>
                             )}
                         </CardContent>

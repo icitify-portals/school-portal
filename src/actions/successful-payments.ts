@@ -132,9 +132,10 @@ export async function getSuccessfulPaymentsGrouped() {
                     rrr: rrr || existing.rrr || null,
                     purpose: tx.purpose || existing.purpose,
                     tuitionProfile: tx.tuitionProfile || existing.tuitionProfile,
+                    metadata: anyTx.metadata || existing.metadata || null,
                 });
             } else {
-                seen.set(key, { ...tx, rrr });
+                seen.set(key, { ...tx, rrr, metadata: anyTx.metadata || null });
             }
         }
         const txs = Array.from(seen.values()).sort((a, b) => {
@@ -415,7 +416,17 @@ export async function getSuccessfulPaymentsGrouped() {
             }
         }
 
-        const grouped: Record<string, any[]> = {};
+        const grouped: Record<string, any[]> = {
+            'School Fees': [],
+            'ICT Fee': [],
+            'Incidental Fee': [],
+            'Acceptance Fee': [],
+            'Application Form Fee': [],
+            'Processing Fee': [],
+            'Transcript Fee': [],
+            'Certificate Fee': [],
+            'Others': [],
+        };
         for (const tx of txs) {
             const gw = (tx.gateway || '').toLowerCase().trim();
             const hasRrr = !!(tx.rrr && tx.rrr.toString().trim().length >= 8);
@@ -426,26 +437,139 @@ export async function getSuccessfulPaymentsGrouped() {
                 continue;
             }
             
-            let category = 'Other';
-            let itemBreakdown = tx.purpose || 'N/A';
-            
+            let metaObj: any = null;
+            try {
+                if (typeof tx.metadata === 'string') metaObj = JSON.parse(tx.metadata);
+                else if (tx.metadata && typeof tx.metadata === 'object') metaObj = tx.metadata;
+            } catch {}
+
             const p = (tx.purpose || '').toLowerCase();
-            if (p.includes('acceptance')) {
+            const ref = (tx.gatewayReference || '').toLowerCase();
+            const metaDesc = ((metaObj?.payment_purpose || metaObj?.description || '') as string).toLowerCase();
+            const metaBizId = ((metaObj?.businessId || metaObj?.targetBusinessId || '') as string).toLowerCase();
+            const ictBizId = (process.env.NEXT_PUBLIC_ALATPAY_BUSINESS_ID_ICT || "181087d9-ec63-4efa-e9f3-08dddfe20b95").toLowerCase();
+
+            const isAlat = gw === 'alatpay';
+            const isRemita = gw === 'remita';
+            const isPaystack = gw === 'paystack';
+
+            let category = 'Others';
+            let itemBreakdown = tx.purpose || 'N/A';
+
+            // 1. ICT Payment Check (Checked first so ICT payments via dedicated ALATPay are never mixed into School Fees)
+            const isIct = /\bict\b/i.test(p) || 
+                          p.includes('information and communication') || 
+                          p.includes('ict fee') || 
+                          p.includes('ict payment') || 
+                          p.includes('ict training') || 
+                          p.includes('ict levy') || 
+                          p.includes('computer') ||
+                          p.includes('technology') ||
+                          ref.includes('ict') || 
+                          /\bict\b/i.test(metaDesc) || 
+                          (metaBizId && metaBizId === ictBizId);
+
+            // 2. Incidental Fee Check (Checked before School Fees so Incidental payments via ALATPay are separate)
+            const isIncidental = p.includes('incidental') || 
+                                 p.includes('ancillary') || 
+                                 ref.includes('incidental') || 
+                                 ref.startsWith('inc-') || 
+                                 metaDesc.includes('incidental') ||
+                                 (isAlat && (p.includes('incidental') || parseFloat(tx.amount) === 5500 || p.includes('ancillary')));
+
+            // 3. Transcript Fee Check
+            const isTranscript = p.includes('transcript') || 
+                                 ref.startsWith('tr-') ||
+                                 metaDesc.includes('transcript');
+
+            // 4. Certificate & Convocation Fee Check
+            const isCertificate = p.includes('certificate') || 
+                                  p.includes('convocation') || 
+                                  p.includes('alumni') || 
+                                  ref.startsWith('alumni-') ||
+                                  metaDesc.includes('certificate');
+
+            // 5. Acceptance Fee Check
+            const isAcceptance = p.includes('acceptance') || 
+                                 ref.startsWith('acc-') ||
+                                 ref.startsWith('wal-acc-');
+
+            // 6. Application Form Fee Check
+            const isApplication = p.includes('application form') || 
+                                  p.includes('form fee') || 
+                                  p.includes('applicant') || 
+                                  p.includes('admission form') ||
+                                  ref.startsWith('form-') || 
+                                  ref.startsWith('adm-') || 
+                                  ref.startsWith('pay-adm-') || 
+                                  ref.startsWith('wal-adm-') ||
+                                  (p.includes('form') && !p.includes('platform'));
+
+            // 7. Processing Fee Check
+            const isProcessing = p.includes('processing') || 
+                                 ref.startsWith('proc-') ||
+                                 (isPaystack && parseFloat(tx.amount) <= 5000 && !isTranscript && !isCertificate);
+
+            // 8. ID Card Fee Check
+            const isIdCard = p.includes('id card') || 
+                             p.includes('idcard') || 
+                             p.includes('identity card');
+
+            // 9. Wallet Topup Check
+            const isWallet = p.includes('wallet_topup') || 
+                             p.includes('wallet funding') ||
+                             ref.startsWith('wal-top-');
+
+            if (isIct) {
+                category = 'ICT Fee';
+                itemBreakdown = tx.purpose || 'ICT Fee / Technology Payment';
+            } else if (isIncidental) {
+                category = 'Incidental Fee';
+                itemBreakdown = tx.purpose || 'Incidental Fee Payment';
+            } else if (isTranscript) {
+                category = 'Transcript Fee';
+                itemBreakdown = tx.purpose || 'Official Academic Transcript';
+            } else if (isCertificate) {
+                category = 'Certificate Fee';
+                itemBreakdown = tx.purpose || 'Certificate & Convocation Payment';
+            } else if (isAcceptance) {
                 category = 'Acceptance Fee';
                 itemBreakdown = 'Acceptance Fee & ID Card (N2,000)';
-            } else if (p.includes('school fee') || p.includes('tuition') || tx.tuitionProfile || (gw === 'remita' && parseFloat(tx.amount) > 10000) || isSplitRef) {
-                category = 'School Fees';
-                itemBreakdown = tx.tuitionProfile || tx.purpose || 'Tuition / School Fees';
-            } else if (p.includes('processing')) {
-                category = 'Processing Fee';
-                itemBreakdown = 'Processing Fee';
-            } else if (p.includes('id card')) {
-                category = 'ID Card Fee';
-            } else if (p.includes('form') || p.includes('application')) {
+            } else if (isApplication) {
                 category = 'Application Form Fee';
-            } else if (p.includes('wallet_topup') || p.includes('wallet')) {
+                itemBreakdown = tx.purpose || 'Admission Application Form';
+            } else if (isProcessing) {
+                category = 'Processing Fee';
+                itemBreakdown = 'Portal Processing Fee';
+            } else if (isIdCard) {
+                category = 'ID Card Fee';
+                itemBreakdown = tx.purpose || 'Student ID Card';
+            } else if (isWallet) {
                 category = 'Wallet Topup';
                 itemBreakdown = 'Wallet Funding';
+            } else if (isAlat) {
+                // ALATPay transactions must NEVER be included in School Fees.
+                // In SplitPaymentEngine, non-tuition student bills are routed through ALATPay as Incidental/Ancillary fees.
+                if (isSplitRef) {
+                    category = 'Incidental Fee';
+                    itemBreakdown = tx.purpose || 'Incidental & Ancillary Fee';
+                } else {
+                    category = 'Others';
+                    itemBreakdown = tx.purpose || 'ALATPay Settlement (Non-Tuition)';
+                }
+            } else if (
+                !isAlat && (
+                    (isRemita && (p.includes('school fee') || p.includes('tuition') || !!tx.tuitionProfile || parseFloat(tx.amount) > 10000 || isSplitRef)) ||
+                    (p.includes('tuition') && !isAlat) ||
+                    (p.includes('school fee') && !isAlat) ||
+                    (!!tx.tuitionProfile)
+                )
+            ) {
+                category = 'School Fees';
+                itemBreakdown = tx.tuitionProfile || tx.purpose || 'Tuition / School Fees';
+            } else {
+                category = 'Others';
+                itemBreakdown = tx.purpose || 'Other Payment';
             }
 
             let studentName = 'N/A';

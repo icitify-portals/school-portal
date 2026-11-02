@@ -20,15 +20,21 @@ function VerifyContent() {
             return;
         }
 
+        if (ref === 'FREE-BYPASS') {
+            setStatus("success");
+            setMessage("Application submitted successfully (Fees waived). Your certificate request is pending approval.");
+            return;
+        }
+
         verifyCertificatePayment(ref).then(res => {
             if (res.success) {
                 if (res.nextPaymentUrl) {
                     setStatus("redirecting");
-                    setMessage("Convocation fee paid successfully. Redirecting to pay processing fee...");
+                    setMessage("Institutional fee paid successfully. Redirecting to pay processing fee...");
                     setTimeout(() => router.push(res.nextPaymentUrl!), 2000);
                 } else if (res.fullyPaid) {
                     setStatus("success");
-                    setMessage("All fees paid successfully! Your certificate request has been submitted and is pending approval.");
+                    setMessage("Selected fees paid successfully! Your certificate request has been submitted and is pending approval.");
                 } else {
                     setStatus("error");
                     setMessage("Payment verification incomplete.");

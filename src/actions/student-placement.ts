@@ -42,7 +42,8 @@ export type PlacementIssueType =
     | "programme_type_mismatch"
     | "no_programme"
     | "legacy_level"
-    | "graduant_status_on_hnd";
+    | "graduant_status_on_hnd"
+    | "matric_programme_mismatch";
 
 /**
  * Resolves the acting user, or explains why the caller may not correct records.
@@ -192,6 +193,8 @@ async function loadPlacementIssues(limit: number): Promise<PlacementIssue[]> {
              OR ${students.currentLevel} NOT IN (1, 2)
              OR (${programmes.id} IS NOT NULL AND ${students.programmeType} <> ${programmes.programmeType})
              OR (${programmes.programmeType} = 'HND' AND ${students.status} = 'nd_graduant')
+             OR ((${students.matricNumber} LIKE '%/HND/%' OR ${students.matricNumber} LIKE 'HND/%' OR ${students.matricNumber} LIKE 'DPP/HND/%') AND (${programmes.programmeType} = 'ND' OR ${programmes.name} LIKE 'OND%' OR ${students.programmeType} = 'ND'))
+             OR (${students.matricNumber} NOT LIKE '%HND%' AND (${students.matricNumber} LIKE '%/ND/%' OR ${students.matricNumber} LIKE 'ND/%' OR ${students.matricNumber} LIKE 'DPP/ND/%') AND (${programmes.programmeType} = 'HND' OR ${students.programmeType} = 'HND'))
         )`))
         .orderBy(students.id)
         .limit(limit);
@@ -225,6 +228,13 @@ async function loadPlacementIssues(limit: number): Promise<PlacementIssue[]> {
         if (r.actualProgrammeType === "HND" && r.status === "nd_graduant") {
             issues.push("graduant_status_on_hnd");
         }
+        const isHndMatric = r.matricNumber && (r.matricNumber.includes('/HND/') || r.matricNumber.startsWith('HND/') || r.matricNumber.startsWith('DPP/HND/'));
+        const isNdMatric = r.matricNumber && (r.matricNumber.includes('/ND/') || r.matricNumber.startsWith('ND/') || (r.matricNumber.startsWith('DPP/ND/') && !r.matricNumber.includes('HND')));
+        if (isHndMatric && (r.actualProgrammeType === 'ND' || (r.programmeName && r.programmeName.toUpperCase().includes('OND')) || r.storedProgrammeType === 'ND')) {
+            issues.push("matric_programme_mismatch");
+        } else if (isNdMatric && (r.actualProgrammeType === 'HND' || (r.programmeName && r.programmeName.toUpperCase().includes('HND')) || r.storedProgrammeType === 'HND')) {
+            issues.push("matric_programme_mismatch");
+        }
         const dep = depMap.get(r.id) ?? { bills: 0, registrations: 0 };
         return {
             id: r.id,
@@ -241,7 +251,7 @@ async function loadPlacementIssues(limit: number): Promise<PlacementIssue[]> {
             status: r.status,
             admissionYear: r.admissionYear,
             issues,
-            displayLabel: levelLabel(r.currentLevel, r.storedProgrammeType),
+            displayLabel: levelLabel(r.currentLevel, r.actualProgrammeType || r.storedProgrammeType, r.matricNumber),
             dependentCounts: dep,
             totalDependents: dep.bills + dep.registrations
         };
@@ -460,4 +470,113 @@ export async function deleteStudentPlacement(input: {
         success: true,
         message: `Student ${student.matricNumber || `ID ${student.id}`} successfully deleted.`
     };
+}
+
+/**
+ * Detects the correct target HND programme for a student based on their matriculation code.
+ */
+export function detectCorrectProgrammeFromMatric(matricNumber: string, currentProgId?: number | null) {
+    const m = (matricNumber || '').toUpperCase();
+    if (m.includes('/NCC/') || m.includes('/NETWORKING/')) return { progId: 16, deptId: 56, programmeType: 'HND', name: "HND Networking and cloud computing" };
+    if (m.includes('/AI/') || m.includes('/ARTIFICIAL/')) return { progId: 15, deptId: 56, programmeType: 'HND', name: "HND Artificial Intelligence" };
+    if (m.includes('/STA/') || m.includes('/STAT/') || m.includes('/STS/') || m.includes('/STATISTICS/')) return { progId: 17, deptId: 57, programmeType: 'HND', name: "HND Statistics" };
+    if (m.includes('/BAM/') || m.includes('/BA/') || m.includes('/BUSINESS/')) return { progId: 18, deptId: 58, programmeType: 'HND', name: "HND Business Administration" };
+    if (m.includes('/ACC/') || m.includes('/ACT/') || m.includes('/ACCOUNTANCY/')) return { progId: 19, deptId: 59, programmeType: 'HND', name: "HND Accountancy" };
+    if (m.includes('/CS/') || m.includes('/CSC/') || m.includes('/COM/') || m.includes('/COMPUTER/')) return { progId: 14, deptId: 55, programmeType: 'HND', name: "HND Computer Science" };
+
+    const directMap: Record<number, { progId: number; deptId: number; programmeType: string; name: string }> = {
+        8: { progId: 14, deptId: 55, programmeType: 'HND', name: "HND Computer Science" },
+        9: { progId: 15, deptId: 56, programmeType: 'HND', name: "HND Artificial Intelligence" },
+        10: { progId: 16, deptId: 56, programmeType: 'HND', name: "HND Networking and cloud computing" },
+        11: { progId: 17, deptId: 57, programmeType: 'HND', name: "HND Statistics" },
+        12: { progId: 18, deptId: 58, programmeType: 'HND', name: "HND Business Administration" },
+        13: { progId: 19, deptId: 59, programmeType: 'HND', name: "HND Accountancy" }
+    };
+    if (currentProgId && directMap[currentProgId]) {
+        return directMap[currentProgId];
+    }
+    return null;
+}
+
+/**
+ * Synchronizes all students whose matric number indicates HND (or ND)
+ * but were incorrectly assigned to an ND (or HND) programme during admission.
+ */
+export async function syncMatricProgrammeMismatches() {
+    const authz = await reviewAdmin();
+    if (authz.error) return { success: false, error: authz.error, count: 0 };
+    const actorId = authz.userId!;
+
+    try {
+        const mismatchedRows = await db
+            .select({
+                id: students.id,
+                matricNumber: students.matricNumber,
+                firstName: students.firstName,
+                lastName: students.lastName,
+                deptId: students.deptId,
+                programmeId: students.programmeId,
+                programmeType: students.programmeType,
+                currentLevel: students.currentLevel,
+                programmeName: programmes.name,
+                actualProgrammeType: programmes.programmeType
+            })
+            .from(students)
+            .leftJoin(programmes, eq(programmes.id, students.programmeId))
+            .where(and(
+                isNull(students.deletedAt),
+                sql`(
+                    (${students.matricNumber} LIKE '%/HND/%' OR ${students.matricNumber} LIKE 'HND/%' OR ${students.matricNumber} LIKE 'DPP/HND/%')
+                    AND (${programmes.programmeType} = 'ND' OR ${programmes.name} LIKE 'OND%' OR ${students.programmeType} = 'ND' OR ${students.programmeId} IN (8, 9, 10, 11, 12, 13))
+                )`
+            ));
+
+        let updatedCount = 0;
+        const details: any[] = [];
+
+        for (const row of mismatchedRows) {
+            if (!row.matricNumber) continue;
+            const target = detectCorrectProgrammeFromMatric(row.matricNumber, row.programmeId);
+            if (!target) continue;
+
+            let newLevel = (row.currentLevel === 300 || row.currentLevel === 100 || row.currentLevel === 1) ? 1 : 2;
+
+            await db.update(students).set({
+                programmeId: target.progId,
+                programmeType: target.programmeType,
+                deptId: target.deptId,
+                currentLevel: newLevel
+            }).where(eq(students.id, row.id));
+
+            updatedCount++;
+            details.push({
+                studentId: row.id,
+                matricNumber: row.matricNumber,
+                name: [row.firstName, row.lastName].filter(Boolean).join(" "),
+                fromProgramme: row.programmeName || `ID ${row.programmeId}`,
+                toProgramme: target.name,
+                newLevel: `HND ${newLevel}`
+            });
+        }
+
+        if (updatedCount > 0) {
+            await audit(actorId, "placement.batch_sync_matrics", 0, {
+                count: updatedCount,
+                studentsUpdated: details.slice(0, 50)
+            });
+        }
+
+        revalidatePath("/admin/students");
+        revalidatePath("/admin/students/placement");
+
+        return {
+            success: true,
+            count: updatedCount,
+            message: `Successfully synchronized ${updatedCount} student record${updatedCount === 1 ? '' : 's'} to correct HND programmes and levels.`,
+            details
+        };
+    } catch (e: any) {
+        console.error("syncMatricProgrammeMismatches error:", e);
+        return { success: false, error: e?.message || "Failed to sync matric programme mismatches", count: 0 };
+    }
 }

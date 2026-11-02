@@ -25,10 +25,13 @@ export default function TranscriptVerifyPage() {
             try {
                 if (reference?.startsWith('TR-ALAT-')) {
                     const res = await verifyTranscriptAlatpay(reference);
-                    if (res.success && res.nextStep === 'paystack') {
+                    if (res.success && res.nextStep === 'paystack' && res.url) {
                         setStatus('partial');
-                        setMessage("Transcript Fee (ALATPay) successful. Redirecting to Paystack for Processing Fee...");
+                        setMessage("Institutional Fee (ALATPay) successful. Redirecting to Paystack for Processing Fee...");
                         setTimeout(() => router.push(res.url), 2000);
+                    } else if (res.success) {
+                        setStatus('success');
+                        setMessage("Payment completed! Your transcript request has been queued for processing.");
                     } else {
                         setStatus('failed');
                         setMessage(res.error || "Verification failed");

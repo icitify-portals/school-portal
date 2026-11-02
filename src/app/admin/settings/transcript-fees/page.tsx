@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect } from "react";
 import { getSystemSettings, updateSystemSetting } from "@/actions/system-settings";
@@ -14,7 +14,7 @@ export default function TranscriptFeesSettings() {
     const [saving, setSaving] = useState(false);
     
     const [transcriptFee, setTranscriptFee] = useState("15000");
-    const [processingFee, setProcessingFee] = useState("5000");
+    const [processingFee, setProcessingFee] = useState("3000");
 
     useEffect(() => {
         getSystemSettings().then(res => {

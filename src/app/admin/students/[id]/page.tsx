@@ -259,7 +259,13 @@ export default function StudentDetailsPage() {
                                         ? 'HND Graduated'
                                         : isK12
                                         ? `Grade ${student.currentLevel}`
-                                        : `${student.programme?.programmeType || ''} ${student.currentLevel}`.trim()}
+                                        : (() => {
+                                            const isHnd = student.matricNumber && (student.matricNumber.includes('/HND/') || student.matricNumber.startsWith('HND/') || student.matricNumber.startsWith('DPP/HND/'));
+                                            const isNd = student.matricNumber && (student.matricNumber.includes('/ND/') || student.matricNumber.startsWith('ND/') || (student.matricNumber.startsWith('DPP/ND/') && !student.matricNumber.includes('HND')));
+                                            const type = isHnd ? 'HND' : (isNd ? 'ND' : (student.programme?.programmeType || student.programmeType || ''));
+                                            const lvl = (student.currentLevel === 300 || student.currentLevel === 100 || student.currentLevel === 1) ? 1 : ((student.currentLevel === 400 || student.currentLevel === 200 || student.currentLevel === 2) ? 2 : student.currentLevel);
+                                            return `${type} ${lvl}`.trim();
+                                        })()}
                                 </p>
                             </div>
                             <div className="space-y-1">

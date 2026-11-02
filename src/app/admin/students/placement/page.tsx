@@ -9,7 +9,7 @@ import {
 import { toast } from "sonner";
 import {
     getPlacementIssues, getPlacementProgrammes, correctStudentPlacement,
-    deleteStudentPlacement
+    deleteStudentPlacement, syncMatricProgrammeMismatches
 } from "@/actions/student-placement";
 import { resolveLevel } from "@/lib/levels";
 
@@ -17,7 +17,8 @@ const ISSUE_LABELS: Record<string, string> = {
     programme_type_mismatch: "Programme type disagrees with programme",
     no_programme: "No programme assigned",
     legacy_level: "Level stored as 100-500 instead of 1-2",
-    graduant_status_on_hnd: "Marked ND graduant but on an HND programme"
+    graduant_status_on_hnd: "Marked ND graduant but on an HND programme",
+    matric_programme_mismatch: "Matric number specifies HND/ND but assigned opposite programme"
 };
 
 const placementIssueLabel = (t: string) => ISSUE_LABELS[t] ?? t;
@@ -46,7 +47,8 @@ const TONE: Record<string, string> = {
     programme_type_mismatch: "bg-rose-50 text-rose-700",
     no_programme: "bg-amber-50 text-amber-700",
     legacy_level: "bg-purple-50 text-purple-700",
-    graduant_status_on_hnd: "bg-blue-50 text-blue-700"
+    graduant_status_on_hnd: "bg-blue-50 text-blue-700",
+    matric_programme_mismatch: "bg-amber-100 text-amber-800 font-bold"
 };
 
 export default function StudentPlacementPage() {
@@ -138,6 +140,27 @@ export default function StudentPlacementPage() {
         }
     };
 
+    const [syncingMatrics, setSyncingMatrics] = useState(false);
+    const handleSyncMatrics = async () => {
+        if (!confirm("This will scan all students with matric numbers specifying HND (such as DPP/HND/... or HND/...) that are currently assigned to ND programmes, and automatically correct their programme and level. Proceed?")) {
+            return;
+        }
+        setSyncingMatrics(true);
+        try {
+            const res = await syncMatricProgrammeMismatches();
+            if (res.success) {
+                toast.success(res.message);
+                await load();
+            } else {
+                toast.error(res.error || "Failed to sync matric mismatches");
+            }
+        } catch (e: any) {
+            toast.error(e?.message || "Failed to sync matric mismatches");
+        } finally {
+            setSyncingMatrics(false);
+        }
+    };
+
     const handleDelete = async () => {
         if (!deleteTarget) return;
         setDeleting(true);
@@ -201,12 +224,13 @@ export default function StudentPlacementPage() {
                 </p>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
                 <StatCard icon={Users} label="Records" value={rows.length} tone="slate" />
                 <StatCard icon={Link2Off} label="Type mismatch" value={counts.programme_type_mismatch || 0} tone="rose" />
                 <StatCard icon={AlertTriangle} label="No programme" value={counts.no_programme || 0} tone="amber" />
                 <StatCard icon={Layers} label="Legacy level" value={counts.legacy_level || 0} tone="purple" />
                 <StatCard icon={GraduationCap} label="Status conflict" value={counts.graduant_status_on_hnd || 0} tone="blue" />
+                <StatCard icon={AlertTriangle} label="Matric Mismatch" value={counts.matric_programme_mismatch || 0} tone="rose" />
             </div>
 
             <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 flex flex-col lg:flex-row gap-3 lg:items-center">
@@ -229,6 +253,15 @@ export default function StudentPlacementPage() {
                         <option key={k} value={k}>{placementIssueLabel(k as any)} ({counts[k] || 0})</option>
                     ))}
                 </select>
+                <button
+                    onClick={handleSyncMatrics}
+                    disabled={syncingMatrics || loading}
+                    className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs uppercase tracking-wider flex items-center gap-2 shadow-sm disabled:opacity-50 shrink-0"
+                    title="Synchronize students whose matric numbers indicate HND/ND but have mismatched programmes"
+                >
+                    <RefreshCw className={`w-4 h-4 ${syncingMatrics ? "animate-spin" : ""}`} />
+                    {syncingMatrics ? "Syncing..." : "Auto-Sync Matrics"}
+                </button>
                 <button onClick={load} disabled={loading}
                     className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-50 flex items-center gap-2 text-sm font-semibold">
                     <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
