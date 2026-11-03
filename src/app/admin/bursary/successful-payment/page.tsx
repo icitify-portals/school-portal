@@ -1,5 +1,2 @@
-import { redirect } from "next/navigation";
-
-export default function SuccessfulPaymentSingularRedirect() {
-    redirect("/admin/bursary/successful-payments");
-}
+export { default } from "../successful-payments/page";
+export const dynamic = "force-dynamic";
