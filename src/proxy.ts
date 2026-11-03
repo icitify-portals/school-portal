@@ -92,7 +92,10 @@ export const proxy = auth((req: NextRequest) => {
     if (cached && Date.now() < cached.expiry) {
         dbName = cached.dbName;
     } else {
-        if (hostname.includes("ajatschools.local")) {
+        const isIp = /^(\d{1,3}\.){3}\d{1,3}(:\d+)?$/.test(hostname);
+        if (isIp || hostname.includes("fssibadan.edu.ng") || hostname.includes("localhost") || hostname.includes("127.0.0.1")) {
+            dbName = "school_portal";
+        } else if (hostname.includes("ajatschools.local")) {
             dbName = "portal_AJAT_ACADEMY";
         } else if (hostname.includes("citadeluniversity.local")) {
             dbName = "portal_CITADEL_UNI";

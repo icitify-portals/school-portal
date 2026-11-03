@@ -116,26 +116,189 @@ export async function getSuccessfulPaymentsGrouped() {
             return dB - dA;
         });
 
+        // Step 1: Initialize grouped categories, counts, and totals
+        const grouped: Record<string, any[]> = {
+            'School Fees': [],
+            'Processing Fee': [],
+            'ICT Fee': [],
+            'Incidental Fee': [],
+            'Acceptance Fee': [],
+            'Application Form Fee': [],
+            'Transcript Fee': [],
+            'Certificate Fee': [],
+            'ID Card Fee': [],
+            'Wallet Topup': [],
+            'Others': [],
+        };
+
+        const counts: Record<string, number> = {
+            'School Fees': 0,
+            'Processing Fee': 0,
+            'ICT Fee': 0,
+            'Incidental Fee': 0,
+            'Acceptance Fee': 0,
+            'Application Form Fee': 0,
+            'Transcript Fee': 0,
+            'Certificate Fee': 0,
+            'ID Card Fee': 0,
+            'Wallet Topup': 0,
+            'Others': 0,
+        };
+
+        const totals: Record<string, number> = {
+            'School Fees': 0,
+            'Processing Fee': 0,
+            'ICT Fee': 0,
+            'Incidental Fee': 0,
+            'Acceptance Fee': 0,
+            'Application Form Fee': 0,
+            'Transcript Fee': 0,
+            'Certificate Fee': 0,
+            'ID Card Fee': 0,
+            'Wallet Topup': 0,
+            'Others': 0,
+        };
+
+        // Step 2: In-memory single-pass classification and total sum/count accumulation across all transactions
+        for (const tx of txs) {
+            const p = (tx.purpose || '').toLowerCase();
+            const ref = (tx.gatewayReference || '').toLowerCase();
+            const rawAmt = parseFloat(tx.amount || '0');
+            const amt = isNaN(rawAmt) ? 0 : rawAmt;
+            const gw = (tx.gateway || '').toLowerCase().trim();
+
+            let category = 'Others';
+            let itemBreakdown = tx.purpose || 'Other Payment';
+
+            if (tx.type === 'developer_fee') {
+                category = 'Processing Fee';
+                itemBreakdown = tx.devType === 'school_fees' 
+                    ? `ND 2 / HND 2 Portal Processing Fee (₦${amt ? amt.toLocaleString() : '4,500'})` 
+                    : `Admission Application Processing Fee (₦${amt ? amt.toLocaleString() : '3,000'})`;
+            } else if (
+                (
+                    /\bict\b/i.test(p) || 
+                    p.includes('information and communication') || 
+                    p.includes('ict fee') || 
+                    p.includes('ict payment') || 
+                    p.includes('ict training') || 
+                    ref.includes('ict') ||
+                    p.includes('courseform_payment')
+                ) && amt <= 10000
+            ) {
+                category = 'ICT Fee';
+                itemBreakdown = tx.purpose || 'ICT Fee / Technology Payment';
+            } else if (
+                (
+                    p.includes('incidental') || 
+                    p.includes('ancillary') || 
+                    ref.includes('incidental') || 
+                    ref.startsWith('inc-') ||
+                    (gw === 'alatpay' && amt === 5500)
+                ) && amt <= 10000
+            ) {
+                category = 'Incidental Fee';
+                itemBreakdown = tx.purpose || 'Incidental Fee Payment (₦5,500)';
+            } else if (
+                (p.includes('processing') || ref.startsWith('proc-') || ref.startsWith('dev-')) && amt <= 10000
+            ) {
+                category = 'Processing Fee';
+                itemBreakdown = tx.purpose || 'Portal Processing Fee';
+            } else if (
+                p.includes('transcript') || ref.startsWith('tr-')
+            ) {
+                category = 'Transcript Fee';
+                itemBreakdown = tx.purpose || 'Official Academic Transcript';
+            } else if (
+                p.includes('certificate') || 
+                p.includes('convocation') || 
+                p.includes('graduation') || 
+                p.includes('alumni') || 
+                ref.startsWith('alumni-')
+            ) {
+                category = 'Certificate Fee';
+                itemBreakdown = tx.purpose || 'Certificate & Convocation Payment';
+            } else if (
+                p.includes('acceptance') || ref.startsWith('acc-') || ref.startsWith('wal-acc-')
+            ) {
+                category = 'Acceptance Fee';
+                itemBreakdown = tx.purpose || 'Acceptance Fee & ID Card';
+            } else if (
+                (p.includes('application form') || p.includes('form fee') || p.includes('adm_payment') || ref.startsWith('form-') || ref.startsWith('adm-') || ref.startsWith('pay-adm-')) && !p.includes('processing')
+            ) {
+                category = 'Application Form Fee';
+                itemBreakdown = tx.purpose || 'Admission Application Form';
+            } else if (
+                (p.includes('id card') || p.includes('idcard') || p.includes('identity card')) && !p.includes('acceptance')
+            ) {
+                category = 'ID Card Fee';
+                itemBreakdown = tx.purpose || 'Student ID Card';
+            } else if (
+                p.includes('wallet_topup') || p.includes('wallet funding') || ref.startsWith('wal-top-')
+            ) {
+                category = 'Wallet Topup';
+                itemBreakdown = 'Wallet Funding';
+            } else if (
+                (gw !== 'alatpay' && (p.includes('school fee') || p.includes('tuition') || amt > 10000)) ||
+                p.includes('legacy fss school_fee')
+            ) {
+                category = 'School Fees';
+                itemBreakdown = tx.purpose || 'Tuition / School Fees';
+            } else {
+                category = 'Others';
+                itemBreakdown = tx.purpose || 'Other Payment';
+            }
+
+            if (!grouped[category]) grouped[category] = [];
+            counts[category] = (counts[category] || 0) + 1;
+            totals[category] = (totals[category] || 0) + amt;
+
+            // Retain top 200 newest items per category for the client payload
+            if (grouped[category].length < 200) {
+                let dateStr = 'N/A';
+                try {
+                    if (tx.createdAt) {
+                        const d = new Date(tx.createdAt);
+                        if (!isNaN(d.getTime())) dateStr = d.toLocaleDateString();
+                    }
+                } catch {}
+
+                grouped[category].push({
+                    ...tx,
+                    category,
+                    itemBreakdown,
+                    studentName: 'N/A',
+                    date: dateStr,
+                    amount: amt.toFixed(2),
+                });
+            }
+        }
+
+        // Step 3: Collect IDs ONLY for the items actually present in grouped (~1,300 items total)
+        const displayedItems = Object.values(grouped).flat();
         const appIds = new Set<number>();
         const studentIds = new Set<number>();
         const userIds = new Set<number>();
         const matricNumbers = new Set<string>();
         const txIdsWithoutStudentId: number[] = [];
-        const unknownRefs = new Set<string>();
 
-        txs.forEach(tx => {
+        displayedItems.forEach(tx => {
             if (tx.studentId) {
-                studentIds.add(Number(tx.studentId));
+                const s = Number(tx.studentId);
+                if (!isNaN(s) && s > 0) studentIds.add(s);
             } else if (tx.type === 'admission') {
                 txIdsWithoutStudentId.push(tx.id);
             }
 
-            if (tx.userId) userIds.add(Number(tx.userId));
+            if (tx.userId) {
+                const u = Number(tx.userId);
+                if (!isNaN(u) && u > 0) userIds.add(u);
+            }
 
             if (tx.type === 'developer_fee') {
                 if (tx.devType === 'school_fees' && tx.identifier) {
                     const parsed = parseInt(tx.identifier);
-                    if (!isNaN(parsed)) {
+                    if (!isNaN(parsed) && parsed > 0) {
                         studentIds.add(parsed);
                         userIds.add(parsed);
                     } else {
@@ -143,26 +306,26 @@ export async function getSuccessfulPaymentsGrouped() {
                     }
                 } else if (tx.devType === 'admission_form' && tx.identifier) {
                     const parsed = parseInt(tx.identifier);
-                    if (!isNaN(parsed)) appIds.add(parsed);
+                    if (!isNaN(parsed) && parsed > 0) appIds.add(parsed);
                 }
             }
 
-            if (tx.gatewayReference) unknownRefs.add(tx.gatewayReference);
-            if (tx.rrr) unknownRefs.add(tx.rrr);
-
             const match = tx.gatewayReference?.match(/(?:SCH|ACC|PROC|FORM|PAY-ADM|ADM|APP)[-_](\d+)/i);
             if (match) {
-                appIds.add(parseInt(match[1]));
+                const parsed = parseInt(match[1]);
+                if (!isNaN(parsed) && parsed > 0) appIds.add(parsed);
             }
             
             const purposeMatch = tx.purpose?.match(/(?:Application\s*ID|App\s*ID|Application|App)[\s:#_-]*(\d+)/i);
             if (purposeMatch) {
-                appIds.add(parseInt(purposeMatch[1]));
+                const parsed = parseInt(purposeMatch[1]);
+                if (!isNaN(parsed) && parsed > 0) appIds.add(parsed);
             }
 
             const studentIdInPurpose = tx.purpose?.match(/(?:Student\s*ID|StudentId|ID)[\s:#_-]*(\d+)/i);
             if (studentIdInPurpose) {
-                studentIds.add(parseInt(studentIdInPurpose[1]));
+                const parsed = parseInt(studentIdInPurpose[1]);
+                if (!isNaN(parsed) && parsed > 0) studentIds.add(parsed);
             }
 
             if (tx.purpose) {
@@ -192,8 +355,9 @@ export async function getSuccessfulPaymentsGrouped() {
 
                 ledgerRows.forEach(l => {
                     if (l.transactionId && l.studentId) {
-                        txIdToStudentId.set(l.transactionId, Number(l.studentId));
-                        studentIds.add(Number(l.studentId));
+                        const s = Number(l.studentId);
+                        txIdToStudentId.set(l.transactionId, s);
+                        studentIds.add(s);
                     }
                 });
             }
@@ -205,7 +369,7 @@ export async function getSuccessfulPaymentsGrouped() {
         const refToNameMap = new Map<string, string>();
         const userMap = new Map<number | string, string>();
 
-        // Batch query students & their levels (ND 2 / HND 2 / ND 1 / HND 1)
+        // Step 4: Batch query students & their levels (ND 2 / HND 2 / ND 1 / HND 1)
         if (studentIds.size > 0) {
             const idArray = Array.from(studentIds);
             for (let i = 0; i < idArray.length; i += 100) {
@@ -250,6 +414,41 @@ export async function getSuccessfulPaymentsGrouped() {
             }
         }
 
+        // Query students by matric numbers if any still unresolved
+        if (matricNumbers.size > 0) {
+            const matricsToFetch = Array.from(matricNumbers).filter(m => !matricToStudentMap.has(m));
+            if (matricsToFetch.length > 0) {
+                for (let i = 0; i < matricsToFetch.length; i += 100) {
+                    const chunk = matricsToFetch.slice(i, i + 100);
+                    const studentsByMatric = await db.select({
+                        id: students.id,
+                        matricNumber: students.matricNumber,
+                        firstName: students.firstName,
+                        lastName: students.lastName,
+                        currentLevel: students.currentLevel,
+                        programmeType: students.programmeType,
+                        userName: users.name,
+                    })
+                    .from(students)
+                    .leftJoin(users, eq(students.userId, users.id))
+                    .where(inArray(students.matricNumber, chunk));
+
+                    studentsByMatric.forEach(s => {
+                        if (s.matricNumber) {
+                            const cleanU = cleanStudentName(s.userName);
+                            const cleanF = cleanStudentName(s.firstName);
+                            const cleanL = cleanStudentName(s.lastName);
+                            let fullName = cleanU || `${cleanF} ${cleanL}`.trim();
+                            if (!fullName) fullName = s.matricNumber;
+                            const levelLabel = s.programmeType && s.currentLevel ? ` [${s.programmeType} ${s.currentLevel}]` : '';
+                            const display = `${fullName} (${s.matricNumber})${levelLabel}`;
+                            matricToStudentMap.set(s.matricNumber.trim().toUpperCase(), display);
+                        }
+                    });
+                }
+            }
+        }
+
         // Batch query applications
         if (appIds.size > 0) {
             const idArray = Array.from(appIds);
@@ -290,7 +489,7 @@ export async function getSuccessfulPaymentsGrouped() {
 
         // Batch query matched users
         if (userIds.size > 0) {
-            const idArray = Array.from(userIds);
+            const idArray = Array.from(userIds).filter(uid => !studentMap.has(uid) && !userMap.has(uid));
             for (let i = 0; i < idArray.length; i += 100) {
                 const chunk = idArray.slice(i, i + 100);
                 const usersData = await db.select({ 
@@ -323,265 +522,97 @@ export async function getSuccessfulPaymentsGrouped() {
             }
         }
 
-        // Group into categorical tabs
-        const grouped: Record<string, any[]> = {
-            'School Fees': [],
-            'Processing Fee': [],
-            'ICT Fee': [],
-            'Incidental Fee': [],
-            'Acceptance Fee': [],
-            'Application Form Fee': [],
-            'Transcript Fee': [],
-            'Certificate Fee': [],
-            'ID Card Fee': [],
-            'Wallet Topup': [],
-            'Others': [],
-        };
+        // Step 5: Assign studentName to the displayed items
+        for (const cat of Object.keys(grouped)) {
+            for (const item of grouped[cat]) {
+                let studentName = 'N/A';
+                const sId = item.studentId ? Number(item.studentId) : (txIdToStudentId.get(item.id) || null);
+                const uId = item.userId ? Number(item.userId) : null;
 
-        const counts: Record<string, number> = {
-            'School Fees': 0,
-            'Processing Fee': 0,
-            'ICT Fee': 0,
-            'Incidental Fee': 0,
-            'Acceptance Fee': 0,
-            'Application Form Fee': 0,
-            'Transcript Fee': 0,
-            'Certificate Fee': 0,
-            'ID Card Fee': 0,
-            'Wallet Topup': 0,
-            'Others': 0,
-        };
-
-        const totals: Record<string, number> = {
-            'School Fees': 0,
-            'Processing Fee': 0,
-            'ICT Fee': 0,
-            'Incidental Fee': 0,
-            'Acceptance Fee': 0,
-            'Application Form Fee': 0,
-            'Transcript Fee': 0,
-            'Certificate Fee': 0,
-            'ID Card Fee': 0,
-            'Wallet Topup': 0,
-            'Others': 0,
-        };
-
-        for (const tx of txs) {
-            const p = (tx.purpose || '').toLowerCase();
-            const ref = (tx.gatewayReference || '').toLowerCase();
-            const amt = parseFloat(tx.amount || '0');
-            const gw = (tx.gateway || '').toLowerCase().trim();
-
-            let category = 'Others';
-            let itemBreakdown = tx.purpose || 'Other Payment';
-
-            // 1. Paystack Developer Fees (Directly handles ND 2 / HND 2 and applicant processing fees)
-            if (tx.type === 'developer_fee') {
-                category = 'Processing Fee';
-                itemBreakdown = tx.devType === 'school_fees' 
-                    ? `ND 2 / HND 2 Portal Processing Fee (₦${amt ? amt.toLocaleString() : '4,500'})` 
-                    : `Admission Application Processing Fee (₦${amt ? amt.toLocaleString() : '3,000'})`;
-            }
-            // 2. ICT Fee Check (₦2,000 or courseform access, under ₦10,000)
-            else if (
-                (
-                    /\bict\b/i.test(p) || 
-                    p.includes('information and communication') || 
-                    p.includes('ict fee') || 
-                    p.includes('ict payment') || 
-                    p.includes('ict training') || 
-                    ref.includes('ict') ||
-                    p.includes('courseform_payment')
-                ) && amt <= 10000
-            ) {
-                category = 'ICT Fee';
-                itemBreakdown = tx.purpose || 'ICT Fee / Technology Payment';
-            } 
-            // 3. Incidental Fee Check (₦5,500 or ancillary, under ₦10,000)
-            else if (
-                (
-                    p.includes('incidental') || 
-                    p.includes('ancillary') || 
-                    ref.includes('incidental') || 
-                    ref.startsWith('inc-') ||
-                    (gw === 'alatpay' && amt === 5500)
-                ) && amt <= 10000
-            ) {
-                category = 'Incidental Fee';
-                itemBreakdown = tx.purpose || 'Incidental Fee Payment (₦5,500)';
-            } 
-            // 4. Processing Fee Check (Standalone under ₦10,000 or PROC reference)
-            else if (
-                (p.includes('processing') || ref.startsWith('proc-') || ref.startsWith('dev-')) && amt <= 10000
-            ) {
-                category = 'Processing Fee';
-                itemBreakdown = tx.purpose || 'Portal Processing Fee';
-            } 
-            // 5. Transcript Fee Check
-            else if (
-                p.includes('transcript') || ref.startsWith('tr-')
-            ) {
-                category = 'Transcript Fee';
-                itemBreakdown = tx.purpose || 'Official Academic Transcript';
-            } 
-            // 6. Certificate & Convocation Fee Check
-            else if (
-                p.includes('certificate') || 
-                p.includes('convocation') || 
-                p.includes('graduation') || 
-                p.includes('alumni') || 
-                ref.startsWith('alumni-')
-            ) {
-                category = 'Certificate Fee';
-                itemBreakdown = tx.purpose || 'Certificate & Convocation Payment';
-            } 
-            // 7. Acceptance Fee Check
-            else if (
-                p.includes('acceptance') || ref.startsWith('acc-') || ref.startsWith('wal-acc-')
-            ) {
-                category = 'Acceptance Fee';
-                itemBreakdown = tx.purpose || 'Acceptance Fee & ID Card';
-            } 
-            // 8. Application Form Fee Check
-            else if (
-                (p.includes('application form') || p.includes('form fee') || p.includes('adm_payment') || ref.startsWith('form-') || ref.startsWith('adm-') || ref.startsWith('pay-adm-')) && !p.includes('processing')
-            ) {
-                category = 'Application Form Fee';
-                itemBreakdown = tx.purpose || 'Admission Application Form';
-            } 
-            // 9. ID Card Fee Check
-            else if (
-                (p.includes('id card') || p.includes('idcard') || p.includes('identity card')) && !p.includes('acceptance')
-            ) {
-                category = 'ID Card Fee';
-                itemBreakdown = tx.purpose || 'Student ID Card';
-            } 
-            // 10. Wallet Topup Check
-            else if (
-                p.includes('wallet_topup') || p.includes('wallet funding') || ref.startsWith('wal-top-')
-            ) {
-                category = 'Wallet Topup';
-                itemBreakdown = 'Wallet Funding';
-            } 
-            // 11. School Fees (Tuition)
-            else if (
-                (gw !== 'alatpay' && (p.includes('school fee') || p.includes('tuition') || amt > 10000)) ||
-                p.includes('legacy fss school_fee')
-            ) {
-                category = 'School Fees';
-                itemBreakdown = tx.purpose || 'Tuition / School Fees';
-            } 
-            // 12. Fallback Others
-            else {
-                category = 'Others';
-                itemBreakdown = tx.purpose || 'Other Payment';
-            }
-
-            // Student name resolution
-            let studentName = 'N/A';
-            const sId = tx.studentId ? Number(tx.studentId) : (txIdToStudentId.get(tx.id) || null);
-            const uId = tx.userId ? Number(tx.userId) : null;
-
-            if (tx.type === 'developer_fee') {
-                if (tx.devType === 'school_fees' && tx.identifier && studentMap.has(tx.identifier)) {
-                    studentName = studentMap.get(tx.identifier)!;
-                } else if (tx.devType === 'admission_form' && tx.identifier && appMap.has(parseInt(tx.identifier))) {
-                    studentName = appMap.get(parseInt(tx.identifier))!;
-                } else if (tx.email) {
-                    studentName = tx.email;
-                }
-            } else if (sId && studentMap.has(sId)) {
-                studentName = studentMap.get(sId)!;
-            } else if (uId && userMap.has(uId)) {
-                studentName = userMap.get(uId)!;
-            }
-
-            if (tx.type === 'developer_fee' && studentName === 'N/A') {
-                const rawId = (tx as any).identifier;
-                if (rawId) {
-                    const numId = parseInt(rawId);
-                    if (!isNaN(numId)) {
-                        if (studentMap.has(numId)) studentName = studentMap.get(numId)!;
-                        else if (userMap.has(numId)) studentName = userMap.get(numId)!;
-                        else if (appMap.has(numId)) studentName = appMap.get(numId)!;
+                if (item.type === 'developer_fee') {
+                    if (item.devType === 'school_fees' && item.identifier && studentMap.has(item.identifier)) {
+                        studentName = studentMap.get(item.identifier)!;
+                    } else if (item.devType === 'admission_form' && item.identifier && appMap.has(parseInt(item.identifier))) {
+                        studentName = appMap.get(parseInt(item.identifier))!;
+                    } else if (item.email) {
+                        studentName = item.email;
                     }
-                    if (studentName === 'N/A' && matricToStudentMap.has(rawId.toUpperCase())) {
-                        studentName = matricToStudentMap.get(rawId.toUpperCase())!;
+                } else if (sId && studentMap.has(sId)) {
+                    studentName = studentMap.get(sId)!;
+                } else if (uId && userMap.has(uId)) {
+                    studentName = userMap.get(uId)!;
+                }
+
+                if (item.type === 'developer_fee' && studentName === 'N/A') {
+                    const rawId = item.identifier;
+                    if (rawId) {
+                        const numId = parseInt(rawId);
+                        if (!isNaN(numId)) {
+                            if (studentMap.has(numId)) studentName = studentMap.get(numId)!;
+                            else if (userMap.has(numId)) studentName = userMap.get(numId)!;
+                            else if (appMap.has(numId)) studentName = appMap.get(numId)!;
+                        }
+                        if (studentName === 'N/A' && matricToStudentMap.has(rawId.toUpperCase())) {
+                            studentName = matricToStudentMap.get(rawId.toUpperCase())!;
+                        }
+                    }
+                    if (studentName === 'N/A' && item.email) {
+                        studentName = item.email;
                     }
                 }
-                if (studentName === 'N/A' && (tx as any).email) {
-                    studentName = (tx as any).email;
-                }
-            }
 
-
-            if (studentName === 'N/A') {
-                const match = tx.gatewayReference?.match(/(?:SCH|ACC|PROC|FORM|PAY-ADM|ADM|APP)[-_](\d+)/i);
-                const appId = match ? parseInt(match[1]) : null;
-                if (appId && appMap.has(appId)) {
-                    studentName = appMap.get(appId)!;
-                } else if (tx.purpose) {
-                    const pAppMatch = tx.purpose.match(/(?:Application\s*ID|App\s*ID|Application|App)[\s:#_-]*(\d+)/i);
-                    if (pAppMatch && appMap.has(parseInt(pAppMatch[1]))) {
-                        studentName = appMap.get(parseInt(pAppMatch[1]))!;
+                if (studentName === 'N/A') {
+                    const match = item.gatewayReference?.match(/(?:SCH|ACC|PROC|FORM|PAY-ADM|ADM|APP)[-_](\d+)/i);
+                    const appId = match ? parseInt(match[1]) : null;
+                    if (appId && appMap.has(appId)) {
+                        studentName = appMap.get(appId)!;
+                    } else if (item.purpose) {
+                        const pAppMatch = item.purpose.match(/(?:Application\s*ID|App\s*ID|Application|App)[\s:#_-]*(\d+)/i);
+                        if (pAppMatch && appMap.has(parseInt(pAppMatch[1]))) {
+                            studentName = appMap.get(parseInt(pAppMatch[1]))!;
+                        }
                     }
                 }
-            }
 
-            if (studentName === 'N/A') {
-                if (tx.gatewayReference && refToNameMap.has(tx.gatewayReference)) {
-                    studentName = refToNameMap.get(tx.gatewayReference)!;
-                } else if (tx.rrr && refToNameMap.has(tx.rrr)) {
-                    studentName = refToNameMap.get(tx.rrr)!;
-                }
-            }
-
-            if (studentName === 'N/A' && tx.purpose) {
-                const embeddedMatch = tx.purpose.match(/-\s*([A-Za-z\s]+)\s*\(([^)]+)\)/);
-                if (embeddedMatch) {
-                    const candidateName = cleanStudentName(embeddedMatch[1]);
-                    const matric = embeddedMatch[2].trim().toUpperCase();
-                    if (candidateName && candidateName.length > 2) {
-                        studentName = `${candidateName} (${matric})`;
-                    } else if (matricToStudentMap.has(matric)) {
-                        studentName = matricToStudentMap.get(matric)!;
+                if (studentName === 'N/A') {
+                    if (item.gatewayReference && refToNameMap.has(item.gatewayReference)) {
+                        studentName = refToNameMap.get(item.gatewayReference)!;
+                    } else if (item.rrr && refToNameMap.has(item.rrr)) {
+                        studentName = refToNameMap.get(item.rrr)!;
                     }
-                } else {
-                    const matricMatches = tx.purpose.match(/[A-Za-z]{2,5}\/[A-Za-z0-9\/-]+/g);
-                    if (matricMatches) {
-                        for (const m of matricMatches) {
-                            const upperM = m.trim().toUpperCase();
-                            if (matricToStudentMap.has(upperM)) {
-                                studentName = matricToStudentMap.get(upperM)!;
-                                break;
+                }
+
+                if (studentName === 'N/A' && item.purpose) {
+                    const embeddedMatch = item.purpose.match(/-\s*([A-Za-z\s]+)\s*\(([^)]+)\)/);
+                    if (embeddedMatch) {
+                        const candidateName = cleanStudentName(embeddedMatch[1]);
+                        const matric = embeddedMatch[2].trim().toUpperCase();
+                        if (candidateName && candidateName.length > 2) {
+                            studentName = `${candidateName} (${matric})`;
+                        } else if (matricToStudentMap.has(matric)) {
+                            studentName = matricToStudentMap.get(matric)!;
+                        }
+                    } else {
+                        const matricMatches = item.purpose.match(/[A-Za-z]{2,5}\/[A-Za-z0-9\/-]+/g);
+                        if (matricMatches) {
+                            for (const m of matricMatches) {
+                                const upperM = m.trim().toUpperCase();
+                                if (matricToStudentMap.has(upperM)) {
+                                    studentName = matricToStudentMap.get(upperM)!;
+                                    break;
+                                }
                             }
                         }
                     }
                 }
-            }
 
+                if (studentName === 'N/A') {
+                    if (item.studentId) studentName = `Student #${item.studentId}`;
+                    else if (item.rrr) studentName = `Payer (RRR: ${item.rrr})`;
+                    else if (item.gatewayReference) studentName = `Payer (${item.gatewayReference})`;
+                }
 
-            if (studentName === 'N/A') {
-                if (tx.studentId) studentName = `Student #${tx.studentId}`;
-                else if (tx.rrr) studentName = `Payer (RRR: ${tx.rrr})`;
-                else if (tx.gatewayReference) studentName = `Payer (${tx.gatewayReference})`;
-            }
-
-            if (!grouped[category]) grouped[category] = [];
-            
-            // Increment exact running counts and sums across all transactions
-            counts[category] = (counts[category] || 0) + 1;
-            totals[category] = (totals[category] || 0) + amt;
-
-            // Retain the newest 200 transactions per category for the client payload
-            // This prevents massive multi-megabyte payloads from crashing the client browser
-            if (grouped[category].length < 200) {
-                grouped[category].push({
-                    ...tx,
-                    itemBreakdown,
-                    studentName,
-                    date: tx.createdAt ? new Date(tx.createdAt).toLocaleDateString() : 'N/A'
-                });
+                item.studentName = studentName;
             }
         }
 
