@@ -31,6 +31,7 @@ import {
     budgets,
     payment_transactions,
     walletTransactions,
+    paystackDeveloperFees,
     admissionApplicationsV2,
     admissionFormTemplates
 } from "@/db/schema";
@@ -1157,9 +1158,9 @@ export async function disburseExpenditure(id: number) {
     }
 }
 
-type UnifiedTransaction = {
+export type UnifiedTransaction = {
     id: number;
-    sourceTable: 'transactions' | 'payment_transactions' | 'wallet_transactions';
+    sourceTable: 'transactions' | 'payment_transactions' | 'wallet_transactions' | 'paystack_developer_fees';
     amount: string | number;
     type: 'credit' | 'debit';
     purpose: string;
@@ -1490,6 +1491,136 @@ export async function getAllUnifiedTransactions(filters?: { status?: string, cat
             }
         }
 
+        // 4. Portal Processing Fees & Developer Fees (paystack_developer_fees table)
+        if (!fCat || fCat === 'fee_payment') {
+            const devStatus = fStatus === 'completed' ? 'paid' : fStatus;
+            const devQuery = db.select({
+                id: paystackDeveloperFees.id,
+                amount: paystackDeveloperFees.amount,
+                type: paystackDeveloperFees.type,
+                reference: paystackDeveloperFees.reference,
+                status: paystackDeveloperFees.status,
+                createdAt: paystackDeveloperFees.createdAt,
+                paidAt: paystackDeveloperFees.paidAt,
+                identifier: paystackDeveloperFees.identifier,
+                email: paystackDeveloperFees.email,
+            }).from(paystackDeveloperFees)
+              .where(devStatus ? eq(paystackDeveloperFees.status, devStatus as any) : undefined)
+              .orderBy(desc(paystackDeveloperFees.createdAt))
+              .limit(200);
+
+            const devRecords = await devQuery;
+
+            if (devRecords.length > 0) {
+                const devUserIds: number[] = [];
+                const devStudentIds: number[] = [];
+                const devAppIds: number[] = [];
+
+                for (const d of devRecords) {
+                    const parsed = parseInt(d.identifier || '');
+                    if (!isNaN(parsed)) {
+                        if (d.type === 'school_fees') {
+                            devUserIds.push(parsed);
+                            devStudentIds.push(parsed);
+                        } else {
+                            devAppIds.push(parsed);
+                        }
+                    }
+                }
+
+                const devStudentMap = new Map<number, any>();
+                if (devUserIds.length > 0 || devStudentIds.length > 0) {
+                    const matchedStudents = await db.select({
+                        id: students.id,
+                        firstName: students.firstName,
+                        lastName: students.lastName,
+                        matricNumber: students.matricNumber,
+                        userId: students.userId,
+                        userEmail: users.email,
+                        userName: users.name
+                    }).from(students)
+                      .leftJoin(users, eq(students.userId, users.id))
+                      .where(or(
+                          devStudentIds.length > 0 ? inArray(students.id, devStudentIds) : undefined,
+                          devUserIds.length > 0 ? inArray(students.userId, devUserIds) : undefined
+                      ));
+
+                    for (const s of matchedStudents) {
+                        const studentObj = {
+                            id: s.id,
+                            firstName: s.firstName || s.userName?.split(' ')[0] || 'Student',
+                            lastName: s.lastName || s.userName?.split(' ').slice(1).join(' ') || '',
+                            matricNumber: s.matricNumber,
+                            contactEmail: s.userEmail
+                        };
+                        devStudentMap.set(s.id, studentObj);
+                        if (s.userId) devStudentMap.set(s.userId, studentObj);
+                    }
+                }
+
+                const devAppMap = new Map<number, any>();
+                if (devAppIds.length > 0) {
+                    const matchedApps = await db.select({
+                        id: admissionApplicationsV2.id,
+                        formNumber: admissionApplicationsV2.formNumber,
+                        name: users.name,
+                        email: users.email,
+                        data: admissionApplicationsV2.data
+                    }).from(admissionApplicationsV2)
+                      .leftJoin(users, eq(admissionApplicationsV2.applicantId, users.id))
+                      .where(inArray(admissionApplicationsV2.id, devAppIds));
+
+                    for (const a of matchedApps) {
+                        let formData: any = {};
+                        try { formData = typeof a.data === 'string' ? JSON.parse(a.data || '{}') : (a.data || {}); } catch {}
+                        const cleanName = a.name || `${formData.firstName || formData.FirstName || ''} ${formData.lastName || formData.Surname || formData['Last Name'] || ''}`.trim() || 'Applicant';
+                        const names = cleanName.split(' ');
+                        devAppMap.set(a.id, {
+                            id: 0,
+                            firstName: names[0] || 'Applicant',
+                            lastName: names.slice(1).join(' ') || '',
+                            matricNumber: a.formNumber || `APP-${a.id}`,
+                            contactEmail: a.email || formData.email || ''
+                        });
+                    }
+                }
+
+                for (const d of devRecords) {
+                    const parsedId = parseInt(d.identifier || '');
+                    let student = (!isNaN(parsedId) ? (d.type === 'school_fees' ? devStudentMap.get(parsedId) : devAppMap.get(parsedId)) : null) || null;
+
+                    if (!student && d.email) {
+                        const emailParts = d.email.split('@')[0].split('.');
+                        student = {
+                            id: 0,
+                            firstName: emailParts[0] || 'Payer',
+                            lastName: emailParts.slice(1).join(' ') || '',
+                            matricNumber: d.identifier || null,
+                            contactEmail: d.email
+                        };
+                    }
+
+                    const purpose = d.type === 'school_fees' 
+                        ? 'ND 2 / HND 2 Portal Processing Fee'
+                        : 'Admission Application Processing Fee';
+
+                    results.push({
+                        id: d.id,
+                        sourceTable: 'paystack_developer_fees',
+                        amount: d.amount,
+                        type: 'credit',
+                        purpose,
+                        status: d.status === 'paid' ? 'completed' : d.status,
+                        gateway: 'paystack',
+                        gatewayReference: d.reference,
+                        rrr: null,
+                        createdAt: d.paidAt || d.createdAt,
+                        student
+                    });
+                }
+            }
+        }
+
         // Sort unified results by createdAt desc
         results.sort((a, b) => {
             const dateA = a.createdAt ? a.createdAt.getTime() : 0;
@@ -1541,11 +1672,21 @@ export async function getTransactions() {
     }
 }
 
-export async function requeryUnifiedTransaction(txId: number, sourceTable: 'transactions' | 'payment_transactions' | 'wallet_transactions', gateway: string, reference: string) {
+export async function requeryUnifiedTransaction(txId: number, sourceTable: 'transactions' | 'payment_transactions' | 'wallet_transactions' | 'paystack_developer_fees', gateway: string, reference: string) {
     if (!gateway || gateway === 'internal') return { success: false, error: 'Internal transactions cannot be re-queried.' };
     if (!reference) return { success: false, error: 'No gateway reference provided.' };
 
     try {
+        if (sourceTable === 'paystack_developer_fees') {
+            const { verifyDeveloperFee } = await import('@/actions/paystack-developer-subscription');
+            const res = await verifyDeveloperFee(reference);
+            if (res.success) {
+                revalidatePath('/admin/bursary/transactions');
+                return { success: true, status: 'completed' };
+            } else {
+                return { success: false, error: res.error || 'Re-query failed for developer fee.' };
+            }
+        }
         if (reference.startsWith('RRR-MOCK-') || reference.startsWith('TX-MOCK-')) {
             console.log(`Bypassing gateway verification for Mock Reference during Re-query: ${reference}`);
             const newStatus = 'completed';
@@ -3432,11 +3573,11 @@ export async function getFeeItemCollectionReport(filters: {
     }
 }
 
-export async function markTransactionPending(id: number, sourceTable: 'transactions' | 'payment_transactions' | 'wallet_transactions') {
+export async function markTransactionPending(id: number, sourceTable: 'transactions' | 'payment_transactions' | 'wallet_transactions' | 'paystack_developer_fees') {
     return bulkMarkTransactionsPending([{ id, sourceTable }]);
 }
 
-export async function bulkMarkTransactionsPending(items: { id: number, sourceTable: 'transactions' | 'payment_transactions' | 'wallet_transactions' }[]) {
+export async function bulkMarkTransactionsPending(items: { id: number, sourceTable: 'transactions' | 'payment_transactions' | 'wallet_transactions' | 'paystack_developer_fees' }[]) {
     try {
         await ensureBursaryStaff();
         
@@ -3447,6 +3588,8 @@ export async function bulkMarkTransactionsPending(items: { id: number, sourceTab
                 await db.update(payment_transactions).set({ status: 'pending' }).where(eq(payment_transactions.id, item.id));
             } else if (item.sourceTable === 'wallet_transactions') {
                 await db.update(walletTransactions).set({ status: 'pending' }).where(eq(walletTransactions.id, item.id));
+            } else if (item.sourceTable === 'paystack_developer_fees') {
+                await db.update(paystackDeveloperFees).set({ status: 'pending' }).where(eq(paystackDeveloperFees.id, item.id));
             }
         }
 
@@ -3458,11 +3601,11 @@ export async function bulkMarkTransactionsPending(items: { id: number, sourceTab
     }
 }
 
-export async function deleteTransaction(id: number, sourceTable: 'transactions' | 'payment_transactions' | 'wallet_transactions') {
+export async function deleteTransaction(id: number, sourceTable: 'transactions' | 'payment_transactions' | 'wallet_transactions' | 'paystack_developer_fees') {
     return bulkDeleteTransactions([{ id, sourceTable }]);
 }
 
-export async function bulkDeleteTransactions(items: { id: number, sourceTable: 'transactions' | 'payment_transactions' | 'wallet_transactions' }[]) {
+export async function bulkDeleteTransactions(items: { id: number, sourceTable: 'transactions' | 'payment_transactions' | 'wallet_transactions' | 'paystack_developer_fees' }[]) {
     try {
         await ensureBursaryStaff();
         
@@ -3473,6 +3616,8 @@ export async function bulkDeleteTransactions(items: { id: number, sourceTable: '
                 await db.delete(payment_transactions).where(eq(payment_transactions.id, item.id));
             } else if (item.sourceTable === 'wallet_transactions') {
                 await db.delete(walletTransactions).where(eq(walletTransactions.id, item.id));
+            } else if (item.sourceTable === 'paystack_developer_fees') {
+                await db.delete(paystackDeveloperFees).where(eq(paystackDeveloperFees.id, item.id));
             }
         }
 

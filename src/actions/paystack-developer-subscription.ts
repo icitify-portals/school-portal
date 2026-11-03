@@ -46,7 +46,7 @@ export async function getDeveloperFeeAmount(type: 'admission_form' | 'school_fee
     if (type === 'admission_form') {
         return parseInt(settingsMap['developer_fee_admission'] || '3000', 10);
     } else {
-        return parseInt(settingsMap['developer_fee_portal_access'] || '7000', 10);
+        return parseInt(settingsMap['developer_fee_portal_access'] || '4500', 10);
     }
 }
 

@@ -11,11 +11,11 @@ import { Button } from "@/components/ui/button";
 
 const TAB_ORDER = [
     'School Fees',
+    'Processing Fee',
     'ICT Fee',
     'Incidental Fee',
     'Acceptance Fee',
     'Application Form Fee',
-    'Processing Fee',
     'Transcript Fee',
     'Certificate Fee',
     'ID Card Fee',
@@ -304,9 +304,10 @@ export default function SuccessfulPaymentsPage() {
                                                 <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
                                                     tx.gateway === 'remita' ? 'bg-blue-100 text-blue-700' :
                                                     tx.gateway === 'alatpay' ? 'bg-rose-100 text-rose-700' :
-                                                    'bg-emerald-100 text-emerald-700'
+                                                    tx.gateway === 'paystack' ? 'bg-emerald-100 text-emerald-700' :
+                                                    'bg-slate-100 text-slate-700'
                                                 }`}>
-                                                    {tx.gateway}
+                                                    {tx.gateway || 'portal'}
                                                 </span>
                                             </td>
                                             <td className="px-6 py-4 text-right font-black text-slate-900">

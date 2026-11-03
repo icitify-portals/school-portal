@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
@@ -192,7 +192,7 @@ export default function UnifiedTransactionsPage() {
             (statusFilter !== 'completed' && tx.status === statusFilter);
         
         let matchesCategory = true;
-        if (categoryFilter === 'fee_payment') matchesCategory = tx.sourceTable === 'transactions';
+        if (categoryFilter === 'fee_payment') matchesCategory = tx.sourceTable === 'transactions' || tx.sourceTable === 'paystack_developer_fees';
         if (categoryFilter === 'wallet_topup') matchesCategory = tx.sourceTable === 'payment_transactions';
         if (categoryFilter === 'wallet_usage') matchesCategory = tx.sourceTable === 'wallet_transactions';
         
@@ -371,7 +371,7 @@ export default function UnifiedTransactionsPage() {
                                         <td className="px-6 py-4">
                                             <div className="flex flex-col">
                                                 <span className="text-[10px] uppercase font-bold text-slate-400 mb-0.5">
-                                                    {tx.sourceTable === 'transactions' ? 'Fee Payment' : tx.sourceTable === 'payment_transactions' ? 'Wallet Top-up' : 'Internal Wallet'}
+                                                    {tx.sourceTable === 'transactions' ? 'Fee Payment' : tx.sourceTable === 'paystack_developer_fees' ? 'Processing Fee' : tx.sourceTable === 'payment_transactions' ? 'Wallet Top-up' : 'Internal Wallet'}
                                                 </span>
                                                 <span className="text-sm text-slate-700 font-medium">{tx.purpose}</span>
                                             </div>
@@ -526,7 +526,7 @@ export default function UnifiedTransactionsPage() {
                                     <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
                                         <div className="text-[10px] font-bold text-slate-400 uppercase mb-1">Category</div>
                                         <div className="text-sm font-medium text-slate-800">
-                                            {selectedTx.sourceTable === 'transactions' ? 'Fee Payment' : selectedTx.sourceTable === 'payment_transactions' ? 'Wallet Top-up' : 'Internal Wallet'}
+                                            {selectedTx.sourceTable === 'transactions' ? 'Fee Payment' : selectedTx.sourceTable === 'paystack_developer_fees' ? 'Processing Fee' : selectedTx.sourceTable === 'payment_transactions' ? 'Wallet Top-up' : 'Internal Wallet'}
                                         </div>
                                     </div>
                                     <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
