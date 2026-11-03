@@ -141,11 +141,16 @@ export class PaystackAdapter implements PaymentGatewayAdapter {
         const lastName = meta?.payerLastName || meta?.payerName?.split(' ').slice(1).join(' ') || '';
         const phone = meta?.payerPhone || meta?.phone || '';
 
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://portal.fssibadan.edu.ng';
+        const callbackUrl = meta?.billId 
+            ? `${appUrl}/student/finance?verifyRef=${encodeURIComponent(txReference)}&billId=${encodeURIComponent(meta.billId)}`
+            : `${appUrl}/student/finance?verifyRef=${encodeURIComponent(txReference)}`;
+
         const payload: any = {
             email: payerEmail,
             amount: Math.round(totalAmount * 100), // in kobo
             reference: txReference,
-            callback_url: `https://portal.fssibadan.edu.ng/student/finance`,
+            callback_url: callbackUrl,
             first_name: firstName,
             last_name: lastName,
             phone: phone,
@@ -866,7 +871,9 @@ export class SplitPaymentEngine {
                 payerName: studentFullName,
                 payerFirstName: payerFirstName,
                 payerLastName: payerLastName,
-                payerPhone: payerPhone
+                payerPhone: payerPhone,
+                billId: bill.id,
+                studentId: studentId
             }
         );
         
@@ -882,8 +889,7 @@ export class SplitPaymentEngine {
         // 1. Fetch Bursary Settings
         const settingsRecords = await db.query.bursarySettings.findMany();
         const settings: any = {};
-        // @ts-expect-error - TS2339: Auto-suppressed for build
-        for (const s of settingsRecords) settings[s.settingKey] = s.settingValue;
+        for (const s of settingsRecords) settings[s.key] = s.value;
 
         const activeGateway = 'alatpay'; // Replaced Remita for admission forms
         const feeBearerRule = settings[`${activeGateway}_fee_bearer`] || 'default';

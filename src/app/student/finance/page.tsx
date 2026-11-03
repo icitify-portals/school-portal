@@ -44,6 +44,7 @@ import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { AcademicNomenclature } from "@/lib/nomenclature";
 import { RemitaInlineCheckout } from "@/components/finance/RemitaInlineCheckout";
+import { toast } from "sonner";
 
 interface LedgerEntry {
     id: number;
@@ -233,6 +234,36 @@ export default function StudentFinancePage() {
         }
     }, [session, fetchData]);
 
+    // Automatically verify gateway callbacks (e.g., Paystack redirecting back with ?reference=... or ?verifyRef=...)
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+        const params = new URLSearchParams(window.location.search);
+        const verifyRef = params.get("verifyRef") || params.get("reference") || params.get("trxref");
+        const billIdParam = params.get("billId");
+
+        if (verifyRef && session?.user) {
+            const billIdNum = billIdParam ? parseInt(billIdParam) : undefined;
+            toast.loading("Verifying your payment with gateway...", { id: "gateway-verify" });
+            
+            resolveOnlinePaymentAction(verifyRef, 'completed', billIdNum)
+                .then((res) => {
+                    if (res.success) {
+                        toast.success("Payment verified and recorded successfully!", { id: "gateway-verify" });
+                        fetchData();
+                    } else {
+                        toast.error(res.error || "Payment verification could not be confirmed.", { id: "gateway-verify" });
+                    }
+                })
+                .catch((err) => {
+                    console.error("Verification error:", err);
+                    toast.error("An error occurred verifying payment.", { id: "gateway-verify" });
+                })
+                .finally(() => {
+                    window.history.replaceState({}, '', window.location.pathname);
+                });
+        }
+    }, [session, fetchData]);
+
     const openCheckout = (bill: Bill) => {
         if ((student as any)?.isPaymentLocked) {
             alert("Your account is locked for self-service payments by Administration. Please contact Bursary to make payments on your behalf.");
@@ -321,7 +352,12 @@ export default function StudentFinancePage() {
                         setCheckoutSuccess(true);
                         setTimeout(() => {
                             setIsCheckoutOpen(false);
-                            window.location.href = `${res.checkoutUrl}&billId=${selectedBill.id}`;
+                            if (res.checkoutUrl.startsWith('http')) {
+                                window.location.href = res.checkoutUrl;
+                            } else {
+                                const sep = res.checkoutUrl.includes('?') ? '&' : '?';
+                                window.location.href = `${res.checkoutUrl}${sep}billId=${selectedBill.id}`;
+                            }
                         }, 1000);
                     } else {
                         setCheckoutError(res.error || "Online checkout initialization failed.");

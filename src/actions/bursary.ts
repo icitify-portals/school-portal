@@ -3199,6 +3199,38 @@ export async function resolveOnlinePaymentAction(reference: string, status: 'com
                     if (billStatus === 'paid') {
                         const { checkAndGenerateMatricNumber } = await import('@/lib/matric-number');
                         await checkAndGenerateMatricNumber(studentId, tx);
+
+                        const isProcessing = bill.note?.toLowerCase().includes('processing') || bill.billNumber?.includes('PROC') || txRecord.purpose?.toLowerCase().includes('processing');
+                        if (isProcessing && bill.sessionId) {
+                            const { paystackDeveloperFees } = await import('@/db/schema');
+                            const [existingFee] = await tx.select().from(paystackDeveloperFees).where(
+                                and(
+                                    eq(paystackDeveloperFees.identifier, studentId.toString()),
+                                    eq(paystackDeveloperFees.type, 'school_fees'),
+                                    eq(paystackDeveloperFees.sessionId, bill.sessionId)
+                                )
+                            ).limit(1);
+
+                            if (existingFee) {
+                                await tx.update(paystackDeveloperFees).set({
+                                    status: 'paid',
+                                    paidAt: new Date(),
+                                    reference: reference,
+                                    amount: txRecord.amount
+                                }).where(eq(paystackDeveloperFees.id, existingFee.id));
+                            } else {
+                                await tx.insert(paystackDeveloperFees).values({
+                                    identifier: studentId.toString(),
+                                    email: (student as any).user?.email || student.matricNumber || '',
+                                    type: 'school_fees',
+                                    sessionId: bill.sessionId,
+                                    amount: txRecord.amount,
+                                    reference: reference,
+                                    status: 'paid',
+                                    paidAt: new Date()
+                                });
+                            }
+                        }
                     }
                 }
             }

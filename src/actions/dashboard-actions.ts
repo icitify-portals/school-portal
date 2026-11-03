@@ -40,8 +40,9 @@ export async function initiatePaystackProcessingFeeAction() {
             return { success: false, message: "Processing fee already paid" };
         }
 
-        if (result.success && result.authorization_url) {
-            return { success: true, authorizationUrl: result.authorization_url };
+        const authUrl = (result as any).authorizationUrl || (result as any).authorization_url;
+        if (result.success && authUrl) {
+            return { success: true, authorizationUrl: authUrl };
         }
 
         return { success: false, message: "Failed to get payment link" };

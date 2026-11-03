@@ -30,7 +30,39 @@ export async function checkDeveloperFeeStatus(
         where: condition
     });
 
-    return !!record;
+    if (record) return true;
+
+    // Fallback for school_fees: also check if student has paid their processing fee studentBill
+    if (type === 'school_fees') {
+        const studentId = parseInt(identifier);
+        if (!isNaN(studentId)) {
+            const { studentBills, studentBillItems, feeItems } = await import('@/db/schema');
+            const bills = await db.select({
+                bill: studentBills,
+                item: feeItems
+            })
+            .from(studentBills)
+            .leftJoin(studentBillItems, eq(studentBillItems.billId, studentBills.id))
+            .leftJoin(feeItems, eq(studentBillItems.feeItemId, feeItems.id))
+            .where(
+                and(
+                    eq(studentBills.studentId, studentId),
+                    eq(studentBills.status, 'paid'),
+                    sessionId ? eq(studentBills.sessionId, sessionId) : undefined
+                )
+            );
+
+            const hasPaidProcessingBill = bills.some(b => 
+                b.bill.note?.toLowerCase().includes('processing') ||
+                b.bill.billNumber?.includes('PROC') ||
+                b.item?.name?.toLowerCase().includes('processing')
+            );
+
+            if (hasPaidProcessingBill) return true;
+        }
+    }
+
+    return false;
 }
 
 /**

@@ -72,6 +72,18 @@ export async function POST(request: Request) {
 
                 console.log(`Paystack webhook: fee ${reference} confirmed as paid`);
             }
+
+            // Also check transactions table for student bill payments
+            const { transactions } = await import('@/db/schema');
+            const [txRecord] = await db.select().from(transactions)
+                .where(eq(transactions.gatewayReference, reference))
+                .limit(1);
+
+            if (txRecord && txRecord.status !== 'completed') {
+                const { resolveOnlinePaymentAction } = await import('@/actions/bursary');
+                await resolveOnlinePaymentAction(reference, 'completed', undefined, true);
+                console.log(`Paystack webhook: transaction ${reference} confirmed as completed`);
+            }
         }
 
         return NextResponse.json({ message: 'Webhook received' });

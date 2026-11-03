@@ -7,7 +7,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { initiatePaystackProcessingFeeAction } from "@/actions/dashboard-actions";
 import { toast } from "sonner";
 
-export function PaystackProcessingFeeBanner({ hasUnpaidSubscription, sessionName }: { hasUnpaidSubscription: boolean, sessionName: string }) {
+export function PaystackProcessingFeeBanner({ hasUnpaidSubscription, sessionName, amount = 4500 }: { hasUnpaidSubscription: boolean, sessionName: string, amount?: number }) {
     const [loading, setLoading] = useState(false);
 
     if (!hasUnpaidSubscription) return null;
@@ -38,7 +38,7 @@ export function PaystackProcessingFeeBanner({ hasUnpaidSubscription, sessionName
                         <Lock className="w-4 h-4 text-red-600" />
                     </AlertTitle>
                     <AlertDescription className="mt-1 text-red-600/90 leading-relaxed">
-                        You have an unpaid <strong>Processing Fee (₦3,000)</strong> for the <strong>{sessionName}</strong> session. 
+                        You have an unpaid <strong>Processing Fee (₦{amount.toLocaleString()})</strong> for the <strong>{sessionName}</strong> session. 
                         Please make this payment to avoid portal access restrictions towards examination periods.
                     </AlertDescription>
                 </div>
