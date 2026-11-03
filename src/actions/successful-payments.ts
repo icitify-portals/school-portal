@@ -259,7 +259,9 @@ export async function getSuccessfulPaymentsGrouped() {
                 try {
                     if (tx.createdAt) {
                         const d = new Date(tx.createdAt);
-                        if (!isNaN(d.getTime())) dateStr = d.toLocaleDateString();
+                        if (!isNaN(d.getTime())) {
+                            dateStr = d.toISOString().split('T')[0];
+                        }
                     }
                 } catch {}
 
@@ -614,6 +616,27 @@ export async function getSuccessfulPaymentsGrouped() {
 
                 item.studentName = studentName;
             }
+        }
+
+        // Step 6: Sanitize displayed items to minimize payload and remove bulky unneeded fields (like raw metadata)
+        for (const cat of Object.keys(grouped)) {
+            grouped[cat] = grouped[cat].map(item => ({
+                id: item.id,
+                studentId: item.studentId || null,
+                amount: item.amount,
+                gateway: item.gateway || 'portal',
+                gatewayReference: item.gatewayReference || null,
+                rrr: item.rrr || null,
+                gatewayTransactionId: item.gatewayTransactionId || null,
+                createdAt: item.createdAt ? (item.createdAt instanceof Date ? item.createdAt.toISOString() : String(item.createdAt)) : null,
+                purpose: item.purpose || null,
+                type: item.type,
+                userId: item.userId || null,
+                category: item.category,
+                itemBreakdown: item.itemBreakdown,
+                studentName: item.studentName || 'N/A',
+                date: item.date || 'N/A',
+            }));
         }
 
         return { 

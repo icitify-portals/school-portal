@@ -197,13 +197,11 @@ export default function SuccessfulPaymentsPage() {
         }
     };
 
-    if (loading) return <div className="p-10 flex justify-center"><Loader2 className="w-8 h-8 animate-spin text-indigo-500" /></div>;
-
     const tabs = useMemo(() => sortTabKeys(Object.keys(groupedData)), [groupedData]);
 
     const activeTabTotalAmount = useMemo(() => {
         if (tabTotals[activeTab] !== undefined) return tabTotals[activeTab];
-        return rawTabData.reduce((sum, tx) => sum + (parseFloat(tx.amount) || 0), 0);
+        return rawTabData.reduce((sum, tx) => sum + (parseFloat(tx.amount || '0') || 0), 0);
     }, [tabTotals, activeTab, rawTabData]);
 
     const totalRecordedCount = tabCounts[activeTab] !== undefined ? tabCounts[activeTab] : rawTabData.length;
@@ -223,7 +221,15 @@ export default function SuccessfulPaymentsPage() {
                 )}
             </div>
 
-            {tabs.length === 0 ? (
+            {loading ? (
+                <Card className="p-20 flex flex-col items-center justify-center gap-4 text-center border-slate-200 shadow-sm">
+                    <Loader2 className="w-10 h-10 animate-spin text-indigo-600" />
+                    <div>
+                        <h3 className="text-base font-bold text-slate-700">Loading Successful Payments</h3>
+                        <p className="text-xs text-slate-400 mt-1">Retrieving verified transactions across Remita, ALATPay and Paystack...</p>
+                    </div>
+                </Card>
+            ) : tabs.length === 0 ? (
                 <Card className="p-10 text-center text-slate-500 font-bold">No successful payments found.</Card>
             ) : (
                 <div className="space-y-6">
@@ -359,7 +365,7 @@ export default function SuccessfulPaymentsPage() {
                                                 </span>
                                             </td>
                                             <td className="px-6 py-4 text-right font-black text-slate-900">
-                                                &#8358;{parseFloat(tx.amount).toLocaleString()}
+                                                &#8358;{(parseFloat(tx.amount || '0') || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                             </td>
                                             <td className="px-6 py-4 text-center">
                                                 <div className="flex items-center justify-center gap-1">
