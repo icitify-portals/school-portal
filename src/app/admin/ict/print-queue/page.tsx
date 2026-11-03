@@ -39,6 +39,8 @@ export default function ICTPrintQueuePage() {
     const [selected, setSelected] = useState<number[]>([]);
     const [assignStaffId, setAssignStaffId] = useState<string>("");
     const [filterStatus, setFilterStatus] = useState("pending");
+    const [filterProgramme, setFilterProgramme] = useState("all");
+    const [filterLevel, setFilterLevel] = useState("all");
     const [search, setSearch] = useState("");
     const [assigning, setAssigning] = useState(false);
     const [updating, setUpdating] = useState(false);
@@ -67,6 +69,8 @@ export default function ICTPrintQueuePage() {
         setLoading(true);
         const res = await getPrintQueue({
             status: filterStatus === "all" ? undefined : filterStatus,
+            programmeType: filterProgramme === "all" ? undefined : filterProgramme,
+            level: filterLevel === "all" ? undefined : filterLevel,
             search: search || undefined,
             limit: pageSize,
             offset: (page - 1) * pageSize,
@@ -93,7 +97,7 @@ export default function ICTPrintQueuePage() {
             }
         }
         setLoading(false);
-    }, [filterStatus, search, page]);
+    }, [filterStatus, filterProgramme, filterLevel, search, page]);
 
     useEffect(() => {
         loadQueue();
@@ -449,9 +453,35 @@ export default function ICTPrintQueuePage() {
                             />
                         </div>
                         <div>
+                            <Label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Programme</Label>
+                            <Select value={filterProgramme} onValueChange={(v) => { setFilterProgramme(v); setPage(1); }}>
+                                <SelectTrigger className="w-32 h-10 rounded-xl">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">All Programmes</SelectItem>
+                                    <SelectItem value="ND">ND</SelectItem>
+                                    <SelectItem value="HND">HND</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div>
+                            <Label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Level</Label>
+                            <Select value={filterLevel} onValueChange={(v) => { setFilterLevel(v); setPage(1); }}>
+                                <SelectTrigger className="w-40 h-10 rounded-xl">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">All Levels</SelectItem>
+                                    <SelectItem value="1">Level 1 (Freshmen)</SelectItem>
+                                    <SelectItem value="2">Level 2 (Returning)</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div>
                             <Label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Status Filter</Label>
                             <Select value={filterStatus} onValueChange={(v) => { setFilterStatus(v); setPage(1); }}>
-                                <SelectTrigger className="w-40 h-10 rounded-xl">
+                                <SelectTrigger className="w-36 h-10 rounded-xl">
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>

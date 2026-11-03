@@ -1,7 +1,21 @@
 "use server";
 
 import { db } from "@/db/db";
-import { idCards, users, students, departments, programmes, staffProfiles, semesterSummaries, studentCourseRegistrations, courses, academicSessions } from "@/db/schema";
+import { 
+    idCards, 
+    users, 
+    students, 
+    departments, 
+    programmes, 
+    staffProfiles, 
+    semesterSummaries, 
+    studentCourseRegistrations, 
+    courses, 
+    academicSessions,
+    admissionApplicationsV2,
+    transactions,
+    payment_transactions 
+} from "@/db/schema";
 import { eq, and, inArray, sql, desc, or, like } from "drizzle-orm";
 import { auth } from "@/auth";
 import { revalidatePath } from "next/cache";
@@ -23,6 +37,7 @@ export async function getPrintQueue(filters?: {
     status?: string;
     departmentId?: number;
     programmeType?: string;
+    level?: string | number;
     search?: string;
     limit?: number;
     offset?: number;
@@ -39,6 +54,17 @@ export async function getPrintQueue(filters?: {
             whereConditions = and(whereConditions, eq(idCards.printStatus, filters.status as any));
         }
 
+        if (filters?.level && filters.level !== "all") {
+            const parsedLvl = parseInt(String(filters.level));
+            if (!isNaN(parsedLvl)) {
+                whereConditions = and(whereConditions, eq(students.currentLevel, parsedLvl));
+            }
+        }
+
+        if (filters?.programmeType && filters.programmeType !== "all") {
+            whereConditions = and(whereConditions, eq(students.programmeType, filters.programmeType as any));
+        }
+
         if (filters?.search) {
             const q = `%${filters.search}%`;
             whereConditions = and(
@@ -50,6 +76,7 @@ export async function getPrintQueue(filters?: {
         const cards = await db.select({
             id: idCards.id,
             userId: idCards.userId,
+            studentId: students.id,
             issueId: idCards.issueId,
             cardType: idCards.cardType,
             printStatus: idCards.printStatus,
@@ -78,13 +105,44 @@ export async function getPrintQueue(filters?: {
         .limit(limit)
         .offset(offset);
 
+        // Fallback photo resolution from admission applications for freshmen
+        const enhancedCards = await Promise.all(cards.map(async (c) => {
+            let photoUrl = c.photoUrl;
+            if (!photoUrl && (c.studentId || c.userId)) {
+                try {
+                    const orConds = [];
+                    if (c.studentId) orConds.push(eq(admissionApplicationsV2.studentId, c.studentId));
+                    if (c.userId) orConds.push(eq(admissionApplicationsV2.applicantId, c.userId));
+                    if (orConds.length > 0) {
+                        const [app] = await db.select({
+                            applicantPhoto: admissionApplicationsV2.applicantPhoto,
+                            data: admissionApplicationsV2.data
+                        }).from(admissionApplicationsV2).where(or(...orConds)).limit(1);
+
+                        if (app) {
+                            if (app.applicantPhoto) {
+                                photoUrl = app.applicantPhoto;
+                            } else if (app.data) {
+                                const d = typeof app.data === 'string' ? JSON.parse(app.data) : app.data;
+                                photoUrl = d['Passport Photograph'] || d['Passport Photo'] || d['Passport'] || d['photo'] || d['Photo'] || null;
+                            }
+                        }
+                    }
+                } catch(e) {}
+            }
+            return {
+                ...c,
+                photoUrl: photoUrl || undefined
+            };
+        }));
+
         const [{ count }] = await db.select({ count: sql<number>`count(*)` })
             .from(idCards)
             .innerJoin(users, eq(idCards.userId, users.id))
             .leftJoin(students, eq(users.id, students.userId))
             .where(whereConditions);
 
-        return { success: true, data: cards, total: count };
+        return { success: true, data: enhancedCards, total: count };
     } catch (error) {
         return { success: false, error: (error as Error).message, data: [], total: 0 };
     }
@@ -295,6 +353,8 @@ export async function getPrintCardsByIds(cardIds: number[]) {
 
         const cards = await db.select({
             id: idCards.id,
+            userId: idCards.userId,
+            studentId: students.id,
             issueId: idCards.issueId,
             verificationCode: idCards.verificationCode,
             studentName: users.name,
@@ -313,7 +373,53 @@ export async function getPrintCardsByIds(cardIds: number[]) {
         .where(inArray(idCards.id, cardIds))
         .orderBy(users.name);
 
-        return { success: true, data: cards };
+        // Enhance with fallback photos and signatures from admission applications
+        const enhancedCards = await Promise.all(cards.map(async (c) => {
+            let photoUrl = c.photoUrl;
+            let signatureUrl = c.signatureUrl;
+
+            if ((!photoUrl || !signatureUrl) && (c.studentId || c.userId)) {
+                try {
+                    const orConds = [];
+                    if (c.studentId) orConds.push(eq(admissionApplicationsV2.studentId, c.studentId));
+                    if (c.userId) orConds.push(eq(admissionApplicationsV2.applicantId, c.userId));
+                    if (orConds.length > 0) {
+                        const [app] = await db.select({
+                            applicantPhoto: admissionApplicationsV2.applicantPhoto,
+                            data: admissionApplicationsV2.data
+                        }).from(admissionApplicationsV2).where(or(...orConds)).limit(1);
+
+                        if (app) {
+                            if (!photoUrl) {
+                                if (app.applicantPhoto) {
+                                    photoUrl = app.applicantPhoto;
+                                } else if (app.data) {
+                                    try {
+                                        const d = typeof app.data === 'string' ? JSON.parse(app.data) : app.data;
+                                        photoUrl = d['Passport Photograph'] || d['Passport Photo'] || d['Passport'] || d['photo'] || d['Photo'] || null;
+                                    } catch(e) {}
+                                }
+                            }
+
+                            if (!signatureUrl && app.data) {
+                                try {
+                                    const d = typeof app.data === 'string' ? JSON.parse(app.data) : app.data;
+                                    signatureUrl = d['Signature'] || d['signature'] || d['Applicant Signature'] || d['Student Signature'] || null;
+                                } catch(e) {}
+                            }
+                        }
+                    }
+                } catch(e) {}
+            }
+
+            return {
+                ...c,
+                photoUrl: photoUrl || undefined,
+                signatureUrl: signatureUrl || undefined,
+            };
+        }));
+
+        return { success: true, data: enhancedCards };
     } catch (error) {
         return { success: false, error: (error as Error).message, data: [] };
     }
@@ -345,18 +451,40 @@ export async function getStudentsWithoutCards(filters?: {
             deptName: departments.name,
             currentLevel: students.currentLevel,
             programmeType: students.programmeType,
-            hasPhoto: sql<number>`(${students.imageUrl} IS NOT NULL AND ${students.imageUrl} <> '')`,
-            hasSignature: sql<number>`(${students.signatureUrl} IS NOT NULL AND ${students.signatureUrl} <> '')`,
+            hasPhoto: sql<number>`(
+                (${students.imageUrl} IS NOT NULL AND ${students.imageUrl} <> '')
+                OR EXISTS (
+                    SELECT 1 FROM admission_applications_v2 a 
+                    WHERE (a.student_id = ${students.id} OR a.applicant_id = ${students.userId})
+                      AND ((a.applicant_photo IS NOT NULL AND a.applicant_photo <> '') OR a.data LIKE '%Passport%')
+                )
+            )`,
+            hasSignature: sql<number>`(
+                (${students.signatureUrl} IS NOT NULL AND ${students.signatureUrl} <> '')
+                OR EXISTS (
+                    SELECT 1 FROM admission_applications_v2 a 
+                    WHERE (a.student_id = ${students.id} OR a.applicant_id = ${students.userId})
+                      AND (a.data LIKE '%Signature%' OR a.data LIKE '%signature%')
+                )
+            )`,
             isPaymentLocked: students.isPaymentLocked,
             hasPaidAcceptance: sql<number>`(
-                EXISTS (
+                (${students.matricNumber} IS NOT NULL AND ${students.matricNumber} <> '' AND ${students.status} = 'active')
+                OR EXISTS (
+                    SELECT 1 FROM transactions t 
+                    WHERE (t.student_id = ${students.id} OR t.gateway_reference LIKE '%ACC%')
+                      AND t.purpose LIKE '%acceptance%' 
+                      AND t.status = 'completed'
+                )
+                OR EXISTS (
                     SELECT 1 FROM payment_transactions pt 
                     WHERE pt.user_id = ${students.userId} 
                       AND pt.transaction_type LIKE '%acceptance%' 
-                      AND pt.status = 'completed'
-                ) OR EXISTS (
+                      AND pt.status IN ('completed', 'paid')
+                ) 
+                OR EXISTS (
                     SELECT 1 FROM admission_applications_v2 a 
-                    WHERE a.applicant_id = ${students.userId} 
+                    WHERE (a.applicant_id = ${students.userId} OR a.student_id = ${students.id})
                       AND a.acceptance_payment_status = 'paid'
                 )
             )`,
@@ -386,7 +514,7 @@ export async function getStudentsWithoutCards(filters?: {
                 if (hasPaidAcceptance) {
                     isEligible = true;
                     statusTag = 'freshman_paid';
-                    eligibilityNote = 'Acceptance Fee Paid — Ready for ID Card';
+                    eligibilityNote = 'Acceptance / Enrolled Verified — Ready for ID Card';
                 } else {
                     isEligible = false;
                     statusTag = 'freshman_unpaid';
@@ -451,7 +579,7 @@ export async function processAcceptancePaidFreshmenIDCards() {
     try {
         await ensureICTManager();
 
-        // Find all ND 1 and HND 1 students who paid acceptance fee and don't have an active card
+        // Find all ND 1 and HND 1 students who paid acceptance fee or are active matriculated freshmen and don't have an active card
         const eligibleRows = await db.select({
             userId: students.userId,
             name: users.name,
@@ -463,21 +591,33 @@ export async function processAcceptancePaidFreshmenIDCards() {
             sql`${students.deletedAt} IS NULL`,
             sql`NOT EXISTS (SELECT 1 FROM id_cards ic WHERE ic.user_id = ${students.userId} AND ic.status = 'active')`,
             sql`(
-                EXISTS (
+                ${students.currentLevel} IN (1, 100, 300, 3)
+                OR (${students.currentLevel} = 1 AND ${students.programmeType} IN ('ND', 'HND'))
+            )`,
+            sql`(
+                (${students.matricNumber} IS NOT NULL AND ${students.matricNumber} <> '' AND ${students.status} = 'active')
+                OR EXISTS (
+                    SELECT 1 FROM transactions t 
+                    WHERE (t.student_id = ${students.id} OR t.gateway_reference LIKE '%ACC%')
+                      AND t.purpose LIKE '%acceptance%' 
+                      AND t.status = 'completed'
+                )
+                OR EXISTS (
                     SELECT 1 FROM payment_transactions pt 
                     WHERE pt.user_id = ${students.userId} 
                       AND pt.transaction_type LIKE '%acceptance%' 
-                      AND pt.status = 'completed'
-                ) OR EXISTS (
+                      AND pt.status IN ('completed', 'paid')
+                ) 
+                OR EXISTS (
                     SELECT 1 FROM admission_applications_v2 a 
-                    WHERE a.applicant_id = ${students.userId} 
+                    WHERE (a.applicant_id = ${students.userId} OR a.student_id = ${students.id})
                       AND a.acceptance_payment_status = 'paid'
                 )
             )`
         ));
 
         if (!eligibleRows.length) {
-            return { success: true, count: 0, message: "All students with paid acceptance fees already have active cards in queue." };
+            return { success: true, count: 0, message: "All eligible ND 1 and HND 1 freshmen already have active cards in queue." };
         }
 
         const { v4: uuidv4 } = await import("uuid");
@@ -512,7 +652,7 @@ export async function processAcceptancePaidFreshmenIDCards() {
         return {
             success: true,
             count: insertedCount,
-            message: `Successfully processed ${insertedCount} ID card(s) for acceptance-paid students into the print queue.`
+            message: `Successfully processed ${insertedCount} ID card(s) for ND 1 & HND 1 freshmen into the print queue.`
         };
     } catch (error) {
         return { success: false, error: (error as Error).message };

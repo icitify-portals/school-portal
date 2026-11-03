@@ -123,6 +123,7 @@ export async function getIdCardStudents(options?: {
     search?: string;
     deptId?: number;
     programmeType?: string;
+    level?: number | string;
     page?: number;
     pageSize?: number;
 }) {
@@ -152,6 +153,12 @@ export async function getIdCardStudents(options?: {
         }
         if (options?.programmeType) {
             conditions.push(eq(students.programmeType, options.programmeType as "ND" | "HND"));
+        }
+        if (options?.level && options.level !== 'all') {
+            const parsedLvl = parseInt(String(options.level));
+            if (!isNaN(parsedLvl)) {
+                conditions.push(eq(students.currentLevel, parsedLvl));
+            }
         }
 
         const whereClause = and(...conditions);

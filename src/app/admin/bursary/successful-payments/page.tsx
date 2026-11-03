@@ -25,9 +25,12 @@ const TAB_ORDER = [
 
 export default function SuccessfulPaymentsPage() {
     const [groupedData, setGroupedData] = useState<Record<string, any[]>>({});
+    const [tabCounts, setTabCounts] = useState<Record<string, number>>({});
+    const [tabTotals, setTabTotals] = useState<Record<string, number>>({});
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<string>('');
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+    const [searchQuery, setSearchQuery] = useState("");
     
     // Pagination state
     const [currentPage, setCurrentPage] = useState(1);
@@ -45,18 +48,28 @@ export default function SuccessfulPaymentsPage() {
 
     const loadData = () => {
         setLoading(true);
-        getSuccessfulPaymentsGrouped().then((res) => {
-            if (res.success && res.data) {
-                setGroupedData(res.data);
-                const sortedKeys = sortTabKeys(Object.keys(res.data));
-                if (sortedKeys.length > 0 && !sortedKeys.includes(activeTab)) {
-                    setActiveTab(sortedKeys[0]);
+        getSuccessfulPaymentsGrouped()
+            .then((res: any) => {
+                if (res.success && res.data) {
+                    setGroupedData(res.data);
+                    if (res.counts) setTabCounts(res.counts);
+                    if (res.totals) setTabTotals(res.totals);
+                    const sortedKeys = sortTabKeys(Object.keys(res.data));
+                    if (sortedKeys.length > 0 && !sortedKeys.includes(activeTab)) {
+                        setActiveTab(sortedKeys[0]);
+                    }
+                } else {
+                    toast.error(res.error || "Failed to load successful payments");
                 }
-            }
-            setLoading(false);
-            setSelectedIds(new Set());
-            setCurrentPage(1);
-        });
+                setLoading(false);
+                setSelectedIds(new Set());
+                setCurrentPage(1);
+            })
+            .catch((err) => {
+                console.error("Load payments failed:", err);
+                toast.error("Failed to load payments data. Please refresh.");
+                setLoading(false);
+            });
     };
 
     useEffect(() => {
@@ -67,16 +80,30 @@ export default function SuccessfulPaymentsPage() {
     useEffect(() => {
         setCurrentPage(1);
         setSelectedIds(new Set());
+        setSearchQuery("");
     }, [activeTab]);
 
-    const currentTabData = useMemo(() => groupedData[activeTab] || [], [groupedData, activeTab]);
+    const rawTabData = useMemo(() => groupedData[activeTab] || [], [groupedData, activeTab]);
+
+    const filteredTabData = useMemo(() => {
+        if (!searchQuery.trim()) return rawTabData;
+        const q = searchQuery.toLowerCase().trim();
+        return rawTabData.filter((tx) => {
+            const student = (tx.studentName || '').toLowerCase();
+            const rrr = (tx.rrr || '').toLowerCase();
+            const ref = (tx.gatewayReference || '').toLowerCase();
+            const purpose = (tx.purpose || '').toLowerCase();
+            const breakdown = (tx.itemBreakdown || '').toLowerCase();
+            return student.includes(q) || rrr.includes(q) || ref.includes(q) || purpose.includes(q) || breakdown.includes(q);
+        });
+    }, [rawTabData, searchQuery]);
 
     const paginatedData = useMemo(() => {
         const startIndex = (currentPage - 1) * itemsPerPage;
-        return currentTabData.slice(startIndex, startIndex + itemsPerPage);
-    }, [currentTabData, currentPage]);
+        return filteredTabData.slice(startIndex, startIndex + itemsPerPage);
+    }, [filteredTabData, currentPage]);
 
-    const totalPages = Math.ceil(currentTabData.length / itemsPerPage);
+    const totalPages = Math.ceil(filteredTabData.length / itemsPerPage);
 
     const handleDelete = async (id: number, type: string) => {
         if (!confirm("Are you sure you want to delete this test transaction? This cannot be undone.")) return;
@@ -175,15 +202,18 @@ export default function SuccessfulPaymentsPage() {
     const tabs = useMemo(() => sortTabKeys(Object.keys(groupedData)), [groupedData]);
 
     const activeTabTotalAmount = useMemo(() => {
-        return currentTabData.reduce((sum, tx) => sum + (parseFloat(tx.amount) || 0), 0);
-    }, [currentTabData]);
+        if (tabTotals[activeTab] !== undefined) return tabTotals[activeTab];
+        return rawTabData.reduce((sum, tx) => sum + (parseFloat(tx.amount) || 0), 0);
+    }, [tabTotals, activeTab, rawTabData]);
+
+    const totalRecordedCount = tabCounts[activeTab] !== undefined ? tabCounts[activeTab] : rawTabData.length;
 
     return (
         <div className="p-6 md:p-10 max-w-7xl mx-auto space-y-8">
             <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
                 <div>
                     <h1 className="text-3xl font-black text-slate-900">Successful Payments</h1>
-                    <p className="text-slate-500 font-medium mt-2">View all successful transactions grouped by payment item across ALATPay and Remita.</p>
+                    <p className="text-slate-500 font-medium mt-2">View all successful transactions grouped by payment item across ALATPay, Paystack and Remita.</p>
                 </div>
                 {selectedIds.size > 0 && (
                     <button onClick={handleBulkDelete} className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg font-medium transition flex items-center gap-2">
@@ -199,18 +229,21 @@ export default function SuccessfulPaymentsPage() {
                 <div className="space-y-6">
                     {/* Tabs */}
                     <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-                        {tabs.map((tab) => (
-                            <button
-                                key={tab}
-                                onClick={() => setActiveTab(tab)}
-                                className={`px-6 py-3 rounded-full font-bold text-sm whitespace-nowrap transition-all ${activeTab === tab ? 'bg-indigo-600 text-white shadow-md' : 'bg-white text-slate-600 hover:bg-slate-100 border'}`}
-                            >
-                                {tab}
-                                <span className={`ml-2 px-2 py-0.5 rounded-full text-[10px] ${activeTab === tab ? 'bg-indigo-500 text-white' : 'bg-slate-200 text-slate-500'}`}>
-                                    {groupedData[tab].length}
-                                </span>
-                            </button>
-                        ))}
+                        {tabs.map((tab) => {
+                            const count = tabCounts[tab] !== undefined ? tabCounts[tab] : (groupedData[tab]?.length || 0);
+                            return (
+                                <button
+                                    key={tab}
+                                    onClick={() => setActiveTab(tab)}
+                                    className={`px-6 py-3 rounded-full font-bold text-sm whitespace-nowrap transition-all ${activeTab === tab ? 'bg-indigo-600 text-white shadow-md' : 'bg-white text-slate-600 hover:bg-slate-100 border'}`}
+                                >
+                                    {tab}
+                                    <span className={`ml-2 px-2 py-0.5 rounded-full text-[10px] ${activeTab === tab ? 'bg-indigo-500 text-white' : 'bg-slate-200 text-slate-500'}`}>
+                                        {count.toLocaleString()}
+                                    </span>
+                                </button>
+                            );
+                        })}
                     </div>
 
                     {/* Active Tab Summary Banner */}
@@ -222,7 +255,8 @@ export default function SuccessfulPaymentsPage() {
                             <div>
                                 <h2 className="text-base font-black text-slate-800">{activeTab} Collections</h2>
                                 <p className="text-xs text-slate-500 font-medium">
-                                    {currentTabData.length} settled transaction{currentTabData.length === 1 ? '' : 's'} recorded
+                                    {totalRecordedCount.toLocaleString()} total verified payment{totalRecordedCount === 1 ? '' : 's'} recorded
+                                    {rawTabData.length < totalRecordedCount && ` (displaying latest ${rawTabData.length})`}
                                 </p>
                             </div>
                         </div>
@@ -234,8 +268,22 @@ export default function SuccessfulPaymentsPage() {
                         </div>
                     </div>
 
-                    {/* Table */}
+                    {/* Search and Table */}
                     <Card className="overflow-hidden border-slate-200 shadow-sm">
+                        <div className="p-4 bg-slate-50 border-b border-slate-200 flex flex-col sm:flex-row justify-between items-center gap-3">
+                            <Input
+                                placeholder={`Search in ${activeTab} by payer, matric, RRR, or reference...`}
+                                value={searchQuery}
+                                onChange={(e) => {
+                                    setSearchQuery(e.target.value);
+                                    setCurrentPage(1);
+                                }}
+                                className="max-w-md bg-white rounded-xl text-sm"
+                            />
+                            <div className="text-xs font-semibold text-slate-500">
+                                Showing {filteredTabData.length} {searchQuery ? 'matching' : 'recent'} transactions
+                            </div>
+                        </div>
                         <div className="overflow-x-auto">
                             <table className="w-full text-left text-sm">
                                 <thead className="bg-slate-50 text-slate-500 uppercase font-black text-[10px] tracking-wider border-b">
@@ -333,7 +381,7 @@ export default function SuccessfulPaymentsPage() {
                         {totalPages > 1 && (
                             <div className="bg-slate-50 px-6 py-4 border-t border-slate-200 flex items-center justify-between">
                                 <div className="text-xs text-slate-500 font-medium">
-                                    Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, currentTabData.length)} of {currentTabData.length} entries
+                                    Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, filteredTabData.length)} of {filteredTabData.length} entries
                                 </div>
                                 <div className="flex gap-1">
                                     <button 

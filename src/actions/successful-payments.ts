@@ -338,6 +338,34 @@ export async function getSuccessfulPaymentsGrouped() {
             'Others': [],
         };
 
+        const counts: Record<string, number> = {
+            'School Fees': 0,
+            'Processing Fee': 0,
+            'ICT Fee': 0,
+            'Incidental Fee': 0,
+            'Acceptance Fee': 0,
+            'Application Form Fee': 0,
+            'Transcript Fee': 0,
+            'Certificate Fee': 0,
+            'ID Card Fee': 0,
+            'Wallet Topup': 0,
+            'Others': 0,
+        };
+
+        const totals: Record<string, number> = {
+            'School Fees': 0,
+            'Processing Fee': 0,
+            'ICT Fee': 0,
+            'Incidental Fee': 0,
+            'Acceptance Fee': 0,
+            'Application Form Fee': 0,
+            'Transcript Fee': 0,
+            'Certificate Fee': 0,
+            'ID Card Fee': 0,
+            'Wallet Topup': 0,
+            'Others': 0,
+        };
+
         for (const tx of txs) {
             const p = (tx.purpose || '').toLowerCase();
             const ref = (tx.gatewayReference || '').toLowerCase();
@@ -540,15 +568,29 @@ export async function getSuccessfulPaymentsGrouped() {
             }
 
             if (!grouped[category]) grouped[category] = [];
-            grouped[category].push({
-                ...tx,
-                itemBreakdown,
-                studentName,
-                date: tx.createdAt ? new Date(tx.createdAt).toLocaleDateString() : 'N/A'
-            });
+            
+            // Increment exact running counts and sums across all transactions
+            counts[category] = (counts[category] || 0) + 1;
+            totals[category] = (totals[category] || 0) + amt;
+
+            // Retain the newest 200 transactions per category for the client payload
+            // This prevents massive multi-megabyte payloads from crashing the client browser
+            if (grouped[category].length < 200) {
+                grouped[category].push({
+                    ...tx,
+                    itemBreakdown,
+                    studentName,
+                    date: tx.createdAt ? new Date(tx.createdAt).toLocaleDateString() : 'N/A'
+                });
+            }
         }
 
-        return { success: true, data: grouped };
+        return { 
+            success: true, 
+            data: grouped,
+            counts,
+            totals
+        };
     } catch(e) {
         console.error("Failed to fetch successful payments:", e);
         return { success: false, error: String(e) };

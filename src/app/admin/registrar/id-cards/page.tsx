@@ -19,6 +19,7 @@ export default function IdCardsPage() {
     const [totalPages, setTotalPages] = useState(1);
     const [search, setSearch] = useState("");
     const [typeFilter, setTypeFilter] = useState("");
+    const [levelFilter, setLevelFilter] = useState("");
     const [loading, setLoading] = useState(true);
     const [downloading, setDownloading] = useState<number | null>(null);
 
@@ -31,6 +32,7 @@ export default function IdCardsPage() {
             const res = await getIdCardStudents({
                 search,
                 programmeType: typeFilter || undefined,
+                level: levelFilter || undefined,
                 page,
                 pageSize: 50,
             });
@@ -41,11 +43,11 @@ export default function IdCardsPage() {
             toast.error("Failed to load students");
         }
         setLoading(false);
-    }, [search, typeFilter, page]);
+    }, [search, typeFilter, levelFilter, page]);
 
     useEffect(() => {
         fetchData();
-    }, [page, typeFilter]);
+    }, [page, typeFilter, levelFilter]);
 
     const handleSearch = () => {
         setPage(1);
@@ -101,16 +103,23 @@ export default function IdCardsPage() {
     return (
         <div className="p-4 sm:p-6 lg:p-8 min-h-screen">
             <div className="max-w-[1600px] w-full mx-auto space-y-6">
-                <div className="flex items-center gap-4">
-                    <Link href="/admin/registrar">
-                        <Button variant="ghost" className="rounded-xl text-slate-500 font-bold">
-                            <ArrowLeft className="w-4 h-4 mr-2" /> Back
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="flex items-center gap-4">
+                        <Link href="/admin/registrar">
+                            <Button variant="ghost" className="rounded-xl text-slate-500 font-bold">
+                                <ArrowLeft className="w-4 h-4 mr-2" /> Back
+                            </Button>
+                        </Link>
+                        <div>
+                            <h1 className="text-3xl font-black tracking-tight text-slate-900">ID Card Assets & Schedule</h1>
+                            <p className="text-slate-500 mt-1">Download student photographs, signatures, and manage physical PVC ID card production.</p>
+                        </div>
+                    </div>
+                    <Link href="/admin/ict/print-queue">
+                        <Button className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-md">
+                            Go to PVC Print Queue & Schedule
                         </Button>
                     </Link>
-                    <div>
-                        <h1 className="text-3xl font-black tracking-tight text-slate-900">ID Card Assets</h1>
-                        <p className="text-slate-500 mt-1">Download student photographs, signatures, and application forms for ID card production.</p>
-                    </div>
                 </div>
 
                 <Card className="border border-slate-200 rounded-2xl shadow-sm">
@@ -133,9 +142,18 @@ export default function IdCardsPage() {
                                 onChange={(e) => { setTypeFilter(e.target.value); setPage(1); }}
                                 className="px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-medium bg-white"
                             >
-                                <option value="">All Types</option>
+                                <option value="">All Types (ND & HND)</option>
                                 <option value="ND">ND</option>
                                 <option value="HND">HND</option>
+                            </select>
+                            <select
+                                value={levelFilter}
+                                onChange={(e) => { setLevelFilter(e.target.value); setPage(1); }}
+                                className="px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-medium bg-white"
+                            >
+                                <option value="">All Levels</option>
+                                <option value="1">Level 1 (ND 1 / HND 1 Freshmen)</option>
+                                <option value="2">Level 2 (ND 2 / HND 2 Returning)</option>
                             </select>
                             <Button
                                 onClick={handleSearch}
