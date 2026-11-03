@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useTransition } from "react";
+import Link from "next/link";
 import {
     Stethoscope, Loader2, Search, FileText, CheckCircle2,
     XCircle, Download, Eye, Filter, Printer, Heart, Activity,
@@ -183,6 +184,14 @@ export default function MedicalRecordsPage() {
                                 Student physical examination, clinical measurements, and official medical form clearance
                             </p>
                         </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <Link href="/admin/health">
+                            <Button variant="outline" className="border-slate-300 text-slate-700 hover:bg-slate-50 font-bold rounded-2xl flex items-center gap-2">
+                                <Activity className="w-4 h-4 text-rose-500" />
+                                Health Directory & Vitals
+                            </Button>
+                        </Link>
                     </div>
                 </div>
 

@@ -11,7 +11,8 @@ import {
     ClipboardList,
     Clock,
     UserCheck,
-    Search
+    Search,
+    Stethoscope
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getHealthDashboardStats } from "@/actions/dashboards";
@@ -50,12 +51,20 @@ export default async function HealthAdminDashboard() {
                     </h1>
                     <p className="text-slate-500 font-medium mt-1">Student medical monitoring and clearance dashboard</p>
                 </div>
-                <Link href="/admin/health">
-                    <button className="flex items-center gap-2 px-6 py-3 bg-slate-900 text-white rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-slate-800 transition-all shadow-xl hover:shadow-slate-200">
-                        Open Health Directory
-                        <Search className="w-4 h-4" />
-                    </button>
-                </Link>
+                <div className="flex flex-wrap items-center gap-3">
+                    <Link href="/admin/health/medical-records">
+                        <button className="flex items-center gap-2 px-6 py-3 bg-emerald-600 text-white rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-emerald-700 transition-all shadow-xl hover:shadow-emerald-200">
+                            <Stethoscope className="w-4 h-4" />
+                            Medical Records & Forms
+                        </button>
+                    </Link>
+                    <Link href="/admin/health">
+                        <button className="flex items-center gap-2 px-6 py-3 bg-slate-900 text-white rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-slate-800 transition-all shadow-xl hover:shadow-slate-200">
+                            Health Directory
+                            <Search className="w-4 h-4" />
+                        </button>
+                    </Link>
+                </div>
             </div>
 
             {/* Stats Grid */}
@@ -158,8 +167,9 @@ export default async function HealthAdminDashboard() {
             </div>
 
             {/* Quick Actions */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 {[
+                    { title: "Medical Records", desc: "Measurements, physical exams & forms", icon: Stethoscope, color: "bg-emerald-600", href: "/admin/health/medical-records" },
                     { title: "Review Queue", desc: "Verify uploaded medical documents", icon: ClipboardList, color: "bg-indigo-600", href: "/admin/health" },
                     { title: "Student Directory", desc: "Search and manage student files", icon: Users, color: "bg-slate-900", href: "/admin/health" },
                     { title: "Screening Logs", desc: "View all vital sign history", icon: Activity, color: "bg-rose-600", href: "/admin/health" },

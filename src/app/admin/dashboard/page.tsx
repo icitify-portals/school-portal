@@ -21,7 +21,8 @@ import {
     BookMarked,
     ScrollText,
     Zap,
-    Activity
+    Activity,
+    Stethoscope
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { db } from "@/db/db";
@@ -173,6 +174,7 @@ export default async function AdminDashboardPage() {
                     </div>
                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                         {[
+                            { title: "Medical Records", desc: "Student Physical Exams & Clearance Forms", href: "/admin/health/medical-records", icon: Stethoscope, color: "bg-emerald-600" },
                             { title: "Carryover Dashboard", desc: "All carryover courses, students & payment status", href: "/admin/registrar/carryover", icon: AlertCircle, color: "bg-amber-600" },
                             { title: "User Management", desc: "Manage all users & bulk import", href: "/admin/users", icon: Users, color: "bg-blue-600" },
                             { title: "Admission Desk", desc: "Screening & applications", href: "/admin/admission", icon: UserCheck, color: "bg-emerald-600" },

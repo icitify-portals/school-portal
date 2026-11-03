@@ -222,6 +222,7 @@ const adminMenuItems: MenuItem[] = [
         subItems: [
             { name: "Registrar Dashboard", href: "/admin/registrar" },
             { name: "All Students", href: "/admin/students" },
+            { name: "Medical Records", href: "/admin/health/medical-records" },
             { name: "Placement Corrections", href: "/admin/students/placement" },
             { name: "Incomplete Admissions", href: "/admin/students/orphans" },
             { name: "Graduation & Clearance", href: "/admin/registrar/clearance" },
@@ -376,6 +377,7 @@ const adminMenuItems: MenuItem[] = [
         icon: User,
         subItems: [
             { name: "All Students", href: "/admin/students" },
+            { name: "Medical Records", href: "/admin/health/medical-records" },
             { name: "Placement Corrections", href: "/admin/students/placement" },
             { name: "Records Mobility", href: "/admin/students/transfer" },
             { name: "Incomplete Admissions", href: "/admin/students/orphans" },
@@ -409,10 +411,10 @@ const adminMenuItems: MenuItem[] = [
             { name: "Attendance Settings", href: "/admin/attendance/settings" },
         ]
     },
+    { name: "Medical Records", icon: Stethoscope, href: "/admin/health/medical-records" },
     {
         name: "Health & Medical",
         icon: Stethoscope,
-        role: "healthadmin",
         subItems: [
             { name: "Medical Records", href: "/admin/health/medical-records" },
             { name: "Health Dashboard", href: "/admin/health" },
@@ -626,6 +628,7 @@ export function Sidebar({ enabledModules = {}, mobileOpen = false, onClose }: {
     const isBursar = role === 'bursar' || role === 'bursary' || userRolesList.includes('bursar') || userRolesList.includes('bursary') || userRolesList.includes('accountant');
     const isRecordOfficer = role === 'record_officer' || role === 'record officer' || role === 'recordofficer' || userRolesList.includes('record_officer') || userRolesList.includes('record officer');
     const isSuperAdminOrDev = role === 'admin' || role === 'superadmin' || role === 'icitify_dev' || userRolesList.includes('superadmin') || userRolesList.includes('admin') || userRolesList.includes('developer');
+    const isHealthAdmin = role === 'healthadmin' || role === 'health_admin' || role === 'medical_officer' || role === 'doctor' || role === 'nurse' || userRolesList.includes('healthadmin') || userRolesList.includes('health admin') || userRolesList.includes('medical officer') || userRolesList.includes('health officer');
 
     const hasResultModulePermission = userPermissions.includes("result_module.manage");
     const isRestrictedResultOfficer = hasResultModulePermission && !['admin', 'superadmin', 'dvc', 'icitify_dev'].includes(role);
@@ -790,8 +793,8 @@ export function Sidebar({ enabledModules = {}, mobileOpen = false, onClose }: {
                       ...(canBursarAccessStudents ? ["Student Management"] : []),
                   ]
                 : isRegistrar
-                ? ["Admin Dashboard", "Academics", "Office of the Registrar", "Admission Management", "Student Management", "Academic Calendar", "Student Promotion", "Communication", "Registration Concessions", "SIWES Management"]
-                : ["Admin Dashboard", "Admission Management", "Student Management", "Communication"];
+                ? ["Admin Dashboard", "Academics", "Office of the Registrar", "Admission Management", "Student Management", "Academic Calendar", "Student Promotion", "Communication", "Registration Concessions", "SIWES Management", "Health & Medical", "Medical Records"]
+                : ["Admin Dashboard", "Admission Management", "Student Management", "Communication", "Health & Medical", "Medical Records"];
 
             return adminMenuItems
                 .filter(item => allowedItems.includes(item.name))
@@ -836,6 +839,27 @@ export function Sidebar({ enabledModules = {}, mobileOpen = false, onClose }: {
                 updated.push(adminSection);
             }
             return updated;
+        } else if (isHealthAdmin) {
+            return [
+                { name: "Health Dashboard", icon: LayoutDashboard, href: "/admin/health" },
+                { name: "Medical Records", icon: Stethoscope, href: "/admin/health/medical-records" },
+                {
+                    name: "Health & Medical",
+                    icon: Stethoscope,
+                    subItems: [
+                        { name: "Medical Records", href: "/admin/health/medical-records" },
+                        { name: "Health Dashboard", href: "/admin/health" },
+                    ]
+                },
+                {
+                    name: "Student Directory",
+                    icon: UsersIcon,
+                    subItems: [
+                        { name: "All Students", href: "/admin/students" },
+                    ]
+                },
+                { name: "Profile", icon: User, href: "/profile" },
+            ];
         } else if (role === 'parent') {
             return parentMenuItems;
         } else if (role === 'staff') {
@@ -867,6 +891,18 @@ export function Sidebar({ enabledModules = {}, mobileOpen = false, onClose }: {
             } else {
                 finalRawItems.push(cmsItem);
             }
+        }
+    }
+
+    const hasHealthPermission = isHealthAdmin || userPermissions.some((p: string) => p.startsWith("health.") || p.startsWith("medical.")) || userRolesList.includes("medical officer") || userRolesList.includes("health officer") || userRolesList.includes("nurse");
+
+    if (hasHealthPermission && !finalRawItems.some(item => item.name === "Medical Records" || item.name === "Health & Medical")) {
+        const medicalItem: MenuItem = { name: "Medical Records", icon: Stethoscope, href: "/admin/health/medical-records" };
+        const profileIndex = finalRawItems.findIndex(item => item.name === "Profile");
+        if (profileIndex !== -1) {
+            finalRawItems.splice(profileIndex, 0, medicalItem);
+        } else {
+            finalRawItems.push(medicalItem);
         }
     }
 
