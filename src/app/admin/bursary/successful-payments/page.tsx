@@ -54,7 +54,8 @@ export default function SuccessfulPaymentsPage() {
                     setGroupedData(res.data);
                     if (res.counts) setTabCounts(res.counts);
                     if (res.totals) setTabTotals(res.totals);
-                    const sortedKeys = sortTabKeys(Object.keys(res.data));
+                    const nonZeroKeys = Object.keys(res.data).filter(k => (res.counts?.[k] || 0) > 0);
+                    const sortedKeys = sortTabKeys(nonZeroKeys.length > 0 ? nonZeroKeys : Object.keys(res.data));
                     if (sortedKeys.length > 0 && !sortedKeys.includes(activeTab)) {
                         setActiveTab(sortedKeys[0]);
                     }
@@ -197,7 +198,10 @@ export default function SuccessfulPaymentsPage() {
         }
     };
 
-    const tabs = useMemo(() => sortTabKeys(Object.keys(groupedData)), [groupedData]);
+    const tabs = useMemo(() => {
+        const nonZero = Object.keys(groupedData).filter(tab => (tabCounts[tab] || 0) > 0 || (groupedData[tab]?.length || 0) > 0);
+        return sortTabKeys(nonZero.length > 0 ? nonZero : Object.keys(groupedData));
+    }, [groupedData, tabCounts]);
 
     const activeTabTotalAmount = useMemo(() => {
         if (tabTotals[activeTab] !== undefined) return tabTotals[activeTab];

@@ -58,7 +58,7 @@ export async function getSuccessfulPaymentsGrouped() {
             email: paystackDeveloperFees.email,
         }).from(paystackDeveloperFees).where(eq(paystackDeveloperFees.status, 'paid'));
 
-        // 3. Bursary Transactions
+        // 3. Live Bursary Transactions (Strictly excluding migrated legacy FSS data)
         const bursaryTxs = await db.select({
             id: payment_transactions.id,
             studentId: sql<number | null>`null`,
@@ -72,15 +72,24 @@ export async function getSuccessfulPaymentsGrouped() {
             userId: payment_transactions.userId,
             metadata: payment_transactions.metadata,
         }).from(payment_transactions).where(
-            or(
-                eq(payment_transactions.status, 'completed'),
-                eq(payment_transactions.status, 'paid')
+            and(
+                or(
+                    eq(payment_transactions.status, 'completed'),
+                    eq(payment_transactions.status, 'paid')
+                ),
+                sql`${payment_transactions.paymentGateway} IS NOT NULL`,
+                sql`LOWER(${payment_transactions.transactionType}) NOT LIKE '%legacy%'`,
+                sql`LOWER(${payment_transactions.transactionReference}) NOT LIKE '%legacy%'`
             )
         );
 
-        // Dedupe by gatewayReference or rrr or unique key
+        // Dedupe by gatewayReference or rrr or unique key, strictly excluding any legacy portal records
         const seen = new Map<string, any>();
         for (const tx of [...admissionTxs, ...devFeeTxs, ...bursaryTxs]) {
+            const p = (tx.purpose || '').toLowerCase();
+            const ref = (tx.gatewayReference || '').toLowerCase();
+            if (p.includes('legacy') || ref.includes('legacy')) continue;
+
             const anyTx: any = tx;
             const rrr = anyTx.rrr || (() => { 
                 try { 
@@ -239,8 +248,7 @@ export async function getSuccessfulPaymentsGrouped() {
                 category = 'Wallet Topup';
                 itemBreakdown = 'Wallet Funding';
             } else if (
-                (gw !== 'alatpay' && (p.includes('school fee') || p.includes('tuition') || amt > 10000)) ||
-                p.includes('legacy fss school_fee')
+                gw !== 'alatpay' && (p.includes('school fee') || p.includes('tuition') || amt > 10000)
             ) {
                 category = 'School Fees';
                 itemBreakdown = tx.purpose || 'Tuition / School Fees';
