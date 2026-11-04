@@ -150,7 +150,7 @@ function PrintContent() {
                                         photoUrl={c.photoUrl || undefined}
                                         signatureUrl={c.signatureUrl || undefined}
                                         institutionName="FEDERAL SCHOOL OF STATISTICS, IBADAN"
-                                        campusAddress="P.M.B. 5065, DUGUP, IBADAN, OYO STATE"
+                                        campusAddress="P.M.B. 5065, SANGO, IBADAN, OYO STATE, NIGERIA"
                                     />
                                 </Sheet>
                             )}

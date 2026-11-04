@@ -86,8 +86,9 @@ export default function ICTPrintQueuePage() {
                     matricNumber: first.matricNumber || "DPP/HND/BAM/FSS/IB/2025/3841",
                     department: first.deptName || "BUSINESS ADMINISTRATION",
                     programmeName: `${first.programmeType || "HND"} ${first.deptName || "Business Administration"}`,
-                    currentLevel: first.currentLevel ? `HND ${first.currentLevel}` : "HND 2",
+                    currentLevel: first.currentLevel ? `${first.programmeType || "Level"} ${first.currentLevel}` : "ND 1",
                     photoUrl: first.photoUrl,
+                    signatureUrl: first.signatureUrl,
                     phoneNumber: first.phoneNumber || "0803 000 0000",
                     bloodGroup: "O+",
                     genotype: "AA",
@@ -562,14 +563,24 @@ export default function ICTPrintQueuePage() {
                                         </td>
                                         <td className="p-3">
                                             <div className="flex items-center gap-3">
-                                                <div className="w-9 h-9 rounded-full bg-slate-200 flex items-center justify-center text-xs font-bold text-slate-600 overflow-hidden shrink-0 border border-slate-300">
+                                                <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center text-xs font-bold text-slate-600 overflow-hidden shrink-0 border border-slate-300">
                                                     {card.photoUrl ? (
                                                         <img src={card.photoUrl} alt="" className="w-full h-full object-cover" />
                                                     ) : (
                                                         (card.studentName || "?").charAt(0)
                                                     )}
                                                 </div>
-                                                <span className="text-sm font-bold text-slate-900">{card.studentName}</span>
+                                                <div className="flex flex-col">
+                                                    <span className="text-sm font-bold text-slate-900">{card.studentName}</span>
+                                                    <div className="flex items-center gap-1.5 mt-1">
+                                                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${card.photoUrl ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-rose-50 text-rose-600 border border-rose-200"}`}>
+                                                            {card.photoUrl ? "Photo ✓" : "No Photo"}
+                                                        </span>
+                                                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${card.signatureUrl ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-rose-50 text-rose-600 border border-rose-200"}`}>
+                                                            {card.signatureUrl ? "Signature ✓" : "No Signature"}
+                                                        </span>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </td>
                                         <td className="p-3 text-xs font-mono font-bold text-slate-700">{card.matricNumber}</td>
@@ -590,9 +601,10 @@ export default function ICTPrintQueuePage() {
                                                         studentName: card.studentName || "STUDENT NAME",
                                                         matricNumber: card.matricNumber || "MATRIC NUMBER",
                                                         department: card.deptName || "DEPARTMENT",
-                                                        currentLevel: card.currentLevel ? `Level ${card.currentLevel}` : "Level 1",
+                                                        currentLevel: card.currentLevel ? `${card.programmeType || "Level"} ${card.currentLevel}` : "ND 1",
                                                         programmeName: `${card.programmeType || "ND"} ${card.deptName || ""}`,
                                                         photoUrl: card.photoUrl,
+                                                        signatureUrl: card.signatureUrl,
                                                         phoneNumber: card.phoneNumber || "0803 000 0000",
                                                         barcode: card.matricNumber || "BARCODE",
                                                         verificationCode: card.issueId || "VERIFY",

@@ -5,6 +5,7 @@ import bwipjs from "bwip-js";
 import QRCode from "qrcode";
 import { Printer, RotateCcw, ShieldCheck, CheckCircle2, ArrowRightLeft, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { viewableAssetUrl } from "@/lib/assets";
 
 export interface IDCardTemplate1Props {
     studentName?: string;
@@ -29,7 +30,7 @@ export interface IDCardTemplate1Props {
 
 const DEFAULTS = {
     institutionName: "FEDERAL SCHOOL OF STATISTICS, IBADAN",
-    campusAddress: "P.M.B. 5065, DUGUP, IBADAN, OYO STATE",
+    campusAddress: "P.M.B. 5065, SANGO, IBADAN, OYO STATE, NIGERIA",
     postalAddress: "OFFICIAL STUDENT IDENTIFICATION CREDENTIAL",
     phone: "0803 000 0000",
     bloodGroup: "O+",
@@ -387,6 +388,9 @@ export function FrontCard({
     campusAddress: string;
     showWatermark?: boolean;
 }) {
+    const resolvedPhoto = photoUrl ? (viewableAssetUrl(photoUrl) || photoUrl) : undefined;
+    const resolvedSignature = signatureUrl ? (viewableAssetUrl(signatureUrl) || signatureUrl) : undefined;
+
     return (
         <section className="id-pvc-card relative flex flex-col justify-between">
             {/* Top Green Gradient Banner */}
@@ -428,13 +432,16 @@ export function FrontCard({
                     <img src="/fss_logo.png" alt="" className="w-full h-full object-contain grayscale" />
                 </div>
 
-                {/* Photo Frame (105px x 122px) */}
+                {/* Photo Frame (102px x 122px) */}
                 <div className="w-[102px] h-[122px] rounded-xl border-2 border-emerald-800 bg-slate-100 overflow-hidden shadow-md flex items-center justify-center shrink-0 relative">
-                    {photoUrl ? (
+                    {resolvedPhoto ? (
                         <img
-                            src={photoUrl}
+                            src={resolvedPhoto}
                             alt={studentName}
                             className="w-full h-full object-cover"
+                            onError={(e) => {
+                                e.currentTarget.style.display = "none";
+                            }}
                         />
                     ) : (
                         <div className="flex flex-col items-center justify-center p-2 text-center text-slate-400">
@@ -507,18 +514,18 @@ export function FrontCard({
 
                 {/* Student Signature */}
                 <div className="flex flex-col items-center">
-                    <div className="w-[90px] h-[22px] flex items-center justify-center bg-white/10 rounded px-1">
-                        {signatureUrl ? (
+                    <div className="w-[90px] h-[22px] flex items-center justify-center bg-white rounded px-1 shadow-xs border border-white/40 overflow-hidden">
+                        {resolvedSignature ? (
                             <img
-                                src={signatureUrl}
+                                src={resolvedSignature}
                                 alt="Signature"
-                                className="max-w-full max-h-full object-contain filter invert brightness-200"
+                                className="max-w-full max-h-full object-contain mix-blend-multiply"
                             />
                         ) : (
-                            <div className="w-full border-t border-white/60 mt-2" />
+                            <div className="w-full border-b border-dashed border-slate-300 mt-2" />
                         )}
                     </div>
-                    <span className="text-[7.5px] font-bold uppercase tracking-wider text-emerald-200">
+                    <span className="text-[7.5px] font-bold uppercase tracking-wider text-emerald-100 mt-0.5">
                         Holder&apos;s Signature
                     </span>
                 </div>
@@ -560,7 +567,7 @@ export function BackCard({
                     This card certifies that the bearer whose photograph and specimen signature appear overleaf is an authorized student of this institution.
                 </p>
                 <p className="text-[8px] text-slate-500 leading-tight">
-                    This card remains institutional property. If lost and found, please surrender to the Registrar&apos;s Office or nearest Police Station.
+                    This card remains institutional property. If lost and found, please surrender to the Registrar&apos;s Office, Federal School of Statistics, Along Ajibode Shasha Road, Behind NISER, Shasha-Ojoo, Ibadan or nearest Police Station.
                 </p>
             </div>
 

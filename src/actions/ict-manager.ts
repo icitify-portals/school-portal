@@ -20,6 +20,7 @@ import { eq, and, inArray, sql, desc, or, like, isNull } from "drizzle-orm";
 import { auth } from "@/auth";
 import { revalidatePath } from "next/cache";
 import { hasRole } from "@/lib/rbac";
+import { viewableAssetUrl } from "@/lib/assets";
 
 const ALLOWED_ICT_ROLES = [
     "admin",
@@ -133,6 +134,7 @@ export async function getPrintQueue(filters?: {
             deptId: students.deptId,
             deptName: departments.name,
             photoUrl: students.imageUrl,
+            signatureUrl: students.signatureUrl,
             phoneNumber: users.phone,
             assignedStaffName: sql<string>`(SELECT name FROM users WHERE id = ${idCards.assignedTo})`,
         })
@@ -145,10 +147,12 @@ export async function getPrintQueue(filters?: {
         .limit(limit)
         .offset(offset);
 
-        // Fallback photo resolution from admission applications for freshmen
+        // Fallback photo and signature resolution from admission applications for freshmen
         const enhancedCards = await Promise.all(cards.map(async (c) => {
             let photoUrl = c.photoUrl;
-            if (!photoUrl && (c.studentId || c.userId)) {
+            let signatureUrl = c.signatureUrl;
+
+            if ((!photoUrl || !signatureUrl) && (c.studentId || c.userId)) {
                 try {
                     const orConds = [];
                     if (c.studentId) orConds.push(eq(admissionApplicationsV2.studentId, c.studentId));
@@ -160,19 +164,41 @@ export async function getPrintQueue(filters?: {
                         }).from(admissionApplicationsV2).where(or(...orConds)).limit(1);
 
                         if (app) {
-                            if (app.applicantPhoto) {
-                                photoUrl = app.applicantPhoto;
-                            } else if (app.data) {
-                                const d = typeof app.data === 'string' ? JSON.parse(app.data) : app.data;
-                                photoUrl = d['Passport Photograph'] || d['Passport Photo'] || d['Passport'] || d['photo'] || d['Photo'] || null;
+                            if (!photoUrl) {
+                                if (app.applicantPhoto) {
+                                    photoUrl = app.applicantPhoto;
+                                } else if (app.data) {
+                                    try {
+                                        const d = typeof app.data === 'string' ? JSON.parse(app.data) : app.data;
+                                        photoUrl = d['Photograph/camera'] || d['Passport Photograph'] || d['Passport Photo'] || d['Passport'] || d['photo'] || d['Photo'] || d['Photograph'] || null;
+                                    } catch(e) {}
+                                }
+                            }
+                            if (!signatureUrl && app.data) {
+                                try {
+                                    const d = typeof app.data === 'string' ? JSON.parse(app.data) : app.data;
+                                    signatureUrl = d['Signature'] || d['signature'] || d['Applicant Signature'] || d['Student Signature'] || null;
+                                } catch(e) {}
                             }
                         }
                     }
                 } catch(e) {}
             }
+
+            // Sync resolved assets back to students record if currently missing
+            if (c.studentId) {
+                const updates: any = {};
+                if (!c.photoUrl && photoUrl) updates.imageUrl = photoUrl;
+                if (!c.signatureUrl && signatureUrl) updates.signatureUrl = signatureUrl;
+                if (Object.keys(updates).length > 0) {
+                    db.update(students).set(updates).where(eq(students.id, c.studentId)).catch(() => {});
+                }
+            }
+
             return {
                 ...c,
-                photoUrl: photoUrl || undefined
+                photoUrl: viewableAssetUrl(photoUrl) || photoUrl || undefined,
+                signatureUrl: viewableAssetUrl(signatureUrl) || signatureUrl || undefined
             };
         }));
 
@@ -436,7 +462,7 @@ export async function getPrintCardsByIds(cardIds: number[]) {
                                 } else if (app.data) {
                                     try {
                                         const d = typeof app.data === 'string' ? JSON.parse(app.data) : app.data;
-                                        photoUrl = d['Passport Photograph'] || d['Passport Photo'] || d['Passport'] || d['photo'] || d['Photo'] || null;
+                                        photoUrl = d['Photograph/camera'] || d['Passport Photograph'] || d['Passport Photo'] || d['Passport'] || d['photo'] || d['Photo'] || d['Photograph'] || null;
                                     } catch(e) {}
                                 }
                             }
@@ -452,10 +478,20 @@ export async function getPrintCardsByIds(cardIds: number[]) {
                 } catch(e) {}
             }
 
+            // Sync resolved assets back to students record if currently missing
+            if (c.studentId) {
+                const updates: any = {};
+                if (!c.photoUrl && photoUrl) updates.imageUrl = photoUrl;
+                if (!c.signatureUrl && signatureUrl) updates.signatureUrl = signatureUrl;
+                if (Object.keys(updates).length > 0) {
+                    db.update(students).set(updates).where(eq(students.id, c.studentId)).catch(() => {});
+                }
+            }
+
             return {
                 ...c,
-                photoUrl: photoUrl || undefined,
-                signatureUrl: signatureUrl || undefined,
+                photoUrl: viewableAssetUrl(photoUrl) || photoUrl || undefined,
+                signatureUrl: viewableAssetUrl(signatureUrl) || signatureUrl || undefined,
             };
         }));
 
@@ -496,7 +532,7 @@ export async function getStudentsWithoutCards(filters?: {
                 OR EXISTS (
                     SELECT 1 FROM admission_applications_v2 a 
                     WHERE (a.student_id = ${students.id} OR a.applicant_id = ${students.userId})
-                      AND ((a.applicant_photo IS NOT NULL AND a.applicant_photo <> '') OR a.data LIKE '%Passport%')
+                      AND ((a.applicant_photo IS NOT NULL AND a.applicant_photo <> '') OR a.data LIKE '%Passport%' OR a.data LIKE '%Photograph%' OR a.data LIKE '%photo%')
                 )
             )`,
             hasSignature: sql<number>`(
