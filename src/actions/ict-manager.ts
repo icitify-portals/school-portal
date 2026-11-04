@@ -16,21 +16,61 @@ import {
     transactions,
     payment_transactions 
 } from "@/db/schema";
-import { eq, and, inArray, sql, desc, or, like } from "drizzle-orm";
+import { eq, and, inArray, sql, desc, or, like, isNull } from "drizzle-orm";
 import { auth } from "@/auth";
 import { revalidatePath } from "next/cache";
+import { hasRole } from "@/lib/rbac";
+
+const ALLOWED_ICT_ROLES = [
+    "admin",
+    "superadmin",
+    "super-admin",
+    "super_admin",
+    "developer",
+    "icitify_dev",
+    "ict_manager",
+    "ict manager",
+    "registrar"
+];
 
 async function ensureICTManager() {
     const session = await auth();
     if (!session?.user) throw new Error("Not authenticated");
-    const user = await db.query.users.findFirst({
-        where: eq(users.id, session.user.id),
-        columns: { role: true }
-    });
-    if (!user || !["admin", "ict_manager", "registrar", "superadmin"].includes(user.role || "")) {
-        throw new Error("Access denied. ICT Manager or Admin role required.");
+
+    const userId = session.user.id ? parseInt(String(session.user.id)) : 0;
+    const sessionRole = ((session.user as any)?.role || "").toString().toLowerCase().trim();
+    const sessionRoles = (((session.user as any)?.roles || []) as string[]).map(r => r.toLowerCase().trim());
+
+    if (
+        ALLOWED_ICT_ROLES.includes(sessionRole) ||
+        sessionRoles.some(r => ALLOWED_ICT_ROLES.includes(r))
+    ) {
+        return session.user.id;
     }
-    return session.user.id;
+
+    // Check RBAC helper
+    try {
+        const isAllowedByRbac = await hasRole(ALLOWED_ICT_ROLES);
+        if (isAllowedByRbac) {
+            return session.user.id;
+        }
+    } catch (e) {
+        // continue to DB check
+    }
+
+    // Direct database fallback
+    if (userId) {
+        const user = await db.query.users.findFirst({
+            where: eq(users.id, userId),
+            columns: { role: true }
+        });
+        const userDbRole = (user?.role || "").toString().toLowerCase().trim();
+        if (user && ALLOWED_ICT_ROLES.includes(userDbRole)) {
+            return session.user.id;
+        }
+    }
+
+    throw new Error("Access denied. ICT Manager or Admin role required.");
 }
 
 export async function getPrintQueue(filters?: {
@@ -98,7 +138,7 @@ export async function getPrintQueue(filters?: {
         })
         .from(idCards)
         .innerJoin(users, eq(idCards.userId, users.id))
-        .leftJoin(students, eq(users.id, students.userId))
+        .leftJoin(students, and(eq(users.id, students.userId), isNull(students.deletedAt)))
         .leftJoin(departments, eq(students.deptId, departments.id))
         .where(whereConditions)
         .orderBy(desc(idCards.issuedAt))
@@ -139,7 +179,7 @@ export async function getPrintQueue(filters?: {
         const [{ count }] = await db.select({ count: sql<number>`count(*)` })
             .from(idCards)
             .innerJoin(users, eq(idCards.userId, users.id))
-            .leftJoin(students, eq(users.id, students.userId))
+            .leftJoin(students, and(eq(users.id, students.userId), isNull(students.deletedAt)))
             .where(whereConditions);
 
         return { success: true, data: enhancedCards, total: count };
@@ -158,7 +198,7 @@ export async function getICTStaff() {
             role: users.role,
         })
         .from(users)
-        .where(inArray(users.role, ["ict_manager", "staff", "admin"]))
+        .where(inArray(users.role, ["ict_manager", "staff", "admin", "superadmin", "super-admin", "developer", "icitify_dev"]))
         .orderBy(users.name);
 
         return { success: true, data: staff };
@@ -236,7 +276,7 @@ export async function getMyAssignedPrintJobs() {
         })
         .from(idCards)
         .innerJoin(users, eq(idCards.userId, users.id))
-        .leftJoin(students, eq(users.id, students.userId))
+        .leftJoin(students, and(eq(users.id, students.userId), isNull(students.deletedAt)))
         .leftJoin(departments, eq(students.deptId, departments.id))
         .where(eq(idCards.assignedTo, session.user.id))
         .orderBy(desc(idCards.assignedAt));
@@ -368,7 +408,7 @@ export async function getPrintCardsByIds(cardIds: number[]) {
         })
         .from(idCards)
         .innerJoin(users, eq(idCards.userId, users.id))
-        .leftJoin(students, eq(users.id, students.userId))
+        .leftJoin(students, and(eq(users.id, students.userId), isNull(students.deletedAt)))
         .leftJoin(departments, eq(students.deptId, departments.id))
         .where(inArray(idCards.id, cardIds))
         .orderBy(users.name);

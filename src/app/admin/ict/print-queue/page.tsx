@@ -95,6 +95,8 @@ export default function ICTPrintQueuePage() {
                     verificationCode: first.issueId || "ID-2026-FSS-3841",
                 });
             }
+        } else {
+            toast.error(res.error || "Failed to load print queue");
         }
         setLoading(false);
     }, [filterStatus, filterProgramme, filterLevel, search, page]);
