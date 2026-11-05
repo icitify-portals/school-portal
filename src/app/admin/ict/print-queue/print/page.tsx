@@ -145,12 +145,11 @@ function PrintContent() {
                                         matricNumber={c.matricNumber || ""}
                                         department={(c.deptName || "").toUpperCase()}
                                         programmeName={`${c.programmeType || ""} ${c.deptName || ""}`}
+                                        programmeType={c.programmeType || undefined}
                                         formattedLevel={levelLabel(c)}
                                         phoneNumber={c.phoneNumber || undefined}
                                         photoUrl={c.photoUrl || undefined}
                                         signatureUrl={c.signatureUrl || undefined}
-                                        institutionName="FEDERAL SCHOOL OF STATISTICS, IBADAN"
-                                        campusAddress="P.M.B. 5065, SANGO, IBADAN, OYO STATE, NIGERIA"
                                     />
                                 </Sheet>
                             )}

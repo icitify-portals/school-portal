@@ -82,18 +82,19 @@ export default function ICTPrintQueuePage() {
             if (res.data.length > 0 && previewStudent.matricNumber === "DPP/HND/BAM/FSS/IB/2025/3841") {
                 const first = res.data[0];
                 setPreviewStudent({
-                    studentName: first.studentName || "OJUGBELE IGBABOSOWON ENIOLA",
-                    matricNumber: first.matricNumber || "DPP/HND/BAM/FSS/IB/2025/3841",
-                    department: first.deptName || "BUSINESS ADMINISTRATION",
-                    programmeName: `${first.programmeType || "HND"} ${first.deptName || "Business Administration"}`,
-                    currentLevel: first.currentLevel ? `${first.programmeType || "Level"} ${first.currentLevel}` : "ND 1",
+                    studentName: first.studentName || "OLAWAYE EMMANUEL OLAOSEBIKAN",
+                    matricNumber: first.matricNumber || "ACC/FSS/IB/2024/119920",
+                    department: first.deptName || "ACCOUNTANCY",
+                    programmeName: `${first.programmeType || "ND"} ${first.deptName || "Accountancy"}`,
+                    programmeType: first.programmeType || "ND",
+                    currentLevel: first.currentLevel ? `${first.programmeType || "ND"} ${first.currentLevel}` : "ND 1",
                     photoUrl: first.photoUrl,
                     signatureUrl: first.signatureUrl,
-                    phoneNumber: first.phoneNumber || "0803 000 0000",
+                    phoneNumber: first.phoneNumber || "07081808456",
                     bloodGroup: "O+",
                     genotype: "AA",
-                    barcode: first.matricNumber || "DPP/HND/BAM/FSS/IB/2025/3841",
-                    verificationCode: first.issueId || "ID-2026-FSS-3841",
+                    barcode: first.matricNumber || "ACC/FSS/IB/2024/119920",
+                    verificationCode: first.issueId || "ID-2026-FSS-119920",
                 });
             }
         } else {
@@ -290,6 +291,7 @@ export default function ICTPrintQueuePage() {
                                 matricNumber={previewStudent.matricNumber}
                                 department={previewStudent.department}
                                 programmeName={previewStudent.programmeName}
+                                programmeType={previewStudent.programmeType}
                                 currentLevel={previewStudent.currentLevel}
                                 phoneNumber={previewStudent.phoneNumber}
                                 bloodGroup={previewStudent.bloodGroup}
@@ -603,9 +605,10 @@ export default function ICTPrintQueuePage() {
                                                         department: card.deptName || "DEPARTMENT",
                                                         currentLevel: card.currentLevel ? `${card.programmeType || "Level"} ${card.currentLevel}` : "ND 1",
                                                         programmeName: `${card.programmeType || "ND"} ${card.deptName || ""}`,
+                                                        programmeType: card.programmeType || "ND",
                                                         photoUrl: card.photoUrl,
                                                         signatureUrl: card.signatureUrl,
-                                                        phoneNumber: card.phoneNumber || "0803 000 0000",
+                                                        phoneNumber: card.phoneNumber || "07081808456",
                                                         barcode: card.matricNumber || "BARCODE",
                                                         verificationCode: card.issueId || "VERIFY",
                                                     });

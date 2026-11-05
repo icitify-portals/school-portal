@@ -13,6 +13,7 @@ export interface IDCardTemplate1Props {
     department?: string;
     programmeName?: string;
     currentLevel?: number | string;
+    programmeType?: string;
     phoneNumber?: string;
     bloodGroup?: string;
     genotype?: string;
@@ -22,6 +23,7 @@ export interface IDCardTemplate1Props {
     verificationCode?: string;
     institutionName?: string;
     campusAddress?: string;
+    postalAddress?: string;
     showWatermark?: boolean;
     initialSide?: "front" | "back" | "both";
     showControls?: boolean;
@@ -29,21 +31,23 @@ export interface IDCardTemplate1Props {
 }
 
 const DEFAULTS = {
-    institutionName: "FEDERAL SCHOOL OF STATISTICS, IBADAN",
-    campusAddress: "P.M.B. 5065, SANGO, IBADAN, OYO STATE, NIGERIA",
-    postalAddress: "OFFICIAL STUDENT IDENTIFICATION CREDENTIAL",
-    phone: "0803 000 0000",
+    institutionName: "FEDERAL SCHOOL OF STATISTICS",
+    subHeader: "(NBS Abuja)",
+    campusAddress: "Ajibode-Shasha Road, Behind Niser, Shasha Ojoo, Ibadan",
+    postalAddress: "P.O. Box 20753 U.I. Post Office Ibadan",
+    phone: "07081808456, 07036516563",
     bloodGroup: "O+",
     genotype: "AA",
-    rectorSignatureText: "M. A. Oladipo",
+    rectorSignatureText: "RECTOR",
 };
 
 export default function IDCardTemplate1({
-    studentName = "OJUGBELE IGBABOSOWON ENIOLA",
-    matricNumber = "DPP/HND/BAM/FSS/IB/2025/3841",
-    department = "BUSINESS ADMINISTRATION",
-    programmeName = "HND Business Administration",
-    currentLevel = "HND 2",
+    studentName = "OLAWAYE EMMANUEL OLAOSEBIKAN",
+    matricNumber = "ACC/FSS/IB/2024/119920",
+    department = "ACCOUNTANCY",
+    programmeName = "ND Accountancy",
+    currentLevel = "ND 1",
+    programmeType,
     phoneNumber,
     bloodGroup,
     genotype,
@@ -53,6 +57,7 @@ export default function IDCardTemplate1({
     verificationCode,
     institutionName = DEFAULTS.institutionName,
     campusAddress = DEFAULTS.campusAddress,
+    postalAddress = DEFAULTS.postalAddress,
     showWatermark = false,
     initialSide = "front",
     showControls = true,
@@ -284,6 +289,7 @@ export default function IDCardTemplate1({
                             department={department}
                             programmeName={programmeName}
                             formattedLevel={formattedLevel}
+                            programmeType={programmeType}
                             phoneNumber={phoneNumber}
                             bloodGroup={bloodGroup}
                             genotype={genotype}
@@ -291,6 +297,7 @@ export default function IDCardTemplate1({
                             signatureUrl={signatureUrl}
                             institutionName={institutionName}
                             campusAddress={campusAddress}
+                            postalAddress={postalAddress}
                             showWatermark={showWatermark}
                         />
                     </div>
@@ -318,6 +325,7 @@ export default function IDCardTemplate1({
                                 department={department}
                                 programmeName={programmeName}
                                 formattedLevel={formattedLevel}
+                                programmeType={programmeType}
                                 phoneNumber={phoneNumber}
                                 bloodGroup={bloodGroup}
                                 genotype={genotype}
@@ -325,6 +333,7 @@ export default function IDCardTemplate1({
                                 signatureUrl={signatureUrl}
                                 institutionName={institutionName}
                                 campusAddress={campusAddress}
+                                postalAddress={postalAddress}
                                 showWatermark={showWatermark}
                             />
                         </div>
@@ -365,13 +374,15 @@ export function FrontCard({
     department,
     programmeName,
     formattedLevel,
+    programmeType,
     phoneNumber,
     bloodGroup,
     genotype,
     photoUrl,
     signatureUrl,
-    institutionName,
-    campusAddress,
+    institutionName = DEFAULTS.institutionName,
+    campusAddress = DEFAULTS.campusAddress,
+    postalAddress = DEFAULTS.postalAddress,
     showWatermark,
 }: {
     studentName: string;
@@ -379,30 +390,34 @@ export function FrontCard({
     department: string;
     programmeName?: string;
     formattedLevel?: string;
+    programmeType?: string;
     phoneNumber?: string;
     bloodGroup?: string;
     genotype?: string;
     photoUrl?: string;
     signatureUrl?: string;
-    institutionName: string;
-    campusAddress: string;
+    institutionName?: string;
+    campusAddress?: string;
+    postalAddress?: string;
     showWatermark?: boolean;
 }) {
     const resolvedPhoto = photoUrl ? (viewableAssetUrl(photoUrl) || photoUrl) : undefined;
     const resolvedSignature = signatureUrl ? (viewableAssetUrl(signatureUrl) || signatureUrl) : undefined;
 
+    // Determine level badge e.g. "ND" or "HND"
+    const displayLevel = programmeType || (formattedLevel?.toUpperCase().includes("HND") ? "HND" : "ND");
+
     return (
         <section className="id-pvc-card relative flex flex-col justify-between">
-            {/* Top Green Gradient Banner */}
-            <div className="h-[105px] bg-gradient-to-r from-emerald-800 via-emerald-700 to-green-600 px-4 py-2.5 flex items-center gap-3 text-white relative shadow-sm">
+            {/* Top Olive-Green Header Banner */}
+            <div className="h-[92px] bg-gradient-to-r from-[#829924] via-[#94ad2b] to-[#79901e] px-3.5 py-2 flex items-center gap-2.5 text-white relative shadow-xs">
                 {/* School Crest / Logo */}
-                <div className="w-[66px] h-[66px] rounded-full bg-white p-1 border-2 border-emerald-300 shadow flex items-center justify-center shrink-0">
+                <div className="w-[62px] h-[62px] rounded-full bg-white p-1 border-2 border-[#b5cc45] shadow flex items-center justify-center shrink-0">
                     <img
                         src="/fss_logo.png"
                         alt="Logo"
                         className="w-full h-full object-contain"
                         onError={(e) => {
-                            // Fallback crest circle
                             e.currentTarget.style.display = "none";
                         }}
                     />
@@ -412,28 +427,41 @@ export function FrontCard({
                 </div>
 
                 {/* Institution Header Text */}
-                <div className="flex-1 text-center pr-2">
-                    <h2 className="text-[15px] font-black uppercase tracking-tight leading-tight text-white drop-shadow-sm">
+                <div className="flex-1 text-center pr-1">
+                    <h2 className="text-[14px] font-black uppercase tracking-tight leading-tight text-white drop-shadow-xs">
                         {institutionName}
                     </h2>
-                    <p className="text-[9.5px] font-medium text-emerald-100 uppercase tracking-wider mt-0.5 leading-snug">
+                    <p className="text-[9.5px] font-bold text-red-700 uppercase tracking-wider leading-tight mt-0.5 drop-shadow-2xs">
+                        (NBS Abuja)
+                    </p>
+                    <p className="text-[8px] font-medium text-white tracking-wide mt-0.5 leading-tight">
                         {campusAddress}
                     </p>
-                    <div className="mt-1 inline-block bg-white/20 backdrop-blur-xs px-2.5 py-0.5 rounded-full border border-white/30 text-[8.5px] font-black uppercase tracking-widest text-amber-200">
-                        STUDENT IDENTITY CARD
-                    </div>
+                    <p className="text-[7.5px] font-medium text-lime-100 tracking-wide leading-tight mt-0.5">
+                        {postalAddress}
+                    </p>
                 </div>
             </div>
 
+            {/* Sub-Header Bar: Student Identification Card + ND/HND Level */}
+            <div className="h-[21px] bg-white border-y border-slate-200 px-4 flex items-center justify-between">
+                <span className="text-[9px] font-black uppercase tracking-wider text-red-600">
+                    STUDENT IDENTIFICATION CARD
+                </span>
+                <span className="text-[10px] font-black uppercase tracking-wider text-red-600">
+                    {displayLevel}
+                </span>
+            </div>
+
             {/* Card Middle: Photo + Student Information */}
-            <div className="flex-1 px-4 py-2.5 flex items-center gap-4 relative">
+            <div className="flex-1 px-4 py-2 flex items-center gap-3.5 relative bg-white">
                 {/* Background Watermark Seal */}
-                <div className="absolute right-4 top-1/2 -translate-y-1/2 w-48 h-48 opacity-[0.04] pointer-events-none">
+                <div className="absolute right-6 top-1/2 -translate-y-1/2 w-44 h-44 opacity-[0.05] pointer-events-none">
                     <img src="/fss_logo.png" alt="" className="w-full h-full object-contain grayscale" />
                 </div>
 
-                {/* Photo Frame (102px x 122px) */}
-                <div className="w-[102px] h-[122px] rounded-xl border-2 border-emerald-800 bg-slate-100 overflow-hidden shadow-md flex items-center justify-center shrink-0 relative">
+                {/* Photo Frame (100px x 118px) */}
+                <div className="w-[100px] h-[118px] rounded-xl border border-slate-900 bg-slate-100 overflow-hidden shadow-xs flex items-center justify-center shrink-0 relative">
                     {resolvedPhoto ? (
                         <img
                             src={resolvedPhoto}
@@ -454,67 +482,61 @@ export function FrontCard({
                 </div>
 
                 {/* Details Table */}
-                <div className="flex-1 space-y-1 text-slate-800">
-                    <div className="grid grid-cols-[85px_10px_1fr] text-[11px] leading-tight items-baseline">
-                        <span className="font-bold text-emerald-950 uppercase">Name</span>
-                        <span className="font-bold text-emerald-950">:</span>
+                <div className="flex-1 space-y-1 text-slate-900">
+                    <div className="grid grid-cols-[74px_8px_1fr] text-[10.5px] leading-tight items-baseline">
+                        <span className="font-bold text-red-600">Name</span>
+                        <span className="font-bold text-red-600">:</span>
                         <span className="font-black text-slate-950 uppercase truncate" title={studentName}>
                             {studentName}
                         </span>
                     </div>
 
-                    <div className="grid grid-cols-[85px_10px_1fr] text-[11px] leading-tight items-baseline">
-                        <span className="font-bold text-emerald-950 uppercase">Matric No.</span>
-                        <span className="font-bold text-emerald-950">:</span>
-                        <span className="font-mono font-black text-emerald-900 bg-emerald-50 px-1 py-0.5 rounded border border-emerald-200 inline-block text-[10.5px]">
+                    <div className="grid grid-cols-[74px_8px_1fr] text-[10.5px] leading-tight items-baseline">
+                        <span className="font-bold text-red-600">Matric No.</span>
+                        <span className="font-bold text-red-600">:</span>
+                        <span className="font-black text-slate-950 text-[10.5px]">
                             {matricNumber}
                         </span>
                     </div>
 
-                    <div className="grid grid-cols-[85px_10px_1fr] text-[10.5px] leading-tight items-baseline">
-                        <span className="font-bold text-emerald-950 uppercase">Department</span>
-                        <span className="font-bold text-emerald-950">:</span>
-                        <span className="font-semibold text-slate-800 truncate" title={department}>
+                    <div className="grid grid-cols-[74px_8px_1fr] text-[10px] leading-tight items-baseline">
+                        <span className="font-bold text-red-600">Department</span>
+                        <span className="font-bold text-red-600">:</span>
+                        <span className="font-black text-slate-900 uppercase truncate" title={department}>
                             {department}
                         </span>
                     </div>
 
-                    <div className="grid grid-cols-[85px_10px_1fr] text-[10.5px] leading-tight items-baseline">
-                        <span className="font-bold text-emerald-950 uppercase">Level</span>
-                        <span className="font-bold text-emerald-950">:</span>
-                        <span className="font-bold text-slate-800">
-                            {formattedLevel}
-                        </span>
-                    </div>
-
-                    <div className="grid grid-cols-[85px_10px_1fr] text-[10px] leading-tight items-baseline">
-                        <span className="font-bold text-emerald-950 uppercase">Blood / Gen</span>
-                        <span className="font-bold text-emerald-950">:</span>
-                        <span className="font-bold text-red-700">
-                            {bloodGroup || DEFAULTS.bloodGroup} &bull; {genotype || DEFAULTS.genotype}
-                        </span>
-                    </div>
-
-                    <div className="grid grid-cols-[85px_10px_1fr] text-[10px] leading-tight items-baseline">
-                        <span className="font-bold text-emerald-950 uppercase">Telephone</span>
-                        <span className="font-bold text-emerald-950">:</span>
-                        <span className="font-medium text-slate-600">
+                    <div className="grid grid-cols-[74px_8px_1fr] text-[10px] leading-tight items-baseline">
+                        <span className="font-bold text-red-600">Telephone</span>
+                        <span className="font-bold text-red-600">:</span>
+                        <span className="font-bold text-slate-900 font-mono">
                             {phoneNumber || DEFAULTS.phone}
+                        </span>
+                    </div>
+
+                    <div className="grid grid-cols-[74px_8px_1fr] text-[9.5px] leading-tight items-baseline">
+                        <span className="font-bold text-red-600">Blood Group</span>
+                        <span className="font-bold text-red-600">:</span>
+                        <span className="font-black text-slate-900">
+                            {bloodGroup || DEFAULTS.bloodGroup}&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                            <span className="font-bold text-red-600">Genotype : </span>
+                            <span className="font-black text-slate-900">{genotype || DEFAULTS.genotype}</span>
                         </span>
                     </div>
                 </div>
             </div>
 
             {/* Bottom Bar: Anti-Cultism Motto + Student Signature */}
-            <div className="h-[44px] bg-gradient-to-r from-emerald-800 to-green-700 px-4 flex items-center justify-between text-white text-[9px] relative">
-                <span className="font-bold tracking-tight text-emerald-100 flex items-center gap-1">
-                    <ShieldCheck className="w-3 h-3 text-amber-300" />
-                    Say No To Cultism, Exam Malpractice &amp; Drugs
+            <div className="h-[36px] bg-gradient-to-r from-[#829924] via-[#94ad2b] to-[#79901e] px-4 flex items-center justify-between text-white text-[9px] relative">
+                <span className="font-bold tracking-tight text-white flex items-center gap-1 text-[8.5px]">
+                    <ShieldCheck className="w-3 h-3 text-amber-200" />
+                    Say No To Cultism, Exam Malpractice &amp; Drug Abuse
                 </span>
 
                 {/* Student Signature */}
                 <div className="flex flex-col items-center">
-                    <div className="w-[90px] h-[22px] flex items-center justify-center bg-white rounded px-1 shadow-xs border border-white/40 overflow-hidden">
+                    <div className="w-[84px] h-[20px] flex items-center justify-center bg-white/95 rounded px-1 shadow-2xs">
                         {resolvedSignature ? (
                             <img
                                 src={resolvedSignature}
@@ -525,8 +547,8 @@ export function FrontCard({
                             <div className="w-full border-b border-dashed border-slate-300 mt-2" />
                         )}
                     </div>
-                    <span className="text-[7.5px] font-bold uppercase tracking-wider text-emerald-100 mt-0.5">
-                        Holder&apos;s Signature
+                    <span className="text-[7px] font-bold uppercase tracking-wider text-lime-100 mt-0.5">
+                        Signature
                     </span>
                 </div>
             </div>
@@ -543,7 +565,7 @@ export function FrontCard({
 }
 
 // ──────────────────────────────────────────────────────────────
-// BACK CARD COMPONENT (WITH ATTENDANCE CLOCK-IN/OUT BARCODE)
+// BACK CARD COMPONENT (WITH RECTOR SIGNATURE & SECURITY FEATURES)
 // ──────────────────────────────────────────────────────────────
 export function BackCard({
     barcodeCanvasRef,
@@ -557,36 +579,43 @@ export function BackCard({
     showWatermark?: boolean;
 }) {
     return (
-        <section className="id-pvc-card relative flex flex-col justify-between p-3.5 bg-gradient-to-b from-white via-emerald-50/20 to-slate-50 border border-slate-200">
-            {/* Top Terms / Legal Statement */}
-            <div className="space-y-1.5 text-center px-2">
-                <h3 className="text-[10px] font-black uppercase tracking-wider text-emerald-950 border-b border-emerald-200 pb-1">
-                    FEDERAL SCHOOL OF STATISTICS &bull; CONDITIONS OF USE
-                </h3>
-                <p className="text-[8.5px] text-slate-600 leading-tight">
-                    This card certifies that the bearer whose photograph and specimen signature appear overleaf is an authorized student of this institution.
+        <section className="id-pvc-card relative flex flex-col justify-between p-3.5 bg-white border border-slate-200">
+            {/* Watermark Crest */}
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.05]">
+                <img src="/fss_logo.png" alt="" className="w-48 h-48 object-contain" />
+            </div>
+
+            {/* Top Text from Official Card Image */}
+            <div className="space-y-1.5 text-center px-1 pt-1 relative z-10">
+                <p className="text-[8.5px] text-slate-800 leading-tight">
+                    I certify that the <strong className="font-black text-slate-950">bearer whose photograph appears overleaf</strong> is a bonafide student of this institution.
                 </p>
-                <p className="text-[8px] text-slate-500 leading-tight">
-                    This card remains institutional property. If lost and found, please surrender to the Registrar&apos;s Office, Federal School of Statistics, Along Ajibode Shasha Road, Behind NISER, Shasha-Ojoo, Ibadan or nearest Police Station.
+                <p className="text-[8px] text-slate-700 leading-tight">
+                    The loss/recovery of this card should be reported to the school authority or call <strong className="font-black text-slate-950 font-mono">07081808456, 07036516563</strong>
+                </p>
+                <p className="text-[8px] text-slate-800 leading-tight">
+                    This card remains the <strong className="font-black text-slate-950">property of this institution</strong> and must be surrendered on request by any authorised officer of this institution.
                 </p>
             </div>
 
-            {/* Middle Section: Rector Signature + Verification QR */}
-            <div className="flex items-center justify-around px-4 py-1 border-y border-dashed border-slate-200">
+            {/* Middle Section: Provost / Rector Signature & QR Verification */}
+            <div className="flex items-center justify-around px-2 py-1 relative z-10 border-t border-b border-slate-200/80">
                 {/* Authority Signatory */}
                 <div className="flex flex-col items-center">
-                    <div className="font-serif italic text-base text-slate-800 font-bold tracking-tight">
-                        {DEFAULTS.rectorSignatureText}
-                    </div>
-                    <div className="w-24 border-t border-slate-700 mt-0.5" />
-                    <span className="text-[8px] font-black uppercase tracking-wider text-emerald-900 mt-0.5">
-                        REGISTRAR / RECTOR
+                    <img
+                        src="/rector_signature.png"
+                        alt="Rector Signature"
+                        className="h-7 max-w-[120px] object-contain"
+                    />
+                    <div className="w-28 border-t border-slate-900 mt-0.5" />
+                    <span className="text-[8.5px] font-black uppercase tracking-wider text-slate-900 mt-0.5">
+                        RECTOR
                     </span>
                 </div>
 
                 {/* Instant Verification QR */}
                 <div className="flex flex-col items-center">
-                    <div className="w-[58px] h-[58px] bg-white p-1 rounded-lg border border-slate-200 shadow-xs flex items-center justify-center">
+                    <div className="w-[50px] h-[50px] bg-white p-1 rounded-lg border border-slate-200 shadow-2xs flex items-center justify-center">
                         {qrDataUrl ? (
                             <img src={qrDataUrl} alt="Verify QR" className="w-full h-full object-contain" />
                         ) : (
@@ -595,32 +624,32 @@ export function BackCard({
                             </div>
                         )}
                     </div>
-                    <span className="text-[7px] font-black uppercase tracking-widest text-slate-500 mt-0.5">
+                    <span className="text-[6.5px] font-black uppercase tracking-widest text-slate-500 mt-0.5">
                         SCAN TO VERIFY
                     </span>
                 </div>
             </div>
 
             {/* Bottom Section: Scannable Attendance Code-128 Barcode */}
-            <div className="flex flex-col items-center justify-center bg-white p-2 rounded-xl border border-slate-200 shadow-2xs">
+            <div className="flex flex-col items-center justify-center bg-white p-1.5 rounded-lg border border-slate-200 shadow-2xs relative z-10">
                 <div className="flex items-center justify-center overflow-hidden">
                     <canvas
                         ref={barcodeCanvasRef}
-                        className="max-h-[38px] max-w-[380px] object-contain"
+                        className="max-h-[32px] max-w-[360px] object-contain"
                     />
                 </div>
-                <div className="flex items-center justify-between w-full px-2 mt-1">
-                    <span className="text-[7.5px] font-black uppercase tracking-wider text-emerald-900">
+                <div className="flex items-center justify-between w-full px-2 mt-0.5">
+                    <span className="text-[7px] font-black uppercase tracking-wider text-emerald-900">
                         ATTENDANCE &amp; SECURITY CLOCK-IN / OUT BARCODE
                     </span>
-                    <span className="text-[7.5px] font-mono text-slate-400">
+                    <span className="text-[7px] font-mono text-slate-400">
                         CODE-128 STANDARD
                     </span>
                 </div>
             </div>
 
             {showWatermark && (
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-20 rotate-[-25deg]">
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-20 rotate-[-25deg] z-20">
                     <span className="text-4xl font-black text-red-600 border-4 border-red-600 px-6 py-2 rounded-2xl uppercase tracking-widest">
                         SAMPLE PROOF
                     </span>
