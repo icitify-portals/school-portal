@@ -407,6 +407,23 @@ export function FrontCard({
     // Determine level badge e.g. "ND" or "HND"
     const displayLevel = programmeType || (formattedLevel?.toUpperCase().includes("HND") ? "HND" : "ND");
 
+    // Dynamic typography scaling so long names and departments never truncate or get cut off
+    const nameLen = (studentName || "").trim().length;
+    const nameFontSize =
+        nameLen > 30
+            ? "text-[8.5px] leading-[1.14]"
+            : nameLen > 22
+            ? "text-[9.5px] leading-[1.18]"
+            : "text-[10.5px] leading-tight";
+
+    const deptLen = (department || "").trim().length;
+    const deptFontSize =
+        deptLen > 28
+            ? "text-[8px] leading-[1.14]"
+            : deptLen > 20
+            ? "text-[9px] leading-[1.18]"
+            : "text-[10px] leading-tight";
+
     return (
         <section className="id-pvc-card relative flex flex-col justify-between">
             {/* Top Olive-Green Header Banner */}
@@ -481,46 +498,52 @@ export function FrontCard({
                     )}
                 </div>
 
-                {/* Details Table */}
-                <div className="flex-1 space-y-1 text-slate-900">
-                    <div className="grid grid-cols-[74px_8px_1fr] text-[10.5px] leading-tight items-baseline">
-                        <span className="font-bold text-red-600">Name</span>
+                {/* Details Table - Full text displayed without ellipsis or truncation */}
+                <div className="flex-1 min-w-0 space-y-1 text-slate-900">
+                    <div className="grid grid-cols-[68px_6px_1fr] text-[10.5px] leading-tight items-baseline">
+                        <span className="font-bold text-red-600 whitespace-nowrap">Name</span>
                         <span className="font-bold text-red-600">:</span>
-                        <span className="font-black text-slate-950 uppercase truncate" title={studentName}>
+                        <span
+                            className={`font-black text-slate-950 uppercase break-words whitespace-normal ${nameFontSize}`}
+                            title={studentName}
+                        >
                             {studentName}
                         </span>
                     </div>
 
-                    <div className="grid grid-cols-[74px_8px_1fr] text-[10.5px] leading-tight items-baseline">
-                        <span className="font-bold text-red-600">Matric No.</span>
+                    <div className="grid grid-cols-[68px_6px_1fr] text-[10px] leading-tight items-baseline">
+                        <span className="font-bold text-red-600 whitespace-nowrap">Matric No.</span>
                         <span className="font-bold text-red-600">:</span>
-                        <span className="font-black text-slate-950 text-[10.5px]">
+                        <span className="font-black text-slate-950 font-mono tracking-tight break-all text-[10px]">
                             {matricNumber}
                         </span>
                     </div>
 
-                    <div className="grid grid-cols-[74px_8px_1fr] text-[10px] leading-tight items-baseline">
-                        <span className="font-bold text-red-600">Department</span>
+                    <div className="grid grid-cols-[68px_6px_1fr] text-[10px] leading-tight items-baseline">
+                        <span className="font-bold text-red-600 whitespace-nowrap">Department</span>
                         <span className="font-bold text-red-600">:</span>
-                        <span className="font-black text-slate-900 uppercase truncate" title={department}>
+                        <span
+                            className={`font-black text-slate-900 uppercase break-words whitespace-normal ${deptFontSize}`}
+                            title={department}
+                        >
                             {department}
                         </span>
                     </div>
 
-                    <div className="grid grid-cols-[74px_8px_1fr] text-[10px] leading-tight items-baseline">
-                        <span className="font-bold text-red-600">Telephone</span>
+                    <div className="grid grid-cols-[68px_6px_1fr] text-[10px] leading-tight items-baseline">
+                        <span className="font-bold text-red-600 whitespace-nowrap">Telephone</span>
                         <span className="font-bold text-red-600">:</span>
-                        <span className="font-bold text-slate-900 font-mono">
+                        <span className="font-bold text-slate-900 font-mono text-[9.5px] tracking-tight">
                             {phoneNumber || DEFAULTS.phone}
                         </span>
                     </div>
 
-                    <div className="grid grid-cols-[74px_8px_1fr] text-[9.5px] leading-tight items-baseline">
-                        <span className="font-bold text-red-600">Blood Group</span>
+                    <div className="grid grid-cols-[68px_6px_1fr] text-[9.5px] leading-tight items-baseline">
+                        <span className="font-bold text-red-600 whitespace-nowrap">Blood Group</span>
                         <span className="font-bold text-red-600">:</span>
-                        <span className="font-black text-slate-900">
-                            {bloodGroup || DEFAULTS.bloodGroup}&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                            <span className="font-bold text-red-600">Genotype : </span>
+                        <span className="font-black text-slate-900 text-[9.5px] whitespace-nowrap">
+                            <span>{bloodGroup || DEFAULTS.bloodGroup}</span>
+                            <span className="ml-3 font-bold text-red-600">Genotype : </span>
                             <span className="font-black text-slate-900">{genotype || DEFAULTS.genotype}</span>
                         </span>
                     </div>
