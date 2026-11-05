@@ -213,18 +213,27 @@ export default function ICTPrintQueuePage() {
     }
 
     function handlePrintSelected() {
-        if (!selected.length) return toast.error("Select cards first");
+        if (!selected.length) {
+            if (cards.length > 0) {
+                const allIds = cards.map((c) => c.id);
+                window.open(`/admin/ict/print-queue/print?ids=${allIds.join(",")}`, "_blank");
+                return;
+            }
+            return toast.error("No cards available to print");
+        }
         window.open(`/admin/ict/print-queue/print?ids=${selected.join(",")}`, "_blank");
     }
+
+    const [showWorkflowGuide, setShowWorkflowGuide] = useState(false);
     const statMap = Object.fromEntries(stats.map((s) => [s.status, s.count]));
 
     return (
         <div className="min-h-screen bg-slate-50 p-6">
             <div className="max-w-7xl mx-auto space-y-6">
                 {/* Header */}
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 bg-indigo-600 text-white rounded-xl flex items-center justify-center shadow-lg">
+                        <div className="w-12 h-12 bg-indigo-600 text-white rounded-xl flex items-center justify-center shadow-lg shrink-0">
                             <Printer size={24} />
                         </div>
                         <div>
@@ -232,11 +241,81 @@ export default function ICTPrintQueuePage() {
                                 ID Card Print &amp; Production Dashboard
                             </h1>
                             <p className="text-sm text-slate-500 font-medium">
-                                Real-time PVC card proofing, attendance barcode verification, and print queue management
+                                Real-time PVC card proofing, attendance barcode verification, and batch print queue management
                             </p>
                         </div>
                     </div>
+
+                    <div className="flex items-center gap-2">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setShowWorkflowGuide(!showWorkflowGuide)}
+                            className="rounded-xl border-indigo-200 text-indigo-700 hover:bg-indigo-50 font-bold text-xs gap-1.5"
+                        >
+                            <FileText className="w-4 h-4" />
+                            {showWorkflowGuide ? "Hide Printing Guide" : "Bulk Printing Guide"}
+                        </Button>
+                        <Button
+                            size="sm"
+                            onClick={handlePrintSelected}
+                            disabled={cards.length === 0}
+                            className="bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-xl shadow-md gap-2 px-4"
+                        >
+                            <Printer className="w-4 h-4" />
+                            {selected.length > 0 ? `Print Selected (${selected.length})` : `Print All on Page (${cards.length})`}
+                        </Button>
+                    </div>
                 </div>
+
+                {/* WORKFLOW & PROCESS GUIDE ACCORDION */}
+                {showWorkflowGuide && (
+                    <Card className="rounded-2xl border-indigo-200 bg-gradient-to-br from-indigo-50/70 via-white to-emerald-50/40 shadow-sm overflow-hidden">
+                        <CardHeader className="p-4 pb-2 border-b border-indigo-100">
+                            <CardTitle className="text-sm font-black text-indigo-950 uppercase tracking-tight flex items-center gap-2">
+                                <Sparkles className="w-4 h-4 text-indigo-600" />
+                                End-to-End ICT Student Identity &amp; Bulk Card Printing Process
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-4 grid grid-cols-1 md:grid-cols-4 gap-4 text-xs">
+                            <div className="p-3 bg-white rounded-xl border border-slate-200 shadow-2xs space-y-1">
+                                <span className="w-6 h-6 rounded-full bg-indigo-600 text-white font-black text-xs flex items-center justify-center">1</span>
+                                <h4 className="font-bold text-slate-900 text-xs mt-1">Gating &amp; Auto-Queuing</h4>
+                                <p className="text-slate-600 leading-relaxed text-[11px]">
+                                    <strong>ND 1 / HND 1:</strong> Automatically queued once their acceptance fee is verified. Photos &amp; signatures are pulled from admission records.
+                                    <br />
+                                    <strong>ND 2 / HND 2:</strong> Queued via the Issue Panel below once photo &amp; signature are captured.
+                                </p>
+                            </div>
+
+                            <div className="p-3 bg-white rounded-xl border border-slate-200 shadow-2xs space-y-1">
+                                <span className="w-6 h-6 rounded-full bg-emerald-600 text-white font-black text-xs flex items-center justify-center">2</span>
+                                <h4 className="font-bold text-slate-900 text-xs mt-1">Filtering &amp; Batch Selection</h4>
+                                <p className="text-slate-600 leading-relaxed text-[11px]">
+                                    Filter by <strong>Status (Pending)</strong>, <strong>Level (ND 1 / HND 1 / ND 2 / HND 2)</strong>, or Department.
+                                    Check individual cards or click <strong>&quot;Select All on Page&quot;</strong> to target the entire batch for immediate production.
+                                </p>
+                            </div>
+
+                            <div className="p-3 bg-white rounded-xl border border-slate-200 shadow-2xs space-y-1">
+                                <span className="w-6 h-6 rounded-full bg-blue-600 text-white font-black text-xs flex items-center justify-center">3</span>
+                                <h4 className="font-bold text-slate-900 text-xs mt-1">PVC Print Engine</h4>
+                                <p className="text-slate-600 leading-relaxed text-[11px]">
+                                    Click <strong>&quot;Print Selected (PVC)&quot;</strong>. A dedicated print sheet opens formatted to CR80 dimensions (85.6 &times; 53.98mm).
+                                    Choose <strong>Duplex (Front+Back)</strong> or <strong>Single-Sided</strong> according to your PVC thermal printer specifications.
+                                </p>
+                            </div>
+
+                            <div className="p-3 bg-white rounded-xl border border-slate-200 shadow-2xs space-y-1">
+                                <span className="w-6 h-6 rounded-full bg-teal-600 text-white font-black text-xs flex items-center justify-center">4</span>
+                                <h4 className="font-bold text-slate-900 text-xs mt-1">Fulfillment &amp; Dispatch</h4>
+                                <p className="text-slate-600 leading-relaxed text-[11px]">
+                                    After the card hopper finishes printing, click <strong>&quot;Mark Printed&quot;</strong>. The portal updates the student&apos;s record, notifies them, and enables the barcode for electronic attendance scanning.
+                                </p>
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
 
                 {/* Stats */}
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
@@ -498,42 +577,66 @@ export default function ICTPrintQueuePage() {
                         </div>
                     </div>
 
-                    {/* Bulk Actions */}
-                    {selected.length > 0 && (
-                        <div className="flex items-center gap-4 p-3 bg-indigo-50 rounded-xl border border-indigo-200">
-                            <span className="text-sm font-bold text-indigo-700">{selected.length} selected</span>
-                            <div className="flex gap-2">
-                                <Select value={assignStaffId} onValueChange={setAssignStaffId}>
-                                    <SelectTrigger className="w-48 h-9 rounded-lg bg-white">
-                                        <SelectValue placeholder="Assign to staff..." />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {staff.map((s) => (
-                                            <SelectItem key={s.id} value={s.id.toString()}>
-                                                {s.name}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                                <Button size="sm" onClick={handleAssign} disabled={assigning} className="gap-1 rounded-lg">
-                                    {assigning ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
-                                    Assign
-                                </Button>
-                                <Button size="sm" onClick={handlePrintSelected} className="gap-1 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white">
-                                    <Printer className="w-4 h-4" /> Print Selected (PVC)
-                                </Button>
-                                <Button size="sm" variant="outline" onClick={() => handleStatusUpdate("printing")} disabled={updating} className="gap-1 rounded-lg">
-                                    <Printer className="w-4 h-4" /> Mark Printing
-                                </Button>
-                                <Button size="sm" variant="outline" onClick={() => handleStatusUpdate("printed")} disabled={updating} className="gap-1 rounded-lg">
-                                    <CheckCircle2 className="w-4 h-4" /> Mark Printed
-                                </Button>
-                                <Button size="sm" variant="outline" onClick={() => handleStatusUpdate("delivered")} disabled={updating} className="gap-1 rounded-lg">
-                                    <Truck className="w-4 h-4" /> Mark Delivered
-                                </Button>
-                            </div>
+                    {/* Permanent Bulk Production & Print Action Bar */}
+                    <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 bg-gradient-to-r from-emerald-50 via-teal-50 to-indigo-50 rounded-2xl border border-emerald-200 shadow-2xs">
+                        <div className="flex flex-wrap items-center gap-2.5">
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={selectAll}
+                                className="h-9 text-xs font-bold bg-white text-slate-800 border-slate-300 hover:bg-slate-100 rounded-xl shadow-2xs"
+                            >
+                                {selected.length === cards.length && cards.length > 0 ? "Deselect All" : `Select All on Page (${cards.length})`}
+                            </Button>
+                            <span className="text-xs font-black text-emerald-950 bg-emerald-100/90 px-3 py-1.5 rounded-xl border border-emerald-200">
+                                {selected.length} of {cards.length} cards selected
+                            </span>
                         </div>
-                    )}
+
+                        <div className="flex flex-wrap items-center gap-2">
+                            {/* Primary Bulk PVC Print Button */}
+                            <Button
+                                size="sm"
+                                onClick={handlePrintSelected}
+                                disabled={cards.length === 0}
+                                className="h-9 px-4 bg-emerald-700 hover:bg-emerald-800 text-white font-black rounded-xl shadow-sm gap-2 text-xs"
+                                title="Opens standard ISO CR80 PVC batch printing layout"
+                            >
+                                <Printer className="w-4 h-4" />
+                                {selected.length > 0 ? `Print Selected Cards (${selected.length})` : `Print All on Page (${cards.length})`}
+                            </Button>
+
+                            {selected.length > 0 && (
+                                <div className="flex flex-wrap items-center gap-2 pl-2 border-l border-emerald-300">
+                                    <Select value={assignStaffId} onValueChange={setAssignStaffId}>
+                                        <SelectTrigger className="w-36 h-9 rounded-xl bg-white text-xs border-slate-300">
+                                            <SelectValue placeholder="Assign Staff..." />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {staff.map((s) => (
+                                                <SelectItem key={s.id} value={s.id.toString()} className="text-xs">
+                                                    {s.name}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <Button size="sm" onClick={handleAssign} disabled={assigning || !assignStaffId} className="h-9 rounded-xl gap-1 text-xs">
+                                        {assigning ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <UserPlus className="w-3.5 h-3.5" />}
+                                        Assign
+                                    </Button>
+                                    <Button size="sm" variant="outline" onClick={() => handleStatusUpdate("printing")} disabled={updating} className="h-9 rounded-xl gap-1 text-xs bg-white text-purple-700 border-purple-200 hover:bg-purple-50">
+                                        <Clock className="w-3.5 h-3.5" /> Mark Printing
+                                    </Button>
+                                    <Button size="sm" variant="outline" onClick={() => handleStatusUpdate("printed")} disabled={updating} className="h-9 rounded-xl gap-1 text-xs bg-white text-emerald-700 border-emerald-200 hover:bg-emerald-50">
+                                        <CheckCircle2 className="w-3.5 h-3.5" /> Mark Printed
+                                    </Button>
+                                    <Button size="sm" variant="outline" onClick={() => handleStatusUpdate("delivered")} disabled={updating} className="h-9 rounded-xl gap-1 text-xs bg-white text-slate-700 border-slate-200 hover:bg-slate-50">
+                                        <Truck className="w-3.5 h-3.5" /> Delivered
+                                    </Button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
                 </div>
 
                 {/* Table */}
