@@ -67,40 +67,50 @@ export default function ICTPrintQueuePage() {
 
     const loadQueue = useCallback(async () => {
         setLoading(true);
-        const res = await getPrintQueue({
-            status: filterStatus === "all" ? undefined : filterStatus,
-            programmeType: filterProgramme === "all" ? undefined : filterProgramme,
-            level: filterLevel === "all" ? undefined : filterLevel,
-            search: search || undefined,
-            limit: pageSize,
-            offset: (page - 1) * pageSize,
-        });
-        if (res.success) {
-            setCards(res.data);
-            setTotal(res.total);
-            // If we have cards and haven't selected a specific one, populate preview with first card
-            if (res.data.length > 0 && previewStudent.matricNumber === "DPP/HND/BAM/FSS/IB/2025/3841") {
-                const first = res.data[0];
-                setPreviewStudent({
-                    studentName: first.studentName || "OLAWAYE EMMANUEL OLAOSEBIKAN",
-                    matricNumber: first.matricNumber || "ACC/FSS/IB/2024/119920",
-                    department: first.deptName || "ACCOUNTANCY",
-                    programmeName: `${first.programmeType || "ND"} ${first.deptName || "Accountancy"}`,
-                    programmeType: first.programmeType || "ND",
-                    currentLevel: first.currentLevel ? `${first.programmeType || "ND"} ${first.currentLevel}` : "ND 1",
-                    photoUrl: first.photoUrl,
-                    signatureUrl: first.signatureUrl,
-                    phoneNumber: first.phoneNumber || "07081808456",
-                    bloodGroup: "O+",
-                    genotype: "AA",
-                    barcode: first.matricNumber || "ACC/FSS/IB/2024/119920",
-                    verificationCode: first.issueId || "ID-2026-FSS-119920",
-                });
+        try {
+            const res = await getPrintQueue({
+                status: filterStatus === "all" ? undefined : filterStatus,
+                programmeType: filterProgramme === "all" ? undefined : filterProgramme,
+                level: filterLevel === "all" ? undefined : filterLevel,
+                search: search || undefined,
+                limit: pageSize,
+                offset: (page - 1) * pageSize,
+            });
+            if (res.success) {
+                setCards(res.data);
+                setTotal(res.total);
+                // If we have cards and haven't selected a specific one, populate preview with first card
+                if (res.data.length > 0 && previewStudent.matricNumber === "DPP/HND/BAM/FSS/IB/2025/3841") {
+                    const first = res.data[0];
+                    setPreviewStudent({
+                        studentName: first.studentName || "OLAWAYE EMMANUEL OLAOSEBIKAN",
+                        matricNumber: first.matricNumber || "ACC/FSS/IB/2024/119920",
+                        department: first.deptName || "ACCOUNTANCY",
+                        programmeName: `${first.programmeType || "ND"} ${first.deptName || "Accountancy"}`,
+                        programmeType: first.programmeType || "ND",
+                        currentLevel: first.currentLevel ? `${first.programmeType || "ND"} ${first.currentLevel}` : "ND 1",
+                        photoUrl: first.photoUrl,
+                        signatureUrl: first.signatureUrl,
+                        phoneNumber: first.phoneNumber || "07081808456",
+                        bloodGroup: "O+",
+                        genotype: "AA",
+                        barcode: first.matricNumber || "ACC/FSS/IB/2024/119920",
+                        verificationCode: first.issueId || "ID-2026-FSS-119920",
+                    });
+                }
+            } else {
+                toast.error(res.error || "Failed to load print queue");
             }
-        } else {
-            toast.error(res.error || "Failed to load print queue");
+        } catch (err: any) {
+            console.error("Load queue error:", err);
+            const msg = err?.message || String(err);
+            if (msg.includes("Failed to find Server Action") || msg.includes("deployment")) {
+                toast.info("Updating to latest server version. Reloading...");
+                setTimeout(() => window.location.reload(), 1000);
+            }
+        } finally {
+            setLoading(false);
         }
-        setLoading(false);
     }, [filterStatus, filterProgramme, filterLevel, search, page]);
 
     useEffect(() => {
@@ -130,30 +140,57 @@ export default function ICTPrintQueuePage() {
 
     async function handleAssign() {
         if (!selected.length) return toast.error("Select cards first");
-        if (!assignStaffId) return toast.error("Select a staff member");
+        if (!assignStaffId) return toast.error("Select a staff member from the dropdown");
         setAssigning(true);
-        const res = await assignPrintJob(selected, parseInt(assignStaffId));
-        setAssigning(false);
-        if (res.success) {
-            toast.success(res.message);
-            setSelected([]);
-            loadQueue();
-        } else {
-            toast.error(res.error);
+        try {
+            const res = await assignPrintJob(selected, parseInt(assignStaffId));
+            if (res.success) {
+                toast.success(`${res.message} Moved to 'Assigned' tab.`);
+                setSelected([]);
+                setAssignStaffId("");
+                await loadQueue();
+                getPrintQueueStats().then((r) => r.success && setStats(r.data));
+            } else {
+                toast.error(res.error || "Failed to assign cards");
+            }
+        } catch (err: any) {
+            console.error("Assign error:", err);
+            const msg = err?.message || String(err);
+            if (msg.includes("Failed to find Server Action") || msg.includes("deployment")) {
+                toast.info("New server update detected. Refreshing page...");
+                setTimeout(() => window.location.reload(), 1000);
+            } else {
+                toast.error(msg || "Failed to assign cards. Please try again.");
+            }
+        } finally {
+            setAssigning(false);
         }
     }
 
     async function handleStatusUpdate(status: string) {
         if (!selected.length) return toast.error("Select cards first");
         setUpdating(true);
-        const res = await bulkUpdatePrintStatus(selected, status);
-        setUpdating(false);
-        if (res.success) {
-            toast.success(res.message);
-            setSelected([]);
-            loadQueue();
-        } else {
-            toast.error(res.error);
+        try {
+            const res = await bulkUpdatePrintStatus(selected, status);
+            if (res.success) {
+                toast.success(`${res.message} Moved to '${status}' tab.`);
+                setSelected([]);
+                await loadQueue();
+                getPrintQueueStats().then((r) => r.success && setStats(r.data));
+            } else {
+                toast.error(res.error || "Failed to update status");
+            }
+        } catch (err: any) {
+            console.error("Status update error:", err);
+            const msg = err?.message || String(err);
+            if (msg.includes("Failed to find Server Action") || msg.includes("deployment")) {
+                toast.info("New server update detected. Refreshing page...");
+                setTimeout(() => window.location.reload(), 1000);
+            } else {
+                toast.error(msg || "Failed to update status. Please try again.");
+            }
+        } finally {
+            setUpdating(false);
         }
     }
 
@@ -171,10 +208,16 @@ export default function ICTPrintQueuePage() {
 
     const loadIssueList = useCallback(async () => {
         setIssueLoading(true);
-        const res = await getStudentsWithoutCards({ search: issueSearch || undefined, levelFilter: issueLevelFilter, limit: 200 });
-        if (res.success) setIssueList(res.data);
-        else toast.error(res.error);
-        setIssueLoading(false);
+        try {
+            const res = await getStudentsWithoutCards({ search: issueSearch || undefined, levelFilter: issueLevelFilter, limit: 200 });
+            if (res.success) setIssueList(res.data);
+            else toast.error(res.error);
+        } catch (err: any) {
+            console.error("Load issue list error:", err);
+            toast.error(err?.message || "Failed to load unissued student list");
+        } finally {
+            setIssueLoading(false);
+        }
     }, [issueSearch, issueLevelFilter]);
 
     useEffect(() => {
@@ -184,31 +227,43 @@ export default function ICTPrintQueuePage() {
     async function handleProcessAcceptancePaid() {
         if (!window.confirm("Process ID cards for all ND 1 & HND 1 students with confirmed acceptance fee payment?")) return;
         setProcessingFreshmen(true);
-        const res = await processAcceptancePaidFreshmenIDCards();
-        setProcessingFreshmen(false);
-        if (res.success) {
-            toast.success(res.message);
-            loadIssueList();
-            loadQueue();
-            getPrintQueueStats().then((r) => r.success && setStats(r.data));
-        } else {
-            toast.error(res.error);
+        try {
+            const res = await processAcceptancePaidFreshmenIDCards();
+            if (res.success) {
+                toast.success(res.message);
+                loadIssueList();
+                await loadQueue();
+                getPrintQueueStats().then((r) => r.success && setStats(r.data));
+            } else {
+                toast.error(res.error || "Failed to process freshmen ID cards");
+            }
+        } catch (err: any) {
+            console.error("Process freshmen error:", err);
+            toast.error(err?.message || "An unexpected error occurred.");
+        } finally {
+            setProcessingFreshmen(false);
         }
     }
 
     async function handleIssue() {
         if (!issueSelected.length) return toast.error("Select students first");
         setIssuing(true);
-        const res = await issueBatchIDCards(issueSelected);
-        setIssuing(false);
-        if (res.success) {
-            toast.success(res.message);
-            setIssueSelected([]);
-            loadIssueList();
-            loadQueue();
-            getPrintQueueStats().then((r) => r.success && setStats(r.data));
-        } else {
-            toast.error(res.error);
+        try {
+            const res = await issueBatchIDCards(issueSelected);
+            if (res.success) {
+                toast.success(res.message);
+                setIssueSelected([]);
+                loadIssueList();
+                await loadQueue();
+                getPrintQueueStats().then((r) => r.success && setStats(r.data));
+            } else {
+                toast.error(res.error || "Failed to issue cards");
+            }
+        } catch (err: any) {
+            console.error("Issue cards error:", err);
+            toast.error(err?.message || "An unexpected error occurred.");
+        } finally {
+            setIssuing(false);
         }
     }
 

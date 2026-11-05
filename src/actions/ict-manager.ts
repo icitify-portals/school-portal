@@ -237,19 +237,30 @@ export async function assignPrintJob(cardIds: number[], staffId: number) {
     try {
         await ensureICTManager();
 
-        if (!cardIds.length) throw new Error("No cards selected");
-        if (!staffId) throw new Error("No staff member selected");
+        const validIds = (cardIds || []).map(Number).filter((n) => !isNaN(n) && n > 0);
+        if (!validIds.length) throw new Error("No cards selected");
+
+        const validStaffId = Number(staffId);
+        if (isNaN(validStaffId) || validStaffId <= 0) throw new Error("No staff member selected");
+
+        const targetStaff = await db.query.users.findFirst({
+            where: eq(users.id, validStaffId),
+            columns: { name: true, role: true }
+        });
 
         await db.update(idCards)
             .set({
                 printStatus: "assigned",
-                assignedTo: staffId,
+                assignedTo: validStaffId,
                 assignedAt: new Date(),
             })
-            .where(inArray(idCards.id, cardIds));
+            .where(inArray(idCards.id, validIds));
 
         revalidatePath("/admin/ict/print-queue");
-        return { success: true, message: `${cardIds.length} card(s) assigned successfully.` };
+        return { 
+            success: true, 
+            message: `${validIds.length} card(s) assigned to ${targetStaff?.name || "staff"}.` 
+        };
     } catch (error) {
         return { success: false, error: (error as Error).message };
     }
@@ -259,19 +270,29 @@ export async function bulkUpdatePrintStatus(cardIds: number[], status: string, n
     try {
         await ensureICTManager();
 
-        if (!cardIds.length) throw new Error("No cards selected");
+        const validIds = (cardIds || []).map(Number).filter((n) => !isNaN(n) && n > 0);
+        if (!validIds.length) throw new Error("No cards selected");
+
+        const validStatus = ["pending", "assigned", "printing", "printed", "delivered"];
+        if (!validStatus.includes(status)) {
+            throw new Error(`Invalid status: ${status}`);
+        }
 
         const updateData: any = { printStatus: status };
         if (status === "printed") updateData.printedAt = new Date();
         if (status === "delivered") updateData.deliveredAt = new Date();
+        if (status === "pending") {
+            updateData.assignedTo = null;
+            updateData.assignedAt = null;
+        }
         if (notes) updateData.printNotes = notes;
 
         await db.update(idCards)
             .set(updateData)
-            .where(inArray(idCards.id, cardIds));
+            .where(inArray(idCards.id, validIds));
 
         revalidatePath("/admin/ict/print-queue");
-        return { success: true, message: `${cardIds.length} card(s) updated to ${status}.` };
+        return { success: true, message: `${validIds.length} card(s) updated to ${status}.` };
     } catch (error) {
         return { success: false, error: (error as Error).message };
     }
