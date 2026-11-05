@@ -72,16 +72,28 @@ export async function forgotPassword(identifier: string) {
             const underNorm = norm.replace(/\//g, '_');
 
             const studentMatches = await db.select().from(students)
-                .where(or(
-                    eq(students.matricNumber, norm),
-                    eq(students.matricNumber, slashNorm),
-                    eq(students.matricNumber, underNorm),
-                    eq(students.admissionNumber, norm),
-                    eq(students.admissionNumber, slashNorm),
-                    eq(students.admissionNumber, underNorm),
-                    norm.length >= 4 ? like(students.matricNumber, `%${norm}%`) : sql`FALSE`,
-                    norm.length >= 4 ? like(students.admissionNumber, `%${norm}%`) : sql`FALSE`
+                .where(and(
+                    isNull(students.deletedAt),
+                    notLike(students.matricNumber, '%.retired.%'),
+                    or(
+                        eq(students.matricNumber, norm),
+                        eq(students.matricNumber, slashNorm),
+                        eq(students.matricNumber, underNorm),
+                        eq(students.admissionNumber, norm),
+                        eq(students.admissionNumber, slashNorm),
+                        eq(students.admissionNumber, underNorm),
+                        sql`JSON_CONTAINS(students.previous_matric_numbers, JSON_QUOTE(${norm}))`,
+                        sql`JSON_CONTAINS(students.previous_matric_numbers, JSON_QUOTE(${slashNorm}))`,
+                        sql`JSON_CONTAINS(students.previous_matric_numbers, JSON_QUOTE(${underNorm}))`,
+                        norm.length >= 4 ? like(students.matricNumber, `%${norm}%`) : sql`FALSE`,
+                        norm.length >= 4 ? like(students.admissionNumber, `%${norm}%`) : sql`FALSE`
+                    )
                 ))
+                .orderBy(
+                    sql`CASE WHEN ${students.status} = 'active' THEN 0 ELSE 1 END`,
+                    sql`CASE WHEN ${students.programmeType} = 'HND' THEN 0 ELSE 1 END`,
+                    desc(students.id)
+                )
                 .limit(1);
 
             if (studentMatches.length > 0) {
@@ -160,8 +172,13 @@ export async function forgotPassword(identifier: string) {
         // Send Email
         const resetLink = `${APP_URL}/reset-password?token=${token}`;
         
+        let emailDispatched = false;
+        let emailErrorMessage = "";
         try {
-            await sendEmail(
+            if (targetEmail.startsWith('retired.')) {
+                targetEmail = targetEmail.replace(/^retired\.\d+\./, '');
+            }
+            const emailResult = await sendEmail(
                 targetEmail,
                 "Password Reset Request",
                 `<div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px; border-top: 4px solid #4f46e5;">
@@ -176,8 +193,21 @@ export async function forgotPassword(identifier: string) {
                     <p style="color: #94a3b8; font-size: 12px;">FSS Portal Identity Services</p>
                 </div>`
             );
-        } catch (emailErr) {
+            if (emailResult && emailResult.success === false) {
+                emailErrorMessage = emailResult.error || "Email delivery failed";
+            } else {
+                emailDispatched = true;
+            }
+        } catch (emailErr: any) {
             console.error("Password reset email send failed:", emailErr);
+            emailErrorMessage = emailErr?.message || "Email dispatch failed";
+        }
+
+        if (!emailDispatched) {
+            return {
+                success: false,
+                error: `Unable to dispatch password reset email (${emailErrorMessage}). Please contact ICT or an administrator to reset your password directly.`
+            };
         }
 
         return {
@@ -327,14 +357,8 @@ export async function changePasswordForced(password: string, dob?: string) {
         if (userRecord && userRecord.role === 'student') {
             const [studentRecord] = await db.select().from(students).where(eq(students.userId, userId)).limit(1);
             
-            if (studentRecord) {
-                if (!studentRecord.dob && !dob) {
-                    return { success: false, error: 'Date of Birth is required for first-time setup.', requireDob: true };
-                }
-                
-                if (!studentRecord.dob && dob) {
-                    await db.update(students).set({ dob }).where(eq(students.userId, userId));
-                }
+            if (studentRecord && dob) {
+                await db.update(students).set({ dob }).where(eq(students.userId, userId));
             }
         }
 
@@ -376,14 +400,7 @@ export async function changePasswordForced(password: string, dob?: string) {
             console.error("Twin account password sync in changePasswordForced error:", syncErr);
         }
 
-                // Clear stale session cookies so middleware will not loop back to /change-password
-        try {
-            const cookieStore = await cookies();
-            cookieStore.delete("authjs.session-token");
-            cookieStore.delete("__Secure-authjs.session-token");
-        } catch (cookieErr) {
-            // non-blocking
-        }
+                // Client handles session refresh via signOut and signIn cleanly
 
         return { 
             success: true, 

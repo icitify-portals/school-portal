@@ -1,4 +1,4 @@
-﻿"use server";
+"use server";
 
 import { db } from "@/db/db";
 import {
@@ -23,7 +23,7 @@ import {
     lessonNotes,
     courseDepartmentSettings
 } from "@/db/schema";
-import { eq, and, count, sql, inArray, desc } from "drizzle-orm";
+import { eq, and, count, sql, inArray, desc, isNull, notLike } from "drizzle-orm";
 import { auth } from "@/auth";
 import { TimetableService } from "@/services/TimetableService";
 import { revalidatePath } from "next/cache";
@@ -143,7 +143,18 @@ export async function getStudentDashboardStats(userId: number) {
             .from(students)
             .innerJoin(users, eq(students.userId, users.id))
             .leftJoin(programmes, eq(students.programmeId, programmes.id))
-            .where(eq(students.userId, userId))
+            .where(
+                and(
+                    eq(students.userId, userId),
+                    isNull(students.deletedAt),
+                    notLike(students.matricNumber, "%.retired.%")
+                )
+            )
+            .orderBy(
+                sql`CASE WHEN ${students.status} = 'active' THEN 0 ELSE 1 END`,
+                sql`CASE WHEN ${students.programmeType} = 'HND' THEN 0 ELSE 1 END`,
+                desc(students.id)
+            )
             .limit(1);
 
         if (!studentData) return null;
@@ -260,7 +271,7 @@ export async function getStudentDashboardStats(userId: number) {
             enrolledCourses: enrolledCourses.length,
             totalCredits: enrolledCourses.reduce((acc, c) => acc + (c.credits || 0), 0),
             level: student.currentLevel,
-            programmeType: programme?.programmeType,
+            programmeType: student.programmeType || programme?.programmeType || 'ND',
             studentStatus: student.status,
             matricNo: student.matricNumber || 'PENDING',
             cgpa,

@@ -732,6 +732,10 @@ export async function togglePaymentLock(studentId: number, status: boolean) {
         await db.update(students).set({ isPaymentLocked: status }).where(eq(students.id, studentId));
         revalidatePath("/admin/students");
         revalidatePath(`/admin/students/${studentId}`);
+        revalidatePath("/admin/students");
+        revalidatePath("/admin/students/placement");
+        revalidatePath("/student");
+        revalidatePath("/student/complete-profile");
         return { success: true, message: `Payment ${status ? 'locked' : 'unlocked'} successfully.` };
     } catch (error: any) {
         console.error("togglePaymentLock error:", error);
@@ -877,6 +881,24 @@ export async function updateAdminStudentProfile(studentId: number, updatePayload
                 if (prog.deptId) studentUpdates.deptId = prog.deptId;
             }
             studentUpdates.programmeId = pid;
+        }
+        if (updatePayload.programmeType !== undefined) {
+            const pt = (updatePayload.programmeType || '').toString().trim().toUpperCase();
+            if (['ND', 'HND'].includes(pt)) {
+                studentUpdates.programmeType = pt;
+                if (updatePayload.programmeId === undefined) {
+                    const targetDept = studentUpdates.deptId || student.deptId;
+                    if (targetDept) {
+                        const [matchingProg] = await db.select({ id: programmes.id })
+                            .from(programmes)
+                            .where(and(eq(programmes.deptId, targetDept), eq(programmes.programmeType, pt as any)))
+                            .limit(1);
+                        if (matchingProg) {
+                            studentUpdates.programmeId = matchingProg.id;
+                        }
+                    }
+                }
+            }
         }
         if (updatePayload.currentLevel !== undefined) {
             const lvl = updatePayload.currentLevel ? Number(updatePayload.currentLevel) : null;
@@ -1027,6 +1049,28 @@ export async function bulkUpdateStudentPlacements(studentIds: number[], data: { 
             .where(inArray(students.id, studentIds));
 
         revalidatePath("/admin/students");
+        // If programmeType was updated, sync programme_id to matching programme for that department
+        if (updateData.programmeType) {
+            const targetType = updateData.programmeType;
+            const updatedStudents = await db.select({ id: students.id, deptId: students.deptId })
+                .from(students)
+                .where(inArray(students.id, studentIds));
+
+            for (const stu of updatedStudents) {
+                if (stu.deptId) {
+                    const [prog] = await db.select({ id: programmes.id })
+                        .from(programmes)
+                        .where(and(eq(programmes.deptId, stu.deptId), eq(programmes.programmeType, targetType)))
+                        .limit(1);
+                    if (prog?.id) {
+                        await db.update(students).set({ programmeId: prog.id }).where(eq(students.id, stu.id));
+                    }
+                }
+            }
+        }
+
+        revalidatePath("/student");
+        revalidatePath("/student/complete-profile");
         return { success: true, message: `Successfully updated placements for ${studentIds.length} student(s).` };
     } catch (error: any) {
         console.error("Bulk Update Placements Error:", error);

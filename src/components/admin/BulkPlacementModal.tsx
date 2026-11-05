@@ -27,7 +27,17 @@ export function BulkPlacementModal({ open, onClose, selectedStudentIds, sessions
     const handleSave = async () => {
         setLoading(true);
         const data: any = {};
-        if (currentLevel) data.currentLevel = Number(currentLevel);
+        if (currentLevel) {
+            if (isK12) {
+                data.currentLevel = Number(currentLevel);
+            } else {
+                const [progType, lvl] = currentLevel.split('-');
+                if (progType && lvl) {
+                    data.programmeType = progType;
+                    data.currentLevel = Number(lvl);
+                }
+            }
+        }
         if (status) data.status = status;
         if (currentSessionId) data.currentSessionId = Number(currentSessionId);
         if (admissionYear) data.admissionYear = admissionYear;
@@ -44,14 +54,13 @@ export function BulkPlacementModal({ open, onClose, selectedStudentIds, sessions
         }
     };
 
-    const levels = isK12 
-        ? [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
-        : [
-            { label: "ND 1", value: "1" },
-            { label: "ND 2", value: "2" },
-            { label: "HND 1", value: "1" },
-            { label: "HND 2", value: "2" }
-        ];
+    const k12Levels = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+    const tertiaryLevels = [
+        { label: "ND 1", value: "ND-1" },
+        { label: "ND 2", value: "ND-2" },
+        { label: "HND 1", value: "HND-1" },
+        { label: "HND 2", value: "HND-2" }
+    ];
 
     return (
         <Dialog open={open} onOpenChange={(val) => !val && onClose()}>
@@ -72,10 +81,10 @@ export function BulkPlacementModal({ open, onClose, selectedStudentIds, sessions
                             className="h-10 px-3 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
                         >
                             <option value="">-- No Change --</option>
-                            {isK12 ? levels.map((lvl) => (
-                                <option key={lvl as number} value={lvl as number}>Grade {lvl}</option>
-                            )) : (levels as {label:string, value:string}[]).map((lvl, idx) => (
-                                <option key={idx} value={lvl.value}>{lvl.label} ({lvl.value})</option>
+                            {isK12 ? k12Levels.map((lvl) => (
+                                <option key={lvl} value={lvl}>Grade {lvl}</option>
+                            )) : tertiaryLevels.map((lvl) => (
+                                <option key={lvl.value} value={lvl.value}>{lvl.label}</option>
                             ))}
                         </select>
                     </div>

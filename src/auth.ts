@@ -139,13 +139,38 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
                 if (isEmail) {
                     const loginEmail = normalizeEmail(rawInput);
+                    const cleanEmail = loginEmail.replace(/^retired\.\d+\./, '');
                     const [userByEmail] = await db
                         .select()
                         .from(users)
-                        .where(eq(users.email, loginEmail))
+                        .where(
+                            or(
+                                eq(users.email, loginEmail),
+                                eq(users.email, cleanEmail)
+                            )
+                        )
+                        .orderBy(
+                            sql`CASE WHEN ${users.status} = 'active' THEN 0 ELSE 1 END`,
+                            sql`CASE WHEN ${users.email} NOT LIKE 'retired.%' THEN 0 ELSE 1 END`,
+                            desc(users.id)
+                        )
                         .limit(1);
 
                     user = userByEmail;
+
+                    // If user matched is suspended or retired, switch to active unretired user account
+                    if (user && (user.status === 'suspended' || user.email.startsWith('retired.'))) {
+                        const [activeUser] = await db.select().from(users)
+                            .where(and(
+                                eq(users.email, cleanEmail),
+                                ne(users.id, user.id),
+                                eq(users.status, 'active')
+                            ))
+                            .limit(1);
+                        if (activeUser) {
+                            user = activeUser;
+                        }
+                    }
 
                     if (user && (user.role === 'student' || user.role === 'applicant' || user.role === 'fresher')) {
                         const [stu] = await db.select().from(students)
@@ -246,6 +271,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                                     eq(students.admissionNumber, normLoginId),
                                     eq(students.admissionNumber, slashNorm),
                                     eq(students.admissionNumber, underNorm),
+                                    sql`JSON_CONTAINS(students.previous_matric_numbers, JSON_QUOTE(${normLoginId}))`,
+                                    sql`JSON_CONTAINS(students.previous_matric_numbers, JSON_QUOTE(${slashNorm}))`,
+                                    sql`JSON_CONTAINS(students.previous_matric_numbers, JSON_QUOTE(${underNorm}))`,
                                     normLoginId.length >= 4 ? like(students.matricNumber, `%${normLoginId}%`) : sql`FALSE`,
                                     normLoginId.length >= 4 ? like(students.admissionNumber, `%${normLoginId}%`) : sql`FALSE`
                                 )
@@ -261,6 +289,23 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                     if (studentRec) {
                         studentRecord = studentRec.student;
                         user = studentRec.user;
+
+                        // If user matched is suspended or retired, switch to active unretired user account
+                        if (user && (user.status === 'suspended' || user.email.startsWith('retired.'))) {
+                            const cleanEmail = user.email.replace(/^retired\.\d+\./, '');
+                            const [activeUser] = await db.select().from(users)
+                                .where(and(
+                                    eq(users.email, cleanEmail),
+                                    ne(users.id, user.id),
+                                    eq(users.status, 'active')
+                                ))
+                                .limit(1);
+                            if (activeUser) {
+                                user = activeUser;
+                                await db.update(students).set({ userId: activeUser.id }).where(eq(students.id, studentRecord.id));
+                                studentRecord.userId = activeUser.id;
+                            }
+                        }
 
                         if (!user) {
                             const strippedMatric = normLoginId.replace(/[\/\_\s]/g, '').toLowerCase();
