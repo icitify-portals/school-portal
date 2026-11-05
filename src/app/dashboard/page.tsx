@@ -24,6 +24,8 @@ export default async function DashboardRedirectPage() {
         case 'icitify_dev':
             redirect("/super-admin/dashboard");
         case 'admin':
+        case 'ict_manager':
+        case 'ictmanager':
             redirect("/admin/dashboard");
         case 'staff':
             redirect("/staff/dashboard");

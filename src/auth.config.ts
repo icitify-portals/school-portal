@@ -140,9 +140,10 @@ export const authConfig = {
             const isAdmissionOfficer = userRole === 'admission_officer' || userRole === 'admission officer' || userRoles.includes('admission_officer') || userRoles.includes('Admission Officer');
             const isRecordOfficer = userRole === 'record_officer' || userRole === 'record officer' || userRole === 'recordofficer' || userRoles.includes('record_officer') || userRoles.includes('Record Officer');
             const isBursar = userRole === 'bursar' || userRole === 'bursary' || userRoles.includes('bursar') || userRoles.includes('Bursar');
+            const isIctManager = userRole === 'ict_manager' || userRole === 'ictmanager' || userRoles.includes('ICT Manager') || userRoles.includes('ict_manager') || userRoles.includes('ict manager');
 
             if (isAdminPage) {
-                if (userRole === 'admin' || userRole === 'superadmin' || userRole === 'dvc' || userRole === 'icitify_dev' || isRegistrar) return true;
+                if (userRole === 'admin' || userRole === 'superadmin' || userRole === 'dvc' || userRole === 'icitify_dev' || isRegistrar || isIctManager) return true;
 
                 // Permission-scoped access: checked BEFORE role rules to enforce strict path restrictions
                 const hasResultModulePermission = userPermissions.includes("result_module.manage");

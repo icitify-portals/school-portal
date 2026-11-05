@@ -11,7 +11,7 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { generateMatricNumber } from "@/actions/matriculation";
 
-const ADMIN_ROLES = ['admin', 'superadmin', 'icitify_dev', 'dvc', 'registrar', 'admission_officer'];
+const ADMIN_ROLES = ['admin', 'superadmin', 'icitify_dev', 'dvc', 'registrar', 'admission_officer', 'ict_manager', 'ictmanager'];
 
 async function requireAdmin() {
     const session = await auth();

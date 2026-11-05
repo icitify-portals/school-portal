@@ -627,7 +627,7 @@ export function Sidebar({ enabledModules = {}, mobileOpen = false, onClose }: {
     const isAdmissionOfficer = role === 'admission_officer' || role === 'admission officer' || role === 'admission' || userRolesList.includes('admission_officer') || userRolesList.includes('admission officer') || userRolesList.includes('admission');
     const isBursar = role === 'bursar' || role === 'bursary' || userRolesList.includes('bursar') || userRolesList.includes('bursary') || userRolesList.includes('accountant');
     const isRecordOfficer = role === 'record_officer' || role === 'record officer' || role === 'recordofficer' || userRolesList.includes('record_officer') || userRolesList.includes('record officer');
-    const isSuperAdminOrDev = role === 'admin' || role === 'superadmin' || role === 'icitify_dev' || userRolesList.includes('superadmin') || userRolesList.includes('admin') || userRolesList.includes('developer');
+    const isSuperAdminOrDev = role === 'admin' || role === 'superadmin' || role === 'icitify_dev' || role === 'ict_manager' || role === 'ictmanager' || userRolesList.includes('superadmin') || userRolesList.includes('admin') || userRolesList.includes('developer') || userRolesList.includes('ict manager') || userRolesList.includes('ict_manager');
     const isHealthAdmin = role === 'healthadmin' || role === 'health_admin' || role === 'medical_officer' || role === 'doctor' || role === 'nurse' || userRolesList.includes('healthadmin') || userRolesList.includes('health admin') || userRolesList.includes('medical officer') || userRolesList.includes('health officer');
 
     const hasResultModulePermission = userPermissions.includes("result_module.manage");

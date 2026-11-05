@@ -343,8 +343,21 @@ export async function getStudentProfileStatus() {
         columns: { email: true, phone: true, name: true, firstName: true, surname: true },
     });
 
-    const firstName = student.firstName?.trim() || user?.firstName?.trim() || user?.name?.trim()?.split(/\s+/)[0] || "";
-    const lastName = student.lastName?.trim() || user?.surname?.trim() || user?.name?.trim()?.split(/\s+/).slice(1).join(" ") || "";
+    const isPlaceholder = (val?: string | null) => {
+        if (!val) return true;
+        const low = val.trim().toLowerCase();
+        return low === 'global' || low === 'citizen' || low === 'null' || low === 'undefined';
+    };
+
+    const sFirst = isPlaceholder(student.firstName) ? "" : (student.firstName?.trim() || "");
+    const sLast = isPlaceholder(student.lastName) ? "" : (student.lastName?.trim() || "");
+    const uFirst = isPlaceholder(user?.firstName) ? "" : (user?.firstName?.trim() || "");
+    const uLast = isPlaceholder(user?.surname) ? "" : (user?.surname?.trim() || "");
+    const uNameFirst = isPlaceholder(user?.name?.trim()?.split(/\s+/)[0]) ? "" : (user?.name?.trim()?.split(/\s+/)[0] || "");
+    const uNameLast = isPlaceholder(user?.name?.trim()?.split(/\s+/).slice(1).join(" ")) ? "" : (user?.name?.trim()?.split(/\s+/).slice(1).join(" ") || "");
+
+    const firstName = sFirst || uFirst || uNameFirst || "";
+    const lastName = sLast || uLast || uNameLast || "";
 
     const missing: string[] = [];
     if (!firstName) missing.push("first_name");
@@ -370,48 +383,102 @@ export async function completeStudentProfile(data: {
     nin: string; jambNumber: string; phone: string; email: string;
     stateOfOrigin: string; lga: string;
 }) {
-    const session = await auth();
-    if (!session?.user) return { success: false, error: "Not authenticated" };
+    try {
+        const session = await auth();
+        if (!session?.user?.id) return { success: false, error: "Not authenticated. Please log in." };
 
-    const [student] = await db.select({ id: students.id })
-        .from(students)
-        // @ts-expect-error - TS2769: Auto-suppressed for build
-        .where(and(eq(students.userId, session.user.id), isNull(students.deletedAt)))
-        .orderBy(
-            sql`CASE WHEN ${students.status} = 'active' THEN 0 ELSE 1 END`,
-            sql`CASE WHEN ${students.programmeType} = 'HND' THEN 0 ELSE 1 END`,
-            desc(students.id)
-        )
-        .limit(1);
-    if (!student) return { success: false, error: "Student record not found" };
+        const userId = Number(session.user.id);
+        if (isNaN(userId)) return { success: false, error: "Invalid user session." };
 
-    if (!data.firstName?.trim()) return { success: false, error: "First name is required" };
-    if (!data.lastName?.trim()) return { success: false, error: "Last name is required" };
-    if (!data.gender) return { success: false, error: "Gender is required" };
-    if (!data.nin?.trim() || data.nin.trim().length !== 11) return { success: false, error: "NIN must be exactly 11 digits" };
-    if (!data.jambNumber?.trim()) return { success: false, error: "JAMB Registration Number is required" };
-    if (!data.phone?.trim()) return { success: false, error: "Phone number is required" };
-    if (!data.email?.trim()) return { success: false, error: "Email is required" };
-    if (!data.stateOfOrigin?.trim()) return { success: false, error: "State of Origin is required" };
-    if (!data.lga?.trim()) return { success: false, error: "Local Government Area is required" };
+        const [student] = await db.select({ id: students.id })
+            .from(students)
+            .where(and(eq(students.userId, userId), isNull(students.deletedAt)))
+            .orderBy(
+                sql`CASE WHEN ${students.status} = 'active' THEN 0 ELSE 1 END`,
+                sql`CASE WHEN ${students.programmeType} = 'HND' THEN 0 ELSE 1 END`,
+                desc(students.id)
+            )
+            .limit(1);
+        if (!student) return { success: false, error: "Student record not found" };
 
-    await db.update(students).set({
-        firstName: data.firstName.trim(), lastName: data.lastName.trim(),
-        otherNames: data.otherNames?.trim() || null, gender: data.gender as any,
-        nin: data.nin.trim(), jambNumber: data.jambNumber.trim(),
-        stateOfOrigin: data.stateOfOrigin.trim(), lga: data.lga.trim(),
-        profileCompleted: true,
-    }).where(eq(students.id, student.id));
+        const cleanFirstName = data.firstName?.trim() || "";
+        const cleanLastName = data.lastName?.trim() || "";
+        const cleanOtherNames = data.otherNames?.trim() || null;
+        const cleanGender = data.gender?.trim() || "";
+        const cleanNin = data.nin?.trim() || "";
+        const cleanJamb = data.jambNumber?.trim()?.toUpperCase() || "";
+        const cleanPhone = data.phone?.trim() || "";
+        const cleanEmail = data.email?.trim()?.toLowerCase() || "";
+        const cleanState = data.stateOfOrigin?.trim() || "";
+        const cleanLga = data.lga?.trim() || "";
 
-    await db.update(users).set({
-        firstName: data.firstName.trim(), surname: data.lastName.trim(),
-        phone: data.phone.trim(), email: data.email.trim(),
-        // @ts-expect-error - TS2769: Auto-suppressed for build
-    }).where(eq(users.id, session.user.id));
+        if (!cleanFirstName) return { success: false, error: "First name is required" };
+        if (!cleanLastName) return { success: false, error: "Last name is required" };
+        if (!cleanGender) return { success: false, error: "Gender is required" };
+        if (!cleanNin || cleanNin.length !== 11) return { success: false, error: "NIN must be exactly 11 digits" };
+        if (!cleanJamb) return { success: false, error: "JAMB Registration Number is required" };
+        if (!cleanPhone) return { success: false, error: "Phone number is required" };
+        if (!cleanEmail) return { success: false, error: "Email is required" };
+        if (!cleanState) return { success: false, error: "State of Origin is required" };
+        if (!cleanLga) return { success: false, error: "Local Government Area is required" };
 
-    revalidatePath("/student");
-    revalidatePath("/student/complete-profile");
-    return { success: true, message: "Profile completed successfully." };
+        // Check if email is in use by another user
+        const [existingEmail] = await db.select({ id: users.id })
+            .from(users)
+            .where(and(eq(users.email, cleanEmail), ne(users.id, userId)))
+            .limit(1);
+
+        if (existingEmail) {
+            return { success: false, error: "This email address is already registered to another account." };
+        }
+
+        // Check if JAMB number is held by another record
+        const [existingJamb] = await db.select({ id: students.id, status: students.status, userId: students.userId })
+            .from(students)
+            .where(and(eq(students.jambNumber, cleanJamb), ne(students.id, student.id)))
+            .limit(1);
+
+        if (existingJamb) {
+            if (existingJamb.status === 'withdrawn' || existingJamb.userId === userId) {
+                // Suffix retired/withdrawn record or user's own companion record to free up JAMB number
+                await db.update(students)
+                    .set({ jambNumber: `${cleanJamb}.retired.${existingJamb.id}` })
+                    .where(eq(students.id, existingJamb.id));
+            } else {
+                return { success: false, error: "This JAMB Registration Number is already associated with another active student." };
+            }
+        }
+
+        await db.update(students).set({
+            firstName: cleanFirstName,
+            lastName: cleanLastName,
+            otherNames: cleanOtherNames,
+            gender: cleanGender as any,
+            nin: cleanNin,
+            jambNumber: cleanJamb,
+            stateOfOrigin: cleanState,
+            lga: cleanLga,
+            profileCompleted: true,
+            isProfileLocked: false,
+        }).where(eq(students.id, student.id));
+
+        const fullName = `${cleanLastName} ${cleanFirstName}${cleanOtherNames ? ' ' + cleanOtherNames : ''}`.trim();
+        await db.update(users).set({
+            name: fullName,
+            firstName: cleanFirstName,
+            surname: cleanLastName,
+            phone: cleanPhone,
+            email: cleanEmail,
+        }).where(eq(users.id, userId));
+
+        revalidatePath("/student");
+        revalidatePath("/student/profile");
+        revalidatePath("/student/complete-profile");
+        return { success: true, message: "Profile completed successfully." };
+    } catch (err: any) {
+        console.error("completeStudentProfile error:", err);
+        return { success: false, error: err.message || "Failed to update profile. Please try again." };
+    }
 }
 
 export async function updateUserEmail(newEmail: string) {

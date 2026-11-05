@@ -8,7 +8,7 @@ import bcrypt from "bcryptjs";
 import { auth } from "@/auth";
 
 // Roles allowed to use the central password reset dashboard.
-const RESET_ADMIN_ROLES = ["superadmin", "icitify_dev", "admin", "rector", "registrar"];
+const RESET_ADMIN_ROLES = ["superadmin", "icitify_dev", "admin", "rector", "registrar", "ict_manager", "ictmanager"];
 // Accounts that only a super-admin may reset.
 const PROTECTED_TARGET_ROLES = ["superadmin", "icitify_dev"];
 const DEFAULT_PASSWORD = "welcome123";

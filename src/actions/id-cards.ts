@@ -10,7 +10,7 @@ import {
 } from "@/db/schema";
 import { eq, and, or, like, isNotNull, isNull, desc, asc, sql, count } from "drizzle-orm";
 
-const ADMIN_ROLES = ['admin', 'superadmin', 'icitify_dev', 'dvc', 'registrar', 'admission_officer'];
+const ADMIN_ROLES = ['admin', 'superadmin', 'icitify_dev', 'dvc', 'registrar', 'admission_officer', 'ict_manager', 'ictmanager'];
 
 async function requireAdmin() {
     const session = await auth();
@@ -102,7 +102,7 @@ export async function generateQRAction(code: string) {
 export async function getAllIDCardsAction(limit = 50, offset = 0) {
     const session = await auth();
     const user = session?.user as any;
-    if (!user?.id || user.role !== 'admin') return [];
+    if (!user?.id || !ADMIN_ROLES.includes(user.role)) return [];
 
     return await IDCardService.getAllIDCards(limit, offset);
 }
@@ -110,7 +110,7 @@ export async function getAllIDCardsAction(limit = 50, offset = 0) {
 export async function revokeIDCardAction(cardId: number) {
     const session = await auth();
     const user = session?.user as any;
-    if (!user?.id || user.role !== 'admin') return { success: false, error: "Unauthorized" };
+    if (!user?.id || !ADMIN_ROLES.includes(user.role)) return { success: false, error: "Unauthorized" };
 
     const res = await IDCardService.revokeCard(cardId);
     if (res.success) {

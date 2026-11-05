@@ -49,10 +49,28 @@ export default function CompleteProfilePage() {
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
         setSaving(true);
-        const res = await completeStudentProfile(formData);
-        setSaving(false);
-        if (res.success) { toast.success(res.message); router.push("/student"); }
-        else toast.error(res.error);
+        try {
+            const res = await completeStudentProfile(formData);
+            if (res.success) {
+                toast.success(res.message);
+                router.push("/student");
+            } else {
+                toast.error(res.error || "Failed to update profile. Please verify your details.");
+            }
+        } catch (err: any) {
+            console.error("Profile submit error:", err);
+            const msg = err?.message || String(err);
+            if (msg.includes("Failed to find Server Action") || msg.includes("older or newer deployment")) {
+                toast.error("The portal was updated in the background. Refreshing page...");
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1200);
+            } else {
+                toast.error(msg || "An unexpected error occurred. Please try again.");
+            }
+        } finally {
+            setSaving(false);
+        }
     }
 
     function updateField(field: string, value: string) {
