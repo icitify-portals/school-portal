@@ -112,7 +112,7 @@ export async function checkStudentGraduationClearance(matricNumber: string) {
                 isGraduant: true,
                 isCleared: false,
                 totalOwed: defaultAmt,
-                message: `Compulsory graduation clearance fees (Convocation, Certificate, and Incidental Fee: ₦${defaultAmt.toLocaleString()}) must be settled before an official transcript can be requested.`
+                message: `Compulsory graduation clearance fees (Convocation, Gown, Certificate, and Incidental Fee: ₦${defaultAmt.toLocaleString()}) must be settled before an official transcript can be requested.`
             };
         }
 
@@ -129,7 +129,7 @@ export async function checkStudentGraduationClearance(matricNumber: string) {
             billDetails,
             message: isCleared
                 ? "Student is financially cleared for graduation."
-                : `Outstanding graduation clearance fees: ₦${totalOwed.toLocaleString()} (Convocation, Certificate, and Incidental Fee must be paid).`
+                : `Outstanding graduation clearance fees: ₦${totalOwed.toLocaleString()} (Convocation, Gown, Certificate, and Incidental Fee must be paid).`
         };
     } catch (e: any) {
         console.error("checkStudentGraduationClearance error:", e);
@@ -155,7 +155,7 @@ export async function submitTranscriptApplication(data: {
                 success: false,
                 clearanceBlocked: true,
                 totalOwed: clearance.totalOwed,
-                error: `Graduation Clearance Required: You have unpaid compulsory graduation fees (Convocation, Certificate & Incidental Fee totaling ₦${clearance.totalOwed?.toLocaleString()}). All graduation fees must be settled in your student portal before an official transcript application can be submitted.`
+                error: `Graduation Clearance Required: You have unpaid compulsory graduation fees (Convocation, Gown, Certificate & Incidental Fee totaling ₦${clearance.totalOwed?.toLocaleString()}). All graduation fees must be settled in your student portal before an official transcript application can be submitted.`
             };
         }
 

@@ -221,6 +221,7 @@ export async function getSuccessfulPaymentsGrouped() {
             } else if (
                 p.includes('certificate') || 
                 p.includes('convocation') || 
+                p.includes('gown') || 
                 p.includes('graduation') || 
                 p.includes('alumni') || 
                 ref.startsWith('alumni-')

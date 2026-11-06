@@ -9,6 +9,7 @@ import { getSettingByKey } from "@/actions/settings";
 const DEFAULT_CERT_FEE_ND = 18500;
 const DEFAULT_CERT_FEE_HND = 28500;
 const DEFAULT_CONVOCATION_FEE = 15500;
+const DEFAULT_CONVOCATION_GOWN_FEE = 7000;
 const DEFAULT_INCIDENTAL_FEE = 5500;
 const DEFAULT_PROCESSING_FEE = 3000;
 
@@ -16,6 +17,7 @@ export async function getDynamicAlumniFees() {
     let certificateFeeND = DEFAULT_CERT_FEE_ND;
     let certificateFeeHND = DEFAULT_CERT_FEE_HND;
     let convocationFee = DEFAULT_CONVOCATION_FEE;
+    let convocationGownFee = DEFAULT_CONVOCATION_GOWN_FEE;
     let incidentalFee = DEFAULT_INCIDENTAL_FEE;
     let processingFee = DEFAULT_PROCESSING_FEE;
 
@@ -25,6 +27,7 @@ export async function getDynamicAlumniFees() {
                 eq(feeItems.name, 'Certificate Fee (ND)'),
                 eq(feeItems.name, 'Certificate Fee (HND)'),
                 eq(feeItems.name, 'Convocation Fee'),
+                eq(feeItems.name, 'Convocation Gown Fee'),
                 eq(feeItems.name, 'Incidental Fee')
             )
         );
@@ -35,6 +38,7 @@ export async function getDynamicAlumniFees() {
             if (item.name === 'Certificate Fee (ND)') certificateFeeND = amt;
             else if (item.name === 'Certificate Fee (HND)') certificateFeeHND = amt;
             else if (item.name === 'Convocation Fee') convocationFee = amt;
+            else if (item.name === 'Convocation Gown Fee') convocationGownFee = amt;
             else if (item.name === 'Incidental Fee') incidentalFee = amt;
         }
     } catch (e) {
@@ -72,6 +76,7 @@ export async function getDynamicAlumniFees() {
         certificateFeeND,
         certificateFeeHND,
         convocationFee,
+        convocationGownFee,
         incidentalFee,
         processingFee,
     };
@@ -95,11 +100,13 @@ export async function submitCertificateApplication(data: {
 
         const payCertificate = !data.selectedItems || data.selectedItems.includes('certificate');
         const payConvocation = !data.selectedItems || data.selectedItems.includes('convocation');
+        const payConvocationGown = !data.selectedItems || data.selectedItems.includes('convocation_gown');
         const payIncidental = !data.selectedItems || data.selectedItems.includes('incidental');
         const payProcessing = !data.selectedItems || data.selectedItems.includes('processing');
 
         const institutionalFee = (payCertificate ? certFee : 0) +
             (payConvocation ? fees.convocationFee : 0) +
+            (payConvocationGown ? fees.convocationGownFee : 0) +
             (payIncidental ? fees.incidentalFee : 0);
         const processingFee = payProcessing ? fees.processingFee : 0;
         const totalFee = institutionalFee + processingFee;

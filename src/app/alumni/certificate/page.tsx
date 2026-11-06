@@ -15,12 +15,13 @@ export default function CertificateApplicationPage() {
         certificateFeeND: 18500,
         certificateFeeHND: 28500,
         convocationFee: 15500,
+        convocationGownFee: 7000,
         incidentalFee: 5500,
         processingFee: 3000,
     });
 
     const [paymentMode, setPaymentMode] = useState<'all' | 'individual'>('all');
-    const [selectedFeeKeys, setSelectedFeeKeys] = useState<string[]>(['certificate', 'convocation', 'incidental', 'processing']);
+    const [selectedFeeKeys, setSelectedFeeKeys] = useState<string[]>(['certificate', 'convocation', 'convocation_gown', 'incidental', 'processing']);
     
     useEffect(() => {
         getDynamicAlumniFees().then((res) => {
@@ -43,16 +44,18 @@ export default function CertificateApplicationPage() {
     const certificateFee = formData.programmeType === "HND" ? fees.certificateFeeHND : fees.certificateFeeND;
 
     const activeKeys = paymentMode === 'all' 
-        ? ['certificate', 'convocation', 'incidental', 'processing'] 
+        ? ['certificate', 'convocation', 'convocation_gown', 'incidental', 'processing'] 
         : selectedFeeKeys;
 
     const isCertSelected = activeKeys.includes('certificate');
     const isConvocationSelected = activeKeys.includes('convocation');
+    const isConvocationGownSelected = activeKeys.includes('convocation_gown');
     const isIncidentalSelected = activeKeys.includes('incidental');
     const isProcessingSelected = activeKeys.includes('processing');
 
     const totalFee = (isCertSelected ? certificateFee : 0) +
         (isConvocationSelected ? fees.convocationFee : 0) +
+        (isConvocationGownSelected ? fees.convocationGownFee : 0) +
         (isIncidentalSelected ? fees.incidentalFee : 0) +
         (isProcessingSelected ? fees.processingFee : 0);
 
@@ -195,7 +198,7 @@ export default function CertificateApplicationPage() {
                                         type="button"
                                         onClick={() => {
                                             setPaymentMode('all');
-                                            setSelectedFeeKeys(['certificate', 'convocation', 'incidental', 'processing']);
+                                            setSelectedFeeKeys(['certificate', 'convocation', 'convocation_gown', 'incidental', 'processing']);
                                         }}
                                         className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
                                             paymentMode === 'all'
@@ -320,6 +323,41 @@ export default function CertificateApplicationPage() {
                                     </p>
                                 </div>
 
+                                {/* Item 2b: Convocation Gown Fee */}
+                                <div
+                                    onClick={() => paymentMode === 'individual' && toggleFeeKey('convocation_gown')}
+                                    className={`relative p-4 rounded-2xl border transition-all ${
+                                        paymentMode === 'individual' ? 'cursor-pointer' : 'cursor-default'
+                                    } ${
+                                        isConvocationGownSelected
+                                            ? 'bg-white border-amber-400 shadow-sm ring-2 ring-amber-500/10'
+                                            : 'bg-white/50 border-slate-200 opacity-60'
+                                    }`}
+                                >
+                                    <div className="flex items-start justify-between gap-3 mb-2">
+                                        <div className="flex items-center gap-2">
+                                            {paymentMode === 'individual' ? (
+                                                isConvocationGownSelected ? (
+                                                    <CheckSquare className="w-5 h-5 text-amber-600 shrink-0" />
+                                                ) : (
+                                                    <Square className="w-5 h-5 text-slate-400 shrink-0" />
+                                                )
+                                            ) : (
+                                                <div className="w-5 h-5 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center text-xs font-black">
+                                                    ✓
+                                                </div>
+                                            )}
+                                            <h4 className="font-bold text-sm text-slate-800">Convocation Gown Fee</h4>
+                                        </div>
+                                        <span className="text-sm font-black text-slate-900">
+                                            ₦{fees.convocationGownFee.toLocaleString()}
+                                        </span>
+                                    </div>
+                                    <p className="text-xs text-slate-500 leading-relaxed pl-7">
+                                        Academic convocation gown hire fee for ND & HND graduants. Paid via ALATPay. Can be deselected if paid.
+                                    </p>
+                                </div>
+
                                 {/* Item 3: Incidental Fee */}
                                 <div
                                     onClick={() => paymentMode === 'individual' && toggleFeeKey('incidental')}
@@ -401,7 +439,7 @@ export default function CertificateApplicationPage() {
                             <div className="flex items-start gap-2 text-xs text-amber-800 bg-amber-100/60 p-3 rounded-xl">
                                 <Info className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
                                 <span>
-                                    Note: Incidental Fee (₦{fees.incidentalFee.toLocaleString()}) and Convocation Fee (₦{fees.convocationFee.toLocaleString()}) are compulsory for all graduants unless you have already cleared them at the bursary.
+                                    Note: Convocation Fee (₦{fees.convocationFee.toLocaleString()}), Convocation Gown Fee (₦{fees.convocationGownFee.toLocaleString()}), and Incidental Fee (₦{fees.incidentalFee.toLocaleString()}) are payable for graduation clearance unless previously cleared at the bursary.
                                 </span>
                             </div>
 
@@ -426,6 +464,7 @@ export default function CertificateApplicationPage() {
                                             : [
                                                   isCertSelected && `Certificate (₦${certificateFee.toLocaleString()})`,
                                                   isConvocationSelected && `Convocation (₦${fees.convocationFee.toLocaleString()})`,
+                                                  isConvocationGownSelected && `Convocation Gown (₦${fees.convocationGownFee.toLocaleString()})`,
                                                   isIncidentalSelected && `Incidental (₦${fees.incidentalFee.toLocaleString()})`,
                                                   isProcessingSelected && `Processing (₦${fees.processingFee.toLocaleString()})`
                                               ]
