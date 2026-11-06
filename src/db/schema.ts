@@ -7584,12 +7584,22 @@ export const alumniCertificateRequests = mysqlTable('alumni_certificate_requests
   deliveryMethod: mysqlEnum('delivery_method', ['email', 'courier', 'pickup']).default('pickup'),
   deliveryAddress: text('delivery_address'),
   
+  certFeeRef: varchar('cert_fee_ref', { length: 100 }),
+  certFeeStatus: mysqlEnum('cert_fee_status', ['paid', 'unpaid']).default('unpaid'),
+
   convocationFeeRef: varchar('convocation_fee_ref', { length: 100 }),
   convocationFeeStatus: mysqlEnum('convocation_fee_status', ['paid', 'unpaid']).default('unpaid'),
+
+  gownFeeRef: varchar('gown_fee_ref', { length: 100 }),
+  gownFeeStatus: mysqlEnum('gown_fee_status', ['paid', 'unpaid']).default('unpaid'),
+
+  incidentalFeeRef: varchar('incidental_fee_ref', { length: 100 }),
+  incidentalFeeStatus: mysqlEnum('incidental_fee_status', ['paid', 'unpaid']).default('unpaid'),
   
   processingFeeRef: varchar('processing_fee_ref', { length: 100 }),
   processingFeeStatus: mysqlEnum('processing_fee_status', ['paid', 'unpaid']).default('unpaid'),
   
+  selectedItems: text('selected_items'),
   paymentStatus: mysqlEnum('payment_status', ['paid', 'unpaid', 'partial']).default('unpaid'),
   approvalStatus: mysqlEnum('approval_status', ['pending', 'approved', 'fulfilled', 'rejected']).default('pending'),
   

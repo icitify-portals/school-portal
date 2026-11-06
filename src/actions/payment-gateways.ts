@@ -50,7 +50,7 @@ export async function getPaymentGatewayConfigs() {
     }
 }
 
-export async function initiatePayment(gatewayOrRef: string, amount: number, refOrGateway: string, email: string, firstName?: string, lastName?: string, phone?: string, description?: string) {
+export async function initiatePayment(gatewayOrRef: string, amount: number, refOrGateway: string, email: string, firstName?: string, lastName?: string, phone?: string, description?: string, targetBusinessId?: string, targetPublicKey?: string) {
     try {
         let gateway = gatewayOrRef;
         let reference = refOrGateway;
@@ -78,6 +78,12 @@ export async function initiatePayment(gatewayOrRef: string, amount: number, refO
         let paymentUrl = '';
 
         if (normalizedGateway === 'paystack') {
+            const callbackUrl = reference?.startsWith('ALUMNI-')
+                ? `${process.env.NEXTAUTH_URL}/alumni/certificate/verify?ref=${reference}`
+                : reference?.startsWith('TR-')
+                ? `${process.env.NEXTAUTH_URL}/transcript-application/verify?ref=${reference}`
+                : `${process.env.NEXTAUTH_URL}/student/finance?ref=${reference}`;
+
             const res = await fetch('https://api.paystack.co/transaction/initialize', {
                 method: 'POST',
                 headers: {
@@ -88,7 +94,7 @@ export async function initiatePayment(gatewayOrRef: string, amount: number, refO
                     email,
                     amount: amount * 100, // kobo
                     reference,
-                    callback_url: `${process.env.NEXTAUTH_URL}/student/finance?ref=${reference}`,
+                    callback_url: callbackUrl,
                     first_name: firstName || '',
                     last_name: lastName || '',
                     phone: phone || '',
@@ -177,6 +183,8 @@ export async function initiatePayment(gatewayOrRef: string, amount: number, refO
         } else if (normalizedGateway === 'alatpay') {
             // Return a simulated checkout URL that handles ALATPay inline JS
             paymentUrl = `/finance/checkout/simulate?gateway=alatpay&reference=${reference}&amount=${amount}&firstName=${encodeURIComponent(firstName || 'Student')}&lastName=${encodeURIComponent(lastName || 'Payer')}&email=${encodeURIComponent(email)}&phone=${encodeURIComponent(phone || '')}&description=${encodeURIComponent(description || '')}`;
+            if (targetBusinessId) paymentUrl += `&businessId=${encodeURIComponent(targetBusinessId)}`;
+            if (targetPublicKey) paymentUrl += `&publicKey=${encodeURIComponent(targetPublicKey)}`;
         } else {
             // OPay: infrastructure placeholder
             return { error: `${def.name} integration coming soon.` };
@@ -203,7 +211,13 @@ export async function verifyPayment(gateway: string, reference: string, rrr?: st
         let secretKey = targetSecretKey || dbSecretKey || process.env[`${def.envPrefix}_SECRET_KEY`] || process.env[`${def.envPrefix}_API_KEY`];
         
         if (!secretKey && gateway === 'alatpay') {
-            secretKey = process.env.ALATPAY_SECRET_KEY_MAIN;
+            if (reference?.startsWith('ALUMNI-CERT-') || reference?.startsWith('ALUMNI-CONV-') || reference?.startsWith('ALUMNI-GOWN-') || reference?.startsWith('CERT-')) {
+                secretKey = process.env.ALATPAY_SECRET_KEY_CERT || process.env.ALATPAY_SECRET_KEY_MAIN;
+            } else if (reference?.startsWith('ALUMNI-INC-') || reference?.startsWith('INC-')) {
+                secretKey = process.env.ALATPAY_SECRET_KEY_ICT || process.env.ALATPAY_SECRET_KEY_MAIN;
+            } else {
+                secretKey = process.env.ALATPAY_SECRET_KEY_MAIN;
+            }
         }
 
         if (!secretKey) return { error: `${def.name} not configured` };

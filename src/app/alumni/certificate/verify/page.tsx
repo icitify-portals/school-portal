@@ -30,11 +30,11 @@ function VerifyContent() {
             if (res.success) {
                 if (res.nextPaymentUrl) {
                     setStatus("redirecting");
-                    setMessage("Institutional fee paid successfully. Redirecting to pay processing fee...");
+                    setMessage(res.message || "Payment verified! Redirecting to next account payment...");
                     setTimeout(() => router.push(res.nextPaymentUrl!), 2000);
                 } else if (res.fullyPaid) {
                     setStatus("success");
-                    setMessage("Selected fees paid successfully! Your certificate request has been submitted and is pending approval.");
+                    setMessage(res.message || "Selected fees paid successfully! Your certificate request has been submitted and is pending approval.");
                 } else {
                     setStatus("error");
                     setMessage("Payment verification incomplete.");

@@ -203,6 +203,7 @@ export async function getSuccessfulPaymentsGrouped() {
                     p.includes('ancillary') || 
                     ref.includes('incidental') || 
                     ref.startsWith('inc-') ||
+                    ref.startsWith('alumni-inc-') ||
                     (gw === 'alatpay' && amt === 5500)
                 ) && amt <= 10000
             ) {
