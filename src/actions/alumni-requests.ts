@@ -13,7 +13,8 @@ const DEFAULT_CONVOCATION_GOWN_FEE = 7000;
 const DEFAULT_INCIDENTAL_FEE = 5500;
 const DEFAULT_PROCESSING_FEE = 3000;
 
-export const ALATPAY_CERT_CONFIG = {
+// Internal configuration constants (NOT exported because "use server" files can only export async functions)
+const ALATPAY_CERT_CONFIG = {
     businessId: process.env.NEXT_PUBLIC_ALATPAY_BUSINESS_ID_CERT || "254d0a99-84ce-4cb0-3828-08dddfda2e81",
     publicKey: process.env.NEXT_PUBLIC_ALATPAY_API_KEY_CERT || "8d20bef5b57f4972a7a05e7156d295c2",
     secretKey: process.env.ALATPAY_SECRET_KEY_CERT || "a7ec45eaf7794660b4e93ee3be4e6618",
@@ -22,7 +23,7 @@ export const ALATPAY_CERT_CONFIG = {
     bankName: "WEMA BANK"
 };
 
-export const ALATPAY_ICT_CONFIG = {
+const ALATPAY_ICT_CONFIG = {
     businessId: process.env.NEXT_PUBLIC_ALATPAY_BUSINESS_ID_ICT || "181087d9-ec63-4efa-e9f3-08dddfe20b95",
     publicKey: process.env.NEXT_PUBLIC_ALATPAY_API_KEY_ICT || "84d105bdef7f420b887c442ff7092027",
     secretKey: process.env.ALATPAY_SECRET_KEY_ICT || "84906058329b463ab53e525ef46da903",
@@ -97,14 +98,52 @@ export async function getDynamicAlumniFees() {
         incidentalFee,
         processingFee,
         accounts: {
-            certAccount: ALATPAY_CERT_CONFIG,
-            ictAccount: ALATPAY_ICT_CONFIG,
+            certAccount: {
+                name: ALATPAY_CERT_CONFIG.accountName,
+                accountNumber: ALATPAY_CERT_CONFIG.accountNumber,
+                bankName: ALATPAY_CERT_CONFIG.bankName,
+                gateway: "alatpay"
+            },
+            ictAccount: {
+                name: ALATPAY_ICT_CONFIG.accountName,
+                accountNumber: ALATPAY_ICT_CONFIG.accountNumber,
+                bankName: ALATPAY_ICT_CONFIG.bankName,
+                gateway: "alatpay"
+            },
             processingAccount: {
-                gateway: "paystack",
-                name: "Portal Processing"
+                name: "Portal Processing",
+                gateway: "paystack"
             }
         }
     };
+}
+
+export async function getStudentCertificateStatus(matricNumber: string) {
+    try {
+        const cleanMatric = matricNumber.trim().toUpperCase();
+        const [existing] = await db.select().from(alumniCertificateRequests).where(
+            eq(alumniCertificateRequests.matricNumber, cleanMatric)
+        ).orderBy(desc(alumniCertificateRequests.id)).limit(1);
+
+        if (!existing) return { found: false };
+
+        return {
+            found: true,
+            id: existing.id,
+            applicantName: existing.applicantName,
+            programmeType: existing.programmeType,
+            certFeeStatus: existing.certFeeStatus,
+            convocationFeeStatus: existing.convocationFeeStatus,
+            gownFeeStatus: existing.gownFeeStatus,
+            incidentalFeeStatus: existing.incidentalFeeStatus,
+            processingFeeStatus: existing.processingFeeStatus,
+            paymentStatus: existing.paymentStatus,
+            approvalStatus: existing.approvalStatus
+        };
+    } catch (err: any) {
+        console.error("getStudentCertificateStatus error:", err);
+        return { found: false, error: err.message };
+    }
 }
 
 export async function submitCertificateApplication(data: {
@@ -117,129 +156,137 @@ export async function submitCertificateApplication(data: {
     yearOfGraduation: string;
     deliveryMethod: "email" | "courier" | "pickup";
     deliveryAddress: string;
+    category: 'cert_account' | 'ict_account' | 'processing';
     selectedItems?: string[];
 }) {
     try {
         const fees = await getDynamicAlumniFees();
         const certFee = data.programmeType === "HND" ? fees.certificateFeeHND : fees.certificateFeeND;
 
-        const selectedKeys = data.selectedItems && data.selectedItems.length > 0 
-            ? data.selectedItems 
-            : ['certificate', 'convocation', 'convocation_gown', 'incidental', 'processing'];
+        const category = data.category || 'cert_account';
+        let amount = 0;
+        let gateway: 'alatpay' | 'paystack' = 'alatpay';
+        let reference = '';
+        let targetBusinessId: string | undefined;
+        let targetPublicKey: string | undefined;
+        let description = '';
+        const selectedKeys = data.selectedItems || [];
+
+        if (category === 'cert_account') {
+            // FSS TECH STUDIO-CERT (ALATPay)
+            gateway = 'alatpay';
+            targetBusinessId = ALATPAY_CERT_CONFIG.businessId;
+            targetPublicKey = ALATPAY_CERT_CONFIG.publicKey;
             
-        const payCertificate = selectedKeys.includes('certificate');
-        const payConvocation = selectedKeys.includes('convocation');
-        const payConvocationGown = selectedKeys.includes('convocation_gown');
-        const payIncidental = selectedKeys.includes('incidental');
-        const payProcessing = selectedKeys.includes('processing');
+            const payCert = selectedKeys.includes('certificate');
+            const payConv = selectedKeys.includes('convocation');
+            const payGown = selectedKeys.includes('convocation_gown');
 
-        // CERT Account Items (Certificate, Convocation, Convocation Gown) -> FSS TECH STUDIO-CERT via ALATPay
-        const certAccountTotal = 
-            (payCertificate ? certFee : 0) +
-            (payConvocation ? fees.convocationFee : 0) +
-            (payConvocationGown ? fees.convocationGownFee : 0);
+            if (payCert) amount += certFee;
+            if (payConv) amount += fees.convocationFee;
+            if (payGown) amount += fees.convocationGownFee;
 
-        // ICT Account Items (Incidental Fee) -> FSS TECH STUDIO-ICT via ALATPay
-        const ictAccountTotal = payIncidental ? fees.incidentalFee : 0;
+            if (amount === 0) {
+                // If none explicitly passed, default to gown or cert
+                amount = fees.convocationGownFee;
+            }
 
-        // Processing Fee -> Paystack
-        const processingTotal = payProcessing ? fees.processingFee : 0;
+            reference = `ALUMNI-CERT-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+            const itemsList = [
+                payCert ? 'Certificate' : null,
+                payConv ? 'Convocation' : null,
+                payGown ? 'Convocation Gown' : null
+            ].filter(Boolean).join(', ') || 'Academic Fees';
+            description = `FSS TECH STUDIO-CERT: ${itemsList}`;
 
-        const totalPayable = certAccountTotal + ictAccountTotal + processingTotal;
+        } else if (category === 'ict_account') {
+            // FSS TECH STUDIO-ICT (ALATPay)
+            gateway = 'alatpay';
+            targetBusinessId = ALATPAY_ICT_CONFIG.businessId;
+            targetPublicKey = ALATPAY_ICT_CONFIG.publicKey;
+            amount = fees.incidentalFee;
+            reference = `ALUMNI-INC-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+            description = `FSS TECH STUDIO-ICT: Incidental Fee`;
 
-        const { selectedItems: _, ...dbData } = data;
+        } else if (category === 'processing') {
+            // Portal Processing (Paystack)
+            gateway = 'paystack';
+            amount = fees.processingFee;
+            reference = `ALUMNI-PAY-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+            description = `Portal Processing Fee`;
+        }
 
-        if (totalPayable === 0) {
-            const [result] = await db.insert(alumniCertificateRequests).values({
+        // Clean up data for insert
+        const { selectedItems: _, category: __, ...dbData } = data;
+
+        // Check if student already has a request record by matric
+        const cleanMatric = data.matricNumber.trim().toUpperCase();
+        const [existing] = await db.select().from(alumniCertificateRequests).where(
+            eq(alumniCertificateRequests.matricNumber, cleanMatric)
+        ).orderBy(desc(alumniCertificateRequests.id)).limit(1);
+
+        let requestId = existing?.id;
+
+        if (existing) {
+            // Update the existing request with this category's new reference
+            const updatePayload: Record<string, any> = {
+                applicantName: data.applicantName,
+                email: data.email,
+                phone: data.phone,
+                department: data.department,
+                yearOfGraduation: data.yearOfGraduation,
+                deliveryMethod: data.deliveryMethod,
+                deliveryAddress: data.deliveryAddress
+            };
+
+            if (category === 'cert_account') {
+                if (selectedKeys.includes('certificate')) updatePayload.certFeeRef = reference;
+                if (selectedKeys.includes('convocation')) updatePayload.convocationFeeRef = reference;
+                if (selectedKeys.includes('convocation_gown')) updatePayload.gownFeeRef = reference;
+            } else if (category === 'ict_account') {
+                updatePayload.incidentalFeeRef = reference;
+            } else if (category === 'processing') {
+                updatePayload.processingFeeRef = reference;
+            }
+
+            await db.update(alumniCertificateRequests).set(updatePayload).where(eq(alumniCertificateRequests.id, existing.id));
+        } else {
+            // Create a new request record
+            const insertPayload: Record<string, any> = {
                 ...dbData,
-                certFeeRef: 'FREE-BYPASS',
-                convocationFeeRef: 'FREE-BYPASS',
-                gownFeeRef: 'FREE-BYPASS',
-                incidentalFeeRef: 'FREE-BYPASS',
-                processingFeeRef: 'FREE-BYPASS',
-                certFeeStatus: 'paid',
-                convocationFeeStatus: 'paid',
-                gownFeeStatus: 'paid',
-                incidentalFeeStatus: 'paid',
-                processingFeeStatus: 'paid',
+                matricNumber: cleanMatric,
+                certFeeRef: (category === 'cert_account' && selectedKeys.includes('certificate')) ? reference : null,
+                convocationFeeRef: (category === 'cert_account' && selectedKeys.includes('convocation')) ? reference : null,
+                gownFeeRef: (category === 'cert_account' && selectedKeys.includes('convocation_gown')) ? reference : null,
+                incidentalFeeRef: category === 'ict_account' ? reference : null,
+                processingFeeRef: category === 'processing' ? reference : null,
                 selectedItems: JSON.stringify(selectedKeys),
-                paymentStatus: 'paid',
+                paymentStatus: 'unpaid',
                 approvalStatus: 'pending'
-            });
-            return { success: true, url: '/alumni/certificate/verify?ref=FREE-BYPASS', requestId: result.insertId };
+            };
+
+            const [result] = await db.insert(alumniCertificateRequests).values(insertPayload as any);
+            requestId = result.insertId;
         }
-
-        // Determine Stage 1 gateway and parameters
-        let initialGateway: 'alatpay' | 'paystack' = 'alatpay';
-        let initialAmount = 0;
-        let initialRef = '';
-        let initialBusinessId: string | undefined;
-        let initialPublicKey: string | undefined;
-        let initialDescription = '';
-
-        if (certAccountTotal > 0) {
-            initialGateway = 'alatpay';
-            initialAmount = certAccountTotal;
-            initialRef = `ALUMNI-CERT-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-            initialBusinessId = ALATPAY_CERT_CONFIG.businessId;
-            initialPublicKey = ALATPAY_CERT_CONFIG.publicKey;
-            const itemsInCert = [
-                payCertificate ? 'Certificate' : null,
-                payConvocation ? 'Convocation' : null,
-                payConvocationGown ? 'Convocation Gown' : null
-            ].filter(Boolean).join(' + ');
-            initialDescription = `FSS Tech Studio CERT: ${itemsInCert}`;
-        } else if (ictAccountTotal > 0) {
-            initialGateway = 'alatpay';
-            initialAmount = ictAccountTotal;
-            initialRef = `ALUMNI-INC-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-            initialBusinessId = ALATPAY_ICT_CONFIG.businessId;
-            initialPublicKey = ALATPAY_ICT_CONFIG.publicKey;
-            initialDescription = `FSS Tech Studio ICT: Incidental Fee`;
-        } else if (processingTotal > 0) {
-            initialGateway = 'paystack';
-            initialAmount = processingTotal;
-            initialRef = `ALUMNI-PAY-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-            initialDescription = `Portal Processing Fee`;
-        }
-
-        const [result] = await db.insert(alumniCertificateRequests).values({
-            ...dbData,
-            certFeeRef: payCertificate ? (certAccountTotal > 0 ? initialRef : null) : 'BYPASSED',
-            certFeeStatus: payCertificate ? 'unpaid' : 'paid',
-            convocationFeeRef: payConvocation ? (certAccountTotal > 0 ? initialRef : null) : 'BYPASSED',
-            convocationFeeStatus: payConvocation ? 'unpaid' : 'paid',
-            gownFeeRef: payConvocationGown ? (certAccountTotal > 0 ? initialRef : null) : 'BYPASSED',
-            gownFeeStatus: payConvocationGown ? 'unpaid' : 'paid',
-            incidentalFeeRef: payIncidental ? (certAccountTotal === 0 && ictAccountTotal > 0 ? initialRef : null) : 'BYPASSED',
-            incidentalFeeStatus: payIncidental ? 'unpaid' : 'paid',
-            processingFeeRef: payProcessing ? (certAccountTotal === 0 && ictAccountTotal === 0 && processingTotal > 0 ? initialRef : null) : 'BYPASSED',
-            processingFeeStatus: payProcessing ? 'unpaid' : 'paid',
-            selectedItems: JSON.stringify(selectedKeys),
-            paymentStatus: 'unpaid',
-            approvalStatus: 'pending'
-        });
-
-        const insertId = result.insertId;
 
         const initRes = await initiatePayment(
-            initialGateway,
-            initialAmount,
-            initialRef,
+            gateway,
+            amount,
+            reference,
             data.email,
             data.applicantName,
             '',
             data.phone,
-            initialDescription,
-            initialBusinessId,
-            initialPublicKey
+            description,
+            targetBusinessId,
+            targetPublicKey
         );
 
         if (initRes.error) {
             return { success: false, error: initRes.error };
         }
 
-        return { success: true, url: initRes.paymentUrl, requestId: insertId };
+        return { success: true, url: initRes.paymentUrl, requestId };
     } catch (error: any) {
         console.error("submitCertificateApplication error:", error);
         return { success: false, error: error.message || "Failed to submit request." };
@@ -260,51 +307,56 @@ export async function verifyCertificatePayment(reference: string) {
 
         if (!request) return { success: false, error: "Request not found for reference: " + reference };
 
-        const fees = await getDynamicAlumniFees();
-
-        // Parse selected items
-        let selectedKeys: string[] = ['certificate', 'convocation', 'convocation_gown', 'incidental', 'processing'];
-        if (request.selectedItems) {
-            try {
-                selectedKeys = JSON.parse(request.selectedItems);
-            } catch {}
-        }
-
         const isCertRef = reference.startsWith('ALUMNI-CERT-') || request.certFeeRef === reference || request.convocationFeeRef === reference || request.gownFeeRef === reference;
         const isIncRef = reference.startsWith('ALUMNI-INC-') || request.incidentalFeeRef === reference;
         const isPayRef = reference.startsWith('ALUMNI-PAY-') || request.processingFeeRef === reference;
 
+        let categoryPaidName = "";
+
         if (isCertRef) {
+            categoryPaidName = "FSS TECH STUDIO-CERT (Academic & Convocation)";
             try {
                 await verifyPayment('alatpay', reference, undefined, ALATPAY_CERT_CONFIG.secretKey);
             } catch (vErr) {
-                console.warn("[Verify CERT ALATPay] Non-blocking verification notice:", vErr);
+                console.warn("[Verify CERT ALATPay] Notice:", vErr);
             }
 
-            await db.update(alumniCertificateRequests).set({
-                certFeeStatus: 'paid',
-                convocationFeeStatus: 'paid',
-                gownFeeStatus: 'paid',
-            }).where(eq(alumniCertificateRequests.id, request.id));
-            request.certFeeStatus = 'paid';
-            request.convocationFeeStatus = 'paid';
-            request.gownFeeStatus = 'paid';
+            const updateFields: Record<string, any> = {};
+            if (request.certFeeRef === reference) updateFields.certFeeStatus = 'paid';
+            if (request.convocationFeeRef === reference) updateFields.convocationFeeStatus = 'paid';
+            if (request.gownFeeRef === reference) updateFields.gownFeeStatus = 'paid';
+
+            // If reference doesn't match specific column but is ALUMNI-CERT, mark whatever was unpaid in that category
+            if (Object.keys(updateFields).length === 0) {
+                updateFields.gownFeeStatus = 'paid';
+                updateFields.convocationFeeStatus = 'paid';
+                updateFields.certFeeStatus = 'paid';
+            }
+
+            await db.update(alumniCertificateRequests).set(updateFields).where(eq(alumniCertificateRequests.id, request.id));
+            if (updateFields.certFeeStatus) request.certFeeStatus = 'paid';
+            if (updateFields.convocationFeeStatus) request.convocationFeeStatus = 'paid';
+            if (updateFields.gownFeeStatus) request.gownFeeStatus = 'paid';
+
         } else if (isIncRef) {
+            categoryPaidName = "FSS TECH STUDIO-ICT (Compulsory Incidental Fee)";
             try {
                 await verifyPayment('alatpay', reference, undefined, ALATPAY_ICT_CONFIG.secretKey);
             } catch (vErr) {
-                console.warn("[Verify ICT ALATPay] Non-blocking verification notice:", vErr);
+                console.warn("[Verify ICT ALATPay] Notice:", vErr);
             }
 
             await db.update(alumniCertificateRequests).set({
                 incidentalFeeStatus: 'paid',
             }).where(eq(alumniCertificateRequests.id, request.id));
             request.incidentalFeeStatus = 'paid';
+
         } else if (isPayRef) {
+            categoryPaidName = "Portal Processing Fee (Paystack)";
             try {
                 await verifyPayment('paystack', reference);
             } catch (vErr) {
-                console.warn("[Verify Paystack] Non-blocking verification notice:", vErr);
+                console.warn("[Verify Paystack] Notice:", vErr);
             }
 
             await db.update(alumniCertificateRequests).set({
@@ -313,78 +365,23 @@ export async function verifyCertificatePayment(reference: string) {
             request.processingFeeStatus = 'paid';
         }
 
-        // Check if next payment stage is required:
-        // Stage 2: Incidental Fee (via ALATPay FSS TECH STUDIO-ICT)
-        if (selectedKeys.includes('incidental') && request.incidentalFeeStatus !== 'paid') {
-            const incRef = `ALUMNI-INC-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-            await db.update(alumniCertificateRequests).set({
-                incidentalFeeRef: incRef,
-                paymentStatus: 'partial'
-            }).where(eq(alumniCertificateRequests.id, request.id));
+        // Check if all fees are now paid
+        const allCompulsoryPaid = 
+            request.gownFeeStatus === 'paid' && 
+            request.convocationFeeStatus === 'paid' && 
+            request.certFeeStatus === 'paid' && 
+            request.incidentalFeeStatus === 'paid';
 
-            const initRes = await initiatePayment(
-                'alatpay',
-                fees.incidentalFee,
-                incRef,
-                request.email,
-                request.applicantName,
-                '',
-                request.phone || '',
-                'FSS Tech Studio ICT: Incidental Fee',
-                ALATPAY_ICT_CONFIG.businessId,
-                ALATPAY_ICT_CONFIG.publicKey
-            );
-
-            if (initRes.error) {
-                return { success: false, error: "Failed to initialize Incidental fee payment: " + initRes.error };
-            }
-
-            return {
-                success: true,
-                nextPaymentUrl: initRes.paymentUrl,
-                message: "Certificate & Convocation payment verified! Redirecting to pay Incidental Fee (FSS TECH STUDIO-ICT account via ALATPay)..."
-            };
-        }
-
-        // Stage 3: Processing Fee via Paystack
-        if (selectedKeys.includes('processing') && request.processingFeeStatus !== 'paid') {
-            const paystackRef = `ALUMNI-PAY-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-            await db.update(alumniCertificateRequests).set({
-                processingFeeRef: paystackRef,
-                paymentStatus: 'partial'
-            }).where(eq(alumniCertificateRequests.id, request.id));
-
-            const initRes = await initiatePayment(
-                'paystack',
-                fees.processingFee,
-                paystackRef,
-                request.email,
-                request.applicantName,
-                '',
-                request.phone || '',
-                'Portal Processing Fee'
-            );
-
-            if (initRes.error) {
-                return { success: false, error: "Failed to initialize Processing fee payment: " + initRes.error };
-            }
-
-            return {
-                success: true,
-                nextPaymentUrl: initRes.paymentUrl,
-                message: "Institutional fees verified! Redirecting to pay Portal Processing Fee via Paystack..."
-            };
-        }
-
-        // All selected items are now paid
         await db.update(alumniCertificateRequests).set({
-            paymentStatus: 'paid'
+            paymentStatus: allCompulsoryPaid ? 'paid' : 'partial'
         }).where(eq(alumniCertificateRequests.id, request.id));
 
         return {
             success: true,
-            fullyPaid: true,
-            message: "All selected clearance and processing fees have been verified! Your certificate request has been submitted and is pending approval."
+            verified: true,
+            categoryPaidName,
+            allCompulsoryPaid,
+            message: `Payment of ₦ successfully credited to ${categoryPaidName}! Your clearance record has been updated.`
         };
     } catch (error: any) {
         console.error("verifyCertificatePayment error:", error);

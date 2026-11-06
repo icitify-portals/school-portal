@@ -1,9 +1,9 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { getDynamicAlumniFees, submitCertificateApplication } from "@/actions/alumni-requests";
+import { getDynamicAlumniFees, submitCertificateApplication, getStudentCertificateStatus } from "@/actions/alumni-requests";
 import { useRouter } from "next/navigation";
-import { Loader2, GraduationCap, MapPin, CreditCard, Info, AlertTriangle, Layers, ListChecks, Check, CheckSquare, Square, Building2, ShieldCheck, ArrowRight } from "lucide-react";
+import { Loader2, GraduationCap, MapPin, CreditCard, Info, Check, CheckSquare, Square, Building2, ShieldCheck, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 
 export default function CertificateApplicationPage() {
@@ -20,8 +20,15 @@ export default function CertificateApplicationPage() {
         processingFee: 3000,
     });
 
-    const [paymentMode, setPaymentMode] = useState<'all' | 'individual'>('individual');
-    const [selectedFeeKeys, setSelectedFeeKeys] = useState<string[]>(['convocation_gown']);
+    // Active category selection: 'cert_account' | 'ict_account' | 'processing'
+    const [selectedCategory, setSelectedCategory] = useState<'cert_account' | 'ict_account' | 'processing'>('cert_account');
+
+    // Sub-items for cert_account (all credited to FSS TECH STUDIO-CERT)
+    const [certItems, setCertItems] = useState<string[]>(['convocation_gown']);
+
+    // Existing student record status
+    const [existingStatus, setExistingStatus] = useState<any>(null);
+    const [checkingStatus, setCheckingStatus] = useState(false);
     
     useEffect(() => {
         getDynamicAlumniFees().then((res) => {
@@ -43,38 +50,67 @@ export default function CertificateApplicationPage() {
 
     const certificateFee = formData.programmeType === "HND" ? fees.certificateFeeHND : fees.certificateFeeND;
 
-    const activeKeys = paymentMode === 'all' 
-        ? ['certificate', 'convocation', 'convocation_gown', 'incidental', 'processing'] 
-        : selectedFeeKeys;
+    // Auto-check clearance status when matric number is entered
+    const handleMatricBlur = async () => {
+        if (!formData.matricNumber || formData.matricNumber.trim().length < 5) return;
+        setCheckingStatus(true);
+        try {
+            const res = await getStudentCertificateStatus(formData.matricNumber);
+            if (res && res.found) {
+                setExistingStatus(res);
+                if (res.applicantName && !formData.applicantName) {
+                    setFormData(prev => ({
+                        ...prev,
+                        applicantName: res.applicantName,
+                        programmeType: (res.programmeType || prev.programmeType) as "ND" | "HND"
+                    }));
+                }
+            } else {
+                setExistingStatus(null);
+            }
+        } catch (e) {
+            console.warn("Status check failed:", e);
+        } finally {
+            setCheckingStatus(false);
+        }
+    };
 
-    const isCertSelected = activeKeys.includes('certificate');
-    const isConvocationSelected = activeKeys.includes('convocation');
-    const isConvocationGownSelected = activeKeys.includes('convocation_gown');
-    const isIncidentalSelected = activeKeys.includes('incidental');
-    const isProcessingSelected = activeKeys.includes('processing');
+    // Calculate total for currently selected category
+    let payableAmount = 0;
+    let categoryName = "";
+    let destinationBankInfo = "";
+    let gatewayName = "";
 
-    const certGroupTotal = 
-        (isCertSelected ? certificateFee : 0) +
-        (isConvocationSelected ? fees.convocationFee : 0) +
-        (isConvocationGownSelected ? fees.convocationGownFee : 0);
+    if (selectedCategory === 'cert_account') {
+        categoryName = "Academic & Convocation (FSS TECH STUDIO-CERT)";
+        gatewayName = "ALATPay";
+        destinationBankInfo = "Wema Bank • Account No: 0126932593";
+        if (certItems.includes('certificate')) payableAmount += certificateFee;
+        if (certItems.includes('convocation')) payableAmount += fees.convocationFee;
+        if (certItems.includes('convocation_gown')) payableAmount += fees.convocationGownFee;
+    } else if (selectedCategory === 'ict_account') {
+        categoryName = "Compulsory Incidental Fee (FSS TECH STUDIO-ICT)";
+        gatewayName = "ALATPay";
+        destinationBankInfo = "Wema Bank • Account No: 0126932586";
+        payableAmount = fees.incidentalFee;
+    } else if (selectedCategory === 'processing') {
+        categoryName = "Portal Processing Fee (Paystack)";
+        gatewayName = "Paystack";
+        destinationBankInfo = "Online Gateway Instant Checkout";
+        payableAmount = fees.processingFee;
+    }
 
-    const ictGroupTotal = isIncidentalSelected ? fees.incidentalFee : 0;
-    const processingGroupTotal = isProcessingSelected ? fees.processingFee : 0;
-
-    const totalFee = certGroupTotal + ictGroupTotal + processingGroupTotal;
-
-    const activeAccountCount = [certGroupTotal > 0, ictGroupTotal > 0, processingGroupTotal > 0].filter(Boolean).length;
-
-    const toggleFeeKey = (key: string) => {
-        setSelectedFeeKeys(prev =>
+    const toggleCertItem = (key: string) => {
+        setCertItems(prev =>
             prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
         );
     };
 
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
-        if (paymentMode === 'individual' && activeKeys.length === 0) {
-            setError("Please select at least one fee item to proceed with payment.");
+        
+        if (selectedCategory === 'cert_account' && certItems.length === 0) {
+            setError("Please select at least one item from the Academic & Convocation category.");
             return;
         }
 
@@ -84,12 +120,14 @@ export default function CertificateApplicationPage() {
         try {
             const res = await submitCertificateApplication({
                 ...formData,
-                selectedItems: activeKeys
+                category: selectedCategory,
+                selectedItems: selectedCategory === 'cert_account' ? certItems : [selectedCategory === 'ict_account' ? 'incidental' : 'processing']
             });
+
             if (res.success && res.url) {
                 router.push(res.url);
             } else {
-                setError(res.error || "Application failed. Please try again.");
+                setError(res.error || "Application submission failed. Please try again.");
                 setLoading(false);
             }
         } catch (err: any) {
@@ -115,26 +153,42 @@ export default function CertificateApplicationPage() {
 
             <main className="flex-1 max-w-4xl w-full mx-auto p-6 md:p-12">
                 <div className="bg-white rounded-3xl shadow-xl p-8 border border-slate-100">
-                    <h2 className="text-2xl font-bold text-slate-800 mb-2">Graduation Clearance & Certificate Request</h2>
+                    <h2 className="text-2xl font-bold text-slate-800 mb-1">Graduation Clearance & Certificate Request</h2>
                     <p className="text-sm text-slate-500 mb-6">
-                        Select and pay your compulsory clearance and convocation fee items below. Because different fees are disbursed into designated institutional accounts (Academic/Certificates vs ICT vs Processing), items are organized by destination account.
+                        Complete your bio-data and choose your <strong>Payment Category</strong>. Each category is routed directly to its designated bank account via its authorized gateway.
                     </p>
                     
                     {error && (
-                        <div className="bg-red-50 text-red-600 p-4 rounded-xl mb-6 text-sm font-medium">
+                        <div className="bg-red-50 text-red-600 p-4 rounded-xl mb-6 text-sm font-medium border border-red-200">
                             {error}
                         </div>
                     )}
 
                     <form onSubmit={handleSubmit} className="space-y-6">
+                        {/* Bio-Data Section */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label className="block text-sm font-semibold text-slate-700 mb-2">Matriculation Number *</label>
+                                <div className="relative">
+                                    <input 
+                                        required 
+                                        type="text" 
+                                        className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 font-mono uppercase" 
+                                        value={formData.matricNumber} 
+                                        onChange={e => setFormData({...formData, matricNumber: e.target.value.toUpperCase()})} 
+                                        onBlur={handleMatricBlur}
+                                        placeholder="e.g. COM/FSS/IB/2023/10234" 
+                                    />
+                                    {checkingStatus && (
+                                        <div className="absolute right-3 top-3.5 text-xs text-slate-400 flex items-center gap-1">
+                                            <Loader2 className="w-4 h-4 animate-spin text-amber-500" />
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
                             <div>
                                 <label className="block text-sm font-semibold text-slate-700 mb-2">Full Name *</label>
                                 <input required type="text" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500" value={formData.applicantName} onChange={e => setFormData({...formData, applicantName: e.target.value})} placeholder="e.g. John Doe" />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-semibold text-slate-700 mb-2">Matriculation Number *</label>
-                                <input required type="text" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 font-mono uppercase" value={formData.matricNumber} onChange={e => setFormData({...formData, matricNumber: e.target.value.toUpperCase()})} placeholder="e.g. COM/FSS/IB/2023/10234" />
                             </div>
                             <div>
                                 <label className="block text-sm font-semibold text-slate-700 mb-2">Email Address *</label>
@@ -161,11 +215,40 @@ export default function CertificateApplicationPage() {
                             </div>
                         </div>
 
+                        {/* Existing Clearance Status Banner if found */}
+                        {existingStatus && (
+                            <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 text-xs text-emerald-950 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                                <div>
+                                    <p className="font-bold flex items-center gap-1.5 text-emerald-900">
+                                        <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                                        Existing Record Found for {formData.matricNumber}:
+                                    </p>
+                                    <div className="flex flex-wrap gap-2 mt-1">
+                                        <span className={`px-2 py-0.5 rounded-full font-bold ${existingStatus.gownFeeStatus === 'paid' ? 'bg-emerald-200 text-emerald-900' : 'bg-slate-200 text-slate-700'}`}>
+                                            Gown: {existingStatus.gownFeeStatus === 'paid' ? 'Paid ✓' : 'Unpaid'}
+                                        </span>
+                                        <span className={`px-2 py-0.5 rounded-full font-bold ${existingStatus.convocationFeeStatus === 'paid' ? 'bg-emerald-200 text-emerald-900' : 'bg-slate-200 text-slate-700'}`}>
+                                            Convocation: {existingStatus.convocationFeeStatus === 'paid' ? 'Paid ✓' : 'Unpaid'}
+                                        </span>
+                                        <span className={`px-2 py-0.5 rounded-full font-bold ${existingStatus.certFeeStatus === 'paid' ? 'bg-emerald-200 text-emerald-900' : 'bg-slate-200 text-slate-700'}`}>
+                                            Certificate: {existingStatus.certFeeStatus === 'paid' ? 'Paid ✓' : 'Unpaid'}
+                                        </span>
+                                        <span className={`px-2 py-0.5 rounded-full font-bold ${existingStatus.incidentalFeeStatus === 'paid' ? 'bg-emerald-200 text-emerald-900' : 'bg-slate-200 text-slate-700'}`}>
+                                            Incidental: {existingStatus.incidentalFeeStatus === 'paid' ? 'Paid ✓' : 'Unpaid'}
+                                        </span>
+                                        <span className={`px-2 py-0.5 rounded-full font-bold ${existingStatus.processingFeeStatus === 'paid' ? 'bg-emerald-200 text-emerald-900' : 'bg-slate-200 text-slate-700'}`}>
+                                            Processing: {existingStatus.processingFeeStatus === 'paid' ? 'Paid ✓' : 'Unpaid'}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Collection Details */}
                         <div className="border-t border-slate-200 pt-6 mt-6">
                             <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2 mb-4">
                                 <MapPin className="w-5 h-5 text-amber-500" /> Collection Details
                             </h3>
-                            
                             <div className="space-y-4">
                                 <div>
                                     <label className="block text-sm font-semibold text-slate-700 mb-2">Delivery Method</label>
@@ -175,7 +258,6 @@ export default function CertificateApplicationPage() {
                                         <option value="email">Email Copy (Digital)</option>
                                     </select>
                                 </div>
-
                                 {formData.deliveryMethod === 'courier' && (
                                     <div>
                                         <label className="block text-sm font-semibold text-slate-700 mb-2">Full Delivery Address (Courier Only) *</label>
@@ -185,332 +267,233 @@ export default function CertificateApplicationPage() {
                             </div>
                         </div>
 
-                        {/* Payment Selection by Destination Account */}
+                        {/* PAYMENT CATEGORY SELECTION */}
                         <div className="bg-gradient-to-br from-amber-50/80 to-orange-50/40 rounded-3xl p-6 md:p-8 border border-amber-200/90 space-y-6 shadow-sm">
-                            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-amber-200/70 pb-5">
-                                <div>
-                                    <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                                        <Layers className="w-5 h-5 text-amber-600" />
-                                        Select Payment Items & Destination Accounts
-                                    </h3>
-                                    <p className="text-xs text-slate-500 mt-1">
-                                        Each fee is routed directly to its designated school bank account through its authorized gateway.
+                            <div>
+                                <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                                    <CreditCard className="w-5 h-5 text-amber-600" />
+                                    Select Payment Category To Settle
+                                </h3>
+                                <p className="text-xs text-slate-600 mt-1">
+                                    To ensure accurate bursary crediting, select one payment category at a time. All items in the selected category go directly to the designated bank account.
+                                </p>
+                            </div>
+
+                            {/* 3 Main Category Cards */}
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                {/* Category 1 Card: CERT Account */}
+                                <div
+                                    onClick={() => setSelectedCategory('cert_account')}
+                                    className={`p-5 rounded-2xl border cursor-pointer transition-all ${
+                                        selectedCategory === 'cert_account'
+                                            ? 'bg-white border-rose-500 shadow-md ring-2 ring-rose-500/20'
+                                            : 'bg-white/60 border-slate-200 hover:border-slate-300'
+                                    }`}
+                                >
+                                    <div className="flex items-center justify-between mb-2">
+                                        <span className="text-xs font-black uppercase tracking-wider px-2.5 py-1 rounded-full bg-rose-100 text-rose-800">
+                                            🔴 ALATPay
+                                        </span>
+                                        {selectedCategory === 'cert_account' && (
+                                            <span className="w-5 h-5 rounded-full bg-rose-600 text-white flex items-center justify-center text-xs font-bold">
+                                                ✓
+                                            </span>
+                                        )}
+                                    </div>
+                                    <h4 className="font-extrabold text-sm text-slate-900 mt-2">
+                                        Academic & Convocation
+                                    </h4>
+                                    <p className="text-[11px] text-slate-500 mt-1 leading-snug">
+                                        FSS TECH STUDIO - CERT<br />
+                                        Wema Bank: <span className="font-mono font-bold text-slate-700">0126932593</span>
+                                    </p>
+                                    <p className="text-xs text-rose-800 font-semibold mt-3">
+                                        Gown Fee • Convocation • Certificate
                                     </p>
                                 </div>
 
-                                {/* Quick Presets */}
-                                <div className="inline-flex flex-wrap p-1 bg-white border border-amber-200 rounded-2xl shadow-sm gap-1">
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            setPaymentMode('individual');
-                                            setSelectedFeeKeys(['convocation_gown']);
-                                        }}
-                                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                                            activeKeys.length === 1 && isConvocationGownSelected
-                                                ? 'bg-amber-600 text-white shadow-sm'
-                                                : 'text-slate-600 hover:text-amber-600 hover:bg-slate-50'
-                                        }`}
-                                    >
-                                        Gown Fee Only (₦7,000)
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            setPaymentMode('individual');
-                                            setSelectedFeeKeys(['certificate', 'convocation', 'convocation_gown']);
-                                        }}
-                                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                                            activeKeys.length === 3 && isCertSelected && isConvocationSelected && isConvocationGownSelected
-                                                ? 'bg-amber-600 text-white shadow-sm'
-                                                : 'text-slate-600 hover:text-amber-600 hover:bg-slate-50'
-                                        }`}
-                                    >
-                                        CERT Account Items
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            setPaymentMode('individual');
-                                            setSelectedFeeKeys(['certificate', 'convocation', 'convocation_gown', 'incidental', 'processing']);
-                                        }}
-                                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                                            activeKeys.length === 5
-                                                ? 'bg-amber-600 text-white shadow-sm'
-                                                : 'text-slate-600 hover:text-amber-600 hover:bg-slate-50'
-                                        }`}
-                                    >
-                                        All Fees
-                                    </button>
+                                {/* Category 2 Card: ICT Account */}
+                                <div
+                                    onClick={() => setSelectedCategory('ict_account')}
+                                    className={`p-5 rounded-2xl border cursor-pointer transition-all ${
+                                        selectedCategory === 'ict_account'
+                                            ? 'bg-white border-indigo-500 shadow-md ring-2 ring-indigo-500/20'
+                                            : 'bg-white/60 border-slate-200 hover:border-slate-300'
+                                    }`}
+                                >
+                                    <div className="flex items-center justify-between mb-2">
+                                        <span className="text-xs font-black uppercase tracking-wider px-2.5 py-1 rounded-full bg-indigo-100 text-indigo-800">
+                                            🔴 ALATPay
+                                        </span>
+                                        {selectedCategory === 'ict_account' && (
+                                            <span className="w-5 h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center text-xs font-bold">
+                                                ✓
+                                            </span>
+                                        )}
+                                    </div>
+                                    <h4 className="font-extrabold text-sm text-slate-900 mt-2">
+                                        Compulsory Incidental Fee
+                                    </h4>
+                                    <p className="text-[11px] text-slate-500 mt-1 leading-snug">
+                                        FSS TECH STUDIO - ICT<br />
+                                        Wema Bank: <span className="font-mono font-bold text-slate-700">0126932586</span>
+                                    </p>
+                                    <p className="text-xs text-indigo-800 font-bold mt-3">
+                                        Fixed: ₦{fees.incidentalFee.toLocaleString()}
+                                    </p>
+                                </div>
+
+                                {/* Category 3 Card: Processing Fee */}
+                                <div
+                                    onClick={() => setSelectedCategory('processing')}
+                                    className={`p-5 rounded-2xl border cursor-pointer transition-all ${
+                                        selectedCategory === 'processing'
+                                            ? 'bg-white border-sky-500 shadow-md ring-2 ring-sky-500/20'
+                                            : 'bg-white/60 border-slate-200 hover:border-slate-300'
+                                    }`}
+                                >
+                                    <div className="flex items-center justify-between mb-2">
+                                        <span className="text-xs font-black uppercase tracking-wider px-2.5 py-1 rounded-full bg-sky-100 text-sky-800">
+                                            🔵 Paystack
+                                        </span>
+                                        {selectedCategory === 'processing' && (
+                                            <span className="w-5 h-5 rounded-full bg-sky-600 text-white flex items-center justify-center text-xs font-bold">
+                                                ✓
+                                            </span>
+                                        )}
+                                    </div>
+                                    <h4 className="font-extrabold text-sm text-slate-900 mt-2">
+                                        Portal Processing Fee
+                                    </h4>
+                                    <p className="text-[11px] text-slate-500 mt-1 leading-snug">
+                                        Paystack Online Gateway<br />
+                                        Card, Bank Transfer, USSD
+                                    </p>
+                                    <p className="text-xs text-sky-800 font-bold mt-3">
+                                        Fixed: ₦{fees.processingFee.toLocaleString()}
+                                    </p>
                                 </div>
                             </div>
 
-                            {/* Section 1: FSS TECH STUDIO-CERT (ALATPay) */}
-                            <div className="bg-white rounded-2xl p-5 border border-amber-300 shadow-sm space-y-3">
-                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-8 h-8 rounded-lg bg-rose-100 text-rose-700 flex items-center justify-center font-bold text-xs">
-                                            🔴
-                                        </div>
+                            {/* Detailed item selection for Category 1 */}
+                            {selectedCategory === 'cert_account' && (
+                                <div className="bg-white rounded-2xl p-5 border border-amber-300 shadow-sm space-y-3">
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
                                         <div>
-                                            <h4 className="font-extrabold text-sm text-slate-900">
-                                                FSS TECH STUDIO - CERT Account (ALATPay)
+                                            <h4 className="font-bold text-sm text-slate-900">
+                                                Items Credited to FSS TECH STUDIO - CERT (0126932593)
                                             </h4>
-                                            <p className="text-[11px] text-slate-500">
-                                                Wema Bank • Account No: <span className="font-mono font-bold text-slate-700">0126932593</span> • Dedicated Certificate & Convocation Account
+                                            <p className="text-xs text-slate-500">
+                                                Check which item(s) you want to pay now into this account.
                                             </p>
                                         </div>
+                                        <div className="flex gap-2">
+                                            <button
+                                                type="button"
+                                                onClick={() => setCertItems(['convocation_gown'])}
+                                                className="text-[11px] font-bold text-amber-800 hover:underline"
+                                            >
+                                                Gown Only
+                                            </button>
+                                            <span className="text-slate-300">|</span>
+                                            <button
+                                                type="button"
+                                                onClick={() => setCertItems(['convocation_gown', 'convocation', 'certificate'])}
+                                                className="text-[11px] font-bold text-amber-800 hover:underline"
+                                            >
+                                                Select All 3
+                                            </button>
+                                        </div>
                                     </div>
-                                    <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-rose-50 text-rose-700 border border-rose-200 self-start sm:self-auto">
-                                        Subtotal: ₦{certGroupTotal.toLocaleString()}
-                                    </span>
-                                </div>
 
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
-                                    {/* Item 1: Certificate Fee */}
-                                    <div
-                                        onClick={() => toggleFeeKey('certificate')}
-                                        className={`p-3.5 rounded-xl border cursor-pointer transition-all ${
-                                            isCertSelected
-                                                ? 'bg-amber-50/70 border-amber-400 ring-2 ring-amber-500/20'
-                                                : 'bg-slate-50/70 border-slate-200 opacity-60'
-                                        }`}
-                                    >
-                                        <div className="flex items-start justify-between gap-2 mb-1.5">
-                                            <div className="flex items-center gap-2">
-                                                {isCertSelected ? (
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
+                                        {/* Convocation Gown Fee */}
+                                        <div
+                                            onClick={() => toggleCertItem('convocation_gown')}
+                                            className={`p-3.5 rounded-xl border cursor-pointer transition-all ${
+                                                certItems.includes('convocation_gown')
+                                                    ? 'bg-amber-50/70 border-amber-400 ring-2 ring-amber-500/20'
+                                                    : 'bg-slate-50/70 border-slate-200 opacity-60'
+                                            }`}
+                                        >
+                                            <div className="flex items-center gap-2 mb-1.5">
+                                                {certItems.includes('convocation_gown') ? (
                                                     <CheckSquare className="w-4 h-4 text-amber-600 shrink-0" />
                                                 ) : (
                                                     <Square className="w-4 h-4 text-slate-400 shrink-0" />
                                                 )}
-                                                <span className="font-bold text-xs text-slate-800">
-                                                    Certificate Fee ({formData.programmeType})
-                                                </span>
+                                                <span className="font-bold text-xs text-slate-800">Convocation Gown Fee</span>
                                             </div>
+                                            <p className="text-base font-black text-slate-900">₦{fees.convocationGownFee.toLocaleString()}</p>
+                                            <p className="text-[11px] text-slate-500 mt-1">Gown hire for ND & HND graduants.</p>
                                         </div>
-                                        <p className="text-base font-black text-slate-900">
-                                            ₦{certificateFee.toLocaleString()}
-                                        </p>
-                                        <p className="text-[11px] text-slate-500 mt-1 leading-snug">
-                                            Official {formData.programmeType} certificate printing & seal.
-                                        </p>
-                                    </div>
 
-                                    {/* Item 2: Convocation Fee */}
-                                    <div
-                                        onClick={() => toggleFeeKey('convocation')}
-                                        className={`p-3.5 rounded-xl border cursor-pointer transition-all ${
-                                            isConvocationSelected
-                                                ? 'bg-amber-50/70 border-amber-400 ring-2 ring-amber-500/20'
-                                                : 'bg-slate-50/70 border-slate-200 opacity-60'
-                                        }`}
-                                    >
-                                        <div className="flex items-start justify-between gap-2 mb-1.5">
-                                            <div className="flex items-center gap-2">
-                                                {isConvocationSelected ? (
+                                        {/* Convocation Fee */}
+                                        <div
+                                            onClick={() => toggleCertItem('convocation')}
+                                            className={`p-3.5 rounded-xl border cursor-pointer transition-all ${
+                                                certItems.includes('convocation')
+                                                    ? 'bg-amber-50/70 border-amber-400 ring-2 ring-amber-500/20'
+                                                    : 'bg-slate-50/70 border-slate-200 opacity-60'
+                                            }`}
+                                        >
+                                            <div className="flex items-center gap-2 mb-1.5">
+                                                {certItems.includes('convocation') ? (
                                                     <CheckSquare className="w-4 h-4 text-amber-600 shrink-0" />
                                                 ) : (
                                                     <Square className="w-4 h-4 text-slate-400 shrink-0" />
                                                 )}
-                                                <span className="font-bold text-xs text-slate-800">
-                                                    Convocation Fee
-                                                </span>
+                                                <span className="font-bold text-xs text-slate-800">Convocation Fee</span>
                                             </div>
+                                            <p className="text-base font-black text-slate-900">₦{fees.convocationFee.toLocaleString()}</p>
+                                            <p className="text-[11px] text-slate-500 mt-1">Convocation levy & archival entry.</p>
                                         </div>
-                                        <p className="text-base font-black text-slate-900">
-                                            ₦{fees.convocationFee.toLocaleString()}
-                                        </p>
-                                        <p className="text-[11px] text-slate-500 mt-1 leading-snug">
-                                            Convocation levy and archival record entry.
-                                        </p>
-                                    </div>
 
-                                    {/* Item 3: Convocation Gown Fee */}
-                                    <div
-                                        onClick={() => toggleFeeKey('convocation_gown')}
-                                        className={`p-3.5 rounded-xl border cursor-pointer transition-all ${
-                                            isConvocationGownSelected
-                                                ? 'bg-amber-50/70 border-amber-400 ring-2 ring-amber-500/20'
-                                                : 'bg-slate-50/70 border-slate-200 opacity-60'
-                                        }`}
-                                    >
-                                        <div className="flex items-start justify-between gap-2 mb-1.5">
-                                            <div className="flex items-center gap-2">
-                                                {isConvocationGownSelected ? (
+                                        {/* Certificate Fee */}
+                                        <div
+                                            onClick={() => toggleCertItem('certificate')}
+                                            className={`p-3.5 rounded-xl border cursor-pointer transition-all ${
+                                                certItems.includes('certificate')
+                                                    ? 'bg-amber-50/70 border-amber-400 ring-2 ring-amber-500/20'
+                                                    : 'bg-slate-50/70 border-slate-200 opacity-60'
+                                            }`}
+                                        >
+                                            <div className="flex items-center gap-2 mb-1.5">
+                                                {certItems.includes('certificate') ? (
                                                     <CheckSquare className="w-4 h-4 text-amber-600 shrink-0" />
                                                 ) : (
                                                     <Square className="w-4 h-4 text-slate-400 shrink-0" />
                                                 )}
-                                                <span className="font-bold text-xs text-slate-800">
-                                                    Convocation Gown Fee
-                                                </span>
+                                                <span className="font-bold text-xs text-slate-800">Certificate Fee ({formData.programmeType})</span>
                                             </div>
-                                        </div>
-                                        <p className="text-base font-black text-slate-900">
-                                            ₦{fees.convocationGownFee.toLocaleString()}
-                                        </p>
-                                        <p className="text-[11px] text-slate-500 mt-1 leading-snug">
-                                            Academic convocation gown hire fee. Standalone payment item.
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Section 2: FSS TECH STUDIO-ICT (ALATPay) */}
-                            <div className="bg-white rounded-2xl p-5 border border-indigo-200 shadow-sm space-y-3">
-                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-xs">
-                                            🔴
-                                        </div>
-                                        <div>
-                                            <h4 className="font-extrabold text-sm text-slate-900">
-                                                FSS TECH STUDIO - ICT Account (ALATPay)
-                                            </h4>
-                                            <p className="text-[11px] text-slate-500">
-                                                Wema Bank • Account No: <span className="font-mono font-bold text-slate-700">0126932586</span> • Dedicated ICT Operations Account
-                                            </p>
+                                            <p className="text-base font-black text-slate-900">₦{certificateFee.toLocaleString()}</p>
+                                            <p className="text-[11px] text-slate-500 mt-1">Official diploma seal & printing.</p>
                                         </div>
                                     </div>
-                                    <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 self-start sm:self-auto">
-                                        Subtotal: ₦{ictGroupTotal.toLocaleString()}
-                                    </span>
                                 </div>
+                            )}
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
-                                    {/* Item 4: Incidental Fee */}
-                                    <div
-                                        onClick={() => toggleFeeKey('incidental')}
-                                        className={`p-3.5 rounded-xl border cursor-pointer transition-all ${
-                                            isIncidentalSelected
-                                                ? 'bg-indigo-50/70 border-indigo-400 ring-2 ring-indigo-500/20'
-                                                : 'bg-slate-50/70 border-slate-200 opacity-60'
-                                        }`}
-                                    >
-                                        <div className="flex items-start justify-between gap-2 mb-1.5">
-                                            <div className="flex items-center gap-2">
-                                                {isIncidentalSelected ? (
-                                                    <CheckSquare className="w-4 h-4 text-indigo-600 shrink-0" />
-                                                ) : (
-                                                    <Square className="w-4 h-4 text-slate-400 shrink-0" />
-                                                )}
-                                                <span className="font-bold text-xs text-slate-800">
-                                                    Compulsory Incidental Fee
-                                                </span>
-                                            </div>
-                                        </div>
-                                        <p className="text-base font-black text-slate-900">
-                                            ₦{fees.incidentalFee.toLocaleString()}
-                                        </p>
-                                        <p className="text-[11px] text-slate-500 mt-1 leading-snug">
-                                            Statutory incidental charge for graduant clearance. Paid to FSS TECH STUDIO-ICT.
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Section 3: Portal Processing Fee (Paystack) */}
-                            <div className="bg-white rounded-2xl p-5 border border-sky-200 shadow-sm space-y-3">
-                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-8 h-8 rounded-lg bg-sky-100 text-sky-700 flex items-center justify-center font-bold text-xs">
-                                            🔵
-                                        </div>
-                                        <div>
-                                            <h4 className="font-extrabold text-sm text-slate-900">
-                                                Portal Processing Account (Paystack)
-                                            </h4>
-                                            <p className="text-[11px] text-slate-500">
-                                                Paystack Gateway • Card, Bank Transfer, USSD & QR
-                                            </p>
-                                        </div>
-                                    </div>
-                                    <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-sky-50 text-sky-700 border border-sky-200 self-start sm:self-auto">
-                                        Subtotal: ₦{processingGroupTotal.toLocaleString()}
-                                    </span>
-                                </div>
-
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
-                                    {/* Item 5: Processing Fee */}
-                                    <div
-                                        onClick={() => toggleFeeKey('processing')}
-                                        className={`p-3.5 rounded-xl border cursor-pointer transition-all ${
-                                            isProcessingSelected
-                                                ? 'bg-sky-50/70 border-sky-400 ring-2 ring-sky-500/20'
-                                                : 'bg-slate-50/70 border-slate-200 opacity-60'
-                                        }`}
-                                    >
-                                        <div className="flex items-start justify-between gap-2 mb-1.5">
-                                            <div className="flex items-center gap-2">
-                                                {isProcessingSelected ? (
-                                                    <CheckSquare className="w-4 h-4 text-sky-600 shrink-0" />
-                                                ) : (
-                                                    <Square className="w-4 h-4 text-slate-400 shrink-0" />
-                                                )}
-                                                <span className="font-bold text-xs text-slate-800">
-                                                    Portal Processing Fee
-                                                </span>
-                                            </div>
-                                        </div>
-                                        <p className="text-base font-black text-slate-900">
-                                            ₦{fees.processingFee.toLocaleString()}
-                                        </p>
-                                        <p className="text-[11px] text-slate-500 mt-1 leading-snug">
-                                            Digital notification and online payment gateway processing charge.
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Settlement Routing Notice */}
-                            <div className="bg-amber-100/70 border border-amber-300 p-4 rounded-2xl flex items-start gap-3 text-xs text-amber-900">
-                                <Info className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
-                                <div className="space-y-1">
-                                    <p className="font-bold">
-                                        Multi-Account Separation Notice:
-                                    </p>
-                                    <p>
-                                        Payments are isolated by account: <strong>Certificate, Convocation & Gown</strong> route to <em>FSS TECH STUDIO-CERT</em>; <strong>Incidental Fee</strong> routes to <em>FSS TECH STUDIO-ICT</em>; and <strong>Processing Fee</strong> routes via <em>Paystack</em>.
-                                    </p>
-                                    {activeAccountCount > 1 && (
-                                        <p className="font-semibold text-amber-950 pt-1">
-                                            ✨ You have selected items across {activeAccountCount} different accounts. When you click proceed, the portal will smoothly walk you through each account's payment in sequence so funds are properly credited.
-                                        </p>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* Bottom Checkout Action */}
+                            {/* Summary & Checkout Action */}
                             <div className="pt-2 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-t border-amber-200/70">
                                 <div>
                                     <p className="text-xs uppercase tracking-wider font-bold text-slate-500">
-                                        Total Selected ({activeKeys.length} items across {activeAccountCount} account{activeAccountCount === 1 ? '' : 's'})
+                                        Selected: {categoryName}
                                     </p>
-                                    <p className="text-3xl font-black text-slate-900 mt-1">₦{totalFee.toLocaleString()}</p>
-                                    <p className="text-[11px] text-slate-500 mt-1 font-medium">
-                                        {activeKeys.length === 0
-                                            ? "No items currently selected."
-                                            : [
-                                                  certGroupTotal > 0 && `CERT Account: ₦${certGroupTotal.toLocaleString()}`,
-                                                  ictGroupTotal > 0 && `ICT Account: ₦${ictGroupTotal.toLocaleString()}`,
-                                                  processingGroupTotal > 0 && `Processing: ₦${processingGroupTotal.toLocaleString()}`
-                                              ]
-                                                  .filter(Boolean)
-                                                  .join(" • ")}
+                                    <p className="text-3xl font-black text-slate-900 mt-1">₦{payableAmount.toLocaleString()}</p>
+                                    <p className="text-[11px] text-slate-600 mt-1 font-medium">
+                                        Routing via <span className="font-bold text-slate-900">{gatewayName}</span> ➔ {destinationBankInfo}
                                     </p>
                                 </div>
 
                                 <button 
                                     type="submit" 
-                                    disabled={loading || activeKeys.length === 0} 
+                                    disabled={loading || payableAmount === 0} 
                                     className="w-full md:w-auto bg-amber-600 text-white px-8 py-3.5 rounded-xl font-bold hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-colors shadow-md"
                                 >
                                     {loading ? (
                                         <Loader2 className="w-5 h-5 animate-spin" />
-                                    ) : activeAccountCount > 1 ? (
-                                        `Proceed to Step 1 (${certGroupTotal > 0 ? 'CERT Account' : ictGroupTotal > 0 ? 'ICT Account' : 'Paystack'}) • Total: ₦${totalFee.toLocaleString()}`
                                     ) : (
-                                        `Pay Selected (${activeKeys.length}) • ₦${totalFee.toLocaleString()}`
+                                        `Pay ₦${payableAmount.toLocaleString()} via ${gatewayName}`
                                     )}
                                 </button>
                             </div>
