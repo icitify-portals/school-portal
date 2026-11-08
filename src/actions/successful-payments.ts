@@ -198,17 +198,21 @@ export async function getSuccessfulPaymentsGrouped() {
                 category = 'ICT Fee';
                 itemBreakdown = tx.purpose || 'ICT Fee / Technology Payment';
             } else if (
+                ref.startsWith('alumni-inc-') ||
+                p.includes('departmental') ||
+                p.includes('library levy') ||
                 (
-                    p.includes('incidental') || 
-                    p.includes('ancillary') || 
-                    ref.includes('incidental') || 
-                    ref.startsWith('inc-') ||
-                    ref.startsWith('alumni-inc-') ||
-                    (gw === 'alatpay' && amt === 5500)
-                ) && amt <= 10000
+                    (
+                        p.includes('incidental') || 
+                        p.includes('ancillary') || 
+                        ref.includes('incidental') || 
+                        ref.startsWith('inc-') ||
+                        (gw === 'alatpay' && amt === 5500)
+                    ) && amt <= 25000
+                )
             ) {
                 category = 'Incidental Fee';
-                itemBreakdown = tx.purpose || 'Incidental Fee Payment (₦5,500)';
+                itemBreakdown = tx.purpose || 'Incidental Fee & Development Levies';
             } else if (
                 (p.includes('processing') || ref.startsWith('proc-') || ref.startsWith('dev-')) && amt <= 10000
             ) {

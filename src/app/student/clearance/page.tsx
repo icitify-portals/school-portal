@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -15,9 +15,11 @@ import {
     AlertTriangle,
     ArrowRight,
     RefreshCw,
-    GraduationCap
+    GraduationCap,
+    ExternalLink
 } from "lucide-react";
 import { getStudentClearance, syncClearanceStatus } from "@/actions/clearance";
+import { getStudentCertificateStatus } from "@/actions/alumni-requests";
 import { cn } from "@/lib/utils";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
@@ -25,6 +27,7 @@ import Link from "next/link";
 export default function StudentClearancePage() {
     const { data: session } = useSession();
     const [data, setData] = useState<any>(null);
+    const [certStatus, setCertStatus] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [syncing, setSyncing] = useState(false);
 
@@ -32,6 +35,14 @@ export default function StudentClearancePage() {
         if (!session?.user) return;
         const res = await getStudentClearance((session.user as any).id);
         setData(res);
+        if (res?.student?.matricNumber) {
+            try {
+                const cRes = await getStudentCertificateStatus(res.student.matricNumber);
+                if (cRes?.found) setCertStatus(cRes);
+            } catch (err) {
+                console.warn("Could not fetch cert status:", err);
+            }
+        }
         setLoading(false);
     };
 
@@ -198,12 +209,12 @@ export default function StudentClearancePage() {
                                         <div>
                                             <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Matric Number</p>
                                             <p className="font-bold text-slate-900 uppercase">
-                                                {data?.student?.id.toString().padStart(6, '0')}
+                                                {data?.student?.matricNumber || data?.student?.id.toString().padStart(6, '0')}
                                             </p>
                                         </div>
                                         <div>
                                             <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Level / Session</p>
-                                            <p className="font-bold text-slate-900 uppercase">400L / 25-26</p>
+                                            <p className="font-bold text-slate-900 uppercase">{data?.student?.level || 2}00L / 25-26</p>
                                         </div>
                                     </div>
                                 </div>
@@ -249,6 +260,62 @@ export default function StudentClearancePage() {
                             A minimum payment of **{stats?.threshold}%** is required for eligibility. If you have recently made a payment, please use the **Re-Sync** button above to refresh your standing.
                         </p>
                     </div>
+                </div>
+            </div>
+
+            {/* GRADUATION & CERTIFICATE CLEARANCE SECTION */}
+            <div className="bg-white rounded-3xl p-8 border border-slate-200 shadow-lg space-y-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center">
+                            <GraduationCap className="w-6 h-6" />
+                        </div>
+                        <div>
+                            <h3 className="text-xl font-black text-slate-900 uppercase">Graduation & Certificate Clearance</h3>
+                            <p className="text-xs text-slate-500">Alumni, ND & HND convocation, gown hire, and certificate clearance status</p>
+                        </div>
+                    </div>
+                    <Link
+                        href={`/alumni/certificate?matric=${encodeURIComponent(data?.student?.matricNumber || '')}`}
+                        className="bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs px-5 py-2.5 rounded-xl flex items-center gap-1.5 shadow transition-colors self-start sm:self-auto"
+                    >
+                        <span>Settle Clearance Fees</span>
+                        <ArrowRight className="w-3.5 h-3.5" />
+                    </Link>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                    {[
+                        { name: "Convocation Gown", status: certStatus?.gownFeeStatus || 'unpaid', fee: "₦7,000" },
+                        { name: "Convocation Fee", status: certStatus?.convocationFeeStatus || 'unpaid', fee: "₦15,500" },
+                        { name: "Certificate Fee", status: certStatus?.certFeeStatus || 'unpaid', fee: data?.student?.programmeType === 'HND' ? "₦28,500" : "₦18,500" },
+                        { name: "Incidental Fee", status: certStatus?.incidentalFeeStatus || 'unpaid', fee: "₦5,500" },
+                        { name: "Departmental Levy", status: certStatus?.departmentalFeeStatus || 'unpaid', fee: "₦5,000" },
+                        { name: "Library Levy", status: certStatus?.libraryFeeStatus || 'unpaid', fee: "₦5,000" },
+                    ].map((item, idx) => {
+                        const isPaid = item.status === 'paid';
+                        return (
+                            <div key={idx} className={cn("p-3.5 rounded-2xl border text-center transition-all", isPaid ? "bg-emerald-50/70 border-emerald-300" : "bg-slate-50/60 border-slate-200")}>
+                                <p className="text-[11px] font-bold text-slate-700 mb-1 leading-tight">{item.name}</p>
+                                <p className="text-xs font-mono font-black text-slate-900 mb-2">{item.fee}</p>
+                                <span className={cn(
+                                    "text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full inline-block",
+                                    isPaid ? "bg-emerald-200 text-emerald-900" : "bg-slate-200 text-slate-600"
+                                )}>
+                                    {isPaid ? "Paid ✓" : "Unpaid"}
+                                </span>
+                            </div>
+                        );
+                    })}
+                </div>
+
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-50 p-4 rounded-2xl text-xs">
+                    <p className="text-slate-600">
+                        Need an official receipt for any cleared payment? Access all receipts directly in your receipt vault.
+                    </p>
+                    <Link href="/student/finance/receipts" className="font-bold text-indigo-700 hover:underline flex items-center gap-1 shrink-0">
+                        View All Receipts <ArrowRight className="w-3.5 h-3.5" />
+                    </Link>
                 </div>
             </div>
         </div>

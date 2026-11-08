@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { getDynamicAlumniFees, submitCertificateApplication, getStudentCertificateStatus } from "@/actions/alumni-requests";
 import { useRouter } from "next/navigation";
-import { Loader2, GraduationCap, MapPin, CreditCard, Info, Check, CheckSquare, Square, Building2, ShieldCheck, CheckCircle2 } from "lucide-react";
+import { Loader2, GraduationCap, MapPin, CreditCard, Info, Check, CheckSquare, Square, Building2, ShieldCheck, CheckCircle2, UserCheck, ArrowRight } from "lucide-react";
 import Link from "next/link";
 
 export default function CertificateApplicationPage() {
@@ -17,14 +17,22 @@ export default function CertificateApplicationPage() {
         convocationFee: 15500,
         convocationGownFee: 7000,
         incidentalFee: 5500,
-        processingFee: 3000,
+        departmentalFee: 5000,
+        libraryFee: 5000,
+        processingFeePerItem: 1000,
     });
 
     // Active category selection: 'cert_account' | 'ict_account' | 'processing'
     const [selectedCategory, setSelectedCategory] = useState<'cert_account' | 'ict_account' | 'processing'>('cert_account');
 
-    // Sub-items for cert_account (all credited to FSS TECH STUDIO-CERT)
+    // Sub-items for cert_account (credited to FSS TECH STUDIO-CERT)
     const [certItems, setCertItems] = useState<string[]>(['convocation_gown']);
+
+    // Sub-items for ict_account (credited to FSS TECH STUDIO-ICT)
+    const [ictItems, setIctItems] = useState<string[]>(['incidental', 'departmental', 'library']);
+
+    // Sub-items for processing (Paystack) - 1,000 per payment item
+    const [processingItems, setProcessingItems] = useState<string[]>(['gown', 'incidental']);
 
     // Existing student record status
     const [existingStatus, setExistingStatus] = useState<any>(null);
@@ -32,8 +40,17 @@ export default function CertificateApplicationPage() {
     
     useEffect(() => {
         getDynamicAlumniFees().then((res) => {
-            if (res) setFees(res);
+            if (res) setFees(res as any);
         });
+
+        if (typeof window !== "undefined") {
+            const params = new URLSearchParams(window.location.search);
+            const m = params.get("matric");
+            if (m) {
+                setFormData(prev => ({ ...prev, matricNumber: m.toUpperCase() }));
+                checkMatric(m.toUpperCase());
+            }
+        }
     }, []);
     
     const [formData, setFormData] = useState({
@@ -50,29 +67,34 @@ export default function CertificateApplicationPage() {
 
     const certificateFee = formData.programmeType === "HND" ? fees.certificateFeeHND : fees.certificateFeeND;
 
-    // Auto-check clearance status when matric number is entered
-    const handleMatricBlur = async () => {
-        if (!formData.matricNumber || formData.matricNumber.trim().length < 5) return;
+    const checkMatric = async (matric: string) => {
+        if (!matric || matric.trim().length < 5) return;
         setCheckingStatus(true);
         try {
-            const res = await getStudentCertificateStatus(formData.matricNumber);
+            const res = await getStudentCertificateStatus(matric);
             if (res && res.found) {
                 setExistingStatus(res);
-                if (res.applicantName && !formData.applicantName) {
-                    setFormData(prev => ({
-                        ...prev,
-                        applicantName: res.applicantName,
-                        programmeType: (res.programmeType || prev.programmeType) as "ND" | "HND"
-                    }));
-                }
+                setFormData(prev => ({
+                    ...prev,
+                    applicantName: res.applicantName || prev.applicantName,
+                    email: res.email || prev.email,
+                    phone: res.phone || prev.phone,
+                    department: res.department || prev.department,
+                    yearOfGraduation: res.yearOfGraduation || prev.yearOfGraduation,
+                    programmeType: (res.programmeType || prev.programmeType) as "ND" | "HND"
+                }));
             } else {
-                setExistingStatus(null);
+                setExistingStatus(res?.hasUserAccount ? res : null);
             }
         } catch (e) {
             console.warn("Status check failed:", e);
         } finally {
             setCheckingStatus(false);
         }
+    };
+
+    const handleMatricBlur = () => {
+        checkMatric(formData.matricNumber);
     };
 
     // Calculate total for currently selected category
@@ -85,23 +107,37 @@ export default function CertificateApplicationPage() {
         categoryName = "Academic & Convocation (FSS TECH STUDIO-CERT)";
         gatewayName = "ALATPay";
         destinationBankInfo = "Wema Bank • Account No: 0126932593";
-        if (certItems.includes('certificate')) payableAmount += certificateFee;
-        if (certItems.includes('convocation')) payableAmount += fees.convocationFee;
         if (certItems.includes('convocation_gown')) payableAmount += fees.convocationGownFee;
+        if (certItems.includes('convocation')) payableAmount += fees.convocationFee;
+        if (certItems.includes('certificate')) payableAmount += certificateFee;
     } else if (selectedCategory === 'ict_account') {
-        categoryName = "Compulsory Incidental Fee (FSS TECH STUDIO-ICT)";
+        categoryName = "Compulsory Incidental & Levies (FSS TECH STUDIO-ICT)";
         gatewayName = "ALATPay";
         destinationBankInfo = "Wema Bank • Account No: 0126932586";
-        payableAmount = fees.incidentalFee;
+        if (ictItems.includes('incidental')) payableAmount += fees.incidentalFee;
+        if (ictItems.includes('departmental')) payableAmount += fees.departmentalFee;
+        if (ictItems.includes('library')) payableAmount += fees.libraryFee;
     } else if (selectedCategory === 'processing') {
         categoryName = "Portal Processing Fee (Paystack)";
         gatewayName = "Paystack";
         destinationBankInfo = "Online Gateway Instant Checkout";
-        payableAmount = fees.processingFee;
+        payableAmount = (processingItems.length > 0 ? processingItems.length : 1) * fees.processingFeePerItem;
     }
 
     const toggleCertItem = (key: string) => {
         setCertItems(prev =>
+            prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
+        );
+    };
+
+    const toggleIctItem = (key: string) => {
+        setIctItems(prev =>
+            prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
+        );
+    };
+
+    const toggleProcessingItem = (key: string) => {
+        setProcessingItems(prev =>
             prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
         );
     };
@@ -114,14 +150,29 @@ export default function CertificateApplicationPage() {
             return;
         }
 
+        if (selectedCategory === 'ict_account' && ictItems.length === 0) {
+            setError("Please select at least one levy from the Compulsory Incidental & Levies category.");
+            return;
+        }
+
+        if (selectedCategory === 'processing' && processingItems.length === 0) {
+            setError("Please select at least one payment item for processing fee.");
+            return;
+        }
+
         setLoading(true);
         setError("");
 
         try {
+            let itemsToPass: string[] = [];
+            if (selectedCategory === 'cert_account') itemsToPass = certItems;
+            else if (selectedCategory === 'ict_account') itemsToPass = ictItems;
+            else if (selectedCategory === 'processing') itemsToPass = processingItems;
+
             const res = await submitCertificateApplication({
                 ...formData,
                 category: selectedCategory,
-                selectedItems: selectedCategory === 'cert_account' ? certItems : [selectedCategory === 'ict_account' ? 'incidental' : 'processing']
+                selectedItems: itemsToPass
             });
 
             if (res.success && res.url) {
@@ -147,7 +198,12 @@ export default function CertificateApplicationPage() {
                             <p className="text-xs text-slate-400 uppercase tracking-widest">Federal School of Statistics • Alumni & Graduants</p>
                         </div>
                     </div>
-                    <Link href="/" className="text-sm font-medium hover:text-amber-300">Back to Portal</Link>
+                    <div className="flex items-center gap-3">
+                        <Link href="/login" className="text-xs font-bold bg-amber-500/20 text-amber-300 px-3 py-1.5 rounded-lg border border-amber-400/30 hover:bg-amber-500/30">
+                            Student Login
+                        </Link>
+                        <Link href="/" className="text-sm font-medium hover:text-amber-300">Home</Link>
+                    </div>
                 </div>
             </header>
 
@@ -217,29 +273,44 @@ export default function CertificateApplicationPage() {
 
                         {/* Existing Clearance Status Banner if found */}
                         {existingStatus && (
-                            <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 text-xs text-emerald-950 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                                <div>
+                            <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 text-xs text-emerald-950 flex flex-col items-start gap-2">
+                                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between w-full gap-2">
                                     <p className="font-bold flex items-center gap-1.5 text-emerald-900">
                                         <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                                        Existing Record Found for {formData.matricNumber}:
+                                        Clearance Record for {formData.matricNumber}:
                                     </p>
-                                    <div className="flex flex-wrap gap-2 mt-1">
-                                        <span className={`px-2 py-0.5 rounded-full font-bold ${existingStatus.gownFeeStatus === 'paid' ? 'bg-emerald-200 text-emerald-900' : 'bg-slate-200 text-slate-700'}`}>
-                                            Gown: {existingStatus.gownFeeStatus === 'paid' ? 'Paid ✓' : 'Unpaid'}
+                                    {existingStatus.hasUserAccount ? (
+                                        <span className="text-[11px] font-bold text-emerald-800 bg-emerald-100 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                                            <UserCheck className="w-3.5 h-3.5" /> Portal Account Active
                                         </span>
-                                        <span className={`px-2 py-0.5 rounded-full font-bold ${existingStatus.convocationFeeStatus === 'paid' ? 'bg-emerald-200 text-emerald-900' : 'bg-slate-200 text-slate-700'}`}>
-                                            Convocation: {existingStatus.convocationFeeStatus === 'paid' ? 'Paid ✓' : 'Unpaid'}
+                                    ) : (
+                                        <span className="text-[11px] font-bold text-amber-800 bg-amber-100 px-2.5 py-0.5 rounded-full">
+                                            Account can be activated after payment
                                         </span>
-                                        <span className={`px-2 py-0.5 rounded-full font-bold ${existingStatus.certFeeStatus === 'paid' ? 'bg-emerald-200 text-emerald-900' : 'bg-slate-200 text-slate-700'}`}>
-                                            Certificate: {existingStatus.certFeeStatus === 'paid' ? 'Paid ✓' : 'Unpaid'}
-                                        </span>
-                                        <span className={`px-2 py-0.5 rounded-full font-bold ${existingStatus.incidentalFeeStatus === 'paid' ? 'bg-emerald-200 text-emerald-900' : 'bg-slate-200 text-slate-700'}`}>
-                                            Incidental: {existingStatus.incidentalFeeStatus === 'paid' ? 'Paid ✓' : 'Unpaid'}
-                                        </span>
-                                        <span className={`px-2 py-0.5 rounded-full font-bold ${existingStatus.processingFeeStatus === 'paid' ? 'bg-emerald-200 text-emerald-900' : 'bg-slate-200 text-slate-700'}`}>
-                                            Processing: {existingStatus.processingFeeStatus === 'paid' ? 'Paid ✓' : 'Unpaid'}
-                                        </span>
-                                    </div>
+                                    )}
+                                </div>
+                                <div className="flex flex-wrap gap-2 mt-1">
+                                    <span className={`px-2 py-0.5 rounded-full font-bold ${existingStatus.gownFeeStatus === 'paid' ? 'bg-emerald-200 text-emerald-900' : 'bg-slate-200 text-slate-700'}`}>
+                                        Gown: {existingStatus.gownFeeStatus === 'paid' ? 'Paid ✓' : 'Unpaid'}
+                                    </span>
+                                    <span className={`px-2 py-0.5 rounded-full font-bold ${existingStatus.convocationFeeStatus === 'paid' ? 'bg-emerald-200 text-emerald-900' : 'bg-slate-200 text-slate-700'}`}>
+                                        Convocation: {existingStatus.convocationFeeStatus === 'paid' ? 'Paid ✓' : 'Unpaid'}
+                                    </span>
+                                    <span className={`px-2 py-0.5 rounded-full font-bold ${existingStatus.certFeeStatus === 'paid' ? 'bg-emerald-200 text-emerald-900' : 'bg-slate-200 text-slate-700'}`}>
+                                        Certificate: {existingStatus.certFeeStatus === 'paid' ? 'Paid ✓' : 'Unpaid'}
+                                    </span>
+                                    <span className={`px-2 py-0.5 rounded-full font-bold ${existingStatus.incidentalFeeStatus === 'paid' ? 'bg-emerald-200 text-emerald-900' : 'bg-slate-200 text-slate-700'}`}>
+                                        Incidental: {existingStatus.incidentalFeeStatus === 'paid' ? 'Paid ✓' : 'Unpaid'}
+                                    </span>
+                                    <span className={`px-2 py-0.5 rounded-full font-bold ${existingStatus.departmentalFeeStatus === 'paid' ? 'bg-emerald-200 text-emerald-900' : 'bg-slate-200 text-slate-700'}`}>
+                                        Departmental: {existingStatus.departmentalFeeStatus === 'paid' ? 'Paid ✓' : 'Unpaid'}
+                                    </span>
+                                    <span className={`px-2 py-0.5 rounded-full font-bold ${existingStatus.libraryFeeStatus === 'paid' ? 'bg-emerald-200 text-emerald-900' : 'bg-slate-200 text-slate-700'}`}>
+                                        Library: {existingStatus.libraryFeeStatus === 'paid' ? 'Paid ✓' : 'Unpaid'}
+                                    </span>
+                                    <span className={`px-2 py-0.5 rounded-full font-bold ${existingStatus.processingFeeStatus === 'paid' ? 'bg-emerald-200 text-emerald-900' : 'bg-slate-200 text-slate-700'}`}>
+                                        Processing: {existingStatus.processingFeeStatus === 'paid' ? 'Paid ✓' : 'Unpaid'}
+                                    </span>
                                 </div>
                             </div>
                         )}
@@ -332,14 +403,14 @@ export default function CertificateApplicationPage() {
                                         )}
                                     </div>
                                     <h4 className="font-extrabold text-sm text-slate-900 mt-2">
-                                        Compulsory Incidental Fee
+                                        Compulsory Incidental & Levies
                                     </h4>
                                     <p className="text-[11px] text-slate-500 mt-1 leading-snug">
                                         FSS TECH STUDIO - ICT<br />
                                         Wema Bank: <span className="font-mono font-bold text-slate-700">0126932586</span>
                                     </p>
-                                    <p className="text-xs text-indigo-800 font-bold mt-3">
-                                        Fixed: ₦{fees.incidentalFee.toLocaleString()}
+                                    <p className="text-xs text-indigo-800 font-semibold mt-3">
+                                        Incidental • Departmental • Library
                                     </p>
                                 </div>
 
@@ -370,12 +441,12 @@ export default function CertificateApplicationPage() {
                                         Card, Bank Transfer, USSD
                                     </p>
                                     <p className="text-xs text-sky-800 font-bold mt-3">
-                                        Fixed: ₦{fees.processingFee.toLocaleString()}
+                                        ₦1,000 per payment item
                                     </p>
                                 </div>
                             </div>
 
-                            {/* Detailed item selection for Category 1 */}
+                            {/* Detailed item selection for Category 1: CERT Account */}
                             {selectedCategory === 'cert_account' && (
                                 <div className="bg-white rounded-2xl p-5 border border-amber-300 shadow-sm space-y-3">
                                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
@@ -469,6 +540,168 @@ export default function CertificateApplicationPage() {
                                             <p className="text-base font-black text-slate-900">₦{certificateFee.toLocaleString()}</p>
                                             <p className="text-[11px] text-slate-500 mt-1">Official diploma seal & printing.</p>
                                         </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Detailed item selection for Category 2: ICT Account */}
+                            {selectedCategory === 'ict_account' && (
+                                <div className="bg-white rounded-2xl p-5 border border-indigo-300 shadow-sm space-y-3">
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                                        <div>
+                                            <h4 className="font-bold text-sm text-slate-900">
+                                                Items Credited to FSS TECH STUDIO - ICT (0126932586)
+                                            </h4>
+                                            <p className="text-xs text-slate-500">
+                                                Select the incidental and development levies you wish to settle now into this account.
+                                            </p>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <button
+                                                type="button"
+                                                onClick={() => setIctItems(['incidental'])}
+                                                className="text-[11px] font-bold text-indigo-800 hover:underline"
+                                            >
+                                                Incidental Only
+                                            </button>
+                                            <span className="text-slate-300">|</span>
+                                            <button
+                                                type="button"
+                                                onClick={() => setIctItems(['incidental', 'departmental', 'library'])}
+                                                className="text-[11px] font-bold text-indigo-800 hover:underline"
+                                            >
+                                                Select All 3
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
+                                        {/* Compulsory Incidental Fee */}
+                                        <div
+                                            onClick={() => toggleIctItem('incidental')}
+                                            className={`p-3.5 rounded-xl border cursor-pointer transition-all ${
+                                                ictItems.includes('incidental')
+                                                    ? 'bg-indigo-50/70 border-indigo-400 ring-2 ring-indigo-500/20'
+                                                    : 'bg-slate-50/70 border-slate-200 opacity-60'
+                                            }`}
+                                        >
+                                            <div className="flex items-center gap-2 mb-1.5">
+                                                {ictItems.includes('incidental') ? (
+                                                    <CheckSquare className="w-4 h-4 text-indigo-600 shrink-0" />
+                                                ) : (
+                                                    <Square className="w-4 h-4 text-slate-400 shrink-0" />
+                                                )}
+                                                <span className="font-bold text-xs text-slate-800">Compulsory Incidental</span>
+                                            </div>
+                                            <p className="text-base font-black text-slate-900">₦{fees.incidentalFee.toLocaleString()}</p>
+                                            <p className="text-[11px] text-slate-500 mt-1">General clearance & administrative fee.</p>
+                                        </div>
+
+                                        {/* Departmental Development Levy */}
+                                        <div
+                                            onClick={() => toggleIctItem('departmental')}
+                                            className={`p-3.5 rounded-xl border cursor-pointer transition-all ${
+                                                ictItems.includes('departmental')
+                                                    ? 'bg-indigo-50/70 border-indigo-400 ring-2 ring-indigo-500/20'
+                                                    : 'bg-slate-50/70 border-slate-200 opacity-60'
+                                            }`}
+                                        >
+                                            <div className="flex items-center gap-2 mb-1.5">
+                                                {ictItems.includes('departmental') ? (
+                                                    <CheckSquare className="w-4 h-4 text-indigo-600 shrink-0" />
+                                                ) : (
+                                                    <Square className="w-4 h-4 text-slate-400 shrink-0" />
+                                                )}
+                                                <span className="font-bold text-xs text-slate-800">Departmental Levy</span>
+                                            </div>
+                                            <p className="text-base font-black text-slate-900">₦{fees.departmentalFee.toLocaleString()}</p>
+                                            <p className="text-[11px] text-slate-500 mt-1">Departmental development levy.</p>
+                                        </div>
+
+                                        {/* Library Development Levy */}
+                                        <div
+                                            onClick={() => toggleIctItem('library')}
+                                            className={`p-3.5 rounded-xl border cursor-pointer transition-all ${
+                                                ictItems.includes('library')
+                                                    ? 'bg-indigo-50/70 border-indigo-400 ring-2 ring-indigo-500/20'
+                                                    : 'bg-slate-50/70 border-slate-200 opacity-60'
+                                            }`}
+                                        >
+                                            <div className="flex items-center gap-2 mb-1.5">
+                                                {ictItems.includes('library') ? (
+                                                    <CheckSquare className="w-4 h-4 text-indigo-600 shrink-0" />
+                                                ) : (
+                                                    <Square className="w-4 h-4 text-slate-400 shrink-0" />
+                                                )}
+                                                <span className="font-bold text-xs text-slate-800">Library Levy</span>
+                                            </div>
+                                            <p className="text-base font-black text-slate-900">₦{fees.libraryFee.toLocaleString()}</p>
+                                            <p className="text-[11px] text-slate-500 mt-1">Library development & archival levy.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Detailed item selection for Category 3: Processing Fee */}
+                            {selectedCategory === 'processing' && (
+                                <div className="bg-white rounded-2xl p-5 border border-sky-300 shadow-sm space-y-3">
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                                        <div>
+                                            <h4 className="font-bold text-sm text-slate-900">
+                                                Portal Processing Fee (₦1,000 per payment item)
+                                            </h4>
+                                            <p className="text-xs text-slate-500">
+                                                Select which item(s) you are settling processing fee for. No lump sum required.
+                                            </p>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <button
+                                                type="button"
+                                                onClick={() => setProcessingItems(['item_1'])}
+                                                className="text-[11px] font-bold text-sky-800 hover:underline"
+                                            >
+                                                1 Item (₦1,000)
+                                            </button>
+                                            <span className="text-slate-300">|</span>
+                                            <button
+                                                type="button"
+                                                onClick={() => setProcessingItems(['gown', 'convocation', 'certificate', 'incidental', 'departmental', 'library'])}
+                                                className="text-[11px] font-bold text-sky-800 hover:underline"
+                                            >
+                                                All 6 Items (₦6,000)
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3 pt-1">
+                                        {[
+                                            { id: 'gown', label: 'Convocation Gown' },
+                                            { id: 'convocation', label: 'Convocation Fee' },
+                                            { id: 'certificate', label: 'Certificate Fee' },
+                                            { id: 'incidental', label: 'Incidental Fee' },
+                                            { id: 'departmental', label: 'Departmental Levy' },
+                                            { id: 'library', label: 'Library Levy' },
+                                        ].map(item => (
+                                            <div
+                                                key={item.id}
+                                                onClick={() => toggleProcessingItem(item.id)}
+                                                className={`p-3 rounded-xl border cursor-pointer transition-all ${
+                                                    processingItems.includes(item.id)
+                                                        ? 'bg-sky-50/70 border-sky-400 ring-2 ring-sky-500/20'
+                                                        : 'bg-slate-50/70 border-slate-200 opacity-60'
+                                                }`}
+                                            >
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    {processingItems.includes(item.id) ? (
+                                                        <CheckSquare className="w-4 h-4 text-sky-600 shrink-0" />
+                                                    ) : (
+                                                        <Square className="w-4 h-4 text-slate-400 shrink-0" />
+                                                    )}
+                                                    <span className="font-bold text-xs text-slate-800">{item.label}</span>
+                                                </div>
+                                                <p className="text-sm font-black text-slate-900">₦1,000</p>
+                                            </div>
+                                        ))}
                                     </div>
                                 </div>
                             )}

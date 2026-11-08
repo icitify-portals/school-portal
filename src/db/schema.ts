@@ -7595,6 +7595,14 @@ export const alumniCertificateRequests = mysqlTable('alumni_certificate_requests
 
   incidentalFeeRef: varchar('incidental_fee_ref', { length: 100 }),
   incidentalFeeStatus: mysqlEnum('incidental_fee_status', ['paid', 'unpaid']).default('unpaid'),
+
+  departmentalFeeRef: varchar('departmental_fee_ref', { length: 100 }),
+  departmentalFeeStatus: mysqlEnum('departmental_fee_status', ['paid', 'unpaid']).default('unpaid'),
+
+  libraryFeeRef: varchar('library_fee_ref', { length: 100 }),
+  libraryFeeStatus: mysqlEnum('library_fee_status', ['paid', 'unpaid']).default('unpaid'),
+
+  userId: int('user_id'),
   
   processingFeeRef: varchar('processing_fee_ref', { length: 100 }),
   processingFeeStatus: mysqlEnum('processing_fee_status', ['paid', 'unpaid']).default('unpaid'),
