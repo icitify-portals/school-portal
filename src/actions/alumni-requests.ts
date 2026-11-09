@@ -397,7 +397,7 @@ export async function verifyCertificatePayment(reference: string) {
         const certFee = request.programmeType === "HND" ? fees.certificateFeeHND : fees.certificateFeeND;
 
         if (isCertRef) {
-            categoryPaidName = "FSS TECH STUDIO-CERT (Academic & Convocation)";
+            categoryPaidName = "Academic & Convocation";
             try {
                 await verifyPayment('alatpay', reference, undefined, ALATPAY_CERT_CONFIG.secretKey);
             } catch (vErr) {
@@ -434,7 +434,7 @@ export async function verifyCertificatePayment(reference: string) {
             if (updateFields.gownFeeStatus) request.gownFeeStatus = 'paid';
 
         } else if (isIncRef) {
-            categoryPaidName = "FSS TECH STUDIO-ICT (Compulsory Incidental & Levies)";
+            categoryPaidName = "Compulsory Incidental & Levies";
             try {
                 await verifyPayment('alatpay', reference, undefined, ALATPAY_ICT_CONFIG.secretKey);
             } catch (vErr) {
@@ -471,7 +471,7 @@ export async function verifyCertificatePayment(reference: string) {
             if (updateFields.libraryFeeStatus) request.libraryFeeStatus = 'paid';
 
         } else if (isPayRef) {
-            categoryPaidName = "Portal Processing Fee (Paystack)";
+            categoryPaidName = "Portal Processing Fee";
             try {
                 await verifyPayment('paystack', reference);
             } catch (vErr) {
@@ -702,9 +702,9 @@ export async function getAlumniReceiptDetails(reference: string) {
 
         if (isCertRef) {
             gatewayName = "ALATPay";
-            creditedAccountName = ALATPAY_CERT_CONFIG.accountName;
-            creditedAccountNumber = ALATPAY_CERT_CONFIG.accountNumber;
-            creditedBank = ALATPAY_CERT_CONFIG.bankName;
+            creditedAccountName = "Academic & Convocation Revenue";
+            creditedAccountNumber = "Bursary Central Revenue";
+            creditedBank = "Official Settlement Channel";
 
             if (request.gownFeeRef === reference) {
                 items.push({ name: "Convocation Gown Fee", amount: fees.convocationGownFee, description: "Official academic gown hire for graduation ceremony." });
@@ -725,9 +725,9 @@ export async function getAlumniReceiptDetails(reference: string) {
             }
         } else if (isIncRef) {
             gatewayName = "ALATPay";
-            creditedAccountName = ALATPAY_ICT_CONFIG.accountName;
-            creditedAccountNumber = ALATPAY_ICT_CONFIG.accountNumber;
-            creditedBank = ALATPAY_ICT_CONFIG.bankName;
+            creditedAccountName = "Incidental & Development Revenue";
+            creditedAccountNumber = "Bursary Central Revenue";
+            creditedBank = "Official Settlement Channel";
 
             if (request.incidentalFeeRef === reference) {
                 items.push({ name: "Compulsory Incidental Fee", amount: fees.incidentalFee, description: "Institutional administrative and incidental clearance levy." });

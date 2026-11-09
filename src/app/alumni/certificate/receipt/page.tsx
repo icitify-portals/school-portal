@@ -120,9 +120,9 @@ function ReceiptContent() {
                         <p className="font-bold text-emerald-800">{data.gatewayName} (Verified)</p>
                     </div>
                     <div className="sm:col-span-3 pt-2 border-t border-slate-200/60">
-                        <p className="text-slate-400 uppercase font-black text-[10px]">Credited Settlement Account</p>
+                        <p className="text-slate-400 uppercase font-black text-[10px]">Payment Settlement Details</p>
                         <p className="font-bold text-slate-900">
-                            {data.creditedAccountName} • {data.creditedBank} ({data.creditedAccountNumber})
+                            {data.creditedAccountName} • {data.gatewayName} Secured Processing
                         </p>
                     </div>
                 </div>

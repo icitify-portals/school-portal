@@ -100,27 +100,23 @@ export default function CertificateApplicationPage() {
     // Calculate total for currently selected category
     let payableAmount = 0;
     let categoryName = "";
-    let destinationBankInfo = "";
     let gatewayName = "";
 
     if (selectedCategory === 'cert_account') {
-        categoryName = "Academic & Convocation (FSS TECH STUDIO-CERT)";
+        categoryName = "Academic & Convocation";
         gatewayName = "ALATPay";
-        destinationBankInfo = "Wema Bank • Account No: 0126932593";
         if (certItems.includes('convocation_gown')) payableAmount += fees.convocationGownFee;
         if (certItems.includes('convocation')) payableAmount += fees.convocationFee;
         if (certItems.includes('certificate')) payableAmount += certificateFee;
     } else if (selectedCategory === 'ict_account') {
-        categoryName = "Compulsory Incidental & Levies (FSS TECH STUDIO-ICT)";
+        categoryName = "Compulsory Incidental & Levies";
         gatewayName = "ALATPay";
-        destinationBankInfo = "Wema Bank • Account No: 0126932586";
         if (ictItems.includes('incidental')) payableAmount += fees.incidentalFee;
         if (ictItems.includes('departmental')) payableAmount += fees.departmentalFee;
         if (ictItems.includes('library')) payableAmount += fees.libraryFee;
     } else if (selectedCategory === 'processing') {
-        categoryName = "Portal Processing Fee (Paystack)";
+        categoryName = "Portal Processing Fee";
         gatewayName = "Paystack";
-        destinationBankInfo = "Online Gateway Instant Checkout";
         payableAmount = (processingItems.length > 0 ? processingItems.length : 1) * fees.processingFeePerItem;
     }
 
@@ -211,7 +207,7 @@ export default function CertificateApplicationPage() {
                 <div className="bg-white rounded-3xl shadow-xl p-8 border border-slate-100">
                     <h2 className="text-2xl font-bold text-slate-800 mb-1">Graduation Clearance & Certificate Request</h2>
                     <p className="text-sm text-slate-500 mb-6">
-                        Complete your bio-data and choose your <strong>Payment Category</strong>. Each category is routed directly to its designated bank account via its authorized gateway.
+                        Complete your bio-data and choose your <strong>Payment Category</strong>. Each category is processed securely through its authorized payment gateway.
                     </p>
                     
                     {error && (
@@ -346,7 +342,7 @@ export default function CertificateApplicationPage() {
                                     Select Payment Category To Settle
                                 </h3>
                                 <p className="text-xs text-slate-600 mt-1">
-                                    To ensure accurate bursary crediting, select one payment category at a time. All items in the selected category go directly to the designated bank account.
+                                    To ensure accurate bursary crediting, select one payment category at a time. All items in the selected category are processed directly via their authorized gateway.
                                 </p>
                             </div>
 
@@ -375,8 +371,7 @@ export default function CertificateApplicationPage() {
                                         Academic & Convocation
                                     </h4>
                                     <p className="text-[11px] text-slate-500 mt-1 leading-snug">
-                                        FSS TECH STUDIO - CERT<br />
-                                        Wema Bank: <span className="font-mono font-bold text-slate-700">0126932593</span>
+                                        Official clearance, academic gown hire, and certificate issuance
                                     </p>
                                     <p className="text-xs text-rose-800 font-semibold mt-3">
                                         Gown Fee • Convocation • Certificate
@@ -406,8 +401,7 @@ export default function CertificateApplicationPage() {
                                         Compulsory Incidental & Levies
                                     </h4>
                                     <p className="text-[11px] text-slate-500 mt-1 leading-snug">
-                                        FSS TECH STUDIO - ICT<br />
-                                        Wema Bank: <span className="font-mono font-bold text-slate-700">0126932586</span>
+                                        Administrative clearance, departmental, and library development levies
                                     </p>
                                     <p className="text-xs text-indigo-800 font-semibold mt-3">
                                         Incidental • Departmental • Library
@@ -452,10 +446,10 @@ export default function CertificateApplicationPage() {
                                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
                                         <div>
                                             <h4 className="font-bold text-sm text-slate-900">
-                                                Items Credited to FSS TECH STUDIO - CERT (0126932593)
+                                                Academic & Convocation Items
                                             </h4>
                                             <p className="text-xs text-slate-500">
-                                                Check which item(s) you want to pay now into this account.
+                                                Check which item(s) you want to pay now.
                                             </p>
                                         </div>
                                         <div className="flex gap-2">
@@ -550,10 +544,10 @@ export default function CertificateApplicationPage() {
                                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
                                         <div>
                                             <h4 className="font-bold text-sm text-slate-900">
-                                                Items Credited to FSS TECH STUDIO - ICT (0126932586)
+                                                Compulsory Incidental & Levies Items
                                             </h4>
                                             <p className="text-xs text-slate-500">
-                                                Select the incidental and development levies you wish to settle now into this account.
+                                                Select the incidental and development levies you wish to settle now.
                                             </p>
                                         </div>
                                         <div className="flex gap-2">
@@ -714,7 +708,7 @@ export default function CertificateApplicationPage() {
                                     </p>
                                     <p className="text-3xl font-black text-slate-900 mt-1">₦{payableAmount.toLocaleString()}</p>
                                     <p className="text-[11px] text-slate-600 mt-1 font-medium">
-                                        Routing via <span className="font-bold text-slate-900">{gatewayName}</span> ➔ {destinationBankInfo}
+                                        Secured Checkout via <span className="font-bold text-slate-900">{gatewayName}</span> Payment Gateway
                                     </p>
                                 </div>
 
