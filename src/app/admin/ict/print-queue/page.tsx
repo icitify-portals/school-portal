@@ -4,8 +4,9 @@ import { useState, useEffect, useCallback } from "react";
 import {
     Printer, Users, CheckCircle2, Clock, Truck, Loader2,
     Search, Filter, ChevronDown, Download, FileText, UserPlus,
-    Eye, Sparkles, ChevronUp
+    Eye, Sparkles, ChevronUp, BookOpen
 } from "lucide-react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -302,6 +303,16 @@ export default function ICTPrintQueuePage() {
                     </div>
 
                     <div className="flex items-center gap-2">
+                        <Link href="/admin/ict/guide">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                className="rounded-xl border-indigo-200 text-indigo-700 hover:bg-indigo-50 font-bold text-xs gap-1.5"
+                            >
+                                <BookOpen className="w-4 h-4" />
+                                Operational Guide
+                            </Button>
+                        </Link>
                         <Button
                             variant="outline"
                             size="sm"
@@ -309,7 +320,7 @@ export default function ICTPrintQueuePage() {
                             className="rounded-xl border-indigo-200 text-indigo-700 hover:bg-indigo-50 font-bold text-xs gap-1.5"
                         >
                             <FileText className="w-4 h-4" />
-                            {showWorkflowGuide ? "Hide Printing Guide" : "Bulk Printing Guide"}
+                            {showWorkflowGuide ? "Hide Quick Guide" : "Quick Workflow"}
                         </Button>
                         <Button
                             size="sm"

@@ -392,6 +392,7 @@ const adminMenuItems: MenuItem[] = [
             { name: "Cohort Groups", href: "/admin/cohorts" },
             { name: "Identity Center", href: "/admin/identity" },
             { name: "ICT Print Queue", href: "/admin/ict/print-queue" },
+            { name: "ID Card Print Guide", href: "/admin/ict/guide" },
             { name: "Photo Capture", href: "/admin/ict/photo-capture" },
             { name: "Course Reg Print", href: "/admin/ict/course-registrations" },
             { name: "RBAC Settings", href: "/admin/rbac" },
