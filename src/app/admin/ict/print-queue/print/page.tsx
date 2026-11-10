@@ -84,6 +84,13 @@ function PrintContent() {
         else toast.error(res.error);
     }
 
+    const deptSummary = cards.reduce((acc: Record<string, number>, c: any) => {
+        const d = (c.deptName || "General").trim();
+        acc[d] = (acc[d] || 0) + 1;
+        return acc;
+    }, {});
+    const deptKeys = Object.keys(deptSummary);
+
     return (
         <div className="min-h-screen bg-slate-100">
             <style>{`
@@ -108,7 +115,16 @@ function PrintContent() {
                 <Button variant="ghost" size="sm" onClick={() => window.close()} className="gap-1">
                     <ArrowLeft className="w-4 h-4" /> Close
                 </Button>
-                <span className="text-sm font-bold text-slate-700">{cards.length} card(s) ready (CR80 PVC)</span>
+                <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-slate-700 bg-slate-100 px-2.5 py-1 rounded-lg">
+                        {cards.length} card(s) ready (CR80 PVC)
+                    </span>
+                    {deptKeys.length > 0 && (
+                        <span className="text-xs font-black text-indigo-700 bg-indigo-50 border border-indigo-200 px-2.5 py-1 rounded-lg">
+                            {deptKeys.length === 1 ? `Batch: ${deptKeys[0]}` : `Batches: ${deptKeys.length} Departments`}
+                        </span>
+                    )}
+                </div>
                 <select
                     value={side}
                     onChange={(e) => setSide(e.target.value as Side)}

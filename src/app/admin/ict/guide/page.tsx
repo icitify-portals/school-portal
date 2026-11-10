@@ -269,13 +269,16 @@ export default function ICTIDCardGuidePage() {
                                     Go to <strong>ICT Print Queue</strong> (<code className="text-indigo-600 font-mono">/admin/ict/print-queue</code>).
                                 </li>
                                 <li>
-                                    Click <strong>&quot;Select All on Page&quot;</strong> or check the desired students (e.g. 20–50 students).
+                                    Filter by <strong>Department (Batch)</strong> (e.g. <em>Computer Science</em>, <em>Statistics</em>, <em>Accountancy</em>) and <strong>Level</strong> (e.g. <em>Level 1 Freshmen</em>) to isolate a specific department.
                                 </li>
                                 <li>
-                                    Click the green <strong>&quot;Print Selected (X)&quot;</strong> button at the top right.
+                                    Click <strong>&quot;Select All on Page&quot;</strong> or check the desired students in that departmental batch.
                                 </li>
                                 <li>
-                                    The system opens the dedicated batch print engine (<code className="text-indigo-600 font-mono">/admin/ict/print-queue/print?ids=...</code>) containing all cards arranged consecutively.
+                                    Click the green <strong>&quot;Print Selected (X)&quot;</strong> button. The cards are automatically pre-sorted by <strong>Department ➔ Level ➔ Matric Number</strong>.
+                                </li>
+                                <li>
+                                    The system opens the dedicated batch print engine (<code className="text-indigo-600 font-mono">/admin/ict/print-queue/print?ids=...</code>) with the departmental batch ready for printing.
                                 </li>
                                 <li>
                                     Press <kbd className="px-1.5 py-0.5 bg-slate-100 border rounded font-mono text-[10px]">Ctrl + P</kbd> (or click Print). In the browser dialog:

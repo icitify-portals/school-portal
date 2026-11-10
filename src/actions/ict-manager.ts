@@ -106,6 +106,13 @@ export async function getPrintQueue(filters?: {
             whereConditions = and(whereConditions, eq(students.programmeType, filters.programmeType as any));
         }
 
+        if (filters?.departmentId && String(filters.departmentId) !== "all") {
+            const parsedDept = parseInt(String(filters.departmentId));
+            if (!isNaN(parsedDept)) {
+                whereConditions = and(whereConditions, eq(students.deptId, parsedDept));
+            }
+        }
+
         if (filters?.search) {
             const q = `%${filters.search}%`;
             whereConditions = and(
@@ -458,7 +465,7 @@ export async function getPrintCardsByIds(cardIds: number[]) {
         .leftJoin(students, and(eq(users.id, students.userId), isNull(students.deletedAt)))
         .leftJoin(departments, eq(students.deptId, departments.id))
         .where(inArray(idCards.id, cardIds))
-        .orderBy(users.name);
+        .orderBy(departments.name, students.currentLevel, students.matricNumber, users.name);
 
         // Enhance with fallback photos and signatures from admission applications
         const enhancedCards = await Promise.all(cards.map(async (c) => {
@@ -535,7 +542,12 @@ export async function getStudentsWithoutCards(filters?: {
             sql`${students.deletedAt} IS NULL`,
             sql`NOT EXISTS (SELECT 1 FROM id_cards ic WHERE ic.user_id = ${students.userId} AND ic.status = 'active')`
         );
-        if (filters?.departmentId) where = and(where, eq(students.deptId, filters.departmentId));
+        if (filters?.departmentId && String(filters.departmentId) !== "all") {
+            const parsedDept = parseInt(String(filters.departmentId));
+            if (!isNaN(parsedDept)) {
+                where = and(where, eq(students.deptId, parsedDept));
+            }
+        }
         if (filters?.search) {
             const q = `%${filters.search}%`;
             where = and(where, or(like(users.name, q), like(students.matricNumber, q)));

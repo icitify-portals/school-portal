@@ -20,6 +20,7 @@ import {
     getPrintQueue, getICTStaff, assignPrintJob,
     bulkUpdatePrintStatus, getPrintQueueStats, issueBatchIDCards, getStudentsWithoutCards, processAcceptancePaidFreshmenIDCards
 } from "@/actions/ict-manager";
+import { getDepartments } from "@/actions/departments";
 import IDCardTemplate1 from "@/components/id-cards/IDCardTemplate1";
 
 const STATUS_COLORS: Record<string, string> = {
@@ -42,6 +43,8 @@ export default function ICTPrintQueuePage() {
     const [filterStatus, setFilterStatus] = useState("pending");
     const [filterProgramme, setFilterProgramme] = useState("all");
     const [filterLevel, setFilterLevel] = useState("all");
+    const [filterDept, setFilterDept] = useState("all");
+    const [departmentsList, setDepartmentsList] = useState<any[]>([]);
     const [search, setSearch] = useState("");
     const [assigning, setAssigning] = useState(false);
     const [updating, setUpdating] = useState(false);
@@ -73,6 +76,7 @@ export default function ICTPrintQueuePage() {
                 status: filterStatus === "all" ? undefined : filterStatus,
                 programmeType: filterProgramme === "all" ? undefined : filterProgramme,
                 level: filterLevel === "all" ? undefined : filterLevel,
+                departmentId: filterDept === "all" ? undefined : parseInt(filterDept),
                 search: search || undefined,
                 limit: pageSize,
                 offset: (page - 1) * pageSize,
@@ -112,7 +116,7 @@ export default function ICTPrintQueuePage() {
         } finally {
             setLoading(false);
         }
-    }, [filterStatus, filterProgramme, filterLevel, search, page]);
+    }, [filterStatus, filterProgramme, filterLevel, filterDept, search, page]);
 
     useEffect(() => {
         loadQueue();
@@ -124,6 +128,9 @@ export default function ICTPrintQueuePage() {
         });
         getPrintQueueStats().then((res) => {
             if (res.success) setStats(res.data);
+        });
+        getDepartments().then((res) => {
+            if (Array.isArray(res)) setDepartmentsList(res);
         });
     }, []);
 
@@ -206,11 +213,17 @@ export default function ICTPrintQueuePage() {
     const [issuing, setIssuing] = useState(false);
     const [processingFreshmen, setProcessingFreshmen] = useState(false);
     const [issueLevelFilter, setIssueLevelFilter] = useState<'all' | 'freshmen' | 'returning_ready' | 'returning_incomplete'>('all');
+    const [issueDeptFilter, setIssueDeptFilter] = useState("all");
 
     const loadIssueList = useCallback(async () => {
         setIssueLoading(true);
         try {
-            const res = await getStudentsWithoutCards({ search: issueSearch || undefined, levelFilter: issueLevelFilter, limit: 200 });
+            const res = await getStudentsWithoutCards({
+                search: issueSearch || undefined,
+                levelFilter: issueLevelFilter,
+                departmentId: issueDeptFilter === "all" ? undefined : parseInt(issueDeptFilter),
+                limit: 200
+            });
             if (res.success) setIssueList(res.data);
             else toast.error(res.error);
         } catch (err: any) {
@@ -219,7 +232,7 @@ export default function ICTPrintQueuePage() {
         } finally {
             setIssueLoading(false);
         }
-    }, [issueSearch, issueLevelFilter]);
+    }, [issueSearch, issueLevelFilter, issueDeptFilter]);
 
     useEffect(() => {
         if (showIssue) loadIssueList();
@@ -527,8 +540,19 @@ export default function ICTPrintQueuePage() {
                                     placeholder="Search name or matric number..."
                                     value={issueSearch}
                                     onChange={(e) => setIssueSearch(e.target.value)}
-                                    className="h-10 rounded-xl max-w-sm"
+                                    className="h-10 rounded-xl max-w-xs"
                                 />
+                                <Select value={issueDeptFilter} onValueChange={setIssueDeptFilter}>
+                                    <SelectTrigger className="w-56 h-10 rounded-xl text-xs bg-white">
+                                        <SelectValue placeholder="All Departments" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all" className="text-xs">All Departments</SelectItem>
+                                        {departmentsList.map((d: any) => (
+                                            <SelectItem key={d.id} value={String(d.id)} className="text-xs">{d.name}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
                                 <Button size="sm" variant="outline" className="rounded-lg text-xs"
                                     onClick={() => {
                                         const eligibleIds = issueList.filter(s => s.isEligible).map(s => s.userId);
@@ -612,6 +636,20 @@ export default function ICTPrintQueuePage() {
                                     <SelectItem value="all">All Programmes</SelectItem>
                                     <SelectItem value="ND">ND</SelectItem>
                                     <SelectItem value="HND">HND</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div>
+                            <Label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Department (Batch)</Label>
+                            <Select value={filterDept} onValueChange={(v) => { setFilterDept(v); setPage(1); }}>
+                                <SelectTrigger className="w-52 h-10 rounded-xl text-xs">
+                                    <SelectValue placeholder="All Departments" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all" className="text-xs">All Departments</SelectItem>
+                                    {departmentsList.map((d: any) => (
+                                        <SelectItem key={d.id} value={String(d.id)} className="text-xs">{d.name}</SelectItem>
+                                    ))}
                                 </SelectContent>
                             </Select>
                         </div>
