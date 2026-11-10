@@ -252,6 +252,294 @@ export async function getStudents(options: { search?: string, page?: number, pag
     }
 }
 
+function escapeCsv(val: any): string {
+    if (val === null || val === undefined) return '""';
+    const str = String(val).replace(/"/g, '""');
+    return `"${str}"`;
+}
+
+export async function exportStudentsAction(options: { 
+    search?: string; 
+    level?: number | string; 
+    sessionId?: string; 
+    semester?: string; 
+    departmentId?: number; 
+    programmeId?: number; 
+    status?: string; 
+    graduationYear?: number | string; 
+} = {}) {
+    try {
+        const allowed = await hasPermission("students.view") || 
+            await hasPermission("students.manage") || 
+            await hasPermission("admin.students.manage") || 
+            await hasRole(["admin", "superadmin", "icitify_dev", "registrar", "admission_officer", "record_officer", "ict_manager", "bursar", "bursary", "accountant", "hod", "dean"]);
+        if (!allowed) {
+            return { success: false, error: "Access denied." };
+        }
+
+        const { search = "", level, sessionId, semester } = options;
+        const searchPattern = `%${search}%`;
+
+        // Enforce role-based department and faculty scopes
+        const session = await auth();
+        const userRole = (session?.user as any)?.role?.toLowerCase() || "";
+        const actorId = session?.user?.id ? parseInt(session.user.id) : null;
+
+        let scopeCondition: any = undefined;
+
+        if (userRole === "hod" && actorId) {
+            const [profile] = await db.select({ departmentId: staffProfiles.departmentId })
+                .from(staffProfiles)
+                .where(eq(staffProfiles.userId, actorId))
+                .limit(1);
+            const hodDeptId = profile?.departmentId;
+            if (!hodDeptId) {
+                return { success: true, csvData: "", filename: "empty.csv", count: 0 };
+            }
+            scopeCondition = eq(students.deptId, hodDeptId);
+        } else if (userRole === "dean" && actorId) {
+            const [profile] = await db.select({ facultyId: departments.facultyId })
+                .from(staffProfiles)
+                .leftJoin(departments, eq(staffProfiles.departmentId, departments.id))
+                .where(eq(staffProfiles.userId, actorId))
+                .limit(1);
+            const deanFacultyId = profile?.facultyId;
+            if (!deanFacultyId) {
+                return { success: true, csvData: "", filename: "empty.csv", count: 0 };
+            }
+            const depts = await db.select({ id: departments.id })
+                .from(departments)
+                .where(eq(departments.facultyId, deanFacultyId));
+            const deanDeptIds = depts.map(d => d.id);
+            if (deanDeptIds.length === 0) {
+                return { success: true, csvData: "", filename: "empty.csv", count: 0 };
+            }
+            scopeCondition = inArray(students.deptId, deanDeptIds);
+        }
+
+        let levelCondition: any = undefined;
+        if (typeof level === 'string') {
+            switch(level) {
+                case "ND 1":
+                    levelCondition = and(
+                        eq(students.currentLevel, 1), 
+                        eq(programmes.programmeType, 'ND'),
+                        sql`(${students.status} NOT IN ('nd_graduant', 'nd_graduated', 'hnd_graduant', 'hnd_graduated') OR ${students.status} IS NULL)`
+                    );
+                    break;
+                case "ND 2":
+                    levelCondition = and(
+                        eq(students.currentLevel, 2), 
+                        eq(programmes.programmeType, 'ND'),
+                        sql`(${students.status} NOT IN ('nd_graduant', 'nd_graduated', 'hnd_graduant', 'hnd_graduated') OR ${students.status} IS NULL)`
+                    );
+                    break;
+                case "ND_GRADUANT":
+                case "ND_GRADUATED":
+                case "ND Graduant":
+                case "ND Graduated":
+                    levelCondition = or(eq(students.status, 'nd_graduant'), eq(students.status, 'nd_graduated'));
+                    break;
+                case "HND 1":
+                    levelCondition = and(
+                        eq(students.currentLevel, 1), 
+                        eq(programmes.programmeType, 'HND'),
+                        sql`(${students.status} NOT IN ('nd_graduant', 'nd_graduated', 'hnd_graduant', 'hnd_graduated') OR ${students.status} IS NULL)`
+                    );
+                    break;
+                case "HND 2":
+                    levelCondition = and(
+                        eq(students.currentLevel, 2), 
+                        eq(programmes.programmeType, 'HND'),
+                        sql`(${students.status} NOT IN ('nd_graduant', 'nd_graduated', 'hnd_graduant', 'hnd_graduated') OR ${students.status} IS NULL)`
+                    );
+                    break;
+                case "HND_GRADUANT":
+                case "HND_GRADUATED":
+                case "HND Graduant":
+                case "HND Graduated":
+                    levelCondition = or(eq(students.status, 'hnd_graduant'), eq(students.status, 'hnd_graduated'));
+                    break;
+                default:
+                    if (!isNaN(Number(level))) {
+                        levelCondition = eq(students.currentLevel, Number(level));
+                    }
+            }
+        } else if (level !== undefined && level !== null) {
+            levelCondition = eq(students.currentLevel, level);
+        }
+
+        const departmentCondition = options.departmentId ? eq(students.deptId, options.departmentId) : undefined;
+        const programmeCondition = options.programmeId ? eq(students.programmeId, options.programmeId) : undefined;
+
+        const levelImpliesGraduantStatus = level === "ND_GRADUANT" || level === "ND_GRADUATED"
+            || level === "ND Graduant" || level === "ND Graduated"
+            || level === "HND_GRADUANT" || level === "HND_GRADUATED"
+            || level === "HND Graduant" || level === "HND Graduated";
+
+        let statusCondition: any = undefined;
+        if (!levelImpliesGraduantStatus && options.status && options.status !== "all") {
+            if (options.status === "graduant") {
+                statusCondition = sql`${students.status} IN ('nd_graduant','hnd_graduant','nd_graduated','hnd_graduated')`;
+            } else if (options.status === "nd_graduant") {
+                statusCondition = sql`${students.status} IN ('nd_graduant', 'nd_graduated')`;
+            } else if (options.status === "hnd_graduant") {
+                statusCondition = sql`${students.status} IN ('hnd_graduant', 'hnd_graduated')`;
+            } else {
+                statusCondition = sql`${students.status} = ${options.status}`;
+            }
+        }
+
+        const graduationYearCondition = options.graduationYear && !isNaN(Number(options.graduationYear))
+            ? sql`YEAR(${students.graduatedAt}) = ${Number(options.graduationYear)}`
+            : undefined;
+
+        let sessionCondition: any = undefined;
+        if (sessionId === "unassigned") {
+            sessionCondition = and(
+                isNull(students.currentSessionId),
+                isNull(students.admissionSessionId)
+            );
+        } else if (sessionId && !isNaN(Number(sessionId))) {
+            const sid = Number(sessionId);
+            const hasEnrollmentsQuery = db.select({ studentId: enrollments.studentId })
+                .from(enrollments)
+                .where(eq(enrollments.sessionId, sid));
+            
+            sessionCondition = or(
+                eq(students.currentSessionId, sid),
+                eq(students.admissionSessionId, sid),
+                inArray(students.id, hasEnrollmentsQuery)
+            );
+        }
+
+        const semesterCondition = semester && !isNaN(Number(semester))
+            ? eq(students.currentSemester, Number(semester))
+            : undefined;
+
+        const countConditions = [
+            isNull(students.deletedAt),
+            levelCondition,
+            departmentCondition,
+            programmeCondition,
+            statusCondition,
+            graduationYearCondition,
+            sessionCondition,
+            semesterCondition,
+            search ? or(
+                like(users.name, searchPattern),
+                like(users.email, searchPattern),
+                like(users.phone, searchPattern),
+                like(students.matricNumber, searchPattern),
+                like(students.firstName, searchPattern),
+                like(students.lastName, searchPattern),
+                like(programmes.name, searchPattern)
+            ) : undefined,
+            scopeCondition
+        ].filter(Boolean);
+
+        const countWhere = countConditions.length > 0 ? and(...countConditions) : undefined;
+
+        const admissionSession = aliasedTable(academicSessions, "admission_session");
+
+        const studentRows = await db.select({
+            student: students,
+            user: users,
+            programme: programmes,
+            department: departments,
+            currentSession: {
+                id: academicSessions.id,
+                name: academicSessions.name,
+            },
+            admissionSession: {
+                id: admissionSession.id,
+                name: admissionSession.name
+            }
+        })
+            .from(students)
+            .leftJoin(users, eq(students.userId, users.id))
+            .leftJoin(programmes, eq(students.programmeId, programmes.id))
+            .leftJoin(departments, eq(students.deptId, departments.id))
+            .leftJoin(academicSessions, eq(students.currentSessionId, academicSessions.id))
+            .leftJoin(admissionSession, eq(students.admissionSessionId, admissionSession.id))
+            .where(countWhere)
+            .orderBy(departments.name, students.programmeType, students.currentLevel, students.matricNumber);
+
+        const headers = [
+            "S/N",
+            "Matric Number",
+            "Application Number",
+            "Full Name",
+            "First Name",
+            "Last Name",
+            "Email",
+            "Phone Number",
+            "Department",
+            "Programme",
+            "Programme Type",
+            "Level",
+            "Current Academic Session",
+            "Admission Session",
+            "Status",
+            "Payment Locked",
+            "Financial Locked"
+        ];
+
+        const rows = studentRows.map((r, index) => {
+            const s = r.student;
+            const u = r.user;
+            const p = r.programme;
+            const d = r.department;
+            const levelLabel = s.currentLevel 
+                ? `${s.programmeType || p?.programmeType || ""} ${s.currentLevel}`.trim() 
+                : (s.programmeType || "");
+            
+            return [
+                index + 1,
+                s.matricNumber || "",
+                s.admissionNumber || "",
+                u?.name || `${s.firstName || ""} ${s.lastName || ""}`.trim() || "",
+                s.firstName || "",
+                s.lastName || "",
+                u?.email || "",
+                u?.phone || "",
+                d?.name || "",
+                p?.name || "",
+                s.programmeType || p?.programmeType || "",
+                levelLabel,
+                r.currentSession?.name || "",
+                r.admissionSession?.name || "",
+                s.status || "",
+                s.isPaymentLocked ? "Yes" : "No",
+                s.isFinanciallyLocked ? "Yes" : "No"
+            ].map(escapeCsv).join(",");
+        });
+
+        const csvData = "\uFEFF" + [headers.map(escapeCsv).join(","), ...rows].join("\r\n");
+
+        let tag = "students";
+        if (options.sessionId && !isNaN(Number(options.sessionId))) {
+            const [sess] = await db.select({ name: academicSessions.name }).from(academicSessions).where(eq(academicSessions.id, Number(options.sessionId))).limit(1);
+            if (sess?.name) tag += `_${sess.name.replace(/[\/\\]/g, "_")}`;
+        }
+        if (options.level) {
+            tag += `_${String(options.level).replace(/[\/\s]/g, "_")}`;
+        }
+
+        const filename = `${tag}_export_${new Date().toISOString().split('T')[0]}.csv`;
+
+        return {
+            success: true,
+            csvData,
+            filename,
+            count: studentRows.length
+        };
+    } catch (error: any) {
+        console.error("Failed to export students:", error);
+        return { success: false, error: error.message || "Failed to export students", csvData: "", filename: "", count: 0 };
+    }
+}
+
 /**
  * Session options for the admin student filter.
  *

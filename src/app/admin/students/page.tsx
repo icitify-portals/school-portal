@@ -5,9 +5,9 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Users, CheckCircle, Loader2, Search, FileUp, X, FileText, ShieldAlert, QrCode, Trash2, AlertTriangle, Lock, Unlock, CreditCard } from "lucide-react";
+import { Users, CheckCircle, Loader2, Search, FileUp, X, FileText, ShieldAlert, QrCode, Trash2, AlertTriangle, Lock, Unlock, CreditCard, Download } from "lucide-react";
 import { getDepartments } from "@/actions/departments";
-import { getStudents, approveStudent, bulkImportStudents, toggleFinancialLock, togglePaymentLock, bulkTogglePaymentLock, getStudentSessionOptions, deleteStudentAccount, bulkDeleteStudentAccounts } from "@/actions/students";
+import { getStudents, approveStudent, bulkImportStudents, toggleFinancialLock, togglePaymentLock, bulkTogglePaymentLock, getStudentSessionOptions, deleteStudentAccount, bulkDeleteStudentAccounts, exportStudentsAction } from "@/actions/students";
 import { impersonateUser } from "@/actions/impersonation";
 import { generateIdentityQRCodeAction } from "@/actions/utility-actions";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
@@ -48,6 +48,7 @@ function StudentsPageContent() {
     const [deletingStudent, setDeletingStudent] = useState(false);
     const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
     const [bulkDeleting, setBulkDeleting] = useState(false);
+    const [exporting, setExporting] = useState(false);
 
     const page = parseInt(searchParams.get("page") || "1");
     const pageSize = parseInt(searchParams.get("pageSize") || "10");
@@ -388,6 +389,44 @@ function StudentsPageContent() {
         }
     };
 
+    const handleExport = async () => {
+        setExporting(true);
+        toast.info("Preparing student export data...");
+        try {
+            const res = await exportStudentsAction({
+                search,
+                level,
+                sessionId: sessionParam,
+                semester: semesterParam,
+                departmentId: deptIdParam ? parseInt(deptIdParam) : undefined,
+                status: statusParam,
+                graduationYear: gradYearParam
+            });
+
+            if (!res.success || !res.csvData) {
+                toast.error(res.error || "Failed to export student data");
+                return;
+            }
+
+            const blob = new Blob([res.csvData], { type: "text/csv;charset=utf-8;" });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.setAttribute("download", res.filename || "students_export.csv");
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+
+            toast.success(`Export complete! ${res.count.toLocaleString()} student records downloaded.`);
+        } catch (error: any) {
+            console.error("Export error:", error);
+            toast.error(error.message || "An error occurred during export");
+        } finally {
+            setExporting(false);
+        }
+    };
+
     return (
         <div className="p-8 pb-32 max-w-[1600px] w-full mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
@@ -412,6 +451,16 @@ function StudentsPageContent() {
                     >
                         {showImporter ? <X className="w-4 h-4" /> : <FileUp className="w-4 h-4" />}
                         {showImporter ? "Close Importer" : "Import Students"}
+                    </Button>
+                    <Button
+                        onClick={handleExport}
+                        disabled={exporting || loading}
+                        variant="outline"
+                        className="rounded-xl font-bold text-xs uppercase tracking-widest h-10 border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 gap-2 shadow-xs disabled:opacity-60"
+                        title="Download CSV spreadsheet of students matching current filters"
+                    >
+                        {exporting ? <Loader2 className="w-4 h-4 animate-spin text-emerald-700" /> : <Download className="w-4 h-4 text-emerald-700" />}
+                        {exporting ? "Exporting..." : "Export CSV"}
                     </Button>
                     
                     <select
