@@ -378,10 +378,9 @@ export default function ICTPrintQueuePage() {
 
                             <div className="p-3 bg-white rounded-xl border border-slate-200 shadow-2xs space-y-1">
                                 <span className="w-6 h-6 rounded-full bg-blue-600 text-white font-black text-xs flex items-center justify-center">3</span>
-                                <h4 className="font-bold text-slate-900 text-xs mt-1">PVC Print Engine</h4>
+                                <h4 className="font-bold text-slate-900 text-xs mt-1">Print Engine (CR80 / A4)</h4>
                                 <p className="text-slate-600 leading-relaxed text-[11px]">
-                                    Click <strong>&quot;Print Selected (PVC)&quot;</strong>. A dedicated print sheet opens formatted to CR80 dimensions (85.6 &times; 53.98mm).
-                                    Choose <strong>Duplex (Front+Back)</strong> or <strong>Single-Sided</strong> according to your PVC thermal printer specifications.
+                                    Click <strong>&quot;Print Selected&quot;</strong>. Choose <strong>PVC Printer</strong> (CR80 85.6&times;54mm) or <strong>A4 Sheet (2-Column Cut &amp; Laminate)</strong>. In Chrome Print Dialog: set <strong>Margins: None</strong>, <strong>Scale: 100%</strong>, and check <strong>Background Graphics</strong>.
                                 </p>
                             </div>
 

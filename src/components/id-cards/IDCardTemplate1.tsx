@@ -174,7 +174,11 @@ export default function IDCardTemplate1({
                     transform: rotateY(180deg);
                 }
 
-                /* Print Engine overrides for thermal/dye-sub PVC Card Printers */
+                /* Print Engine overrides - strictly scoped to template root so external print pages are never contaminated */
+                .print-only {
+                    display: none;
+                }
+
                 @media print {
                     body * {
                         visibility: hidden !important;
@@ -184,27 +188,54 @@ export default function IDCardTemplate1({
                         visibility: visible !important;
                     }
                     .id-card-template-root {
-                        position: absolute;
-                        top: 0;
-                        left: 0;
-                        width: 100%;
+                        position: absolute !important;
+                        top: 0 !important;
+                        left: 0 !important;
+                        width: 100% !important;
+                        margin: 0 !important;
+                        padding: 0 !important;
+                        background: transparent !important;
                     }
+                    .no-print,
                     .no-print-controls {
                         display: none !important;
                     }
-                    .id-pvc-card {
+                    .print-only {
+                        display: flex !important;
+                        flex-direction: column !important;
+                        align-items: center !important;
+                        justify-content: center !important;
+                        width: 100% !important;
+                    }
+                    .id-card-template-root .id-card-print-box {
                         width: 85.6mm !important;
                         height: 53.98mm !important;
-                        border-radius: 3.18mm !important;
-                        box-shadow: none !important;
-                        border: 0.2mm solid #d1d5db !important;
-                        page-break-inside: avoid !important;
+                        overflow: hidden !important;
                         margin: 4mm auto !important;
+                        page-break-inside: avoid !important;
+                        box-shadow: none !important;
+                        border: 0.2mm solid #cbd5e1 !important;
+                        border-radius: 3.18mm !important;
+                    }
+                    .id-card-template-root .id-card-print-box .id-pvc-card {
+                        width: 504px !important;
+                        height: 318px !important;
+                        min-width: 504px !important;
+                        min-height: 318px !important;
+                        max-width: 504px !important;
+                        max-height: 318px !important;
+                        transform: scale(0.64192) !important;
+                        transform-origin: top left !important;
+                        border-radius: 0 !important;
+                        box-shadow: none !important;
+                        border: none !important;
+                        margin: 0 !important;
                         -webkit-print-color-adjust: exact !important;
                         print-color-adjust: exact !important;
                     }
                     .print-break-after {
                         page-break-after: always !important;
+                        break-after: page !important;
                     }
                 }
             `}</style>
@@ -275,50 +306,15 @@ export default function IDCardTemplate1({
                 </div>
             )}
 
-            {/* CARD CONTAINER */}
-            {activeTab === "both" ? (
-                /* Side-by-side mode for batch inspection & double-sided printing */
-                <div className="flex flex-wrap items-center justify-center gap-6">
-                    <div className="flex flex-col items-center gap-2">
-                        <span className="no-print-controls text-[11px] font-black uppercase tracking-widest text-slate-400">
-                            Front Side (CR80 PVC)
-                        </span>
-                        <FrontCard
-                            studentName={studentName}
-                            matricNumber={matricNumber}
-                            department={department}
-                            programmeName={programmeName}
-                            formattedLevel={formattedLevel}
-                            programmeType={programmeType}
-                            phoneNumber={phoneNumber}
-                            bloodGroup={bloodGroup}
-                            genotype={genotype}
-                            photoUrl={photoUrl}
-                            signatureUrl={signatureUrl}
-                            institutionName={institutionName}
-                            campusAddress={campusAddress}
-                            postalAddress={postalAddress}
-                            showWatermark={showWatermark}
-                        />
-                    </div>
-                    <div className="flex flex-col items-center gap-2">
-                        <span className="no-print-controls text-[11px] font-black uppercase tracking-widest text-slate-400">
-                            Back Side (Security Barcode)
-                        </span>
-                        <BackCard
-                            barcodeCanvasRef={barcodeCanvasBackRef}
-                            barcodeValue={barcodeValue}
-                            qrDataUrl={qrDataUrl}
-                            showWatermark={showWatermark}
-                        />
-                    </div>
-                </div>
-            ) : (
-                /* Interactive 3D Flip Card View */
-                <div className="id-flip-perspective p-2">
-                    <div className={`id-flip-inner ${activeTab === "back" ? "is-flipped" : ""}`}>
-                        {/* FRONT FACE */}
-                        <div className="id-flip-face face-front">
+            {/* SCREEN VIEW (Hidden when printing) */}
+            <div className="no-print w-full flex flex-col items-center">
+                {activeTab === "both" ? (
+                    /* Side-by-side mode for batch inspection & double-sided printing */
+                    <div className="flex flex-wrap items-center justify-center gap-6">
+                        <div className="flex flex-col items-center gap-2">
+                            <span className="text-[11px] font-black uppercase tracking-widest text-slate-400">
+                                Front Side (CR80 PVC)
+                            </span>
                             <FrontCard
                                 studentName={studentName}
                                 matricNumber={matricNumber}
@@ -337,9 +333,10 @@ export default function IDCardTemplate1({
                                 showWatermark={showWatermark}
                             />
                         </div>
-
-                        {/* BACK FACE */}
-                        <div className="id-flip-face face-back">
+                        <div className="flex flex-col items-center gap-2">
+                            <span className="text-[11px] font-black uppercase tracking-widest text-slate-400">
+                                Back Side (Security Barcode)
+                            </span>
                             <BackCard
                                 barcodeCanvasRef={barcodeCanvasBackRef}
                                 barcodeValue={barcodeValue}
@@ -348,8 +345,79 @@ export default function IDCardTemplate1({
                             />
                         </div>
                     </div>
-                </div>
-            )}
+                ) : (
+                    /* Interactive 3D Flip Card View */
+                    <div className="id-flip-perspective p-2">
+                        <div className={`id-flip-inner ${activeTab === "back" ? "is-flipped" : ""}`}>
+                            {/* FRONT FACE */}
+                            <div className="id-flip-face face-front">
+                                <FrontCard
+                                    studentName={studentName}
+                                    matricNumber={matricNumber}
+                                    department={department}
+                                    programmeName={programmeName}
+                                    formattedLevel={formattedLevel}
+                                    programmeType={programmeType}
+                                    phoneNumber={phoneNumber}
+                                    bloodGroup={bloodGroup}
+                                    genotype={genotype}
+                                    photoUrl={photoUrl}
+                                    signatureUrl={signatureUrl}
+                                    institutionName={institutionName}
+                                    campusAddress={campusAddress}
+                                    postalAddress={postalAddress}
+                                    showWatermark={showWatermark}
+                                />
+                            </div>
+
+                            {/* BACK FACE */}
+                            <div className="id-flip-face face-back">
+                                <BackCard
+                                    barcodeCanvasRef={barcodeCanvasBackRef}
+                                    barcodeValue={barcodeValue}
+                                    qrDataUrl={qrDataUrl}
+                                    showWatermark={showWatermark}
+                                />
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            {/* DEDICATED PRINT VIEW (Exact 85.6mm x 53.98mm 1:1 CR80 dimensions, never distorted by 3D transforms) */}
+            <div className="print-only">
+                {(activeTab === "front" || activeTab === "both") && (
+                    <div className="id-card-print-box print-break-after">
+                        <FrontCard
+                            studentName={studentName}
+                            matricNumber={matricNumber}
+                            department={department}
+                            programmeName={programmeName}
+                            formattedLevel={formattedLevel}
+                            programmeType={programmeType}
+                            phoneNumber={phoneNumber}
+                            bloodGroup={bloodGroup}
+                            genotype={genotype}
+                            photoUrl={photoUrl}
+                            signatureUrl={signatureUrl}
+                            institutionName={institutionName}
+                            campusAddress={campusAddress}
+                            postalAddress={postalAddress}
+                            showWatermark={false}
+                        />
+                    </div>
+                )}
+                {(activeTab === "back" || activeTab === "both") && (
+                    <div className="id-card-print-box">
+                        <BackCard
+                            barcodeCanvasRef={barcodeCanvasBackRef}
+                            barcodeValue={barcodeValue}
+                            qrDataUrl={qrDataUrl}
+                            showWatermark={false}
+                        />
+                    </div>
+                )}
+            </div>
 
             {/* Attendance Scanner Notice Banner */}
             <div className="no-print-controls mt-4 max-w-[504px] w-full p-3 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between text-xs text-emerald-900 shadow-sm">
