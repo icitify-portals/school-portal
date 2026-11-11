@@ -3921,6 +3921,104 @@ export const idCardsRelations = relations(idCards, ({ one }) => ({
   }),
 }));
 
+// --- ID CARD PRINTER CALIBRATION PROFILES ---
+export const idCardPrinterProfiles = mysqlTable('id_card_printer_profiles', {
+  id: int('id').autoincrement().primaryKey(),
+  name: varchar('name', { length: 100 }).notNull(),
+  printerModel: mysqlEnum('printer_model', ['canon_ts704a', 'canon_ts705a', 'generic_cr80', 'a4_sheet']).default('canon_ts704a'),
+  carrierType: mysqlEnum('carrier_type', ['inksystem_mp_2card', 'single_cr80', 'a4_grid']).default('inksystem_mp_2card'),
+  trayWidthMm: decimal('tray_width_mm', { precision: 8, scale: 2 }).default('130.00'),
+  trayHeightMm: decimal('tray_height_mm', { precision: 8, scale: 2 }).default('253.00'),
+  slot1XOffsetMm: decimal('slot1_x_offset_mm', { precision: 8, scale: 2 }).default('22.20'),
+  slot1YOffsetMm: decimal('slot1_y_offset_mm', { precision: 8, scale: 2 }).default('32.00'),
+  slot2XOffsetMm: decimal('slot2_x_offset_mm', { precision: 8, scale: 2 }).default('22.20'),
+  slot2YOffsetMm: decimal('slot2_y_offset_mm', { precision: 8, scale: 2 }).default('100.00'),
+  cardWidthMm: decimal('card_width_mm', { precision: 8, scale: 2 }).default('85.60'),
+  cardHeightMm: decimal('card_height_mm', { precision: 8, scale: 2 }).default('53.98'),
+  scalePercent: decimal('scale_percent', { precision: 5, scale: 2 }).default('100.00'),
+  bleedMm: decimal('bleed_mm', { precision: 5, scale: 2 }).default('0.00'),
+  orientation: mysqlEnum('orientation', ['portrait', 'landscape']).default('portrait'),
+  mediaTypeRef: varchar('media_type_ref', { length: 100 }).default('Multi-Purpose Tray'),
+  isDefault: boolean('is_default').default(false),
+  notes: text('notes'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
+});
+
+// --- ID CARD PRINT BATCHES & AUDIT HISTORY ---
+export const idCardPrintBatches = mysqlTable('id_card_print_batches', {
+  id: int('id').autoincrement().primaryKey(),
+  batchNumber: varchar('batch_number', { length: 60 }).unique().notNull(),
+  operatorId: int('operator_id').references(() => users.id),
+  printerProfileId: int('printer_profile_id').references(() => idCardPrinterProfiles.id),
+  filterSessionId: int('filter_session_id').references(() => academicSessions.id),
+  filterDeptId: int('filter_dept_id').references(() => departments.id),
+  filterLevel: varchar('filter_level', { length: 50 }),
+  totalCards: int('total_cards').notNull().default(0),
+  totalTrays: int('total_trays').notNull().default(0),
+  frontStatus: mysqlEnum('front_status', ['pending', 'in_progress', 'completed', 'failed']).default('pending'),
+  backStatus: mysqlEnum('back_status', ['pending', 'in_progress', 'completed', 'failed']).default('pending'),
+  status: mysqlEnum('status', ['queued', 'printing', 'completed', 'partial', 'cancelled']).default('queued'),
+  notes: text('notes'),
+  createdAt: timestamp('created_at').defaultNow(),
+  completedAt: timestamp('completed_at'),
+});
+
+export const idCardPrintBatchItems = mysqlTable('id_card_print_batch_items', {
+  id: int('id').autoincrement().primaryKey(),
+  batchId: int('batch_id').references(() => idCardPrintBatches.id, { onDelete: 'cascade' }).notNull(),
+  idCardId: int('id_card_id').references(() => idCards.id),
+  studentId: int('student_id').references(() => students.id),
+  trayNumber: int('tray_number').notNull(),
+  slotNumber: int('slot_number').notNull(), // 1 (Top/Lead) or 2 (Bottom/Trail)
+  frontPrinted: boolean('front_printed').default(false),
+  backPrinted: boolean('back_printed').default(false),
+  reprintCount: int('reprint_count').default(0),
+  failed: boolean('failed').default(false),
+  failureReason: text('failure_reason'),
+  printedAt: timestamp('printed_at'),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const idCardPrinterProfilesRelations = relations(idCardPrinterProfiles, ({ many }) => ({
+  batches: many(idCardPrintBatches),
+}));
+
+export const idCardPrintBatchesRelations = relations(idCardPrintBatches, ({ one, many }) => ({
+  operator: one(users, {
+    fields: [idCardPrintBatches.operatorId],
+    references: [users.id],
+  }),
+  printerProfile: one(idCardPrinterProfiles, {
+    fields: [idCardPrintBatches.printerProfileId],
+    references: [idCardPrinterProfiles.id],
+  }),
+  department: one(departments, {
+    fields: [idCardPrintBatches.filterDeptId],
+    references: [departments.id],
+  }),
+  session: one(academicSessions, {
+    fields: [idCardPrintBatches.filterSessionId],
+    references: [academicSessions.id],
+  }),
+  items: many(idCardPrintBatchItems),
+}));
+
+export const idCardPrintBatchItemsRelations = relations(idCardPrintBatchItems, ({ one }) => ({
+  batch: one(idCardPrintBatches, {
+    fields: [idCardPrintBatchItems.batchId],
+    references: [idCardPrintBatches.id],
+  }),
+  idCard: one(idCards, {
+    fields: [idCardPrintBatchItems.idCardId],
+    references: [idCards.id],
+  }),
+  student: one(students, {
+    fields: [idCardPrintBatchItems.studentId],
+    references: [students.id],
+  }),
+}));
+
 // --- CMS RELATIONS ---
 export const cmsPagesRelations = relations(cmsPages, ({ one, many }) => ({
   author: one(users, {

@@ -6,19 +6,22 @@ import bwipjs from "bwip-js";
 import QRCode from "qrcode";
 import {
     Printer, Loader2, CheckCircle2, ArrowLeft, Settings2,
-    HelpCircle, FileText, CreditCard, Scissors, Sparkles, AlertTriangle
+    HelpCircle, FileText, CreditCard, Scissors, Sparkles, AlertTriangle,
+    Layers, Sliders, ChevronDown, Check, Info, ShieldAlert
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { getPrintCardsByIds, bulkUpdatePrintStatus } from "@/actions/ict-manager";
+import { getPrinterProfiles } from "@/actions/id-card-printer";
 import { FrontCard, BackCard } from "@/components/id-cards/IDCardTemplate1";
+import Canon2CardTray, { DEFAULT_CANON_TRAY_PROFILE, TrayProfile } from "@/components/id-cards/Canon2CardTray";
+import PrinterCalibrationDialog from "@/components/id-cards/PrinterCalibrationDialog";
 
-type Side = "both" | "front" | "back";
-type PaperMode = "pvc" | "a4";
+type Side = "front" | "back" | "both";
+type PaperMode = "canon_tray" | "pvc" | "a4";
 type A4Arrangement = "pair" | "sequential";
 
 // CR80 standard: 85.60mm x 53.98mm. Card design is 504px x 318px.
-// 85.6mm at 96 DPI = 323.5275px. 323.5275 / 504 = 0.64192.
 const BASE_SCALE = 323.5275 / 504;
 
 function levelLabel(card: any) {
@@ -56,7 +59,7 @@ function CardBack({ card }: { card: any }) {
     return <BackCard barcodeCanvasRef={canvasRef} barcodeValue={barcodeValue} qrDataUrl={qr} />;
 }
 
-// Single scaled card wrapper that ensures exact CR80 physical dimensions
+// Scaled Card Wrapper for CR80/A4 modes
 function ScaledCardBox({
     children,
     effectiveScale,
@@ -94,19 +97,60 @@ function PrintContent() {
     const ids = useMemo(() => (params.get("ids") || "").split(",").map(Number).filter(Boolean), [params]);
     const [cards, setCards] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
-    const [side, setSide] = useState<Side>("both");
-    const [paperMode, setPaperMode] = useState<PaperMode>("pvc");
+    const [preloadingImages, setPreloadingImages] = useState(false);
+    const [side, setSide] = useState<Side>("front");
+    const [paperMode, setPaperMode] = useState<PaperMode>("canon_tray");
     const [scalePercent, setScalePercent] = useState<number>(100);
     const [a4Arrangement, setA4Arrangement] = useState<A4Arrangement>("pair");
     const [marking, setMarking] = useState(false);
     const [showGuide, setShowGuide] = useState(false);
-    const [testSingleOnly, setTestSingleOnly] = useState(false);
+    const [selectedTrayOnly, setSelectedTrayOnly] = useState<number | "all">("all");
+
+    // Profiles from DB
+    const [profiles, setProfiles] = useState<any[]>([]);
+    const [activeProfile, setActiveProfile] = useState<any>(null);
+
+    const loadProfiles = () => {
+        getPrinterProfiles().then((res) => {
+            if (res.success && res.data.length > 0) {
+                setProfiles(res.data);
+                const def = res.data.find((p: any) => p.isDefault) || res.data[0];
+                setActiveProfile(def);
+            }
+        });
+    };
 
     useEffect(() => {
+        loadProfiles();
+    }, []);
+
+    // Load Cards and Pre-cache Wasabi Images
+    useEffect(() => {
         if (!ids.length) { setLoading(false); return; }
-        getPrintCardsByIds(ids).then((res) => {
-            if (res.success) setCards(res.data);
-            else toast.error(res.error);
+        getPrintCardsByIds(ids).then(async (res) => {
+            if (res.success) {
+                setCards(res.data);
+                // Pre-cache all images in browser memory to guarantee instant print rendering
+                setPreloadingImages(true);
+                const allUrls: string[] = [];
+                res.data.forEach((c: any) => {
+                    if (c.photoUrl) allUrls.push(c.photoUrl);
+                    if (c.signatureUrl) allUrls.push(c.signatureUrl);
+                });
+                await Promise.all(
+                    allUrls.map((url) => {
+                        return new Promise((resolve) => {
+                            const img = new Image();
+                            img.src = url;
+                            img.onload = () => resolve(true);
+                            img.onerror = () => resolve(false);
+                        });
+                    })
+                );
+                setPreloadingImages(false);
+            } else {
+                toast.error(res.error);
+            }
             setLoading(false);
         });
     }, [ids]);
@@ -126,17 +170,50 @@ function PrintContent() {
     }, {});
     const deptKeys = Object.keys(deptSummary);
 
-    // Compute effective CSS scale
-    const effectiveScale = BASE_SCALE * (scalePercent / 100);
+    // Active Tray Profile Mapping
+    const trayProfileConfig: TrayProfile = useMemo(() => {
+        if (activeProfile && activeProfile.carrierType === "inksystem_mp_2card") {
+            return {
+                trayWidthMm: Number(activeProfile.trayWidthMm || 130),
+                trayHeightMm: Number(activeProfile.trayHeightMm || 253),
+                slot1XOffsetMm: Number(activeProfile.slot1XOffsetMm || 22.2),
+                slot1YOffsetMm: Number(activeProfile.slot1YOffsetMm || 32.0),
+                slot2XOffsetMm: Number(activeProfile.slot2XOffsetMm || 22.2),
+                slot2YOffsetMm: Number(activeProfile.slot2YOffsetMm || 100.0),
+                cardWidthMm: Number(activeProfile.cardWidthMm || 85.6),
+                cardHeightMm: Number(activeProfile.cardHeightMm || 53.98),
+                scalePercent: Number(activeProfile.scalePercent || 100),
+                bleedMm: Number(activeProfile.bleedMm || 0.5),
+                orientation: activeProfile.orientation || "portrait",
+            };
+        }
+        return DEFAULT_CANON_TRAY_PROFILE;
+    }, [activeProfile]);
 
-    // Filter cards if test-single mode is enabled
-    const displayedCards = testSingleOnly && cards.length > 0 ? [cards[0]] : cards;
+    // Group cards into 2-card trays for Canon Multi-Purpose feed
+    const allTrays = useMemo(() => {
+        const list: { trayNumber: number; slot1: any; slot2: any | null }[] = [];
+        for (let i = 0; i < cards.length; i += 2) {
+            list.push({
+                trayNumber: Math.floor(i / 2) + 1,
+                slot1: cards[i],
+                slot2: cards[i + 1] || null,
+            });
+        }
+        return list;
+    }, [cards]);
+
+    const displayedTrays = useMemo(() => {
+        if (selectedTrayOnly === "all") return allTrays;
+        return allTrays.filter((t) => t.trayNumber === selectedTrayOnly);
+    }, [allTrays, selectedTrayOnly]);
+
+    const effectiveScale = BASE_SCALE * (scalePercent / 100);
 
     return (
         <div className="min-h-screen bg-slate-100 print:bg-white text-slate-900">
-            {/* Dynamic Print Stylesheet */}
+            {/* Dynamic Print Stylesheet for Selected Mode */}
             <style>{`
-                /* Base Screen and Reset Styles */
                 .id-pvc-card {
                     width: 504px !important;
                     height: 318px !important;
@@ -152,7 +229,6 @@ function PrintContent() {
                     box-shadow: none !important;
                 }
 
-                /* Scaled Container: exactly 85.60mm x 53.98mm physical size */
                 .pvc-scale-box {
                     width: 85.6mm;
                     height: 53.98mm;
@@ -178,7 +254,6 @@ function PrintContent() {
                     flex-shrink: 0;
                 }
 
-                /* A4 Cut Guidelines & Corner Markers */
                 .with-cut-guide {
                     outline: 1px dashed #cbd5e1;
                     border-radius: 3.18mm;
@@ -201,18 +276,16 @@ function PrintContent() {
                 .cut-bl { bottom: 0; left: 0; border-width: 0 0 1px 1px; }
                 .cut-br { bottom: 0; right: 0; border-width: 0 1px 1px 0; }
 
-                /* Screen Display Cards */
-                .pvc-preview-card {
-                    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
-                    border-radius: 3.18mm;
-                    background: #ffffff;
-                }
-
                 /* ────────────────────────────────────────────────────────
-                   PRINT MEDIA ENGINE
+                   PRINT MEDIA ENGINE: DYNAMIC CARRIER SIZING
                    ──────────────────────────────────────────────────────── */
                 @media print {
-                    ${paperMode === "pvc" ? `
+                    ${paperMode === "canon_tray" ? `
+                        @page {
+                            size: ${trayProfileConfig.trayWidthMm}mm ${trayProfileConfig.trayHeightMm}mm portrait;
+                            margin: 0mm;
+                        }
+                    ` : paperMode === "pvc" ? `
                         @page {
                             size: 85.6mm 53.98mm landscape;
                             margin: 0mm;
@@ -254,7 +327,18 @@ function PrintContent() {
                         background: #ffffff !important;
                     }
 
-                    /* PVC Card Mode Print Behavior */
+                    /* Canon Inksystem 2-Card Sheet Print Break */
+                    .canon-tray-sheet {
+                        page-break-after: always !important;
+                        break-after: page !important;
+                        page-break-inside: avoid !important;
+                        break-inside: avoid !important;
+                        margin: 0 !important;
+                        border: none !important;
+                        box-shadow: none !important;
+                    }
+
+                    /* PVC Card Mode Print Break */
                     .pvc-card-page {
                         width: 85.6mm !important;
                         height: 53.98mm !important;
@@ -264,9 +348,6 @@ function PrintContent() {
                         break-inside: avoid !important;
                         margin: 0 !important;
                         box-shadow: none !important;
-                        border-radius: 0 !important;
-                    }
-                    .pvc-card-page .id-pvc-card {
                         border-radius: 0 !important;
                     }
 
@@ -291,16 +372,21 @@ function PrintContent() {
 
             {/* Print Header Controls Toolbar */}
             <header className="no-print sticky top-0 z-40 bg-white border-b border-slate-200 shadow-xs">
-                <div className="max-w-[1500px] mx-auto p-3 flex flex-wrap items-center justify-between gap-3">
-                    {/* Left: Back & Badge */}
+                <div className="max-w-[1600px] mx-auto p-3 flex flex-wrap items-center justify-between gap-3">
+                    {/* Left: Back, Badge, Preloader Status */}
                     <div className="flex items-center gap-2.5">
                         <Button variant="ghost" size="sm" onClick={() => window.close()} className="h-8 gap-1 text-xs">
                             <ArrowLeft className="w-4 h-4" /> Close
                         </Button>
                         <div className="h-5 w-px bg-slate-200" />
                         <span className="text-xs font-bold text-slate-800 bg-slate-100 px-2.5 py-1 rounded-lg">
-                            {cards.length} Card{cards.length === 1 ? "" : "s"} Ready
+                            {cards.length} Card{cards.length === 1 ? "" : "s"} &bull; {allTrays.length} Tray Load{allTrays.length === 1 ? "" : "s"}
                         </span>
+                        {preloadingImages && (
+                            <span className="text-[11px] font-medium text-indigo-600 flex items-center gap-1 bg-indigo-50 px-2 py-0.5 rounded-lg">
+                                <Loader2 className="w-3 h-3 animate-spin" /> Pre-caching photos...
+                            </span>
+                        )}
                         {deptKeys.length > 0 && (
                             <span className="text-xs font-black text-indigo-700 bg-indigo-50 border border-indigo-200 px-2.5 py-1 rounded-lg">
                                 {deptKeys.length === 1 ? `Batch: ${deptKeys[0]}` : `${deptKeys.length} Departments`}
@@ -310,8 +396,21 @@ function PrintContent() {
 
                     {/* Middle: Configuration Controls */}
                     <div className="flex flex-wrap items-center gap-2">
-                        {/* Paper / Printer Mode Selector */}
+                        {/* Hardware Layout Selector */}
                         <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
+                            <button
+                                type="button"
+                                onClick={() => setPaperMode("canon_tray")}
+                                className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 ${
+                                    paperMode === "canon_tray"
+                                        ? "bg-white text-indigo-700 shadow-xs"
+                                        : "text-slate-600 hover:text-slate-900"
+                                }`}
+                                title="Canon PIXMA TS704a / TS705a Multi-Purpose 2-Card Tray"
+                            >
+                                <Layers className="w-3.5 h-3.5 text-indigo-600" />
+                                Canon 2-Card Tray (TS704a/TS705a)
+                            </button>
                             <button
                                 type="button"
                                 onClick={() => setPaperMode("pvc")}
@@ -320,10 +419,10 @@ function PrintContent() {
                                         ? "bg-white text-indigo-700 shadow-xs"
                                         : "text-slate-600 hover:text-slate-900"
                                 }`}
-                                title="Dedicated PVC Card Printer (Zebra, Evolis, Fargo)"
+                                title="Dedicated Single CR80 Card Printer"
                             >
                                 <CreditCard className="w-3.5 h-3.5" />
-                                PVC Printer (CR80)
+                                Single CR80 (PVC)
                             </button>
                             <button
                                 type="button"
@@ -336,63 +435,53 @@ function PrintContent() {
                                 title="Standard A4 Paper / Photo Paper for Cutting & Laminating"
                             >
                                 <FileText className="w-3.5 h-3.5" />
-                                A4 Sheet (Cut &amp; Laminate)
+                                A4 Sheet Grid
                             </button>
                         </div>
 
-                        {/* Duplex / Side Selector */}
-                        <select
-                            value={side}
-                            onChange={(e) => setSide(e.target.value as Side)}
-                            className="h-8 rounded-lg border border-slate-300 bg-white px-2.5 text-xs font-medium text-slate-700 focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
-                        >
-                            <option value="both">Front &amp; Back</option>
-                            <option value="front">Front Only</option>
-                            <option value="back">Back Only</option>
-                        </select>
-
-                        {/* A4 Arrangement (if A4 mode) */}
-                        {paperMode === "a4" && side === "both" && (
-                            <select
-                                value={a4Arrangement}
-                                onChange={(e) => setA4Arrangement(e.target.value as A4Arrangement)}
-                                className="h-8 rounded-lg border border-slate-300 bg-white px-2.5 text-xs font-medium text-slate-700 focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
-                                title="Pair Front & Back side-by-side for folding into pouches"
-                            >
-                                <option value="pair">Side-by-Side (Fold &amp; Laminate)</option>
-                                <option value="sequential">Sequential (All Fronts then Backs)</option>
-                            </select>
-                        )}
-
-                        {/* Scale / Bleed Fine-Tuning */}
+                        {/* Duplex / Pass Side Selector */}
                         <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-2 py-0.5 rounded-lg">
-                            <span className="text-[11px] font-bold text-slate-500">Scale:</span>
+                            <span className="text-[11px] font-bold text-slate-500">Pass:</span>
                             <select
-                                value={scalePercent}
-                                onChange={(e) => setScalePercent(Number(e.target.value))}
+                                value={side}
+                                onChange={(e) => setSide(e.target.value as Side)}
                                 className="h-7 text-xs font-bold bg-transparent text-slate-800 border-none focus:outline-hidden cursor-pointer"
-                                title="Adjust scale to remove white slivers or adapt to printer driver margins"
                             >
-                                <option value={100}>100% (Exact CR80: 85.6×54mm)</option>
-                                <option value={102}>102% (+1mm Bleed - Zero White Borders)</option>
-                                <option value={104}>104% (+2mm Extra Bleed)</option>
-                                <option value={98}>98% (-1mm Safe Inset)</option>
+                                <option value="front">Pass 1: Front Sides Only</option>
+                                <option value="back">Pass 2: Back Sides Only</option>
+                                <option value="both">Both (Front &amp; Back)</option>
                             </select>
                         </div>
 
-                        {/* Test Single Card Checkbox */}
-                        <label className="flex items-center gap-1.5 text-xs font-medium text-slate-600 cursor-pointer select-none px-1">
-                            <input
-                                type="checkbox"
-                                checked={testSingleOnly}
-                                onChange={(e) => setTestSingleOnly(e.target.checked)}
-                                className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-                            />
-                            Test 1 card only
-                        </label>
+                        {/* Tray Range / Single Tray Filter */}
+                        {paperMode === "canon_tray" && allTrays.length > 1 && (
+                            <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-2 py-0.5 rounded-lg">
+                                <span className="text-[11px] font-bold text-slate-500">Trays:</span>
+                                <select
+                                    value={selectedTrayOnly}
+                                    onChange={(e) => setSelectedTrayOnly(e.target.value === "all" ? "all" : Number(e.target.value))}
+                                    className="h-7 text-xs font-bold bg-transparent text-slate-800 border-none focus:outline-hidden cursor-pointer"
+                                >
+                                    <option value="all">All {allTrays.length} Trays</option>
+                                    {allTrays.map((t) => (
+                                        <option key={t.trayNumber} value={t.trayNumber}>
+                                            Tray #{t.trayNumber} Only ({t.slot2 ? "2 Cards" : "1 Card + Dummy"})
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
+
+                        {/* Calibration Studio Modal Button */}
+                        <PrinterCalibrationDialog
+                            profiles={profiles}
+                            activeProfileId={activeProfile?.id}
+                            onProfileChange={setActiveProfile}
+                            onRefreshProfiles={loadProfiles}
+                        />
                     </div>
 
-                    {/* Right: Print Actions & Guide Toggle */}
+                    {/* Right: Print Actions & Setup Guide */}
                     <div className="flex items-center gap-2">
                         <Button
                             variant="outline"
@@ -403,7 +492,7 @@ function PrintContent() {
                             }`}
                         >
                             <HelpCircle className="w-3.5 h-3.5 text-amber-600" />
-                            Print Setup Guide
+                            Canon Setup Guide
                         </Button>
 
                         <Button
@@ -413,7 +502,9 @@ function PrintContent() {
                             className="h-8 gap-1.5 text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs"
                         >
                             <Printer className="w-3.5 h-3.5" />
-                            Print Now {testSingleOnly ? "(1 Sample)" : `(${displayedCards.length})`}
+                            Print {side === "front" ? "Fronts" : side === "back" ? "Backs" : "Now"} (
+                            {paperMode === "canon_tray" ? `${displayedTrays.length} Tray Load${displayedTrays.length === 1 ? "" : "s"}` : `${cards.length} Cards`}
+                            )
                         </Button>
 
                         <Button
@@ -429,32 +520,32 @@ function PrintContent() {
                     </div>
                 </div>
 
-                {/* Expandable Print Settings Guide Banner */}
+                {/* Canon Hardware Setup Guide Banner */}
                 {showGuide && (
                     <div className="bg-amber-50 border-t border-amber-200 px-4 py-3">
-                        <div className="max-w-[1500px] mx-auto flex flex-col md:flex-row items-start md:items-center justify-between gap-4 text-xs text-amber-950">
+                        <div className="max-w-[1600px] mx-auto flex flex-col md:flex-row items-start md:items-center justify-between gap-4 text-xs text-amber-950">
                             <div className="flex items-start gap-2.5">
                                 <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
                                 <div>
                                     <h4 className="font-black uppercase tracking-wider text-amber-900">
-                                        Mandatory Browser Print Settings (To prevent cards printing small):
+                                        Canon PIXMA TS704a / TS705a Inksystem MP Tray Operating Guide:
                                     </h4>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 mt-1.5 font-medium">
-                                        <div className="bg-white/80 p-2 rounded-lg border border-amber-200">
-                                            <span className="font-bold block text-slate-900">1. Paper Size</span>
-                                            {paperMode === "pvc" ? "Select CR80 / Credit Card (85.6 × 54mm)" : "Select A4 (210 × 297mm)"}
+                                        <div className="bg-white/80 p-2.5 rounded-lg border border-amber-200">
+                                            <span className="font-bold block text-slate-900">1. Paper Size &amp; Source</span>
+                                            Set Paper Size to <strong>130 &times; 253 mm</strong> (or Multi-Purpose Tray / Disc Tray J)
                                         </div>
-                                        <div className="bg-white/80 p-2 rounded-lg border border-amber-200">
+                                        <div className="bg-white/80 p-2.5 rounded-lg border border-amber-200">
                                             <span className="font-bold block text-slate-900">2. Margins</span>
-                                            <strong className="text-red-700 font-black">Set to NONE</strong> (Default margins shrink cards!)
+                                            <strong className="text-red-700 font-black">Set Margins to NONE</strong> (Never use Default margins)
                                         </div>
-                                        <div className="bg-white/80 p-2 rounded-lg border border-amber-200">
-                                            <span className="font-bold block text-slate-900">3. Scale</span>
-                                            <strong className="text-emerald-700 font-black">100% / Actual Size</strong> (Do not use &quot;Fit to paper&quot;)
+                                        <div className="bg-white/80 p-2.5 rounded-lg border border-amber-200">
+                                            <span className="font-bold block text-slate-900">3. Two Cards Rule</span>
+                                            <strong>Always insert 2 cards</strong> in the carrier (use a blank dummy card if printing an odd number)
                                         </div>
-                                        <div className="bg-white/80 p-2 rounded-lg border border-amber-200">
+                                        <div className="bg-white/80 p-2.5 rounded-lg border border-amber-200">
                                             <span className="font-bold block text-slate-900">4. Background Graphics</span>
-                                            <strong className="text-indigo-700 font-black">Check the Box</strong> (Ensures crest &amp; color banners print)
+                                            <strong className="text-indigo-700 font-black">Check Background Graphics</strong> to render the school crest &amp; photo
                                         </div>
                                     </div>
                                 </div>
@@ -477,7 +568,7 @@ function PrintContent() {
                 {loading ? (
                     <div className="flex flex-col items-center justify-center p-16 gap-3">
                         <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
-                        <span className="text-sm font-semibold text-slate-600">Loading batch cards...</span>
+                        <span className="text-sm font-semibold text-slate-600">Loading batch cards &amp; assets...</span>
                     </div>
                 ) : cards.length === 0 ? (
                     <div className="text-center p-16 bg-white rounded-2xl border border-slate-200 max-w-md mx-auto">
@@ -488,21 +579,61 @@ function PrintContent() {
                             Return to Print Queue
                         </Button>
                     </div>
+                ) : paperMode === "canon_tray" ? (
+                    /* ══════════════════════════════════════════════════════════════
+                       CANON PIXMA TS704a / TS705a (2-CARD INKSYSTEM MP TRAY)
+                       ══════════════════════════════════════════════════════════════ */
+                    <div className="print-root flex flex-col items-center gap-8">
+                        <div className="no-print text-center mb-1">
+                            <span className="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center justify-center gap-2">
+                                <Layers className="w-4 h-4 text-indigo-600" />
+                                Canon TS704a / TS705a Inksystem MP Mode &bull; {displayedTrays.length} Tray Load{displayedTrays.length === 1 ? "" : "s"} &bull; {side.toUpperCase()} PASS
+                            </span>
+                            <span className="text-[11px] text-slate-400 block mt-0.5">
+                                Physical Tray Carrier: {trayProfileConfig.trayWidthMm}mm &times; {trayProfileConfig.trayHeightMm}mm
+                            </span>
+                        </div>
+
+                        {displayedTrays.map((tray) => (
+                            <div key={`tray-${tray.trayNumber}`} className="flex flex-col items-center gap-2">
+                                <Canon2CardTray
+                                    trayNumber={tray.trayNumber}
+                                    slot1Card={tray.slot1}
+                                    slot2Card={tray.slot2}
+                                    side={side === "back" ? "back" : "front"}
+                                    profile={trayProfileConfig}
+                                    isTestPattern={false}
+                                    showScreenGuides={true}
+                                />
+                                {side === "both" && (
+                                    <Canon2CardTray
+                                        trayNumber={tray.trayNumber}
+                                        slot1Card={tray.slot1}
+                                        slot2Card={tray.slot2}
+                                        side="back"
+                                        profile={trayProfileConfig}
+                                        isTestPattern={false}
+                                        showScreenGuides={true}
+                                    />
+                                )}
+                            </div>
+                        ))}
+                    </div>
                 ) : paperMode === "pvc" ? (
                     /* ══════════════════════════════════════════════════════════════
-                       PVC CARD PRINTER LAYOUT (CR80: 85.6mm x 53.98mm)
+                       SINGLE CR80 DIRECT PLASTIC CARD PRINTER
                        ══════════════════════════════════════════════════════════════ */
                     <div className="print-root flex flex-col items-center gap-6">
                         <div className="no-print text-center mb-2">
                             <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">
-                                CR80 PVC Mode &bull; Scale: {scalePercent}% &bull; {displayedCards.length} Card{displayedCards.length === 1 ? "" : "s"}
+                                Single CR80 Mode &bull; {cards.length} Card{cards.length === 1 ? "" : "s"}
                             </span>
                         </div>
 
-                        {displayedCards.map((c) => (
+                        {cards.map((c) => (
                             <div key={`pvc-${c.id}`} className="flex flex-col items-center gap-4">
                                 {side !== "back" && (
-                                    <div className="pvc-card-page pvc-preview-card">
+                                    <div className="pvc-card-page">
                                         <ScaledCardBox effectiveScale={effectiveScale} showCutGuide={false}>
                                             <FrontCard
                                                 studentName={(c.studentName || "").toUpperCase()}
@@ -519,7 +650,7 @@ function PrintContent() {
                                     </div>
                                 )}
                                 {side !== "front" && (
-                                    <div className="pvc-card-page pvc-preview-card">
+                                    <div className="pvc-card-page">
                                         <ScaledCardBox effectiveScale={effectiveScale} showCutGuide={false}>
                                             <CardBack card={c} />
                                         </ScaledCardBox>
@@ -546,8 +677,7 @@ function PrintContent() {
 
                         <div className="a4-sheet-grid">
                             {paperMode === "a4" && side === "both" && a4Arrangement === "pair" ? (
-                                /* Paired Side-by-Side: Front on Left, Back on Right for same student */
-                                displayedCards.flatMap((c) => [
+                                cards.flatMap((c) => [
                                     <div key={`a4-front-${c.id}`} className="a4-card-item">
                                         <ScaledCardBox effectiveScale={effectiveScale} showCutGuide={true}>
                                             <FrontCard
@@ -570,10 +700,9 @@ function PrintContent() {
                                     </div>,
                                 ])
                             ) : (
-                                /* Sequential or Single-Sided */
                                 <>
                                     {side !== "back" &&
-                                        displayedCards.map((c) => (
+                                        cards.map((c) => (
                                             <div key={`a4-seq-front-${c.id}`} className="a4-card-item">
                                                 <ScaledCardBox effectiveScale={effectiveScale} showCutGuide={true}>
                                                     <FrontCard
@@ -591,7 +720,7 @@ function PrintContent() {
                                             </div>
                                         ))}
                                     {side !== "front" &&
-                                        displayedCards.map((c) => (
+                                        cards.map((c) => (
                                             <div key={`a4-seq-back-${c.id}`} className="a4-card-item">
                                                 <ScaledCardBox effectiveScale={effectiveScale} showCutGuide={true}>
                                                     <CardBack card={c} />
@@ -610,7 +739,7 @@ function PrintContent() {
 
 export default function PrintCardsPage() {
     return (
-        <Suspense fallback={<div className="p-12 text-center text-slate-500 font-semibold">Loading print engine…</div>}>
+        <Suspense fallback={<div className="p-12 text-center text-slate-500 font-semibold">Loading Canon print engine…</div>}>
             <PrintContent />
         </Suspense>
     );

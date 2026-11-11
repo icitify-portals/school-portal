@@ -22,6 +22,9 @@ import {
 } from "@/actions/ict-manager";
 import { getDepartments } from "@/actions/departments";
 import IDCardTemplate1 from "@/components/id-cards/IDCardTemplate1";
+import PrinterCalibrationDialog from "@/components/id-cards/PrinterCalibrationDialog";
+import PrintBatchHistoryDialog from "@/components/id-cards/PrintBatchHistoryDialog";
+import { getPrinterProfiles } from "@/actions/id-card-printer";
 
 const STATUS_COLORS: Record<string, string> = {
     pending: "bg-amber-100 text-amber-700 border-amber-300",
@@ -50,7 +53,23 @@ export default function ICTPrintQueuePage() {
     const [updating, setUpdating] = useState(false);
     const [page, setPage] = useState(1);
     const [total, setTotal] = useState(0);
-    const pageSize = 20;
+    const [pageSize, setPageSize] = useState(20);
+    const [profiles, setProfiles] = useState<any[]>([]);
+    const [activeProfile, setActiveProfile] = useState<any>(null);
+
+    const loadProfiles = useCallback(() => {
+        getPrinterProfiles().then((res) => {
+            if (res.success && res.data.length > 0) {
+                setProfiles(res.data);
+                const def = res.data.find((p: any) => p.isDefault) || res.data[0];
+                setActiveProfile(def);
+            }
+        });
+    }, []);
+
+    useEffect(() => {
+        loadProfiles();
+    }, [loadProfiles]);
 
     // Interactive Sample / Proof State
     const [showProofPanel, setShowProofPanel] = useState(true);
@@ -315,7 +334,14 @@ export default function ICTPrintQueuePage() {
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                        <PrintBatchHistoryDialog />
+                        <PrinterCalibrationDialog
+                            profiles={profiles}
+                            activeProfileId={activeProfile?.id}
+                            onProfileChange={setActiveProfile}
+                            onRefreshProfiles={loadProfiles}
+                        />
                         <Link href="/admin/ict/guide">
                             <Button
                                 variant="outline"
@@ -378,9 +404,9 @@ export default function ICTPrintQueuePage() {
 
                             <div className="p-3 bg-white rounded-xl border border-slate-200 shadow-2xs space-y-1">
                                 <span className="w-6 h-6 rounded-full bg-blue-600 text-white font-black text-xs flex items-center justify-center">3</span>
-                                <h4 className="font-bold text-slate-900 text-xs mt-1">Print Engine (CR80 / A4)</h4>
+                                <h4 className="font-bold text-slate-900 text-xs mt-1">Canon 2-Card Tray &amp; PVC Engine</h4>
                                 <p className="text-slate-600 leading-relaxed text-[11px]">
-                                    Click <strong>&quot;Print Selected&quot;</strong>. Choose <strong>PVC Printer</strong> (CR80 85.6&times;54mm) or <strong>A4 Sheet (2-Column Cut &amp; Laminate)</strong>. In Chrome Print Dialog: set <strong>Margins: None</strong>, <strong>Scale: 100%</strong>, and check <strong>Background Graphics</strong>.
+                                    Click <strong>&quot;Print Selected&quot;</strong>. Formatted for <strong>Canon PIXMA TS704a / TS705a</strong> with the 2-Card Inksystem MP Tray (130&times;253mm), Single CR80, or A4. Print Fronts (Pass 1), flip cards, then print Backs (Pass 2). Fine-tune alignment via the Calibration Studio.
                                 </p>
                             </div>
 

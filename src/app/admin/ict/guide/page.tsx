@@ -252,15 +252,15 @@ export default function ICTIDCardGuidePage() {
                         <CardHeader className="p-6 pb-3">
                             <div className="flex items-center justify-between">
                                 <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700">
-                                    Method A • Recommended
+                                    Method A • Official Campus Hardware
                                 </span>
-                                <span className="text-xs font-bold text-slate-400">Direct Batch Thermal Printing</span>
+                                <span className="text-xs font-bold text-slate-400">Canon TS704a / TS705a (2-Card Inksystem MP Tray)</span>
                             </div>
                             <CardTitle className="text-base font-black text-slate-900 mt-2">
-                                Bulk PDF &amp; Direct Multi-Card Printing
+                                Canon PIXMA TS704a / TS705a Carrier Printing
                             </CardTitle>
                             <CardDescription className="text-xs text-slate-500">
-                                For in-house production using PVC card printers (Evolis, Zebra, Fargo, Datacard).
+                                Uses the front multi-purpose feed slot with the 2-Card Inksystem MP Carrier Tray.
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="p-6 pt-2 text-xs text-slate-600 space-y-3">
@@ -269,27 +269,25 @@ export default function ICTIDCardGuidePage() {
                                     Go to <strong>ICT Print Queue</strong> (<code className="text-indigo-600 font-mono">/admin/ict/print-queue</code>).
                                 </li>
                                 <li>
-                                    Filter by <strong>Department (Batch)</strong> (e.g. <em>Computer Science</em>, <em>Statistics</em>, <em>Accountancy</em>) and <strong>Level</strong> (e.g. <em>Level 1 Freshmen</em>) to isolate a specific department.
+                                    Filter by <strong>Department</strong>, <strong>Level (ND 1 / ND 2 / HND 1 / HND 2)</strong>, or search by name. Select the students to print.
                                 </li>
                                 <li>
-                                    Click <strong>&quot;Select All on Page&quot;</strong> or check the desired students in that departmental batch.
+                                    Click <strong>&quot;Print Selected&quot;</strong>. The print engine automatically batches students into 2-card trays (Slot 1 Lead, Slot 2 Trail).
                                 </li>
                                 <li>
-                                    Click the green <strong>&quot;Print Selected (X)&quot;</strong> button. The cards are automatically pre-sorted by <strong>Department ➔ Level ➔ Matric Number</strong>.
+                                    <strong>&quot;Always Use 2 Cards&quot; Rule</strong>: If an odd number of students is selected, Slot 2 on the final tray will display a dummy card. Keep a blank PVC card in Slot 2 to protect the printer rollers.
                                 </li>
                                 <li>
-                                    The system opens the dedicated batch print engine (<code className="text-indigo-600 font-mono">/admin/ict/print-queue/print?ids=...</code>) with the departmental batch ready for printing.
+                                    <strong>Pass 1 (Fronts)</strong>: Keep Pass set to <em>&quot;Pass 1: Front Sides Only&quot;</em>. Insert the tray with arrows aligned into the Canon front feed slot and press Print (<kbd className="px-1.5 py-0.5 bg-slate-100 border rounded font-mono text-[10px]">Ctrl + P</kbd>).
                                 </li>
                                 <li>
-                                    Press <kbd className="px-1.5 py-0.5 bg-slate-100 border rounded font-mono text-[10px]">Ctrl + P</kbd> (or click Print). In the browser dialog:
-                                    <ul className="list-disc pl-4 mt-1 space-y-1 text-slate-500">
-                                        <li><strong>Destination:</strong> Select your PVC ID Card Printer, OR select <strong>&quot;Save as PDF&quot;</strong> to export all cards into one multi-page PDF.</li>
-                                        <li><strong>Margins:</strong> None / 0mm.</li>
-                                        <li><strong>Paper Size:</strong> CR80 / Credit Card Size (85.6mm &times; 53.98mm).</li>
-                                    </ul>
+                                    <strong>Flip &amp; Pass 2 (Backs)</strong>: Flip the printed cards horizontally in the tray. Set Pass to <em>&quot;Pass 2: Back Sides Only&quot;</em> and print.
                                 </li>
                                 <li>
-                                    Click <strong>&quot;Mark Printed&quot;</strong> on the print page to update the batch status in one click.
+                                    <strong>Printer Dialog Settings</strong>: Destination: Canon TS704a or TS705a &bull; Paper Size: 130 &times; 253mm (or Multi-Purpose Tray / Disc Tray J) &bull; Margins: None &bull; Scale: 100% &bull; Background Graphics: Checked.
+                                </li>
+                                <li>
+                                    Need alignment adjustment? Click <strong>&quot;Printer Calibration&quot;</strong> to fine-tune Slot 1 &amp; Slot 2 horizontal/vertical offsets or print a physical test pattern.
                                 </li>
                             </ol>
                         </CardContent>
