@@ -578,12 +578,33 @@ export class BursaryService {
 
         if (currentPaid >= totalAmount) return { minPayment: 0, outstanding, isFullyPaid: true };
 
-        // Tuition-only installment mode
+        // Check global policy and bill setting: part-payment is disabled by default
+        const settings = await db.select()
+            .from(bursarySettings)
+            .where(inArray(bursarySettings.key, ['allow_installment_payments', 'part_payment_enabled', 'minimum_installment_percentage', 'min_part_payment_amount']));
+
+        const settingsMap: Record<string, string> = {};
+        for (const s of settings) settingsMap[s.key] = s.value;
+
+        const allowed = settingsMap['allow_installment_payments'] === "true" && 
+                        settingsMap['part_payment_enabled'] !== "false" && 
+                        Boolean(bill.tuitionInstallmentEnabled);
+
+        // If installments are not allowed, 100% full payment is strictly required
+        if (!allowed) {
+            return {
+                minPayment: outstanding,
+                outstanding,
+                isFullyPaid: false,
+                isTuitionInstallment: false,
+            };
+        }
+
+        // Tuition-only installment mode (if explicitly allowed)
         if (bill.tuitionInstallmentEnabled) {
             const installPct = parseFloat(bill.tuitionInstallmentPercentage || "60") / 100;
             const deadline = bill.tuitionInstallmentDeadline;
 
-            // Separate tuition items from others
             let tuitionTotal = 0;
             let otherTotal = 0;
 
@@ -597,7 +618,6 @@ export class BursaryService {
             }
 
             if (currentPaid === 0) {
-                // First payment: must cover all non-tuition items + installment % of tuition
                 const tuitionPart = tuitionTotal * installPct;
                 const minFirst = otherTotal + tuitionPart;
                 return {
@@ -613,9 +633,8 @@ export class BursaryService {
                 };
             }
 
-            // Installment mode, subsequent payments: minimum is just the remaining tuition
             return {
-                minPayment: Math.min(outstanding, 1000),
+                minPayment: outstanding,
                 outstanding,
                 tuitionTotal,
                 otherTotal,
@@ -624,15 +643,6 @@ export class BursaryService {
             };
         }
 
-        // Standard mode: applies to all items proportionally
-        const settings = await db.select()
-            .from(bursarySettings)
-            .where(inArray(bursarySettings.key, ['allow_installment_payments', 'minimum_installment_percentage', 'min_part_payment_amount']));
-
-        const settingsMap: Record<string, string> = {};
-        for (const s of settings) settingsMap[s.key] = s.value;
-
-        const allowed = settingsMap['allow_installment_payments'] === "true";
         const minPercent = parseFloat(settingsMap['minimum_installment_percentage'] || "60");
         const minFlatAmount = parseFloat(settingsMap['min_part_payment_amount'] || "5000");
 
@@ -640,7 +650,7 @@ export class BursaryService {
             const pctAmount = (totalAmount * minPercent) / 100;
             const minPayment = Math.max(pctAmount, minFlatAmount);
             return {
-                minPayment: allowed ? Math.min(outstanding, minPayment) : outstanding,
+                minPayment: Math.min(outstanding, minPayment),
                 outstanding,
                 isFullyPaid: false,
                 isTuitionInstallment: false,
@@ -648,7 +658,7 @@ export class BursaryService {
         }
 
         return {
-            minPayment: Math.min(outstanding, 1000),
+            minPayment: outstanding,
             outstanding,
             isFullyPaid: false,
             isTuitionInstallment: false,

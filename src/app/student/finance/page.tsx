@@ -286,19 +286,28 @@ export default function StudentFinancePage() {
 
         // Validation
         const outstanding = parseFloat(selectedBill.totalAmount) - parseFloat(selectedBill.amountPaid || "0.00");
-        const partPaymentEnabled = selectedBill.partPaymentAllowed !== false && settings['part_payment_enabled'] !== 'false';
-        const minPercentage = parseFloat(selectedBill.partPaymentMinPercent?.toString() || settings['min_part_payment_percentage'] || "60");
-        const minFlatAmount = parseFloat(settings['min_part_payment_amount'] || "5000");
-        const isInitialPayment = parseFloat(selectedBill.amountPaid || "0.00") < 0.01;
+        const allowInstallments = settings['allow_installment_payments'] === 'true' && 
+                                  settings['part_payment_enabled'] !== 'false' && 
+                                  Boolean(selectedBill.tuitionInstallmentEnabled);
 
-        const pctAmount = (parseFloat(selectedBill.totalAmount) * minPercentage) / 100;
-        const minPayment = (partPaymentEnabled && isInitialPayment)
-            ? Math.min(outstanding, Math.max(pctAmount, minFlatAmount))
-            : Math.min(outstanding, 1000);
+        if (!allowInstallments) {
+            if (Math.abs(selectedAmount - outstanding) > 0.01) {
+                setCheckoutError(`Part-payment is not permitted for school fees. Full payment of ₦${outstanding.toLocaleString()} is required.`);
+                return;
+            }
+        } else {
+            const minPercentage = parseFloat(selectedBill.partPaymentMinPercent?.toString() || settings['min_part_payment_percentage'] || "60");
+            const minFlatAmount = parseFloat(settings['min_part_payment_amount'] || "5000");
+            const isInitialPayment = parseFloat(selectedBill.amountPaid || "0.00") < 0.01;
+            const pctAmount = (parseFloat(selectedBill.totalAmount) * minPercentage) / 100;
+            const minPayment = isInitialPayment
+                ? Math.min(outstanding, Math.max(pctAmount, minFlatAmount))
+                : outstanding;
 
-        if (selectedAmount < minPayment) {
-            setCheckoutError(`Minimum payment of ₦${minPayment.toLocaleString()} is required.`);
-            return;
+            if (selectedAmount < minPayment) {
+                setCheckoutError(`Minimum payment of ₦${minPayment.toLocaleString()} is required.`);
+                return;
+            }
         }
 
         if (selectedAmount > outstanding + 0.01) {
@@ -1088,14 +1097,45 @@ export default function StudentFinancePage() {
                                                 {/* Amount selector */}
                                                 {(() => {
                                                     const outstanding = parseFloat(selectedBill.totalAmount) - parseFloat(selectedBill.amountPaid || "0.00");
-                                                    const partPaymentEnabled = selectedBill.partPaymentAllowed !== false && settings['part_payment_enabled'] !== 'false';
+                                                    const allowInstallments = settings['allow_installment_payments'] === 'true' && 
+                                                                              settings['part_payment_enabled'] !== 'false' && 
+                                                                              Boolean(selectedBill.tuitionInstallmentEnabled);
+
+                                                    if (!allowInstallments) {
+                                                        return (
+                                                            <div className="space-y-3">
+                                                                <div className="flex justify-between items-center">
+                                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                                                        Amount to Pay (₦)
+                                                                    </label>
+                                                                    <span className="text-[9px] text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full font-black uppercase tracking-wider">
+                                                                        Full Payment Required
+                                                                    </span>
+                                                                </div>
+
+                                                                <div className="relative">
+                                                                    <input
+                                                                        type="number"
+                                                                        readOnly
+                                                                        disabled
+                                                                        className="w-full bg-slate-100 border border-slate-200 rounded-2xl h-12 px-4 font-black text-slate-900 text-lg cursor-not-allowed outline-none select-none"
+                                                                        value={outstanding}
+                                                                    />
+                                                                </div>
+                                                                <p className="text-[11px] text-slate-500 font-medium">
+                                                                    Part-payment is not permitted for school fees. The full balance of <strong>₦{outstanding.toLocaleString()}</strong> will be processed on {gateway.name}.
+                                                                </p>
+                                                            </div>
+                                                        );
+                                                    }
+
                                                     const minPercentage = parseFloat(selectedBill.partPaymentMinPercent?.toString() || settings['min_part_payment_percentage'] || "60");
                                                     const minFlatAmount = parseFloat(settings['min_part_payment_amount'] || "5000");
                                                     const isInitialPayment = parseFloat(selectedBill.amountPaid || "0.00") < 0.01;
                                                     const pctAmount = (parseFloat(selectedBill.totalAmount) * minPercentage) / 100;
-                                                    const minPayment = (partPaymentEnabled && isInitialPayment)
+                                                    const minPayment = isInitialPayment
                                                         ? Math.min(outstanding, Math.max(pctAmount, minFlatAmount))
-                                                        : Math.min(outstanding, 1000);
+                                                        : outstanding;
 
                                                     return (
                                                         <div className="space-y-3">
@@ -1103,11 +1143,9 @@ export default function StudentFinancePage() {
                                                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
                                                                     Amount to Pay (₦)
                                                                 </label>
-                                                                {partPaymentEnabled && (
-                                                                    <span className="text-[9px] text-indigo-600 bg-indigo-50 px-2.5 py-0.5 rounded-full font-black uppercase tracking-wider">
-                                                                        Installment (Min {minPercentage}%)
-                                                                    </span>
-                                                                )}
+                                                                <span className="text-[9px] text-indigo-600 bg-indigo-50 px-2.5 py-0.5 rounded-full font-black uppercase tracking-wider">
+                                                                    Installment (Min {minPercentage}%)
+                                                                </span>
                                                             </div>
 
                                                             <input

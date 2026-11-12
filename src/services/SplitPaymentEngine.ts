@@ -609,8 +609,22 @@ export class SplitPaymentEngine {
         const currentPaid = parseFloat(bill.amountPaid || "0.00");
         const outstanding = billTotal - currentPaid;
 
-        // Installment payment validations — supports tuition-only installment mode
-        if (bill.tuitionInstallmentEnabled) {
+        // Installment / Part-Payment Policy Check
+        // Part-payment of school fees is strictly disabled unless explicitly permitted globally and on the specific bill.
+        const allowInstallments = settings['allow_installment_payments'] === "true" && 
+                                  settings['part_payment_enabled'] !== "false" && 
+                                  Boolean(bill.tuitionInstallmentEnabled);
+
+        if (!allowInstallments) {
+            // Strict 100% full payment enforcement: any payment must cover the entire outstanding balance
+            if (Math.abs(selectedAmount - outstanding) > 0.01) {
+                return { 
+                    success: false, 
+                    reference: "", 
+                    error: `Part-payment is not permitted for school fees. Full payment of ₦${outstanding.toLocaleString(undefined, { minimumFractionDigits: 2 })} is required.` 
+                };
+            }
+        } else if (bill.tuitionInstallmentEnabled) {
             const installPct = parseFloat(bill.tuitionInstallmentPercentage || "60") / 100;
             let tuitionTotal = 0;
             let otherTotal = 0;
@@ -633,18 +647,13 @@ export class SplitPaymentEngine {
                 }
             }
         } else {
-            const allowed = settings['allow_installment_payments'] === "true";
             const minPercent = parseFloat(settings['minimum_installment_percentage'] || "60");
-            const minAllowedAmount = allowed ? (billTotal * minPercent) / 100 : billTotal;
+            const minAllowedAmount = (billTotal * minPercent) / 100;
 
             if (currentPaid < 0.01) {
                 if (selectedAmount < minAllowedAmount - 0.01) {
                     return { success: false, reference: "", error: `Minimum initial installment payment of ₦${minAllowedAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })} (${minPercent}%) is required.` };
                 }
-            }
-
-            if (!allowed && Math.abs(selectedAmount - outstanding) > 0.01) {
-                return { success: false, reference: "", error: `Installments are not enabled for this payment. Full payment of ₦${outstanding.toLocaleString()} is required.` };
             }
         }
 

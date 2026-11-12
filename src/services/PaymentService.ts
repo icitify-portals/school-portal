@@ -189,7 +189,18 @@ export class PaymentService {
             .innerJoin(feeItems, eq(studentBillItems.feeItemId, feeItems.id))
             .where(eq(studentBillItems.billId, billId));
 
-            if (bill.tuitionInstallmentEnabled) {
+            const settingsRows = await tx.select().from(bursarySettings).where(inArray(bursarySettings.key, ['allow_installment_payments', 'part_payment_enabled']));
+            const settingsMap: Record<string, string> = {};
+            for (const s of settingsRows) settingsMap[s.key] = s.value;
+            const allowInstallments = settingsMap['allow_installment_payments'] === "true" && 
+                                      settingsMap['part_payment_enabled'] !== "false" && 
+                                      Boolean(bill.tuitionInstallmentEnabled);
+
+            if (!allowInstallments) {
+                if (Math.abs(amount - outstanding) > 0.01) {
+                    throw new Error(`Part-payment is not permitted for school fees. Full payment of ₦${outstanding.toFixed(2)} is required.`);
+                }
+            } else if (bill.tuitionInstallmentEnabled) {
                 const installPct = parseFloat(bill.tuitionInstallmentPercentage || "60") / 100;
                 let tuitionTotal = 0;
                 let otherTotal = 0;
@@ -216,18 +227,13 @@ export class PaymentService {
                     }
                 }
             } else {
-                const allowed = bill.tuitionInstallmentEnabled === true;
                 const minPercent = parseFloat(bill.tuitionInstallmentPercentage || "60");
-                const minAllowedAmount = allowed ? (totalAmount * minPercent) / 100 : totalAmount;
+                const minAllowedAmount = (totalAmount * minPercent) / 100;
 
                 if (currentPaid < 0.01) {
                     if (amount < minAllowedAmount - 0.01 && Math.abs(amount - outstanding) > 0.01) {
                         throw new Error(`Minimum initial installment payment of ₦${minAllowedAmount.toLocaleString()} (${minPercent}%) is required.`);
                     }
-                }
-
-                if (!allowed && Math.abs(amount - outstanding) > 0.01) {
-                    throw new Error(`Installments are not enabled for this payment. Full payment of ₦${outstanding.toFixed(2)} is required.`);
                 }
             }
 
