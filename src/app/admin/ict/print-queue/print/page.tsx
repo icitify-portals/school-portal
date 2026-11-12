@@ -7,12 +7,12 @@ import QRCode from "qrcode";
 import {
     Printer, Loader2, CheckCircle2, ArrowLeft, Settings2,
     HelpCircle, FileText, CreditCard, Scissors, Sparkles, AlertTriangle,
-    Layers, Sliders, ChevronDown, Check, Info, ShieldAlert
+    Layers, Sliders, ChevronDown, Check, Info, ShieldAlert, RotateCw, Save, RefreshCw
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { getPrintCardsByIds, bulkUpdatePrintStatus } from "@/actions/ict-manager";
-import { getPrinterProfiles } from "@/actions/id-card-printer";
+import { getPrinterProfiles, quickUpdateCalibration } from "@/actions/id-card-printer";
 import { FrontCard, BackCard } from "@/components/id-cards/IDCardTemplate1";
 import Canon2CardTray, { DEFAULT_CANON_TRAY_PROFILE, TrayProfile } from "@/components/id-cards/Canon2CardTray";
 import PrinterCalibrationDialog from "@/components/id-cards/PrinterCalibrationDialog";
@@ -105,6 +105,17 @@ function PrintContent() {
     const [marking, setMarking] = useState(false);
     const [showGuide, setShowGuide] = useState(false);
     const [selectedTrayOnly, setSelectedTrayOnly] = useState<number | "all">("all");
+    // Live Calibration & Offset Nudge Controls
+    const [activeOffsets, setActiveOffsets] = useState({
+        slot1X: 22.2,
+        slot1Y: 32.0,
+        slot2X: 22.2,
+        slot2Y: 100.0,
+        scale: 100,
+        rotation: 0,
+    });
+    const [savingCalibration, setSavingCalibration] = useState(false);
+
 
     // Profiles from DB
     const [profiles, setProfiles] = useState<any[]>([]);
@@ -163,6 +174,46 @@ function PrintContent() {
         else toast.error(res.error);
     }
 
+    
+    useEffect(() => {
+        if (activeProfile) {
+            setActiveOffsets({
+                slot1X: Number(activeProfile.slot1XOffsetMm || 22.2),
+                slot1Y: Number(activeProfile.slot1YOffsetMm || 32.0),
+                slot2X: Number(activeProfile.slot2XOffsetMm || 22.2),
+                slot2Y: Number(activeProfile.slot2YOffsetMm || 100.0),
+                scale: Number(activeProfile.scalePercent || 100),
+                rotation: Number(activeProfile.cardRotationDeg || 0),
+            });
+        }
+    }, [activeProfile]);
+
+    async function handleSaveCalibration() {
+        if (!activeProfile?.id) return;
+        setSavingCalibration(true);
+        try {
+            const res = await quickUpdateCalibration({
+                id: activeProfile.id,
+                slot1XOffsetMm: activeOffsets.slot1X,
+                slot1YOffsetMm: activeOffsets.slot1Y,
+                slot2XOffsetMm: activeOffsets.slot2X,
+                slot2YOffsetMm: activeOffsets.slot2Y,
+                scalePercent: activeOffsets.scale,
+                cardRotationDeg: activeOffsets.rotation,
+            });
+            if (res.success) {
+                toast.success(res.message);
+                loadProfiles();
+            } else {
+                toast.error(res.error);
+            }
+        } catch (err: any) {
+            toast.error(err.message);
+        } finally {
+            setSavingCalibration(false);
+        }
+    }
+
     const deptSummary = cards.reduce((acc: Record<string, number>, c: any) => {
         const d = (c.deptName || "General").trim();
         acc[d] = (acc[d] || 0) + 1;
@@ -176,19 +227,28 @@ function PrintContent() {
             return {
                 trayWidthMm: Number(activeProfile.trayWidthMm || 130),
                 trayHeightMm: Number(activeProfile.trayHeightMm || 253),
-                slot1XOffsetMm: Number(activeProfile.slot1XOffsetMm || 22.2),
-                slot1YOffsetMm: Number(activeProfile.slot1YOffsetMm || 32.0),
-                slot2XOffsetMm: Number(activeProfile.slot2XOffsetMm || 22.2),
-                slot2YOffsetMm: Number(activeProfile.slot2YOffsetMm || 100.0),
+                slot1XOffsetMm: activeOffsets.slot1X,
+                slot1YOffsetMm: activeOffsets.slot1Y,
+                slot2XOffsetMm: activeOffsets.slot2X,
+                slot2YOffsetMm: activeOffsets.slot2Y,
                 cardWidthMm: Number(activeProfile.cardWidthMm || 85.6),
                 cardHeightMm: Number(activeProfile.cardHeightMm || 53.98),
-                scalePercent: Number(activeProfile.scalePercent || 100),
+                scalePercent: activeOffsets.scale,
                 bleedMm: Number(activeProfile.bleedMm || 0.5),
                 orientation: activeProfile.orientation || "portrait",
+                cardRotationDeg: activeOffsets.rotation,
             };
         }
-        return DEFAULT_CANON_TRAY_PROFILE;
-    }, [activeProfile]);
+        return {
+            ...DEFAULT_CANON_TRAY_PROFILE,
+            slot1XOffsetMm: activeOffsets.slot1X,
+            slot1YOffsetMm: activeOffsets.slot1Y,
+            slot2XOffsetMm: activeOffsets.slot2X,
+            slot2YOffsetMm: activeOffsets.slot2Y,
+            scalePercent: activeOffsets.scale,
+            cardRotationDeg: activeOffsets.rotation,
+        };
+    }, [activeProfile, activeOffsets]);
 
     // Group cards into 2-card trays for Canon Multi-Purpose feed
     const allTrays = useMemo(() => {
@@ -517,6 +577,136 @@ function PrintContent() {
                             {marking ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />}
                             Mark Printed
                         </Button>
+                    </div>
+                </div>
+
+                
+                {/* Real-time Hardware Alignment & Nudge Toolbar (Visible for Canon Tray mode) */}
+                {paperMode === "canon_tray" && (
+                    <div className="bg-slate-900 text-white px-4 py-2 border-t border-slate-800 text-xs select-none">
+                        <div className="max-w-[1600px] mx-auto flex flex-wrap items-center justify-between gap-3">
+                            <div className="flex flex-wrap items-center gap-3">
+                                {/* Rotation Dropdown */}
+                                <div className="flex items-center gap-1.5 bg-slate-800 px-2.5 py-1 rounded-xl border border-slate-700">
+                                    <RotateCw className="w-3.5 h-3.5 text-amber-400" />
+                                    <span className="text-[11px] font-bold text-slate-300">Orientation:</span>
+                                    <select
+                                        value={activeOffsets.rotation}
+                                        onChange={(e) => setActiveOffsets((prev) => ({ ...prev, rotation: Number(e.target.value) }))}
+                                        className="h-6 text-xs font-black bg-transparent text-white border-none focus:outline-hidden cursor-pointer"
+                                    >
+                                        <option value={0} className="bg-slate-800 text-white">0&deg; Standard (Landscape)</option>
+                                        <option value={90} className="bg-slate-800 text-white">90&deg; Clockwise</option>
+                                        <option value={180} className="bg-slate-800 text-white">180&deg; Inverted</option>
+                                        <option value={270} className="bg-slate-800 text-amber-300 font-bold">270&deg; Auto-Fix (Canon Driver Fix)</option>
+                                    </select>
+                                </div>
+
+                                {/* Slot 1 X Nudge */}
+                                <div className="flex items-center gap-1 bg-slate-800 px-2 py-1 rounded-xl border border-slate-700">
+                                    <span className="text-[10px] font-bold text-slate-400 uppercase">Slot 1 X:</span>
+                                    <button
+                                        type="button"
+                                        onClick={() => setActiveOffsets((p) => ({ ...p, slot1X: Math.round((p.slot1X - 0.5) * 10) / 10 }))}
+                                        className="w-5 h-5 bg-slate-700 hover:bg-slate-600 rounded flex items-center justify-center font-black text-xs"
+                                        title="-0.5mm"
+                                    >-</button>
+                                    <span className="font-mono font-bold text-[11px] text-emerald-400 min-w-[42px] text-center">{activeOffsets.slot1X.toFixed(1)}mm</span>
+                                    <button
+                                        type="button"
+                                        onClick={() => setActiveOffsets((p) => ({ ...p, slot1X: Math.round((p.slot1X + 0.5) * 10) / 10 }))}
+                                        className="w-5 h-5 bg-slate-700 hover:bg-slate-600 rounded flex items-center justify-center font-black text-xs"
+                                        title="+0.5mm"
+                                    >+</button>
+                                </div>
+
+                                {/* Slot 1 Y Nudge */}
+                                <div className="flex items-center gap-1 bg-slate-800 px-2 py-1 rounded-xl border border-slate-700">
+                                    <span className="text-[10px] font-bold text-slate-400 uppercase">Slot 1 Y:</span>
+                                    <button
+                                        type="button"
+                                        onClick={() => setActiveOffsets((p) => ({ ...p, slot1Y: Math.round((p.slot1Y - 0.5) * 10) / 10 }))}
+                                        className="w-5 h-5 bg-slate-700 hover:bg-slate-600 rounded flex items-center justify-center font-black text-xs"
+                                        title="-0.5mm"
+                                    >-</button>
+                                    <span className="font-mono font-bold text-[11px] text-emerald-400 min-w-[42px] text-center">{activeOffsets.slot1Y.toFixed(1)}mm</span>
+                                    <button
+                                        type="button"
+                                        onClick={() => setActiveOffsets((p) => ({ ...p, slot1Y: Math.round((p.slot1Y + 0.5) * 10) / 10 }))}
+                                        className="w-5 h-5 bg-slate-700 hover:bg-slate-600 rounded flex items-center justify-center font-black text-xs"
+                                        title="+0.5mm"
+                                    >+</button>
+                                </div>
+
+                                {/* Slot 2 Y Nudge */}
+                                <div className="flex items-center gap-1 bg-slate-800 px-2 py-1 rounded-xl border border-slate-700">
+                                    <span className="text-[10px] font-bold text-slate-400 uppercase">Slot 2 Y:</span>
+                                    <button
+                                        type="button"
+                                        onClick={() => setActiveOffsets((p) => ({ ...p, slot2Y: Math.round((p.slot2Y - 0.5) * 10) / 10 }))}
+                                        className="w-5 h-5 bg-slate-700 hover:bg-slate-600 rounded flex items-center justify-center font-black text-xs"
+                                        title="-0.5mm"
+                                    >-</button>
+                                    <span className="font-mono font-bold text-[11px] text-emerald-400 min-w-[46px] text-center">{activeOffsets.slot2Y.toFixed(1)}mm</span>
+                                    <button
+                                        type="button"
+                                        onClick={() => setActiveOffsets((p) => ({ ...p, slot2Y: Math.round((p.slot2Y + 0.5) * 10) / 10 }))}
+                                        className="w-5 h-5 bg-slate-700 hover:bg-slate-600 rounded flex items-center justify-center font-black text-xs"
+                                        title="+0.5mm"
+                                    >+</button>
+                                </div>
+
+                                {/* Scale Nudge */}
+                                <div className="flex items-center gap-1 bg-slate-800 px-2 py-1 rounded-xl border border-slate-700">
+                                    <span className="text-[10px] font-bold text-slate-400 uppercase">Scale:</span>
+                                    <button
+                                        type="button"
+                                        onClick={() => setActiveOffsets((p) => ({ ...p, scale: Math.round((p.scale - 0.5) * 10) / 10 }))}
+                                        className="w-5 h-5 bg-slate-700 hover:bg-slate-600 rounded flex items-center justify-center font-black text-xs"
+                                        title="-0.5%"
+                                    >-</button>
+                                    <span className="font-mono font-bold text-[11px] text-indigo-300 min-w-[42px] text-center">{activeOffsets.scale.toFixed(1)}%</span>
+                                    <button
+                                        type="button"
+                                        onClick={() => setActiveOffsets((p) => ({ ...p, scale: Math.round((p.scale + 0.5) * 10) / 10 }))}
+                                        className="w-5 h-5 bg-slate-700 hover:bg-slate-600 rounded flex items-center justify-center font-black text-xs"
+                                        title="+0.5%"
+                                    >+</button>
+                                </div>
+                            </div>
+
+                            {/* Save Calibration Button */}
+                            <div className="flex items-center gap-2">
+                                <Button
+                                    size="sm"
+                                    onClick={handleSaveCalibration}
+                                    disabled={savingCalibration || !activeProfile?.id}
+                                    className="h-7 text-xs font-black gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg shadow-sm"
+                                >
+                                    <Save className="w-3 h-3" />
+                                    {savingCalibration ? "Saving..." : "Save Calibration as Default"}
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Critical Chrome Print Settings Warning Bar */}
+                <div className="no-print bg-amber-50 border-y border-amber-200 px-4 py-2">
+                    <div className="max-w-[1600px] mx-auto flex flex-wrap items-center justify-between gap-3 text-xs text-amber-950 font-medium">
+                        <div className="flex items-center gap-2">
+                            <ShieldAlert className="w-4 h-4 text-amber-700 shrink-0" />
+                            <span>
+                                <strong>MANDATORY BROWSER SETTINGS (In Chrome Print Dialog &rarr; More settings):</strong>
+                                <span className="ml-1 font-black text-rose-700 bg-rose-100 px-1.5 py-0.5 rounded">1. UNCHECK &quot;Headers and footers&quot;</span>
+                                <span className="ml-1 font-bold text-amber-900 bg-amber-100 px-1.5 py-0.5 rounded">2. Margins: NONE</span>
+                                <span className="ml-1 font-bold text-slate-900 bg-slate-100 px-1.5 py-0.5 rounded">3. Scale: 100%</span>
+                                <span className="ml-1 font-bold text-indigo-900 bg-indigo-100 px-1.5 py-0.5 rounded">4. Background graphics: CHECKED</span>
+                            </span>
+                        </div>
+                        <span className="text-[10px] font-bold text-amber-800 bg-amber-200/80 px-2 py-0.5 rounded">
+                            Prevents URL printing &amp; edge clipping on PVC card
+                        </span>
                     </div>
                 </div>
 

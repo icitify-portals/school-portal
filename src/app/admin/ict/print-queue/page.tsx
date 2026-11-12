@@ -484,6 +484,15 @@ export default function ICTPrintQueuePage() {
                                 barcode={previewStudent.barcode}
                                 verificationCode={previewStudent.verificationCode}
                                 showControls={true}
+                                onPrint={() => {
+                                    if (previewStudent?.id) {
+                                        window.open(`/admin/ict/print-queue/print?ids=${previewStudent.id}`, "_blank");
+                                    } else if (cards.length > 0) {
+                                        window.open(`/admin/ict/print-queue/print?ids=${cards[0].id}`, "_blank");
+                                    } else {
+                                        toast.info("Please select a student from the queue to print.");
+                                    }
+                                }}
                             />
                         </CardContent>
                     )}
@@ -832,6 +841,7 @@ export default function ICTPrintQueuePage() {
                                                 className="h-8 text-xs font-bold text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 border-indigo-200 gap-1.5 rounded-lg"
                                                 onClick={() => {
                                                     setPreviewStudent({
+                                                        id: card.id,
                                                         studentName: card.studentName || "STUDENT NAME",
                                                         matricNumber: card.matricNumber || "MATRIC NUMBER",
                                                         department: card.deptName || "DEPARTMENT",

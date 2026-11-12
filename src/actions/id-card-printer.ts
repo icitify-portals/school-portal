@@ -56,6 +56,7 @@ export async function savePrinterProfile(profile: {
     scalePercent?: number | string;
     bleedMm?: number | string;
     orientation?: "portrait" | "landscape";
+    cardRotationDeg?: number;
     mediaTypeRef?: string;
     isDefault?: boolean;
     notes?: string;
@@ -78,6 +79,7 @@ export async function savePrinterProfile(profile: {
             scalePercent: String(profile.scalePercent ?? "100.00"),
             bleedMm: String(profile.bleedMm ?? "0.00"),
             orientation: profile.orientation || "portrait",
+            cardRotationDeg: profile.cardRotationDeg ?? 0,
             mediaTypeRef: profile.mediaTypeRef || "Multi-Purpose Tray",
             isDefault: Boolean(profile.isDefault),
             notes: profile.notes || null,
@@ -98,6 +100,38 @@ export async function savePrinterProfile(profile: {
 
         revalidatePath("/admin/ict/print-queue");
         return { success: true, message: `Calibration profile "${profile.name}" saved successfully.` };
+    } catch (error) {
+        return { success: false, error: (error as Error).message };
+    }
+}
+
+
+export async function quickUpdateCalibration(params: {
+    id: number;
+    slot1XOffsetMm?: number | string;
+    slot1YOffsetMm?: number | string;
+    slot2XOffsetMm?: number | string;
+    slot2YOffsetMm?: number | string;
+    scalePercent?: number | string;
+    cardRotationDeg?: number;
+}) {
+    try {
+        await ensureStaffOrAdmin();
+        const updates: any = {};
+        if (params.slot1XOffsetMm !== undefined) updates.slot1XOffsetMm = String(params.slot1XOffsetMm);
+        if (params.slot1YOffsetMm !== undefined) updates.slot1YOffsetMm = String(params.slot1YOffsetMm);
+        if (params.slot2XOffsetMm !== undefined) updates.slot2XOffsetMm = String(params.slot2XOffsetMm);
+        if (params.slot2YOffsetMm !== undefined) updates.slot2YOffsetMm = String(params.slot2YOffsetMm);
+        if (params.scalePercent !== undefined) updates.scalePercent = String(params.scalePercent);
+        if (params.cardRotationDeg !== undefined) updates.cardRotationDeg = params.cardRotationDeg;
+
+        await db.update(idCardPrinterProfiles)
+            .set(updates)
+            .where(eq(idCardPrinterProfiles.id, params.id));
+
+        revalidatePath("/admin/ict/print-queue");
+        revalidatePath("/admin/ict/print-queue/print");
+        return { success: true, message: "Calibration adjustments saved successfully." };
     } catch (error) {
         return { success: false, error: (error as Error).message };
     }

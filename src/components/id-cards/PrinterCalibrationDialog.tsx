@@ -48,6 +48,7 @@ export default function PrinterCalibrationDialog({
         scalePercent: Number(currentProfile.scalePercent || 100),
         bleedMm: Number(currentProfile.bleedMm || 0.5),
         orientation: currentProfile.orientation || "portrait",
+        cardRotationDeg: Number(currentProfile.cardRotationDeg ?? 0),
     });
 
     const handleSelectProfile = (pId: number) => {
@@ -66,6 +67,7 @@ export default function PrinterCalibrationDialog({
                 scalePercent: Number(p.scalePercent || 100),
                 bleedMm: Number(p.bleedMm || 0.5),
                 orientation: p.orientation || "portrait",
+                cardRotationDeg: Number(p.cardRotationDeg ?? 0),
             });
             if (onProfileChange) onProfileChange(p);
         }
@@ -348,6 +350,33 @@ export default function PrinterCalibrationDialog({
                                     />
                                     <span className="text-[10px] text-slate-400">0.5 mm eliminates white borders</span>
                                 </div>
+                            </div>
+                        </div>
+
+                        
+                        {/* Card Rotation / Feed Alignment */}
+                        <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl space-y-3">
+                            <div className="flex items-center justify-between">
+                                <h4 className="text-xs font-black uppercase text-slate-800">Card Rotation &amp; Feed Alignment</h4>
+                                <span className="text-[10px] font-mono font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-lg">
+                                    {formState.cardRotationDeg ?? 0}&deg;
+                                </span>
+                            </div>
+                            <div>
+                                <Label className="text-[11px] font-bold text-slate-600">Card Print Rotation</Label>
+                                <select
+                                    value={formState.cardRotationDeg ?? 0}
+                                    onChange={(e) => setFormState({ ...formState, cardRotationDeg: Number(e.target.value) })}
+                                    className="w-full mt-1 h-9 px-3 text-xs font-bold rounded-xl border border-slate-300 bg-white text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+                                >
+                                    <option value={0}>0&deg; - Standard (Landscape Card)</option>
+                                    <option value={90}>90&deg; - Rotated Clockwise</option>
+                                    <option value={180}>180&deg; - Inverted Upside Down</option>
+                                    <option value={270}>270&deg; - Auto-Fix for Canon Multi-Purpose Tray (Rotated 90&deg; CCW)</option>
+                                </select>
+                                <span className="text-[10px] text-slate-400 block mt-1">
+                                    Select 270&deg; if the printed output on the plastic card appears rotated sideways.
+                                </span>
                             </div>
                         </div>
 

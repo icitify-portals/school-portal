@@ -2,7 +2,7 @@
 
 import React from "react";
 import { FrontCard, BackCard } from "@/components/id-cards/IDCardTemplate1";
-import { AlertCircle, ArrowDown, Scissors, ShieldAlert } from "lucide-react";
+import { ArrowDown, ShieldAlert } from "lucide-react";
 
 export interface TrayProfile {
     trayWidthMm: number;
@@ -16,6 +16,7 @@ export interface TrayProfile {
     scalePercent: number;
     bleedMm: number;
     orientation: "portrait" | "landscape";
+    cardRotationDeg?: number;
 }
 
 export const DEFAULT_CANON_TRAY_PROFILE: TrayProfile = {
@@ -30,6 +31,7 @@ export const DEFAULT_CANON_TRAY_PROFILE: TrayProfile = {
     scalePercent: 100.00,
     bleedMm: 0.50,
     orientation: "portrait",
+    cardRotationDeg: 0,
 };
 
 export interface Canon2CardTrayProps {
@@ -52,6 +54,34 @@ export default function Canon2CardTray({
     showScreenGuides = true,
 }: Canon2CardTrayProps) {
     const scaleFactor = (323.5275 / 504) * (profile.scalePercent / 100);
+    const rotationDeg = Number(profile.cardRotationDeg) || 0;
+    const isRotated90or270 = rotationDeg === 90 || rotationDeg === 270;
+
+    // Slot 1 Geometry Calculation
+    const slot1WidthMm = isRotated90or270
+        ? profile.cardHeightMm + profile.bleedMm * 2
+        : profile.cardWidthMm + profile.bleedMm * 2;
+    const slot1HeightMm = isRotated90or270
+        ? profile.cardWidthMm + profile.bleedMm * 2
+        : profile.cardHeightMm + profile.bleedMm * 2;
+
+    const slot1CenterX = profile.slot1XOffsetMm + profile.cardWidthMm / 2;
+    const slot1CenterY = profile.slot1YOffsetMm + profile.cardHeightMm / 2;
+    const slot1LeftMm = isRotated90or270 ? slot1CenterX - slot1WidthMm / 2 : profile.slot1XOffsetMm;
+    const slot1TopMm = isRotated90or270 ? slot1CenterY - slot1HeightMm / 2 : profile.slot1YOffsetMm;
+
+    // Slot 2 Geometry Calculation
+    const slot2WidthMm = isRotated90or270
+        ? profile.cardHeightMm + profile.bleedMm * 2
+        : profile.cardWidthMm + profile.bleedMm * 2;
+    const slot2HeightMm = isRotated90or270
+        ? profile.cardWidthMm + profile.bleedMm * 2
+        : profile.cardHeightMm + profile.bleedMm * 2;
+
+    const slot2CenterX = profile.slot2XOffsetMm + profile.cardWidthMm / 2;
+    const slot2CenterY = profile.slot2YOffsetMm + profile.cardHeightMm / 2;
+    const slot2LeftMm = isRotated90or270 ? slot2CenterX - slot2WidthMm / 2 : profile.slot2XOffsetMm;
+    const slot2TopMm = isRotated90or270 ? slot2CenterY - slot2HeightMm / 2 : profile.slot2YOffsetMm;
 
     return (
         <div
@@ -72,7 +102,7 @@ export default function Canon2CardTray({
                         FEED ARROW (Top) &bull; Tray #{trayNumber}
                     </span>
                     <span className="bg-slate-100 px-2 py-0.5 rounded text-slate-600 font-mono">
-                        {side.toUpperCase()} PASS
+                        {side.toUpperCase()} PASS &bull; ROT: {rotationDeg}&deg;
                     </span>
                 </div>
             )}
@@ -80,15 +110,12 @@ export default function Canon2CardTray({
             {/* Test Pattern Overlays if Calibration Mode */}
             {isTestPattern && (
                 <div className="absolute inset-0 pointer-events-none z-30">
-                    {/* Millimeter Grid and Center Lines */}
                     <div className="w-full h-full border-2 border-dashed border-rose-300 relative">
                         <div className="absolute left-1/2 top-0 bottom-0 border-r border-rose-400" />
                         <div className="absolute top-[32mm] left-0 right-0 border-b border-rose-300" />
                         <div className="absolute top-[100mm] left-0 right-0 border-b border-rose-300" />
-
-                        {/* Top Margin Ruler */}
                         <div className="absolute top-1 left-2 text-[9px] font-mono text-rose-700 font-bold">
-                            CALIBRATION TEST PATTERN &bull; 130mm &times; 253mm
+                            CALIBRATION TEST PATTERN &bull; 130mm &times; 253mm &bull; Rot: {rotationDeg}&deg;
                         </div>
                     </div>
                 </div>
@@ -98,12 +125,12 @@ export default function Canon2CardTray({
                 SLOT 1 (Top / Lead Card Slot)
                 ══════════════════════════════════════════════════════════ */}
             <div
-                className="canon-card-slot slot-1 absolute overflow-hidden"
+                className="canon-card-slot slot-1 absolute overflow-hidden flex items-center justify-center"
                 style={{
-                    left: `${profile.slot1XOffsetMm}mm`,
-                    top: `${profile.slot1YOffsetMm}mm`,
-                    width: `${profile.cardWidthMm + profile.bleedMm * 2}mm`,
-                    height: `${profile.cardHeightMm + profile.bleedMm * 2}mm`,
+                    left: `${slot1LeftMm}mm`,
+                    top: `${slot1TopMm}mm`,
+                    width: `${slot1WidthMm}mm`,
+                    height: `${slot1HeightMm}mm`,
                     boxSizing: "border-box",
                 }}
             >
@@ -113,7 +140,7 @@ export default function Canon2CardTray({
                         style={{
                             width: "504px",
                             height: "318px",
-                            transform: `scale(${scaleFactor})`,
+                            transform: `scale(${scaleFactor}) rotate(${rotationDeg}deg)`,
                             transformOrigin: "center center",
                         }}
                     >
@@ -138,7 +165,6 @@ export default function Canon2CardTray({
                         )}
                     </div>
                 ) : (
-                    /* Blank Card Placeholder */
                     <div className="w-full h-full border-2 border-dashed border-amber-300 rounded-[3mm] flex flex-col items-center justify-center p-2 text-center bg-amber-50/60 text-amber-800">
                         <ShieldAlert className="w-4 h-4 text-amber-600 mb-1" />
                         <span className="text-[9px] font-black uppercase">Blank Card Placeholder</span>
@@ -146,11 +172,10 @@ export default function Canon2CardTray({
                     </div>
                 )}
 
-                {/* Calibration Corner Brackets for Slot 1 */}
                 {isTestPattern && (
                     <div className="absolute inset-0 pointer-events-none border border-rose-500">
                         <span className="absolute top-0.5 left-1 text-[8px] font-bold text-rose-700 font-mono">
-                            SLOT 1 (85.6&times;54mm)
+                            SLOT 1 ({profile.cardWidthMm}&times;{profile.cardHeightMm}mm)
                         </span>
                         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 border-t border-l border-rose-600" />
                     </div>
@@ -161,12 +186,12 @@ export default function Canon2CardTray({
                 SLOT 2 (Bottom / Trail Card Slot)
                 ══════════════════════════════════════════════════════════ */}
             <div
-                className="canon-card-slot slot-2 absolute overflow-hidden"
+                className="canon-card-slot slot-2 absolute overflow-hidden flex items-center justify-center"
                 style={{
-                    left: `${profile.slot2XOffsetMm}mm`,
-                    top: `${profile.slot2YOffsetMm}mm`,
-                    width: `${profile.cardWidthMm + profile.bleedMm * 2}mm`,
-                    height: `${profile.cardHeightMm + profile.bleedMm * 2}mm`,
+                    left: `${slot2LeftMm}mm`,
+                    top: `${slot2TopMm}mm`,
+                    width: `${slot2WidthMm}mm`,
+                    height: `${slot2HeightMm}mm`,
                     boxSizing: "border-box",
                 }}
             >
@@ -176,7 +201,7 @@ export default function Canon2CardTray({
                         style={{
                             width: "504px",
                             height: "318px",
-                            transform: `scale(${scaleFactor})`,
+                            transform: `scale(${scaleFactor}) rotate(${rotationDeg}deg)`,
                             transformOrigin: "center center",
                         }}
                     >
@@ -201,7 +226,6 @@ export default function Canon2CardTray({
                         )}
                     </div>
                 ) : (
-                    /* Blank Card Placeholder for Odd-Count Trays */
                     <div className="w-full h-full border-2 border-dashed border-amber-300 rounded-[3mm] flex flex-col items-center justify-center p-2 text-center bg-amber-50/60 text-amber-800">
                         <ShieldAlert className="w-4 h-4 text-amber-600 mb-1" />
                         <span className="text-[9px] font-black uppercase">Blank Card Placeholder</span>
@@ -211,11 +235,10 @@ export default function Canon2CardTray({
                     </div>
                 )}
 
-                {/* Calibration Corner Brackets for Slot 2 */}
                 {isTestPattern && (
                     <div className="absolute inset-0 pointer-events-none border border-rose-500">
                         <span className="absolute top-0.5 left-1 text-[8px] font-bold text-rose-700 font-mono">
-                            SLOT 2 (85.6&times;54mm)
+                            SLOT 2 ({profile.cardWidthMm}&times;{profile.cardHeightMm}mm)
                         </span>
                         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 border-t border-l border-rose-600" />
                     </div>

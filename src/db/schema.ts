@@ -3938,6 +3938,7 @@ export const idCardPrinterProfiles = mysqlTable('id_card_printer_profiles', {
   scalePercent: decimal('scale_percent', { precision: 5, scale: 2 }).default('100.00'),
   bleedMm: decimal('bleed_mm', { precision: 5, scale: 2 }).default('0.00'),
   orientation: mysqlEnum('orientation', ['portrait', 'landscape']).default('portrait'),
+  cardRotationDeg: int('card_rotation_deg').default(0),
   mediaTypeRef: varchar('media_type_ref', { length: 100 }).default('Multi-Purpose Tray'),
   isDefault: boolean('is_default').default(false),
   notes: text('notes'),
