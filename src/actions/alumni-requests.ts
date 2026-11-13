@@ -11,10 +11,12 @@ import { amountInWords } from "@/lib/numberToWords";
 const DEFAULT_CERT_FEE_ND = 18500;
 const DEFAULT_CERT_FEE_HND = 28500;
 const DEFAULT_CONVOCATION_FEE = 15500;
-const DEFAULT_CONVOCATION_GOWN_FEE = 7000;
+const DEFAULT_CONVOCATION_GOWN_FEE = 12000; // Comprises ₦7,000 Gown Fee + ₦5,000 Refundable Deposit
+const DEFAULT_CONVOCATION_GOWN_BASE_FEE = 7000;
+const DEFAULT_CONVOCATION_GOWN_REFUNDABLE_DEPOSIT = 5000;
 const DEFAULT_INCIDENTAL_FEE = 5500;
-const DEFAULT_DEPARTMENTAL_FEE = 5000;
-const DEFAULT_LIBRARY_FEE = 5000;
+const DEFAULT_DEPARTMENTAL_FEE = 10000;
+const DEFAULT_LIBRARY_FEE = 10000;
 const DEFAULT_PROCESSING_FEE_PER_ITEM = 1000;
 
 // Internal configuration constants (NOT exported because "use server" files can only export async functions)
@@ -55,9 +57,7 @@ export async function getDynamicAlumniFees() {
                 eq(feeItems.name, 'Convocation Gown Fee'),
                 eq(feeItems.name, 'Incidental Fee'),
                 eq(feeItems.name, 'Departmental Development Levy'),
-                eq(feeItems.name, 'Departmental Fee'),
-                eq(feeItems.name, 'Library Development Levy'),
-                eq(feeItems.name, 'Library Development Fee')
+                eq(feeItems.name, 'Library Development Levy')
             )
         );
 
@@ -69,8 +69,8 @@ export async function getDynamicAlumniFees() {
             else if (item.name === 'Convocation Fee') convocationFee = amt;
             else if (item.name === 'Convocation Gown Fee') convocationGownFee = amt;
             else if (item.name === 'Incidental Fee') incidentalFee = amt;
-            else if (item.name === 'Departmental Development Levy' || item.name === 'Departmental Fee') departmentalFee = amt;
-            else if (item.name === 'Library Development Levy' || item.name === 'Library Development Fee') libraryFee = amt;
+            else if (item.name === 'Departmental Development Levy') departmentalFee = amt;
+            else if (item.name === 'Library Development Levy') libraryFee = amt;
         }
     } catch (e) {
         console.warn("Fallback to default alumni fee items:", e);
@@ -81,6 +81,8 @@ export async function getDynamicAlumniFees() {
         certificateFeeHND,
         convocationFee,
         convocationGownFee,
+        convocationGownBaseFee: DEFAULT_CONVOCATION_GOWN_BASE_FEE,
+        convocationGownDeposit: DEFAULT_CONVOCATION_GOWN_REFUNDABLE_DEPOSIT,
         incidentalFee,
         departmentalFee,
         libraryFee,
@@ -229,7 +231,7 @@ export async function submitCertificateApplication(data: {
 
             reference = `ALUMNI-CERT-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
             const itemsList = [
-                payGown ? 'Convocation Gown' : null,
+                payGown ? 'Convocation Gown (₦7,000 Gown + ₦5,000 Refundable Deposit)' : null,
                 payConv ? 'Convocation' : null,
                 payCert ? 'Certificate' : null
             ].filter(Boolean).join(', ') || 'Academic Fees';
@@ -237,7 +239,7 @@ export async function submitCertificateApplication(data: {
 
         } else if (category === 'ict_account') {
             // FSS TECH STUDIO-ICT (ALATPay)
-            // Covers Incidental (5,500), Departmental Levy (5,000), Library Levy (5,000)
+            // Covers Incidental (5,500), Departmental Levy (10,000), Library Levy (10,000)
             gateway = 'alatpay';
             targetBusinessId = ALATPAY_ICT_CONFIG.businessId;
             targetPublicKey = ALATPAY_ICT_CONFIG.publicKey;
@@ -418,14 +420,14 @@ export async function verifyCertificatePayment(reference: string) {
             if (request.gownFeeRef === reference) {
                 updateFields.gownFeeStatus = 'paid';
                 amountPaid += fees.convocationGownFee;
-                itemsPaidList.push('Convocation Gown Fee');
+                itemsPaidList.push('Convocation Gown Fee (₦7,000 Gown + ₦5,000 Refundable Deposit)');
             }
 
             // Fallback if reference wasn't specific
             if (Object.keys(updateFields).length === 0) {
                 updateFields.gownFeeStatus = 'paid';
                 amountPaid += fees.convocationGownFee;
-                itemsPaidList.push('Convocation Gown Fee');
+                itemsPaidList.push('Convocation Gown Fee (₦7,000 Gown + ₦5,000 Refundable Deposit)');
             }
 
             await db.update(alumniCertificateRequests).set(updateFields).where(eq(alumniCertificateRequests.id, request.id));
@@ -546,6 +548,8 @@ export async function verifyCertificatePayment(reference: string) {
             paymentStatus: allCompulsoryPaid ? 'paid' : 'partial'
         }).where(eq(alumniCertificateRequests.id, request.id));
 
+        const includesGown = itemsPaidList.some(item => item.toLowerCase().includes('gown'));
+
         return {
             success: true,
             verified: true,
@@ -554,10 +558,11 @@ export async function verifyCertificatePayment(reference: string) {
             reference,
             amountPaid,
             itemsPaid: itemsPaidList,
+            includesGown,
             matricNumber: request.matricNumber,
             applicantName: request.applicantName,
             email: request.email,
-            message: `Payment of ₦${amountPaid.toLocaleString()} successfully credited to ${categoryPaidName}! Your clearance record has been updated.`
+            message: `Payment of ₦${amountPaid.toLocaleString()} successfully credited to ${categoryPaidName}! Your clearance record has been updated.${includesGown ? ' Note: Your ₦12,000 Convocation Gown payment comprises ₦7,000 for the gown and a ₦5,000 refundable deposit, which will be refunded after the return of the gown.' : ''}`
         };
     } catch (error: any) {
         console.error("verifyCertificatePayment error:", error);
@@ -707,7 +712,7 @@ export async function getAlumniReceiptDetails(reference: string) {
             creditedBank = "Official Settlement Channel";
 
             if (request.gownFeeRef === reference) {
-                items.push({ name: "Convocation Gown Fee", amount: fees.convocationGownFee, description: "Official academic gown hire for graduation ceremony." });
+                items.push({ name: "Convocation Gown Fee (Includes ₦5,000 Refundable Deposit)", amount: fees.convocationGownFee, description: "Official academic gown hire for graduation ceremony — comprises ₦7,000 gown fee and ₦5,000 refundable deposit payable after the return of the gown." });
                 totalAmount += fees.convocationGownFee;
             }
             if (request.convocationFeeRef === reference) {
@@ -720,7 +725,7 @@ export async function getAlumniReceiptDetails(reference: string) {
             }
 
             if (items.length === 0) {
-                items.push({ name: "Convocation Gown Fee", amount: fees.convocationGownFee, description: "Academic gown fee." });
+                items.push({ name: "Convocation Gown Fee (Includes ₦5,000 Refundable Deposit)", amount: fees.convocationGownFee, description: "Official academic gown hire — comprises ₦7,000 gown fee and ₦5,000 refundable deposit after return of the gown." });
                 totalAmount += fees.convocationGownFee;
             }
         } else if (isIncRef) {

@@ -286,18 +286,21 @@ export default function StudentClearancePage() {
 
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
                     {[
-                        { name: "Convocation Gown", status: certStatus?.gownFeeStatus || 'unpaid', fee: "₦7,000" },
+                        { name: "Convocation Gown", status: certStatus?.gownFeeStatus || 'unpaid', fee: "₦12,000", note: "₦7k Gown + ₦5k Refundable" },
                         { name: "Convocation Fee", status: certStatus?.convocationFeeStatus || 'unpaid', fee: "₦15,500" },
                         { name: "Certificate Fee", status: certStatus?.certFeeStatus || 'unpaid', fee: data?.student?.programmeType === 'HND' ? "₦28,500" : "₦18,500" },
                         { name: "Incidental Fee", status: certStatus?.incidentalFeeStatus || 'unpaid', fee: "₦5,500" },
-                        { name: "Departmental Levy", status: certStatus?.departmentalFeeStatus || 'unpaid', fee: "₦5,000" },
-                        { name: "Library Levy", status: certStatus?.libraryFeeStatus || 'unpaid', fee: "₦5,000" },
-                    ].map((item, idx) => {
+                        { name: "Departmental Levy", status: certStatus?.departmentalFeeStatus || 'unpaid', fee: "₦10,000" },
+                        { name: "Library Levy", status: certStatus?.libraryFeeStatus || 'unpaid', fee: "₦10,000" },
+                    ].map((item: any, idx) => {
                         const isPaid = item.status === 'paid';
                         return (
                             <div key={idx} className={cn("p-3.5 rounded-2xl border text-center transition-all", isPaid ? "bg-emerald-50/70 border-emerald-300" : "bg-slate-50/60 border-slate-200")}>
                                 <p className="text-[11px] font-bold text-slate-700 mb-1 leading-tight">{item.name}</p>
-                                <p className="text-xs font-mono font-black text-slate-900 mb-2">{item.fee}</p>
+                                <p className="text-xs font-mono font-black text-slate-900 mb-1">{item.fee}</p>
+                                {item.note && (
+                                    <p className="text-[9px] text-amber-800 font-semibold mb-1.5 leading-tight">{item.note}</p>
+                                )}
                                 <span className={cn(
                                     "text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full inline-block",
                                     isPaid ? "bg-emerald-200 text-emerald-900" : "bg-slate-200 text-slate-600"

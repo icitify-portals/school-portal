@@ -15,10 +15,10 @@ export default function CertificateApplicationPage() {
         certificateFeeND: 18500,
         certificateFeeHND: 28500,
         convocationFee: 15500,
-        convocationGownFee: 7000,
+        convocationGownFee: 12000,
         incidentalFee: 5500,
-        departmentalFee: 5000,
-        libraryFee: 5000,
+        departmentalFee: 10000,
+        libraryFee: 10000,
         processingFeePerItem: 1000,
     });
 
@@ -490,7 +490,9 @@ export default function CertificateApplicationPage() {
                                                 <span className="font-bold text-xs text-slate-800">Convocation Gown Fee</span>
                                             </div>
                                             <p className="text-base font-black text-slate-900">₦{fees.convocationGownFee.toLocaleString()}</p>
-                                            <p className="text-[11px] text-slate-500 mt-1">Gown hire for ND & HND graduants.</p>
+                                            <p className="text-[11px] text-amber-900 font-semibold mt-1 leading-snug">
+                                                Comprises ₦7,000 Gown + ₦5,000 Refundable Deposit (after return of gown).
+                                            </p>
                                         </div>
 
                                         {/* Convocation Fee */}
@@ -535,6 +537,18 @@ export default function CertificateApplicationPage() {
                                             <p className="text-[11px] text-slate-500 mt-1">Official diploma seal & printing.</p>
                                         </div>
                                     </div>
+
+                                    {certItems.includes('convocation_gown') && (
+                                        <div className="bg-amber-50 border border-amber-200 rounded-xl p-3.5 flex items-start gap-2.5 text-xs text-amber-950 mt-2">
+                                            <Info className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                                            <div>
+                                                <p className="font-bold text-amber-900">Academic Gown Fee Breakdown (₦12,000)</p>
+                                                <p className="text-amber-800 mt-0.5 leading-relaxed">
+                                                    The <strong>₦12,000</strong> Convocation Gown fee comprises <strong>₦7,000</strong> for the academic gown and a <strong>₦5,000 refundable deposit</strong>, which will be refunded after the return of the gown following the convocation ceremony.
+                                                </p>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             )}
 
@@ -606,7 +620,7 @@ export default function CertificateApplicationPage() {
                                                 ) : (
                                                     <Square className="w-4 h-4 text-slate-400 shrink-0" />
                                                 )}
-                                                <span className="font-bold text-xs text-slate-800">Departmental Levy</span>
+                                                <span className="font-bold text-xs text-slate-800">Departmental Development Levy</span>
                                             </div>
                                             <p className="text-base font-black text-slate-900">₦{fees.departmentalFee.toLocaleString()}</p>
                                             <p className="text-[11px] text-slate-500 mt-1">Departmental development levy.</p>
@@ -627,7 +641,7 @@ export default function CertificateApplicationPage() {
                                                 ) : (
                                                     <Square className="w-4 h-4 text-slate-400 shrink-0" />
                                                 )}
-                                                <span className="font-bold text-xs text-slate-800">Library Levy</span>
+                                                <span className="font-bold text-xs text-slate-800">Library Development Levy</span>
                                             </div>
                                             <p className="text-base font-black text-slate-900">₦{fees.libraryFee.toLocaleString()}</p>
                                             <p className="text-[11px] text-slate-500 mt-1">Library development & archival levy.</p>

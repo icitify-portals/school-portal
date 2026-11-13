@@ -106,6 +106,17 @@ function VerifyContent() {
                         Credited to {paymentDetails?.categoryPaidName || "Bursary Account"}
                     </p>
                     <p className="text-slate-600 text-sm mb-6 leading-relaxed">{message}</p>
+
+                    {paymentDetails?.includesGown && (
+                        <div className="w-full text-left bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-6 text-xs text-amber-950">
+                            <p className="font-bold text-amber-900 mb-1">
+                                🎓 Academic Gown Payment Breakdown (₦12,000)
+                            </p>
+                            <p className="text-amber-800 leading-relaxed">
+                                Your <strong>₦12,000</strong> payment comprises <strong>₦7,000</strong> for the academic gown and a <strong>₦5,000 refundable deposit</strong>, which will be refunded after the return of the gown. Kindly print and keep your official receipt to claim your refund upon gown return.
+                            </p>
+                        </div>
+                    )}
                     
                     {/* Primary Actions: Print Receipt & Settle Remainder */}
                     <div className="flex flex-col w-full gap-3 mb-8">

@@ -199,12 +199,24 @@ function ReceiptContent() {
                 </div>
 
                 {/* Amount in words */}
-                <div className="bg-amber-50/70 border border-amber-200 p-4 rounded-2xl mb-8 text-xs">
+                <div className="bg-amber-50/70 border border-amber-200 p-4 rounded-2xl mb-6 text-xs">
                     <span className="font-black uppercase text-[10px] text-amber-900 block mb-0.5">Amount in Words:</span>
                     <p className="font-serif italic font-bold text-amber-950 text-sm">
                         {data.totalInWords}
                     </p>
                 </div>
+
+                {/* Gown Refundable Deposit Notice (shown when Convocation Gown is on receipt) */}
+                {data.items?.some((item: any) => item.name?.toLowerCase().includes('gown')) && (
+                    <div className="bg-emerald-50 border border-emerald-200 p-4 rounded-2xl mb-8 text-xs text-emerald-950">
+                        <p className="font-black uppercase text-[10px] text-emerald-900 mb-1">
+                            Academic Gown Payment Breakdown & Refund Notice
+                        </p>
+                        <p className="text-emerald-800 leading-relaxed font-medium">
+                            Your <strong>₦12,000.00</strong> Convocation Gown payment comprises <strong>₦7,000.00</strong> for the academic gown hire and a <strong>₦5,000.00 refundable deposit</strong>. Please present this official receipt when returning the academic gown after the convocation ceremony to claim your <strong>₦5,000.00</strong> refund.
+                        </p>
+                    </div>
+                )}
 
                 {/* Signatures & Security Stamp */}
                 <div className="grid grid-cols-2 gap-8 pt-6 border-t-2 border-dashed border-slate-200">
