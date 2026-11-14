@@ -23,6 +23,7 @@ export default async function StudentLayout({
         // @ts-expect-error - TS2769: Auto-suppressed for build
         .where(and(eq(students.userId, session.user.id), isNull(students.deletedAt)))
         .orderBy(
+            sql`CASE WHEN ${students.matricNumber} IS NOT NULL THEN 0 ELSE 1 END`,
             sql`CASE WHEN ${students.status} = 'active' THEN 0 ELSE 1 END`,
             sql`CASE WHEN ${students.programmeType} = 'HND' THEN 0 ELSE 1 END`,
             desc(students.id)

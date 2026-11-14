@@ -866,7 +866,7 @@ export async function getStudentProfile() {
             .from(students)
             .leftJoin(users, eq(students.userId, users.id))
             .leftJoin(programmes, eq(students.programmeId, programmes.id))
-            .where(and(eq(students.userId, userId), isNull(students.deletedAt)))
+            .where(and(eq(students.userId, userId), isNull(students.deletedAt), sql`${students.matricNumber} IS NOT NULL`))
             .orderBy(
                 sql`CASE WHEN ${students.status} = 'active' THEN 0 ELSE 1 END`,
                 sql`CASE WHEN ${students.programmeType} = 'HND' THEN 0 ELSE 1 END`,
@@ -874,29 +874,81 @@ export async function getStudentProfile() {
             )
             .limit(1);
 
-        // JIT Profile Creation: If no student record exists but user is a student, create one.
-        if (studentRows.length === 0) {
+        // Recovery lookup: If user has no active matriculated student row (or only has an old nd_graduant row while an active HND row exists),
+        // locate their canonical active student record instead of fabricating a blank ND 1 row.
+        if (studentRows.length === 0 || (studentRows[0].student.status === 'nd_graduant' && studentRows[0].student.programmeType === 'ND')) {
             const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
-            if (user && user.role === 'student') {
-                const barcode = `${user.name} | PENDING`;
-                await db.insert(students).values({
-                    userId: userId,
-                    currentLevel: 1,
-                    barcode: barcode
-                });
+            if (user && (user.role === 'student' || user.role === 'fresher' || user.role === 'applicant')) {
+                const cleanEmail = (user.email || '').toLowerCase().replace(/^retired\.\d+\./, '');
+                const emailLocalStripped = (cleanEmail.endsWith('@student.fss.edu.ng') || cleanEmail.endsWith('@fssibadan.edu.ng'))
+                    ? cleanEmail.split('@')[0].replace(/[^a-z0-9]/gi, '').toUpperCase()
+                    : '';
+                const cleanPhone = (user.phone || '').trim();
+                const nameTokens = (user.name || '').trim().split(/\s+/).filter(w => w.length >= 3);
 
-                // Re-fetch now that it exists
-                studentRows = await db.select({
-                    student: students,
-                    user: users,
-                    programme: programmes
-                })
-                    .from(students)
-                    .leftJoin(users, eq(students.userId, users.id))
-                    .leftJoin(programmes, eq(students.programmeId, programmes.id))
-                    .where(and(eq(students.userId, userId), isNull(students.deletedAt)))
-                    .limit(1);
+                const recoveryConditions: any[] = [];
+                if (emailLocalStripped.length >= 6) {
+                    recoveryConditions.push(sql`REPLACE(REPLACE(UPPER(${students.matricNumber}), '/', ''), '_', '') = ${emailLocalStripped}`);
+                }
+                if (user.schoolPortalId) {
+                    const normPortalId = user.schoolPortalId.trim().toUpperCase();
+                    recoveryConditions.push(eq(students.matricNumber, normPortalId));
+                }
+                if (cleanPhone.length >= 10 && nameTokens.length >= 1) {
+                    const anyTokenMatch = or(...nameTokens.map(t =>
+                        sql`CONCAT_WS(' ', COALESCE(${students.firstName}, ''), COALESCE(${students.lastName}, ''), COALESCE(${students.otherNames}, ''), COALESCE(${users.name}, '')) LIKE ${`%${t}%`}`
+                    ));
+                    recoveryConditions.push(and(eq(users.phone, cleanPhone), anyTokenMatch, eq(students.programmeType, 'HND'), eq(students.status, 'active')));
+                }
+                if (nameTokens.length >= 2) {
+                    const tokenMatches = nameTokens.map(t =>
+                        sql`CONCAT_WS(' ', COALESCE(${students.firstName}, ''), COALESCE(${students.lastName}, ''), COALESCE(${students.otherNames}, ''), COALESCE(${users.name}, '')) LIKE ${`%${t}%`}`
+                    );
+                    recoveryConditions.push(and(...tokenMatches, eq(students.programmeType, 'HND'), eq(students.status, 'active')));
+                }
+
+                if (recoveryConditions.length > 0) {
+                    const recoveredRows = await db.select({
+                        student: students,
+                        user: users,
+                        programme: programmes
+                    })
+                        .from(students)
+                        .leftJoin(users, eq(students.userId, users.id))
+                        .leftJoin(programmes, eq(students.programmeId, programmes.id))
+                        .where(and(
+                            isNull(students.deletedAt),
+                            sql`${students.matricNumber} IS NOT NULL`,
+                            notLike(students.matricNumber, '%.retired.%'),
+                            or(...recoveryConditions)
+                        ))
+                        .orderBy(
+                            sql`CASE WHEN ${students.status} = 'active' THEN 0 ELSE 1 END`,
+                            sql`CASE WHEN ${students.programmeType} = 'HND' THEN 0 ELSE 1 END`,
+                            desc(students.id)
+                        )
+                        .limit(1);
+
+                    if (recoveredRows.length > 0) {
+                        studentRows = recoveredRows;
+                    }
+                }
             }
+        }
+
+        // Fallback if student genuinely has an unmatriculated fresher row (e.g. brand new admission before matric assignment)
+        if (studentRows.length === 0) {
+            studentRows = await db.select({
+                student: students,
+                user: users,
+                programme: programmes
+            })
+                .from(students)
+                .leftJoin(users, eq(students.userId, users.id))
+                .leftJoin(programmes, eq(students.programmeId, programmes.id))
+                .where(and(eq(students.userId, userId), isNull(students.deletedAt)))
+                .orderBy(desc(students.id))
+                .limit(1);
         }
 
         if (studentRows.length === 0) return null;

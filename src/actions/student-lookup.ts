@@ -79,8 +79,10 @@ export async function searchPublicStudents(query: string) {
 
         const activeCondition = and(
             isNull(students.deletedAt),
+            sql`${students.matricNumber} IS NOT NULL`,
             ne(students.status, 'withdrawn'),
             notLike(students.matricNumber, '%.retired.%'),
+            notLike(students.matricNumber, '%.deleted.%'),
             notLike(users.email, 'retired.%')
         );
 
@@ -155,6 +157,11 @@ export async function searchPublicStudents(query: string) {
             .leftJoin(departments, eq(students.deptId, departments.id))
             .leftJoin(programmes, eq(students.programmeId, programmes.id))
             .where(whereClause)
+            .orderBy(
+                sql`CASE WHEN ${students.status} = 'active' THEN 0 ELSE 1 END`,
+                sql`CASE WHEN ${students.programmeType} = 'HND' THEN 0 ELSE 1 END`,
+                sql`${students.id} DESC`
+            )
             .limit(12);
 
         const data = rows

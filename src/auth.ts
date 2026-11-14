@@ -174,27 +174,69 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
                     if (user && (user.role === 'student' || user.role === 'applicant' || user.role === 'fresher')) {
                         const [stu] = await db.select().from(students)
-                            .where(and(eq(students.userId, user.id), isNull(students.deletedAt)))
+                            .where(and(
+                                eq(students.userId, user.id),
+                                isNull(students.deletedAt),
+                                sql`${students.matricNumber} IS NOT NULL`
+                            ))
                             .orderBy(
                                 sql`CASE WHEN ${students.status} = 'active' THEN 0 ELSE 1 END`,
                                 sql`CASE WHEN ${students.programmeType} = 'HND' THEN 0 ELSE 1 END`,
                                 desc(students.id)
                             )
                             .limit(1);
+
                         if (stu) {
                             studentRecord = stu;
-                        } else {
-                            const [matchedStudent] = await db.select().from(students)
+                        }
+
+                        // If no matriculated student record on this user OR the student record is an old ND graduant,
+                        // check if an active canonical (especially HND) student record exists for this person.
+                        if (!studentRecord || (studentRecord.status === 'nd_graduant' && studentRecord.programmeType === 'ND')) {
+                            const emailLocalStripped = (cleanEmail.endsWith('@student.fss.edu.ng') || cleanEmail.endsWith('@fssibadan.edu.ng'))
+                                ? cleanEmail.split('@')[0].replace(/[^a-z0-9]/gi, '').toUpperCase()
+                                : '';
+                            const cleanPhone = (user.phone || '').trim();
+                            const nameTokens = (user.name || '').trim().split(/\s+/).filter((w: string) => w.length >= 3);
+
+                            const matchOrs: any[] = [
+                                eq(students.guardianEmail, user.email),
+                                eq(students.kinEmail, user.email),
+                            ];
+
+                            if (user.firstName && user.surname) {
+                                matchOrs.push(and(
+                                    eq(students.firstName, user.firstName),
+                                    eq(students.lastName, user.surname)
+                                ));
+                            }
+                            if (emailLocalStripped.length >= 6) {
+                                matchOrs.push(sql`REPLACE(REPLACE(UPPER(${students.matricNumber}), '/', ''), '_', '') = ${emailLocalStripped}`);
+                            }
+                            if (cleanPhone.length >= 10 && nameTokens.length >= 1) {
+                                const anyTokenMatch = or(...nameTokens.map((t: string) =>
+                                    sql`CONCAT_WS(' ', COALESCE(${students.firstName}, ''), COALESCE(${students.lastName}, ''), COALESCE(${students.otherNames}, ''), COALESCE(${users.name}, '')) LIKE ${`%${t}%`}`
+                                ));
+                                matchOrs.push(and(eq(users.phone, cleanPhone), anyTokenMatch, eq(students.programmeType, 'HND'), eq(students.status, 'active')));
+                            }
+                            if (nameTokens.length >= 2) {
+                                const tokenConds = nameTokens.map((t: string) =>
+                                    sql`CONCAT_WS(' ', COALESCE(${students.firstName}, ''), COALESCE(${students.lastName}, ''), COALESCE(${students.otherNames}, ''), COALESCE(${users.name}, '')) LIKE ${`%${t}%`}`
+                                );
+                                matchOrs.push(and(...tokenConds, eq(students.programmeType, 'HND'), eq(students.status, 'active')));
+                            }
+
+                            const [matchedPair] = await db
+                                .select({ student: students, ownerUser: users })
+                                .from(students)
+                                .leftJoin(users, eq(students.userId, users.id))
                                 .where(and(
                                     isNull(students.deletedAt),
-                                    or(
-                                        eq(students.guardianEmail, user.email),
-                                        eq(students.kinEmail, user.email),
-                                        and(
-                                            eq(students.firstName, user.firstName || ''),
-                                            eq(students.lastName, user.surname || '')
-                                        )
-                                    )
+                                    sql`${students.matricNumber} IS NOT NULL`,
+                                    notLike(students.matricNumber, '%.retired.%'),
+                                    // If we already have an nd_graduant record, only upgrade if the matched record is active HND
+                                    studentRecord ? and(eq(students.programmeType, 'HND'), eq(students.status, 'active')) : sql`TRUE`,
+                                    or(...matchOrs)
                                 ))
                                 .orderBy(
                                     sql`CASE WHEN ${students.status} = 'active' THEN 0 ELSE 1 END`,
@@ -203,13 +245,25 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                                 )
                                 .limit(1);
 
-                            if (matchedStudent) {
-                                studentRecord = matchedStudent;
-                                if (!studentRecord.userId) {
-                                    await db.update(students).set({ userId: user.id }).where(eq(students.id, matchedStudent.id));
+                            if (matchedPair?.student) {
+                                studentRecord = matchedPair.student;
+                                if (matchedPair.ownerUser && matchedPair.ownerUser.id !== user.id) {
+                                    companionUsers.push(user);
+                                    user = matchedPair.ownerUser;
+                                } else if (!studentRecord.userId) {
+                                    await db.update(students).set({ userId: user.id }).where(eq(students.id, studentRecord.id));
                                     studentRecord.userId = user.id;
                                 }
                             }
+                        }
+
+                        if (!studentRecord) {
+                            // Final fallback to any non-deleted student row on this userId
+                            const [anyStu] = await db.select().from(students)
+                                .where(and(eq(students.userId, user.id), isNull(students.deletedAt)))
+                                .orderBy(desc(students.id))
+                                .limit(1);
+                            if (anyStu) studentRecord = anyStu;
                         }
 
                         if (studentRecord) {
@@ -243,13 +297,28 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                                 eq(users.schoolPortalId, normLogin)
                             )
                         )
+                        .orderBy(
+                            sql`CASE WHEN ${users.status} = 'active' THEN 0 ELSE 1 END`,
+                            desc(users.id)
+                        )
                         .limit(1);
                     if (userByUsername) {
                         user = userByUsername;
+                        if (user.role === 'student' || user.role === 'fresher' || user.role === 'applicant') {
+                            const [stu] = await db.select().from(students)
+                                .where(and(eq(students.userId, user.id), isNull(students.deletedAt), sql`${students.matricNumber} IS NOT NULL`))
+                                .orderBy(
+                                    sql`CASE WHEN ${students.status} = 'active' THEN 0 ELSE 1 END`,
+                                    sql`CASE WHEN ${students.programmeType} = 'HND' THEN 0 ELSE 1 END`,
+                                    desc(students.id)
+                                )
+                                .limit(1);
+                            if (stu) studentRecord = stu;
+                        }
                     }
                 }
 
-                if (!user) {
+                if (!user || ((user.role === 'student' || user.role === 'fresher') && !studentRecord)) {
                     // Try finding student by matric number or admission number (flexible matching)
                     const normLoginId = rawInput.toUpperCase().replace(/\s+/g, '');
                     const slashNorm = normLoginId.replace(/_/g, '/');
@@ -493,10 +562,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                     name: user.name,
                     email: user.email,
                     role: user.role,
-                    status: user.status,
+                    status: studentRecord?.status === 'active' ? 'active' : user.status,
                     roles: roleNames,
                     permissions: permissionNames,
-                    schoolPortalId: (user as any).schoolPortalId,
+                    schoolPortalId: studentRecord?.matricNumber || (user as any).schoolPortalId,
                     requiresPasswordChange: Boolean((user as any).requiresPasswordChange),
                     twoFactorPending: false, // Temporarily disabled for all users to allow quick login & registration
                     matricNumber: studentRecord?.matricNumber || undefined
