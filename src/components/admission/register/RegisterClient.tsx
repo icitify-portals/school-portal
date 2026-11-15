@@ -26,6 +26,13 @@ interface RegisterCandidate {
   surname: string;
   firstName: string;
   middleName: string;
+  gender?: string;
+  dob?: string;
+  stateOfOrigin?: string;
+  lga?: string;
+  nin?: string;
+  jambNumber?: string;
+  academicSession?: string;
   email: string;
   phone: string;
   faculty: string;
@@ -160,6 +167,73 @@ export default function AdmissionRegisterClient({
   const dedupedAdmitted = Array.from(new Map(admitted.map(c => [c.id, c])).values());
   const dedupedPending = Array.from(new Map(pending.map(c => [c.id, c])).values());
   const filteredListRaw = activeTab === "admitted" ? dedupedAdmitted : dedupedPending;
+
+  const handleExportRegisterCSV = () => {
+    const listToExport = filteredListRaw;
+    if (listToExport.length === 0) {
+      toast.error("No records available to export");
+      return;
+    }
+
+    const escapeCell = (val: any) => `"${String(val ?? "").replace(/"/g, '""')}"`;
+    const headers = [
+      "S/N",
+      "Matriculation Number",
+      "Surname",
+      "First Name",
+      "Middle Name",
+      "Gender",
+      "Date of Birth",
+      "State of Origin",
+      "LGA",
+      "NIN",
+      "Phone Number",
+      "Email",
+      "JAMB No",
+      "Level",
+      "Programme",
+      "Department",
+      "Academic Session",
+      "Matric Visibility",
+      "Form Number",
+      "Status"
+    ];
+
+    const rows = listToExport.map((c, idx) => [
+      idx + 1,
+      c.matricNumber || "",
+      c.surname || "",
+      c.firstName || "",
+      c.middleName || "",
+      c.gender || "",
+      c.dob || "",
+      c.stateOfOrigin || "",
+      c.lga || "",
+      c.nin || "",
+      c.phone && c.phone !== "N/A" ? c.phone : "",
+      c.email && c.email !== "N/A" ? c.email : "",
+      c.jambNumber || "",
+      c.level || "",
+      c.programme || "",
+      c.department || "",
+      c.academicSession || "2026/2027",
+      c.matricNumber
+        ? (c.matricUnlocked ? "Unlocked (Fees Paid)" : "Hidden from Student (NELFUND Ready)")
+        : "Not Generated",
+      c.formNumber || "",
+      c.status ? c.status.toUpperCase() : ""
+    ]);
+
+    const csv = "\uFEFF" + [headers, ...rows].map(r => r.map(escapeCell).join(",")).join("\r\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `admission_register_${activeTab}_biodata_${new Date().toISOString().split("T")[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success(`Downloaded ${listToExport.length.toLocaleString()} student biodata record(s)`);
+  };
   const totalPages = Math.max(1, Math.ceil(filteredListRaw.length / pageSize));
   const paginatedList = filteredListRaw.slice((currentPage - 1) * pageSize, currentPage * pageSize);
   const filteredList = paginatedList;
@@ -499,6 +573,15 @@ export default function AdmissionRegisterClient({
                 <option key={m.value} value={m.value}>{m.label}</option>
               ))}
             </select>
+
+            {/* One-Click Biodata Download Button */}
+            <button
+              onClick={handleExportRegisterCSV}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black uppercase tracking-widest transition-colors shadow-sm"
+            >
+              <Download className="w-4 h-4" />
+              Download All Biodata (CSV)
+            </button>
 
             <button onClick={fetchData} disabled={loading} className="p-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white transition-colors">
               <Loader2 className={cn("w-4 h-4", loading && "animate-spin")} />

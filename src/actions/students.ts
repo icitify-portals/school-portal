@@ -2,14 +2,16 @@
 "use server";
 
 import { db } from "@/db/db";
-import { users, students, programmes, userRoles, roles, courses, enrollments, quizAttempts, quizResponses, quizQuestions, lessonNotes, quizzes, staffProfiles, departments, systemAuditLogs, academicSessions } from "@/db/schema";
+import { users, students, programmes, userRoles, roles, courses, enrollments, quizAttempts, quizResponses, quizQuestions, lessonNotes, quizzes, staffProfiles, departments, systemAuditLogs, academicSessions, admissionApplicationsV2 } from "@/db/schema";
 import { eq, inArray, sql, or, like, and, desc, isNull, aliasedTable } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
 import { auth } from "@/auth";
 import { generateMatricNumber } from "@/actions/matriculation";
 import { hasPermission, hasRole } from "@/lib/rbac";
-import { isStudentMatricLocked } from "@/lib/matric-visibility";
+import { isStudentMatricLocked, getLockedMatricStudentIds } from "@/lib/matric-visibility";
+import { extractBiodataFields } from "@/lib/applicant-names";
+import { inArrayChunked } from "@/lib/db-helpers";
 
 export async function getStudents(options: { search?: string, page?: number, pageSize?: number, level?: number | string, sessionId?: string, semester?: string, departmentId?: number, programmeId?: number, status?: string, graduationYear?: number | string } = {}) {
     try {
@@ -466,21 +468,51 @@ export async function exportStudentsAction(options: {
             .where(countWhere)
             .orderBy(departments.name, students.programmeType, students.currentLevel, students.matricNumber);
 
+        // Fetch linked admission applications in chunks for biodata fallback
+        const studentIds = studentRows.map(r => r.student.id).filter(Boolean);
+        const appByStudentId = new Map<number, any>();
+        if (studentIds.length > 0) {
+            const apps = await db.select({
+                id: admissionApplicationsV2.id,
+                studentId: admissionApplicationsV2.studentId,
+                applicantId: admissionApplicationsV2.applicantId,
+                formNumber: admissionApplicationsV2.formNumber,
+                applicationNumber: admissionApplicationsV2.applicationNumber,
+                nin: admissionApplicationsV2.nin,
+                jambRegNumber: admissionApplicationsV2.jambRegNumber,
+                data: admissionApplicationsV2.data,
+            })
+            .from(admissionApplicationsV2)
+            .where(inArrayChunked(admissionApplicationsV2.studentId, studentIds));
+            for (const a of apps) {
+                if (a.studentId) appByStudentId.set(a.studentId, a);
+            }
+        }
+
+        const lockedStudentIds = studentIds.length > 0
+            ? await getLockedMatricStudentIds(studentIds)
+            : new Set<number>();
+
         const headers = [
             "S/N",
-            "Matric Number",
-            "Application Number",
-            "Full Name",
+            "Matriculation Number",
+            "Surname",
             "First Name",
-            "Last Name",
-            "Email",
+            "Middle Name",
+            "Gender",
+            "Date of Birth",
+            "State of Origin",
+            "LGA",
+            "NIN",
             "Phone Number",
-            "Department",
-            "Programme",
-            "Programme Type",
+            "Email",
+            "JAMB No",
             "Level",
-            "Current Academic Session",
-            "Admission Session",
+            "Programme",
+            "Department",
+            "Academic Session",
+            "Matric Visibility",
+            "Application Number",
             "Status",
             "Payment Locked",
             "Financial Locked"
@@ -491,25 +523,56 @@ export async function exportStudentsAction(options: {
             const u = r.user;
             const p = r.programme;
             const d = r.department;
-            const levelLabel = s.currentLevel 
-                ? `${s.programmeType || p?.programmeType || ""} ${s.currentLevel}`.trim() 
-                : (s.programmeType || "");
-            
+            const app = appByStudentId.get(s.id) || null;
+            let formData: any = {};
+            if (app?.data) {
+                try { formData = typeof app.data === 'string' ? JSON.parse(app.data) : app.data; } catch {}
+            }
+
+            const bio = extractBiodataFields({
+                formData,
+                student: s,
+                user: u,
+                application: app,
+            });
+
+            const levelLabel = s.status === 'nd_graduant' || s.status === 'nd_graduated'
+                ? 'ND Graduant'
+                : s.status === 'hnd_graduant' || s.status === 'hnd_graduated'
+                    ? 'HND Graduant'
+                    : s.currentLevel
+                        ? `${s.programmeType || p?.programmeType || ""} ${s.currentLevel}`.trim()
+                        : (s.programmeType || p?.programmeType || "");
+
+            const academicSessionName = r.currentSession?.name
+                || r.admissionSession?.name
+                || (s.admissionYear ? `${s.admissionYear}/${s.admissionYear + 1}` : "2026/2027");
+
+            const isLocked = lockedStudentIds.has(s.id);
+            const matricVisibility = s.matricNumber
+                ? (isLocked ? "Hidden from Student (NELFUND Ready)" : "Unlocked (Fees Paid)")
+                : "Not Assigned";
+
             return [
                 index + 1,
-                s.matricNumber || "",
-                s.admissionNumber || "",
-                u?.name || `${s.firstName || ""} ${s.lastName || ""}`.trim() || "",
-                s.firstName || "",
-                s.lastName || "",
-                u?.email || "",
-                u?.phone || "",
-                d?.name || "",
-                p?.name || "",
-                s.programmeType || p?.programmeType || "",
+                s.matricNumber || formData.matricNumber || "",
+                bio.surname,
+                bio.firstName,
+                bio.middleName,
+                bio.gender,
+                bio.dob,
+                bio.stateOfOrigin,
+                bio.lga,
+                bio.nin,
+                bio.phone,
+                bio.email,
+                bio.jambNumber,
                 levelLabel,
-                r.currentSession?.name || "",
-                r.admissionSession?.name || "",
+                p?.name || "",
+                d?.name || "",
+                academicSessionName,
+                matricVisibility,
+                s.admissionNumber || app?.formNumber || app?.applicationNumber || "",
                 s.status || "",
                 s.isPaymentLocked ? "Yes" : "No",
                 s.isFinanciallyLocked ? "Yes" : "No"

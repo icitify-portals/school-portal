@@ -5,6 +5,7 @@ import { db } from "@/db/db";
 import {
     students, programmes, departments, users, academicSessions,
     matriculationAuditLog, matriculationSettings, matriculationSequences,
+    admissionApplicationsV2,
 } from "@/db/schema";
 import { eq, and, or, like, isNull, isNotNull, desc, asc, sql, count } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
@@ -12,6 +13,8 @@ import { auth } from "@/auth";
 import { generateMatricNumber } from "@/actions/matriculation";
 import { getLockedMatricStudentIds } from "@/lib/matric-visibility";
 import { syncAdmittedMatricNumbers } from "@/actions/admission_v2";
+import { extractBiodataFields } from "@/lib/applicant-names";
+import { inArrayChunked } from "@/lib/db-helpers";
 
 const ADMIN_ROLES = ['admin', 'superadmin', 'icitify_dev', 'dvc', 'registrar', 'admission_officer', 'ict_manager', 'ictmanager'];
 
@@ -131,6 +134,156 @@ export async function getMatricStudents(options?: {
     } catch (error) {
         console.error("[getMatricStudents] Failed:", error);
         return { students: [], total: 0, page: 1, pageSize: 50, totalPages: 0 };
+    }
+}
+
+export async function exportAllMatricStudentsBiodata(options?: {
+    search?: string;
+    deptId?: number;
+    programmeType?: string;
+    level?: number;
+    sessionId?: number;
+    matricStatus?: "all" | "assigned" | "pending";
+}) {
+    await requireAdmin();
+    try {
+        const conditions: any[] = [isNull(students.deletedAt)];
+
+        if (options?.search) {
+            const s = `%${options.search}%`;
+            conditions.push(
+                or(
+                    like(students.firstName, s),
+                    like(students.lastName, s),
+                    like(students.matricNumber, s),
+                    like(students.admissionNumber, s),
+                )
+            );
+        }
+        if (options?.deptId) {
+            conditions.push(eq(students.deptId, options.deptId));
+        }
+        if (options?.programmeType) {
+            conditions.push(eq(students.programmeType, options.programmeType as "ND" | "HND"));
+        }
+        if (options?.level) {
+            conditions.push(eq(students.currentLevel, options.level));
+        }
+        if (options?.sessionId) {
+            conditions.push(eq(students.admissionSessionId, options.sessionId));
+        }
+        if (options?.matricStatus === "assigned") {
+            conditions.push(isNotNull(students.matricNumber));
+        } else if (options?.matricStatus === "pending") {
+            conditions.push(isNull(students.matricNumber));
+        }
+
+        const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+        const rows = await db
+            .select({
+                student: students,
+                user: users,
+                programme: programmes,
+                department: departments,
+                session: academicSessions,
+            })
+            .from(students)
+            .leftJoin(users, eq(students.userId, users.id))
+            .leftJoin(programmes, eq(students.programmeId, programmes.id))
+            .leftJoin(departments, eq(students.deptId, departments.id))
+            .leftJoin(academicSessions, eq(students.admissionSessionId, academicSessions.id))
+            .where(whereClause)
+            .orderBy(
+                asc(departments.name),
+                asc(students.programmeType),
+                asc(students.currentLevel),
+                asc(students.matricNumber)
+            );
+
+        const studentIds = rows.map(r => r.student.id).filter(Boolean);
+        const appByStudentId = new Map<number, any>();
+        if (studentIds.length > 0) {
+            const apps = await db
+                .select({
+                    id: admissionApplicationsV2.id,
+                    studentId: admissionApplicationsV2.studentId,
+                    formNumber: admissionApplicationsV2.formNumber,
+                    applicationNumber: admissionApplicationsV2.applicationNumber,
+                    nin: admissionApplicationsV2.nin,
+                    jambRegNumber: admissionApplicationsV2.jambRegNumber,
+                    data: admissionApplicationsV2.data,
+                })
+                .from(admissionApplicationsV2)
+                .where(inArrayChunked(admissionApplicationsV2.studentId, studentIds));
+            for (const a of apps) {
+                if (a.studentId) appByStudentId.set(a.studentId, a);
+            }
+        }
+
+        const lockedIds = studentIds.length > 0
+            ? await getLockedMatricStudentIds(studentIds)
+            : new Set<number>();
+
+        const records = rows.map((r) => {
+            const s = r.student;
+            const u = r.user;
+            const p = r.programme;
+            const d = r.department;
+            const app = appByStudentId.get(s.id) || null;
+            let formData: any = {};
+            if (app?.data) {
+                try { formData = typeof app.data === "string" ? JSON.parse(app.data) : app.data; } catch {}
+            }
+
+            const bio = extractBiodataFields({
+                formData,
+                student: s,
+                user: u,
+                application: app,
+            });
+
+            const levelLabel = s.status === "nd_graduant" || s.status === "nd_graduated"
+                ? "ND Graduant"
+                : s.status === "hnd_graduant" || s.status === "hnd_graduated"
+                    ? "HND Graduant"
+                    : s.currentLevel
+                        ? `${s.programmeType || p?.programmeType || ""} ${s.currentLevel}`.trim()
+                        : (s.programmeType || p?.programmeType || "");
+
+            const sessionName = r.session?.name || (s.admissionYear ? `${s.admissionYear}/${s.admissionYear + 1}` : "2026/2027");
+            const isLocked = lockedIds.has(s.id);
+            const matricNumber = s.matricNumber || formData.matricNumber || "";
+
+            return {
+                matricNumber,
+                surname: bio.surname,
+                firstName: bio.firstName,
+                middleName: bio.middleName,
+                gender: bio.gender,
+                dob: bio.dob,
+                stateOfOrigin: bio.stateOfOrigin,
+                lga: bio.lga,
+                nin: bio.nin,
+                phone: bio.phone,
+                email: bio.email,
+                jambNumber: bio.jambNumber,
+                level: levelLabel,
+                programmeName: p?.name || "",
+                deptName: d?.name || "",
+                sessionName,
+                matricVisibility: matricNumber
+                    ? (isLocked ? "Hidden from Student (NELFUND Ready)" : "Unlocked (Fees Paid)")
+                    : "Pending",
+                admissionNumber: s.admissionNumber || app?.formNumber || app?.applicationNumber || "",
+                status: s.status || "",
+            };
+        });
+
+        return { success: true, records, total: records.length };
+    } catch (error: any) {
+        console.error("Failed to export matric students biodata:", error);
+        return { success: false, records: [], total: 0, error: error.message || "Export failed" };
     }
 }
 

@@ -39,7 +39,7 @@ import { sendInAppNotification } from "./notifications";
 import { checkDeveloperFeeStatus } from "./paystack-developer-subscription";
 import { sendEmail } from "@/lib/mail";
 import { normalizeEmail, isValidEmailFormat } from "@/lib/email";
-import { extractNameParts, buildFullName, findFormValue } from "@/lib/applicant-names";
+import { extractNameParts, buildFullName, findFormValue, extractBiodataFields } from "@/lib/applicant-names";
 import { generateFormNumber, generateFormHash } from "@/lib/form-number";
 import { inArrayChunked } from "@/lib/db-helpers";
 import { resolveJambNumber } from "@/lib/jamb";
@@ -2296,11 +2296,16 @@ export async function assignMatricOnAdmissionOffer(applicationId: number) {
         if (formData.signature && formData.signature.startsWith('data:image')) {
             finalSignatureUrl = await processBase64Image(formData.signature, 'signatures');
         }
+        if (finalImageUrl && finalImageUrl.length > 250) finalImageUrl = finalImageUrl.split('?')[0];
+        if (finalSignatureUrl && finalSignatureUrl.length > 250) finalSignatureUrl = finalSignatureUrl.split('?')[0];
 
+        const bio = extractBiodataFields({ formData, application });
         const nameParts = extractNameParts(formData);
-        const resolvedFirstName = nameParts.firstName || formData.fullName?.split(' ')[0] || '';
-        const resolvedLastName = nameParts.lastName || formData.fullName?.split(' ').slice(1).join(' ') || '';
+        const resolvedFirstName = bio.firstName || nameParts.firstName || formData.fullName?.split(' ')[0] || '';
+        const resolvedMiddleName = bio.middleName || nameParts.middleName || null;
+        const resolvedLastName = bio.surname || nameParts.lastName || formData.fullName?.split(' ').slice(1).join(' ') || '';
         const userFullName = buildFullName(nameParts) || formData.fullName || `Applicant ${application.id}`;
+        const resolvedGender = (['male', 'female', 'other'].includes(bio.gender.toLowerCase()) ? bio.gender.toLowerCase() : 'other') as any;
 
         let userId = application.applicantId;
         if (userId) {
@@ -2358,6 +2363,7 @@ export async function assignMatricOnAdmissionOffer(applicationId: number) {
                 await db.update(students).set({
                     firstName: resolvedFirstName || existingStudent.firstName,
                     lastName: resolvedLastName || existingStudent.lastName,
+                    otherNames: resolvedMiddleName || existingStudent.otherNames,
                     matricNumber: matricNumber,
                     previousMatricNumbers: JSON.stringify(prevMatrics),
                     jambNumber: jambNumberForDb || existingStudent.jambNumber,
@@ -2369,8 +2375,11 @@ export async function assignMatricOnAdmissionOffer(applicationId: number) {
                     admissionSessionId: targetSession?.id || existingStudent.admissionSessionId,
                     currentLevel: 1,
                     admissionYear: year || existingStudent.admissionYear,
-                    gender: (formData.gender?.toLowerCase() || existingStudent.gender || 'other') as any,
-                    dob: formData.dob || existingStudent.dob,
+                    gender: resolvedGender !== 'other' ? resolvedGender : (existingStudent.gender || 'other'),
+                    dob: bio.dob || existingStudent.dob,
+                    stateOfOrigin: bio.stateOfOrigin || existingStudent.stateOfOrigin,
+                    lga: bio.lga || existingStudent.lga,
+                    nin: (bio.nin ? bio.nin.slice(0, 11) : null) || existingStudent.nin,
                     imageUrl: finalImageUrl || existingStudent.imageUrl,
                     signatureUrl: finalSignatureUrl || existingStudent.signatureUrl,
                     status: 'active'
@@ -2381,6 +2390,7 @@ export async function assignMatricOnAdmissionOffer(applicationId: number) {
                 userId: userId,
                 firstName: resolvedFirstName,
                 lastName: resolvedLastName,
+                otherNames: resolvedMiddleName,
                 matricNumber: matricNumber,
                 jambNumber: jambNumberForDb,
                 modeOfEntry: modeOfEntry as any,
@@ -2391,8 +2401,11 @@ export async function assignMatricOnAdmissionOffer(applicationId: number) {
                 admissionSessionId: targetSession?.id || null,
                 currentLevel: 1,
                 admissionYear: year,
-                gender: (formData.gender?.toLowerCase() || 'other') as any,
-                dob: formData.dob,
+                gender: resolvedGender,
+                dob: bio.dob || null,
+                stateOfOrigin: bio.stateOfOrigin || null,
+                lga: bio.lga || null,
+                nin: bio.nin ? bio.nin.slice(0, 11) : null,
                 imageUrl: finalImageUrl,
                 signatureUrl: finalSignatureUrl,
                 nationality: formData.nationality || 'Nigerian',
@@ -4308,12 +4321,28 @@ export async function exportAdminV2Applications(filters?: {
                         String(app.admissionNotes || '').includes('Matric Number:')))
             );
 
+            const bio = extractBiodataFields({
+                formData,
+                student: app.student,
+                user: app.applicant,
+                application: app,
+            });
+
             return {
                 ...app,
                 parsedData: formData,
                 applicantName: nameFromForm || nameFromUser || 'N/A',
-                applicantEmail: app.applicant?.email || formData.email || formData.email_address || 'N/A',
-                applicantPhone: app.applicant?.phone || app.applicant?.phoneNumber || formData.phone || formData.phone_number || 'N/A',
+                surname: bio.surname || '',
+                firstName: bio.firstName || '',
+                middleName: bio.middleName || '',
+                gender: bio.gender || '',
+                dob: bio.dob || '',
+                stateOfOrigin: bio.stateOfOrigin || '',
+                lga: bio.lga || '',
+                nin: bio.nin || '',
+                jambNumber: bio.jambNumber || '',
+                applicantEmail: bio.email || app.applicant?.email || formData.email || formData.email_address || 'N/A',
+                applicantPhone: bio.phone || app.applicant?.phone || app.applicant?.phoneNumber || formData.phone || formData.phone_number || 'N/A',
                 studentMatricNumber: resolvedMatric,
                 matricUnlocked,
                 matricStatusLabel: resolvedMatric
@@ -4324,6 +4353,7 @@ export async function exportAdminV2Applications(filters?: {
                 departmentName: deptName,
                 facultyName: facName,
                 academicLevel,
+                academicSession: '2026/2027',
                 administrativeLevel: app.status === 'admitted' ? academicLevel : 'Applicant',
                 examAttendanceStatus: attendanceStatus
             };
@@ -4687,6 +4717,13 @@ export async function getAdmittedRegister(filters?: RegisterFilters) {
                         String(app.admissionNotes || '').includes('Matric Number:')))
             );
 
+            const bio = extractBiodataFields({
+                formData,
+                student: app.student,
+                user: app.applicant,
+                application: app,
+            });
+
             return {
                 id: app.id,
                 formNumber: app.formNumber || '—',
@@ -4694,11 +4731,18 @@ export async function getAdmittedRegister(filters?: RegisterFilters) {
                 matricNumber: resolvedMatric,
                 matricUnlocked,
                 fullName,
-                surname: parts.lastName,
-                firstName: parts.firstName,
-                middleName: parts.middleName,
-                email: formData.email || app.applicant?.email || 'N/A',
-                phone: formData.phone || formData.phone_number || app.applicant?.phone || 'N/A',
+                surname: bio.surname || parts.lastName,
+                firstName: bio.firstName || parts.firstName,
+                middleName: bio.middleName || parts.middleName,
+                gender: bio.gender || '',
+                dob: bio.dob || '',
+                stateOfOrigin: bio.stateOfOrigin || '',
+                lga: bio.lga || '',
+                nin: bio.nin || '',
+                jambNumber: bio.jambNumber || '',
+                academicSession: '2026/2027',
+                email: bio.email || formData.email || app.applicant?.email || 'N/A',
+                phone: bio.phone || formData.phone || formData.phone_number || app.applicant?.phone || 'N/A',
                 faculty: facName,
                 department: deptName,
                 programme: progName,

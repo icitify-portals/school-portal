@@ -72,3 +72,144 @@ export function buildFullName(parts: { firstName?: string; middleName?: string; 
         .replace(/\s+/g, ' ')
         .trim();
 }
+
+export interface ExtractedBiodata {
+    surname: string;
+    firstName: string;
+    middleName: string;
+    fullName: string;
+    gender: string;
+    dob: string;
+    stateOfOrigin: string;
+    lga: string;
+    nin: string;
+    phone: string;
+    email: string;
+    jambNumber: string;
+}
+
+export function extractBiodataFields(params: {
+    formData?: Record<string, any> | null;
+    student?: Record<string, any> | null;
+    user?: Record<string, any> | null;
+    application?: Record<string, any> | null;
+}): ExtractedBiodata {
+    const fd = params.formData || {};
+    const s = params.student || {};
+    const u = params.user || {};
+    const app = params.application || {};
+
+    const formNames = extractNameParts(fd);
+
+    let surname = String(u.surname || formNames.lastName || s.lastName || s.last_name || '').trim();
+    let middleName = String(u.middleName || u.middle_name || s.otherNames || s.other_names || formNames.middleName || '').trim();
+    let firstName = String(u.firstName || u.first_name || formNames.firstName || s.firstName || s.first_name || '').trim();
+
+    // If student.firstName had "First Middle" combined and middleName was missing or appended, split cleanly
+    if (firstName && !middleName && firstName.includes(' ')) {
+        const parts = firstName.split(/\s+/);
+        firstName = parts[0];
+        middleName = parts.slice(1).join(' ');
+    } else if (firstName && middleName && firstName.toLowerCase().endsWith(' ' + middleName.toLowerCase())) {
+        firstName = firstName.slice(0, firstName.length - middleName.length).trim();
+    }
+
+    // Fallback to user.name if surname or firstName is still empty
+    if ((!surname || !firstName) && u.name) {
+        const parts = String(u.name).trim().split(/\s+/);
+        if (!surname && parts.length > 0) surname = parts[0];
+        if (!firstName && parts.length > 1) firstName = parts[1];
+        if (!middleName && parts.length > 2) middleName = parts.slice(2).join(' ');
+    }
+
+    const fullName = buildFullName({ lastName: surname, firstName, middleName });
+
+    const rawGenderFromForm = findFormValue(fd, ['gender', 'sex']);
+    const rawStuGender = String(s.gender || '').trim();
+    const chosenGender = (rawStuGender && rawStuGender.toLowerCase() !== 'other')
+        ? rawStuGender
+        : (rawGenderFromForm || rawStuGender || '');
+    const gender = chosenGender
+        ? chosenGender.charAt(0).toUpperCase() + chosenGender.slice(1).toLowerCase()
+        : '';
+
+    const dob = String(
+        s.dob ||
+        findFormValue(fd, ['date of birth', 'dob', 'date_of_birth', 'birth date', 'birthdate']) ||
+        (fd.__ninData && (fd.__ninData.birthdate || fd.__ninData.dob || fd.__ninData.dateOfBirth)) ||
+        ''
+    ).trim();
+
+    const stateOfOrigin = String(
+        s.stateOfOrigin ||
+        s.state_of_origin ||
+        findFormValue(fd, ['state of origin', 'stateoforigin', 'state_of_origin', 'state']) ||
+        ''
+    ).trim();
+
+    const lga = String(
+        s.lga ||
+        findFormValue(fd, ['l.g.a', 'l.g.a.', 'lga', 'local government', 'local government area', 'lga of origin', 'local_government']) ||
+        ''
+    ).trim();
+
+    const ninCandidate = String(
+        s.nin ||
+        app.nin ||
+        findFormValue(fd, ['nin', 'national identification number', 'national id', 'nin_number', 'nin number']) ||
+        (fd.__ninData && (fd.__ninData.nin || fd.__ninData.idNumber)) ||
+        ''
+    ).trim();
+
+    const phone = String(
+        u.phone ||
+        u.phoneNumber ||
+        findFormValue(fd, ['phone', 'phone number', 'phone_number', 'phonenumber', 'telephone', 'mobile', 'whatsapp number', 'whatsapp']) ||
+        s.guardianPhone ||
+        s.guardian_phone ||
+        ''
+    ).trim();
+
+    const email = String(
+        u.email ||
+        findFormValue(fd, ['email', 'email address', 'email_address']) ||
+        ''
+    ).trim();
+
+    const rawJamb = String(
+        s.jambNumber ||
+        s.jamb_number ||
+        app.jambRegNumber ||
+        app.jamb_reg_number ||
+        findFormValue(fd, [
+            'jamb registration number',
+            'jamb reg number',
+            'jambregnumber',
+            'jamb_reg_number',
+            'jamb number',
+            'jamb_number',
+            'jamb no',
+            'utme reg no',
+            'utme number'
+        ]) ||
+        ''
+    ).trim();
+    const jambNumber = /^0+$/.test(rawJamb) || ['NONE', 'NIL', 'N/A', 'NA', 'NULL', 'DIRECT', 'TEMP'].includes(rawJamb.toUpperCase())
+        ? ''
+        : rawJamb;
+
+    return {
+        surname,
+        firstName,
+        middleName,
+        fullName,
+        gender,
+        dob,
+        stateOfOrigin,
+        lga,
+        nin: ninCandidate,
+        phone,
+        email,
+        jambNumber,
+    };
+}

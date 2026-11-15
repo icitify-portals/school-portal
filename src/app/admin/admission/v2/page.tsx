@@ -223,22 +223,32 @@ function AdminV2ApplicationsContent() {
                 applicationMode: modeFilter !== 'all' ? modeFilter : undefined,
             });
             if (result.success && result.applications.length > 0) {
-                const exportData = result.applications.map((app: any) => ({
-                    'Application Date': app.appliedAt ? format(new Date(app.appliedAt), 'yyyy-MM-dd HH:mm') : 'N/A',
-                    'Form Number': app.formNumber || 'N/A',
-                    'Applicant Name': app.applicantName || 'N/A',
+                const exportData = result.applications.map((app: any, idx: number) => ({
+                    'S/N': idx + 1,
+                    'Matriculation Number': app.studentMatricNumber || app.parsedData?.matricNumber || 'N/A',
+                    'Surname': app.surname || 'N/A',
+                    'First Name': app.firstName || 'N/A',
+                    'Middle Name': app.middleName || '',
+                    'Gender': app.gender || 'N/A',
+                    'Date of Birth': app.dob || 'N/A',
+                    'State of Origin': app.stateOfOrigin || 'N/A',
+                    'LGA': app.lga || 'N/A',
+                    'NIN': app.nin || 'N/A',
+                    'Phone Number': app.applicantPhone || 'N/A',
                     'Email': app.applicantEmail || 'N/A',
-                    'Phone': app.applicantPhone || 'N/A',
-                    'Matric Number': app.studentMatricNumber || app.parsedData?.matricNumber || 'N/A',
-                    'Matric Visibility': app.matricStatusLabel || (app.studentMatricNumber || app.parsedData?.matricNumber ? (app.matricUnlocked ? 'Unlocked (Fees Paid)' : 'Hidden from Student (NELFUND Ready)') : 'Not Generated'),
-                    'Faculty': app.facultyName || 'N/A',
-                    'Department': app.departmentName || 'N/A',
-                    'Programme': app.programmeName || 'Pending Course Selection',
-                    'Mode of Study': app.applicationMode === 'full_time' ? 'Full Time' : app.applicationMode === 'part_time' ? 'Part Time' : app.applicationMode === 'elearning' ? 'E-Learning' : 'N/A',
+                    'JAMB No': app.jambNumber || 'N/A',
                     'Level': app.academicLevel || 'N/A',
+                    'Programme': app.programmeName || 'Pending Course Selection',
+                    'Department': app.departmentName || 'N/A',
+                    'Academic Session': app.academicSession || '2026/2027',
+                    'Matric Visibility': app.matricStatusLabel || (app.studentMatricNumber || app.parsedData?.matricNumber ? (app.matricUnlocked ? 'Unlocked (Fees Paid)' : 'Hidden from Student (NELFUND Ready)') : 'Not Generated'),
+                    'Form Number': app.formNumber || 'N/A',
+                    'Faculty': app.facultyName || 'N/A',
+                    'Mode of Study': app.applicationMode === 'full_time' ? 'Full Time' : app.applicationMode === 'part_time' ? 'Part Time' : app.applicationMode === 'elearning' ? 'E-Learning' : 'N/A',
                     'Status': app.status ? String(app.status).toUpperCase() : 'N/A',
                     'Payment Status': app.paymentStatus ? String(app.paymentStatus).toUpperCase() : 'N/A',
-                    'Template': app.templateName || 'N/A'
+                    'Template': app.templateName || 'N/A',
+                    'Application Date': app.appliedAt ? format(new Date(app.appliedAt), 'yyyy-MM-dd HH:mm') : 'N/A'
                 }));
                 const worksheet = xlsx.utils.json_to_sheet(exportData);
                 const workbook = xlsx.utils.book_new();

@@ -11,7 +11,7 @@ import {
 import {
     getMatricStudents, previewNextMatricNumber, assignMatricNumber,
     changeMatricNumber, restoreMatricNumber, getMatricAuditLog, getStudentMatricHistory,
-    batchAssignMatricNumbers, getLastMatricNumbers
+    batchAssignMatricNumbers, getLastMatricNumbers, exportAllMatricStudentsBiodata
 } from "@/actions/matric-admin";
 import { getDepartments } from "@/actions/departments";
 import { getAcademicSessions } from "@/actions/portal";
@@ -247,28 +247,83 @@ export default function MatricAdminPage() {
         setHistoryLoading(false);
     };
 
-    const exportCSV = () => {
-        const headers = ["Student Name", "Admission No", "Matric No", "Student Visibility", "Department", "Programme", "Year Entry", "Level", "Status"];
-        const rows = students.map((s) => [
-            `${s.lastName} ${s.firstName}`,
-            s.admissionNumber || "",
-            s.matricNumber || "PENDING",
-            s.matricNumber ? (s.matricLocked ? "Hidden from Student (NELFUND Ready - Awaiting Fees)" : "Unlocked (Fees Paid)") : "Pending",
-            s.deptName || "",
-            s.programmeName || "",
-            s.admissionYear || "",
-            s.currentLevel || "",
-            s.status || "",
-        ]);
-        const csv = [headers, ...rows].map((r) => r.map((c) => `"${c}"`).join(",")).join("\n");
-        const blob = new Blob([csv], { type: "text/csv" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `matric-students-${format(new Date(), "yyyy-MM-dd")}.csv`;
-        a.click();
-        URL.revokeObjectURL(url);
-        toast.success("CSV exported");
+    const exportCSV = async () => {
+        toast.loading("Preparing full student biodata export (all matching students)...", { id: "matric-export" });
+        try {
+            const res = await exportAllMatricStudentsBiodata({
+                search: search || undefined,
+                deptId: deptFilter ? Number(deptFilter) : undefined,
+                programmeType: typeFilter || undefined,
+                level: levelFilter ? Number(levelFilter) : undefined,
+                sessionId: yearFilter ? Number(yearFilter) : undefined,
+                matricStatus: (statusFilter as any) || "all",
+            });
+
+            if (!res.success || !res.records) {
+                toast.error(res.error || "Failed to export student biodata", { id: "matric-export" });
+                return;
+            }
+
+            const escapeCell = (val: any) => `"${String(val ?? "").replace(/"/g, '""')}"`;
+
+            const headers = [
+                "S/N",
+                "Matriculation Number",
+                "Surname",
+                "First Name",
+                "Middle Name",
+                "Gender",
+                "Date of Birth",
+                "State of Origin",
+                "LGA",
+                "NIN",
+                "Phone Number",
+                "Email",
+                "JAMB No",
+                "Level",
+                "Programme",
+                "Department",
+                "Academic Session",
+                "Matric Visibility",
+                "Admission No",
+                "Status"
+            ];
+
+            const rows = res.records.map((s: any, idx: number) => [
+                idx + 1,
+                s.matricNumber || "PENDING",
+                s.surname || "",
+                s.firstName || "",
+                s.middleName || "",
+                s.gender || "",
+                s.dob || "",
+                s.stateOfOrigin || "",
+                s.lga || "",
+                s.nin || "",
+                s.phone || "",
+                s.email || "",
+                s.jambNumber || "",
+                s.level || "",
+                s.programmeName || "",
+                s.deptName || "",
+                s.sessionName || "",
+                s.matricVisibility || "",
+                s.admissionNumber || "",
+                s.status || "",
+            ]);
+
+            const csv = "\uFEFF" + [headers, ...rows].map((r) => r.map(escapeCell).join(",")).join("\r\n");
+            const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `student-biodata-matric-${format(new Date(), "yyyy-MM-dd")}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+            toast.success(`Exported ${res.records.length.toLocaleString()} student record(s) with full biodata`, { id: "matric-export" });
+        } catch (err: any) {
+            toast.error(err?.message || "Failed to export CSV", { id: "matric-export" });
+        }
     };
 
     const exportAuditCSV = () => {
