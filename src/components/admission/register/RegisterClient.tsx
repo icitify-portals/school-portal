@@ -20,6 +20,8 @@ interface RegisterCandidate {
   id: number;
   formNumber: string;
   applicationNumber: string;
+  matricNumber?: string | null;
+  matricUnlocked?: boolean;
   fullName: string;
   surname: string;
   firstName: string;
@@ -205,12 +207,29 @@ export default function AdmissionRegisterClient({
             </span>
           </td>
           <td className="px-4 py-3.5">
-            <span className={cn(
-              "font-mono text-xs font-bold px-2 py-1 rounded-lg",
-              c.applicationNumber && c.applicationNumber !== "—" ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-400"
-            )}>
-              {c.applicationNumber}
-            </span>
+            {c.matricNumber ? (
+              <div className="flex flex-col gap-0.5">
+                <span className={cn(
+                  "font-mono text-xs font-bold px-2 py-1 rounded-lg w-fit",
+                  c.matricUnlocked ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-800"
+                )}>
+                  {c.matricNumber}
+                </span>
+                <span className={cn(
+                  "text-[9px] font-black uppercase tracking-wider",
+                  c.matricUnlocked ? "text-emerald-600" : "text-amber-600"
+                )}>
+                  {c.matricUnlocked ? "Unlocked (Paid)" : "Hidden (NELFUND)"}
+                </span>
+              </div>
+            ) : (
+              <span className={cn(
+                "font-mono text-xs font-bold px-2 py-1 rounded-lg",
+                c.applicationNumber && c.applicationNumber !== "—" ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-400"
+              )}>
+                {c.applicationNumber}
+              </span>
+            )}
           </td>
           <td className="px-4 py-3.5">
             <div>
@@ -367,6 +386,7 @@ export default function AdmissionRegisterClient({
             <div className="grid grid-cols-2 gap-4 text-sm">
               {[
                 ["Form Number", detailModal.formNumber],
+                ["Matric Number", detailModal.matricNumber ? `${detailModal.matricNumber} (${detailModal.matricUnlocked ? "Unlocked" : "Hidden - Awaiting Fees"})` : "—"],
                 ["Admission Number", detailModal.applicationNumber !== "—" ? detailModal.applicationNumber : "—"],
                 ["Programme", detailModal.programme],
                 ["Department", detailModal.department],
@@ -544,7 +564,7 @@ export default function AdmissionRegisterClient({
                   <tr className="bg-slate-50 border-b border-slate-200">
                     <th className="px-4 py-3.5 w-8"></th>
                     <th className="px-4 py-3.5 text-[10px] font-black uppercase tracking-widest text-slate-500">Form No</th>
-                    <th className="px-4 py-3.5 text-[10px] font-black uppercase tracking-widest text-slate-500">Admission No</th>
+                    <th className="px-4 py-3.5 text-[10px] font-black uppercase tracking-widest text-slate-500">Matric / Adm No</th>
                     <th className="px-4 py-3.5 text-[10px] font-black uppercase tracking-widest text-slate-500">Applicant</th>
                     <th className="px-4 py-3.5 text-[10px] font-black uppercase tracking-widest text-slate-500">Department</th>
                     <th className="px-4 py-3.5 text-[10px] font-black uppercase tracking-widest text-slate-500">Programme</th>

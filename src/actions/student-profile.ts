@@ -8,6 +8,7 @@ import { auth } from "@/auth";
 import { getStaffProfileByUserId } from "@/actions/hr_leave";
 import { getStudentProfile as fetchStudentProfile } from "@/actions/students";
 import { storage } from "@/lib/storage";
+import { isStudentMatricLocked } from "@/lib/matric-visibility";
 
 export async function updateStudentProfile(userId: number, data: {
     guardianName?: string;
@@ -107,6 +108,9 @@ export async function getStudentProfile(userId: number) {
                 desc(students.id)
             )
             .limit(1);
+        if (profile && await isStudentMatricLocked({ studentId: profile.id, userId })) {
+            return { ...profile, matricNumber: null, matricLocked: true };
+        }
         return profile;
     } catch (error) {
         console.error("Failed to fetch student profile:", error);
@@ -370,9 +374,11 @@ export async function getStudentProfileStatus() {
     if (!user?.phone?.trim()) missing.push("phone");
     if (!user?.email?.trim()) missing.push("email");
 
+    const matricLocked = await isStudentMatricLocked({ studentId: student.id, userId: Number(session.user.id) });
+
     return {
         success: true,
-        profile: { ...student, firstName, lastName, email: user?.email || "", phone: user?.phone || "" },
+        profile: { ...student, matricNumber: matricLocked ? null : student.matricNumber, matricLocked, firstName, lastName, email: user?.email || "", phone: user?.phone || "" },
         missing,
         isComplete: missing.length === 0 || student.profileCompleted === true,
     };

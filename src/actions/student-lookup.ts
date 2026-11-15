@@ -5,6 +5,7 @@ import { students, users, departments, programmes } from "@/db/schema";
 import { eq, or, like, notLike, and, sql, isNull, inArray, ne } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { levelLabel } from "@/lib/levels";
+import { getLockedMatricStudentIds, isStudentMatricLocked } from "@/lib/matric-visibility";
 
 function maskEmail(email: string | null | undefined): string {
     if (!email || !email.includes('@')) return email || 'Not assigned';
@@ -164,23 +165,29 @@ export async function searchPublicStudents(query: string) {
             )
             .limit(12);
 
+        const lockedIds = await getLockedMatricStudentIds();
+
         const data = rows
             .filter((r) => {
                 if (!r.matricNumber || r.matricNumber.includes('.retired.')) return false;
                 if (r.status === 'withdrawn') return false;
                 if (r.userEmail && r.userEmail.startsWith('retired.')) return false;
+                // Do not allow searching by a locked matriculation number
+                if (isNumericOrCode && lockedIds.has(r.studentId)) return false;
                 return true;
             })
             .map((r) => {
             const rawEmail = r.userEmail || '';
             const isInstitutional = rawEmail.endsWith('@student.fss.edu.ng');
             const fullName = [r.firstName, r.lastName, r.otherNames].filter(Boolean).join(' ') || r.userName || 'Unnamed Student';
+            const isLocked = lockedIds.has(r.studentId);
 
             return {
                 studentId: r.studentId,
                 userId: r.userId,
                 fullName,
-                matricNumber: r.matricNumber || 'Pending / Not Assigned',
+                matricNumber: isLocked ? 'Locked (Pay Acceptance & School Fees)' : (r.matricNumber || 'Pending / Not Assigned'),
+                matricLocked: isLocked,
                 admissionNumber: r.admissionNumber,
                 department: r.deptName || 'Not Assigned',
                 programme: r.programmeName || `${r.programmeType || ''} Level ${r.currentLevel || 1}`,
@@ -294,7 +301,8 @@ export async function resetPasswordToDefaultAction(studentId: number) {
             console.warn("Companion twin sync notice:", syncErr);
         }
 
-        const loginIdentifier = student.matricNumber || user.email;
+        const isLocked = await isStudentMatricLocked({ studentId: student.id, userId });
+        const loginIdentifier = isLocked ? user.email : (student.matricNumber || user.email);
         const studentDisplayName = [student.firstName, student.lastName].filter(Boolean).join(' ') || user.name || 'Student';
 
         return {

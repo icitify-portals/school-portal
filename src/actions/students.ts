@@ -9,6 +9,7 @@ import bcrypt from "bcryptjs";
 import { auth } from "@/auth";
 import { generateMatricNumber } from "@/actions/matriculation";
 import { hasPermission, hasRole } from "@/lib/rbac";
+import { isStudentMatricLocked } from "@/lib/matric-visibility";
 
 export async function getStudents(options: { search?: string, page?: number, pageSize?: number, level?: number | string, sessionId?: string, semester?: string, departmentId?: number, programmeId?: number, status?: string, graduationYear?: number | string } = {}) {
     try {
@@ -826,6 +827,17 @@ export async function getStudentByUserId(userId: number) {
             if (!student.firstName) student.firstName = parts[0] || '';
             if (!student.lastName) student.lastName = parts.slice(1).join(' ') || parts[0] || '';
         }
+
+        const session = await auth();
+        const callerRole = ((session?.user as any)?.role || '').toLowerCase();
+        if (!callerRole || ['student', 'applicant', 'fresher'].includes(callerRole)) {
+            const locked = await isStudentMatricLocked({ studentId: student.id, userId });
+            if (locked) {
+                student.matricNumber = null;
+                (student as any).matricLocked = true;
+            }
+        }
+
         return student;
     } catch (error) {
         console.error("Failed to fetch student profile:", error);
@@ -953,7 +965,11 @@ export async function getStudentProfile() {
 
         if (studentRows.length === 0) return null;
 
-        const studentData = studentRows[0].student;
+        const studentData = { ...studentRows[0].student };
+        const matricLocked = await isStudentMatricLocked({ studentId: studentData.id, userId });
+        if (matricLocked) {
+            studentData.matricNumber = null;
+        }
         const enrollmentsWithCourses = await db.select({
             enrollment: enrollments,
             course: courses
@@ -964,6 +980,7 @@ export async function getStudentProfile() {
 
         return {
             ...studentData,
+            matricLocked,
             user: studentRows[0].user,
             programme: studentRows[0].programme,
             enrollments: enrollmentsWithCourses.map(e => ({

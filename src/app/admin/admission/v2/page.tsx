@@ -229,6 +229,8 @@ function AdminV2ApplicationsContent() {
                     'Applicant Name': app.applicantName || 'N/A',
                     'Email': app.applicantEmail || 'N/A',
                     'Phone': app.applicantPhone || 'N/A',
+                    'Matric Number': app.studentMatricNumber || app.parsedData?.matricNumber || 'N/A',
+                    'Matric Visibility': app.matricStatusLabel || (app.studentMatricNumber || app.parsedData?.matricNumber ? (app.matricUnlocked ? 'Unlocked (Fees Paid)' : 'Hidden from Student (NELFUND Ready)') : 'Not Generated'),
                     'Faculty': app.facultyName || 'N/A',
                     'Department': app.departmentName || 'N/A',
                     'Programme': app.programmeName || 'Pending Course Selection',
@@ -817,12 +819,26 @@ function AdminV2ApplicationsContent() {
                                                 </span>
                                             </td>
                                             <td className="px-6 py-5">
-                                                <span className={cn(
-                                                    "font-mono text-[10px] font-black italic",
-                                                    app.studentMatricNumber ? "text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200" : "text-slate-400"
-                                                )}>
-                                                    {app.studentMatricNumber || '—'}
-                                                </span>
+                                                <div className="flex flex-col gap-1">
+                                                    <span className={cn(
+                                                        "font-mono text-[10px] font-black italic w-fit",
+                                                        app.studentMatricNumber
+                                                            ? (app.matricUnlocked
+                                                                ? "text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200"
+                                                                : "text-amber-800 bg-amber-50 px-2 py-0.5 rounded-lg border border-amber-200")
+                                                            : "text-slate-400"
+                                                    )}>
+                                                        {app.studentMatricNumber || '—'}
+                                                    </span>
+                                                    {app.studentMatricNumber && (
+                                                        <span className={cn(
+                                                            "text-[8px] font-black uppercase tracking-wider",
+                                                            app.matricUnlocked ? "text-emerald-600" : "text-amber-600"
+                                                        )}>
+                                                            {app.matricUnlocked ? "Unlocked" : "NELFUND • Hidden"}
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </td>
                                             <td className="px-6 py-5">
                                                 <span className="text-[10px] font-bold text-slate-600">{app.sessionName || '—'}</span>

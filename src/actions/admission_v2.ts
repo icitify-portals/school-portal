@@ -47,6 +47,7 @@ import { storage } from "@/lib/storage";
 import { assertActivityUnlocked, ACTIVITIES } from "@/services/ActivityLockService";
 import { resolveRemitaServiceType } from "@/services/SplitPaymentEngine";
 import { verifyAdmissionFeesForApplication, describeMissingFees } from "@/services/AdmissionFeeVerificationService";
+import { isApplicationMatricUnlocked } from "@/lib/matric-visibility";
 import { hash, compare } from "bcryptjs";
 import { writeFile, mkdir, readFile } from "fs/promises";
 
@@ -1288,12 +1289,35 @@ export async function updateAdmissionStatus(applicationId: number, status: any, 
 
 export async function getApplicantStatusData(applicationId: number) {
     try {
-        const app = await db.query.admissionApplicationsV2.findFirst({
+        let app = await db.query.admissionApplicationsV2.findFirst({
             where: eq(admissionApplicationsV2.id, applicationId),
-            with: { applicant: true, programme: true }
+            with: { applicant: true, programme: true, student: true }
         });
 
         if (!app) return null;
+
+        // Ensure any admitted ND 1 / HND 1 application has its matriculation number pre-generated
+        // for NELFUND / admin use, and automatically unlock/finalize if both fees are paid.
+        let matricUnlocked = false;
+        if (app.status === 'admitted') {
+            let formData: any = {};
+            try { formData = typeof app.data === 'string' ? JSON.parse(app.data || '{}') : (app.data || {}); } catch {}
+            if (!formData.matricNumber && !app.student?.matricNumber) {
+                await assignMatricOnAdmissionOffer(applicationId);
+                app = await db.query.admissionApplicationsV2.findFirst({
+                    where: eq(admissionApplicationsV2.id, applicationId),
+                    with: { applicant: true, programme: true, student: true }
+                }) || app;
+            }
+            matricUnlocked = await isApplicationMatricUnlocked(app);
+            if (matricUnlocked && (!app.studentId || !String(app.admissionNotes || '').includes('Admission accepted and finalized'))) {
+                await finalizeStudentAdmission(applicationId);
+                app = await db.query.admissionApplicationsV2.findFirst({
+                    where: eq(admissionApplicationsV2.id, applicationId),
+                    with: { applicant: true, programme: true, student: true }
+                }) || app;
+            }
+        }
 
         const template = await db.query.admissionFormTemplates.findFirst({
             where: eq(admissionFormTemplates.id, app.templateId)
@@ -1320,13 +1344,45 @@ export async function getApplicantStatusData(applicationId: number) {
         });
 
         const schoolFeesAmount = getCalculatedTuition(template, app.programme);
-        
+
+        let sanitizedData = app.data;
+        let parsedForm: any = {};
+        try {
+            parsedForm = typeof app.data === 'string' ? JSON.parse(app.data || '{}') : { ...(app.data || {}) };
+        } catch {}
+
+        const rawMatric = app.student?.matricNumber || parsedForm.matricNumber || null;
+
+        if (!matricUnlocked) {
+            // Strip pre-generated matriculation number so student cannot see it before paying both fees
+            const strippedForm = { ...parsedForm };
+            delete strippedForm.matricNumber;
+            sanitizedData = typeof app.data === 'string' ? JSON.stringify(strippedForm) : strippedForm;
+        }
+
+        const sanitizedNotes = !matricUnlocked && app.admissionNotes
+            ? String(app.admissionNotes).replace(/Matric Number:\s*\S+/gi, '').trim()
+            : app.admissionNotes;
+
+        const sanitizedStudent = app.student
+            ? {
+                ...app.student,
+                matricNumber: matricUnlocked ? app.student.matricNumber : null
+            }
+            : null;
+
         return {
             ...app,
+            data: sanitizedData,
+            admissionNotes: sanitizedNotes,
+            student: sanitizedStudent,
             template,
             results,
             hasPaidSchoolFees: !!schoolFeesTx,
-            schoolFeesAmount
+            schoolFeesAmount,
+            matricLocked: app.status === 'admitted' ? !matricUnlocked : false,
+            matricNumber: matricUnlocked ? rawMatric : null,
+            hasPreAssignedMatric: Boolean(rawMatric)
         };
     } catch (error) {
         console.error("Failed to fetch applicant status data:", error);
@@ -1444,6 +1500,13 @@ export async function confirmAcceptancePayment(applicationId: number, reference:
         await db.update(transactions)
             .set({ status: 'completed' })
             .where(eq(transactions.gatewayReference, reference));
+
+        // If school fees have also already been paid, finalize and unlock matriculation number immediately
+        try {
+            await finalizeStudentAdmission(applicationId);
+        } catch (finErr) {
+            console.warn("[confirmAcceptancePayment] Non-fatal finalize check:", finErr);
+        }
 
         // Dispatch Admission Letter copy via Email
         try {
@@ -1911,6 +1974,19 @@ export async function confirmSchoolFeesPayment(applicationId: number, reference:
             .set(updatePayload)
             .where(eq(transactions.gatewayReference, reference));
 
+        // Automatically finalize admission and unlock the student's pre-generated matriculation number
+        // once both Acceptance Fee and School Fees are verified as paid.
+        try {
+            const finalization = await finalizeStudentAdmission(applicationId);
+            if (finalization.success && finalization.studentId) {
+                await db.update(transactions)
+                    .set({ studentId: finalization.studentId })
+                    .where(eq(transactions.gatewayReference, reference));
+            }
+        } catch (finErr) {
+            console.warn("[confirmSchoolFeesPayment] Non-fatal finalize check:", finErr);
+        }
+
         safeRevalidatePath(`/admission/status/${applicationId}`);
         return { success: true };
     } catch (error) {
@@ -2015,6 +2091,396 @@ export async function confirmProcessingFeePayment(applicationId: number, referen
     } catch (error) {
         console.error("Failed to confirm processing fee payment:", error);
         return { success: false, error: "An error occurred" };
+    }
+}
+
+export async function assignMatricOnAdmissionOffer(applicationId: number) {
+    try {
+        const application = await db.query.admissionApplicationsV2.findFirst({
+            where: eq(admissionApplicationsV2.id, applicationId)
+        });
+
+        if (!application || application.status !== 'admitted') {
+            return { success: false, error: "Application is not in admitted status." };
+        }
+
+        const template = await db.query.admissionFormTemplates.findFirst({
+            where: eq(admissionFormTemplates.id, application.templateId)
+        });
+
+        if (!template) {
+            return { success: false, error: "Template not found." };
+        }
+
+        const formData = typeof application.data === 'string' ? JSON.parse(application.data || "{}") : { ...(application.data || {}) };
+
+        // Resolve JAMB & Study Mode
+        const jambResolution = resolveJambNumber(application.jambRegNumber, formData);
+        const jambRegNo = jambResolution.raw;
+        const jambNumberForDb = jambResolution.persistable;
+
+        const isJambCandidate = application.applicationMode
+            ? application.applicationMode === 'full_time'
+            : (!!jambRegNo && !jambRegNo.toLowerCase().includes("temp") && !jambRegNo.toLowerCase().includes("direct"));
+
+        let studyMode: string;
+        if (isJambCandidate) {
+            studyMode = 'full-time';
+        } else if (formData.studyMode) {
+            studyMode = formData.studyMode;
+        } else if (application.applicationMode) {
+            if (application.applicationMode === 'full_time') studyMode = 'full-time';
+            else if (application.applicationMode === 'elearning') studyMode = 'elearning';
+            else studyMode = 'part-time';
+        } else {
+            studyMode = 'part-time';
+        }
+
+        if (studyMode === 'full_time') studyMode = 'full-time';
+        if (studyMode === 'part_time') studyMode = 'part-time';
+        if (studyMode === 'e-learning' || studyMode === 'e_learning') studyMode = 'elearning';
+
+        const modeOfEntry = isJambCandidate ? "JAMB" : "Direct";
+
+        const year = new Date().getFullYear();
+        const tmplName = template.name.toLowerCase();
+        const programmeType = tmplName.includes("hnd") ? "HND" : (tmplName.includes("nd") || tmplName.includes("diploma") ? "ND" : "HND");
+
+        // Resolve Programme & Department with fallbacks
+        let selectedProgrammeId = application.programmeId || Number(formData.programmeId) || null;
+        let deptId: number | null = null;
+
+        if (selectedProgrammeId) {
+            const [prog] = await db.select().from(programmes).where(eq(programmes.id, selectedProgrammeId)).limit(1);
+            if (prog) {
+                deptId = prog.deptId || null;
+            } else {
+                selectedProgrammeId = null;
+            }
+        }
+
+        // Fallback to formData.programme name lookup
+        if (!selectedProgrammeId && (formData.programme || formData.Programme || formData.programmeName)) {
+            const progNameCandidate = String(formData.programme || formData.Programme || formData.programmeName).trim();
+            const [matchedProg] = await db.select().from(programmes).where(like(programmes.name, `%${progNameCandidate}%`)).limit(1);
+            if (matchedProg) {
+                selectedProgrammeId = matchedProg.id;
+                deptId = matchedProg.deptId || null;
+            }
+        }
+
+        // Fallback to template linked programmes
+        if (!selectedProgrammeId) {
+            const templateProgs = await db.select({ programmeId: admissionTemplateProgrammes.programmeId })
+                .from(admissionTemplateProgrammes)
+                .where(eq(admissionTemplateProgrammes.templateId, template.id))
+                .limit(1);
+            selectedProgrammeId = templateProgs[0]?.programmeId || null;
+            if (selectedProgrammeId) {
+                const [prog] = await db.select().from(programmes).where(eq(programmes.id, selectedProgrammeId)).limit(1);
+                if (prog) deptId = prog.deptId || null;
+            }
+        }
+
+        // Fallback to existing student record's deptId if still unresolved
+        let existingStudentByUser = application.applicantId
+            ? await db.query.students.findFirst({ where: eq(students.userId, application.applicantId) })
+            : null;
+        if (!existingStudentByUser && application.studentId) {
+            existingStudentByUser = await db.query.students.findFirst({ where: eq(students.id, application.studentId) });
+        }
+        if (!deptId && existingStudentByUser?.deptId) {
+            deptId = existingStudentByUser.deptId;
+        }
+
+        // Find target academic session
+        const nextSessionName = `${year}/${year + 1}`;
+        let [targetSession] = await db.select().from(academicSessions)
+            .where(eq(academicSessions.name, nextSessionName))
+            .limit(1);
+
+        if (!targetSession) {
+            const [activeSession] = await db.select().from(academicSessions)
+                .where(eq(academicSessions.isActive, true))
+                .orderBy(desc(academicSessions.startDate))
+                .limit(1);
+            targetSession = activeSession;
+        }
+
+        const sessionYear = targetSession?.startDate
+            ? new Date(targetSession.startDate).getFullYear()
+            : year;
+
+        const feeCheck = await verifyAdmissionFeesForApplication(
+            {
+                id: application.id,
+                applicantId: application.applicantId,
+                acceptancePaymentStatus: application.acceptancePaymentStatus,
+                acceptancePaymentReference: application.acceptancePaymentReference,
+            },
+            { notBefore: new Date(sessionYear, 0, 1), sessionName: targetSession?.name ?? null, remitaOnlySchoolFee: true }
+        );
+
+        const wasAlreadyFinalized =
+            formData.matricUnlocked === true ||
+            (formData.matricUnlocked !== false &&
+                (String(application.admissionNotes || '').includes("Admission accepted and finalized") ||
+                    String(application.admissionNotes || '').includes("Matric Number:")));
+
+        const isUnlocked = wasAlreadyFinalized || feeCheck.verified;
+
+        // Reuse existing matriculation number if already assigned for this programmeType
+        let matricNumber = String(formData.matricNumber || "").trim();
+        if (!matricNumber && existingStudentByUser?.matricNumber) {
+            const existingMatUpper = existingStudentByUser.matricNumber.toUpperCase();
+            if (programmeType === "HND" && existingMatUpper.includes("HND")) {
+                matricNumber = existingStudentByUser.matricNumber;
+            } else if (programmeType === "ND" && existingMatUpper.includes("ND") && !existingMatUpper.includes("HND")) {
+                // Only reuse existing ND matric if it belongs to current admission cycle or student is level 1
+                if (existingStudentByUser.currentLevel === 1 || existingMatUpper.includes(String(year))) {
+                    matricNumber = existingStudentByUser.matricNumber;
+                }
+            }
+        }
+
+        if (!matricNumber) {
+            const { generateMatricNumber } = await import('@/actions/matriculation');
+            const matricRes = await generateMatricNumber({
+                year,
+                deptId: deptId || undefined,
+                studyMode,
+                programmeType
+            });
+
+            if (matricRes.success && matricRes.matricNumber) {
+                matricNumber = matricRes.matricNumber;
+            } else {
+                console.error(`[assignMatricOnAdmissionOffer] Matric generation failed for app ${applicationId}:`, matricRes.error);
+                return { success: false, error: matricRes.error || "Failed to generate matriculation number" };
+            }
+        }
+
+        // Persist pre-assigned matriculation metadata in application.data
+        formData.matricNumber = matricNumber;
+        formData.matricPreAssigned = true;
+        formData.matricUnlocked = isUnlocked;
+        if (!formData.matricAssignedAt) {
+            formData.matricAssignedAt = new Date().toISOString();
+        }
+        if (isUnlocked && !formData.matricUnlockedAt) {
+            formData.matricUnlockedAt = new Date().toISOString();
+        }
+
+        // Process Base64 images if needed
+        let finalImageUrl = application.applicantPhoto;
+        let finalSignatureUrl = null;
+
+        const processBase64Image = async (base64Str: string, folder: string) => {
+            if (!base64Str || !base64Str.startsWith('data:image')) return base64Str;
+            try {
+                const base64Data = base64Str.replace(/^data:image\/\w+;base64,/, "");
+                const buffer = Buffer.from(base64Data, 'base64');
+                const uploadDir = path.join(process.cwd(), 'public', 'uploads', folder);
+                await mkdir(uploadDir, { recursive: true });
+                const fileName = `${randomUUID()}.jpg`;
+                await writeFile(path.join(uploadDir, fileName), buffer);
+                return `/uploads/${folder}/${fileName}`;
+            } catch (err) {
+                return base64Str;
+            }
+        };
+
+        if (application.applicantPhoto && application.applicantPhoto.startsWith('data:image')) {
+            finalImageUrl = await processBase64Image(application.applicantPhoto, 'profiles');
+        }
+        if (formData.signature && formData.signature.startsWith('data:image')) {
+            finalSignatureUrl = await processBase64Image(formData.signature, 'signatures');
+        }
+
+        const nameParts = extractNameParts(formData);
+        const resolvedFirstName = nameParts.firstName || formData.fullName?.split(' ')[0] || '';
+        const resolvedLastName = nameParts.lastName || formData.fullName?.split(' ').slice(1).join(' ') || '';
+        const userFullName = buildFullName(nameParts) || formData.fullName || `Applicant ${application.id}`;
+
+        let userId = application.applicantId;
+        if (userId) {
+            const existingUser = await db.query.users.findFirst({ where: eq(users.id, userId) });
+            if (!existingUser) userId = null;
+        }
+
+        if (!userId) {
+            const defaultPasswordHash = await hash("Password123", 10);
+            const [userResult] = await db.insert(users).values({
+                name: userFullName,
+                email: formData.email || formData.guardianEmail || `applicant${application.id}@portal.edu`,
+                password: defaultPasswordHash,
+                requiresPasswordChange: true,
+                role: isUnlocked ? 'student' : 'applicant',
+                phone: formData.phone || formData.guardianPhone,
+                imageUrl: finalImageUrl,
+                status: 'active'
+            });
+            userId = userResult.insertId;
+        }
+
+        const existingStudent = existingStudentByUser || (await db.query.students.findFirst({
+            where: eq(students.userId, userId)
+        }));
+
+        let finalStudentId: number | null = application.studentId || existingStudent?.id || null;
+
+        if (existingStudent) {
+            finalStudentId = existingStudent.id;
+            const isActiveLevel2OtherProg =
+                !isUnlocked &&
+                existingStudent.status === 'active' &&
+                (existingStudent.currentLevel || 1) >= 2 &&
+                existingStudent.matricNumber &&
+                existingStudent.matricNumber !== matricNumber;
+
+            const isAlreadyActiveSameMatric =
+                existingStudent.matricNumber === matricNumber &&
+                existingStudent.status === 'active';
+
+            if (!isActiveLevel2OtherProg && !isAlreadyActiveSameMatric) {
+                let prevMatrics: string[] = [];
+                if (existingStudent.previousMatricNumbers) {
+                    try {
+                        prevMatrics = JSON.parse(existingStudent.previousMatricNumbers);
+                    } catch {}
+                }
+                if (existingStudent.matricNumber && existingStudent.matricNumber !== matricNumber) {
+                    if (!prevMatrics.includes(existingStudent.matricNumber)) {
+                        prevMatrics.push(existingStudent.matricNumber);
+                    }
+                }
+
+                await db.update(students).set({
+                    firstName: resolvedFirstName || existingStudent.firstName,
+                    lastName: resolvedLastName || existingStudent.lastName,
+                    matricNumber: matricNumber,
+                    previousMatricNumbers: JSON.stringify(prevMatrics),
+                    jambNumber: jambNumberForDb || existingStudent.jambNumber,
+                    modeOfEntry: (modeOfEntry || existingStudent.modeOfEntry) as any,
+                    studyMode: (studyMode || existingStudent.studyMode) as any,
+                    programmeType: (programmeType || existingStudent.programmeType) as any,
+                    programmeId: selectedProgrammeId || existingStudent.programmeId,
+                    deptId: deptId || existingStudent.deptId,
+                    admissionSessionId: targetSession?.id || existingStudent.admissionSessionId,
+                    currentLevel: 1,
+                    admissionYear: year || existingStudent.admissionYear,
+                    gender: (formData.gender?.toLowerCase() || existingStudent.gender || 'other') as any,
+                    dob: formData.dob || existingStudent.dob,
+                    imageUrl: finalImageUrl || existingStudent.imageUrl,
+                    signatureUrl: finalSignatureUrl || existingStudent.signatureUrl,
+                    status: 'active'
+                }).where(eq(students.id, existingStudent.id));
+            }
+        } else {
+            const [studentResult] = await db.insert(students).values({
+                userId: userId,
+                firstName: resolvedFirstName,
+                lastName: resolvedLastName,
+                matricNumber: matricNumber,
+                jambNumber: jambNumberForDb,
+                modeOfEntry: modeOfEntry as any,
+                studyMode: studyMode as any,
+                programmeType: programmeType as any,
+                programmeId: selectedProgrammeId,
+                deptId: deptId,
+                admissionSessionId: targetSession?.id || null,
+                currentLevel: 1,
+                admissionYear: year,
+                gender: (formData.gender?.toLowerCase() || 'other') as any,
+                dob: formData.dob,
+                imageUrl: finalImageUrl,
+                signatureUrl: finalSignatureUrl,
+                nationality: formData.nationality || 'Nigerian',
+                guardianName: formData.parentName || formData.guardianName || formData.fatherName || formData.motherName,
+                guardianPhone: formData.parentPhone || formData.guardianPhone || formData.fatherPhone || formData.motherPhone,
+                guardianEmail: formData.parentEmail || formData.guardianEmail,
+                guardianAddress: formData.address || formData.guardianAddress || formData.homeAddress,
+                bloodGroup: formData.bloodGroup || formData.blood_group,
+                genotype: formData.genotype,
+                ailments: formData.immunizationHistory || formData.ailments || formData.medicalHistory,
+                status: 'active'
+            });
+            finalStudentId = studentResult.insertId;
+        }
+
+        if (isUnlocked && userId) {
+            await db.update(users)
+                .set({ role: 'student', status: 'active' })
+                .where(and(eq(users.id, userId), eq(users.role, 'applicant')));
+        }
+
+        const updatedNotes = isUnlocked
+            ? `Admission accepted and finalized. Matric Number: ${matricNumber}`
+            : (application.admissionNotes && !application.admissionNotes.includes('Matric Number:')
+                ? application.admissionNotes
+                : null);
+
+        await db.update(admissionApplicationsV2)
+            .set({
+                applicantId: userId,
+                studentId: finalStudentId,
+                programmeId: selectedProgrammeId || application.programmeId,
+                data: JSON.stringify(formData),
+                admissionNotes: updatedNotes,
+                updatedAt: new Date()
+            })
+            .where(eq(admissionApplicationsV2.id, applicationId));
+
+        return {
+            success: true,
+            matricNumber,
+            matricUnlocked: isUnlocked,
+            studentId: finalStudentId
+        };
+    } catch (error: any) {
+        console.error(`[assignMatricOnAdmissionOffer] Error for application ${applicationId}:`, error);
+        return { success: false, error: error.message || "Failed to assign matriculation number on admission offer" };
+    }
+}
+
+export async function syncAdmittedMatricNumbers() {
+    try {
+        const admittedApps = await db.select()
+            .from(admissionApplicationsV2)
+            .where(eq(admissionApplicationsV2.status, 'admitted'));
+
+        let generatedCount = 0;
+        let unlockedCount = 0;
+        let lockedCount = 0;
+        const errors: string[] = [];
+
+        for (const app of admittedApps) {
+            let formData: any = {};
+            try { formData = typeof app.data === 'string' ? JSON.parse(app.data || '{}') : (app.data || {}); } catch {}
+
+            const res = await assignMatricOnAdmissionOffer(app.id);
+            if (res.success) {
+                if (!formData.matricNumber && !app.studentId) {
+                    generatedCount++;
+                }
+                if (res.matricUnlocked) unlockedCount++;
+                else lockedCount++;
+            } else {
+                errors.push(`App #${app.id}: ${res.error}`);
+            }
+        }
+
+        return {
+            success: true,
+            totalAdmitted: admittedApps.length,
+            generatedCount,
+            unlockedCount,
+            lockedCount,
+            errors
+        };
+    } catch (error: any) {
+        console.error("[syncAdmittedMatricNumbers] Failed:", error);
+        return { success: false, error: error.message || "Failed to sync admitted matric numbers" };
     }
 }
 
@@ -2131,23 +2597,46 @@ export async function finalizeStudentAdmission(applicationId: number) {
             return { success: false, error: describeMissingFees(feeCheck) };
         }
 
-        let matricNumber = "";
-        
-        // Use the centralized Matriculation Engine
-        const { generateMatricNumber } = await import('@/actions/matriculation');
-        const matricRes = await generateMatricNumber({
-            year,
-            deptId: deptId || undefined,
-            studyMode: studyMode,
-            programmeType: programmeType
-        });
-        
-        if (matricRes.success && matricRes.matricNumber) {
-            matricNumber = matricRes.matricNumber;
-        } else {
-            console.error(`[Admission] Matric generation failed for application ${applicationId}:`, matricRes.error);
-            throw new Error(`Failed to generate matriculation number: ${matricRes.error || 'Unknown error'}`);
+        // Reuse pre-generated matriculation number if already assigned on admission offer!
+        let matricNumber = String(formData.matricNumber || "").trim();
+
+        if (!matricNumber && application.studentId) {
+            const linkedStudent = await db.query.students.findFirst({
+                where: eq(students.id, application.studentId)
+            });
+            if (linkedStudent?.matricNumber) {
+                const matUpper = linkedStudent.matricNumber.toUpperCase();
+                if (
+                    (programmeType === "HND" && matUpper.includes("HND")) ||
+                    (programmeType === "ND" && matUpper.includes("ND") && !matUpper.includes("HND"))
+                ) {
+                    matricNumber = linkedStudent.matricNumber;
+                }
+            }
         }
+
+        if (!matricNumber) {
+            // Use the centralized Matriculation Engine
+            const { generateMatricNumber } = await import('@/actions/matriculation');
+            const matricRes = await generateMatricNumber({
+                year,
+                deptId: deptId || undefined,
+                studyMode: studyMode,
+                programmeType: programmeType
+            });
+            
+            if (matricRes.success && matricRes.matricNumber) {
+                matricNumber = matricRes.matricNumber;
+            } else {
+                console.error(`[Admission] Matric generation failed for application ${applicationId}:`, matricRes.error);
+                throw new Error(`Failed to generate matriculation number: ${matricRes.error || 'Unknown error'}`);
+            }
+        }
+
+        formData.matricNumber = matricNumber;
+        formData.matricPreAssigned = true;
+        formData.matricUnlocked = true;
+        formData.matricUnlockedAt = formData.matricUnlockedAt || new Date().toISOString();
 
         // Process Base64 images to physical files
         let finalImageUrl = application.applicantPhoto;
@@ -2325,6 +2814,7 @@ export async function finalizeStudentAdmission(applicationId: number) {
         await db.update(admissionApplicationsV2)
             .set({ 
                 studentId: finalStudentId,
+                data: JSON.stringify(formData),
                 admissionNotes: `Admission accepted and finalized. Matric Number: ${matricNumber}`,
                 updatedAt: new Date()
             })
@@ -3572,6 +4062,14 @@ export async function getAdminV2Applications(filters?: {
             const applicantDob = findFormValue(formData, ['dob', 'date of birth', 'dateofbirth', 'birth date', 'birthdate']);
             const applicantPhone = findFormValue(formData, ['phone', 'phone number', 'phonenumber', 'mobile', 'telephone']) || app.applicant?.phone || 'N/A';
 
+            const resolvedMatric = app.student?.matricNumber || formData.matricNumber || null;
+            const matricUnlocked = Boolean(
+                formData.matricUnlocked === true ||
+                (formData.matricUnlocked !== false &&
+                    (String(app.admissionNotes || '').includes('Admission accepted and finalized') ||
+                        String(app.admissionNotes || '').includes('Matric Number:')))
+            );
+
             return {
                 ...app,
                 parsedData: formData,
@@ -3583,11 +4081,15 @@ export async function getAdminV2Applications(filters?: {
                 applicantNin: app.nin || findFormValue(formData, ['nin']) || 'N/A',
                 applicantPhone,
                 jambRegNumber: app.jambRegNumber || formData.jambRegNumber || formData.jambNumber || formData['JAMB Reg Number'] || formData['JAMB Registration No'] || 'N/A',
-                studentMatricNumber: app.student?.matricNumber || formData.matricNumber || null,
+                studentMatricNumber: resolvedMatric,
+                matricUnlocked,
+                matricStatusLabel: resolvedMatric
+                    ? (matricUnlocked ? 'Unlocked (Fees Paid)' : 'Hidden from Student (NELFUND Ready)')
+                    : 'Not Generated',
                 studentCurrentSession: app.student?.currentSessionId || null,
                 sessionName: (app.student?.currentSessionId ? (sessionMap.get(app.student.currentSessionId) || null) : null) || formData.session || formData.academicSession || 'N/A',
                 tuitionFee: getCalculatedTuition(app.template, app.programme),
-                hasMatric: !!(app.student?.matricNumber || formData.matricNumber),
+                hasMatric: !!resolvedMatric,
                 templateName: app.template?.name || 'N/A',
                 facultyName: app.programme?.department?.faculty?.name || 'Unassigned Faculty',
                 departmentName: app.programme?.department?.name || 'Unassigned Department',
@@ -3747,6 +4249,7 @@ export async function exportAdminV2Applications(filters?: {
             with: {
                 template: true,
                 applicant: true,
+                student: true,
                 programme: {
                     with: {
                         department: {
@@ -3797,18 +4300,31 @@ export async function exportAdminV2Applications(filters?: {
                 ? app.examAttendanceStatus
                 : (isCbtPresent ? 'present' : 'pending');
 
+            const resolvedMatric = app.student?.matricNumber || formData.matricNumber || null;
+            const matricUnlocked = Boolean(
+                formData.matricUnlocked === true ||
+                (formData.matricUnlocked !== false &&
+                    (String(app.admissionNotes || '').includes('Admission accepted and finalized') ||
+                        String(app.admissionNotes || '').includes('Matric Number:')))
+            );
+
             return {
                 ...app,
                 parsedData: formData,
                 applicantName: nameFromForm || nameFromUser || 'N/A',
                 applicantEmail: app.applicant?.email || formData.email || formData.email_address || 'N/A',
                 applicantPhone: app.applicant?.phone || app.applicant?.phoneNumber || formData.phone || formData.phone_number || 'N/A',
+                studentMatricNumber: resolvedMatric,
+                matricUnlocked,
+                matricStatusLabel: resolvedMatric
+                    ? (matricUnlocked ? 'Unlocked (Fees Paid)' : 'Hidden from Student (NELFUND Ready)')
+                    : 'Not Generated',
                 templateName: app.template?.name || 'N/A',
                 programmeName: progName,
                 departmentName: deptName,
                 facultyName: facName,
                 academicLevel,
-                administrativeLevel: 'Applicant',
+                administrativeLevel: app.status === 'admitted' ? academicLevel : 'Applicant',
                 examAttendanceStatus: attendanceStatus
             };
         });
@@ -4116,6 +4632,7 @@ export async function getAdmittedRegister(filters?: RegisterFilters) {
             where: conds.length > 0 ? and(...conds) : undefined,
             with: {
                 template: true,
+                student: true,
                 programme: {
                     with: {
                         department: {
@@ -4162,10 +4679,20 @@ export async function getAdmittedRegister(filters?: RegisterFilters) {
                 pendingReason = 'Screened — awaiting admission offer';
             }
 
+            const resolvedMatric = app.student?.matricNumber || formData.matricNumber || null;
+            const matricUnlocked = Boolean(
+                formData.matricUnlocked === true ||
+                (formData.matricUnlocked !== false &&
+                    (String(app.admissionNotes || '').includes('Admission accepted and finalized') ||
+                        String(app.admissionNotes || '').includes('Matric Number:')))
+            );
+
             return {
                 id: app.id,
                 formNumber: app.formNumber || '—',
                 applicationNumber: app.applicationNumber || '—', // admission number — filled on tuition payment
+                matricNumber: resolvedMatric,
+                matricUnlocked,
                 fullName,
                 surname: parts.lastName,
                 firstName: parts.firstName,
@@ -4200,6 +4727,7 @@ export async function getAdmittedRegister(filters?: RegisterFilters) {
                 r.fullName.toLowerCase().includes(q) ||
                 (r.formNumber || '').toLowerCase().includes(q) ||
                 (r.applicationNumber || '').toLowerCase().includes(q) ||
+                (r.matricNumber || '').toLowerCase().includes(q) ||
                 r.email.toLowerCase().includes(q) ||
                 r.phone.includes(q) ||
                 r.surname.toLowerCase().includes(q)
@@ -4250,6 +4778,9 @@ export async function admitFromRegister(applicationId: number, notes?: string) {
                 updatedAt: new Date(),
             })
             .where(eq(admissionApplicationsV2.id, applicationId));
+
+        // Immediately generate hidden matriculation number for NELFUND / admin use
+        await assignMatricOnAdmissionOffer(applicationId);
 
         // Send admission offer email
         if (email) {

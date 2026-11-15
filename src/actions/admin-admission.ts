@@ -8,6 +8,7 @@ import { hasPermission, hasRole } from "@/lib/rbac";
 import { revalidatePath } from "next/cache";
 import { computeScreeningPercentage, decideFromScreening } from "@/lib/admission/screening";
 import { extractNameParts, buildFullName } from "@/lib/applicant-names";
+import { assignMatricOnAdmissionOffer } from "@/actions/admission_v2";
 
 // ─────────────────────────────────────────────────────────────────────
 // Post-UTME Screening Unification (Phase 1): cut-off management
@@ -393,6 +394,11 @@ export async function updateSubjectScoresV2(applicationId: number, mathScore: nu
 
         revalidatePath("/admin/admission/screening");
 
+        // Pre-assign hidden matriculation number for NELFUND whenever candidate is admitted
+        if (newStatus === 'admitted') {
+            await assignMatricOnAdmissionOffer(applicationId);
+        }
+
         // Congratulate on NEW offers only
         if (newStatus === 'admitted' && !wasAdmitted) {
             await notifyOneOffer(buildOfferTarget(
@@ -617,6 +623,11 @@ export async function bulkUploadSubjectScoresV2(rows: BulkScoreRowV2[]): Promise
                         .where(eq(admissionApplicationsV2.id, u.id));
                 }
             });
+            for (const u of updates) {
+                if (u.set.status === 'admitted') {
+                    await assignMatricOnAdmissionOffer(u.id);
+                }
+            }
         }
 
         // Congratulate all newly-offered applicants (chunked, non-fatal)
@@ -805,6 +816,11 @@ export async function runSelection(templateId?: number): Promise<{
                         .where(eq(admissionApplicationsV2.id, u.id));
                 }
             });
+            for (const u of updates) {
+                if (u.set.status === 'admitted') {
+                    await assignMatricOnAdmissionOffer(u.id);
+                }
+            }
         }
 
         // Congratulate all newly-offered applicants (chunked, non-fatal)
@@ -853,6 +869,10 @@ export async function decideApplicantManual(applicationId: number, decision: 'ad
         await db.update(admissionApplicationsV2)
             .set({ status: decision, decisionSource: 'manual' })
             .where(eq(admissionApplicationsV2.id, applicationId));
+
+        if (decision === 'admitted') {
+            await assignMatricOnAdmissionOffer(applicationId);
+        }
 
         revalidatePath("/admin/admission/screening");
 

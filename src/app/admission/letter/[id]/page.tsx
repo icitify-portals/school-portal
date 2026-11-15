@@ -28,7 +28,7 @@ export default function AdmissionLetterPage() {
             setData(statusRes);
 
             if (statusRes && statusRes.status === 'admitted') {
-                const isFullyRegistered = statusRes.admissionNotes?.includes('Matric Number');
+                const isFullyRegistered = !statusRes.matricLocked && (statusRes.matricNumber || statusRes.admissionNotes?.includes('Matric Number'));
                 
                 if (isFullyRegistered) {
                     const letterRes = await generateAdmissionLetterAction(id);
@@ -38,7 +38,7 @@ export default function AdmissionLetterPage() {
                         setError(letterRes.error || "Failed to generate admission letter.");
                     }
                 } else {
-                    setError("Admission Letter locked. Please pay your School Fees to generate your Matriculation Number first.");
+                    setError("Admission Letter locked. Please pay both your Acceptance Fee and School Fees to unlock your Matriculation Number and Admission Letter.");
                 }
             }
         } catch (e: any) {
@@ -50,7 +50,7 @@ export default function AdmissionLetterPage() {
     if (loading) return <div className="min-h-screen flex justify-center items-center bg-slate-50"><Loader2 className="w-10 h-10 animate-spin text-indigo-500" /></div>;
     if (!data || data.status !== 'admitted') return <div className="min-h-screen flex justify-center items-center font-black text-2xl uppercase text-slate-300">Letter Not Available</div>;
 
-    const isFullyRegistered = data.admissionNotes?.includes('Matric Number');
+    const isFullyRegistered = !data.matricLocked && (data.matricNumber || data.admissionNotes?.includes('Matric Number'));
     
     if (!isFullyRegistered) {
         return (

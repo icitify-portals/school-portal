@@ -13,6 +13,7 @@ import {
 import { eq, and, desc } from "drizzle-orm";
 import { auth } from "@/auth";
 import { revalidatePath } from "next/cache";
+import { isStudentMatricLocked } from "@/lib/matric-visibility";
 
 export async function saveStudentDossierAction(formData: {
     firstName: string;
@@ -185,6 +186,10 @@ export async function getStudentDossierData(targetStudentId?: number) {
             .orderBy(desc(matriculationRegister.signedAt))
             .limit(1);
 
+        if ((currentUserRole === "student" || currentUserRole === "applicant" || currentUserRole === "fresher") && await isStudentMatricLocked({ studentId: student.id, userId: student.userId })) {
+            student.matricNumber = "LOCKED (PAY ACCEPTANCE & SCHOOL FEES)" as any;
+        }
+
         return {
             success: true,
             data: {
@@ -252,6 +257,10 @@ export async function getStudentMatriculationOathData(targetStudentId?: number) 
             .orderBy(desc(matriculationRegister.signedAt))
             .limit(1);
 
+        if ((currentUserRole === "student" || currentUserRole === "applicant" || currentUserRole === "fresher") && await isStudentMatricLocked({ studentId: student.id, userId: student.userId })) {
+            student.matricNumber = "LOCKED (PAY ACCEPTANCE & SCHOOL FEES)" as any;
+        }
+
         return {
             success: true,
             data: {
@@ -315,6 +324,10 @@ export async function getStudentMedicalFormData(targetStudentId?: number) {
             .from(studentMedicalRecords)
             .where(eq(studentMedicalRecords.studentId, student.id))
             .limit(1);
+
+        if ((currentUserRole === "student" || currentUserRole === "applicant" || currentUserRole === "fresher") && await isStudentMatricLocked({ studentId: student.id, userId: student.userId })) {
+            student.matricNumber = "LOCKED (PAY ACCEPTANCE & SCHOOL FEES)" as any;
+        }
 
         return {
             success: true,

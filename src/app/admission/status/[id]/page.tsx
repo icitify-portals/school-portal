@@ -332,7 +332,7 @@ export default function ApplicantStatusPage() {
 
                                 {data.status === 'admitted' && (
                                     <div className="flex flex-col sm:flex-wrap gap-3 sm:gap-4 pt-4">
-                                        {data.admissionNotes?.includes('Matric Number') ? (
+                                        {!data.matricLocked && (data.matricNumber || data.admissionNotes?.includes('Matric Number')) ? (
                                             <Button 
                                                 onClick={() => window.open(`/admission/letter/${id}`, '_blank')}
                                                 className="rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-black px-5 sm:px-8 py-4 sm:py-6 flex gap-3 uppercase text-xs tracking-widest shadow-xl shadow-emerald-100"
@@ -344,7 +344,7 @@ export default function ApplicantStatusPage() {
                                                 disabled
                                                 className="rounded-2xl bg-slate-200 text-slate-400 font-black px-5 sm:px-8 py-4 sm:py-6 flex gap-3 uppercase text-xs tracking-widest cursor-not-allowed opacity-60"
                                             >
-                                                <Download className="w-5 h-5 text-slate-300" /> Letter Locked (Pay School Fees to Unlock)
+                                                <Download className="w-5 h-5 text-slate-300" /> Letter &amp; Matric Number Locked (Pay Acceptance &amp; School Fees to Unlock)
                                             </Button>
                                         )}
                                         {data.template.requireAcceptanceFee && data.acceptancePaymentStatus !== 'paid' && (
@@ -352,11 +352,11 @@ export default function ApplicantStatusPage() {
                                                 onClick={handleAcceptancePayment}
                                                 className="rounded-2xl bg-slate-900 hover:bg-indigo-600 text-white font-black px-5 sm:px-8 py-4 sm:py-6 flex gap-3 uppercase text-xs tracking-widest shadow-xl"
                                             >
-                                                <CreditCard className="w-5 h-5 text-emerald-400" /> Pay Acceptance & ID Card Fee (₦{(parseFloat(data.template.acceptanceFee) + parseFloat(data.template.idCardFee || "0")).toLocaleString()})
+                                                <CreditCard className="w-5 h-5 text-emerald-400" /> Pay Acceptance &amp; ID Card Fee (₦{(parseFloat(data.template.acceptanceFee) + parseFloat(data.template.idCardFee || "0")).toLocaleString()})
                                             </Button>
                                         )}
 
-                                        {(!data.template.requireAcceptanceFee || data.acceptancePaymentStatus === 'paid') && !data.admissionNotes?.includes('Matric Number') && (
+                                        {(!data.template.requireAcceptanceFee || data.acceptancePaymentStatus === 'paid') && (data.matricLocked || !data.admissionNotes?.includes('Matric Number')) && (
                                             <div className="flex flex-col gap-4">
                                                 <div className="px-6 py-4 bg-emerald-50 rounded-2xl flex items-center gap-3 text-emerald-600 font-black uppercase text-[10px] tracking-widest italic">
                                                     <CheckCircle2 className="w-4 h-4" /> {data.template.requireAcceptanceFee ? 'Acceptance & ID Card Fee Paid — Status: Confirmed Admitted' : 'Admitted — Acceptance Fee Not Required'}
@@ -367,22 +367,28 @@ export default function ApplicantStatusPage() {
                                                         onClick={handleSchoolFeesPayment}
                                                         className="rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black px-5 sm:px-8 py-4 sm:py-6 flex gap-3 uppercase text-xs tracking-widest shadow-xl shadow-indigo-100"
                                                     >
-                                                        <CreditCard className="w-5 h-5" /> Pay School Fees (Remita)
+                                                        <CreditCard className="w-5 h-5" /> Pay School Fees (Remita) to Unlock Matric Number
                                                     </Button>
                                                 ) : (
                                                     <Button 
                                                         onClick={handleProcessingFeePayment}
                                                         className="rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-black px-5 sm:px-8 py-4 sm:py-6 flex gap-3 uppercase text-xs tracking-widest shadow-xl"
                                                     >
-                                                        <CreditCard className="w-5 h-5 text-emerald-400" /> Pay Processing Fee (Paystack) to Obtain Matric Number
+                                                        <CreditCard className="w-5 h-5 text-emerald-400" /> Pay Processing Fee (Paystack) to Unlock Matric Number
                                                     </Button>
                                                 )}
                                             </div>
                                         )}
 
-                                        {data.admissionNotes?.includes('Matric Number') && (
+                                        {data.matricLocked && (
+                                            <div className="px-6 py-4 bg-amber-50 border border-amber-200 rounded-2xl flex items-center gap-3 text-amber-800 font-black uppercase text-[10px] tracking-widest italic shadow-sm">
+                                                <Clock className="w-4 h-4 text-amber-600 shrink-0" /> Matriculation Number Generated &amp; Reserved — Complete Acceptance Fee &amp; School Fees Payment to Unlock Access
+                                            </div>
+                                        )}
+
+                                        {!data.matricLocked && (data.matricNumber || data.admissionNotes?.includes('Matric Number')) && (
                                             <div className="px-6 py-4 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center gap-3 text-emerald-700 font-black uppercase text-[10px] tracking-widest italic shadow-sm">
-                                                <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Admission Confirmed & Registered — Matric Number Assigned
+                                                <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Admission Confirmed &amp; Registered — Matric Number: {data.matricNumber || 'Assigned'}
                                             </div>
                                         )}
                                     </div>

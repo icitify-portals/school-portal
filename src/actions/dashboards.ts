@@ -27,6 +27,7 @@ import { eq, and, count, sql, inArray, desc, isNull, notLike } from "drizzle-orm
 import { auth } from "@/auth";
 import { TimetableService } from "@/services/TimetableService";
 import { revalidatePath } from "next/cache";
+import { isStudentMatricLocked } from "@/lib/matric-visibility";
 
 export async function getLecturerDashboardStats(staffId: number) {
     try {
@@ -266,6 +267,8 @@ export async function getStudentDashboardStats(userId: number) {
         // Sort activities by date descending
         activities.sort((a, b) => b.date.getTime() - a.date.getTime());
 
+        const matricLocked = await isStudentMatricLocked({ studentId: student.id, userId });
+
         return {
             studentId: student.id,
             enrolledCourses: enrolledCourses.length,
@@ -273,7 +276,8 @@ export async function getStudentDashboardStats(userId: number) {
             level: student.currentLevel,
             programmeType: student.programmeType || programme?.programmeType || 'ND',
             studentStatus: student.status,
-            matricNo: student.matricNumber || 'PENDING',
+            matricNo: matricLocked ? 'LOCKED (PAY ACCEPTANCE & SCHOOL FEES)' : (student.matricNumber || 'PENDING'),
+            matricLocked,
             cgpa,
             attendance: "94%",
             courseProgress: detailedProgress,
@@ -404,4 +408,3 @@ export async function reviewLessonNote(noteId: number, status: 'approved' | 'rej
         return { success: false, error: "Failed to review lesson note" };
     }
 }
-

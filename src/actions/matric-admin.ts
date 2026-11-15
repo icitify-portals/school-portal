@@ -10,6 +10,8 @@ import { eq, and, or, like, isNull, isNotNull, desc, asc, sql, count } from "dri
 import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { generateMatricNumber } from "@/actions/matriculation";
+import { getLockedMatricStudentIds } from "@/lib/matric-visibility";
+import { syncAdmittedMatricNumbers } from "@/actions/admission_v2";
 
 const ADMIN_ROLES = ['admin', 'superadmin', 'icitify_dev', 'dvc', 'registrar', 'admission_officer', 'ict_manager', 'ictmanager'];
 
@@ -111,9 +113,12 @@ export async function getMatricStudents(options?: {
             .limit(pageSize)
             .offset(offset);
 
+        const lockedIds = await getLockedMatricStudentIds();
+
         return {
             students: data.map((s) => ({
                 ...s,
+                matricLocked: lockedIds.has(s.id),
                 previousMatricNumbers: s.previousMatricNumbers
                     ? JSON.parse(s.previousMatricNumbers)
                     : [],
@@ -410,6 +415,9 @@ export async function batchAssignMatricNumbers(year: number) {
         const session = await requireAdmin();
         const adminId = session.user.id;
 
+        // First sync any admitted V2 applications that do not yet have pre-generated matriculation numbers
+        const syncRes = await syncAdmittedMatricNumbers();
+
         // Fetch all active students for the given admission year who DO NOT have a matric number
         const pendingStudents = await db.query.students.findMany({
             where: and(
@@ -420,7 +428,14 @@ export async function batchAssignMatricNumbers(year: number) {
         });
 
         if (pendingStudents.length === 0) {
-            return { success: true, message: "No active pending students found for that year.", count: 0 };
+            const preGenCount = syncRes.success ? (syncRes.generatedCount || 0) : 0;
+            return {
+                success: true,
+                message: preGenCount > 0
+                    ? `Pre-generated ${preGenCount} matriculation numbers for admitted candidates.`
+                    : "All admitted and active students for that year already have matriculation numbers assigned.",
+                count: preGenCount
+            };
         }
 
         let assignedCount = 0;

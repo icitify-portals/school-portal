@@ -248,11 +248,12 @@ export default function MatricAdminPage() {
     };
 
     const exportCSV = () => {
-        const headers = ["Student Name", "Admission No", "Matric No", "Department", "Programme", "Year Entry", "Level", "Status"];
+        const headers = ["Student Name", "Admission No", "Matric No", "Student Visibility", "Department", "Programme", "Year Entry", "Level", "Status"];
         const rows = students.map((s) => [
             `${s.lastName} ${s.firstName}`,
             s.admissionNumber || "",
             s.matricNumber || "PENDING",
+            s.matricNumber ? (s.matricLocked ? "Hidden from Student (NELFUND Ready - Awaiting Fees)" : "Unlocked (Fees Paid)") : "Pending",
             s.deptName || "",
             s.programmeName || "",
             s.admissionYear || "",
@@ -515,9 +516,22 @@ export default function MatricAdminPage() {
                                                     </td>
                                                     <td className="px-4 py-3">
                                                         {s.matricNumber ? (
-                                                            <span className="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-[10px] font-black uppercase tracking-widest border border-emerald-200">
-                                                                {s.matricNumber}
-                                                            </span>
+                                                            <div className="flex flex-col gap-1">
+                                                                <span className={cn(
+                                                                    "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border w-fit",
+                                                                    s.matricLocked
+                                                                        ? "bg-amber-50 text-amber-800 border-amber-200"
+                                                                        : "bg-emerald-100 text-emerald-700 border-emerald-200"
+                                                                )}>
+                                                                    {s.matricNumber}
+                                                                </span>
+                                                                <span className={cn(
+                                                                    "text-[9px] font-black uppercase tracking-wider",
+                                                                    s.matricLocked ? "text-amber-600" : "text-emerald-600"
+                                                                )}>
+                                                                    {s.matricLocked ? "Hidden from Student (Unpaid Fees)" : "Unlocked"}
+                                                                </span>
+                                                            </div>
                                                         ) : (
                                                             <span className="px-3 py-1 bg-amber-100 text-amber-700 rounded-full text-[10px] font-black uppercase tracking-widest border border-amber-200">
                                                                 PENDING

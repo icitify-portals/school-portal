@@ -5,6 +5,7 @@ import { students, users, departments, programmes, idCards } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { IDCardService } from "@/services/IDCardService";
 import { getIDCardSettings } from "@/actions/settings";
+import { isStudentMatricLocked } from "@/lib/matric-visibility";
 import IDCardTemplate1 from "@/components/id-cards/IDCardTemplate1";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { ShieldCheck, Info, Lock } from "lucide-react";
@@ -57,7 +58,8 @@ export default async function StudentIDCardPage() {
         ? [studentRecord.firstName, studentRecord.lastName, studentRecord.otherNames].filter(Boolean).join(" ") || studentRecord.name || user.name
         : user.name || "STUDENT NAME";
 
-    const matricNo = studentRecord?.matricNumber || "PENDING";
+    const matricLocked = studentRecord ? await isStudentMatricLocked({ studentId: studentRecord.id, userId }) : false;
+    const matricNo = matricLocked ? "LOCKED (PAY FEES)" : (studentRecord?.matricNumber || "PENDING");
     const deptName = studentRecord?.deptName || "ACADEMIC DEPARTMENT";
     const progName = studentRecord?.programmeName || `${studentRecord?.programmeType || "ND"} Programme`;
     const levelLabel = studentRecord?.programmeType 

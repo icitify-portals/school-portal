@@ -5,6 +5,7 @@ import { admissionLeads, admissionWaitlists, admissionInterviews, admissionAppli
 import { auth } from "@/auth";
 import { eq, desc, and } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { assignMatricOnAdmissionOffer } from "@/actions/admission_v2";
 
 // --- LEADS / CRM ---
 export async function createLead(data: any) {
@@ -85,6 +86,7 @@ export async function updateWaitlistStatus(waitlistId: number, status: "waiting"
             const w = await db.select().from(admissionWaitlists).where(eq(admissionWaitlists.id, waitlistId));
             if (w[0]) {
                 await db.update(admissionApplicationsV2).set({ status: 'admitted' }).where(eq(admissionApplicationsV2.id, w[0].applicationId));
+                await assignMatricOnAdmissionOffer(w[0].applicationId);
             }
         }
 

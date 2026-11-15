@@ -1,12 +1,13 @@
 "use server";
 
 import { db } from "@/db/db";
-import { gradingSystems, gradePoints, documentTemplates, annualSummaries, resultEditLogs, students } from "@/db/schema";
+import { gradingSystems, gradePoints, documentTemplates, annualSummaries, resultEditLogs, students, admissionApplicationsV2 } from "@/db/schema";
 import { revalidatePath } from "next/cache";
 import { hasRole, hasPermission } from "@/lib/rbac";
 import { eq } from "drizzle-orm";
 import { AdmissionLetterService } from "@/services/AdmissionLetterService";
 import { sendInAppNotification } from "./notifications";
+import { isApplicationMatricUnlocked } from "@/lib/matric-visibility";
 
 async function ensureAdminAccess() {
     const isAdmin = await hasPermission("academic.manage") || await hasRole("admin") || await hasRole("superadmin");
@@ -100,6 +101,16 @@ export async function getDocumentTemplates() {
 
 export async function generateAdmissionLetterAction(applicationId: number) {
     try {
+        const isAdminCaller = await hasPermission("academic.manage") || await hasRole(["admin", "superadmin", "registrar", "admission_officer", "icitify_dev"]);
+        if (!isAdminCaller) {
+            const [app] = await db.select().from(admissionApplicationsV2).where(eq(admissionApplicationsV2.id, applicationId)).limit(1);
+            if (!app || !(await isApplicationMatricUnlocked(app))) {
+                return {
+                    success: false,
+                    error: "Your Matriculation Number and Official Admission Letter are locked until both your Acceptance Fee and School Fees are paid."
+                };
+            }
+        }
         const result = await AdmissionLetterService.generateLetter(applicationId);
         return { success: true, data: result };
     } catch (error) {
@@ -192,5 +203,3 @@ export async function dispatchResultNotificationsAction(studentId: number, metho
         return { success: false, error: (error as Error).message };
     }
 }
-
-

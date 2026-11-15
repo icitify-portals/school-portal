@@ -22,6 +22,7 @@ import bcrypt from "bcryptjs";
 import { authConfig } from "./auth.config";
 import { normalizeEmail } from "@/lib/email";
 import { cookies } from "next/headers";
+import { isStudentMatricLocked } from "@/lib/matric-visibility";
 
 
 async function verifyStoredPassword(candidate: string, hash: string | null | undefined): Promise<boolean> {
@@ -356,6 +357,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                         .limit(1);
                         
                     if (studentRec) {
+                        const lockedMatric = await isStudentMatricLocked({
+                            studentId: studentRec.student.id,
+                            userId: studentRec.student.userId
+                        });
+                        // If the student's matriculation number is still locked (unpaid Acceptance/School Fees),
+                        // do not allow logging in via the pre-generated matriculation number.
+                        const matchedByMatric =
+                            studentRec.student.matricNumber &&
+                            (studentRec.student.matricNumber.toUpperCase() === normLoginId ||
+                                studentRec.student.matricNumber.toUpperCase() === slashNorm ||
+                                studentRec.student.matricNumber.toUpperCase() === underNorm ||
+                                studentRec.student.matricNumber.toUpperCase().includes(normLoginId));
+                        if (lockedMatric && matchedByMatric) {
+                            throw new InvalidCredentialsError();
+                        }
                         studentRecord = studentRec.student;
                         user = studentRec.user;
 
@@ -557,6 +573,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
                 const { roleNames, permissionNames } = await fetchUserRolesAndPermissions(user.id);
 
+                const matricIsLocked = studentRecord
+                    ? await isStudentMatricLocked({ studentId: studentRecord.id, userId: user.id })
+                    : false;
+                const exposedMatric = matricIsLocked ? undefined : (studentRecord?.matricNumber || undefined);
+
                 return {
                     id: user.id.toString(),
                     name: user.name,
@@ -565,10 +586,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                     status: studentRecord?.status === 'active' ? 'active' : user.status,
                     roles: roleNames,
                     permissions: permissionNames,
-                    schoolPortalId: studentRecord?.matricNumber || (user as any).schoolPortalId,
+                    schoolPortalId: exposedMatric || (matricIsLocked ? undefined : (user as any).schoolPortalId),
                     requiresPasswordChange: Boolean((user as any).requiresPasswordChange),
                     twoFactorPending: false, // Temporarily disabled for all users to allow quick login & registration
-                    matricNumber: studentRecord?.matricNumber || undefined
+                    matricNumber: exposedMatric
                 };
             },
         }),
@@ -651,7 +672,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                         if (dbUser.role === 'student' || dbUser.role === 'applicant' || dbUser.role === 'fresher') {
                             const [stu] = await db.select().from(students).where(eq(students.userId, dbUser.id)).limit(1);
                             if (stu && stu.matricNumber) {
-                                token.matricNumber = stu.matricNumber;
+                                const locked = await isStudentMatricLocked({ studentId: stu.id, userId: dbUser.id });
+                                if (!locked) {
+                                    token.matricNumber = stu.matricNumber;
+                                }
                             }
                         }
 
