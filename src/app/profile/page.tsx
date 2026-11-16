@@ -26,9 +26,11 @@ import {
     ShieldCheck,
     Fingerprint,
     Bell,
-    FileText
+    FileText,
+    Lock
 } from "lucide-react";
-import { updateStudentProfile, updateStaffProfile, getLoggedUserProfile, uploadProfileImage, uploadSignatureImage, updateUserEmail } from "@/actions/student-profile";
+import { updateStudentProfile, updateStaffProfile, getLoggedUserProfile, uploadProfileImage, uploadSignatureImage, updateUserEmail, updateMissingStudentBiodata } from "@/actions/student-profile";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { verifyNin } from "@/actions/nin-actions";
 import { IdentityCard } from "@/components/IdentityCard";
@@ -68,7 +70,9 @@ export default function ProfilePage() {
     }
     const [isVerifyingNin, setIsVerifyingNin] = useState(false);
     const [isUpdatingImage, setIsUpdatingImage] = useState(false);
-const [isUpdatingSignature, setIsUpdatingSignature] = useState(false);
+    const [isUpdatingSignature, setIsUpdatingSignature] = useState(false);
+    const [missingBioForm, setMissingBioForm] = useState<Record<string, string>>({});
+    const [isSavingBiodata, setIsSavingBiodata] = useState(false);
 
     useEffect(() => {
         if (session?.user) fetchProfile();
@@ -76,9 +80,52 @@ const [isUpdatingSignature, setIsUpdatingSignature] = useState(false);
 
     async function fetchProfile() {
         setLoading(true);
-        const data = await getLoggedUserProfile();
+        const data: any = await getLoggedUserProfile();
         setProfile(data);
+        if (data && !data.isStaffProfile && data.biodata) {
+            setMissingBioForm({
+                surname: data.biodata.surname || "",
+                firstName: data.biodata.firstName || "",
+                middleName: data.biodata.middleName || "",
+                gender: data.biodata.gender || "",
+                dob: data.biodata.dob || "",
+                stateOfOrigin: data.biodata.stateOfOrigin || "",
+                lga: data.biodata.lga || "",
+                nin: data.biodata.nin || "",
+                phone: data.biodata.phone || "",
+                email: data.biodata.email || "",
+                jambNumber: data.biodata.jambNumber || "",
+            });
+        }
         setLoading(false);
+    }
+
+    async function handleSaveMissingBiodata() {
+        if (profile?.isDeadlinePassed) {
+            toast.error("Profile updates are currently locked. Please contact administration.");
+            return;
+        }
+        const captured = profile?.capturedFields || {};
+        const payload: Record<string, string> = {};
+        const keys = ["surname", "firstName", "middleName", "gender", "dob", "stateOfOrigin", "lga", "nin", "phone", "email", "jambNumber"];
+        for (const k of keys) {
+            if (!captured[k] && missingBioForm[k]?.trim()) {
+                payload[k] = missingBioForm[k].trim();
+            }
+        }
+        if (Object.keys(payload).length === 0) {
+            toast.error("Please fill in at least one missing field before saving.");
+            return;
+        }
+        setIsSavingBiodata(true);
+        const res = await updateMissingStudentBiodata(payload);
+        setIsSavingBiodata(false);
+        if (res.success) {
+            toast.success(res.message);
+            await fetchProfile();
+        } else {
+            toast.error(res.error || "Failed to save missing biodata.");
+        }
     }
 
     async function handleUpdate(e: React.FormEvent) {
@@ -407,22 +454,214 @@ const [isUpdatingSignature, setIsUpdatingSignature] = useState(false);
                                             </div>
                                         </>
                                     ) : (
-                                        <div className="grid grid-cols-1 md:grid-cols-4 gap-8 pt-6 border-t border-slate-50">
-                                            <div className="space-y-3">
-                                                <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 italic">Gender</Label>
-                                                <Input readOnly value={profile.gender?.toUpperCase() || ""} className="bg-slate-50 h-14 rounded-2xl font-bold text-slate-400 border-slate-100" />
+                                        <div className="space-y-8 pt-6 border-t border-slate-100">
+                                            {/* Official Academic & Matriculation Summary (Always Read-Only) */}
+                                            <div className="p-6 bg-slate-50/80 rounded-3xl border border-slate-100 space-y-5">
+                                                <div className="flex items-center justify-between flex-wrap gap-2">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-1.5 h-6 bg-emerald-600 rounded-full" />
+                                                        <h3 className="text-sm font-black text-slate-900 uppercase tracking-tight">Academic &amp; Matriculation Record</h3>
+                                                    </div>
+                                                    <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-slate-500 bg-white px-3 py-1 rounded-full border border-slate-200">
+                                                        <Lock className="w-3 h-3 text-slate-400" /> System Assigned (Read-Only)
+                                                    </span>
+                                                </div>
+                                                <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                                                    <div className="space-y-2">
+                                                        <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 italic">Matriculation Number</Label>
+                                                        <Input
+                                                            readOnly
+                                                            value={profile.matricLocked ? "Hidden (Awaiting Fees)" : (profile.biodata?.matricNumber || "Not Assigned")}
+                                                            className="bg-white h-12 rounded-2xl font-mono font-bold text-slate-700 border-slate-200 text-xs"
+                                                        />
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 italic">Matric Visibility</Label>
+                                                        <Input
+                                                            readOnly
+                                                            value={profile.biodata?.matricVisibility || "Not Assigned"}
+                                                            className={cn(
+                                                                "h-12 rounded-2xl font-bold text-xs border",
+                                                                profile.matricLocked
+                                                                    ? "bg-amber-50 text-amber-800 border-amber-200"
+                                                                    : "bg-emerald-50 text-emerald-800 border-emerald-200"
+                                                            )}
+                                                        />
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 italic">Level</Label>
+                                                        <Input readOnly value={profile.biodata?.level || "—"} className="bg-white h-12 rounded-2xl font-bold text-slate-700 border-slate-200 text-xs" />
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 italic">Programme</Label>
+                                                        <Input readOnly value={profile.biodata?.programme || profile.programme?.name || "—"} className="bg-white h-12 rounded-2xl font-bold text-slate-700 border-slate-200 text-xs" />
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 italic">Department</Label>
+                                                        <Input readOnly value={profile.biodata?.department || profile.department?.name || "—"} className="bg-white h-12 rounded-2xl font-bold text-slate-700 border-slate-200 text-xs" />
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 italic">Academic Session</Label>
+                                                        <Input readOnly value={profile.biodata?.academicSession || profile.academicSession || "—"} className="bg-white h-12 rounded-2xl font-bold text-slate-700 border-slate-200 text-xs" />
+                                                    </div>
+                                                </div>
                                             </div>
-                                            <div className="space-y-3">
-                                                <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 italic">Date of Birth</Label>
-                                                <Input type="date" name="dob" value={profile.dob ? new Date(profile.dob).toISOString().split('T')[0] : ""} onChange={handleChange} className="h-14 rounded-2xl font-bold text-slate-900 border-slate-200 focus:ring-2 focus:ring-emerald-500" />
+
+                                            {/* Fill-Once Biodata Fields (Editable Only If Missing) */}
+                                            <div className="p-6 bg-white rounded-3xl border border-slate-200 space-y-6">
+                                                <div className="flex items-center justify-between flex-wrap gap-3">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-1.5 h-6 bg-indigo-600 rounded-full" />
+                                                        <div>
+                                                            <h3 className="text-sm font-black text-slate-900 uppercase tracking-tight">Student Biodata</h3>
+                                                            <p className="text-[11px] text-slate-500">Missing fields can be filled in once. Captured fields are locked as read-only.</p>
+                                                        </div>
+                                                    </div>
+                                                    {Object.values(profile.capturedFields || {}).some((v) => !v) && !profile.isDeadlinePassed && (
+                                                        <Button
+                                                            type="button"
+                                                            onClick={handleSaveMissingBiodata}
+                                                            disabled={isSavingBiodata}
+                                                            className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl h-10 px-4 text-xs font-bold gap-2"
+                                                        >
+                                                            {isSavingBiodata ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                                                            Save Missing Biodata
+                                                        </Button>
+                                                    )}
+                                                </div>
+
+                                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                                    {[
+                                                        { key: "surname", label: "Surname", placeholder: "Enter surname" },
+                                                        { key: "firstName", label: "First Name", placeholder: "Enter first name" },
+                                                        { key: "middleName", label: "Middle Name", placeholder: "Enter middle name" },
+                                                    ].map(({ key, label, placeholder }) => {
+                                                        const isLocked = Boolean(profile.capturedFields?.[key]);
+                                                        return (
+                                                            <div key={key} className="space-y-2">
+                                                                <div className="flex items-center justify-between">
+                                                                    <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 italic">{label}</Label>
+                                                                    <span className={cn("text-[9px] font-bold uppercase px-2 py-0.5 rounded-full", isLocked ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700")}>
+                                                                        {isLocked ? "Read-Only" : "Missing"}
+                                                                    </span>
+                                                                </div>
+                                                                <Input
+                                                                    readOnly={isLocked || profile.isDeadlinePassed}
+                                                                    value={missingBioForm[key] || ""}
+                                                                    onChange={(e) => setMissingBioForm((prev) => ({ ...prev, [key]: e.target.value }))}
+                                                                    placeholder={isLocked ? "" : placeholder}
+                                                                    className={cn("h-12 rounded-2xl font-bold text-xs", isLocked ? "bg-slate-50 text-slate-600 border-slate-100" : "bg-white text-slate-900 border-amber-300 focus:ring-2 focus:ring-indigo-500")}
+                                                                />
+                                                            </div>
+                                                        );
+                                                    })}
+
+                                                    {/* Gender */}
+                                                    <div className="space-y-2">
+                                                        <div className="flex items-center justify-between">
+                                                            <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 italic">Gender</Label>
+                                                            <span className={cn("text-[9px] font-bold uppercase px-2 py-0.5 rounded-full", profile.capturedFields?.gender ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700")}>
+                                                                {profile.capturedFields?.gender ? "Read-Only" : "Missing"}
+                                                            </span>
+                                                        </div>
+                                                        {profile.capturedFields?.gender || profile.isDeadlinePassed ? (
+                                                            <Input readOnly value={(missingBioForm.gender || "").toUpperCase()} className="bg-slate-50 h-12 rounded-2xl font-bold text-slate-600 border-slate-100 text-xs" />
+                                                        ) : (
+                                                            <Select value={missingBioForm.gender || ""} onValueChange={(v) => setMissingBioForm((prev) => ({ ...prev, gender: v }))}>
+                                                                <SelectTrigger className="h-12 rounded-2xl font-bold text-xs border-amber-300"><SelectValue placeholder="Select gender" /></SelectTrigger>
+                                                                <SelectContent>
+                                                                    <SelectItem value="male">Male</SelectItem>
+                                                                    <SelectItem value="female">Female</SelectItem>
+                                                                </SelectContent>
+                                                            </Select>
+                                                        )}
+                                                    </div>
+
+                                                    {/* Date of Birth */}
+                                                    <div className="space-y-2">
+                                                        <div className="flex items-center justify-between">
+                                                            <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 italic">Date of Birth</Label>
+                                                            <span className={cn("text-[9px] font-bold uppercase px-2 py-0.5 rounded-full", profile.capturedFields?.dob ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700")}>
+                                                                {profile.capturedFields?.dob ? "Read-Only" : "Missing"}
+                                                            </span>
+                                                        </div>
+                                                        <Input
+                                                            type="date"
+                                                            readOnly={Boolean(profile.capturedFields?.dob) || profile.isDeadlinePassed}
+                                                            value={missingBioForm.dob ? (missingBioForm.dob.includes("T") ? missingBioForm.dob.split("T")[0] : missingBioForm.dob) : ""}
+                                                            onChange={(e) => setMissingBioForm((prev) => ({ ...prev, dob: e.target.value }))}
+                                                            className={cn("h-12 rounded-2xl font-bold text-xs", profile.capturedFields?.dob ? "bg-slate-50 text-slate-600 border-slate-100" : "bg-white text-slate-900 border-amber-300 focus:ring-2 focus:ring-indigo-500")}
+                                                        />
+                                                    </div>
+
+                                                    {/* State of Origin */}
+                                                    <div className="space-y-2">
+                                                        <div className="flex items-center justify-between">
+                                                            <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 italic">State of Origin</Label>
+                                                            <span className={cn("text-[9px] font-bold uppercase px-2 py-0.5 rounded-full", profile.capturedFields?.stateOfOrigin ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700")}>
+                                                                {profile.capturedFields?.stateOfOrigin ? "Read-Only" : "Missing"}
+                                                            </span>
+                                                        </div>
+                                                        {profile.capturedFields?.stateOfOrigin || profile.isDeadlinePassed ? (
+                                                            <Input readOnly value={missingBioForm.stateOfOrigin || ""} className="bg-slate-50 h-12 rounded-2xl font-bold text-slate-600 border-slate-100 text-xs" />
+                                                        ) : (
+                                                            <Select value={missingBioForm.stateOfOrigin || ""} onValueChange={(v) => setMissingBioForm((prev) => ({ ...prev, stateOfOrigin: v }))}>
+                                                                <SelectTrigger className="h-12 rounded-2xl font-bold text-xs border-amber-300"><SelectValue placeholder="Select state" /></SelectTrigger>
+                                                                <SelectContent>
+                                                                    {["Abia","Adamawa","Akwa Ibom","Anambra","Bauchi","Bayelsa","Benue","Borno","Cross River","Delta","Ebonyi","Edo","Ekiti","Enugu","FCT","Gombe","Imo","Jigawa","Kaduna","Kano","Katsina","Kebbi","Kogi","Kwara","Lagos","Nasarawa","Niger","Ogun","Ondo","Osun","Oyo","Plateau","Rivers","Sokoto","Taraba","Yobe","Zamfara"].map((s) => (
+                                                                        <SelectItem key={s} value={s}>{s}</SelectItem>
+                                                                    ))}
+                                                                </SelectContent>
+                                                            </Select>
+                                                        )}
+                                                    </div>
+
+                                                    {/* LGA, NIN, Phone Number, Email, JAMB No */}
+                                                    {[
+                                                        { key: "lga", label: "LGA", placeholder: "Local Government Area", maxLength: 80 },
+                                                        { key: "nin", label: "NIN", placeholder: "11-digit NIN", maxLength: 11, digitsOnly: true },
+                                                        { key: "phone", label: "Phone Number", placeholder: "08012345678", maxLength: 15, digitsOnly: true },
+                                                        { key: "email", label: "Email", placeholder: "student@email.com", maxLength: 120 },
+                                                        { key: "jambNumber", label: "JAMB No", placeholder: "e.g. 202660003248HI", maxLength: 30, upper: true },
+                                                    ].map(({ key, label, placeholder, maxLength, digitsOnly, upper }) => {
+                                                        const isLocked = Boolean(profile.capturedFields?.[key]);
+                                                        return (
+                                                            <div key={key} className="space-y-2">
+                                                                <div className="flex items-center justify-between">
+                                                                    <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 italic">{label}</Label>
+                                                                    <span className={cn("text-[9px] font-bold uppercase px-2 py-0.5 rounded-full", isLocked ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700")}>
+                                                                        {isLocked ? "Read-Only" : "Missing"}
+                                                                    </span>
+                                                                </div>
+                                                                <Input
+                                                                    readOnly={isLocked || profile.isDeadlinePassed}
+                                                                    maxLength={maxLength}
+                                                                    value={missingBioForm[key] || ""}
+                                                                    onChange={(e) => {
+                                                                        let val = e.target.value;
+                                                                        if (digitsOnly) val = val.replace(/\D/g, "");
+                                                                        if (upper) val = val.toUpperCase();
+                                                                        setMissingBioForm((prev) => ({ ...prev, [key]: val }));
+                                                                    }}
+                                                                    placeholder={isLocked ? "" : placeholder}
+                                                                    className={cn("h-12 rounded-2xl font-bold text-xs", isLocked ? "bg-slate-50 text-slate-600 border-slate-100" : "bg-white text-slate-900 border-amber-300 focus:ring-2 focus:ring-indigo-500")}
+                                                                />
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
                                             </div>
-                                            <div className="space-y-3">
-                                                <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 italic">Genotype</Label>
-                                                <Input name="genotype" value={profile.genotype || ""} onChange={handleChange} className="h-14 rounded-2xl font-bold text-slate-900 border-slate-200 focus:ring-2 focus:ring-emerald-500" />
-                                            </div>
-                                            <div className="space-y-3">
-                                                <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 italic">Blood Group</Label>
-                                                <Input name="bloodGroup" value={profile.bloodGroup || ""} onChange={handleChange} className="h-14 rounded-2xl font-bold text-slate-900 border-slate-200 focus:ring-2 focus:ring-emerald-500" />
+
+                                            {/* Medical Quick Fields */}
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4 border-t border-slate-50">
+                                                <div className="space-y-3">
+                                                    <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 italic">Genotype</Label>
+                                                    <Input name="genotype" value={profile.genotype || ""} onChange={handleChange} className="h-14 rounded-2xl font-bold text-slate-900 border-slate-200 focus:ring-2 focus:ring-emerald-500" />
+                                                </div>
+                                                <div className="space-y-3">
+                                                    <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 italic">Blood Group</Label>
+                                                    <Input name="bloodGroup" value={profile.bloodGroup || ""} onChange={handleChange} className="h-14 rounded-2xl font-bold text-slate-900 border-slate-200 focus:ring-2 focus:ring-emerald-500" />
+                                                </div>
                                             </div>
                                         </div>
                                     )}

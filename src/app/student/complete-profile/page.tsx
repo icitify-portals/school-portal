@@ -23,8 +23,9 @@ export default function CompleteProfilePage() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [profile, setProfile] = useState<any>(null);
+    const [capturedFields, setCapturedFields] = useState<Record<string, boolean>>({});
     const [formData, setFormData] = useState({
-        firstName: "", lastName: "", otherNames: "", gender: "",
+        firstName: "", lastName: "", otherNames: "", gender: "", dob: "",
         nin: "", jambNumber: "", phone: "", email: "",
         stateOfOrigin: "", lga: "",
     });
@@ -33,9 +34,11 @@ export default function CompleteProfilePage() {
         getStudentProfileStatus().then((res) => {
             if (res.success && res.profile) {
                 setProfile(res.profile);
+                setCapturedFields((res as any).capturedFields || {});
                 setFormData({
                     firstName: res.profile.firstName || "", lastName: res.profile.lastName || "",
                     otherNames: res.profile.otherNames || "", gender: res.profile.gender || "",
+                    dob: res.profile.dob || "",
                     nin: res.profile.nin || "", jambNumber: res.profile.jambNumber || "",
                     phone: res.profile.phone || "", email: res.profile.email || "",
                     stateOfOrigin: res.profile.stateOfOrigin || "", lga: res.profile.lga || "",
@@ -89,50 +92,58 @@ export default function CompleteProfilePage() {
                     <p className="text-sm text-slate-500 mt-1">Please fill in your details to continue. All fields are required.</p>
                 </div>
 
-                {profile.matricNumber && (
-                    <Card className="mb-6 border-indigo-200 bg-indigo-50">
-                        <CardContent className="p-4">
-                            <div className="grid grid-cols-2 gap-4 text-sm">
-                                <div><span className="text-slate-500">Matric No:</span><span className="ml-2 font-mono font-bold text-indigo-700">{profile.matricNumber}</span></div>
-                                <div><span className="text-slate-500">Programme:</span><span className="ml-2 font-medium">{profile.programmeType} Level {profile.currentLevel}</span></div>
-                            </div>
-                        </CardContent>
-                    </Card>
-                )}
+                <Card className="mb-6 border-indigo-200 bg-indigo-50">
+                    <CardContent className="p-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                            <div><span className="text-slate-500">Matric No:</span><span className="ml-2 font-mono font-bold text-indigo-700">{profile.matricLocked ? "Hidden (Awaiting Fees)" : (profile.matricNumber || "Not Assigned")}</span></div>
+                            <div><span className="text-slate-500">Matric Visibility:</span><span className="ml-2 font-medium text-slate-800">{profile.matricVisibility || "Not Assigned"}</span></div>
+                            <div><span className="text-slate-500">Level:</span><span className="ml-2 font-medium">{profile.levelLabel || `${profile.programmeType} ${profile.currentLevel || ""}`}</span></div>
+                            <div><span className="text-slate-500">Programme:</span><span className="ml-2 font-medium">{profile.programmeName || "—"}</span></div>
+                            <div><span className="text-slate-500">Department:</span><span className="ml-2 font-medium">{profile.departmentName || "—"}</span></div>
+                            <div><span className="text-slate-500">Session:</span><span className="ml-2 font-medium">{profile.academicSession || "—"}</span></div>
+                        </div>
+                    </CardContent>
+                </Card>
 
                 <Card>
                     <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Users className="w-5 h-5" /> Personal Information</CardTitle></CardHeader>
                     <CardContent>
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div className="grid grid-cols-2 gap-4">
-                                <div><Label className="text-xs font-bold text-slate-500 uppercase">First Name *</Label><Input value={formData.firstName} onChange={(e) => updateField("firstName", e.target.value)} placeholder="Enter first name" required /></div>
-                                <div><Label className="text-xs font-bold text-slate-500 uppercase">Last Name *</Label><Input value={formData.lastName} onChange={(e) => updateField("lastName", e.target.value)} placeholder="Enter last name" required /></div>
+                                <div><Label className="text-xs font-bold text-slate-500 uppercase">Surname *</Label><Input readOnly={Boolean(capturedFields.surname)} className={capturedFields.surname ? "bg-slate-100 text-slate-600" : ""} value={formData.lastName} onChange={(e) => updateField("lastName", e.target.value)} placeholder="Enter surname" required /></div>
+                                <div><Label className="text-xs font-bold text-slate-500 uppercase">First Name *</Label><Input readOnly={Boolean(capturedFields.firstName)} className={capturedFields.firstName ? "bg-slate-100 text-slate-600" : ""} value={formData.firstName} onChange={(e) => updateField("firstName", e.target.value)} placeholder="Enter first name" required /></div>
                             </div>
-                            <div><Label className="text-xs font-bold text-slate-500 uppercase">Other Names</Label><Input value={formData.otherNames} onChange={(e) => updateField("otherNames", e.target.value)} placeholder="Middle name(s) (optional)" /></div>
-                            <div>
-                                <Label className="text-xs font-bold text-slate-500 uppercase">Gender *</Label>
-                                <Select value={formData.gender} onValueChange={(v) => updateField("gender", v)}>
-                                    <SelectTrigger><SelectValue placeholder="Select gender" /></SelectTrigger>
-                                    <SelectContent><SelectItem value="male">Male</SelectItem><SelectItem value="female">Female</SelectItem></SelectContent>
-                                </Select>
+                            <div><Label className="text-xs font-bold text-slate-500 uppercase">Middle Name</Label><Input readOnly={Boolean(capturedFields.middleName)} className={capturedFields.middleName ? "bg-slate-100 text-slate-600" : ""} value={formData.otherNames} onChange={(e) => updateField("otherNames", e.target.value)} placeholder="Middle name(s) (optional)" /></div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <Label className="text-xs font-bold text-slate-500 uppercase">Gender *</Label>
+                                    <Select disabled={Boolean(capturedFields.gender)} value={formData.gender} onValueChange={(v) => updateField("gender", v)}>
+                                        <SelectTrigger className={capturedFields.gender ? "bg-slate-100 text-slate-600" : ""}><SelectValue placeholder="Select gender" /></SelectTrigger>
+                                        <SelectContent><SelectItem value="male">Male</SelectItem><SelectItem value="female">Female</SelectItem></SelectContent>
+                                    </Select>
+                                </div>
+                                <div>
+                                    <Label className="text-xs font-bold text-slate-500 uppercase">Date of Birth</Label>
+                                    <Input type="date" readOnly={Boolean(capturedFields.dob)} className={capturedFields.dob ? "bg-slate-100 text-slate-600" : ""} value={formData.dob ? (formData.dob.includes("T") ? formData.dob.split("T")[0] : formData.dob) : ""} onChange={(e) => updateField("dob", e.target.value)} />
+                                </div>
                             </div>
                             <div className="grid grid-cols-2 gap-4">
-                                <div><Label className="text-xs font-bold text-slate-500 uppercase flex items-center gap-1"><IdCard className="w-3 h-3" /> NIN (11 digits) *</Label><Input value={formData.nin} onChange={(e) => updateField("nin", e.target.value.replace(/\D/g, "").slice(0, 11))} placeholder="12345678901" maxLength={11} required /></div>
-                                <div><Label className="text-xs font-bold text-slate-500 uppercase flex items-center gap-1"><Hash className="w-3 h-3" /> JAMB Reg No *</Label><Input value={formData.jambNumber} onChange={(e) => updateField("jambNumber", e.target.value.toUpperCase())} placeholder="202660003248HI" required /></div>
+                                <div><Label className="text-xs font-bold text-slate-500 uppercase flex items-center gap-1"><IdCard className="w-3 h-3" /> NIN (11 digits) *</Label><Input readOnly={Boolean(capturedFields.nin)} className={capturedFields.nin ? "bg-slate-100 text-slate-600" : ""} value={formData.nin} onChange={(e) => updateField("nin", e.target.value.replace(/\D/g, "").slice(0, 11))} placeholder="12345678901" maxLength={11} required /></div>
+                                <div><Label className="text-xs font-bold text-slate-500 uppercase flex items-center gap-1"><Hash className="w-3 h-3" /> JAMB Reg No *</Label><Input readOnly={Boolean(capturedFields.jambNumber)} className={capturedFields.jambNumber ? "bg-slate-100 text-slate-600" : ""} value={formData.jambNumber} onChange={(e) => updateField("jambNumber", e.target.value.toUpperCase())} placeholder="202660003248HI" required /></div>
                             </div>
                             <div className="grid grid-cols-2 gap-4">
-                                <div><Label className="text-xs font-bold text-slate-500 uppercase flex items-center gap-1"><Phone className="w-3 h-3" /> Phone Number *</Label><Input value={formData.phone} onChange={(e) => updateField("phone", e.target.value.replace(/\D/g, "").slice(0, 11))} placeholder="08012345678" maxLength={11} required /></div>
-                                <div><Label className="text-xs font-bold text-slate-500 uppercase flex items-center gap-1"><Mail className="w-3 h-3" /> Email *</Label><Input type="email" value={formData.email} onChange={(e) => updateField("email", e.target.value)} placeholder="student@email.com" required /></div>
+                                <div><Label className="text-xs font-bold text-slate-500 uppercase flex items-center gap-1"><Phone className="w-3 h-3" /> Phone Number *</Label><Input readOnly={Boolean(capturedFields.phone)} className={capturedFields.phone ? "bg-slate-100 text-slate-600" : ""} value={formData.phone} onChange={(e) => updateField("phone", e.target.value.replace(/\D/g, "").slice(0, 11))} placeholder="08012345678" maxLength={11} required /></div>
+                                <div><Label className="text-xs font-bold text-slate-500 uppercase flex items-center gap-1"><Mail className="w-3 h-3" /> Email *</Label><Input type="email" readOnly={Boolean(capturedFields.email)} className={capturedFields.email ? "bg-slate-100 text-slate-600" : ""} value={formData.email} onChange={(e) => updateField("email", e.target.value)} placeholder="student@email.com" required /></div>
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <Label className="text-xs font-bold text-slate-500 uppercase flex items-center gap-1"><MapPin className="w-3 h-3" /> State of Origin *</Label>
-                                    <Select value={formData.stateOfOrigin} onValueChange={(v) => updateField("stateOfOrigin", v)}>
-                                        <SelectTrigger><SelectValue placeholder="Select state" /></SelectTrigger>
+                                    <Select disabled={Boolean(capturedFields.stateOfOrigin)} value={formData.stateOfOrigin} onValueChange={(v) => updateField("stateOfOrigin", v)}>
+                                        <SelectTrigger className={capturedFields.stateOfOrigin ? "bg-slate-100 text-slate-600" : ""}><SelectValue placeholder="Select state" /></SelectTrigger>
                                         <SelectContent>{NIGERIAN_STATES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
                                     </Select>
                                 </div>
-                                <div><Label className="text-xs font-bold text-slate-500 uppercase">LGA *</Label><Input value={formData.lga} onChange={(e) => updateField("lga", e.target.value)} placeholder="Local Government Area" required /></div>
+                                <div><Label className="text-xs font-bold text-slate-500 uppercase">LGA *</Label><Input readOnly={Boolean(capturedFields.lga)} className={capturedFields.lga ? "bg-slate-100 text-slate-600" : ""} value={formData.lga} onChange={(e) => updateField("lga", e.target.value)} placeholder="Local Government Area" required /></div>
                             </div>
                             <Button type="submit" disabled={saving} className="w-full bg-indigo-600 hover:bg-indigo-700 gap-2 h-12 text-base font-bold">
                                 {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />} Save & Continue

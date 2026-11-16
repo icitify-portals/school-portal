@@ -989,14 +989,23 @@ export async function getStudentProfile() {
 
         const userId = parseInt(session.user.id);
 
+        const currentSessionTable = aliasedTable(academicSessions, "current_session");
+        const admissionSessionTable = aliasedTable(academicSessions, "admission_session");
+
         let studentRows = await db.select({
             student: students,
             user: users,
-            programme: programmes
+            programme: programmes,
+            department: departments,
+            currentSession: currentSessionTable,
+            admissionSession: admissionSessionTable,
         })
             .from(students)
             .leftJoin(users, eq(students.userId, users.id))
             .leftJoin(programmes, eq(students.programmeId, programmes.id))
+            .leftJoin(departments, eq(students.deptId, departments.id))
+            .leftJoin(currentSessionTable, eq(students.currentSessionId, currentSessionTable.id))
+            .leftJoin(admissionSessionTable, eq(students.admissionSessionId, admissionSessionTable.id))
             .where(and(eq(students.userId, userId), isNull(students.deletedAt), sql`${students.matricNumber} IS NOT NULL`))
             .orderBy(
                 sql`CASE WHEN ${students.status} = 'active' THEN 0 ELSE 1 END`,
@@ -1042,15 +1051,21 @@ export async function getStudentProfile() {
                     const recoveredRows = await db.select({
                         student: students,
                         user: users,
-                        programme: programmes
+                        programme: programmes,
+                        department: departments,
+                        currentSession: currentSessionTable,
+                        admissionSession: admissionSessionTable,
                     })
                         .from(students)
                         .leftJoin(users, eq(students.userId, users.id))
                         .leftJoin(programmes, eq(students.programmeId, programmes.id))
+                        .leftJoin(departments, eq(students.deptId, departments.id))
+                        .leftJoin(currentSessionTable, eq(students.currentSessionId, currentSessionTable.id))
+                        .leftJoin(admissionSessionTable, eq(students.admissionSessionId, admissionSessionTable.id))
                         .where(and(
                             isNull(students.deletedAt),
                             sql`${students.matricNumber} IS NOT NULL`,
-                            notLike(students.matricNumber, '%.retired.%'),
+                            sql`${students.matricNumber} NOT LIKE '%.retired.%'`,
                             or(...recoveryConditions)
                         ))
                         .orderBy(
@@ -1072,11 +1087,17 @@ export async function getStudentProfile() {
             studentRows = await db.select({
                 student: students,
                 user: users,
-                programme: programmes
+                programme: programmes,
+                department: departments,
+                currentSession: currentSessionTable,
+                admissionSession: admissionSessionTable,
             })
                 .from(students)
                 .leftJoin(users, eq(students.userId, users.id))
                 .leftJoin(programmes, eq(students.programmeId, programmes.id))
+                .leftJoin(departments, eq(students.deptId, departments.id))
+                .leftJoin(currentSessionTable, eq(students.currentSessionId, currentSessionTable.id))
+                .leftJoin(admissionSessionTable, eq(students.admissionSessionId, admissionSessionTable.id))
                 .where(and(eq(students.userId, userId), isNull(students.deletedAt)))
                 .orderBy(desc(students.id))
                 .limit(1);
@@ -1084,11 +1105,91 @@ export async function getStudentProfile() {
 
         if (studentRows.length === 0) return null;
 
-        const studentData = { ...studentRows[0].student };
+        const row = studentRows[0];
+        const studentData = { ...row.student };
+        const hasAssignedMatric = Boolean(studentData.matricNumber && String(studentData.matricNumber).trim().length > 0);
         const matricLocked = await isStudentMatricLocked({ studentId: studentData.id, userId });
         if (matricLocked) {
             studentData.matricNumber = null;
         }
+
+        const effectiveUserId = studentData.userId || userId;
+        const [latestApp] = await db.select()
+            .from(admissionApplicationsV2)
+            .where(eq(admissionApplicationsV2.applicantId, effectiveUserId))
+            .orderBy(desc(admissionApplicationsV2.id))
+            .limit(1);
+
+        let formData: Record<string, any> = {};
+        if (latestApp?.data) {
+            try {
+                formData = typeof latestApp.data === "string" ? JSON.parse(latestApp.data) : latestApp.data;
+            } catch {
+                formData = {};
+            }
+        }
+
+        const rawBio = extractBiodataFields({
+            formData,
+            student: row.student,
+            user: row.user,
+            application: latestApp || null,
+        });
+
+        const normalizedGender = rawBio.gender?.toLowerCase() === "male" || rawBio.gender?.toLowerCase() === "female"
+            ? rawBio.gender.toLowerCase()
+            : "";
+
+        const levelLabel = studentData.status === "nd_graduant" || studentData.status === "nd_graduated"
+            ? "ND Graduant"
+            : studentData.status === "hnd_graduant" || studentData.status === "hnd_graduated"
+                ? "HND Graduant"
+                : studentData.currentLevel
+                    ? `${studentData.programmeType || row.programme?.programmeType || ""} ${studentData.currentLevel}`.trim()
+                    : (studentData.programmeType || row.programme?.programmeType || "");
+
+        const academicSessionName = row.currentSession?.name
+            || row.admissionSession?.name
+            || (studentData.admissionYear ? `${studentData.admissionYear}/${studentData.admissionYear + 1}` : "2026/2027");
+
+        const matricVisibility = hasAssignedMatric
+            ? (matricLocked ? "Hidden from Student (NELFUND Ready)" : "Unlocked (Fees Paid)")
+            : "Not Assigned";
+
+        const biodata = {
+            matricNumber: matricLocked ? "" : (studentData.matricNumber || ""),
+            surname: rawBio.surname || "",
+            firstName: rawBio.firstName || "",
+            middleName: rawBio.middleName || "",
+            gender: normalizedGender,
+            dob: rawBio.dob || "",
+            stateOfOrigin: rawBio.stateOfOrigin || "",
+            lga: rawBio.lga || "",
+            nin: rawBio.nin || "",
+            phone: rawBio.phone || "",
+            email: rawBio.email || "",
+            jambNumber: rawBio.jambNumber || "",
+            level: levelLabel,
+            programme: row.programme?.name || "",
+            department: row.department?.name || "",
+            academicSession: academicSessionName,
+            matricVisibility,
+        };
+
+        const capturedFields = {
+            surname: Boolean(biodata.surname.trim()),
+            firstName: Boolean(biodata.firstName.trim()),
+            middleName: Boolean(biodata.middleName.trim()),
+            gender: biodata.gender === "male" || biodata.gender === "female",
+            dob: Boolean(biodata.dob.trim()),
+            stateOfOrigin: Boolean(biodata.stateOfOrigin.trim()),
+            lga: Boolean(biodata.lga.trim()),
+            nin: Boolean(biodata.nin.trim()),
+            phone: Boolean(biodata.phone.trim()),
+            email: Boolean(biodata.email.trim()),
+            jambNumber: Boolean(biodata.jambNumber.trim()),
+        };
+
         const enrollmentsWithCourses = await db.select({
             enrollment: enrollments,
             course: courses
@@ -1100,8 +1201,13 @@ export async function getStudentProfile() {
         return {
             ...studentData,
             matricLocked,
-            user: studentRows[0].user,
-            programme: studentRows[0].programme,
+            user: row.user,
+            programme: row.programme,
+            department: row.department,
+            academicSession: academicSessionName,
+            matricVisibility,
+            biodata,
+            capturedFields,
             enrollments: enrollmentsWithCourses.map(e => ({
                 ...e.enrollment,
                 course: e.course
