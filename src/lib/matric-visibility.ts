@@ -1,6 +1,6 @@
 import { db } from "@/db/db";
-import { admissionApplicationsV2, academicSessions } from "@/db/schema";
-import { eq, and, or, desc, isNotNull } from "drizzle-orm";
+import { admissionApplicationsV2, academicSessions, transactions } from "@/db/schema";
+import { eq, and, or, desc, isNotNull, like } from "drizzle-orm";
 import {
     verifyAdmissionFeesForApplication,
     loadPaymentEvidence,
@@ -36,6 +36,7 @@ export async function isApplicationMatricUnlocked(app: {
     studentId?: number | null;
     acceptancePaymentStatus?: string | null;
     acceptancePaymentReference?: string | null;
+    processingFeeReference?: string | null;
     admissionNotes?: string | null;
     data?: string | Record<string, any> | null;
 }): Promise<boolean> {
@@ -91,6 +92,27 @@ export async function isApplicationMatricUnlocked(app: {
     );
 
     if (feeCheck.verified) {
+        // Require post-school-fee Processing Fee (PROC-{appId}-...) before unlocking matriculation number
+        const hasProcRef = String(app.processingFeeReference || "").startsWith(`PROC-${app.id}-`);
+        let hasProcTx = hasProcRef;
+        if (!hasProcTx) {
+            const [procTx] = await db
+                .select({ id: transactions.id })
+                .from(transactions)
+                .where(
+                    and(
+                        like(transactions.gatewayReference, `PROC-${app.id}-%`),
+                        eq(transactions.status, "completed")
+                    )
+                )
+                .limit(1);
+            hasProcTx = Boolean(procTx);
+        }
+
+        if (!hasProcTx) {
+            return false;
+        }
+
         // Persist unlock state so future reads are fast and consistent
         try {
             formData.matricUnlocked = true;
@@ -144,6 +166,7 @@ export async function isStudentMatricLocked(params: {
                 studentId: admissionApplicationsV2.studentId,
                 acceptancePaymentStatus: admissionApplicationsV2.acceptancePaymentStatus,
                 acceptancePaymentReference: admissionApplicationsV2.acceptancePaymentReference,
+                processingFeeReference: admissionApplicationsV2.processingFeeReference,
                 admissionNotes: admissionApplicationsV2.admissionNotes,
                 data: admissionApplicationsV2.data,
             })
@@ -181,6 +204,7 @@ export async function getLockedMatricStudentIds(): Promise<Set<number>> {
                 studentId: admissionApplicationsV2.studentId,
                 acceptancePaymentStatus: admissionApplicationsV2.acceptancePaymentStatus,
                 acceptancePaymentReference: admissionApplicationsV2.acceptancePaymentReference,
+                processingFeeReference: admissionApplicationsV2.processingFeeReference,
                 admissionNotes: admissionApplicationsV2.admissionNotes,
                 data: admissionApplicationsV2.data,
             })

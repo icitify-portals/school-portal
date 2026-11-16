@@ -1343,6 +1343,15 @@ export async function getApplicantStatusData(applicationId: number) {
             )
         });
 
+        // Check if post-school-fee processing fee has been paid (gatewayReference starts with PROC-{applicationId}-)
+        const processingFeeTx = await db.query.transactions.findFirst({
+            where: and(
+                like(transactions.gatewayReference, `PROC-${applicationId}-%`),
+                eq(transactions.status, 'completed')
+            )
+        });
+        const hasPaidProcessingFee = !!processingFeeTx || String(app.processingFeeReference || '').startsWith('PROC-');
+
         const schoolFeesAmount = getCalculatedTuition(template, app.programme);
 
         let sanitizedData = app.data;
@@ -1379,6 +1388,7 @@ export async function getApplicantStatusData(applicationId: number) {
             template,
             results,
             hasPaidSchoolFees: !!schoolFeesTx,
+            hasPaidProcessingFee,
             schoolFeesAmount,
             matricLocked: app.status === 'admitted' ? !matricUnlocked : false,
             matricNumber: matricUnlocked ? rawMatric : null,
@@ -1974,19 +1984,8 @@ export async function confirmSchoolFeesPayment(applicationId: number, reference:
             .set(updatePayload)
             .where(eq(transactions.gatewayReference, reference));
 
-        // Automatically finalize admission and unlock the student's pre-generated matriculation number
-        // once both Acceptance Fee and School Fees are verified as paid.
-        try {
-            const finalization = await finalizeStudentAdmission(applicationId);
-            if (finalization.success && finalization.studentId) {
-                await db.update(transactions)
-                    .set({ studentId: finalization.studentId })
-                    .where(eq(transactions.gatewayReference, reference));
-            }
-        } catch (finErr) {
-            console.warn("[confirmSchoolFeesPayment] Non-fatal finalize check:", finErr);
-        }
-
+        // Do NOT finalize or unlock matriculation number here — student must pay the
+        // post-school-fee Processing Fee (PROC-...) before matriculation number is unlocked.
         safeRevalidatePath(`/admission/status/${applicationId}`);
         return { success: true };
     } catch (error) {

@@ -382,7 +382,7 @@ export default function ApplicantStatusPage() {
 
                                         {data.matricLocked && (
                                             <div className="px-6 py-4 bg-amber-50 border border-amber-200 rounded-2xl flex items-center gap-3 text-amber-800 font-black uppercase text-[10px] tracking-widest italic shadow-sm">
-                                                <Clock className="w-4 h-4 text-amber-600 shrink-0" /> Matriculation Number Generated &amp; Reserved — Complete Acceptance Fee &amp; School Fees Payment to Unlock Access
+                                                <Clock className="w-4 h-4 text-amber-600 shrink-0" /> Matriculation Number Generated &amp; Reserved — Complete Acceptance Fee, School Fees &amp; Processing Fee Payment to Unlock Access
                                             </div>
                                         )}
 
