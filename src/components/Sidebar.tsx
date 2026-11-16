@@ -222,6 +222,7 @@ const adminMenuItems: MenuItem[] = [
         subItems: [
             { name: "Registrar Dashboard", href: "/admin/registrar" },
             { name: "All Students", href: "/admin/students" },
+            { name: "Matriculation Administration", href: "/admin/registrar/matriculation" },
             { name: "Medical Records", href: "/admin/health/medical-records" },
             { name: "Placement Corrections", href: "/admin/students/placement" },
             { name: "Incomplete Admissions", href: "/admin/students/orphans" },
@@ -278,6 +279,7 @@ const adminMenuItems: MenuItem[] = [
             { name: "Document Pricing Settings", href: "/admin/bursary/documents" },
             { name: "Scholarships & Trusts", href: "/admin/bursary/scholarships" },
             { name: "Bank Reconciliation", href: "/admin/bursary/reconciliation" },
+            { name: "NELFUND Administration", href: "/admin/bursary/nelfund" },
             { name: "All Transactions", href: "/admin/bursary/transactions" },
             { name: "School Bills", href: "/admin/bursary/bills" },
             { name: "Refund Management", href: "/admin/bursary/refunds" },
@@ -628,7 +630,8 @@ export function Sidebar({ enabledModules = {}, mobileOpen = false, onClose }: {
     const isAdmissionOfficer = role === 'admission_officer' || role === 'admission officer' || role === 'admission' || userRolesList.includes('admission_officer') || userRolesList.includes('admission officer') || userRolesList.includes('admission');
     const isBursar = role === 'bursar' || role === 'bursary' || userRolesList.includes('bursar') || userRolesList.includes('bursary') || userRolesList.includes('accountant');
     const isRecordOfficer = role === 'record_officer' || role === 'record officer' || role === 'recordofficer' || userRolesList.includes('record_officer') || userRolesList.includes('record officer');
-    const isSuperAdminOrDev = role === 'admin' || role === 'superadmin' || role === 'icitify_dev' || role === 'ict_manager' || role === 'ictmanager' || userRolesList.includes('superadmin') || userRolesList.includes('admin') || userRolesList.includes('developer') || userRolesList.includes('ict manager') || userRolesList.includes('ict_manager');
+    const isIctManager = role === 'ict_manager' || role === 'ictmanager' || userRolesList.includes('ict manager') || userRolesList.includes('ict_manager');
+    const isSuperAdminOrDev = role === 'admin' || role === 'superadmin' || role === 'icitify_dev' || userRolesList.includes('superadmin') || userRolesList.includes('admin') || userRolesList.includes('developer');
     const isHealthAdmin = role === 'healthadmin' || role === 'health_admin' || role === 'medical_officer' || role === 'doctor' || role === 'nurse' || userRolesList.includes('healthadmin') || userRolesList.includes('health admin') || userRolesList.includes('medical officer') || userRolesList.includes('health officer');
 
     const hasResultModulePermission = userPermissions.includes("result_module.manage");
@@ -770,6 +773,36 @@ export function Sidebar({ enabledModules = {}, mobileOpen = false, onClose }: {
                         { name: "Broadcast Communications", href: "/admin/communications/broadcasts" },
                         { name: "Broadcast Center", href: "/admin/announcements" },
                         { name: "Direct Messages", href: "/communications" },
+                    ]
+                },
+                { name: "Profile", icon: User, href: "/profile" }
+            ];
+        }
+
+        if (isIctManager && !isSuperAdminOrDev) {
+            return [
+                { name: "ICT Print Queue", icon: LayoutDashboard, href: "/admin/ict/print-queue" },
+                {
+                    name: "ICT & Identity Center",
+                    icon: Shield,
+                    subItems: [
+                        { name: "ICT Print Queue", href: "/admin/ict/print-queue" },
+                        { name: "ID Card Print Guide", href: "/admin/ict/guide" },
+                        { name: "Photo Capture", href: "/admin/ict/photo-capture" },
+                        { name: "Course Reg Print", href: "/admin/ict/course-registrations" },
+                        { name: "Identity Center", href: "/admin/identity" },
+                        { name: "User Manager", href: "/admin/users" },
+                        { name: "Password Reset Centre", href: "/admin/security/password-reset" },
+                    ]
+                },
+                {
+                    name: "Student Directory",
+                    icon: UsersIcon,
+                    subItems: [
+                        { name: "All Students", href: "/admin/students" },
+                        { name: "Matriculation Administration", href: "/admin/registrar/matriculation" },
+                        { name: "Placement Corrections", href: "/admin/students/placement" },
+                        { name: "Incomplete Admissions", href: "/admin/students/orphans" },
                     ]
                 },
                 { name: "Profile", icon: User, href: "/profile" }

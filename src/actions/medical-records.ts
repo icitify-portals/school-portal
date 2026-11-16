@@ -13,7 +13,7 @@ async function ensureHealthAccess() {
         where: eq(users.id, Number(session.user.id)),
         columns: { role: true }
     });
-    if (!user || !["admin", "superadmin", "healthadmin", "ict_manager", "registrar", "medical_officer"].includes(user.role || "")) {
+    if (!user || !["admin", "superadmin", "healthadmin", "registrar", "medical_officer"].includes(user.role || "")) {
         throw new Error("Access denied. Medical Officer or Health Admin role required.");
     }
 }
