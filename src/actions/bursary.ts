@@ -2986,6 +2986,135 @@ export async function initializeOnlineCheckoutAction(studentId: number, billId: 
     }
 }
 
+async function ensurePayOnBehalfStaff() {
+    const allowed =
+        await hasPermission("finance.view_summary") ||
+        await hasPermission("finance.view_detailed") ||
+        await hasPermission("admin.students.manage") ||
+        await hasRole(["admin", "superadmin", "registrar", "bursar", "bursary", "bursary_staff", "accountant", "icitify_dev"]);
+    if (!allowed) {
+        throw new Error("Unauthorized: Administrative, Bursary, or Registrar access required.");
+    }
+}
+
+export async function initializeOnBehalfCheckoutAction(studentId: number, billId: number, amount: number) {
+    try {
+        await ensurePayOnBehalfStaff();
+        const { SplitPaymentEngine } = await import("@/services/SplitPaymentEngine");
+        const res = await SplitPaymentEngine.checkoutBill(studentId, billId, amount, { bypassStudentPaymentLock: true });
+        return {
+            success: res.success,
+            checkoutUrl: res.checkoutUrl,
+            reference: res.reference,
+            rrr: res.rrr,
+            error: res.error
+        };
+    } catch (error) {
+        console.error("On-behalf checkout initialization failed:", error);
+        return { success: false, error: (error as Error).message };
+    }
+}
+
+export async function postOnBehalfDirectPayment(
+    studentId: number,
+    billId: number,
+    amount: number,
+    tellerNumber: string,
+    bankName: string
+) {
+    try {
+        await ensurePayOnBehalfStaff();
+
+        return await db.transaction(async (tx) => {
+            const [student] = await tx.select().from(students).where(eq(students.id, studentId)).limit(1);
+            if (!student) throw new Error("Student not found.");
+
+            const lockCheck = await assertActivityUnlocked(ACTIVITIES.SCHOOL_FEE_PAYMENT, buildStudentLockContext(student));
+            if (!lockCheck.success) {
+                throw new Error(lockCheck.error || "School fee payments are currently closed.");
+            }
+
+            const [bill] = await tx.select().from(studentBills).where(eq(studentBills.id, billId)).limit(1);
+            if (!bill) throw new Error("Bill not found.");
+
+            const totalAmount = parseFloat(bill.totalAmount);
+            const currentPaid = parseFloat(bill.amountPaid || "0.00");
+            const newPaid = currentPaid + amount;
+
+            if (newPaid > totalAmount + 0.01) {
+                throw new Error("Payment exceeds bill outstanding balance.");
+            }
+
+            const ref = `OBH-${tellerNumber.trim()}-${Date.now()}`;
+            const [newCoreTx] = await tx.insert(transactions).values({
+                studentId,
+                amount: amount.toFixed(2),
+                type: "credit",
+                purpose: `Tuition Payment (On Behalf): ${bill.billNumber} (Ref/Bank: ${bankName})`,
+                status: "completed",
+                gateway: "manual",
+                gatewayReference: ref
+            });
+
+            let billStatus: "pending" | "partially_paid" | "paid" = "partially_paid";
+            if (Math.abs(newPaid - totalAmount) < 0.01) {
+                billStatus = "paid";
+            }
+            await tx.update(studentBills)
+                .set({
+                    amountPaid: newPaid.toFixed(2),
+                    status: billStatus
+                })
+                .where(eq(studentBills.id, billId));
+
+            const [lastLedgerEntry] = await tx.select()
+                .from(studentLedger)
+                .where(eq(studentLedger.studentId, studentId))
+                .orderBy(desc(studentLedger.createdAt))
+                .limit(1);
+
+            const lastBalance = lastLedgerEntry ? parseFloat(lastLedgerEntry.balance) : 0;
+            const newBalanceOwed = lastBalance - amount;
+
+            await tx.insert(studentLedger).values({
+                studentId,
+                transactionId: newCoreTx.insertId,
+                description: `Payment (On Behalf): ${bill.billNumber} (${bankName})`,
+                debit: "0.00",
+                credit: amount.toFixed(2),
+                balance: newBalanceOwed.toFixed(2)
+            });
+
+            try {
+                // @ts-expect-error - TS2769: Auto-suppressed for build
+                const [user] = await tx.select().from(users).where(eq(users.id, student.userId)).limit(1);
+                const studentName = user ? user.name : `Student #${studentId}`;
+                const session = await auth();
+                const recordedBy = session?.user?.id ? parseInt(session.user.id) : 1;
+
+                const { AccountingService } = await import("@/services/AccountingService");
+                await AccountingService.postReceiptToGL({
+                    amount,
+                    studentName,
+                    feeItemId: 0,
+                    feeCategory: "Student Fees (On Behalf)",
+                    recordedBy,
+                    paymentMethod: "bank"
+                });
+            } catch (glErr) {
+                console.error("On-behalf direct payment GL posting failed:", glErr);
+            }
+
+            revalidatePath("/admin/students");
+            revalidatePath("/student/finance");
+            return { success: true, transactionId: newCoreTx.insertId, reference: ref };
+        });
+    } catch (error) {
+        console.error("Failed to post on-behalf direct payment:", error);
+        return { success: false, error: (error as Error).message };
+    }
+}
+
 export async function resolveOnlinePaymentAction(reference: string, status: 'completed' | 'failed', billId?: number, skipGatewayVerification?: boolean) {
     try {
         return await db.transaction(async (tx) => {

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Users, CheckCircle, Loader2, Search, FileUp, X, FileText, ShieldAlert, QrCode, Trash2, AlertTriangle, Lock, Unlock, CreditCard, Download } from "lucide-react";
 import { getDepartments } from "@/actions/departments";
 import { getStudents, approveStudent, bulkImportStudents, toggleFinancialLock, togglePaymentLock, bulkTogglePaymentLock, getStudentSessionOptions, deleteStudentAccount, bulkDeleteStudentAccounts, exportStudentsAction } from "@/actions/students";
+import { getStudentBills, initializeOnBehalfCheckoutAction, postOnBehalfDirectPayment } from "@/actions/bursary";
 import { impersonateUser } from "@/actions/impersonation";
 import { generateIdentityQRCodeAction } from "@/actions/utility-actions";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
@@ -51,6 +52,18 @@ function StudentsPageContent() {
     const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
     const [bulkDeleting, setBulkDeleting] = useState(false);
     const [exporting, setExporting] = useState(false);
+
+    // Pay on Behalf modal state
+    const [payBehalfStudent, setPayBehalfStudent] = useState<any | null>(null);
+    const [payBehalfBills, setPayBehalfBills] = useState<any[]>([]);
+    const [payBehalfLoading, setPayBehalfLoading] = useState(false);
+    const [payBehalfSubmitting, setPayBehalfSubmitting] = useState(false);
+    const [selectedBillId, setSelectedBillId] = useState<number | null>(null);
+    const [payAmount, setPayAmount] = useState("");
+    const [payMode, setPayMode] = useState<"gateway" | "manual">("gateway");
+    const [tellerNumber, setTellerNumber] = useState("");
+    const [bankName, setBankName] = useState("");
+    const [gatewayResult, setGatewayResult] = useState<{ checkoutUrl?: string; rrr?: string; reference?: string } | null>(null);
 
     const page = parseInt(searchParams.get("page") || "1");
     const pageSize = parseInt(searchParams.get("pageSize") || "10");
@@ -419,6 +432,83 @@ function StudentsPageContent() {
             setQrStudent(null);
         } finally {
             setQrLoading(false);
+        }
+    };
+
+    const handleOpenPayOnBehalf = async (student: any) => {
+        setPayBehalfStudent(student);
+        setPayBehalfBills([]);
+        setSelectedBillId(null);
+        setPayAmount("");
+        setPayMode("gateway");
+        setTellerNumber("");
+        setBankName("");
+        setGatewayResult(null);
+        setPayBehalfLoading(true);
+        try {
+            const bills = await getStudentBills(student.id);
+            const list = Array.isArray(bills) ? bills : [];
+            setPayBehalfBills(list);
+            const firstUnpaid = list.find((b: any) => b.status !== "paid" && parseFloat(b.totalAmount || "0") > parseFloat(b.amountPaid || "0"));
+            if (firstUnpaid) {
+                setSelectedBillId(firstUnpaid.id);
+                const outstanding = Math.max(0, parseFloat(firstUnpaid.totalAmount || "0") - parseFloat(firstUnpaid.amountPaid || "0"));
+                setPayAmount(outstanding.toFixed(2));
+            }
+        } catch (err: any) {
+            toast.error(err?.message || "Failed to load student bills");
+        } finally {
+            setPayBehalfLoading(false);
+        }
+    };
+
+    const handlePayOnBehalfSubmit = async () => {
+        if (!payBehalfStudent || !selectedBillId) {
+            toast.error("Please select a bill to pay");
+            return;
+        }
+        const amt = parseFloat(payAmount);
+        if (isNaN(amt) || amt <= 0) {
+            toast.error("Please enter a valid payment amount");
+            return;
+        }
+
+        setPayBehalfSubmitting(true);
+        setGatewayResult(null);
+        try {
+            if (payMode === "gateway") {
+                const res = await initializeOnBehalfCheckoutAction(payBehalfStudent.id, selectedBillId, amt);
+                if (!res.success) {
+                    toast.error(res.error || "Failed to initialize gateway payment");
+                    return;
+                }
+                setGatewayResult({
+                    checkoutUrl: res.checkoutUrl,
+                    rrr: res.rrr,
+                    reference: res.reference
+                });
+                toast.success(res.rrr ? `Payment initialized (RRR: ${res.rrr})` : "Payment checkout initialized!");
+                if (res.checkoutUrl) {
+                    window.open(res.checkoutUrl, "_blank", "noopener,noreferrer");
+                }
+            } else {
+                if (!tellerNumber.trim() || !bankName.trim()) {
+                    toast.error("Please enter both Teller/Reference Number and Bank Name");
+                    return;
+                }
+                const res = await postOnBehalfDirectPayment(payBehalfStudent.id, selectedBillId, amt, tellerNumber.trim(), bankName.trim());
+                if (!res.success) {
+                    toast.error(res.error || "Failed to record payment");
+                    return;
+                }
+                toast.success(`Payment recorded successfully (Ref: ${res.reference})`);
+                await handleOpenPayOnBehalf(payBehalfStudent);
+                fetchStudents();
+            }
+        } catch (err: any) {
+            toast.error(err?.message || "Payment action failed");
+        } finally {
+            setPayBehalfSubmitting(false);
         }
     };
 
@@ -989,6 +1079,16 @@ function StudentsPageContent() {
                                             <Button
                                                 variant="outline"
                                                 size="sm"
+                                                onClick={() => handleOpenPayOnBehalf(s)}
+                                                className="h-8 px-3 text-xs gap-1 rounded-lg border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 font-bold"
+                                                title="Pay or post a bill on behalf of this student"
+                                            >
+                                                <CreditCard className="w-3 h-3" />
+                                                Pay on Behalf
+                                            </Button>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
                                                 onClick={() => router.push(`/admin/bursary/ledger/${s.id}`)}
                                                 className="h-8 px-3 text-xs gap-1 rounded-lg border-slate-200 text-indigo-600 hover:bg-indigo-50"
                                             >
@@ -1238,6 +1338,165 @@ function StudentsPageContent() {
                             {bulkDeleting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                             {deletePermanent ? `Permanently Delete (${selectedStudentIds.length})` : `Remove (${selectedStudentIds.length})`}
                         </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Pay on Behalf Modal */}
+            <Dialog open={!!payBehalfStudent} onOpenChange={(open) => {
+                if (!open) {
+                    setPayBehalfStudent(null);
+                    setGatewayResult(null);
+                }
+            }}>
+                <DialogContent className="border-none shadow-2xl rounded-2xl bg-white max-w-lg p-6">
+                    <DialogHeader className="space-y-2">
+                        <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center">
+                            <CreditCard className="w-6 h-6" />
+                        </div>
+                        <DialogTitle className="text-xl font-bold text-slate-900">
+                            Pay on Behalf of Student
+                        </DialogTitle>
+                        <DialogDescription className="text-slate-500 text-xs">
+                            {payBehalfStudent?.user?.name || `${payBehalfStudent?.lastName || ""} ${payBehalfStudent?.firstName || ""}`}
+                            {payBehalfStudent?.matricNumber ? ` (${payBehalfStudent.matricNumber})` : ""}
+                            {payBehalfStudent?.isPaymentLocked ? " — Student self-service payment is locked." : ""}
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    {payBehalfLoading ? (
+                        <div className="py-10 flex items-center justify-center">
+                            <Loader2 className="w-6 h-6 animate-spin text-emerald-600" />
+                        </div>
+                    ) : payBehalfBills.length === 0 ? (
+                        <div className="py-8 text-center text-sm text-slate-500">
+                            No student bills found for this student.
+                        </div>
+                    ) : (
+                        <div className="space-y-4 py-2">
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Select Bill</label>
+                                <select
+                                    className="w-full h-10 px-3 rounded-xl border border-slate-200 text-sm font-medium bg-white"
+                                    value={selectedBillId || ""}
+                                    onChange={(e) => {
+                                        const id = Number(e.target.value);
+                                        setSelectedBillId(id);
+                                        const bill = payBehalfBills.find((b: any) => b.id === id);
+                                        if (bill) {
+                                            const out = Math.max(0, parseFloat(bill.totalAmount || "0") - parseFloat(bill.amountPaid || "0"));
+                                            setPayAmount(out.toFixed(2));
+                                        }
+                                    }}
+                                >
+                                    <option value="">-- Choose a bill --</option>
+                                    {payBehalfBills.map((b: any) => {
+                                        const total = parseFloat(b.totalAmount || "0");
+                                        const paid = parseFloat(b.amountPaid || "0");
+                                        const out = Math.max(0, total - paid);
+                                        return (
+                                            <option key={b.id} value={b.id} disabled={out <= 0}>
+                                                {b.billNumber} ({b.session?.name || "Session"}) — Balance: ₦{out.toLocaleString()} [{b.status}]
+                                            </option>
+                                        );
+                                    })}
+                                </select>
+                            </div>
+
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Amount (₦)</label>
+                                <input
+                                    type="number"
+                                    step="0.01"
+                                    value={payAmount}
+                                    onChange={(e) => setPayAmount(e.target.value)}
+                                    className="w-full h-10 px-3 rounded-xl border border-slate-200 text-sm font-bold"
+                                />
+                            </div>
+
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Payment Method</label>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => setPayMode("gateway")}
+                                        className={`h-10 rounded-xl text-xs font-bold border transition-all ${payMode === "gateway" ? "bg-emerald-600 text-white border-emerald-600" : "bg-white text-slate-600 border-slate-200"}`}
+                                    >
+                                        Online Gateway (Remita/Paystack)
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setPayMode("manual")}
+                                        className={`h-10 rounded-xl text-xs font-bold border transition-all ${payMode === "manual" ? "bg-indigo-600 text-white border-indigo-600" : "bg-white text-slate-600 border-slate-200"}`}
+                                    >
+                                        Record Bank / Teller Deposit
+                                    </button>
+                                </div>
+                            </div>
+
+                            {payMode === "manual" && (
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div className="space-y-1">
+                                        <label className="text-[11px] font-bold text-slate-500">Teller / Reference No</label>
+                                        <input
+                                            type="text"
+                                            value={tellerNumber}
+                                            onChange={(e) => setTellerNumber(e.target.value)}
+                                            placeholder="e.g. RRR / Teller No"
+                                            className="w-full h-10 px-3 rounded-xl border border-slate-200 text-sm"
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-[11px] font-bold text-slate-500">Bank / Channel</label>
+                                        <input
+                                            type="text"
+                                            value={bankName}
+                                            onChange={(e) => setBankName(e.target.value)}
+                                            placeholder="e.g. Zenith Bank / Remita"
+                                            className="w-full h-10 px-3 rounded-xl border border-slate-200 text-sm"
+                                        />
+                                    </div>
+                                </div>
+                            )}
+
+                            {gatewayResult && (
+                                <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-900 space-y-1">
+                                    <p className="font-bold">Payment Checkout Initialized</p>
+                                    {gatewayResult.rrr && <p>RRR: <span className="font-mono font-bold">{gatewayResult.rrr}</span></p>}
+                                    {gatewayResult.reference && <p>Reference: <span className="font-mono">{gatewayResult.reference}</span></p>}
+                                    {gatewayResult.checkoutUrl && (
+                                        <a
+                                            href={gatewayResult.checkoutUrl}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="inline-block mt-1 font-bold text-emerald-700 underline"
+                                        >
+                                            Open Payment Checkout Page &rarr;
+                                        </a>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    <DialogFooter className="gap-2 sm:gap-0">
+                        <Button
+                            variant="outline"
+                            onClick={() => setPayBehalfStudent(null)}
+                            className="rounded-xl font-bold text-xs"
+                        >
+                            Close
+                        </Button>
+                        {payBehalfBills.length > 0 && (
+                            <Button
+                                onClick={handlePayOnBehalfSubmit}
+                                disabled={payBehalfSubmitting || !selectedBillId}
+                                className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs gap-1.5"
+                            >
+                                {payBehalfSubmitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                                {payMode === "gateway" ? "Proceed to Gateway" : "Record Payment"}
+                            </Button>
+                        )}
                     </DialogFooter>
                 </DialogContent>
             </Dialog>

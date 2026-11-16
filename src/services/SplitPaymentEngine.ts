@@ -521,7 +521,12 @@ export class SplitPaymentEngine {
      * Compiles bills proportionally, computes active bearer fees, compiles splits,
      * initializes gateway checkout and returns the response.
      */
-    static async checkoutBill(studentId: number, billId: number, selectedAmount: number): Promise<GatewayCheckoutResponse> {
+    static async checkoutBill(
+        studentId: number,
+        billId: number,
+        selectedAmount: number,
+        options?: { bypassStudentPaymentLock?: boolean }
+    ): Promise<GatewayCheckoutResponse> {
         console.log(`Starting Checkout: StudentId ${studentId}, BillId ${billId}, SelectedAmount ₦${selectedAmount}`);
         
         // 1. Fetch Student details
@@ -545,8 +550,8 @@ export class SplitPaymentEngine {
             programme: studentRows[0].programme 
         };
 
-        // 1.4 Student Payment Lock Check
-        if ((student as any).isPaymentLocked) {
+        // 1.4 Student Payment Lock Check (bypassed when authorized staff pays on behalf of student)
+        if ((student as any).isPaymentLocked && !options?.bypassStudentPaymentLock) {
             return {
                 success: false,
                 reference: "",
