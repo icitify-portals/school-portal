@@ -208,7 +208,7 @@ function AdminV2ApplicationsContent() {
         }
     };
 
-    const handleExportExcel = async () => {
+    const handleExportExcel = async (formatType: 'excel' | 'csv' = 'excel') => {
         setLoading(true);
         try {
             const result = await exportAdminV2Applications({
@@ -250,11 +250,26 @@ function AdminV2ApplicationsContent() {
                     'Template': app.templateName || 'N/A',
                     'Application Date': app.appliedAt ? format(new Date(app.appliedAt), 'yyyy-MM-dd HH:mm') : 'N/A'
                 }));
-                const worksheet = xlsx.utils.json_to_sheet(exportData);
-                const workbook = xlsx.utils.book_new();
-                xlsx.utils.book_append_sheet(workbook, worksheet, "Filtered Applications");
-                xlsx.writeFile(workbook, `admission_applications_filtered_${format(new Date(), 'yyyyMMdd_HHmm')}.xlsx`);
-                toast.success(`Exported ${exportData.length} matching application(s) to Excel`);
+                if (formatType === 'csv') {
+                    const escapeCell = (val: any) => `"${String(val ?? '').replace(/"/g, '""')}"`;
+                    const headers = Object.keys(exportData[0]);
+                    const rows = exportData.map((row: any) => headers.map(h => row[h]));
+                    const csv = '\uFEFF' + [headers, ...rows].map(r => r.map(escapeCell).join(',')).join('\r\n');
+                    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `admission_applications_filtered_${format(new Date(), 'yyyyMMdd_HHmm')}.csv`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                    toast.success(`Exported ${exportData.length} matching application(s) to CSV`);
+                } else {
+                    const worksheet = xlsx.utils.json_to_sheet(exportData);
+                    const workbook = xlsx.utils.book_new();
+                    xlsx.utils.book_append_sheet(workbook, worksheet, "Filtered Applications");
+                    xlsx.writeFile(workbook, `admission_applications_filtered_${format(new Date(), 'yyyyMMdd_HHmm')}.xlsx`);
+                    toast.success(`Exported ${exportData.length} matching application(s) to Excel`);
+                }
             } else {
                 toast.error("No applications match the currently selected filters");
             }
@@ -437,10 +452,18 @@ function AdminV2ApplicationsContent() {
                             </Button>
 
                             <Button 
-                                onClick={handleExportExcel}
+                                onClick={() => handleExportExcel('excel')}
                                 className="px-5 py-4 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm flex items-center"
                             >
                                 <FileSpreadsheet className="w-4 h-4 mr-2" /> Export Excel
+                            </Button>
+
+                            <Button 
+                                onClick={() => handleExportExcel('csv')}
+                                variant="outline"
+                                className="px-5 py-4 rounded-2xl border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold text-xs shadow-sm flex items-center"
+                            >
+                                <Download className="w-4 h-4 mr-2" /> Export CSV
                             </Button>
 
                             <Button

@@ -17,6 +17,7 @@ import { Suspense } from "react";
 import { AccountManagementModal } from "@/components/admin/AccountManagementModal";
 import { BulkPlacementModal } from "@/components/admin/BulkPlacementModal";
 import Link from "next/link";
+import * as xlsx from "xlsx";
 
 import { useBranch } from "@/providers/BranchProvider";
 
@@ -32,6 +33,7 @@ function StudentsPageContent() {
     const [loading, setLoading] = useState(true);
     const [sessions, setSessions] = useState<any[]>([]);
     const [departmentsList, setDepartmentsList] = useState<any[]>([]);
+    const [programmesList, setProgrammesList] = useState<any[]>([]);
     const [unassignedCount, setUnassignedCount] = useState(0);
     const [graduationYears, setGraduationYears] = useState<number[]>([]);
     const [showImporter, setShowImporter] = useState(false);
@@ -58,12 +60,15 @@ function StudentsPageContent() {
     const sessionParam = searchParams.get("session") || undefined;
     const semesterParam = searchParams.get("semester") || undefined;
     const deptIdParam = searchParams.get("deptId") || undefined;
+    const progIdParam = searchParams.get("programmeId") || undefined;
     const statusParam = searchParams.get("status") || "all";
     const gradYearParam = searchParams.get("gradYear") || undefined;
 
     const [statusCounts, setStatusCounts] = useState<{
         all: number;
         active: number;
+        inactive?: number;
+        applicant?: number;
         nd_graduant: number;
         hnd_graduant: number;
         suspended: number;
@@ -91,7 +96,10 @@ function StudentsPageContent() {
     const levelIsGraduant = !!level && graduantLevels.includes(level);
     const statusOptions = [
         { value: "all", label: "All Statuses" },
-        { value: "active", label: "Active" },
+        { value: "active", label: "Active (ND 1, ND 2, HND 1, HND 2)" },
+        { value: "inactive", label: "Inactive (All Graduants / Suspended / Withdrawn)" },
+        { value: "applicant", label: "Applicants (NELFUND Ready - Unpaid Fees)" },
+        { value: "unlocked", label: "Unlocked / Registered (Fees Paid)" },
         { value: "nd_graduant", label: "ND Graduant" },
         { value: "hnd_graduant", label: "HND Graduant" },
         { value: "graduant", label: "All Graduants (ND & HND)" },
@@ -116,7 +124,18 @@ function StudentsPageContent() {
     const fetchStudents = useCallback(async () => {
         setLoading(true);
         try {
-            const res = await getStudents({ search, page, pageSize, level, sessionId: sessionParam, semester: semesterParam, departmentId: deptIdParam ? parseInt(deptIdParam) : undefined, status: effectiveStatus, graduationYear: gradYearParam });
+            const res = await getStudents({
+                search,
+                page,
+                pageSize,
+                level,
+                sessionId: sessionParam,
+                semester: semesterParam,
+                departmentId: deptIdParam ? parseInt(deptIdParam) : undefined,
+                programmeId: progIdParam ? parseInt(progIdParam) : undefined,
+                status: effectiveStatus,
+                graduationYear: gradYearParam
+            });
             if (res.success) {
                 setStudents(res.data);
                 setTotalCount(res.totalCount);
@@ -132,7 +151,7 @@ function StudentsPageContent() {
         } finally {
             setLoading(false);
         }
-    }, [search, page, pageSize, level, sessionParam, semesterParam, deptIdParam, effectiveStatus, gradYearParam]);
+    }, [search, page, pageSize, level, sessionParam, semesterParam, deptIdParam, progIdParam, effectiveStatus, gradYearParam]);
 
     useEffect(() => {
         fetchStudents();
@@ -144,6 +163,7 @@ function StudentsPageContent() {
             if (deptRes.success) { setDepartmentsList(deptRes.data); }
             if (res.success) {
                 setSessions(res.sessions);
+                if ((res as any).programmes) setProgrammesList((res as any).programmes);
                 setUnassignedCount(res.unassignedCount);
                 setGraduationYears(res.graduationYears || []);
                 if (res.statusCounts) {
@@ -207,6 +227,7 @@ function StudentsPageContent() {
         sessionParam ||
         semesterParam ||
         deptIdParam ||
+        progIdParam ||
         gradYearParam ||
         (searchParams.has("status") && statusParam !== "all")
     );
@@ -247,6 +268,18 @@ function StudentsPageContent() {
             params.set("deptId", value);
         } else {
             params.delete("deptId");
+        }
+        params.delete("programmeId");
+        params.set("page", "1");
+        router.push(`${pathname}?${params.toString()}`);
+    };
+
+    const handleProgrammeChange = (value: string) => {
+        const params = new URLSearchParams(searchParams);
+        if (value) {
+            params.set("programmeId", value);
+        } else {
+            params.delete("programmeId");
         }
         params.set("page", "1");
         router.push(`${pathname}?${params.toString()}`);
@@ -389,9 +422,9 @@ function StudentsPageContent() {
         }
     };
 
-    const handleExport = async () => {
+    const handleExport = async (formatType: "csv" | "excel" = "csv") => {
         setExporting(true);
-        toast.info("Preparing student export data...");
+        toast.info(`Preparing student ${formatType.toUpperCase()} export...`);
         try {
             const res = await exportStudentsAction({
                 search,
@@ -399,12 +432,23 @@ function StudentsPageContent() {
                 sessionId: sessionParam,
                 semester: semesterParam,
                 departmentId: deptIdParam ? parseInt(deptIdParam) : undefined,
+                programmeId: progIdParam ? parseInt(progIdParam) : undefined,
                 status: statusParam,
                 graduationYear: gradYearParam
             });
 
             if (!res.success || !res.csvData) {
                 toast.error(res.error || "Failed to export student data");
+                return;
+            }
+
+            if (formatType === "excel" && (res as any).records && (res as any).records.length > 0) {
+                const ws = xlsx.utils.json_to_sheet((res as any).records);
+                const wb = xlsx.utils.book_new();
+                xlsx.utils.book_append_sheet(wb, ws, "Students Biodata");
+                const xlsxFilename = (res.filename || "students_export.csv").replace(/\.csv$/i, ".xlsx");
+                xlsx.writeFile(wb, xlsxFilename);
+                toast.success(`Excel export complete! ${res.count.toLocaleString()} student records downloaded.`);
                 return;
             }
 
@@ -418,7 +462,7 @@ function StudentsPageContent() {
             document.body.removeChild(link);
             URL.revokeObjectURL(url);
 
-            toast.success(`Export complete! ${res.count.toLocaleString()} student records downloaded.`);
+            toast.success(`CSV export complete! ${res.count.toLocaleString()} student records downloaded.`);
         } catch (error: any) {
             console.error("Export error:", error);
             toast.error(error.message || "An error occurred during export");
@@ -453,11 +497,21 @@ function StudentsPageContent() {
                         {showImporter ? "Close Importer" : "Import Students"}
                     </Button>
                     <Button
-                        onClick={handleExport}
+                        onClick={() => handleExport("excel")}
+                        disabled={exporting || loading}
+                        variant="outline"
+                        className="rounded-xl font-bold text-xs uppercase tracking-widest h-10 border-emerald-400 bg-emerald-600 text-white hover:bg-emerald-700 hover:text-white gap-2 shadow-xs disabled:opacity-60"
+                        title="Download Excel (.xlsx) spreadsheet of all students matching current filters"
+                    >
+                        {exporting ? <Loader2 className="w-4 h-4 animate-spin text-white" /> : <Download className="w-4 h-4 text-white" />}
+                        {exporting ? "Exporting..." : "Export Excel"}
+                    </Button>
+                    <Button
+                        onClick={() => handleExport("csv")}
                         disabled={exporting || loading}
                         variant="outline"
                         className="rounded-xl font-bold text-xs uppercase tracking-widest h-10 border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 gap-2 shadow-xs disabled:opacity-60"
-                        title="Download CSV spreadsheet of students matching current filters"
+                        title="Download CSV spreadsheet of all students matching current filters"
                     >
                         {exporting ? <Loader2 className="w-4 h-4 animate-spin text-emerald-700" /> : <Download className="w-4 h-4 text-emerald-700" />}
                         {exporting ? "Exporting..." : "Export CSV"}
@@ -537,6 +591,20 @@ function StudentsPageContent() {
                         ))}
                     </select>
 
+                    <select
+                        className="px-3 h-10 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white shadow-sm text-xs font-bold uppercase tracking-wider text-slate-700 cursor-pointer"
+                        value={progIdParam || ""}
+                        onChange={(e) => handleProgrammeChange(e.target.value)}
+                    >
+                        <option value="">All Programmes</option>
+                        {(deptIdParam
+                            ? programmesList.filter((p) => String(p.deptId) === String(deptIdParam))
+                            : programmesList
+                        ).map((p) => (
+                            <option key={p.id} value={p.id.toString()}>{p.name}</option>
+                        ))}
+                    </select>
+
                       <div className="relative w-full md:w-64">
                           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
                           <input
@@ -579,11 +647,13 @@ function StudentsPageContent() {
                 </div>
             </div>
 
-            {/* Quick Status Filter Tabs */}
+            {/* Quick Status & Level Filter Tabs */}
             <div className="flex flex-wrap items-center gap-2">
                 {[
                     { id: "all", label: "All Students", count: statusCounts?.all },
                     { id: "active", label: "Active", count: statusCounts?.active },
+                    { id: "inactive", label: "Inactive / Graduants", count: statusCounts?.inactive },
+                    { id: "applicant", label: "Applicants (NELFUND Ready)", count: statusCounts?.applicant },
                     { id: "nd_graduant", label: "ND Graduants", count: statusCounts?.nd_graduant },
                     { id: "hnd_graduant", label: "HND Graduants", count: statusCounts?.hnd_graduant },
                     { id: "suspended", label: "Suspended", count: statusCounts?.suspended },
@@ -611,6 +681,24 @@ function StudentsPageContent() {
                                     {tab.count.toLocaleString()}
                                 </span>
                             )}
+                        </button>
+                    );
+                })}
+                <div className="h-5 w-px bg-slate-200 mx-1 hidden sm:block" />
+                {["ND 1", "ND 2", "HND 1", "HND 2"].map((lvl) => {
+                    const isLvlSelected = levelParam === lvl;
+                    return (
+                        <button
+                            key={lvl}
+                            type="button"
+                            onClick={() => handleLevelChange(isLvlSelected ? "" : lvl)}
+                            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-sm ${
+                                isLvlSelected
+                                    ? "bg-emerald-600 text-white shadow-emerald-200"
+                                    : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 hover:text-slate-900"
+                            }`}
+                        >
+                            {lvl}
                         </button>
                     );
                 })}

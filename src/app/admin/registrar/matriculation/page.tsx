@@ -19,6 +19,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import Link from "next/link";
 import { format } from "date-fns";
+import * as xlsx from "xlsx";
 
 type Tab = "list" | "assign" | "audit";
 
@@ -45,6 +46,7 @@ export default function MatricAdminPage() {
     const [levelFilter, setLevelFilter] = useState("");
     const [yearFilter, setYearFilter] = useState("");
     const [statusFilter, setStatusFilter] = useState("");
+    const [categoryFilter, setCategoryFilter] = useState("all");
     const [listLoading, setListLoading] = useState(false);
     const [departmentsList, setDepartmentsList] = useState<any[]>([]);
     const [sessionsList, setSessionsList] = useState<any[]>([]);
@@ -81,9 +83,10 @@ export default function MatricAdminPage() {
                 search,
                 deptId: deptFilter ? Number(deptFilter) : undefined,
                 programmeType: typeFilter || undefined,
-                level: levelFilter ? Number(levelFilter) : undefined,
+                level: levelFilter || undefined,
                 sessionId: yearFilter ? Number(yearFilter) : undefined,
                 matricStatus: (statusFilter as any) || undefined,
+                studentCategory: categoryFilter || "all",
                 page,
                 pageSize: 50,
             });
@@ -94,7 +97,7 @@ export default function MatricAdminPage() {
             toast.error("Failed to load students");
         }
         setListLoading(false);
-    }, [search, deptFilter, typeFilter, levelFilter, yearFilter, statusFilter, page]);
+    }, [search, deptFilter, typeFilter, levelFilter, yearFilter, statusFilter, categoryFilter, page]);
 
     useEffect(() => {
         getDepartments().then(data => {
@@ -113,7 +116,7 @@ export default function MatricAdminPage() {
 
     useEffect(() => {
         fetchStudents();
-    }, [page, deptFilter, typeFilter, levelFilter, yearFilter, statusFilter]);
+    }, [page, deptFilter, typeFilter, levelFilter, yearFilter, statusFilter, categoryFilter]);
 
     const handleSearch = () => {
         setPage(1);
@@ -247,20 +250,52 @@ export default function MatricAdminPage() {
         setHistoryLoading(false);
     };
 
-    const exportCSV = async () => {
-        toast.loading("Preparing full student biodata export (all matching students)...", { id: "matric-export" });
+    const exportDataFile = async (formatType: "csv" | "excel" = "csv") => {
+        toast.loading(`Preparing full student biodata ${formatType.toUpperCase()} export (all matching students)...`, { id: "matric-export" });
         try {
             const res = await exportAllMatricStudentsBiodata({
                 search: search || undefined,
                 deptId: deptFilter ? Number(deptFilter) : undefined,
                 programmeType: typeFilter || undefined,
-                level: levelFilter ? Number(levelFilter) : undefined,
+                level: levelFilter || undefined,
                 sessionId: yearFilter ? Number(yearFilter) : undefined,
                 matricStatus: (statusFilter as any) || "all",
+                studentCategory: categoryFilter || "all",
             });
 
             if (!res.success || !res.records) {
                 toast.error(res.error || "Failed to export student biodata", { id: "matric-export" });
+                return;
+            }
+
+            if (formatType === "excel") {
+                const excelRows = res.records.map((s: any, idx: number) => ({
+                    "S/N": idx + 1,
+                    "Matriculation Number": s.matricNumber || "PENDING",
+                    "Surname": s.surname || "",
+                    "First Name": s.firstName || "",
+                    "Middle Name": s.middleName || "",
+                    "Gender": s.gender || "",
+                    "Date of Birth": s.dob || "",
+                    "State of Origin": s.stateOfOrigin || "",
+                    "LGA": s.lga || "",
+                    "NIN": s.nin || "",
+                    "Phone Number": s.phone || "",
+                    "Email": s.email || "",
+                    "JAMB No": s.jambNumber || "",
+                    "Level": s.level || "",
+                    "Programme": s.programmeName || "",
+                    "Department": s.deptName || "",
+                    "Academic Session": s.sessionName || "",
+                    "Matric Visibility": s.matricVisibility || "",
+                    "Admission No": s.admissionNumber || "",
+                    "Status": s.status || "",
+                }));
+                const ws = xlsx.utils.json_to_sheet(excelRows);
+                const wb = xlsx.utils.book_new();
+                xlsx.utils.book_append_sheet(wb, ws, "Students Biodata");
+                xlsx.writeFile(wb, `student-biodata-matric-${format(new Date(), "yyyy-MM-dd")}.xlsx`);
+                toast.success(`Exported ${res.records.length.toLocaleString()} student record(s) to Excel`, { id: "matric-export" });
                 return;
             }
 
@@ -322,7 +357,7 @@ export default function MatricAdminPage() {
             URL.revokeObjectURL(url);
             toast.success(`Exported ${res.records.length.toLocaleString()} student record(s) with full biodata`, { id: "matric-export" });
         } catch (err: any) {
-            toast.error(err?.message || "Failed to export CSV", { id: "matric-export" });
+            toast.error(err?.message || "Failed to export data", { id: "matric-export" });
         }
     };
 
@@ -476,20 +511,39 @@ export default function MatricAdminPage() {
                                         ))}
                                     </select>
                                     <select
+                                        value={categoryFilter}
+                                        onChange={(e) => { setCategoryFilter(e.target.value); setPage(1); }}
+                                        className="px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-medium bg-white"
+                                    >
+                                        <option value="all">All Student Categories</option>
+                                        <option value="active">Active Students (ND 1, ND 2, HND 1, HND 2)</option>
+                                        <option value="inactive">Inactive / Graduants (ND & HND Graduants)</option>
+                                        <option value="applicant">Applicants (NELFUND Ready - Unpaid Fees)</option>
+                                        <option value="unlocked">Unlocked (Fees Paid)</option>
+                                        <option value="nd_graduant">ND Graduants Only</option>
+                                        <option value="hnd_graduant">HND Graduants Only</option>
+                                    </select>
+                                    <select
                                         value={levelFilter}
                                         onChange={(e) => { setLevelFilter(e.target.value); setPage(1); }}
                                         className="px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-medium bg-white"
                                     >
                                         <option value="">All Levels</option>
-                                        <option value="1">Year 1</option>
-                                        <option value="2">Year 2</option>
+                                        <option value="ND 1">ND 1</option>
+                                        <option value="ND 2">ND 2</option>
+                                        <option value="HND 1">HND 1</option>
+                                        <option value="HND 2">HND 2</option>
+                                        <option value="ND_GRADUANT">ND Graduant</option>
+                                        <option value="HND_GRADUANT">HND Graduant</option>
+                                        <option value="1">All Year 1 (ND 1 & HND 1)</option>
+                                        <option value="2">All Year 2 (ND 2 & HND 2)</option>
                                     </select>
                                     <select
                                         value={statusFilter}
                                         onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
                                         className="px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-medium bg-white"
                                     >
-                                        <option value="">All Status</option>
+                                        <option value="">All Matric Status</option>
                                         <option value="assigned">Matric Assigned</option>
                                         <option value="pending">Pending</option>
                                     </select>
@@ -500,11 +554,17 @@ export default function MatricAdminPage() {
                                         <Search className="w-4 h-4 mr-1" /> Search
                                     </Button>
                                     <Button
-                                        onClick={exportCSV}
+                                        onClick={() => exportDataFile("excel")}
+                                        className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold"
+                                    >
+                                        <Download className="w-4 h-4 mr-1" /> Export Excel
+                                    </Button>
+                                    <Button
+                                        onClick={() => exportDataFile("csv")}
                                         variant="outline"
                                         className="rounded-xl border-slate-200 text-sm font-bold"
                                     >
-                                        <Download className="w-4 h-4 mr-1" /> CSV
+                                        <Download className="w-4 h-4 mr-1" /> Export CSV
                                     </Button>
                                     <Button
                                         onClick={() => setShowBatchAssign(true)}

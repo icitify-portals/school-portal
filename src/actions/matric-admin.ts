@@ -7,7 +7,7 @@ import {
     matriculationAuditLog, matriculationSettings, matriculationSequences,
     admissionApplicationsV2,
 } from "@/db/schema";
-import { eq, and, or, like, isNull, isNotNull, desc, asc, sql, count } from "drizzle-orm";
+import { eq, and, or, like, isNull, isNotNull, inArray, notInArray, desc, asc, sql, count } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { generateMatricNumber } from "@/actions/matriculation";
@@ -27,13 +27,127 @@ async function requireAdmin() {
     return session;
 }
 
+async function buildMatricFilterConditions(options?: {
+    search?: string;
+    deptId?: number;
+    programmeType?: string;
+    level?: number | string;
+    sessionId?: number;
+    matricStatus?: "all" | "assigned" | "pending";
+    studentCategory?: string;
+}) {
+    const conditions: any[] = [isNull(students.deletedAt)];
+
+    if (options?.search) {
+        const s = `%${options.search}%`;
+        conditions.push(
+            or(
+                like(students.firstName, s),
+                like(students.lastName, s),
+                like(students.otherNames, s),
+                like(students.matricNumber, s),
+                like(students.admissionNumber, s),
+            )
+        );
+    }
+    if (options?.deptId) {
+        conditions.push(eq(students.deptId, options.deptId));
+    }
+    if (options?.programmeType) {
+        conditions.push(eq(students.programmeType, options.programmeType as "ND" | "HND"));
+    }
+    if (options?.level !== undefined && options?.level !== "") {
+        const lvlStr = String(options.level).trim();
+        if (lvlStr === "ND 1") {
+            conditions.push(
+                and(
+                    eq(students.currentLevel, 1),
+                    eq(students.programmeType, "ND"),
+                    sql`(${students.status} NOT IN ('nd_graduant','nd_graduated','hnd_graduant','hnd_graduated') OR ${students.status} IS NULL)`
+                )
+            );
+        } else if (lvlStr === "ND 2") {
+            conditions.push(
+                and(
+                    eq(students.currentLevel, 2),
+                    eq(students.programmeType, "ND"),
+                    sql`(${students.status} NOT IN ('nd_graduant','nd_graduated','hnd_graduant','hnd_graduated') OR ${students.status} IS NULL)`
+                )
+            );
+        } else if (lvlStr === "HND 1") {
+            conditions.push(
+                and(
+                    eq(students.currentLevel, 1),
+                    eq(students.programmeType, "HND"),
+                    sql`(${students.status} NOT IN ('nd_graduant','nd_graduated','hnd_graduant','hnd_graduated') OR ${students.status} IS NULL)`
+                )
+            );
+        } else if (lvlStr === "HND 2") {
+            conditions.push(
+                and(
+                    eq(students.currentLevel, 2),
+                    eq(students.programmeType, "HND"),
+                    sql`(${students.status} NOT IN ('nd_graduant','nd_graduated','hnd_graduant','hnd_graduated') OR ${students.status} IS NULL)`
+                )
+            );
+        } else if (lvlStr === "ND_GRADUANT" || lvlStr === "ND Graduant") {
+            conditions.push(sql`${students.status} IN ('nd_graduant', 'nd_graduated')`);
+        } else if (lvlStr === "HND_GRADUANT" || lvlStr === "HND Graduant") {
+            conditions.push(sql`${students.status} IN ('hnd_graduant', 'hnd_graduated')`);
+        } else if (!isNaN(Number(lvlStr))) {
+            conditions.push(eq(students.currentLevel, Number(lvlStr)));
+        }
+    }
+    if (options?.sessionId) {
+        conditions.push(
+            or(
+                eq(students.admissionSessionId, options.sessionId),
+                eq(students.currentSessionId, options.sessionId)
+            )
+        );
+    }
+    if (options?.matricStatus === "assigned") {
+        conditions.push(isNotNull(students.matricNumber));
+    } else if (options?.matricStatus === "pending") {
+        conditions.push(isNull(students.matricNumber));
+    }
+
+    if (options?.studentCategory && options.studentCategory !== "all") {
+        const cat = options.studentCategory;
+        if (cat === "active") {
+            conditions.push(eq(students.status, "active"));
+        } else if (cat === "inactive") {
+            conditions.push(sql`${students.status} IN ('nd_graduant','hnd_graduant','nd_graduated','hnd_graduated','suspended','withdrawn','rusticated')`);
+        } else if (cat === "nd_graduant") {
+            conditions.push(sql`${students.status} IN ('nd_graduant','nd_graduated')`);
+        } else if (cat === "hnd_graduant") {
+            conditions.push(sql`${students.status} IN ('hnd_graduant','hnd_graduated')`);
+        } else if (cat === "applicant") {
+            const lockedSet = await getLockedMatricStudentIds();
+            const lockedArr = Array.from(lockedSet);
+            conditions.push(lockedArr.length > 0 ? inArray(students.id, lockedArr) : sql`1 = 0`);
+        } else if (cat === "unlocked") {
+            const lockedSet = await getLockedMatricStudentIds();
+            const lockedArr = Array.from(lockedSet);
+            if (lockedArr.length > 0) {
+                conditions.push(and(eq(students.status, "active"), notInArray(students.id, lockedArr)));
+            } else {
+                conditions.push(eq(students.status, "active"));
+            }
+        }
+    }
+
+    return conditions.length > 0 ? and(...conditions) : undefined;
+}
+
 export async function getMatricStudents(options?: {
     search?: string;
     deptId?: number;
     programmeType?: string;
-    level?: number;
+    level?: number | string;
     sessionId?: number;
     matricStatus?: "all" | "assigned" | "pending";
+    studentCategory?: string;
     page?: number;
     pageSize?: number;
 }) {
@@ -43,38 +157,7 @@ export async function getMatricStudents(options?: {
         const pageSize = options?.pageSize || 50;
         const offset = (page - 1) * pageSize;
 
-        const conditions: any[] = [];
-
-        if (options?.search) {
-            const s = `%${options.search}%`;
-            conditions.push(
-                or(
-                    like(students.firstName, s),
-                    like(students.lastName, s),
-                    like(students.matricNumber, s),
-                    like(students.admissionNumber, s),
-                )
-            );
-        }
-        if (options?.deptId) {
-            conditions.push(eq(students.deptId, options.deptId));
-        }
-        if (options?.programmeType) {
-            conditions.push(eq(students.programmeType, options.programmeType as "ND" | "HND"));
-        }
-        if (options?.level) {
-            conditions.push(eq(students.currentLevel, options.level));
-        }
-        if (options?.sessionId) {
-            conditions.push(eq(students.admissionSessionId, options.sessionId));
-        }
-        if (options?.matricStatus === "assigned") {
-            conditions.push(isNotNull(students.matricNumber));
-        } else if (options?.matricStatus === "pending") {
-            conditions.push(isNull(students.matricNumber));
-        }
-
-        const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+        const whereClause = await buildMatricFilterConditions(options);
 
         const [totalRow] = await db
             .select({ value: count() })
@@ -141,44 +224,14 @@ export async function exportAllMatricStudentsBiodata(options?: {
     search?: string;
     deptId?: number;
     programmeType?: string;
-    level?: number;
+    level?: number | string;
     sessionId?: number;
     matricStatus?: "all" | "assigned" | "pending";
+    studentCategory?: string;
 }) {
     await requireAdmin();
     try {
-        const conditions: any[] = [isNull(students.deletedAt)];
-
-        if (options?.search) {
-            const s = `%${options.search}%`;
-            conditions.push(
-                or(
-                    like(students.firstName, s),
-                    like(students.lastName, s),
-                    like(students.matricNumber, s),
-                    like(students.admissionNumber, s),
-                )
-            );
-        }
-        if (options?.deptId) {
-            conditions.push(eq(students.deptId, options.deptId));
-        }
-        if (options?.programmeType) {
-            conditions.push(eq(students.programmeType, options.programmeType as "ND" | "HND"));
-        }
-        if (options?.level) {
-            conditions.push(eq(students.currentLevel, options.level));
-        }
-        if (options?.sessionId) {
-            conditions.push(eq(students.admissionSessionId, options.sessionId));
-        }
-        if (options?.matricStatus === "assigned") {
-            conditions.push(isNotNull(students.matricNumber));
-        } else if (options?.matricStatus === "pending") {
-            conditions.push(isNull(students.matricNumber));
-        }
-
-        const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+        const whereClause = await buildMatricFilterConditions(options);
 
         const rows = await db
             .select({
@@ -672,42 +725,43 @@ export async function getStudentMatricHistory(studentId: number) {
 
 export async function getLastMatricNumbers() {
     try {
-        const currentYear = new Date().getFullYear();
-
-        // Get all students with matric numbers
+        // Get all non-deleted students with matric numbers
         const matriculated = await db.select({
             matricNumber: students.matricNumber,
             programmeType: students.programmeType,
         }).from(students)
           .where(and(
+              isNull(students.deletedAt),
               isNotNull(students.matricNumber),
-              sql`YEAR(${students.createdAt}) >= ${currentYear - 1}`
+              sql`${students.matricNumber} <> ''`
           ));
 
-        // Separate ND and HND
         const ndStudents = matriculated.filter(s => {
             const m = s.matricNumber || '';
-            return m.includes('/ND/') || m.startsWith('ND') || m.includes('DPP/');
+            return s.programmeType === 'ND' || m.includes('/ND/') || m.startsWith('ND');
         });
 
         const hndStudents = matriculated.filter(s => {
             const m = s.matricNumber || '';
-            return m.includes('/HND/') || m.startsWith('HND') || m.includes('DPP/HND');
+            return s.programmeType === 'HND' || m.includes('/HND/') || m.startsWith('HND') || m.includes('DPP/HND');
         });
 
-        // Sort by matric number descending to get the latest
-        const sortMatric = (a: any, b: any) => (b.matricNumber || '').localeCompare(a.matricNumber || '');
+        // Sort 2026 matrics first so the top card shows the latest 2026 ND & HND matric numbers
+        const sort2026First = (a: any, b: any) => {
+            const ma = String(a.matricNumber || '');
+            const mb = String(b.matricNumber || '');
+            const a26 = ma.includes('/2026/') ? 1 : 0;
+            const b26 = mb.includes('/2026/') ? 1 : 0;
+            if (a26 !== b26) return b26 - a26;
+            return mb.localeCompare(ma, undefined, { numeric: true });
+        };
 
-        const lastND = ndStudents.sort(sortMatric)[0] || null;
-        const lastHND = hndStudents.sort(sortMatric)[0] || null;
-
-        // Also get total counts
-        const totalND = ndStudents.length;
-        const totalHND = hndStudents.length;
+        const lastND = [...ndStudents].sort(sort2026First)[0] || null;
+        const lastHND = [...hndStudents].sort(sort2026First)[0] || null;
 
         return {
-            nd: lastND ? { matricNumber: lastND.matricNumber, count: totalND } : { matricNumber: null, count: totalND },
-            hnd: lastHND ? { matricNumber: lastHND.matricNumber, count: totalHND } : { matricNumber: null, count: totalHND },
+            nd: lastND ? { matricNumber: lastND.matricNumber, count: ndStudents.length } : { matricNumber: null, count: ndStudents.length },
+            hnd: lastHND ? { matricNumber: lastHND.matricNumber, count: hndStudents.length } : { matricNumber: null, count: hndStudents.length },
         };
     } catch (error) {
         return { nd: { matricNumber: null, count: 0 }, hnd: { matricNumber: null, count: 0 } };

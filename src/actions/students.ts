@@ -3,7 +3,7 @@
 
 import { db } from "@/db/db";
 import { users, students, programmes, userRoles, roles, courses, enrollments, quizAttempts, quizResponses, quizQuestions, lessonNotes, quizzes, staffProfiles, departments, systemAuditLogs, academicSessions, admissionApplicationsV2 } from "@/db/schema";
-import { eq, inArray, sql, or, like, and, desc, isNull, aliasedTable } from "drizzle-orm";
+import { eq, inArray, notInArray, sql, or, like, and, desc, isNull, aliasedTable } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
 import { auth } from "@/auth";
@@ -75,14 +75,14 @@ export async function getStudents(options: { search?: string, page?: number, pag
                 case "ND 1":
                     levelCondition = and(
                         eq(students.currentLevel, 1), 
-                        eq(programmes.programmeType, 'ND'),
+                        or(eq(students.programmeType, 'ND'), eq(programmes.programmeType, 'ND')),
                         sql`(${students.status} NOT IN ('nd_graduant', 'nd_graduated', 'hnd_graduant', 'hnd_graduated') OR ${students.status} IS NULL)`
                     );
                     break;
                 case "ND 2":
                     levelCondition = and(
                         eq(students.currentLevel, 2), 
-                        eq(programmes.programmeType, 'ND'),
+                        or(eq(students.programmeType, 'ND'), eq(programmes.programmeType, 'ND')),
                         sql`(${students.status} NOT IN ('nd_graduant', 'nd_graduated', 'hnd_graduant', 'hnd_graduated') OR ${students.status} IS NULL)`
                     );
                     break;
@@ -95,14 +95,14 @@ export async function getStudents(options: { search?: string, page?: number, pag
                 case "HND 1":
                     levelCondition = and(
                         eq(students.currentLevel, 1), 
-                        eq(programmes.programmeType, 'HND'),
+                        or(eq(students.programmeType, 'HND'), eq(programmes.programmeType, 'HND')),
                         sql`(${students.status} NOT IN ('nd_graduant', 'nd_graduated', 'hnd_graduant', 'hnd_graduated') OR ${students.status} IS NULL)`
                     );
                     break;
                 case "HND 2":
                     levelCondition = and(
                         eq(students.currentLevel, 2), 
-                        eq(programmes.programmeType, 'HND'),
+                        or(eq(students.programmeType, 'HND'), eq(programmes.programmeType, 'HND')),
                         sql`(${students.status} NOT IN ('nd_graduant', 'nd_graduated', 'hnd_graduant', 'hnd_graduated') OR ${students.status} IS NULL)`
                     );
                     break;
@@ -136,10 +136,24 @@ export async function getStudents(options: { search?: string, page?: number, pag
         if (!levelImpliesGraduantStatus && options.status && options.status !== "all") {
             if (options.status === "graduant") {
                 statusCondition = sql`${students.status} IN ('nd_graduant','hnd_graduant','nd_graduated','hnd_graduated')`;
+            } else if (options.status === "inactive") {
+                statusCondition = sql`${students.status} IN ('nd_graduant','hnd_graduant','nd_graduated','hnd_graduated','suspended','withdrawn','rusticated')`;
             } else if (options.status === "nd_graduant") {
                 statusCondition = sql`${students.status} IN ('nd_graduant', 'nd_graduated')`;
             } else if (options.status === "hnd_graduant") {
                 statusCondition = sql`${students.status} IN ('hnd_graduant', 'hnd_graduated')`;
+            } else if (options.status === "applicant") {
+                const lockedSet = await getLockedMatricStudentIds();
+                const lockedArr = Array.from(lockedSet);
+                statusCondition = lockedArr.length > 0
+                    ? inArray(students.id, lockedArr)
+                    : sql`1 = 0`;
+            } else if (options.status === "unlocked") {
+                const lockedSet = await getLockedMatricStudentIds();
+                const lockedArr = Array.from(lockedSet);
+                statusCondition = lockedArr.length > 0
+                    ? and(eq(students.status, 'active'), notInArray(students.id, lockedArr))
+                    : eq(students.status, 'active');
             } else {
                 statusCondition = sql`${students.status} = ${options.status}`;
             }
@@ -326,14 +340,14 @@ export async function exportStudentsAction(options: {
                 case "ND 1":
                     levelCondition = and(
                         eq(students.currentLevel, 1), 
-                        eq(programmes.programmeType, 'ND'),
+                        or(eq(students.programmeType, 'ND'), eq(programmes.programmeType, 'ND')),
                         sql`(${students.status} NOT IN ('nd_graduant', 'nd_graduated', 'hnd_graduant', 'hnd_graduated') OR ${students.status} IS NULL)`
                     );
                     break;
                 case "ND 2":
                     levelCondition = and(
                         eq(students.currentLevel, 2), 
-                        eq(programmes.programmeType, 'ND'),
+                        or(eq(students.programmeType, 'ND'), eq(programmes.programmeType, 'ND')),
                         sql`(${students.status} NOT IN ('nd_graduant', 'nd_graduated', 'hnd_graduant', 'hnd_graduated') OR ${students.status} IS NULL)`
                     );
                     break;
@@ -346,14 +360,14 @@ export async function exportStudentsAction(options: {
                 case "HND 1":
                     levelCondition = and(
                         eq(students.currentLevel, 1), 
-                        eq(programmes.programmeType, 'HND'),
+                        or(eq(students.programmeType, 'HND'), eq(programmes.programmeType, 'HND')),
                         sql`(${students.status} NOT IN ('nd_graduant', 'nd_graduated', 'hnd_graduant', 'hnd_graduated') OR ${students.status} IS NULL)`
                     );
                     break;
                 case "HND 2":
                     levelCondition = and(
                         eq(students.currentLevel, 2), 
-                        eq(programmes.programmeType, 'HND'),
+                        or(eq(students.programmeType, 'HND'), eq(programmes.programmeType, 'HND')),
                         sql`(${students.status} NOT IN ('nd_graduant', 'nd_graduated', 'hnd_graduant', 'hnd_graduated') OR ${students.status} IS NULL)`
                     );
                     break;
@@ -384,10 +398,24 @@ export async function exportStudentsAction(options: {
         if (!levelImpliesGraduantStatus && options.status && options.status !== "all") {
             if (options.status === "graduant") {
                 statusCondition = sql`${students.status} IN ('nd_graduant','hnd_graduant','nd_graduated','hnd_graduated')`;
+            } else if (options.status === "inactive") {
+                statusCondition = sql`${students.status} IN ('nd_graduant','hnd_graduant','nd_graduated','hnd_graduated','suspended','withdrawn','rusticated')`;
             } else if (options.status === "nd_graduant") {
                 statusCondition = sql`${students.status} IN ('nd_graduant', 'nd_graduated')`;
             } else if (options.status === "hnd_graduant") {
                 statusCondition = sql`${students.status} IN ('hnd_graduant', 'hnd_graduated')`;
+            } else if (options.status === "applicant") {
+                const lockedSet = await getLockedMatricStudentIds();
+                const lockedArr = Array.from(lockedSet);
+                statusCondition = lockedArr.length > 0
+                    ? inArray(students.id, lockedArr)
+                    : sql`1 = 0`;
+            } else if (options.status === "unlocked") {
+                const lockedSet = await getLockedMatricStudentIds();
+                const lockedArr = Array.from(lockedSet);
+                statusCondition = lockedArr.length > 0
+                    ? and(eq(students.status, 'active'), notInArray(students.id, lockedArr))
+                    : eq(students.status, 'active');
             } else {
                 statusCondition = sql`${students.status} = ${options.status}`;
             }
@@ -518,7 +546,7 @@ export async function exportStudentsAction(options: {
             "Financial Locked"
         ];
 
-        const rows = studentRows.map((r, index) => {
+        const records = studentRows.map((r, index) => {
             const s = r.student;
             const u = r.user;
             const p = r.programme;
@@ -553,32 +581,33 @@ export async function exportStudentsAction(options: {
                 ? (isLocked ? "Hidden from Student (NELFUND Ready)" : "Unlocked (Fees Paid)")
                 : "Not Assigned";
 
-            return [
-                index + 1,
-                s.matricNumber || formData.matricNumber || "",
-                bio.surname,
-                bio.firstName,
-                bio.middleName,
-                bio.gender,
-                bio.dob,
-                bio.stateOfOrigin,
-                bio.lga,
-                bio.nin,
-                bio.phone,
-                bio.email,
-                bio.jambNumber,
-                levelLabel,
-                p?.name || "",
-                d?.name || "",
-                academicSessionName,
-                matricVisibility,
-                s.admissionNumber || app?.formNumber || app?.applicationNumber || "",
-                s.status || "",
-                s.isPaymentLocked ? "Yes" : "No",
-                s.isFinanciallyLocked ? "Yes" : "No"
-            ].map(escapeCsv).join(",");
+            return {
+                'S/N': index + 1,
+                'Matriculation Number': s.matricNumber || formData.matricNumber || "",
+                'Surname': bio.surname,
+                'First Name': bio.firstName,
+                'Middle Name': bio.middleName,
+                'Gender': bio.gender,
+                'Date of Birth': bio.dob,
+                'State of Origin': bio.stateOfOrigin,
+                'LGA': bio.lga,
+                'NIN': bio.nin,
+                'Phone Number': bio.phone,
+                'Email': bio.email,
+                'JAMB No': bio.jambNumber,
+                'Level': levelLabel,
+                'Programme': p?.name || "",
+                'Department': d?.name || "",
+                'Academic Session': academicSessionName,
+                'Matric Visibility': matricVisibility,
+                'Application Number': s.admissionNumber || app?.formNumber || app?.applicationNumber || "",
+                'Status': s.status || "",
+                'Payment Locked': s.isPaymentLocked ? "Yes" : "No",
+                'Financial Locked': s.isFinanciallyLocked ? "Yes" : "No"
+            };
         });
 
+        const rows = records.map(rec => headers.map(h => escapeCsv((rec as any)[h])).join(","));
         const csvData = "\uFEFF" + [headers.map(escapeCsv).join(","), ...rows].join("\r\n");
 
         let tag = "students";
@@ -589,18 +618,22 @@ export async function exportStudentsAction(options: {
         if (options.level) {
             tag += `_${String(options.level).replace(/[\/\s]/g, "_")}`;
         }
+        if (options.status && options.status !== "all") {
+            tag += `_${String(options.status).replace(/[\/\s]/g, "_")}`;
+        }
 
         const filename = `${tag}_export_${new Date().toISOString().split('T')[0]}.csv`;
 
         return {
             success: true,
             csvData,
+            records,
             filename,
             count: studentRows.length
         };
     } catch (error: any) {
         console.error("Failed to export students:", error);
-        return { success: false, error: error.message || "Failed to export students", csvData: "", filename: "", count: 0 };
+        return { success: false, error: error.message || "Failed to export students", csvData: "", records: [], filename: "", count: 0 };
     }
 }
 
@@ -664,9 +697,19 @@ export async function getStudentSessionOptions() {
             GROUP BY status
         `) as unknown as [Array<Record<string, any>>];
 
+        const lockedMatricSet = await getLockedMatricStudentIds();
+        const programmesList = await db.select({
+            id: programmes.id,
+            name: programmes.name,
+            deptId: programmes.deptId,
+            programmeType: programmes.programmeType
+        }).from(programmes);
+
         const statusCountsMap: Record<string, number> = {
             all: 0,
             active: 0,
+            inactive: 0,
+            applicant: lockedMatricSet.size,
             nd_graduant: 0,
             hnd_graduant: 0,
             suspended: 0,
@@ -677,9 +720,21 @@ export async function getStudentSessionOptions() {
             const cnt = Number(row.c || 0);
             statusCountsMap.all += cnt;
             if (st === 'active') statusCountsMap.active += cnt;
-            else if (st === 'nd_graduant' || st === 'nd_graduated') statusCountsMap.nd_graduant += cnt;
-            else if (st === 'hnd_graduant' || st === 'hnd_graduated') statusCountsMap.hnd_graduant += cnt;
-            else if (st === 'suspended') statusCountsMap.suspended += cnt;
+            else if (st === 'nd_graduant' || st === 'nd_graduated') {
+                statusCountsMap.nd_graduant += cnt;
+                statusCountsMap.inactive += cnt;
+            }
+            else if (st === 'hnd_graduant' || st === 'hnd_graduated') {
+                statusCountsMap.hnd_graduant += cnt;
+                statusCountsMap.inactive += cnt;
+            }
+            else if (st === 'suspended') {
+                statusCountsMap.suspended += cnt;
+                statusCountsMap.inactive += cnt;
+            }
+            else if (st === 'withdrawn' || st === 'rusticated') {
+                statusCountsMap.inactive += cnt;
+            }
             else if (st === 'pending_review') statusCountsMap.pending_review += cnt;
         }
 
@@ -693,6 +748,7 @@ export async function getStudentSessionOptions() {
                 startDate: r.start_date ? new Date(r.start_date).toISOString() : null,
                 studentCount: Number(r.student_count || 0)
             })),
+            programmes: programmesList,
             unassignedCount: Number(unassigned[0]?.c || 0),
             graduationYears: yearRows.map((r) => Number(r.y)).filter((y) => !isNaN(y)),
             statusCounts: statusCountsMap

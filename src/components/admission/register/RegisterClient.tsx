@@ -15,6 +15,7 @@ import {
   updatePendingReason
 } from "@/actions/admission_v2";
 import { cn } from "@/lib/utils";
+import * as xlsx from "xlsx";
 
 interface RegisterCandidate {
   id: number;
@@ -168,71 +169,61 @@ export default function AdmissionRegisterClient({
   const dedupedPending = Array.from(new Map(pending.map(c => [c.id, c])).values());
   const filteredListRaw = activeTab === "admitted" ? dedupedAdmitted : dedupedPending;
 
-  const handleExportRegisterCSV = () => {
+  const handleExportRegister = (formatType: "csv" | "excel" = "csv") => {
     const listToExport = filteredListRaw;
     if (listToExport.length === 0) {
       toast.error("No records available to export");
       return;
     }
 
-    const escapeCell = (val: any) => `"${String(val ?? "").replace(/"/g, '""')}"`;
-    const headers = [
-      "S/N",
-      "Matriculation Number",
-      "Surname",
-      "First Name",
-      "Middle Name",
-      "Gender",
-      "Date of Birth",
-      "State of Origin",
-      "LGA",
-      "NIN",
-      "Phone Number",
-      "Email",
-      "JAMB No",
-      "Level",
-      "Programme",
-      "Department",
-      "Academic Session",
-      "Matric Visibility",
-      "Form Number",
-      "Status"
-    ];
-
-    const rows = listToExport.map((c, idx) => [
-      idx + 1,
-      c.matricNumber || "",
-      c.surname || "",
-      c.firstName || "",
-      c.middleName || "",
-      c.gender || "",
-      c.dob || "",
-      c.stateOfOrigin || "",
-      c.lga || "",
-      c.nin || "",
-      c.phone && c.phone !== "N/A" ? c.phone : "",
-      c.email && c.email !== "N/A" ? c.email : "",
-      c.jambNumber || "",
-      c.level || "",
-      c.programme || "",
-      c.department || "",
-      c.academicSession || "2026/2027",
-      c.matricNumber
+    const excelObjects = listToExport.map((c, idx) => ({
+      "S/N": idx + 1,
+      "Matriculation Number": c.matricNumber || "",
+      "Surname": c.surname || "",
+      "First Name": c.firstName || "",
+      "Middle Name": c.middleName || "",
+      "Gender": c.gender || "",
+      "Date of Birth": c.dob || "",
+      "State of Origin": c.stateOfOrigin || "",
+      "LGA": c.lga || "",
+      "NIN": c.nin || "",
+      "Phone Number": c.phone && c.phone !== "N/A" ? c.phone : "",
+      "Email": c.email && c.email !== "N/A" ? c.email : "",
+      "JAMB No": c.jambNumber || "",
+      "Level": c.level || "",
+      "Programme": c.programme || "",
+      "Department": c.department || "",
+      "Academic Session": c.academicSession || "2026/2027",
+      "Matric Visibility": c.matricNumber
         ? (c.matricUnlocked ? "Unlocked (Fees Paid)" : "Hidden from Student (NELFUND Ready)")
         : "Not Generated",
-      c.formNumber || "",
-      c.status ? c.status.toUpperCase() : ""
-    ]);
+      "Form Number": c.formNumber || "",
+      "Status": c.status ? c.status.toUpperCase() : ""
+    }));
+
+    const dateTag = new Date().toISOString().split("T")[0];
+    if (formatType === "excel") {
+      const ws = xlsx.utils.json_to_sheet(excelObjects);
+      const wb = xlsx.utils.book_new();
+      xlsx.utils.book_append_sheet(wb, ws, "Admission Register Biodata");
+      xlsx.writeFile(wb, `admission_register_${activeTab}_biodata_${dateTag}.xlsx`);
+      toast.success(`Downloaded ${listToExport.length.toLocaleString()} student biodata record(s) to Excel`);
+      return;
+    }
+
+    const escapeCell = (val: any) => `"${String(val ?? "").replace(/"/g, '""')}"`;
+    const headers = Object.keys(excelObjects[0]);
+    const rows = excelObjects.map(obj => headers.map(h => (obj as any)[h]));
 
     const csv = "\uFEFF" + [headers, ...rows].map(r => r.map(escapeCell).join(",")).join("\r\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `admission_register_${activeTab}_biodata_${new Date().toISOString().split("T")[0]}.csv`;
+    a.download = `admission_register_${activeTab}_biodata_${dateTag}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-    toast.success(`Downloaded ${listToExport.length.toLocaleString()} student biodata record(s)`);
+    toast.success(`Downloaded ${listToExport.length.toLocaleString()} student biodata record(s) to CSV`);
   };
   const totalPages = Math.max(1, Math.ceil(filteredListRaw.length / pageSize));
   const paginatedList = filteredListRaw.slice((currentPage - 1) * pageSize, currentPage * pageSize);
@@ -574,13 +565,20 @@ export default function AdmissionRegisterClient({
               ))}
             </select>
 
-            {/* One-Click Biodata Download Button */}
+            {/* One-Click Biodata Download Buttons (Excel & CSV) */}
             <button
-              onClick={handleExportRegisterCSV}
+              onClick={() => handleExportRegister("excel")}
               className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black uppercase tracking-widest transition-colors shadow-sm"
             >
               <Download className="w-4 h-4" />
-              Download All Biodata (CSV)
+              Export Excel
+            </button>
+            <button
+              onClick={() => handleExportRegister("csv")}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 text-xs font-black uppercase tracking-widest transition-colors shadow-sm"
+            >
+              <Download className="w-4 h-4" />
+              Export CSV
             </button>
 
             <button onClick={fetchData} disabled={loading} className="p-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white transition-colors">
