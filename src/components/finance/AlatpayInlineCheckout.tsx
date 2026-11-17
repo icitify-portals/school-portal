@@ -10,9 +10,9 @@ interface AlatpayInlineCheckoutProps {
     email: string;
     firstName: string;
     lastName: string;
-    onSuccess: () => void;
+    onSuccess: (response?: any) => void;
     onClose: () => void;
-    onError: (error: any) => void;
+    onError?: (error: any) => void;
     targetBusinessId?: string;
     publicKey?: string;
     phone?: string;
@@ -133,9 +133,9 @@ export function AlatpayInlineCheckout({
                         console.log("ALATPay onTransaction response:", JSON.stringify(response));
                         if (response.status === true || response.message === "Approved" || response.status === "Approved") {
                             toast.success("Payment received. Verifying with gateway...");
-                            onSuccess();
+                            onSuccess(response);
                         } else {
-                            onError(response);
+                            onError?.(response);
                         }
                     },
                     onClose: function () {
@@ -147,12 +147,12 @@ export function AlatpayInlineCheckout({
             } catch (err: any) {
                 console.error("ALATPay Error:", err);
                 toast.error(err?.message || "Failed to initialize payment gateway. Please check configuration.");
-                onError(err);
+                onError?.(err);
             }
         } else {
             console.error("ALATPay script not loaded");
             toast.error("Payment Gateway is still loading. Please try again in a few seconds.");
-            onError("Payment Gateway Error");
+            onError?.("Payment Gateway Error");
         }
     };
 

@@ -32,6 +32,8 @@ export default function CourseRegistrationPrintPage() {
     const [selected, setSelected] = useState<number[]>([]);
     const [filterDept, setFilterDept] = useState<string>("all");
     const [filterProgramme, setFilterProgramme] = useState<string>("all");
+    const [filterSemester, setFilterSemester] = useState<string>("1");
+    const [submittedOnly, setSubmittedOnly] = useState<boolean>(true);
     const [search, setSearch] = useState("");
     const [printing, setPrinting] = useState(false);
 
@@ -41,11 +43,13 @@ export default function CourseRegistrationPrintPage() {
             departmentId: filterDept !== "all" ? parseInt(filterDept) : undefined,
             programmeType: filterProgramme !== "all" ? filterProgramme : undefined,
             search: search || undefined,
-            semester: '1',
+            semester: filterSemester,
+            submittedOnly,
+            limit: 2000,
         });
         if (res.success) setRegistrations(res.data);
         setLoading(false);
-    }, [filterDept, filterProgramme, search]);
+    }, [filterDept, filterProgramme, filterSemester, submittedOnly, search]);
 
     useEffect(() => {
         loadRegistrations();
@@ -69,6 +73,13 @@ export default function CourseRegistrationPrintPage() {
         if (!selected.length) return toast.error("Select students first");
         const regs = registrations.filter(r => selected.includes(r.studentId));
         generatePrintHTML(regs);
+    }
+
+    function printAllSubmitted() {
+        const submitted = registrations.filter(r => (r.courseCount || 0) > 0);
+        if (!submitted.length) return toast.error("No submitted course forms found to download.");
+        setPrinting(true);
+        generatePrintHTML(submitted);
     }
 
     function generatePrintHTML(regs: any[]) {
@@ -101,16 +112,24 @@ export default function CourseRegistrationPrintPage() {
         <div className="min-h-screen bg-slate-50 p-6">
             <div className="max-w-7xl mx-auto space-y-6">
                 {/* Header */}
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between flex-wrap gap-4">
                     <div className="flex items-center gap-4">
                         <div className="w-12 h-12 bg-indigo-600 text-white rounded-xl flex items-center justify-center shadow-lg">
                             <FileText size={24} />
                         </div>
                         <div>
                             <h1 className="text-2xl font-bold text-slate-900">Course Registration Print Queue</h1>
-                            <p className="text-sm text-slate-500">View and print student course registration forms</p>
+                            <p className="text-sm text-slate-500">View, print, and download all submitted student course registration forms</p>
                         </div>
                     </div>
+                    <Button
+                        onClick={printAllSubmitted}
+                        disabled={printing || loading || totalWithCourses === 0}
+                        className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white h-11 px-5 rounded-xl font-bold shadow-md"
+                    >
+                        <Download className="w-4 h-4" />
+                        Download All Submitted Forms ({totalWithCourses})
+                    </Button>
                 </div>
 
                 {/* Stats */}
@@ -157,6 +176,26 @@ export default function CourseRegistrationPrintPage() {
                                 <SelectItem value="all">All</SelectItem>
                                 <SelectItem value="ND">ND</SelectItem>
                                 <SelectItem value="HND">HND</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div>
+                        <Label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Semester</Label>
+                        <Select value={filterSemester} onValueChange={setFilterSemester}>
+                            <SelectTrigger className="w-40 h-10"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="1">First Semester</SelectItem>
+                                <SelectItem value="2">Second Semester</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div>
+                        <Label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Filter</Label>
+                        <Select value={submittedOnly ? "submitted" : "all"} onValueChange={(v) => setSubmittedOnly(v === "submitted")}>
+                            <SelectTrigger className="w-44 h-10"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="submitted">Submitted Forms Only</SelectItem>
+                                <SelectItem value="all">All Active Students</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>

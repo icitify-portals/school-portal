@@ -774,15 +774,16 @@ export async function getCourseRegistrationPrintQueue(filters?: {
     sessionId?: number;
     semester?: string;
     search?: string;
+    submittedOnly?: boolean;
     limit?: number;
     offset?: number;
 }) {
     try {
         await ensureICTManager();
-        const { courseDepartmentSettings, transactions } = await import("@/db/schema");
+        const { courseDepartmentSettings, transactions, payment_transactions } = await import("@/db/schema");
         const { resolveLevel } = await import("@/lib/levels");
 
-        const limit = filters?.limit || 100;
+        const limit = filters?.limit || 2000;
         const offset = filters?.offset || 0;
         const activeSession = await db.query.academicSessions.findFirst({
             where: eq(academicSessions.isCurrent, true)
@@ -795,9 +796,10 @@ export async function getCourseRegistrationPrintQueue(filters?: {
         const semester = filters?.semester || activeSession?.currentSemester || '1';
         const semesterLabel = semester === '2' ? 'Second Semester' : 'First Semester';
 
-        // Get students who have registered courses or are active in session
+        // Get students who have registered courses (or are active in session)
         const rows = await db.select({
             studentId: students.id,
+            userId: students.userId,
             studentName: users.name,
             firstName: students.firstName,
             lastName: students.lastName,
@@ -827,10 +829,12 @@ export async function getCourseRegistrationPrintQueue(filters?: {
         ))
         .where(and(
             sql`${students.deletedAt} IS NULL`,
-            or(
-                eq(students.currentSessionId, sessionId),
-                sql`${students.id} IN (SELECT student_id FROM student_course_registrations WHERE session_id = ${sessionId})`
-            )
+            filters?.submittedOnly
+                ? sql`${students.id} IN (SELECT student_id FROM student_course_registrations WHERE session_id = ${sessionId} AND semester = ${semester})`
+                : or(
+                    eq(students.currentSessionId, sessionId),
+                    sql`${students.id} IN (SELECT student_id FROM student_course_registrations WHERE session_id = ${sessionId})`
+                )
         ))
         .orderBy(users.name)
         .limit(limit)
@@ -889,9 +893,21 @@ export async function getCourseRegistrationPrintQueue(filters?: {
         .where(and(
             inArray(transactions.studentId, studentIds),
             eq(transactions.status, "completed"),
-            sql`(${transactions.purpose} LIKE '%Print Fee%' OR ${transactions.purpose} LIKE '%Course Form%' OR ${transactions.gatewayReference} LIKE 'PRINT_%')`
+            sql`(${transactions.purpose} LIKE '%Print Fee%' OR ${transactions.purpose} LIKE '%Course Form%' OR ${transactions.gatewayReference} LIKE 'PRINT_%' OR CAST(${transactions.amount} AS DECIMAL(12,2)) = 500)`
         )) : [];
         const paidStudentIds = new Set(paidPrintTxs.map(t => t.studentId));
+
+        const userIds = filtered.map(r => r.userId).filter(Boolean) as number[];
+        const paidPts = userIds.length > 0 ? await db.select({
+            userId: payment_transactions.userId
+        })
+        .from(payment_transactions)
+        .where(and(
+            inArray(payment_transactions.userId, userIds),
+            eq(payment_transactions.status, "completed"),
+            sql`(CAST(${payment_transactions.amount} AS DECIMAL(12,2)) = 500 OR ${payment_transactions.metadata} LIKE '%Course Form%' OR ${payment_transactions.metadata} LIKE '%Print Fee%')`
+        )) : [];
+        const paidUserIds = new Set(paidPts.map(t => t.userId));
 
         // Group registrations by student
         const regMap = new Map<number, any[]>();
@@ -927,7 +943,7 @@ export async function getCourseRegistrationPrintQueue(filters?: {
                 levelLabel: resolvedLvl?.label || `${r.programmeType || ''} ${r.currentLevel || ''}`.trim(),
                 program: programLabel,
                 sessionSemester: `${sessionName} ${semesterLabel}`,
-                isPrintFeePaid: Boolean(r.isPrintFeePaid || paidStudentIds.has(r.studentId)),
+                isPrintFeePaid: Boolean(r.isPrintFeePaid || paidStudentIds.has(r.studentId) || (r.userId && paidUserIds.has(r.userId))),
                 courses: studentCourses,
                 courseCount: studentCourses.length,
                 totalUnits: studentCourses.reduce((sum: number, c: any) => sum + (c.creditUnits || 0), 0),

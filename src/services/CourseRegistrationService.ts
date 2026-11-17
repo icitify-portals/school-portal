@@ -88,15 +88,56 @@ name: sql<string>`COALESCE(${courseDepartmentSettings.courseTitle}, ${courses.na
             or(
                 // Own level: the full catalogue.
                 eq(courseDepartmentSettings.level, ownLevel),
-                // Lower level: only a specific owed course, and only when one exists.
-                carryOverCourseIds.length > 0 && lowerLevels.length > 0
-                    ? and(
-                        inArray(courseDepartmentSettings.level, lowerLevels),
-                        inArray(courses.id, carryOverCourseIds)
-                    )
+                // Carry-over courses from earlier session/levels (regardless of level)
+                carryOverCourseIds.length > 0
+                    ? inArray(courses.id, carryOverCourseIds)
                     : undefined
             )
         ));
+
+        // Ensure any owed carry-over course without a courseDepartmentSettings row for this dept
+        // is also surfaced if it belongs to this semester.
+        if (carryOverCourseIds.length > 0) {
+            const seenIds = new Set(available.map((c) => c.id));
+            const missingCarryIds = carryOverCourseIds.filter(id => !seenIds.has(id));
+            if (missingCarryIds.length > 0) {
+                const fallbackCarryCourses = await db.select({
+                    id: courses.id,
+                    name: courses.name,
+                    code: courses.code,
+                    units: courses.creditUnits,
+                    isUniversityRequired: courses.isUniversityRequired,
+                    courseSemester: courses.semester,
+                })
+                    .from(courses)
+                    .where(inArray(courses.id, missingCarryIds));
+
+                for (const fc of fallbackCarryCourses) {
+                    if (!fc.courseSemester || fc.courseSemester === semester) {
+                        available.push({
+                            id: fc.id,
+                            name: fc.name,
+                            code: fc.code,
+                            units: Number(fc.units) || 0,
+                            status: "compulsory",
+                            level: ownLevel,
+                            isUniversityRequired: fc.isUniversityRequired,
+                            capacity: null,
+                            enrolledCount: null,
+                        });
+                    }
+                }
+            }
+        }
+
+        // Deduplicate by course.id
+        const dedupedMap = new Map();
+        for (const c of available) {
+            if (!dedupedMap.has(c.id)) {
+                dedupedMap.set(c.id, c);
+            }
+        }
+        available = Array.from(dedupedMap.values());
 
         // Badge the carry-overs so the UI can distinguish an owed course.
         if (carryOverCourseIds.length > 0) {
@@ -163,18 +204,28 @@ name: sql<string>`COALESCE(${courseDepartmentSettings.courseTitle}, ${courses.na
             for (const r of rows) if (r.courseId) carried.add(r.courseId);
         } catch {}
 
-        if (carried.size === 0) {
-            try {
-                const { studentResults } = await import("@/db/schema");
-                const failed = await db.select({ courseId: studentResults.courseId })
-                    .from(studentResults)
-                    .where(and(
-                        eq(studentResults.studentId, studentId),
-                        sql`${studentResults.grade} IN ('F')`
-                    ));
-                for (const r of failed) if (r.courseId) carried.add(r.courseId);
-            } catch {}
-        }
+        // Always also check published student_results for unambiguous F grades (e.g. 2025/2026 first semester)
+        try {
+            const { studentResults } = await import("@/db/schema");
+            const failed = await db.select({ courseId: studentResults.courseId })
+                .from(studentResults)
+                .where(and(
+                    eq(studentResults.studentId, studentId),
+                    sql`UPPER(TRIM(${studentResults.grade})) IN ('F', 'F9', 'FAIL')`
+                ));
+            for (const r of failed) if (r.courseId) carried.add(r.courseId);
+        } catch {}
+
+        // Also check resultMarks for F grades
+        try {
+            const failedMarks = await db.select({ courseId: resultMarks.courseId })
+                .from(resultMarks)
+                .where(and(
+                    eq(resultMarks.studentId, studentId),
+                    sql`UPPER(TRIM(${resultMarks.grade})) IN ('F', 'F9', 'FAIL')`
+                ));
+            for (const r of failedMarks) if (r.courseId) carried.add(r.courseId);
+        } catch {}
 
         // Anything the student has since passed is no longer owed.
         if (carried.size > 0) {
@@ -384,7 +435,8 @@ const deptId = studentDept[0]?.deptId;
             .from(courses)
             .leftJoin(courseDepartmentSettings, and(
                 eq(courseDepartmentSettings.courseId, courses.id),
-                eq(courseDepartmentSettings.deptId, deptId)
+                eq(courseDepartmentSettings.deptId, deptId),
+                eq(courseDepartmentSettings.semester, data.semester)
             ))
             .where(inArray(courses.id, data.courseIds));
 

@@ -52,7 +52,7 @@ export async function submitCourseRegistrationAction(data: {
 
 export async function getRegisteredCoursesAction(studentId: number, sessionId: number, semester: '1' | '2') {
     try {
-        const { semesterSummaries, departments, academicSessions, transactions, studentBills } = await import("@/db/schema");
+        const { semesterSummaries, departments, academicSessions, transactions, studentBills, studentBillItems, feeItems, payment_transactions } = await import("@/db/schema");
         const { resolveLevel } = await import("@/lib/levels");
 
         const summary = await db.select({ isPrintFeePaid: semesterSummaries.isPrintFeePaid })
@@ -71,7 +71,7 @@ export async function getRegisteredCoursesAction(studentId: number, sessionId: n
                 .where(and(
                     eq(transactions.studentId, studentId),
                     eq(transactions.status, "completed"),
-                    sql`(${transactions.purpose} LIKE '%Print Fee%' OR ${transactions.purpose} LIKE '%Course Form%' OR ${transactions.gatewayReference} LIKE 'PRINT_%')`
+                    sql`(${transactions.purpose} LIKE '%Print Fee%' OR ${transactions.purpose} LIKE '%Course Form%' OR ${transactions.gatewayReference} LIKE 'PRINT_%' OR CAST(${transactions.amount} AS DECIMAL(12,2)) = 500)`
                 ))
                 .limit(1);
             if (paidTx.length > 0) {
@@ -79,14 +79,33 @@ export async function getRegisteredCoursesAction(studentId: number, sessionId: n
             } else {
                 const paidBill = await db.select({ id: studentBills.id })
                     .from(studentBills)
+                    .innerJoin(studentBillItems, eq(studentBillItems.billId, studentBills.id))
+                    .leftJoin(feeItems, eq(studentBillItems.feeItemId, feeItems.id))
                     .where(and(
                         eq(studentBills.studentId, studentId),
                         eq(studentBills.sessionId, sessionId),
-                        eq(studentBills.paymentStatus, "paid"),
-                        sql`(${studentBills.feeItemId} = 52 OR ${studentBills.description} LIKE '%Course Form%')`
+                        eq(studentBills.status, "paid"),
+                        sql`(${studentBillItems.feeItemId} = 52 OR ${feeItems.name} LIKE '%Course Form%' OR ${feeItems.name} LIKE '%Print%' OR ${studentBills.note} LIKE '%Course Form%')`
                     ))
                     .limit(1);
                 if (paidBill.length > 0) {
+                    isPrintFeePaid = true;
+                }
+            }
+        }
+
+        if (!isPrintFeePaid) {
+            const [stuUser] = await db.select({ userId: students.userId }).from(students).where(eq(students.id, studentId)).limit(1);
+            if (stuUser?.userId) {
+                const paidPt = await db.select({ id: payment_transactions.id })
+                    .from(payment_transactions)
+                    .where(and(
+                        eq(payment_transactions.userId, stuUser.userId),
+                        eq(payment_transactions.status, "completed"),
+                        sql`(CAST(${payment_transactions.amount} AS DECIMAL(12,2)) = 500 OR ${payment_transactions.metadata} LIKE '%Course Form%' OR ${payment_transactions.metadata} LIKE '%Print Fee%')`
+                    ))
+                    .limit(1);
+                if (paidPt.length > 0) {
                     isPrintFeePaid = true;
                 }
             }

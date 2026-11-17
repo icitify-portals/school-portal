@@ -24,6 +24,7 @@ export default function AdvancedCourseRegistrationPortal() {
   const [studentInfo, setStudentInfo] = useState<any>(null);
   const [isPrintFeePaid, setIsPrintFeePaid] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
+  const [printReference, setPrintReference] = useState<string>("");
   const [showPreview, setShowPreview] = useState(false);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -155,6 +156,7 @@ export default function AdvancedCourseRegistrationPortal() {
     // The N500 course form fee is charged at submission, and only at submission.
     if (!isPrintFeePaid) {
       toast.info(`A payment of N${COURSE_FORM_FEE} is required to submit your course registration form.`);
+      setPrintReference(`PRINT_${studentCtx.id}_${Date.now()}`);
       setShowPayment(true);
       return;
     }
@@ -195,11 +197,13 @@ export default function AdvancedCourseRegistrationPortal() {
     }
   };
 
-  const handlePaymentSuccess = async (res: any) => {
+  const handlePaymentSuccess = async (res?: any) => {
     if (!studentCtx) return;
+    const ref = res?.reference || res?.transactionReference || res?.data?.reference || printReference || `PRINT_${studentCtx.id}_${Date.now()}`;
+    const txId = res?.gatewayTransactionId || res?.transactionId || res?.id || "";
     const r = await recordPrintFeePaymentAction(
       studentCtx.id, studentCtx.sessionId, studentCtx.semester,
-      COURSE_FORM_FEE, res.reference || res.transactionReference, res.gatewayTransactionId || ""
+      COURSE_FORM_FEE, ref, String(txId)
     );
     if (r.success) {
       toast.success("Payment successful! Submitting your course registration...");
@@ -222,7 +226,7 @@ export default function AdvancedCourseRegistrationPortal() {
         setError(subRes.error || "Submission failed");
       }
     } else {
-      toast.error("Failed to record payment.");
+      toast.error(r.error || "Failed to record payment.");
     }
   };
 
@@ -406,7 +410,20 @@ export default function AdvancedCourseRegistrationPortal() {
                             )}
                          </p>
                       </div>
-                   ) : availableCourses.map((course) => (
+                   ) : (
+                      <>
+                        {availableCourses.some((c: any) => c.isCarryOver) && (
+                          <div className="mb-4 p-4 rounded-2xl bg-amber-50 border border-amber-200 flex items-start gap-3">
+                            <RefreshCw className="w-5 h-5 text-amber-600 mt-0.5 shrink-0" />
+                            <div>
+                              <div className="text-sm font-black text-amber-900">Carry-Over Courses Detected (Failed in Previous Session)</div>
+                              <p className="text-xs text-amber-800 mt-0.5">
+                                You have failed course(s) from your previous session marked with a <span className="font-bold">Carry-over</span> badge below. Please select and re-register them for this semester.
+                              </p>
+                            </div>
+                          </div>
+                        )}
+                        {[...availableCourses].sort((a, b) => (b.isCarryOver ? 1 : 0) - (a.isCarryOver ? 1 : 0)).map((course) => (
                       <div
                         key={course.id}
                         onClick={() => toggleCourse(course.id)}
@@ -457,6 +474,7 @@ export default function AdvancedCourseRegistrationPortal() {
                          </div>
                       </div>
                    ))}
+                      </>
                 </div>
              </div>
           </div>
@@ -565,11 +583,12 @@ export default function AdvancedCourseRegistrationPortal() {
                         firstName={studentCtx.firstName}
                         lastName={studentCtx.lastName}
                         phone={studentCtx.phone}
-                        reference={`PRINT_${studentCtx.id}_${Date.now()}`}
+                        reference={printReference || `PRINT_${studentCtx.id}_${Date.now()}`}
                         description="Course Registration Print Fee"
                         targetBusinessId="181087d9-ec63-4efa-e9f3-08dddfe20b95"
                         publicKey="84d105bdef7f420b887c442ff7092027"
                         onSuccess={handlePaymentSuccess}
+                        onError={(err: any) => toast.error(typeof err === "string" ? err : err?.message || "Payment failed. Please try again.")}
                         onClose={() => setShowPayment(false)}
                     />
                 </div>
