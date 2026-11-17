@@ -475,6 +475,7 @@ export default function AdvancedCourseRegistrationPortal() {
                       </div>
                    ))}
                       </>
+                    )}
                 </div>
              </div>
           </div>
