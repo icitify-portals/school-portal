@@ -7,7 +7,7 @@ import {
   Edit3, XCircle, Search, CreditCard, RefreshCw
 } from 'lucide-react';
 import { getAvailableCoursesAction, submitCourseRegistrationAction, getRegisteredCoursesAction } from '@/actions/course-registration';
-import { recordPrintFeePaymentAction } from '@/actions/finance';
+import { recordPrintFeePaymentAction, recordLateRegistrationFeePaymentAction } from '@/actions/finance';
 import { getStudentProfileStatus } from '@/actions/student-profile';
 import { getCurrentSession } from '@/actions/portal';
 import { resolveLevel } from '@/lib/levels';
@@ -25,6 +25,9 @@ export default function AdvancedCourseRegistrationPortal() {
   const [isPrintFeePaid, setIsPrintFeePaid] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
   const [printReference, setPrintReference] = useState<string>("");
+  const [showLatePayment, setShowLatePayment] = useState(false);
+  const [lateReference, setLateReference] = useState<string>("");
+  const [registrationWindow, setRegistrationWindow] = useState<any>(null);
   const [showPreview, setShowPreview] = useState(false);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -98,6 +101,7 @@ export default function AdvancedCourseRegistrationPortal() {
     }
     if (regRes.success) {
       setIsPrintFeePaid(regRes.isPrintFeePaid || false);
+      setRegistrationWindow((regRes as any).registrationWindow || null);
       if ((regRes as any).studentInfo) {
         setStudentInfo((regRes as any).studentInfo);
       }
@@ -122,7 +126,9 @@ export default function AdvancedCourseRegistrationPortal() {
 
   const advisorStatus = registeredCourses[0]?.advisorStatus || 'pending';
   const hodStatus = registeredCourses[0]?.hodStatus || 'pending';
-  const isLocked = advisorStatus === 'approved' || hodStatus === 'approved';
+  const windowPhase = registrationWindow?.phase || 'open';
+  const needsLateFee = windowPhase === 'late_open' && Number(registrationWindow?.lateFee || 0) > 0 && !registrationWindow?.isLateFeePaid;
+  const isLocked = windowPhase === 'closed' || needsLateFee;
   const hasSubmitted = registeredCourses.length > 0;
   const unitProblem = totalUnits < MIN_UNITS
     ? `Select at least ${MIN_UNITS} units (currently ${totalUnits}).`
@@ -153,7 +159,18 @@ export default function AdvancedCourseRegistrationPortal() {
     if (!studentCtx) return;
     if (unitProblem) return toast.error(unitProblem);
 
-    // The N500 course form fee is charged at submission, and only at submission.
+    if (windowPhase === 'closed') {
+      toast.error(registrationWindow?.reason || "Course registration is currently closed.");
+      return;
+    }
+    if (needsLateFee) {
+      toast.info(`Late registration fee of ₦${Number(registrationWindow.lateFee).toLocaleString()} is required before submitting or editing courses.`);
+      setLateReference(`LATE_REG_${studentCtx.id}_${Date.now()}`);
+      setShowLatePayment(true);
+      return;
+    }
+
+    // The N500 course form fee is charged at submission, and only once.
     if (!isPrintFeePaid) {
       toast.info(`A payment of N${COURSE_FORM_FEE} is required to submit your course registration form.`);
       setPrintReference(`PRINT_${studentCtx.id}_${Date.now()}`);
@@ -300,7 +317,7 @@ export default function AdvancedCourseRegistrationPortal() {
                </button>
                <button
                  onClick={handleSubmit}
-                 disabled={submitting || !!unitProblem || isLocked}
+                 disabled={submitting || (!needsLateFee && (!!unitProblem || isLocked))}
                  title={unitProblem || undefined}
                  className={`h-12 px-6 rounded-2xl font-bold flex items-center gap-2 transition-all shadow-lg backdrop-blur-md border disabled:opacity-50 disabled:cursor-not-allowed ${
                    isLocked
@@ -311,10 +328,65 @@ export default function AdvancedCourseRegistrationPortal() {
                  }`}
                >
                   {submitting ? <Loader2 size={18} className="animate-spin" /> : isLocked ? <ShieldCheck size={18} /> : <CheckCircle2 size={18} />}
-                  {isLocked ? 'Registration Finalized' : !isPrintFeePaid ? `Pay ₦${COURSE_FORM_FEE} & Submit Form` : 'Submit Form'}
+                  {windowPhase === 'closed' ? 'Registration Closed' : needsLateFee ? `Pay ₦${Number(registrationWindow?.lateFee || 0).toLocaleString()} Late Fee` : !isPrintFeePaid ? `Pay ₦${COURSE_FORM_FEE} & Submit Form` : hasSubmitted ? 'Update Registration' : 'Submit Form'}
                </button>
             </div>
         </div>
+
+        {registrationWindow && (
+          <div className={`rounded-[2rem] p-5 border flex flex-col md:flex-row md:items-center justify-between gap-4 ${
+            windowPhase === 'open'
+              ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
+              : windowPhase === 'late_open'
+                ? 'bg-amber-50 border-amber-200 text-amber-900'
+                : 'bg-rose-50 border-rose-200 text-rose-900'
+          }`}>
+            <div className="flex items-start gap-3">
+              <Clock className="w-5 h-5 mt-0.5 shrink-0" />
+              <div>
+                <div className="font-black text-sm uppercase tracking-tight">
+                  {windowPhase === 'open'
+                    ? (hasSubmitted ? 'Course Registration Open — You Can Edit Courses Until Deadline' : 'Course Registration Open')
+                    : windowPhase === 'late_open'
+                      ? 'Late Registration Window Open'
+                      : 'Course Registration Closed'}
+                </div>
+                <div className="text-xs font-medium mt-0.5 opacity-90">
+                  {windowPhase === 'open' && registrationWindow.registrationClosesAt && (
+                    <>Normal registration closes on <strong>{new Date(registrationWindow.registrationClosesAt).toLocaleString()}</strong>.</>
+                  )}
+                  {windowPhase === 'open' && !registrationWindow.registrationClosesAt && (
+                    <>You can add or remove courses and update your registration anytime before registration closes.</>
+                  )}
+                  {windowPhase === 'late_open' && (
+                    <>
+                      {Number(registrationWindow.lateFee || 0) > 0
+                        ? (registrationWindow.isLateFeePaid
+                            ? `Late registration fee (₦${Number(registrationWindow.lateFee).toLocaleString()}) paid. You can now submit or edit your courses.`
+                            : `A late registration fee of ₦${Number(registrationWindow.lateFee).toLocaleString()} is required to submit or edit courses.`)
+                        : 'Late registration is open.'}
+                      {registrationWindow.lateRegistrationClosesAt && (
+                        <> Closes on <strong>{new Date(registrationWindow.lateRegistrationClosesAt).toLocaleString()}</strong>.</>
+                      )}
+                    </>
+                  )}
+                  {windowPhase === 'closed' && (registrationWindow.reason || 'Course registration is currently closed.')}
+                </div>
+              </div>
+            </div>
+            {needsLateFee && (
+              <button
+                onClick={() => {
+                  setLateReference(`LATE_REG_${studentCtx.id}_${Date.now()}`);
+                  setShowLatePayment(true);
+                }}
+                className="h-10 px-5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-black uppercase tracking-wider shrink-0 shadow"
+              >
+                Pay Late Fee (₦{Number(registrationWindow.lateFee).toLocaleString()})
+              </button>
+            )}
+          </div>
+        )}
 
         {showPreview && hasSubmitted && isPrintFeePaid && courseFormData && (
           <div className="bg-slate-100 border border-slate-200 rounded-[2.5rem] p-6 sm:p-10 space-y-6 shadow-xl">
@@ -563,6 +635,56 @@ export default function AdvancedCourseRegistrationPortal() {
              </div>
           </div>
         </div>
+
+        {/* Late Registration Fee Modal */}
+        {showLatePayment && studentCtx && registrationWindow && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+                <div className="bg-white rounded-[2rem] p-8 max-w-md w-full shadow-2xl">
+                    <div className="flex justify-between items-center mb-6">
+                        <h3 className="text-xl font-black text-slate-900">Late Course Registration Fee</h3>
+                        <button onClick={() => setShowLatePayment(false)} className="text-slate-400 hover:text-slate-600">
+                            <XCircle className="w-6 h-6" />
+                        </button>
+                    </div>
+                    <div className="bg-amber-50 p-6 rounded-2xl mb-6 border border-amber-100">
+                        <p className="text-sm text-amber-900 mb-2 font-medium">Normal course registration has closed. Pay the late registration fee below to unlock course submission/editing.</p>
+                        <div className="text-3xl font-black text-amber-700">₦{Number(registrationWindow.lateFee || 0).toLocaleString()}</div>
+                    </div>
+                    <AlatpayInlineCheckout
+                        amount={Number(registrationWindow.lateFee || 0)}
+                        email={studentCtx.email}
+                        firstName={studentCtx.firstName}
+                        lastName={studentCtx.lastName}
+                        phone={studentCtx.phone}
+                        reference={lateReference || `LATE_REG_${studentCtx.id}_${Date.now()}`}
+                        description="Late Course Registration Fee"
+                        targetBusinessId="181087d9-ec63-4efa-e9f3-08dddfe20b95"
+                        publicKey="84d105bdef7f420b887c442ff7092027"
+                        onSuccess={async (res?: any) => {
+                          const ref = res?.reference || res?.transactionReference || lateReference || `LATE_REG_${studentCtx.id}_${Date.now()}`;
+                          const txId = res?.gatewayTransactionId || res?.transactionId || res?.id || "";
+                          const r = await recordLateRegistrationFeePaymentAction(
+                            studentCtx.id,
+                            studentCtx.sessionId,
+                            studentCtx.semester,
+                            Number(registrationWindow.lateFee || 0),
+                            ref,
+                            String(txId)
+                          );
+                          if (r.success) {
+                            toast.success("Late registration fee recorded! You can now submit or update your courses.");
+                            setShowLatePayment(false);
+                            await loadData(studentCtx);
+                          } else {
+                            toast.error(r.error || "Failed to record late registration fee.");
+                          }
+                        }}
+                        onError={(err: any) => toast.error(typeof err === "string" ? err : err?.message || "Payment failed. Please try again.")}
+                        onClose={() => setShowLatePayment(false)}
+                    />
+                </div>
+            </div>
+        )}
 
         {/* Payment Modal */}
         {showPayment && studentCtx && (

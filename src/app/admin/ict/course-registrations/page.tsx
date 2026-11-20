@@ -245,9 +245,17 @@ export default function CourseRegistrationPrintPage() {
                                             )}
                                         </td>
                                         <td className="p-3 text-center">
-                                            <Button size="sm" variant="outline" onClick={() => printSingle(reg.studentId)} className="gap-1">
-                                                <Printer className="w-3 h-3" /> Print
-                                            </Button>
+                                            <div className="flex items-center justify-center gap-2">
+                                                <Button size="sm" variant="outline" onClick={() => printSingle(reg.studentId)} className="gap-1">
+                                                    <Printer className="w-3 h-3" /> Print
+                                                </Button>
+                                                <a
+                                                    href={`/admin/registration/manage?studentId=${reg.studentId}`}
+                                                    className="inline-flex items-center justify-center h-8 px-2.5 rounded-md border border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 text-xs font-semibold"
+                                                >
+                                                    Edit Courses
+                                                </a>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))

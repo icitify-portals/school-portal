@@ -4,6 +4,51 @@ import { db } from "@/db/db";
 import { academicSessions, students } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { hasPermission, hasRole } from "@/lib/rbac";
+
+export async function updateSessionRegistrationTimelineAction(
+    sessionId: number,
+    data: {
+        isRegistrationOpen: boolean;
+        registrationOpensAt?: string | null;
+        registrationClosesAt?: string | null;
+        isLateRegistrationOpen: boolean;
+        lateRegistrationOpensAt?: string | null;
+        lateRegistrationClosesAt?: string | null;
+        lateRegistrationFee: number;
+    }
+) {
+    try {
+        const allowed =
+            (await hasPermission("academic.registration.manage")) ||
+            (await hasRole(["admin", "superadmin", "registrar", "ict_manager", "icitify_dev"]));
+        if (!allowed) return { success: false, error: "Unauthorized" };
+
+        const toDateOrNull = (v?: string | null) => {
+            if (!v || !v.trim()) return null;
+            const d = new Date(v);
+            return isNaN(d.getTime()) ? null : d;
+        };
+
+        await db.update(academicSessions)
+            .set({
+                isRegistrationOpen: Boolean(data.isRegistrationOpen),
+                registrationOpensAt: toDateOrNull(data.registrationOpensAt),
+                registrationClosesAt: toDateOrNull(data.registrationClosesAt),
+                isLateRegistrationOpen: Boolean(data.isLateRegistrationOpen),
+                lateRegistrationOpensAt: toDateOrNull(data.lateRegistrationOpensAt),
+                lateRegistrationClosesAt: toDateOrNull(data.lateRegistrationClosesAt),
+                lateRegistrationFee: Math.max(0, Number(data.lateRegistrationFee || 0)).toFixed(2),
+            })
+            .where(eq(academicSessions.id, sessionId));
+
+        revalidatePath("/admin/registration/controls");
+        revalidatePath("/student/courses/registration");
+        return { success: true };
+    } catch (error: any) {
+        return { success: false, error: error.message || "Failed to update registration timeline" };
+    }
+}
 
 export async function getAcademicSessions() {
     try {

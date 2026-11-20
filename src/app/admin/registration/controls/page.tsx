@@ -12,7 +12,7 @@ import {
     Settings2,
     ShieldCheck
 } from "lucide-react";
-import { getAcademicSessions } from "@/actions/portal";
+import { getAcademicSessions, updateSessionRegistrationTimelineAction } from "@/actions/portal";
 import { getLevelControls, setLevelControl } from "@/actions/concessions";
 import { getAutoApproveFlags, setAutoApproveFlagAction } from "@/actions/settings";
 import { toast } from "sonner";
@@ -28,6 +28,16 @@ export default function RegistrationControlsPage() {
     const [loading, setLoading] = useState(true);
     const [autoApprove, setAutoApprove] = useState<{ advisor: boolean; hod: boolean }>({ advisor: false, hod: false });
     const [toggling, setToggling] = useState<"advisor" | "hod" | null>(null);
+    const [timelineForm, setTimelineForm] = useState({
+        isRegistrationOpen: false,
+        registrationOpensAt: "",
+        registrationClosesAt: "",
+        isLateRegistrationOpen: false,
+        lateRegistrationOpensAt: "",
+        lateRegistrationClosesAt: "",
+        lateRegistrationFee: "0",
+    });
+    const [savingTimeline, setSavingTimeline] = useState(false);
 
     useEffect(() => {
         loadSessions();
@@ -48,10 +58,52 @@ setLoading(false);
         setAutoApprove(await getAutoApproveFlags());
     };
 
+    const toLocalInput = (val: any) => {
+        if (!val) return "";
+        const d = new Date(val);
+        if (isNaN(d.getTime())) return "";
+        const pad = (n: number) => String(n).padStart(2, "0");
+        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    };
+
     const loadControls = async () => {
         if (!selectedSessionId) return;
         const data = await getLevelControls(Number(selectedSessionId));
         setControls(data);
+        const sess = sessions.find(x => x.id === Number(selectedSessionId));
+        if (sess) {
+            setTimelineForm({
+                isRegistrationOpen: Boolean(sess.isRegistrationOpen),
+                registrationOpensAt: toLocalInput(sess.registrationOpensAt),
+                registrationClosesAt: toLocalInput(sess.registrationClosesAt),
+                isLateRegistrationOpen: Boolean(sess.isLateRegistrationOpen),
+                lateRegistrationOpensAt: toLocalInput(sess.lateRegistrationOpensAt),
+                lateRegistrationClosesAt: toLocalInput(sess.lateRegistrationClosesAt),
+                lateRegistrationFee: String(sess.lateRegistrationFee || "0"),
+            });
+        }
+    };
+
+    const handleSaveTimeline = async () => {
+        if (!selectedSessionId) return;
+        setSavingTimeline(true);
+        const res = await updateSessionRegistrationTimelineAction(Number(selectedSessionId), {
+            isRegistrationOpen: timelineForm.isRegistrationOpen,
+            registrationOpensAt: timelineForm.registrationOpensAt || null,
+            registrationClosesAt: timelineForm.registrationClosesAt || null,
+            isLateRegistrationOpen: timelineForm.isLateRegistrationOpen,
+            lateRegistrationOpensAt: timelineForm.lateRegistrationOpensAt || null,
+            lateRegistrationClosesAt: timelineForm.lateRegistrationClosesAt || null,
+            lateRegistrationFee: parseFloat(timelineForm.lateRegistrationFee || "0") || 0,
+        });
+        setSavingTimeline(false);
+        if (res.success) {
+            toast.success("Course registration timeline updated.");
+            const refreshed = await getAcademicSessions();
+            setSessions(refreshed);
+        } else {
+            toast.error(res.error || "Failed to update timeline.");
+        }
     };
 
     const handleToggleStage = async (stage: "advisor" | "hod") => {
@@ -112,6 +164,109 @@ setLoading(false);
                     </select>
                 </div>
             </header>
+
+            <Card className="border-none shadow-2xl rounded-[3rem] overflow-hidden bg-white">
+                <CardHeader className="p-8 border-b border-slate-100 flex flex-row justify-between items-center flex-wrap gap-4">
+                    <div>
+                        <CardTitle className="text-2xl font-black italic uppercase tracking-tighter flex items-center gap-3">
+                            <Calendar className="w-6 h-6 text-indigo-600" />
+                            Course Registration Timeline &amp; Late Registration
+                        </CardTitle>
+                        <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px] mt-1">
+                            Schedule automatic close, re-open for late registration, and configure late fee (₦)
+                        </p>
+                    </div>
+                    <Button
+                        onClick={handleSaveTimeline}
+                        disabled={savingTimeline}
+                        className="bg-indigo-600 hover:bg-indigo-700 text-white font-black px-6 py-5 rounded-xl uppercase text-xs tracking-wider"
+                    >
+                        {savingTimeline ? "Saving..." : "Save Timeline & Late Fee"}
+                    </Button>
+                </CardHeader>
+                <CardContent className="p-8 grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="p-6 rounded-2xl bg-slate-50 border border-slate-200 space-y-4">
+                        <div className="flex items-center justify-between">
+                            <h4 className="font-black uppercase text-sm text-slate-800">Normal Registration Window</h4>
+                            <label className="flex items-center gap-2 text-xs font-bold cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    checked={timelineForm.isRegistrationOpen}
+                                    onChange={e => setTimelineForm(f => ({ ...f, isRegistrationOpen: e.target.checked }))}
+                                    className="w-4 h-4 accent-emerald-600"
+                                />
+                                {timelineForm.isRegistrationOpen ? "OPEN" : "CLOSED"}
+                            </label>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label className="text-[10px] font-bold uppercase text-slate-500 block mb-1">Opens At (Optional)</label>
+                                <input
+                                    type="datetime-local"
+                                    value={timelineForm.registrationOpensAt}
+                                    onChange={e => setTimelineForm(f => ({ ...f, registrationOpensAt: e.target.value }))}
+                                    className="w-full rounded-xl border border-slate-200 p-2.5 text-xs font-semibold bg-white"
+                                />
+                            </div>
+                            <div>
+                                <label className="text-[10px] font-bold uppercase text-slate-500 block mb-1">Closes At (Deadline)</label>
+                                <input
+                                    type="datetime-local"
+                                    value={timelineForm.registrationClosesAt}
+                                    onChange={e => setTimelineForm(f => ({ ...f, registrationClosesAt: e.target.value }))}
+                                    className="w-full rounded-xl border border-slate-200 p-2.5 text-xs font-semibold bg-white"
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="p-6 rounded-2xl bg-amber-50/70 border border-amber-200 space-y-4">
+                        <div className="flex items-center justify-between">
+                            <h4 className="font-black uppercase text-sm text-amber-900">Late Registration &amp; Payment</h4>
+                            <label className="flex items-center gap-2 text-xs font-bold cursor-pointer text-amber-900">
+                                <input
+                                    type="checkbox"
+                                    checked={timelineForm.isLateRegistrationOpen}
+                                    onChange={e => setTimelineForm(f => ({ ...f, isLateRegistrationOpen: e.target.checked }))}
+                                    className="w-4 h-4 accent-amber-600"
+                                />
+                                {timelineForm.isLateRegistrationOpen ? "RE-OPENED (LATE)" : "OFF"}
+                            </label>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <div>
+                                <label className="text-[10px] font-bold uppercase text-amber-800 block mb-1">Late Opens At</label>
+                                <input
+                                    type="datetime-local"
+                                    value={timelineForm.lateRegistrationOpensAt}
+                                    onChange={e => setTimelineForm(f => ({ ...f, lateRegistrationOpensAt: e.target.value }))}
+                                    className="w-full rounded-xl border border-amber-200 p-2.5 text-xs font-semibold bg-white"
+                                />
+                            </div>
+                            <div>
+                                <label className="text-[10px] font-bold uppercase text-amber-800 block mb-1">Late Closes At</label>
+                                <input
+                                    type="datetime-local"
+                                    value={timelineForm.lateRegistrationClosesAt}
+                                    onChange={e => setTimelineForm(f => ({ ...f, lateRegistrationClosesAt: e.target.value }))}
+                                    className="w-full rounded-xl border border-amber-200 p-2.5 text-xs font-semibold bg-white"
+                                />
+                            </div>
+                            <div>
+                                <label className="text-[10px] font-bold uppercase text-amber-800 block mb-1">Late Fee (₦)</label>
+                                <input
+                                    type="number"
+                                    min={0}
+                                    step={100}
+                                    value={timelineForm.lateRegistrationFee}
+                                    onChange={e => setTimelineForm(f => ({ ...f, lateRegistrationFee: e.target.value }))}
+                                    className="w-full rounded-xl border border-amber-200 p-2.5 text-xs font-bold bg-white"
+                                />
+                            </div>
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <Card className="border-none shadow-2xl rounded-[3rem] overflow-hidden bg-white">

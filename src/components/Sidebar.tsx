@@ -397,6 +397,8 @@ const adminMenuItems: MenuItem[] = [
             { name: "ID Card Print Guide", href: "/admin/ict/guide" },
             { name: "Photo Capture", href: "/admin/ict/photo-capture" },
             { name: "Course Reg Print", href: "/admin/ict/course-registrations" },
+            { name: "Edit Student Courses", href: "/admin/registration/manage" },
+            { name: "Reg Timeline & Controls", href: "/admin/registration/controls" },
             { name: "RBAC Settings", href: "/admin/rbac" },
             { name: "Portal Management", href: "/admin/settings/portal" },
         ]
@@ -790,6 +792,8 @@ export function Sidebar({ enabledModules = {}, mobileOpen = false, onClose }: {
                         { name: "ID Card Print Guide", href: "/admin/ict/guide" },
                         { name: "Photo Capture", href: "/admin/ict/photo-capture" },
                         { name: "Course Reg Print", href: "/admin/ict/course-registrations" },
+            { name: "Edit Student Courses", href: "/admin/registration/manage" },
+            { name: "Reg Timeline & Controls", href: "/admin/registration/controls" },
                         { name: "Identity Center", href: "/admin/identity" },
                         { name: "User Manager", href: "/admin/users" },
                         { name: "Password Reset Centre", href: "/admin/security/password-reset" },

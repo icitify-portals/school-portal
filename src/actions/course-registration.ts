@@ -203,7 +203,9 @@ export async function getRegisteredCoursesAction(studentId: number, sessionId: n
             signatureUrl: studentRow.signatureUrl || null,
         } : null;
 
-        return { success: true, data: formattedRegistered, isPrintFeePaid, studentInfo };
+        const registrationWindow = await CourseRegistrationService.getRegistrationWindowStatus(studentId, sessionId, semester);
+
+        return { success: true, data: formattedRegistered, isPrintFeePaid, studentInfo, registrationWindow };
     } catch (error) {
         return { success: false, error: (error as Error).message };
     }
@@ -284,3 +286,140 @@ export async function getCourseRegisteredStudentsRosterAction(courseId: number, 
     }
 }
 
+
+
+export async function adminSearchStudentsForRegistrationAction(query: string) {
+    try {
+        const isAuthorized =
+            (await hasPermission("academic.registration.approve")) ||
+            (await hasRole(["admin", "superadmin", "registrar", "ict_manager", "record_officer", "icitify_dev", "hod"]));
+        if (!isAuthorized) return { success: false, error: "Unauthorized", data: [] };
+
+        const q = (query || "").trim();
+        if (!q) return { success: true, data: [] };
+
+        const { departments } = await import("@/db/schema");
+        const { or, like, isNull } = await import("drizzle-orm");
+
+        const rows = await db.select({
+            id: students.id,
+            matricNumber: students.matricNumber,
+            admissionNumber: students.admissionNumber,
+            name: users.name,
+            firstName: students.firstName,
+            lastName: students.lastName,
+            otherNames: students.otherNames,
+            programmeType: students.programmeType,
+            currentLevel: students.currentLevel,
+            deptId: students.deptId,
+            deptName: departments.name,
+            status: students.status,
+        })
+        .from(students)
+        .leftJoin(users, eq(students.userId, users.id))
+        .leftJoin(departments, eq(students.deptId, departments.id))
+        .where(and(
+            isNull(students.deletedAt),
+            or(
+                like(students.matricNumber, `%${q}%`),
+                like(students.admissionNumber, `%${q}%`),
+                like(users.name, `%${q}%`),
+                like(students.firstName, `%${q}%`),
+                like(students.lastName, `%${q}%`)
+            )
+        ))
+        .limit(25);
+
+        return { success: true, data: rows };
+    } catch (error: any) {
+        return { success: false, error: error.message, data: [] };
+    }
+}
+
+export async function adminGetStudentRegistrationDetailAction(studentId: number, sessionId: number, semester: '1' | '2') {
+    try {
+        const isAuthorized =
+            (await hasPermission("academic.registration.approve")) ||
+            (await hasRole(["admin", "superadmin", "registrar", "ict_manager", "record_officer", "icitify_dev", "hod"]));
+        if (!isAuthorized) throw new Error("Unauthorized");
+
+        const [regRes, availCourses] = await Promise.all([
+            getRegisteredCoursesAction(studentId, sessionId, semester),
+            CourseRegistrationService.getAvailableCourses(studentId, semester),
+        ]);
+
+        // Also provide all department/portal courses for the semester so admin can add electives or cross-dept courses
+        const allCourses = await db.select({
+            id: courses.id,
+            code: courses.code,
+            name: courses.name,
+            units: courses.creditUnits,
+            semester: courses.semester,
+        })
+        .from(courses)
+        .limit(500);
+
+        return {
+            success: true,
+            studentInfo: (regRes as any).studentInfo || null,
+            registeredCourses: (regRes as any).data || [],
+            availableCourses: availCourses || [],
+            allCourses,
+        };
+    } catch (error: any) {
+        return { success: false, error: error.message };
+    }
+}
+
+export async function adminUpdateStudentCoursesAction(
+    studentId: number,
+    sessionId: number,
+    semester: '1' | '2',
+    courseIds: number[]
+) {
+    try {
+        const isAuthorized =
+            (await hasPermission("academic.registration.approve")) ||
+            (await hasRole(["admin", "superadmin", "registrar", "ict_manager", "record_officer", "icitify_dev", "hod"]));
+        if (!isAuthorized) throw new Error("Unauthorized");
+
+        if (!courseIds || courseIds.length === 0) {
+            throw new Error("Select at least one course.");
+        }
+
+        const result = await CourseRegistrationService.submitRegistration(
+            { studentId, sessionId, semester, courseIds },
+            { adminOverride: true }
+        );
+
+        const { auth } = await import("@/auth");
+        const { systemAuditLogs } = await import("@/db/schema");
+        const session = await auth();
+        const actorId = session?.user?.id ? parseInt(String(session.user.id)) : null;
+
+        await db.insert(systemAuditLogs).values({
+            userId: actorId,
+            action: "ADMIN_EDIT_COURSE_REGISTRATION",
+            resource: `student:${studentId}`,
+            details: JSON.stringify({ studentId, sessionId, semester, courseIds, totalUnits: result.totalUnits }),
+        }).catch(() => {});
+
+        const [stu] = await db.select({ userId: students.userId }).from(students).where(eq(students.id, studentId)).limit(1);
+        if (stu?.userId) {
+            await sendInAppNotification({
+                userId: stu.userId,
+                title: "Course Registration Updated by Admin",
+                message: `An administrator updated your course registration (${result.totalUnits} units).`,
+                type: "info",
+                link: "/student/courses/registration"
+            }).catch(() => {});
+        }
+
+        revalidatePath("/student/courses/registration");
+        revalidatePath("/admin/ict/course-registrations");
+        revalidatePath("/admin/registration/manage");
+        return { success: true, totalUnits: result.totalUnits };
+    } catch (error: any) {
+        return { success: false, error: error.message };
+    }
+}

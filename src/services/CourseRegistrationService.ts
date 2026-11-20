@@ -298,29 +298,127 @@ name: sql<string>`COALESCE(${courseDepartmentSettings.courseTitle}, ${courses.na
     /**
      * Validates and submits course registration with prerequisite and waiver checks.
      */
+    static async getRegistrationWindowStatus(studentId: number, sessionId: number, semester: '1' | '2') {
+        const [sessionRow] = await db.select().from(academicSessions).where(eq(academicSessions.id, sessionId)).limit(1);
+        if (!sessionRow) {
+            return {
+                phase: 'closed' as const,
+                reason: 'Academic session not found.',
+                lateFee: 0,
+                isLateFeePaid: false,
+                isRegistrationOpen: false,
+                isLateRegistrationOpen: false,
+                registrationOpensAt: null,
+                registrationClosesAt: null,
+                lateRegistrationOpensAt: null,
+                lateRegistrationClosesAt: null,
+            };
+        }
+
+        const [lockStudent] = await db.select({
+            programmeType: students.programmeType,
+            currentLevel: students.currentLevel,
+            deptId: students.deptId,
+            userId: students.userId,
+        }).from(students).where(eq(students.id, studentId)).limit(1);
+
+        let activityLockReason: string | null = null;
+        if (lockStudent) {
+            const lockCheck = await assertActivityUnlocked(ACTIVITIES.COURSE_REGISTRATION, buildStudentLockContext(lockStudent));
+            if (!lockCheck.success) {
+                activityLockReason = lockCheck.error || 'Course registration is currently locked for your level/department.';
+            }
+        }
+
+        const [summaryRow] = await db.select({ isLateRegistrationPaid: semesterSummaries.isLateRegistrationPaid })
+            .from(semesterSummaries)
+            .where(and(
+                eq(semesterSummaries.studentId, studentId),
+                eq(semesterSummaries.sessionId, sessionId),
+                eq(semesterSummaries.semester, semester)
+            ))
+            .limit(1);
+        let isLateFeePaid = Boolean(summaryRow?.isLateRegistrationPaid);
+
+        if (!isLateFeePaid) {
+            const { transactions } = await import("@/db/schema");
+            const [paidLateTx] = await db.select({ id: transactions.id })
+                .from(transactions)
+                .where(and(
+                    eq(transactions.studentId, studentId),
+                    eq(transactions.status, 'completed'),
+                    sql`(${transactions.purpose} LIKE '%Late Course Registration%' OR ${transactions.gatewayReference} LIKE 'LATE_REG_%')`
+                ))
+                .limit(1);
+            if (paidLateTx) isLateFeePaid = true;
+        }
+
+        const now = new Date();
+        const regOpens = sessionRow.registrationOpensAt ? new Date(sessionRow.registrationOpensAt) : null;
+        const regCloses = sessionRow.registrationClosesAt ? new Date(sessionRow.registrationClosesAt) : null;
+        const lateOpens = sessionRow.lateRegistrationOpensAt ? new Date(sessionRow.lateRegistrationOpensAt) : null;
+        const lateCloses = sessionRow.lateRegistrationClosesAt ? new Date(sessionRow.lateRegistrationClosesAt) : null;
+        const lateFee = Number(sessionRow.lateRegistrationFee || 0);
+
+        const withinNormalDates = (!regOpens || now >= regOpens) && (!regCloses || now <= regCloses);
+        const normalOpen = Boolean(sessionRow.isRegistrationOpen) && withinNormalDates && !activityLockReason;
+
+        const withinLateDates = (!lateOpens || now >= lateOpens) && (!lateCloses || now <= lateCloses);
+        const lateOpen = !normalOpen && Boolean(sessionRow.isLateRegistrationOpen) && withinLateDates && !activityLockReason;
+
+        let phase: 'open' | 'late_open' | 'closed' = 'closed';
+        let reason: string | null = null;
+        if (normalOpen) {
+            phase = 'open';
+        } else if (lateOpen) {
+            phase = 'late_open';
+        } else {
+            phase = 'closed';
+            if (activityLockReason) reason = activityLockReason;
+            else if (regCloses && now > regCloses && !sessionRow.isLateRegistrationOpen) reason = 'Normal course registration deadline has passed.';
+            else if (lateCloses && now > lateCloses) reason = 'Late course registration deadline has passed.';
+            else if (regOpens && now < regOpens) reason = `Course registration opens on ${regOpens.toLocaleString()}.`;
+            else reason = 'Course registration is currently closed.';
+        }
+
+        return {
+            phase,
+            reason,
+            lateFee,
+            isLateFeePaid,
+            isRegistrationOpen: Boolean(sessionRow.isRegistrationOpen),
+            isLateRegistrationOpen: Boolean(sessionRow.isLateRegistrationOpen),
+            registrationOpensAt: regOpens ? regOpens.toISOString() : null,
+            registrationClosesAt: regCloses ? regCloses.toISOString() : null,
+            lateRegistrationOpensAt: lateOpens ? lateOpens.toISOString() : null,
+            lateRegistrationClosesAt: lateCloses ? lateCloses.toISOString() : null,
+        };
+    }
+
     static async submitRegistration(data: {
         studentId: number,
         sessionId: number,
         semester: '1' | '2',
         courseIds: number[]
-    }) {
-        // 0. Activity lock check (e.g. course registration freeze by level/programme)
-        const [lockStudent] = await db.select({
-            programmeType: students.programmeType,
-            currentLevel: students.currentLevel,
-            deptId: students.deptId,
-        }).from(students).where(eq(students.id, data.studentId)).limit(1);
-        if (lockStudent) {
-            const lockCheck = await assertActivityUnlocked(ACTIVITIES.COURSE_REGISTRATION, buildStudentLockContext(lockStudent));
-            if (!lockCheck.success) {
-                throw new Error(lockCheck.error || "Course registration is currently closed.");
+    }, options?: { adminOverride?: boolean }) {
+        const isAdminOverride = Boolean(options?.adminOverride);
+
+        if (!isAdminOverride) {
+            const win = await this.getRegistrationWindowStatus(data.studentId, data.sessionId, data.semester);
+            if (win.phase === 'closed') {
+                throw new Error(win.reason || "Course registration is currently closed.");
+            }
+            if (win.phase === 'late_open' && win.lateFee > 0 && !win.isLateFeePaid) {
+                throw new Error(`Late registration requires a ₦${win.lateFee.toLocaleString()} late registration fee payment before submitting or editing courses.`);
             }
         }
 
-        // 1. Prerequisite & Waiver Validation
-        const prerequisiteErrors = await this.validatePrerequisites(data.studentId, data.courseIds);
-        if (prerequisiteErrors.length > 0) {
-            throw new Error(`Prerequisite Failure: ${prerequisiteErrors.map(e => e.message).join(' ')}`);
+        // 1. Prerequisite & Waiver Validation (skipped on admin override)
+        if (!isAdminOverride) {
+            const prerequisiteErrors = await this.validatePrerequisites(data.studentId, data.courseIds);
+            if (prerequisiteErrors.length > 0) {
+                throw new Error(`Prerequisite Failure: ${prerequisiteErrors.map(e => e.message).join(' ')}`);
+            }
         }
 
         // 1b. Capacity & timetable clash check (if enabled) - fail late with clear message
@@ -442,16 +540,15 @@ const deptId = studentDept[0]?.deptId;
 
         const totalUnits = selectedCourses.reduce((sum, c) => sum + (c.deptUnits ?? c.courseUnits ?? 0), 0);
         
-        if (totalUnits < 9 || totalUnits > 36) {
+        if (!isAdminOverride && (totalUnits < 9 || totalUnits > 36)) {
             throw new Error(`Invalid credit units: ${totalUnits}. Allowed range: 9-36 units.`);
         }
 
-return await db.transaction(async (tx) => {
+        return await db.transaction(async (tx) => {
             await tx.delete(studentCourseRegistrations).where(and(
                 eq(studentCourseRegistrations.studentId, data.studentId),
                 eq(studentCourseRegistrations.sessionId, data.sessionId),
-                eq(studentCourseRegistrations.semester, data.semester),
-                eq(studentCourseRegistrations.advisorStatus, 'pending')
+                eq(studentCourseRegistrations.semester, data.semester)
             ));
 
             // Advisor and HOD are approved independently, so the portal can run
