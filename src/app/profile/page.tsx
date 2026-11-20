@@ -724,18 +724,23 @@ export default function ProfilePage() {
                                                         Identity Card Photographic Capture
                                                     </Label>
 
-                                                    {profile.isProfileLocked || profile.isDeadlinePassed ? (
+                                                    {profile.isDeadlinePassed ? (
                                                         <div className="space-y-4">
                                                             <div className="h-14 flex items-center px-6 bg-amber-50 rounded-2xl border border-amber-100 text-xs font-bold text-amber-700 gap-3">
                                                                 <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                                                                Biometric Image Locked for ID Generation
+                                                                Profile Photo Updates Closed
                                                             </div>
                                                             <p className="text-[8px] font-black text-slate-400 uppercase italic tracking-wider">
-                                                                Your profile image has been verified and locked. Contact support for re-capture.
+                                                                The profile update deadline has passed. Contact support for re-capture.
                                                             </p>
                                                         </div>
                                                     ) : (
                                                         <div className="space-y-4">
+                                                            {profile.imageUrl && (
+                                                                <div className="flex justify-center p-4 bg-white rounded-2xl border border-slate-200">
+                                                                    <img src={profile.imageUrl} alt="Profile Photo" className="max-h-24 w-24 rounded-xl object-cover" />
+                                                                </div>
+                                                            )}
                                                             <div className="flex flex-col items-center justify-center border-2 border-dashed border-slate-200 hover:border-emerald-500 rounded-2xl p-8 bg-slate-50/50 hover:bg-emerald-50/20 transition-all cursor-pointer relative group">
                                                                 <input
                                                                     id="profile-upload-input"
@@ -757,7 +762,9 @@ export default function ProfilePage() {
                                                                                 <Camera className="w-6 h-6 text-slate-500 group-hover:text-emerald-600" />
                                                                             </div>
                                                                             <div className="text-center">
-                                                                                <span className="text-xs font-black text-slate-700 uppercase tracking-tight block">Upload Profile Photo</span>
+                                                                                <span className="text-xs font-black text-slate-700 uppercase tracking-tight block">
+                                                                                    {profile.imageUrl ? "Replace Profile Photo" : "Upload Profile Photo"}
+                                                                                </span>
                                                                                 <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block mt-1">JPEG or PNG up to 2MB</span>
                                                                             </div>
                                                                         </>
@@ -767,7 +774,7 @@ export default function ProfilePage() {
                                                             <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-100 flex gap-3 items-start">
                                                                 <Info className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />
                                                                 <p className="text-[9px] font-bold text-emerald-800 uppercase leading-relaxed">
-                                                                    <span className="font-black underline">Notice:</span> {isStaff ? "Your photo is loaded onto your staff identity card." : "Your photo will be locked immediately for security and ID card integration."}
+                                                                    <span className="font-black underline">Notice:</span> {isStaff ? "Your photo is loaded onto your staff identity card." : "You can replace your photo if you uploaded the wrong image."}
                                                                 </p>
                                                             </div>
                                                         </div>

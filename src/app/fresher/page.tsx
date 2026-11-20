@@ -234,6 +234,15 @@ export default function FresherDashboard() {
                   </ul>
                 </div>
 
+                <input
+                  type="file"
+                  id="passport-upload"
+                  accept="image/jpeg,image/png,image/jpg"
+                  onChange={(e) => handleFileUpload(e, 'passport_photo')}
+                  className="hidden"
+                  disabled={uploading}
+                />
+
                 {uploadStatus?.passportPhoto.uploaded ? (
                   <div className="space-y-4">
                     <div className="flex items-center justify-between p-5 bg-white border border-slate-100 shadow-sm rounded-2xl">
@@ -243,7 +252,9 @@ export default function FresherDashboard() {
                         </div>
                         <div>
                           <p className="text-sm font-black text-slate-900">Photo Uploaded</p>
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Awaiting Review</p>
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
+                            {uploadStatus.passportPhoto.status === 'approved' ? 'Approved' : 'Awaiting Review'}
+                          </p>
                         </div>
                       </div>
                       {getStatusBadge(uploadStatus.passportPhoto.status)}
@@ -257,17 +268,21 @@ export default function FresherDashboard() {
                         </p>
                       </div>
                     )}
+
+                    {uploadStatus.passportPhoto.status !== 'approved' && (
+                      <Button
+                        onClick={() => document.getElementById('passport-upload')?.click()}
+                        disabled={uploading}
+                        variant="outline"
+                        className="w-full h-12 rounded-2xl font-bold border-indigo-200 text-indigo-700 hover:bg-indigo-50"
+                      >
+                        {uploading ? <RefreshCw className="w-4 h-4 mr-2 animate-spin" /> : <Upload className="w-4 h-4 mr-2" />}
+                        Replace Passport Photo
+                      </Button>
+                    )}
                   </div>
                 ) : (
                   <div className="h-full flex flex-col justify-center">
-                    <input
-                      type="file"
-                      id="passport-upload"
-                      accept="image/jpeg,image/png,image/jpg"
-                      onChange={(e) => handleFileUpload(e, 'passport_photo')}
-                      className="hidden"
-                      disabled={uploading}
-                    />
                     <Button
                       onClick={() => document.getElementById('passport-upload')?.click()}
                       disabled={uploading}
@@ -301,6 +316,15 @@ export default function FresherDashboard() {
                 Provide a clear scan or photograph of your signature on a plain white paper using black or blue ink.
               </div>
 
+              <input
+                type="file"
+                id="signature-upload"
+                accept="image/jpeg,image/png,image/jpg"
+                onChange={(e) => handleFileUpload(e, 'signature')}
+                className="hidden"
+                disabled={uploading}
+              />
+
               {uploadStatus?.signature.uploaded ? (
                 <div className="space-y-4">
                   <div className="flex flex-col gap-3 p-4 bg-white shadow-sm rounded-2xl">
@@ -317,7 +341,7 @@ export default function FresherDashboard() {
                     </div>
                   )}
 
-                  {(uploadStatus.signature.status === 'rejected' || !uploadStatus.signature.uploaded) && (
+                  {uploadStatus.signature.status !== 'approved' && (
                     <Button
                       onClick={() => document.getElementById('signature-upload')?.click()}
                       disabled={uploading}
@@ -325,20 +349,12 @@ export default function FresherDashboard() {
                       className="w-full h-12 rounded-xl font-bold"
                     >
                       {uploading ? <RefreshCw className="w-4 h-4 mr-2 animate-spin" /> : <Upload className="w-4 h-4 mr-2" />}
-                      Re-upload
+                      Replace Signature
                     </Button>
                   )}
                 </div>
               ) : (
                 <div className="mt-8">
-                  <input
-                    type="file"
-                    id="signature-upload"
-                    accept="image/jpeg,image/png,image/jpg"
-                    onChange={(e) => handleFileUpload(e, 'signature')}
-                    className="hidden"
-                    disabled={uploading}
-                  />
                   <Button
                     onClick={() => document.getElementById('signature-upload')?.click()}
                     disabled={uploading}

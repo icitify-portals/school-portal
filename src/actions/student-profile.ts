@@ -51,13 +51,9 @@ export async function updateStudentProfile(userId: number, data: {
 
         const updateData: any = { ...data };
 
-        // Handle Image Locking
+        // Allow students to replace their profile image if needed
         if (data.imageUrl && data.imageUrl !== currentProfile.imageUrl) {
-            if (currentProfile.isProfileLocked) {
-                return { success: false, error: "Profile image is locked and cannot be changed." };
-            }
-            // If user is setting a new image, lock it immediately
-            updateData.isProfileLocked = true;
+            updateData.isProfileLocked = false;
         }
 
         await db.update(students)
@@ -224,18 +220,6 @@ export async function uploadProfileImage(formData: FormData) {
         const userId = profile.userId;
         const isStaff = profile.isStaffProfile;
 
-        // Check if student profile is already locked
-        // Allow returning students (level > 1) and ICT-captured photos to bypass the lock
-        // @ts-expect-error - TS2339: Auto-suppressed for build
-        if (!isStaff && profile.isProfileLocked) {
-            // @ts-expect-error - TS2339: Auto-suppressed for build
-            const studentLevel = profile.currentLevel || 1;
-            if (studentLevel <= 1) {
-                return { success: false, error: "Profile image is locked. Returning students (ND 2/HND 2) can upload at the ICT unit." };
-            }
-            // Level > 1: allow re-upload (returning students)
-        }
-
         // Create unique filename
         const fileExtension = file.name.split('.').pop() || 'jpg';
         const uniqueFilename = `profile_${userId}_${Date.now()}.${fileExtension}`;
@@ -259,7 +243,7 @@ export async function uploadProfileImage(formData: FormData) {
                 .where(eq(staffProfiles.userId, userId));
         } else {
             await db.update(students)
-                .set({ imageUrl, isProfileLocked: true })
+                .set({ imageUrl, isProfileLocked: false })
                 // @ts-expect-error - TS2769: Auto-suppressed for build
                 .where(eq(students.userId, userId));
         }
