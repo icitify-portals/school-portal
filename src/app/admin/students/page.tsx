@@ -257,6 +257,19 @@ function StudentsPageContent() {
         const params = new URLSearchParams(searchParams);
         if (value) {
             params.set("level", value);
+            if (["ND 1", "ND 2", "HND 1", "HND 2"].includes(value)) {
+                params.set("status", "active");
+                params.delete("gradYear");
+                const targetProgType = value.startsWith("HND") ? "HND" : "ND";
+                if (progIdParam) {
+                    const selectedProg = programmesList.find((p) => String(p.id) === String(progIdParam));
+                    if (selectedProg && selectedProg.programmeType && selectedProg.programmeType !== targetProgType) {
+                        params.delete("programmeId");
+                    }
+                }
+            } else if (graduantLevels.includes(value)) {
+                params.delete("status");
+            }
         } else {
             params.delete("level");
         }
@@ -324,6 +337,14 @@ function StudentsPageContent() {
         const params = new URLSearchParams(searchParams);
         if (value) {
             params.set("gradYear", value);
+            const currentStatus = params.get("status");
+            if (!["graduant", "nd_graduant", "hnd_graduant"].includes(currentStatus || "")) {
+                params.set("status", "graduant");
+            }
+            const currentLevel = params.get("level");
+            if (currentLevel && ["ND 1", "ND 2", "HND 1", "HND 2"].includes(currentLevel)) {
+                params.delete("level");
+            }
         } else {
             params.delete("gradYear");
         }
@@ -512,19 +533,22 @@ function StudentsPageContent() {
         }
     };
 
-    const handleExport = async (formatType: "csv" | "excel" = "csv") => {
+    const handleExport = async (
+        formatType: "csv" | "excel" = "csv",
+        overrideFilters?: { level?: string; status?: string; graduationYear?: string; programmeId?: number; clearLevel?: boolean; clearGradYear?: boolean; clearProgramme?: boolean }
+    ) => {
         setExporting(true);
         toast.info(`Preparing student ${formatType.toUpperCase()} export...`);
         try {
             const res = await exportStudentsAction({
                 search,
-                level,
+                level: overrideFilters?.clearLevel ? undefined : (overrideFilters?.level ?? level),
                 sessionId: sessionParam,
                 semester: semesterParam,
                 departmentId: deptIdParam ? parseInt(deptIdParam) : undefined,
-                programmeId: progIdParam ? parseInt(progIdParam) : undefined,
-                status: statusParam,
-                graduationYear: gradYearParam
+                programmeId: overrideFilters?.clearProgramme ? undefined : (overrideFilters?.programmeId ?? (progIdParam ? parseInt(progIdParam) : undefined)),
+                status: overrideFilters?.status ?? effectiveStatus,
+                graduationYear: overrideFilters?.clearGradYear ? undefined : (overrideFilters?.graduationYear ?? gradYearParam)
             });
 
             if (!res.success || !res.csvData) {
@@ -638,8 +662,41 @@ function StudentsPageContent() {
                         title="Filter graduants by year of graduation"
                     >
                         <option value="">All Graduation Years</option>
+                        <option value="unassigned">Legacy / Year Not Set</option>
                         {graduationYears.map((y) => (
                             <option key={y} value={y.toString()}>{`Graduated ${y}`}</option>
+                        ))}
+                    </select>
+                    <select
+                        className="px-3 h-10 rounded-xl border border-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-emerald-50 shadow-sm text-xs font-bold uppercase tracking-wider text-emerald-800 cursor-pointer"
+                        value=""
+                        disabled={exporting || loading}
+                        onChange={(e) => {
+                            const v = e.target.value;
+                            if (!v) return;
+                            if (v === "active_all") {
+                                handleExport("excel", { status: "active", clearLevel: true, clearGradYear: true });
+                            } else if (["ND 1", "ND 2", "HND 1", "HND 2"].includes(v)) {
+                                handleExport("excel", { level: v, status: "active", clearGradYear: true, clearProgramme: true });
+                            } else if (v === "graduant_all") {
+                                handleExport("excel", { status: "graduant", clearLevel: true, clearGradYear: true });
+                            } else if (v.startsWith("grad_year:")) {
+                                const yr = v.replace("grad_year:", "");
+                                handleExport("excel", { status: "graduant", graduationYear: yr, clearLevel: true });
+                            }
+                        }}
+                        title="One-click Excel download by cohort or graduation year"
+                    >
+                        <option value="">Quick Download Excel...</option>
+                        <option value="active_all">All Active Students (ND 1–2, HND 1–2)</option>
+                        <option value="ND 1">Active ND 1 Only</option>
+                        <option value="ND 2">Active ND 2 Only</option>
+                        <option value="HND 1">Active HND 1 Only</option>
+                        <option value="HND 2">Active HND 2 Only</option>
+                        <option value="graduant_all">All Graduants (ND &amp; HND)</option>
+                        <option value="grad_year:unassigned">Graduants — Legacy / Year Not Set</option>
+                        {graduationYears.map((y) => (
+                            <option key={`dl-${y}`} value={`grad_year:${y}`}>{`Graduants — ${y}`}</option>
                         ))}
                     </select>
                     <select

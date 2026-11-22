@@ -70,20 +70,24 @@ export async function getStudents(options: { search?: string, page?: number, pag
         }
 
         let levelCondition: any = undefined;
+        const activeOnlyUnlessExplicit = (!options.status || options.status === "all" || options.status === "active" || options.status === "applicant" || options.status === "unlocked")
+            ? eq(students.status, 'active')
+            : sql`(${students.status} NOT IN ('nd_graduant', 'nd_graduated', 'hnd_graduant', 'hnd_graduated') OR ${students.status} IS NULL)`;
+
         if (typeof level === 'string') {
             switch(level) {
                 case "ND 1":
                     levelCondition = and(
                         eq(students.currentLevel, 1), 
                         or(eq(students.programmeType, 'ND'), eq(programmes.programmeType, 'ND')),
-                        sql`(${students.status} NOT IN ('nd_graduant', 'nd_graduated', 'hnd_graduant', 'hnd_graduated') OR ${students.status} IS NULL)`
+                        activeOnlyUnlessExplicit
                     );
                     break;
                 case "ND 2":
                     levelCondition = and(
                         eq(students.currentLevel, 2), 
                         or(eq(students.programmeType, 'ND'), eq(programmes.programmeType, 'ND')),
-                        sql`(${students.status} NOT IN ('nd_graduant', 'nd_graduated', 'hnd_graduant', 'hnd_graduated') OR ${students.status} IS NULL)`
+                        activeOnlyUnlessExplicit
                     );
                     break;
                 case "ND_GRADUANT":
@@ -96,14 +100,14 @@ export async function getStudents(options: { search?: string, page?: number, pag
                     levelCondition = and(
                         eq(students.currentLevel, 1), 
                         or(eq(students.programmeType, 'HND'), eq(programmes.programmeType, 'HND')),
-                        sql`(${students.status} NOT IN ('nd_graduant', 'nd_graduated', 'hnd_graduant', 'hnd_graduated') OR ${students.status} IS NULL)`
+                        activeOnlyUnlessExplicit
                     );
                     break;
                 case "HND 2":
                     levelCondition = and(
                         eq(students.currentLevel, 2), 
                         or(eq(students.programmeType, 'HND'), eq(programmes.programmeType, 'HND')),
-                        sql`(${students.status} NOT IN ('nd_graduant', 'nd_graduated', 'hnd_graduant', 'hnd_graduated') OR ${students.status} IS NULL)`
+                        activeOnlyUnlessExplicit
                     );
                     break;
                 case "HND_GRADUANT":
@@ -159,9 +163,17 @@ export async function getStudents(options: { search?: string, page?: number, pag
             }
         }
 
-        const graduationYearCondition = options.graduationYear && !isNaN(Number(options.graduationYear))
-            ? sql`YEAR(${students.graduatedAt}) = ${Number(options.graduationYear)}`
-            : undefined;
+        const graduationYearCondition = options.graduationYear === "unassigned"
+            ? and(
+                isNull(students.graduatedAt),
+                sql`${students.status} IN ('nd_graduant','hnd_graduant','nd_graduated','hnd_graduated')`
+              )
+            : options.graduationYear && !isNaN(Number(options.graduationYear))
+                ? and(
+                    sql`YEAR(${students.graduatedAt}) = ${Number(options.graduationYear)}`,
+                    sql`${students.status} IN ('nd_graduant','hnd_graduant','nd_graduated','hnd_graduated')`
+                  )
+                : undefined;
 
         // Session filter. "unassigned" buckets students with no current session,
         // which is the single largest cohort in the legacy data.
@@ -335,20 +347,24 @@ export async function exportStudentsAction(options: {
         }
 
         let levelCondition: any = undefined;
+        const activeOnlyUnlessExplicit = (!options.status || options.status === "all" || options.status === "active" || options.status === "applicant" || options.status === "unlocked")
+            ? eq(students.status, 'active')
+            : sql`(${students.status} NOT IN ('nd_graduant', 'nd_graduated', 'hnd_graduant', 'hnd_graduated') OR ${students.status} IS NULL)`;
+
         if (typeof level === 'string') {
             switch(level) {
                 case "ND 1":
                     levelCondition = and(
                         eq(students.currentLevel, 1), 
                         or(eq(students.programmeType, 'ND'), eq(programmes.programmeType, 'ND')),
-                        sql`(${students.status} NOT IN ('nd_graduant', 'nd_graduated', 'hnd_graduant', 'hnd_graduated') OR ${students.status} IS NULL)`
+                        activeOnlyUnlessExplicit
                     );
                     break;
                 case "ND 2":
                     levelCondition = and(
                         eq(students.currentLevel, 2), 
                         or(eq(students.programmeType, 'ND'), eq(programmes.programmeType, 'ND')),
-                        sql`(${students.status} NOT IN ('nd_graduant', 'nd_graduated', 'hnd_graduant', 'hnd_graduated') OR ${students.status} IS NULL)`
+                        activeOnlyUnlessExplicit
                     );
                     break;
                 case "ND_GRADUANT":
@@ -361,14 +377,14 @@ export async function exportStudentsAction(options: {
                     levelCondition = and(
                         eq(students.currentLevel, 1), 
                         or(eq(students.programmeType, 'HND'), eq(programmes.programmeType, 'HND')),
-                        sql`(${students.status} NOT IN ('nd_graduant', 'nd_graduated', 'hnd_graduant', 'hnd_graduated') OR ${students.status} IS NULL)`
+                        activeOnlyUnlessExplicit
                     );
                     break;
                 case "HND 2":
                     levelCondition = and(
                         eq(students.currentLevel, 2), 
                         or(eq(students.programmeType, 'HND'), eq(programmes.programmeType, 'HND')),
-                        sql`(${students.status} NOT IN ('nd_graduant', 'nd_graduated', 'hnd_graduant', 'hnd_graduated') OR ${students.status} IS NULL)`
+                        activeOnlyUnlessExplicit
                     );
                     break;
                 case "HND_GRADUANT":
@@ -421,9 +437,17 @@ export async function exportStudentsAction(options: {
             }
         }
 
-        const graduationYearCondition = options.graduationYear && !isNaN(Number(options.graduationYear))
-            ? sql`YEAR(${students.graduatedAt}) = ${Number(options.graduationYear)}`
-            : undefined;
+        const graduationYearCondition = options.graduationYear === "unassigned"
+            ? and(
+                isNull(students.graduatedAt),
+                sql`${students.status} IN ('nd_graduant','hnd_graduant','nd_graduated','hnd_graduated')`
+              )
+            : options.graduationYear && !isNaN(Number(options.graduationYear))
+                ? and(
+                    sql`YEAR(${students.graduatedAt}) = ${Number(options.graduationYear)}`,
+                    sql`${students.status} IN ('nd_graduant','hnd_graduant','nd_graduated','hnd_graduated')`
+                  )
+                : undefined;
 
         let sessionCondition: any = undefined;
         if (sessionId === "unassigned") {
@@ -542,6 +566,7 @@ export async function exportStudentsAction(options: {
             "Matric Visibility",
             "Application Number",
             "Status",
+            "Graduation Year",
             "Payment Locked",
             "Financial Locked"
         ];
@@ -602,6 +627,7 @@ export async function exportStudentsAction(options: {
                 'Matric Visibility': matricVisibility,
                 'Application Number': s.admissionNumber || app?.formNumber || app?.applicationNumber || "",
                 'Status': s.status || "",
+                'Graduation Year': s.graduatedAt ? String(new Date(s.graduatedAt).getFullYear()) : "",
                 'Payment Locked': s.isPaymentLocked ? "Yes" : "No",
                 'Financial Locked': s.isFinanciallyLocked ? "Yes" : "No"
             };
