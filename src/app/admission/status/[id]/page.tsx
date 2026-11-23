@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
+import Link from "next/link";
 import { getApplicantStatusData, confirmAcceptancePayment, finalizeStudentAdmission, initiateAcceptancePaymentCheckout, uploadApplicantDocument, initiateSchoolFeesCheckout, confirmSchoolFeesPayment, initiateProcessingFeeCheckout, confirmProcessingFeePayment } from "@/actions/admission_v2";
 import { AlatpayInlineCheckout } from "@/components/finance/AlatpayInlineCheckout";
 import { RemitaInlineCheckout } from "@/components/finance/RemitaInlineCheckout";
@@ -20,7 +21,13 @@ import {
     ChevronRight,
     XCircle,
     Info,
-    Clock
+    Clock,
+    Sparkles,
+    FileText,
+    Stethoscope,
+    ScrollText,
+    BookOpen,
+    ArrowRight
 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -521,6 +528,104 @@ export default function ApplicantStatusPage() {
                         )}
                     </CardContent>
                 </Card>
+
+                {/* Official Student Onboarding & Access Hub */}
+                {data.status === 'admitted' && data.acceptancePaymentStatus === 'paid' && (
+                    <Card className="border-none shadow-xl rounded-[3rem] overflow-hidden bg-gradient-to-br from-indigo-950 via-slate-900 to-indigo-900 text-white">
+                        <CardHeader className="p-8 sm:p-10 border-b border-white/10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                            <div className="flex items-center gap-4">
+                                <div className="p-3 bg-indigo-500/20 border border-indigo-400/30 rounded-2xl text-indigo-400">
+                                    <Sparkles className="w-6 h-6 text-amber-400" />
+                                </div>
+                                <div>
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400 bg-emerald-500/20 px-3 py-1 rounded-full border border-emerald-500/30">
+                                        Admission Offer Accepted • Enrolled Student
+                                    </span>
+                                    <CardTitle className="text-xl sm:text-2xl font-black italic uppercase text-white mt-1">Official Student Portal & Registration Hub</CardTitle>
+                                    <p className="text-xs font-medium text-slate-300 mt-1">
+                                        Your Acceptance Fee is confirmed! You now have full access to complete your official student records, medical clearance, matriculation oath, and course registration.
+                                    </p>
+                                </div>
+                            </div>
+                            <Link href="/student" className="flex-shrink-0">
+                                <Button className="bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-black rounded-2xl px-6 py-6 text-xs uppercase tracking-widest shadow-xl flex items-center gap-2">
+                                    Go to Student Dashboard <ArrowRight className="w-4 h-4" />
+                                </Button>
+                            </Link>
+                        </CardHeader>
+                        <CardContent className="p-8 sm:p-10 space-y-6">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                                <Link href="/student/dossier" className="group">
+                                    <div className="p-6 rounded-3xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-indigo-400/50 transition-all space-y-3 h-full flex flex-col justify-between">
+                                        <div className="space-y-2">
+                                            <div className="p-3 bg-indigo-500/20 rounded-2xl w-fit text-indigo-400 group-hover:scale-110 transition-transform">
+                                                <FileText className="w-5 h-5" />
+                                            </div>
+                                            <h4 className="text-sm font-black uppercase italic text-white group-hover:text-indigo-300">1. Student Dossier</h4>
+                                            <p className="text-[11px] text-slate-400 leading-relaxed">
+                                                Update your official biodata, next of kin, guardian address, and emergency contact details.
+                                            </p>
+                                        </div>
+                                        <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-400 flex items-center gap-1">
+                                            Fill / Update Dossier <ChevronRight className="w-3 h-3" />
+                                        </span>
+                                    </div>
+                                </Link>
+
+                                <Link href="/student/medical" className="group">
+                                    <div className="p-6 rounded-3xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-emerald-400/50 transition-all space-y-3 h-full flex flex-col justify-between">
+                                        <div className="space-y-2">
+                                            <div className="p-3 bg-emerald-500/20 rounded-2xl w-fit text-emerald-400 group-hover:scale-110 transition-transform">
+                                                <Stethoscope className="w-5 h-5" />
+                                            </div>
+                                            <h4 className="text-sm font-black uppercase italic text-white group-hover:text-emerald-300">2. Health & Medical Form</h4>
+                                            <p className="text-[11px] text-slate-400 leading-relaxed">
+                                                Submit your blood group, genotype, allergies, immunization history, and health declarations.
+                                            </p>
+                                        </div>
+                                        <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1">
+                                            Fill Medical Form <ChevronRight className="w-3 h-3" />
+                                        </span>
+                                    </div>
+                                </Link>
+
+                                <Link href="/student/matriculation" className="group">
+                                    <div className="p-6 rounded-3xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-amber-400/50 transition-all space-y-3 h-full flex flex-col justify-between">
+                                        <div className="space-y-2">
+                                            <div className="p-3 bg-amber-500/20 rounded-2xl w-fit text-amber-400 group-hover:scale-110 transition-transform">
+                                                <ScrollText className="w-5 h-5" />
+                                            </div>
+                                            <h4 className="text-sm font-black uppercase italic text-white group-hover:text-amber-300">3. Matriculation Oath</h4>
+                                            <p className="text-[11px] text-slate-400 leading-relaxed">
+                                                Read, affirm, and digitally sign your institutional matriculation oath.
+                                            </p>
+                                        </div>
+                                        <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1">
+                                            Sign Oath <ChevronRight className="w-3 h-3" />
+                                        </span>
+                                    </div>
+                                </Link>
+
+                                <Link href="/student/courses/registration" className="group">
+                                    <div className="p-6 rounded-3xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-cyan-400/50 transition-all space-y-3 h-full flex flex-col justify-between">
+                                        <div className="space-y-2">
+                                            <div className="p-3 bg-cyan-500/20 rounded-2xl w-fit text-cyan-400 group-hover:scale-110 transition-transform">
+                                                <BookOpen className="w-5 h-5" />
+                                            </div>
+                                            <h4 className="text-sm font-black uppercase italic text-white group-hover:text-cyan-300">4. Course Registration</h4>
+                                            <p className="text-[11px] text-slate-400 leading-relaxed">
+                                                Select and register your semester courses for academic verification and examination clearance.
+                                            </p>
+                                        </div>
+                                        <span className="text-[10px] font-bold uppercase tracking-wider text-cyan-400 flex items-center gap-1">
+                                            Register Courses <ChevronRight className="w-3 h-3" />
+                                        </span>
+                                    </div>
+                                </Link>
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
 
                 {/* Mandatory Post-Admission Documents Upload Card */}
                 {data.status === 'admitted' && (

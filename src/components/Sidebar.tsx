@@ -915,6 +915,10 @@ export function Sidebar({ enabledModules = {}, mobileOpen = false, onClose }: {
             }
             return staffMenuItems;
         } else if (role === 'applicant') {
+            const hasMatricOrStudentRole = Boolean((session?.user as any)?.matricNumber) || (session?.user as any)?.role === 'student';
+            if (hasMatricOrStudentRole) {
+                return studentMenuItems;
+            }
             return applicantMenuItems;
         } else {
             return studentMenuItems;

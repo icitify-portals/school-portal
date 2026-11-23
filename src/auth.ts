@@ -571,6 +571,38 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                     }
                 }
 
+                // If user is marked as applicant, promote to student if they have an active student row
+                // or have paid their acceptance fee on admissionApplicationsV2
+                if (user.role === 'applicant') {
+                    if (studentRecord) {
+                        user.role = 'student';
+                        await db.update(users).set({ role: 'student', status: 'active' }).where(eq(users.id, user.id));
+                    } else {
+                        const { admissionApplicationsV2 } = await import("@/db/schema");
+                        const [paidApp] = await db.select({ id: admissionApplicationsV2.id })
+                            .from(admissionApplicationsV2)
+                            .where(and(
+                                eq(admissionApplicationsV2.applicantId, user.id),
+                                eq(admissionApplicationsV2.acceptancePaymentStatus, 'paid')
+                            ))
+                            .limit(1);
+                        if (paidApp) {
+                            user.role = 'student';
+                            await db.update(users).set({ role: 'student', status: 'active' }).where(eq(users.id, user.id));
+                            try {
+                                const { ensureStudentOnboardingOnAcceptance } = await import("@/actions/admission_v2");
+                                await ensureStudentOnboardingOnAcceptance(paidApp.id);
+                                const [newStu] = await db.select().from(students)
+                                    .where(and(eq(students.userId, user.id), isNull(students.deletedAt)))
+                                    .limit(1);
+                                if (newStu) studentRecord = newStu;
+                            } catch (e) {
+                                console.error("[auth.ts] Student onboarding on login error:", e);
+                            }
+                        }
+                    }
+                }
+
                 const { roleNames, permissionNames } = await fetchUserRolesAndPermissions(user.id);
 
                 const matricIsLocked = studentRecord
@@ -671,10 +703,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
                         if (dbUser.role === 'student' || dbUser.role === 'applicant' || dbUser.role === 'fresher') {
                             const [stu] = await db.select().from(students).where(eq(students.userId, dbUser.id)).limit(1);
-                            if (stu && stu.matricNumber) {
-                                const locked = await isStudentMatricLocked({ studentId: stu.id, userId: dbUser.id });
-                                if (!locked) {
-                                    token.matricNumber = stu.matricNumber;
+                            if (stu) {
+                                token.role = 'student';
+                                if (stu.matricNumber) {
+                                    const locked = await isStudentMatricLocked({ studentId: stu.id, userId: dbUser.id });
+                                    if (!locked) {
+                                        token.matricNumber = stu.matricNumber;
+                                    }
                                 }
                             }
                         }

@@ -751,6 +751,13 @@ export async function adminConfirmAcceptancePayment(applicationId: number, refer
                 ));
         }
 
+        // Immediately onboard candidate as an active student
+        try {
+            await ensureStudentOnboardingOnAcceptance(applicationId);
+        } catch (onboardErr) {
+            console.error("[adminConfirmAcceptancePayment] Student onboarding error:", onboardErr);
+        }
+
         const appData = await db.query.admissionApplicationsV2.findFirst({
             where: eq(admissionApplicationsV2.id, applicationId)
         });
@@ -1510,6 +1517,13 @@ export async function confirmAcceptancePayment(applicationId: number, reference:
         await db.update(transactions)
             .set({ status: 'completed' })
             .where(eq(transactions.gatewayReference, reference));
+
+        // Immediately onboard candidate as an active student
+        try {
+            await ensureStudentOnboardingOnAcceptance(applicationId);
+        } catch (onboardErr) {
+            console.error("[confirmAcceptancePayment] Student onboarding error:", onboardErr);
+        }
 
         // If school fees have also already been paid, finalize and unlock matriculation number immediately
         try {
@@ -2493,6 +2507,229 @@ export async function syncAdmittedMatricNumbers() {
     } catch (error: any) {
         console.error("[syncAdmittedMatricNumbers] Failed:", error);
         return { success: false, error: error.message || "Failed to sync admitted matric numbers" };
+    }
+}
+
+/**
+ * Ensures an applicant who has paid their acceptance fee is immediately onboarded as an active student.
+ * Promotes their user account to role='student' and guarantees an active record in the students table
+ * so they can immediately complete their Dossier, Medical Form, Matriculation Oath, and Course Registration.
+ */
+export async function ensureStudentOnboardingOnAcceptance(applicationId: number) {
+    try {
+        const application = await db.query.admissionApplicationsV2.findFirst({
+            where: eq(admissionApplicationsV2.id, applicationId)
+        });
+
+        if (!application || (application.status !== 'admitted' && application.acceptancePaymentStatus !== 'paid')) {
+            return { success: false, error: "Application is not admitted or acceptance fee is not paid." };
+        }
+
+        const template = await db.query.admissionFormTemplates.findFirst({
+            where: eq(admissionFormTemplates.id, application.templateId)
+        });
+
+        const formData = typeof application.data === 'string' ? JSON.parse(application.data || "{}") : (application.data || {});
+
+        const jambResolution = resolveJambNumber(application.jambRegNumber, formData);
+        const jambRegNo = jambResolution.raw;
+        const jambNumberForDb = jambResolution.persistable;
+
+        const isJambCandidate = application.applicationMode
+            ? application.applicationMode === 'full_time'
+            : (!!jambRegNo && !jambRegNo.toLowerCase().includes("temp") && !jambRegNo.toLowerCase().includes("direct"));
+
+        let studyMode: string;
+        if (isJambCandidate) {
+            studyMode = 'full-time';
+        } else if (formData.studyMode) {
+            studyMode = formData.studyMode;
+        } else if (application.applicationMode) {
+            if (application.applicationMode === 'full_time') studyMode = 'full-time';
+            else if (application.applicationMode === 'elearning') studyMode = 'elearning';
+            else studyMode = 'part-time';
+        } else {
+            studyMode = 'part-time';
+        }
+
+        if (studyMode === 'full_time') studyMode = 'full-time';
+        if (studyMode === 'part_time') studyMode = 'part-time';
+        if (studyMode === 'e-learning' || studyMode === 'e_learning') studyMode = 'elearning';
+
+        const modeOfEntry = isJambCandidate ? "JAMB" : "Direct";
+
+        const year = new Date().getFullYear();
+        const tmplName = template?.name?.toLowerCase() || '';
+        const programmeType = tmplName.includes("hnd") ? "HND" : (tmplName.includes("nd") || tmplName.includes("diploma") ? "ND" : "HND");
+
+        let selectedProgrammeId = application.programmeId;
+        if (!selectedProgrammeId && template) {
+            const templateProgs = await db.select({ programmeId: admissionTemplateProgrammes.programmeId })
+                .from(admissionTemplateProgrammes)
+                .where(eq(admissionTemplateProgrammes.templateId, template.id))
+                .limit(1);
+            selectedProgrammeId = templateProgs[0]?.programmeId || null;
+        }
+
+        let deptId: number | null = null;
+        if (selectedProgrammeId) {
+            const [prog] = await db.select().from(programmes).where(eq(programmes.id, selectedProgrammeId)).limit(1);
+            if (prog) {
+                deptId = prog.deptId || null;
+            }
+        }
+
+        const nextSessionName = `${year}/${year + 1}`;
+        let [targetSession] = await db.select().from(academicSessions)
+            .where(eq(academicSessions.name, nextSessionName))
+            .limit(1);
+
+        if (!targetSession) {
+            const [activeSession] = await db.select().from(academicSessions)
+                .where(eq(academicSessions.isActive, true))
+                .orderBy(desc(academicSessions.startDate))
+                .limit(1);
+            targetSession = activeSession;
+        }
+
+        // Reuse or assign matriculation number
+        let matricNumber = String(formData.matricNumber || "").trim();
+        if (!matricNumber && application.studentId) {
+            const linkedStudent = await db.query.students.findFirst({
+                where: eq(students.id, application.studentId)
+            });
+            if (linkedStudent?.matricNumber) {
+                matricNumber = linkedStudent.matricNumber;
+            }
+        }
+
+        if (!matricNumber) {
+            try {
+                const { generateMatricNumber } = await import('@/actions/matriculation');
+                const matricRes = await generateMatricNumber({
+                    year,
+                    deptId: deptId || undefined,
+                    studyMode: studyMode,
+                    programmeType: programmeType
+                });
+                if (matricRes.success && matricRes.matricNumber) {
+                    matricNumber = matricRes.matricNumber;
+                }
+            } catch (mErr) {
+                console.warn("[ensureStudentOnboardingOnAcceptance] Non-fatal matric generation check:", mErr);
+            }
+        }
+
+        if (matricNumber) {
+            formData.matricNumber = matricNumber;
+            formData.matricPreAssigned = true;
+        }
+
+        const nameParts = extractNameParts(formData);
+        const resolvedFirstName = nameParts.firstName || formData.fullName?.split(' ')[0] || '';
+        const resolvedLastName = nameParts.lastName || formData.fullName?.split(' ').slice(1).join(' ') || '';
+        const userFullName = buildFullName(nameParts) || formData.fullName || `Student ${application.id}`;
+
+        let userId = application.applicantId;
+
+        if (userId) {
+            // Promote user to student role with active status
+            await db.update(users)
+                .set({
+                    role: 'student',
+                    status: 'active',
+                    firstName: resolvedFirstName || undefined,
+                    surname: resolvedLastName || undefined,
+                    name: userFullName || undefined
+                })
+                .where(eq(users.id, userId));
+        }
+
+        // Check if student row already exists
+        let existingStudent = userId
+            ? await db.query.students.findFirst({ where: eq(students.userId, userId) })
+            : null;
+
+        if (!existingStudent && application.studentId) {
+            existingStudent = await db.query.students.findFirst({ where: eq(students.id, application.studentId) });
+        }
+
+        let finalStudentId: number;
+        if (existingStudent) {
+            await db.update(students).set({
+                userId: userId || existingStudent.userId,
+                firstName: resolvedFirstName || existingStudent.firstName,
+                lastName: resolvedLastName || existingStudent.lastName,
+                matricNumber: matricNumber || existingStudent.matricNumber,
+                jambNumber: jambNumberForDb || existingStudent.jambNumber,
+                modeOfEntry: modeOfEntry || existingStudent.modeOfEntry,
+                studyMode: studyMode || existingStudent.studyMode,
+                programmeType: programmeType || existingStudent.programmeType,
+                programmeId: selectedProgrammeId || existingStudent.programmeId,
+                deptId: deptId || existingStudent.deptId,
+                admissionSessionId: targetSession?.id || existingStudent.admissionSessionId,
+                currentSessionId: targetSession?.id || existingStudent.currentSessionId,
+                currentLevel: existingStudent.currentLevel || 1,
+                admissionYear: year || existingStudent.admissionYear,
+                status: 'active'
+            }).where(eq(students.id, existingStudent.id));
+            finalStudentId = existingStudent.id;
+        } else if (userId) {
+            const [studentResult] = await db.insert(students).values({
+                userId: userId,
+                firstName: resolvedFirstName,
+                lastName: resolvedLastName,
+                matricNumber: matricNumber || null,
+                jambNumber: jambNumberForDb,
+                modeOfEntry: modeOfEntry,
+                studyMode: studyMode,
+                programmeType: programmeType,
+                programmeId: selectedProgrammeId,
+                deptId: deptId,
+                admissionSessionId: targetSession?.id || null,
+                currentSessionId: targetSession?.id || null,
+                currentLevel: 1,
+                admissionYear: year,
+                gender: (formData.gender?.toLowerCase() || 'other') as any,
+                dob: formData.dob,
+                nationality: formData.nationality || 'Nigerian',
+                guardianName: formData.parentName || formData.guardianName || formData.fatherName || formData.motherName,
+                guardianPhone: formData.parentPhone || formData.guardianPhone || formData.fatherPhone || formData.motherPhone,
+                guardianEmail: formData.parentEmail || formData.guardianEmail,
+                guardianAddress: formData.address || formData.guardianAddress || formData.homeAddress,
+                bloodGroup: formData.bloodGroup || formData.blood_group,
+                genotype: formData.genotype,
+                ailments: formData.immunizationHistory || formData.ailments || formData.medicalHistory,
+                status: 'active'
+            });
+            finalStudentId = studentResult.insertId;
+        } else {
+            return { success: false, error: "Applicant user ID not found." };
+        }
+
+        // Link studentId to application
+        await db.update(admissionApplicationsV2)
+            .set({
+                studentId: finalStudentId,
+                data: JSON.stringify(formData),
+                updatedAt: new Date()
+            })
+            .where(eq(admissionApplicationsV2.id, applicationId));
+
+        safeRevalidatePath(`/admission/status/${applicationId}`);
+        safeRevalidatePath(`/admin/admission/v2/${applicationId}`);
+        safeRevalidatePath(`/student`);
+        safeRevalidatePath(`/student/dossier`);
+        safeRevalidatePath(`/student/medical`);
+
+        return {
+            success: true,
+            studentId: finalStudentId,
+            matricNumber: matricNumber
+        };
+    } catch (error: any) {
+        console.error("[ensureStudentOnboardingOnAcceptance] Error:", error);
+        return { success: false, error: error.message || "Failed to onboard student on acceptance" };
     }
 }
 

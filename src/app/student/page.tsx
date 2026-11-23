@@ -57,7 +57,8 @@ export default async function StudentDashboard() {
     }
 
     const userRole = (session.user as any).role;
-    if (userRole !== 'student') {
+    const hasMatricNumber = Boolean((session.user as any).matricNumber);
+    if (userRole !== 'student' && !hasMatricNumber) {
         redirect("/");
     }
 
