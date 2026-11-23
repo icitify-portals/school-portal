@@ -269,17 +269,15 @@ export default function FresherDashboard() {
                       </div>
                     )}
 
-                    {uploadStatus.passportPhoto.status !== 'approved' && (
-                      <Button
-                        onClick={() => document.getElementById('passport-upload')?.click()}
-                        disabled={uploading}
-                        variant="outline"
-                        className="w-full h-12 rounded-2xl font-bold border-indigo-200 text-indigo-700 hover:bg-indigo-50"
-                      >
-                        {uploading ? <RefreshCw className="w-4 h-4 mr-2 animate-spin" /> : <Upload className="w-4 h-4 mr-2" />}
-                        Replace Passport Photo
-                      </Button>
-                    )}
+                    <Button
+                      onClick={() => document.getElementById('passport-upload')?.click()}
+                      disabled={uploading}
+                      variant="outline"
+                      className="w-full h-12 rounded-2xl font-bold border-indigo-200 text-indigo-700 hover:bg-indigo-50"
+                    >
+                      {uploading ? <RefreshCw className="w-4 h-4 mr-2 animate-spin" /> : <Upload className="w-4 h-4 mr-2" />}
+                      Replace Passport Photo
+                    </Button>
                   </div>
                 ) : (
                   <div className="h-full flex flex-col justify-center">
@@ -341,17 +339,15 @@ export default function FresherDashboard() {
                     </div>
                   )}
 
-                  {uploadStatus.signature.status !== 'approved' && (
-                    <Button
-                      onClick={() => document.getElementById('signature-upload')?.click()}
-                      disabled={uploading}
-                      variant="outline"
-                      className="w-full h-12 rounded-xl font-bold"
-                    >
-                      {uploading ? <RefreshCw className="w-4 h-4 mr-2 animate-spin" /> : <Upload className="w-4 h-4 mr-2" />}
-                      Replace Signature
-                    </Button>
-                  )}
+                  <Button
+                    onClick={() => document.getElementById('signature-upload')?.click()}
+                    disabled={uploading}
+                    variant="outline"
+                    className="w-full h-12 rounded-xl font-bold"
+                  >
+                    {uploading ? <RefreshCw className="w-4 h-4 mr-2 animate-spin" /> : <Upload className="w-4 h-4 mr-2" />}
+                    Replace Signature
+                  </Button>
                 </div>
               ) : (
                 <div className="mt-8">

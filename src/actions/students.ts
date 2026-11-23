@@ -80,14 +80,14 @@ export async function getStudents(options: { search?: string, page?: number, pag
                     levelCondition = and(
                         eq(students.currentLevel, 1), 
                         or(eq(students.programmeType, 'ND'), eq(programmes.programmeType, 'ND')),
-                        activeOnlyUnlessExplicit
+                        eq(students.status, 'active')
                     );
                     break;
                 case "ND 2":
                     levelCondition = and(
                         eq(students.currentLevel, 2), 
                         or(eq(students.programmeType, 'ND'), eq(programmes.programmeType, 'ND')),
-                        activeOnlyUnlessExplicit
+                        eq(students.status, 'active')
                     );
                     break;
                 case "ND_GRADUANT":
@@ -100,14 +100,14 @@ export async function getStudents(options: { search?: string, page?: number, pag
                     levelCondition = and(
                         eq(students.currentLevel, 1), 
                         or(eq(students.programmeType, 'HND'), eq(programmes.programmeType, 'HND')),
-                        activeOnlyUnlessExplicit
+                        eq(students.status, 'active')
                     );
                     break;
                 case "HND 2":
                     levelCondition = and(
                         eq(students.currentLevel, 2), 
                         or(eq(students.programmeType, 'HND'), eq(programmes.programmeType, 'HND')),
-                        activeOnlyUnlessExplicit
+                        eq(students.status, 'active')
                     );
                     break;
                 case "HND_GRADUANT":
@@ -357,14 +357,14 @@ export async function exportStudentsAction(options: {
                     levelCondition = and(
                         eq(students.currentLevel, 1), 
                         or(eq(students.programmeType, 'ND'), eq(programmes.programmeType, 'ND')),
-                        activeOnlyUnlessExplicit
+                        eq(students.status, 'active')
                     );
                     break;
                 case "ND 2":
                     levelCondition = and(
                         eq(students.currentLevel, 2), 
                         or(eq(students.programmeType, 'ND'), eq(programmes.programmeType, 'ND')),
-                        activeOnlyUnlessExplicit
+                        eq(students.status, 'active')
                     );
                     break;
                 case "ND_GRADUANT":
@@ -377,14 +377,14 @@ export async function exportStudentsAction(options: {
                     levelCondition = and(
                         eq(students.currentLevel, 1), 
                         or(eq(students.programmeType, 'HND'), eq(programmes.programmeType, 'HND')),
-                        activeOnlyUnlessExplicit
+                        eq(students.status, 'active')
                     );
                     break;
                 case "HND 2":
                     levelCondition = and(
                         eq(students.currentLevel, 2), 
                         or(eq(students.programmeType, 'HND'), eq(programmes.programmeType, 'HND')),
-                        activeOnlyUnlessExplicit
+                        eq(students.status, 'active')
                     );
                     break;
                 case "HND_GRADUANT":
@@ -641,11 +641,18 @@ export async function exportStudentsAction(options: {
             const [sess] = await db.select({ name: academicSessions.name }).from(academicSessions).where(eq(academicSessions.id, Number(options.sessionId))).limit(1);
             if (sess?.name) tag += `_${sess.name.replace(/[\/\\]/g, "_")}`;
         }
+        if (options.programmeId && !isNaN(Number(options.programmeId))) {
+            const [prog] = await db.select({ code: programmes.code, name: programmes.name }).from(programmes).where(eq(programmes.id, Number(options.programmeId))).limit(1);
+            if (prog?.code || prog?.name) tag += `_${(prog.code || prog.name).replace(/[\/\s]/g, "_")}`;
+        }
         if (options.level) {
             tag += `_${String(options.level).replace(/[\/\s]/g, "_")}`;
         }
         if (options.status && options.status !== "all") {
             tag += `_${String(options.status).replace(/[\/\s]/g, "_")}`;
+        }
+        if (options.graduationYear) {
+            tag += `_grad_${String(options.graduationYear).replace(/[\/\s]/g, "_")}`;
         }
 
         const filename = `${tag}_export_${new Date().toISOString().split('T')[0]}.csv`;

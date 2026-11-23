@@ -74,7 +74,7 @@ function StudentsPageContent() {
     const semesterParam = searchParams.get("semester") || undefined;
     const deptIdParam = searchParams.get("deptId") || undefined;
     const progIdParam = searchParams.get("programmeId") || undefined;
-    const statusParam = searchParams.get("status") || "all";
+    const statusParam = searchParams.get("status") || "active";
     const gradYearParam = searchParams.get("gradYear") || undefined;
 
     const [statusCounts, setStatusCounts] = useState<{
@@ -108,14 +108,14 @@ function StudentsPageContent() {
     const graduantLevels = ["ND_GRADUANT", "ND_GRADUATED", "ND Graduant", "ND Graduated", "HND_GRADUANT", "HND_GRADUATED", "HND Graduant", "HND Graduated"];
     const levelIsGraduant = !!level && graduantLevels.includes(level);
     const statusOptions = [
-        { value: "all", label: "All Statuses" },
-        { value: "active", label: "Active (ND 1, ND 2, HND 1, HND 2)" },
-        { value: "inactive", label: "Inactive (All Graduants / Suspended / Withdrawn)" },
+        { value: "active", label: "Active Students (ND 1, ND 2, HND 1, HND 2)" },
+        { value: "all", label: "All Records (Active & Graduants)" },
+        { value: "graduant", label: "All Graduants (ND & HND)" },
+        { value: "nd_graduant", label: "ND Graduants" },
+        { value: "hnd_graduant", label: "HND Graduants" },
         { value: "applicant", label: "Applicants (NELFUND Ready - Unpaid Fees)" },
         { value: "unlocked", label: "Unlocked / Registered (Fees Paid)" },
-        { value: "nd_graduant", label: "ND Graduant" },
-        { value: "hnd_graduant", label: "HND Graduant" },
-        { value: "graduant", label: "All Graduants (ND & HND)" },
+        { value: "inactive", label: "Inactive (Graduants / Suspended / Withdrawn)" },
         { value: "suspended", label: "Suspended" },
         { value: "pending_review", label: "Pending Review" },
     ];
@@ -263,7 +263,7 @@ function StudentsPageContent() {
                 const targetProgType = value.startsWith("HND") ? "HND" : "ND";
                 if (progIdParam) {
                     const selectedProg = programmesList.find((p) => String(p.id) === String(progIdParam));
-                    if (selectedProg && selectedProg.programmeType && selectedProg.programmeType !== targetProgType) {
+                    if (selectedProg && selectedProg.programmeType && selectedProg.programmeType.toUpperCase() !== targetProgType.toUpperCase()) {
                         params.delete("programmeId");
                     }
                 }
@@ -674,30 +674,48 @@ function StudentsPageContent() {
                         onChange={(e) => {
                             const v = e.target.value;
                             if (!v) return;
-                            if (v === "active_all") {
-                                handleExport("excel", { status: "active", clearLevel: true, clearGradYear: true });
-                            } else if (["ND 1", "ND 2", "HND 1", "HND 2"].includes(v)) {
-                                handleExport("excel", { level: v, status: "active", clearGradYear: true, clearProgramme: true });
-                            } else if (v === "graduant_all") {
-                                handleExport("excel", { status: "graduant", clearLevel: true, clearGradYear: true });
-                            } else if (v.startsWith("grad_year:")) {
-                                const yr = v.replace("grad_year:", "");
-                                handleExport("excel", { status: "graduant", graduationYear: yr, clearLevel: true });
+                            const parts = v.split(":");
+                            const format = (parts[0] === "csv" ? "csv" : "excel") as "csv" | "excel";
+                            const type = parts[1];
+                            const val = parts.slice(2).join(":");
+
+                            if (type === "active_all") {
+                                handleExport(format, { status: "active", clearLevel: true, clearGradYear: true });
+                            } else if (["ND 1", "ND 2", "HND 1", "HND 2"].includes(type)) {
+                                handleExport(format, { level: type, status: "active", clearGradYear: true });
+                            } else if (type === "graduant_all") {
+                                handleExport(format, { status: "graduant", clearLevel: true, clearGradYear: true });
+                            } else if (type === "grad_year") {
+                                handleExport(format, { status: "graduant", graduationYear: val, clearLevel: true });
                             }
                         }}
-                        title="One-click Excel download by cohort or graduation year"
+                        title="One-click download by active level, cohort, or graduation year"
                     >
-                        <option value="">Quick Download Excel...</option>
-                        <option value="active_all">All Active Students (ND 1–2, HND 1–2)</option>
-                        <option value="ND 1">Active ND 1 Only</option>
-                        <option value="ND 2">Active ND 2 Only</option>
-                        <option value="HND 1">Active HND 1 Only</option>
-                        <option value="HND 2">Active HND 2 Only</option>
-                        <option value="graduant_all">All Graduants (ND &amp; HND)</option>
-                        <option value="grad_year:unassigned">Graduants — Legacy / Year Not Set</option>
-                        {graduationYears.map((y) => (
-                            <option key={`dl-${y}`} value={`grad_year:${y}`}>{`Graduants — ${y}`}</option>
-                        ))}
+                        <option value="">Quick Download...</option>
+                        <optgroup label="📗 EXCEL (.xlsx)">
+                            <option value="excel:active_all">All Active Students (ND 1–2, HND 1–2) — Excel</option>
+                            <option value="excel:ND 1">Active ND 1 Only — Excel</option>
+                            <option value="excel:ND 2">Active ND 2 Only — Excel</option>
+                            <option value="excel:HND 1">Active HND 1 Only — Excel</option>
+                            <option value="excel:HND 2">Active HND 2 Only — Excel</option>
+                            <option value="excel:graduant_all">All Graduants (ND &amp; HND) — Excel</option>
+                            <option value="excel:grad_year:unassigned">Graduants — Legacy / Year Not Set — Excel</option>
+                            {graduationYears.map((y) => (
+                                <option key={`dl-xlsx-${y}`} value={`excel:grad_year:${y}`}>{`Graduants — ${y} — Excel`}</option>
+                            ))}
+                        </optgroup>
+                        <optgroup label="📄 CSV (.csv)">
+                            <option value="csv:active_all">All Active Students (ND 1–2, HND 1–2) — CSV</option>
+                            <option value="csv:ND 1">Active ND 1 Only — CSV</option>
+                            <option value="csv:ND 2">Active ND 2 Only — CSV</option>
+                            <option value="csv:HND 1">Active HND 1 Only — CSV</option>
+                            <option value="csv:HND 2">Active HND 2 Only — CSV</option>
+                            <option value="csv:graduant_all">All Graduants (ND &amp; HND) — CSV</option>
+                            <option value="csv:grad_year:unassigned">Graduants — Legacy / Year Not Set — CSV</option>
+                            {graduationYears.map((y) => (
+                                <option key={`dl-csv-${y}`} value={`csv:grad_year:${y}`}>{`Graduants — ${y} — CSV`}</option>
+                            ))}
+                        </optgroup>
                     </select>
                     <select
                         className="px-3 h-10 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white shadow-sm text-xs font-bold uppercase tracking-wider text-slate-700 cursor-pointer"
@@ -797,16 +815,16 @@ function StudentsPageContent() {
             {/* Quick Status & Level Filter Tabs */}
             <div className="flex flex-wrap items-center gap-2">
                 {[
-                    { id: "all", label: "All Students", count: statusCounts?.all },
-                    { id: "active", label: "Active", count: statusCounts?.active },
-                    { id: "inactive", label: "Inactive / Graduants", count: statusCounts?.inactive },
-                    { id: "applicant", label: "Applicants (NELFUND Ready)", count: statusCounts?.applicant },
+                    { id: "active", label: "Active Students", count: statusCounts?.active },
+                    { id: "all", label: "All Records", count: statusCounts?.all },
+                    { id: "graduant", label: "All Graduants", count: (statusCounts?.nd_graduant || 0) + (statusCounts?.hnd_graduant || 0) },
                     { id: "nd_graduant", label: "ND Graduants", count: statusCounts?.nd_graduant },
                     { id: "hnd_graduant", label: "HND Graduants", count: statusCounts?.hnd_graduant },
+                    { id: "applicant", label: "Applicants (NELFUND Ready)", count: statusCounts?.applicant },
                     { id: "suspended", label: "Suspended", count: statusCounts?.suspended },
                     { id: "pending_review", label: "Pending Review", count: statusCounts?.pending_review },
                 ].map((tab) => {
-                    const isSelected = (!searchParams.get("status") && tab.id === "all") || searchParams.get("status") === tab.id;
+                    const isSelected = (!searchParams.get("status") && tab.id === "active") || searchParams.get("status") === tab.id;
                     return (
                         <button
                             key={tab.id}

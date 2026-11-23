@@ -23,6 +23,8 @@ import {
     Info,
     Clock,
     Sparkles,
+    RefreshCw,
+    ExternalLink,
     FileText,
     Stethoscope,
     ScrollText,
@@ -660,9 +662,50 @@ export default function ApplicantStatusPage() {
                                                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{doc.desc}</p>
                                             </div>
                                             {isUploaded ? (
-                                                <div className="px-4 py-3 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center justify-between text-emerald-700 text-xs font-black uppercase tracking-wider italic">
-                                                    <span className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4" /> Uploaded</span>
-                                                    <a href={appDataJson.uploadedDocuments[doc.key]} target="_blank" rel="noreferrer" className="text-[10px] underline">View</a>
+                                                <div className="space-y-2">
+                                                    <div className="px-4 py-2.5 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center justify-between text-emerald-700 text-xs font-black uppercase tracking-wider italic">
+                                                        <span className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-600" /> Uploaded</span>
+                                                        <a 
+                                                            href={appDataJson.uploadedDocuments[doc.key]} 
+                                                            target="_blank" 
+                                                            rel="noreferrer" 
+                                                            className="text-[10px] bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 py-1 rounded-xl font-bold flex items-center gap-1 transition-colors not-italic shadow-xs"
+                                                        >
+                                                            <ExternalLink className="w-3 h-3" /> View
+                                                        </a>
+                                                    </div>
+                                                    <label className="cursor-pointer rounded-2xl bg-white hover:bg-slate-100 border border-slate-200 hover:border-slate-300 text-slate-700 font-bold py-2.5 px-3 flex items-center justify-center gap-2 uppercase text-[10px] tracking-wider transition-all shadow-xs">
+                                                        <RefreshCw className="w-3.5 h-3.5 text-indigo-600" /> Replace Document
+                                                        <input 
+                                                            type="file" 
+                                                            accept=".pdf,.jpg,.jpeg,.png"
+                                                            className="hidden" 
+                                                            onChange={async (e) => {
+                                                                const file = e.target.files?.[0];
+                                                                if (!file) return;
+                                                                toast.loading(`Replacing ${doc.label}...`, { id: `upload-${doc.key}` });
+                                                                try {
+                                                                    const formData = new FormData();
+                                                                    formData.append('file', file);
+                                                                    const uploadRes = await fetch('/api/upload', { method: 'POST', body: formData });
+                                                                    const uploadJson = await uploadRes.json();
+                                                                    if (uploadJson.url) {
+                                                                        const saveRes = await uploadApplicantDocument(id, doc.key as any, uploadJson.url);
+                                                                        if (saveRes.success) {
+                                                                            toast.success(`${doc.label} replaced successfully!`, { id: `upload-${doc.key}` });
+                                                                            fetchData();
+                                                                        } else {
+                                                                            toast.error(saveRes.error || "Failed to replace document", { id: `upload-${doc.key}` });
+                                                                        }
+                                                                    } else {
+                                                                        toast.error("File upload failed", { id: `upload-${doc.key}` });
+                                                                    }
+                                                                } catch (err: any) {
+                                                                    toast.error(err.message || "Upload error", { id: `upload-${doc.key}` });
+                                                                }
+                                                            }}
+                                                        />
+                                                    </label>
                                                 </div>
                                             ) : (
                                                 <label className="cursor-pointer rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black py-3 px-4 flex items-center justify-center gap-2 uppercase text-[10px] tracking-widest transition-colors">
