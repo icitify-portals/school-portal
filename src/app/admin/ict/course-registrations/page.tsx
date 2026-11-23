@@ -3,8 +3,9 @@
 import { useState, useEffect, useCallback } from "react";
 import {
     FileText, Printer, Loader2, Search, Filter, ChevronDown,
-    CheckCircle2, Download, Users, BookOpen
+    CheckCircle2, Download, Users, BookOpen, Edit3, Plus, Trash2, Save, ExternalLink
 } from "lucide-react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,8 +14,15 @@ import { Card, CardContent } from "@/components/ui/card";
 import {
     Select, SelectContent, SelectItem, SelectTrigger, SelectValue
 } from "@/components/ui/select";
+import {
+    Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { getCourseRegistrationPrintQueue } from "@/actions/ict-manager";
+import {
+    adminGetStudentRegistrationDetailAction,
+    adminUpdateStudentCoursesAction
+} from "@/actions/course-registration";
 import { printOfficialCourseForms, type CourseFormData } from "@/components/documents/CourseFormPrintable";
 
 const DEPARTMENTS = [
@@ -36,6 +44,17 @@ export default function CourseRegistrationPrintPage() {
     const [submittedOnly, setSubmittedOnly] = useState<boolean>(true);
     const [search, setSearch] = useState("");
     const [printing, setPrinting] = useState(false);
+
+    // Quick Edit Modal state
+    const [editModalOpen, setEditModalOpen] = useState(false);
+    const [editingReg, setEditingReg] = useState<any>(null);
+    const [modalLoading, setModalLoading] = useState(false);
+    const [modalSaving, setModalSaving] = useState(false);
+    const [modalRegisteredCourses, setModalRegisteredCourses] = useState<any[]>([]);
+    const [modalAvailableCourses, setModalAvailableCourses] = useState<any[]>([]);
+    const [modalAllCourses, setModalAllCourses] = useState<any[]>([]);
+    const [modalSelectedCourseIds, setModalSelectedCourseIds] = useState<number[]>([]);
+    const [modalCourseSearch, setModalCourseSearch] = useState("");
 
     const loadRegistrations = useCallback(async () => {
         setLoading(true);
@@ -93,10 +112,10 @@ export default function CourseRegistrationPrintPage() {
             imageUrl: reg.imageUrl || null,
             signatureUrl: reg.signatureUrl || null,
             courses: (reg.courses || []).map((c: any) => ({
-                id: c.courseId,
-                code: c.courseCode || '',
-                title: c.courseName || '',
-                units: Number(c.creditUnits) || 0,
+                id: c.courseId || c.id,
+                code: c.courseCode || c.code || '',
+                title: c.courseName || c.name || '',
+                units: Number(c.creditUnits || c.units) || 0,
                 statusCode: c.statusCode || (c.status === 'elective' ? 'E' : c.status === 'required' ? 'R' : 'C'),
                 isCarryOver: Boolean(c.isCarryOver),
             })),
@@ -104,6 +123,103 @@ export default function CourseRegistrationPrintPage() {
         printOfficialCourseForms(forms);
         setPrinting(false);
     }
+
+    async function openEditModal(reg: any) {
+        setEditingReg(reg);
+        setEditModalOpen(true);
+        setModalLoading(true);
+        setModalCourseSearch("");
+        const sessId = reg.sessionId || 6;
+        const sem = (filterSemester as "1" | "2") || "1";
+        const res = await adminGetStudentRegistrationDetailAction(reg.studentId, sessId, sem);
+        setModalLoading(false);
+        if (res.success) {
+            setModalRegisteredCourses(res.registeredCourses || []);
+            setModalAvailableCourses(res.availableCourses || []);
+            setModalAllCourses(res.allCourses || []);
+            setModalSelectedCourseIds((res.registeredCourses || []).map((c: any) => c.id));
+        } else {
+            toast.error(res.error || "Failed to load student course details");
+        }
+    }
+
+    function handleModalAddCourse(courseId: number) {
+        setModalSelectedCourseIds(prev => prev.includes(courseId) ? prev : [...prev, courseId]);
+    }
+
+    function handleModalRemoveCourse(courseId: number) {
+        setModalSelectedCourseIds(prev => prev.filter(id => id !== courseId));
+    }
+
+    async function handleModalSave() {
+        if (!editingReg) return;
+        setModalSaving(true);
+        const sessId = editingReg.sessionId || 6;
+        const sem = (filterSemester as "1" | "2") || "1";
+        const res = await adminUpdateStudentCoursesAction(
+            editingReg.studentId,
+            sessId,
+            sem,
+            modalSelectedCourseIds
+        );
+        setModalSaving(false);
+        if (res.success) {
+            toast.success(`Course registration updated (${res.totalUnits} units).`);
+            await loadRegistrations();
+            // Refresh modal state
+            const refreshRes = await adminGetStudentRegistrationDetailAction(editingReg.studentId, sessId, sem);
+            if (refreshRes.success) {
+                setModalRegisteredCourses(refreshRes.registeredCourses || []);
+                setModalSelectedCourseIds((refreshRes.registeredCourses || []).map((c: any) => c.id));
+            }
+        } else {
+            toast.error(res.error || "Failed to save courses");
+        }
+    }
+
+    function handleModalPrint() {
+        if (!editingReg || modalSelectedCourseObjects.length === 0) {
+            toast.error("No registered courses to print.");
+            return;
+        }
+        const updatedReg = {
+            ...editingReg,
+            courses: modalSelectedCourseObjects.map(c => ({
+                courseId: c.id,
+                courseCode: c.code,
+                courseName: c.name,
+                creditUnits: c.units,
+                statusCode: c.statusCode,
+                isCarryOver: c.isCarryOver,
+            })),
+        };
+        generatePrintHTML([updatedReg]);
+    }
+
+    // Modal courses lookup
+    const modalCourseLookup = new Map<number, any>();
+    for (const c of modalAllCourses) modalCourseLookup.set(c.id, c);
+    for (const c of modalAvailableCourses) modalCourseLookup.set(c.id, c);
+    for (const c of modalRegisteredCourses) modalCourseLookup.set(c.id, c);
+
+    const modalSelectedCourseObjects = modalSelectedCourseIds
+        .map(id => modalCourseLookup.get(id))
+        .filter(Boolean);
+    const modalTotalUnits = modalSelectedCourseObjects.reduce(
+        (sum, c) => sum + Number(c.units || 0),
+        0
+    );
+
+    const modalCandidatePool = [
+        ...modalAvailableCourses,
+        ...modalAllCourses.filter(ac => !modalAvailableCourses.some(av => av.id === ac.id)),
+    ].filter(c => !modalSelectedCourseIds.includes(c.id));
+
+    const modalFilteredCandidates = modalCandidatePool.filter(c => {
+        if (!modalCourseSearch.trim()) return true;
+        const q = modalCourseSearch.toLowerCase();
+        return (c.code || "").toLowerCase().includes(q) || (c.name || "").toLowerCase().includes(q);
+    }).slice(0, 50);
 
     const totalPaid = registrations.filter(r => r.isPrintFeePaid).length;
     const totalWithCourses = registrations.filter(r => r.courseCount > 0).length;
@@ -119,17 +235,25 @@ export default function CourseRegistrationPrintPage() {
                         </div>
                         <div>
                             <h1 className="text-2xl font-bold text-slate-900">Course Registration Print Queue</h1>
-                            <p className="text-sm text-slate-500">View, print, and download all submitted student course registration forms</p>
+                            <p className="text-sm text-slate-500">View, print, and edit student course registration forms</p>
                         </div>
                     </div>
-                    <Button
-                        onClick={printAllSubmitted}
-                        disabled={printing || loading || totalWithCourses === 0}
-                        className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white h-11 px-5 rounded-xl font-bold shadow-md"
-                    >
-                        <Download className="w-4 h-4" />
-                        Download All Submitted Forms ({totalWithCourses})
-                    </Button>
+                    <div className="flex items-center gap-3">
+                        <Link
+                            href="/admin/registration/manage"
+                            className="inline-flex items-center gap-2 h-11 px-4 rounded-xl border border-indigo-200 bg-white text-indigo-700 hover:bg-indigo-50 font-bold text-sm shadow-sm transition"
+                        >
+                            <BookOpen className="w-4 h-4" /> Full Registration Editor
+                        </Link>
+                        <Button
+                            onClick={printAllSubmitted}
+                            disabled={printing || loading || totalWithCourses === 0}
+                            className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white h-11 px-5 rounded-xl font-bold shadow-md"
+                        >
+                            <Download className="w-4 h-4" />
+                            Download All Submitted Forms ({totalWithCourses})
+                        </Button>
+                    </div>
                 </div>
 
                 {/* Stats */}
@@ -246,15 +370,16 @@ export default function CourseRegistrationPrintPage() {
                                         </td>
                                         <td className="p-3 text-center">
                                             <div className="flex items-center justify-center gap-2">
-                                                <Button size="sm" variant="outline" onClick={() => printSingle(reg.studentId)} className="gap-1">
-                                                    <Printer className="w-3 h-3" /> Print
+                                                <Button size="sm" variant="outline" onClick={() => printSingle(reg.studentId)} className="gap-1 h-8 px-2.5">
+                                                    <Printer className="w-3.5 h-3.5" /> Print
                                                 </Button>
-                                                <a
-                                                    href={`/admin/registration/manage?studentId=${reg.studentId}`}
-                                                    className="inline-flex items-center justify-center h-8 px-2.5 rounded-md border border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 text-xs font-semibold"
+                                                <Button
+                                                    size="sm"
+                                                    onClick={() => openEditModal(reg)}
+                                                    className="bg-indigo-600 hover:bg-indigo-700 text-white gap-1 h-8 px-2.5 font-semibold text-xs shadow-sm"
                                                 >
-                                                    Edit Courses
-                                                </a>
+                                                    <Edit3 className="w-3.5 h-3.5" /> Edit Courses
+                                                </Button>
                                             </div>
                                         </td>
                                     </tr>
@@ -264,6 +389,156 @@ export default function CourseRegistrationPrintPage() {
                     </table>
                 </div>
             </div>
+
+            {/* Quick Edit Course Modal */}
+            <Dialog open={editModalOpen} onOpenChange={setEditModalOpen}>
+                <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-0 overflow-hidden">
+                    <DialogHeader className="p-6 border-b border-slate-100 bg-slate-50/50">
+                        <div className="flex items-start justify-between">
+                            <div>
+                                <DialogTitle className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                                    <Edit3 className="w-5 h-5 text-indigo-600" />
+                                    Edit Course Form — {editingReg?.studentName}
+                                </DialogTitle>
+                                <DialogDescription className="text-xs font-mono text-slate-500 mt-1">
+                                    {editingReg?.matricNumber} • {editingReg?.deptName} • {editingReg?.programmeType} {editingReg?.currentLevel || ""}
+                                </DialogDescription>
+                            </div>
+                            {editingReg && (
+                                <Link
+                                    href={`/admin/registration/manage?studentId=${editingReg.studentId}&sessionId=${editingReg.sessionId || 6}&semester=${filterSemester}`}
+                                    target="_blank"
+                                    className="inline-flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-800 font-semibold mr-6"
+                                >
+                                    Full Editor <ExternalLink className="w-3.5 h-3.5" />
+                                </Link>
+                            )}
+                        </div>
+                    </DialogHeader>
+
+                    {modalLoading ? (
+                        <div className="p-16 text-center">
+                            <Loader2 className="w-8 h-8 animate-spin text-indigo-600 mx-auto" />
+                            <p className="text-xs text-slate-500 mt-2">Loading student registration details...</p>
+                        </div>
+                    ) : (
+                        <div className="p-6 overflow-y-auto grid grid-cols-1 md:grid-cols-2 gap-6 flex-1">
+                            {/* Current Registered Courses */}
+                            <div className="space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <h3 className="font-bold text-sm text-slate-800 uppercase tracking-wider">
+                                        Registered Courses ({modalSelectedCourseObjects.length})
+                                    </h3>
+                                    <Badge className="bg-indigo-100 text-indigo-800 text-xs font-bold">
+                                        {modalTotalUnits} Credit Units
+                                    </Badge>
+                                </div>
+
+                                <div className="space-y-2 max-h-[380px] overflow-y-auto pr-1">
+                                    {modalSelectedCourseObjects.length === 0 ? (
+                                        <div className="p-8 text-center text-slate-400 border border-dashed rounded-xl text-xs">
+                                            No courses selected. Add courses from the right panel.
+                                        </div>
+                                    ) : (
+                                        modalSelectedCourseObjects.map(c => (
+                                            <div key={c.id} className="flex items-center justify-between p-2.5 rounded-xl border border-slate-200 bg-slate-50/70 hover:bg-white transition">
+                                                <div>
+                                                    <div className="font-bold text-xs text-slate-900">{c.code} — {c.name}</div>
+                                                    <div className="text-[11px] text-slate-500 mt-0.5">
+                                                        <span className="font-semibold text-slate-700">{c.units} Units</span>
+                                                        {c.isCarryOver && <Badge className="ml-2 bg-amber-100 text-amber-800 text-[9px]">Carry-over</Badge>}
+                                                    </div>
+                                                </div>
+                                                <Button
+                                                    size="sm"
+                                                    variant="outline"
+                                                    onClick={() => handleModalRemoveCourse(c.id)}
+                                                    className="h-7 px-2 text-rose-600 border-rose-200 hover:bg-rose-50 text-xs font-semibold gap-1"
+                                                >
+                                                    <Trash2 className="w-3 h-3" /> Remove
+                                                </Button>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Add Courses */}
+                            <div className="space-y-3">
+                                <h3 className="font-bold text-sm text-slate-800 uppercase tracking-wider">Add Courses</h3>
+                                <Input
+                                    placeholder="Search by code or title (e.g. COM 111)..."
+                                    value={modalCourseSearch}
+                                    onChange={e => setModalCourseSearch(e.target.value)}
+                                    className="h-9 text-xs"
+                                />
+
+                                <div className="space-y-2 max-h-[340px] overflow-y-auto pr-1">
+                                    {modalFilteredCandidates.length === 0 ? (
+                                        <div className="p-8 text-center text-slate-400 border border-dashed rounded-xl text-xs">
+                                            No matching courses available to add.
+                                        </div>
+                                    ) : (
+                                        modalFilteredCandidates.map(c => {
+                                            const isDept = modalAvailableCourses.some(av => av.id === c.id);
+                                            return (
+                                                <div key={c.id} className="flex items-center justify-between p-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 transition">
+                                                    <div>
+                                                        <div className="font-bold text-xs text-slate-900">{c.code} — {c.name}</div>
+                                                        <div className="text-[11px] text-slate-500 mt-0.5 flex items-center gap-1.5">
+                                                            <span className="font-semibold text-slate-700">{c.units} Units</span>
+                                                            {isDept && <Badge className="bg-emerald-50 text-emerald-700 text-[9px]">Dept</Badge>}
+                                                        </div>
+                                                    </div>
+                                                    <Button
+                                                        size="sm"
+                                                        onClick={() => handleModalAddCourse(c.id)}
+                                                        className="h-7 px-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold gap-1"
+                                                    >
+                                                        <Plus className="w-3 h-3" /> Add
+                                                    </Button>
+                                                </div>
+                                            );
+                                        })
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    <DialogFooter className="p-4 border-t border-slate-100 bg-slate-50 flex items-center justify-between gap-3 sm:justify-between">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={handleModalPrint}
+                            disabled={modalSelectedCourseObjects.length === 0}
+                            className="gap-2 border-slate-300 text-slate-700 font-semibold"
+                        >
+                            <Printer className="w-4 h-4" /> Print Course Form
+                        </Button>
+
+                        <div className="flex items-center gap-2">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => setEditModalOpen(false)}
+                                disabled={modalSaving}
+                            >
+                                Close
+                            </Button>
+                            <Button
+                                type="button"
+                                onClick={handleModalSave}
+                                disabled={modalSaving}
+                                className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2 font-bold shadow-sm"
+                            >
+                                {modalSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                                Save & Apply Courses
+                            </Button>
+                        </div>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

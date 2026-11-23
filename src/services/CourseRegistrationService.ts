@@ -107,25 +107,22 @@ name: sql<string>`COALESCE(${courseDepartmentSettings.courseTitle}, ${courses.na
                     code: courses.code,
                     units: courses.creditUnits,
                     isUniversityRequired: courses.isUniversityRequired,
-                    courseSemester: courses.semester,
                 })
                     .from(courses)
                     .where(inArray(courses.id, missingCarryIds));
 
                 for (const fc of fallbackCarryCourses) {
-                    if (!fc.courseSemester || fc.courseSemester === semester) {
-                        available.push({
-                            id: fc.id,
-                            name: fc.name,
-                            code: fc.code,
-                            units: Number(fc.units) || 0,
-                            status: "compulsory",
-                            level: ownLevel,
-                            isUniversityRequired: fc.isUniversityRequired,
-                            capacity: null,
-                            enrolledCount: null,
-                        });
-                    }
+                    available.push({
+                        id: fc.id,
+                        name: fc.name,
+                        code: fc.code,
+                        units: Number(fc.units) || 0,
+                        status: "compulsory",
+                        level: ownLevel,
+                        isUniversityRequired: fc.isUniversityRequired,
+                        capacity: null,
+                        enrolledCount: null,
+                    });
                 }
             }
         }
@@ -449,13 +446,14 @@ name: sql<string>`COALESCE(${courseDepartmentSettings.courseTitle}, ${courses.na
                 }
             }
 
-            // Timetable clash check against already-registered courses
+            // Timetable clash check against already-registered courses (excluding current semester being replaced)
             const { timetableSlots, courseLecturers } = await import("@/db/schema");
             const studentRegs = await db.select({ courseId: studentCourseRegistrations.courseId })
                 .from(studentCourseRegistrations)
                 .where(and(
                     eq(studentCourseRegistrations.studentId, data.studentId),
-                    eq(studentCourseRegistrations.sessionId, data.sessionId)
+                    eq(studentCourseRegistrations.sessionId, data.sessionId),
+                    sql`${studentCourseRegistrations.semester} != ${data.semester}`
                 ))
                 .limit(50);
             const registeredIds = studentRegs.map(r => r.courseId).filter(Boolean) as number[];
@@ -484,6 +482,7 @@ name: sql<string>`COALESCE(${courseDepartmentSettings.courseTitle}, ${courses.na
 
                 for (const ns of newSlots) {
                     const overlap = existingSlots.some(es =>
+                        es.courseId !== ns.courseId &&
                         es.day === ns.day &&
                         es.startTime && es.endTime && ns.startTime && ns.endTime &&
                         ns.startTime < es.endTime && ns.endTime > es.startTime
@@ -495,11 +494,13 @@ name: sql<string>`COALESCE(${courseDepartmentSettings.courseTitle}, ${courses.na
             }
         } catch {}
 
-        if (capacityErrors.length > 0) {
-            throw new Error(`Capacity reached: ${capacityErrors.join('; ')}`);
-        }
-        if (clashErrors.length > 0) {
-            throw new Error(`Timetable clash: ${clashErrors.join('; ')}`);
+        if (!isAdminOverride) {
+            if (capacityErrors.length > 0) {
+                throw new Error(`Capacity reached: ${capacityErrors.join('; ')}`);
+            }
+            if (clashErrors.length > 0) {
+                throw new Error(`Timetable clash: ${clashErrors.join('; ')}`);
+            }
         }
 
         // 2. Fetch Waivers to mark entries correctly
@@ -513,13 +514,9 @@ name: sql<string>`COALESCE(${courseDepartmentSettings.courseTitle}, ${courses.na
             .from(students)
             .where(eq(students.id, data.studentId))
             .limit(1);
-const deptId = studentDept[0]?.deptId;
+        const deptId = studentDept[0]?.deptId;
 
-        // Same reason as getAvailableCourses: without a department there is no
-        // defined credit unit for the student. The join below would otherwise
-        // match every department offering each course and add the same course
-        // into the total once per department.
-        if (!deptId) {
+        if (!deptId && !isAdminOverride) {
             throw new Error(
                 'Your student record has no department set, so your course credits cannot be determined. ' +
                 'Please contact the registrar.'
@@ -527,18 +524,27 @@ const deptId = studentDept[0]?.deptId;
         }
 
         const selectedCourses = await db.select({
+            id: courses.id,
             courseUnits: courses.creditUnits,
             deptUnits: courseDepartmentSettings.creditUnits
         })
             .from(courses)
             .leftJoin(courseDepartmentSettings, and(
                 eq(courseDepartmentSettings.courseId, courses.id),
-                eq(courseDepartmentSettings.deptId, deptId),
+                deptId ? eq(courseDepartmentSettings.deptId, deptId) : sql`1=1`,
                 eq(courseDepartmentSettings.semester, data.semester)
             ))
             .where(inArray(courses.id, data.courseIds));
 
-        const totalUnits = selectedCourses.reduce((sum, c) => sum + (c.deptUnits ?? c.courseUnits ?? 0), 0);
+        // Deduplicate in case leftJoin matches multiple rows
+        const seenCourses = new Set<number>();
+        let totalUnits = 0;
+        for (const c of selectedCourses) {
+            if (!seenCourses.has(c.id)) {
+                seenCourses.add(c.id);
+                totalUnits += (c.deptUnits ?? c.courseUnits ?? 0);
+            }
+        }
         
         if (!isAdminOverride && (totalUnits < 9 || totalUnits > 36)) {
             throw new Error(`Invalid credit units: ${totalUnits}. Allowed range: 9-36 units.`);

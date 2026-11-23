@@ -348,16 +348,16 @@ export async function adminGetStudentRegistrationDetailAction(studentId: number,
             CourseRegistrationService.getAvailableCourses(studentId, semester),
         ]);
 
-        // Also provide all department/portal courses for the semester so admin can add electives or cross-dept courses
+        // Also provide all portal courses so admin can add electives or cross-dept courses
         const allCourses = await db.select({
             id: courses.id,
             code: courses.code,
             name: courses.name,
             units: courses.creditUnits,
-            semester: courses.semester,
         })
         .from(courses)
-        .limit(500);
+        .orderBy(courses.code)
+        .limit(1000);
 
         return {
             success: true,
@@ -383,19 +383,54 @@ export async function adminUpdateStudentCoursesAction(
             (await hasRole(["admin", "superadmin", "registrar", "ict_manager", "record_officer", "icitify_dev", "hod"]));
         if (!isAuthorized) throw new Error("Unauthorized");
 
+        const { auth } = await import("@/auth");
+        const { systemAuditLogs, enrollments, semesterSummaries, academicSessions } = await import("@/db/schema");
+        const session = await auth();
+        const actorId = session?.user?.id ? parseInt(String(session.user.id)) : null;
+
+        // If admin deletes all courses
         if (!courseIds || courseIds.length === 0) {
-            throw new Error("Select at least one course.");
+            await db.delete(studentCourseRegistrations).where(and(
+                eq(studentCourseRegistrations.studentId, studentId),
+                eq(studentCourseRegistrations.sessionId, sessionId),
+                eq(studentCourseRegistrations.semester, semester)
+            ));
+
+            const [sessionRow] = await db.select({ name: academicSessions.name, currentSemester: academicSessions.currentSemester })
+                .from(academicSessions).where(eq(academicSessions.id, sessionId)).limit(1);
+            if (sessionRow?.name) {
+                const semesterNo = semester === '2' ? 2 : 1;
+                await db.delete(enrollments).where(and(
+                    eq(enrollments.studentId, studentId),
+                    eq(enrollments.academicYear, sessionRow.name),
+                    eq(enrollments.semester, semesterNo)
+                ));
+            }
+
+            await db.insert(semesterSummaries).values({
+                studentId,
+                sessionId,
+                semester,
+                tcr: 0
+            }).onDuplicateKeyUpdate({ set: { tcr: 0 } });
+
+            await db.insert(systemAuditLogs).values({
+                userId: actorId,
+                action: "ADMIN_CLEAR_COURSE_REGISTRATION",
+                resource: `student:${studentId}`,
+                details: JSON.stringify({ studentId, sessionId, semester, action: "cleared_all_courses" }),
+            }).catch(() => {});
+
+            revalidatePath("/student/courses/registration");
+            revalidatePath("/admin/ict/course-registrations");
+            revalidatePath("/admin/registration/manage");
+            return { success: true, totalUnits: 0 };
         }
 
         const result = await CourseRegistrationService.submitRegistration(
             { studentId, sessionId, semester, courseIds },
             { adminOverride: true }
         );
-
-        const { auth } = await import("@/auth");
-        const { systemAuditLogs } = await import("@/db/schema");
-        const session = await auth();
-        const actorId = session?.user?.id ? parseInt(String(session.user.id)) : null;
 
         await db.insert(systemAuditLogs).values({
             userId: actorId,
