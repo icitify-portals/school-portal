@@ -59,7 +59,7 @@ export async function hasPermission(permission: string) {
 
     // Record Officer automatically has access to result module, exams/records, communication,
     // course management, student management, and user management features.
-    if ((baseRole === "record_officer" || baseRole === "record officer" || baseRole === "recordofficer") && (
+    if ((baseRole === "record_officer" || baseRole === "record officer" || baseRole === "recordofficer" || userRoles.includes("record_officer") || userRoles.includes("record officer") || userRoles.includes("recordofficer") || userRoles.includes("result officer")) && (
         permission.startsWith("result_module.") || 
         permission.startsWith("exams_records.") || 
         permission.startsWith("communication.") ||
@@ -68,6 +68,8 @@ export async function hasPermission(permission: string) {
         permission.startsWith("admin.students.") ||
         permission.startsWith("users.") ||
         permission.startsWith("admin.users.") ||
+        permission.startsWith("finance.lock.") ||
+        permission === "finance.lock.manage" ||
         permission === "result_module.manage"
     )) {
         return true;
@@ -106,6 +108,8 @@ export async function hasRole(roleName: string | string[]) {
         (t === "bursar" && (baseRole === "bursary" || userRoles.includes("bursary") || baseRole === "accountant")) ||
         (t === "bursary" && (baseRole === "bursar" || userRoles.includes("bursar"))) ||
         (t === "admission_officer" && (baseRole === "admission officer" || baseRole === "admission" || userRoles.includes("admission_officer"))) ||
-        (t === "record_officer" && (baseRole === "record officer" || baseRole === "recordofficer" || userRoles.includes("record_officer")))
+        ((t === "record_officer" || t === "record officer" || t === "recordofficer") && 
+         (baseRole === "record_officer" || baseRole === "record officer" || baseRole === "recordofficer" || 
+          userRoles.includes("record_officer") || userRoles.includes("record officer") || userRoles.includes("recordofficer") || userRoles.includes("result officer")))
     );
 }

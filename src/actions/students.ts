@@ -787,7 +787,12 @@ export async function getStudentSessionOptions() {
 
 export async function approveStudent(userId: number, inputMatricNumber?: string) {
     try {
-        const allowed = await hasPermission("students.manage") || await hasRole("admin") || await hasRole("superadmin");
+        const allowed = await hasPermission("students.manage") || 
+                        await hasPermission("admin.students.manage") || 
+                        await hasRole("admin") || 
+                        await hasRole("superadmin") || 
+                        await hasRole("registrar") || 
+                        await hasRole("record_officer");
         if (!allowed) {
             return { success: false, error: "Unauthorized: Insufficient permissions to approve students" };
         }
@@ -857,7 +862,12 @@ export async function approveStudent(userId: number, inputMatricNumber?: string)
 
 export async function bulkImportStudents(data: any[]) {
     try {
-        const allowed = await hasPermission("students.manage") || await hasRole("admin") || await hasRole("superadmin");
+        const allowed = await hasPermission("students.manage") || 
+                        await hasPermission("admin.students.manage") || 
+                        await hasRole("admin") || 
+                        await hasRole("superadmin") || 
+                        await hasRole("registrar") || 
+                        await hasRole("record_officer");
         if (!allowed) {
             return { success: false, error: "Unauthorized: Insufficient permissions to import students" };
         }
@@ -1332,6 +1342,7 @@ export async function togglePaymentLock(studentId: number, status: boolean) {
                         await hasRole("superadmin") ||
                         await hasRole("bursar") ||
                         await hasRole("registrar") ||
+                        await hasRole("record_officer") ||
                         await hasRole("icitify_dev");
         if (!allowed) {
             return { success: false, error: "Unauthorized: Insufficient permissions to modify payment lock" };
@@ -1359,6 +1370,7 @@ export async function bulkTogglePaymentLock(studentIds: number[], status: boolea
                         await hasRole("superadmin") ||
                         await hasRole("bursar") ||
                         await hasRole("registrar") ||
+                        await hasRole("record_officer") ||
                         await hasRole("icitify_dev");
         if (!allowed) {
             return { success: false, error: "Unauthorized: Insufficient permissions to modify payment lock" };
@@ -1391,6 +1403,7 @@ export async function toggleFinancialLock(studentId: number, status: boolean) {
                         await hasRole("superadmin") ||
                         await hasRole("bursar") ||
                         await hasRole("registrar") ||
+                        await hasRole("record_officer") ||
                         await hasRole("icitify_dev");
         if (!allowed) {
             return { success: false, error: "Unauthorized: Insufficient permissions to modify financial lock" };
@@ -1695,7 +1708,8 @@ export async function deleteStudentAccount(
                         await hasRole("admin") ||
                         await hasRole("superadmin") ||
                         await hasRole("icitify_dev") ||
-                        await hasRole("registrar");
+                        await hasRole("registrar") ||
+                        await hasRole("record_officer");
         if (!allowed) {
             return { success: false, error: "Unauthorized: You do not have permission to delete student accounts." };
         }
@@ -1815,7 +1829,8 @@ export async function bulkDeleteStudentAccounts(
                         await hasRole("admin") ||
                         await hasRole("superadmin") ||
                         await hasRole("icitify_dev") ||
-                        await hasRole("registrar");
+                        await hasRole("registrar") ||
+                        await hasRole("record_officer");
         if (!allowed) {
             return { success: false, error: "Unauthorized: Insufficient permissions to delete student accounts." };
         }

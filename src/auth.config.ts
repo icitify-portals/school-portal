@@ -138,7 +138,7 @@ export const authConfig = {
             const hasCmsAccess = userPermissions.some((p: string) => p.startsWith("cms.")) || userRoles.includes("CMS Manager");
             const isRegistrar = userRole === 'registrar' || userRoles.includes('registrar') || userRoles.includes('Registrar');
             const isAdmissionOfficer = userRole === 'admission_officer' || userRole === 'admission officer' || userRoles.includes('admission_officer') || userRoles.includes('Admission Officer');
-            const isRecordOfficer = userRole === 'record_officer' || userRole === 'record officer' || userRole === 'recordofficer' || userRoles.includes('record_officer') || userRoles.includes('Record Officer');
+            const isRecordOfficer = userRole === 'record_officer' || userRole === 'record officer' || userRole === 'recordofficer' || userRoles.includes('record_officer') || userRoles.includes('Record Officer') || userRoles.includes('record officer') || userRoles.includes('Result Officer');
             const isBursar = userRole === 'bursar' || userRole === 'bursary' || userRoles.includes('bursar') || userRoles.includes('Bursar');
             const isIctManager = userRole === 'ict_manager' || userRole === 'ictmanager' || userRoles.includes('ICT Manager') || userRoles.includes('ict_manager') || userRoles.includes('ict manager');
 
@@ -149,9 +149,18 @@ export const authConfig = {
                 const hasResultModulePermission = userPermissions.includes("result_module.manage");
                 if ((hasResultModulePermission || isRecordOfficer) && !isRegistrar) {
                     if (
+                        nextUrl.pathname === "/admin/dashboard" ||
                         nextUrl.pathname.startsWith("/admin/result-module") ||
                         nextUrl.pathname.startsWith("/admin/exams-records") ||
                         nextUrl.pathname.startsWith("/admin/students") ||
+                        nextUrl.pathname.startsWith("/admin/student-resolutions") ||
+                        nextUrl.pathname.startsWith("/admin/health/medical-records") ||
+                        nextUrl.pathname.startsWith("/admin/registration") ||
+                        nextUrl.pathname.startsWith("/admin/cohorts") ||
+                        nextUrl.pathname.startsWith("/admin/identity") ||
+                        nextUrl.pathname.startsWith("/admin/ict") ||
+                        nextUrl.pathname.startsWith("/admin/registrar/matriculation") ||
+                        nextUrl.pathname.startsWith("/admin/data") ||
                         nextUrl.pathname.startsWith("/admin/users") ||
                         nextUrl.pathname.startsWith("/admin/communications") ||
                         nextUrl.pathname.startsWith("/admin/announcements") ||

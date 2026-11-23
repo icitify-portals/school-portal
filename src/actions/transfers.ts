@@ -84,7 +84,7 @@ export async function processTransferApproval(
     note?: string
 ) {
     try {
-        const allowed = await hasPermission("students.transfer.approve") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("registrar") || await hasRole("dean") || await hasRole("hod");
+        const allowed = await hasPermission("students.transfer.approve") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("registrar") || await hasRole("record_officer") || await hasRole("dean") || await hasRole("hod");
         if (!allowed) return { success: false, error: "Unauthorized: Insufficient permissions to process transfer approval" };
 
         const session = await auth();
@@ -189,7 +189,7 @@ export async function finalizeTransfer(transferId: number) {
 
 export async function getPendingTransfersForStaff(userId: number) {
     try {
-        const allowed = await hasPermission("students.transfer.approve") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("registrar") || await hasRole("dean") || await hasRole("hod");
+        const allowed = await hasPermission("students.transfer.approve") || await hasRole("admin") || await hasRole("superadmin") || await hasRole("registrar") || await hasRole("record_officer") || await hasRole("dean") || await hasRole("hod");
         if (!allowed) return [];
 
         const baseTransfers = await db.select().from(studentCourseTransfers);
