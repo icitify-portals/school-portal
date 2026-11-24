@@ -125,9 +125,11 @@ function StudentsPageContent() {
         : [
             { value: "ND 1", label: "ND 1" },
             { value: "ND 2", label: "ND 2" },
-            { value: "ND_GRADUANT", label: "ND Graduant" },
             { value: "HND 1", label: "HND 1" },
             { value: "HND 2", label: "HND 2" },
+            { value: "ND 2 & HND 2", label: "ND 2 & HND 2 (All Level 2)" },
+            { value: "ND 1 & HND 1", label: "ND 1 & HND 1 (All Level 1)" },
+            { value: "ND_GRADUANT", label: "ND Graduant" },
             { value: "HND_GRADUANT", label: "HND Graduant" },
           ];
 
@@ -681,7 +683,7 @@ function StudentsPageContent() {
 
                             if (type === "active_all") {
                                 handleExport(format, { status: "active", clearLevel: true, clearGradYear: true });
-                            } else if (["ND 1", "ND 2", "HND 1", "HND 2"].includes(type)) {
+                            } else if (["ND 1", "ND 2", "HND 1", "HND 2", "ND 2 & HND 2", "ND 1 & HND 1"].includes(type)) {
                                 handleExport(format, { level: type, status: "active", clearGradYear: true });
                             } else if (type === "graduant_all") {
                                 handleExport(format, { status: "graduant", clearLevel: true, clearGradYear: true });
@@ -698,6 +700,8 @@ function StudentsPageContent() {
                             <option value="excel:ND 2">Active ND 2 Only — Excel</option>
                             <option value="excel:HND 1">Active HND 1 Only — Excel</option>
                             <option value="excel:HND 2">Active HND 2 Only — Excel</option>
+                            <option value="excel:ND 2 & HND 2">Active ND 2 &amp; HND 2 (All Level 2) — Excel</option>
+                            <option value="excel:ND 1 & HND 1">Active ND 1 &amp; HND 1 (All Level 1) — Excel</option>
                             <option value="excel:graduant_all">All Graduants (ND &amp; HND) — Excel</option>
                             <option value="excel:grad_year:unassigned">Graduants — Legacy / Year Not Set — Excel</option>
                             {graduationYears.map((y) => (
@@ -710,6 +714,8 @@ function StudentsPageContent() {
                             <option value="csv:ND 2">Active ND 2 Only — CSV</option>
                             <option value="csv:HND 1">Active HND 1 Only — CSV</option>
                             <option value="csv:HND 2">Active HND 2 Only — CSV</option>
+                            <option value="csv:ND 2 & HND 2">Active ND 2 &amp; HND 2 (All Level 2) — CSV</option>
+                            <option value="csv:ND 1 & HND 1">Active ND 1 &amp; HND 1 (All Level 1) — CSV</option>
                             <option value="csv:graduant_all">All Graduants (ND &amp; HND) — CSV</option>
                             <option value="csv:grad_year:unassigned">Graduants — Legacy / Year Not Set — CSV</option>
                             {graduationYears.map((y) => (

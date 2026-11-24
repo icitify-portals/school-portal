@@ -110,6 +110,34 @@ export async function getStudents(options: { search?: string, page?: number, pag
                         eq(students.status, 'active')
                     );
                     break;
+                case "ND 2 & HND 2":
+                case "ND 2, HND 2":
+                case "LEVEL_2":
+                    levelCondition = and(
+                        eq(students.currentLevel, 2),
+                        or(
+                            eq(students.programmeType, 'ND'),
+                            eq(students.programmeType, 'HND'),
+                            eq(programmes.programmeType, 'ND'),
+                            eq(programmes.programmeType, 'HND')
+                        ),
+                        eq(students.status, 'active')
+                    );
+                    break;
+                case "ND 1 & HND 1":
+                case "ND 1, HND 1":
+                case "LEVEL_1":
+                    levelCondition = and(
+                        eq(students.currentLevel, 1),
+                        or(
+                            eq(students.programmeType, 'ND'),
+                            eq(students.programmeType, 'HND'),
+                            eq(programmes.programmeType, 'ND'),
+                            eq(programmes.programmeType, 'HND')
+                        ),
+                        eq(students.status, 'active')
+                    );
+                    break;
                 case "HND_GRADUANT":
                 case "HND_GRADUATED":
                 case "HND Graduant":
@@ -384,6 +412,34 @@ export async function exportStudentsAction(options: {
                     levelCondition = and(
                         eq(students.currentLevel, 2), 
                         or(eq(students.programmeType, 'HND'), eq(programmes.programmeType, 'HND')),
+                        eq(students.status, 'active')
+                    );
+                    break;
+                case "ND 2 & HND 2":
+                case "ND 2, HND 2":
+                case "LEVEL_2":
+                    levelCondition = and(
+                        eq(students.currentLevel, 2),
+                        or(
+                            eq(students.programmeType, 'ND'),
+                            eq(students.programmeType, 'HND'),
+                            eq(programmes.programmeType, 'ND'),
+                            eq(programmes.programmeType, 'HND')
+                        ),
+                        eq(students.status, 'active')
+                    );
+                    break;
+                case "ND 1 & HND 1":
+                case "ND 1, HND 1":
+                case "LEVEL_1":
+                    levelCondition = and(
+                        eq(students.currentLevel, 1),
+                        or(
+                            eq(students.programmeType, 'ND'),
+                            eq(students.programmeType, 'HND'),
+                            eq(programmes.programmeType, 'ND'),
+                            eq(programmes.programmeType, 'HND')
+                        ),
                         eq(students.status, 'active')
                     );
                     break;

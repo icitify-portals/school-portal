@@ -90,6 +90,22 @@ async function buildMatricFilterConditions(options?: {
                     sql`(${students.status} NOT IN ('nd_graduant','nd_graduated','hnd_graduant','hnd_graduated') OR ${students.status} IS NULL)`
                 )
             );
+        } else if (lvlStr === "ND 2 & HND 2" || lvlStr === "ND 2, HND 2" || lvlStr === "LEVEL_2") {
+            conditions.push(
+                and(
+                    eq(students.currentLevel, 2),
+                    sql`(${students.programmeType} IN ('ND', 'HND'))`,
+                    sql`(${students.status} NOT IN ('nd_graduant','nd_graduated','hnd_graduant','hnd_graduated') OR ${students.status} IS NULL)`
+                )
+            );
+        } else if (lvlStr === "ND 1 & HND 1" || lvlStr === "ND 1, HND 1" || lvlStr === "LEVEL_1") {
+            conditions.push(
+                and(
+                    eq(students.currentLevel, 1),
+                    sql`(${students.programmeType} IN ('ND', 'HND'))`,
+                    sql`(${students.status} NOT IN ('nd_graduant','nd_graduated','hnd_graduant','hnd_graduated') OR ${students.status} IS NULL)`
+                )
+            );
         } else if (lvlStr === "ND_GRADUANT" || lvlStr === "ND Graduant") {
             conditions.push(sql`${students.status} IN ('nd_graduant', 'nd_graduated')`);
         } else if (lvlStr === "HND_GRADUANT" || lvlStr === "HND Graduant") {

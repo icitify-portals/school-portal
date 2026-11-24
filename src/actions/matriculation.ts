@@ -104,107 +104,97 @@ export async function generateMatricNumber(options: {
         const { year, deptId, facultyId, unitId, studyMode, programmeType, previewOnly } = options;
 
         let deptCode = "GEN";
-        let facultyCode = "GEN";
-        let unitCode = "GEN";
+        let facultyCode = "FSS";
+        let unitCode = "IB";
 
         if (deptId) {
             const dept = await db.select().from(departments).where(eq(departments.id, deptId)).limit(1);
-            if (dept.length > 0) deptCode = dept[0].code;
+            if (dept.length > 0) {
+                const rawCode = (dept[0].code || "").trim().toUpperCase();
+                const dName = (dept[0].name || "").toLowerCase();
+                if (dName.includes("business") || rawCode === "BUS" || rawCode === "BAM") deptCode = "BAM";
+                else if (dName.includes("networking") || rawCode === "NET" || rawCode === "NCC") deptCode = "NCC";
+                else if (dName.includes("artificial") || rawCode === "ART" || rawCode === "AI") deptCode = "AI";
+                else if (dName.includes("computer") || rawCode === "COM" || rawCode === "CSC") deptCode = "CSC";
+                else if (dName.includes("statistics") || rawCode === "STA" || rawCode === "STAT") deptCode = "STA";
+                else if (dName.includes("account") || rawCode === "ACC") deptCode = "ACC";
+                else deptCode = rawCode || "GEN";
+            }
+        } else {
+            const rawCode = (options as any).deptCode ? String((options as any).deptCode).toUpperCase().trim() : "GEN";
+            if (rawCode === "BUS" || rawCode === "BAM") deptCode = "BAM";
+            else if (rawCode === "NET" || rawCode === "NCC") deptCode = "NCC";
+            else if (rawCode === "ART" || rawCode === "AI") deptCode = "AI";
+            else if (rawCode === "COM" || rawCode === "CSC") deptCode = "CSC";
+            else if (rawCode === "STA" || rawCode === "STAT") deptCode = "STA";
+            else if (rawCode === "ACC") deptCode = "ACC";
+            else deptCode = rawCode;
         }
+
         if (facultyId) {
             const fac = await db.select().from(faculties).where(eq(faculties.id, facultyId)).limit(1);
-            if (fac.length > 0) facultyCode = fac[0].code;
+            if (fac.length > 0) facultyCode = fac[0].code || "FSS";
         }
-        // Assuming unit might have a name/code we can use, simplified here to "U"
         if (unitId) {
             unitCode = `U${unitId}`;
         }
+
+        const isPartTime = (studyMode || "").toLowerCase().includes("part") || (studyMode || "").toLowerCase().includes("dpp");
+        const isHnd = (programmeType || "").toUpperCase() === "HND";
 
         // Find the best setting: Priority -> Dept > Faculty > Unit > Global
         let bestSetting = null;
 
         const allSettings = await db.select().from(matriculationSettings);
 
-        if (deptId) {
-            const deptSettings = allSettings.filter(s => s.deptId === deptId);
-            if (deptSettings.length > 1) {
-                const isHndForDept = programmeType?.toUpperCase() === "HND";
-                bestSetting = deptSettings.find(s => isHndForDept ? s.format.includes("/HND/") : s.format.includes("/ND/")) || deptSettings[0];
-            } else {
-                bestSetting = allSettings.find(s => s.deptId === deptId);
-            }
-        }
-        if (!bestSetting && facultyId) {
-            const facSettings = allSettings.filter(s => s.facultyId === facultyId);
-            if (facSettings.length > 1) {
-                const isHndForFac = programmeType?.toUpperCase() === "HND";
-                bestSetting = facSettings.find(s => isHndForFac ? s.format.includes("/HND/") : s.format.includes("/ND/")) || facSettings[0];
-            } else {
-                bestSetting = allSettings.find(s => s.facultyId === facultyId);
-            }
-        }
-        if (!bestSetting && unitId) {
-            const unitSettings = allSettings.filter(s => s.unitId === unitId);
-            if (unitSettings.length > 1) {
-                const isHndForUnit = programmeType?.toUpperCase() === "HND";
-                bestSetting = unitSettings.find(s => isHndForUnit ? s.format.includes("/HND/") : s.format.includes("/ND/")) || unitSettings[0];
-            } else {
-                bestSetting = allSettings.find(s => s.unitId === unitId);
-            }
-        }
-        if (!bestSetting) {
-            const globals = allSettings.filter(s => !s.deptId && !s.facultyId && !s.unitId);
-            const isHndForSetting = programmeType?.toUpperCase() === "HND";
-            if (isHndForSetting) {
-                bestSetting = globals.find(s => s.format.includes("/HND/")) || globals.find(s => s.format.includes("HND")) || globals[0];
-            } else {
-                bestSetting = globals.find(s => s.format.includes("/ND/")) || globals.find(s => s.format.includes("/FSS/IB/")) || globals[0];
-            }
+        if (isHnd) {
+            bestSetting = allSettings.find(s => s.id === 2)
+                || allSettings.find(s => s.nomenclature?.toLowerCase().includes("hnd") || s.format?.includes("HND"))
+                || allSettings[0];
+        } else {
+            bestSetting = allSettings.find(s => s.id === 1)
+                || allSettings.find(s => s.nomenclature?.toLowerCase().includes("nd") && !s.nomenclature?.toLowerCase().includes("hnd"))
+                || allSettings.find(s => s.id === 3)
+                || allSettings[0];
         }
 
-        // Determine Prefix based on Study Mode and Programme Type
-        // Only add prefix if the chosen format doesn't already contain ND/HND
-        let prefix = "";
-        const isPartTime = studyMode?.toLowerCase().includes("part");
-        const isHnd = programmeType?.toUpperCase() === "HND";
-        const formatHasND = bestSetting?.format.includes("/ND/") || bestSetting?.format.includes("ND");
-        const formatHasHND = bestSetting?.format.includes("/HND/") || bestSetting?.format.includes("HND");
-
-        if (!formatHasND && !formatHasHND) {
-            if (isPartTime) {
-                prefix = isHnd ? "DPP/HND/" : "DPP/";
-            } else {
-                prefix = isHnd ? "HND/" : "";
-            }
-        } else if (isHnd && !formatHasHND && formatHasND) {
-            // Edge: ND format chosen for HND student (should not happen after above), add HND prefix
-            prefix = isPartTime ? "DPP/HND/" : "HND/";
+        // Standard arrangement:
+        // HND fulltime: HND/BAM/FSS/IB/year/serial
+        // HND parttime: DPP/HND/BAM/FSS/IB/year/serial
+        // ND fulltime:  BAM/FSS/IB/year/serial
+        // ND parttime:  DPP/BAM/FSS/IB/year/serial
+        let formatTemplate = "";
+        if (isHnd) {
+            formatTemplate = isPartTime
+                ? "DPP/HND/{DEPT_CODE}/FSS/IB/{YEAR}/{SERIAL}"
+                : "HND/{DEPT_CODE}/FSS/IB/{YEAR}/{SERIAL}";
+        } else {
+            formatTemplate = isPartTime
+                ? "DPP/{DEPT_CODE}/FSS/IB/{YEAR}/{SERIAL}"
+                : "{DEPT_CODE}/FSS/IB/{YEAR}/{SERIAL}";
         }
-
-        // Apply Prefix to the department code so that it seamlessly integrates with {DEPT_CODE}
-        deptCode = `${prefix}${deptCode}`;
 
         // If absolutely no setting exists, create a default global one to prevent failure
         if (!bestSetting) {
             if (!previewOnly) {
                 const [insertRes] = await db.insert(matriculationSettings).values({
-                    nomenclature: "Matriculation Number",
-                    format: "{DEPT_CODE}/FSS/IB/{YEAR}/{SERIAL}",
-                    serialStart: 1,
-                    serialPadding: 3,
+                    nomenclature: isHnd ? "HND Matriculation Number" : "ND Matriculation Number",
+                    format: formatTemplate,
+                    serialStart: isHnd ? 4210 : 120546,
+                    serialPadding: 4,
                 });
                 bestSetting = {
                     id: insertRes.insertId,
-                    format: "{DEPT_CODE}/FSS/IB/{YEAR}/{SERIAL}",
-                    serialStart: 1,
-                    serialPadding: 3,
+                    format: formatTemplate,
+                    serialStart: isHnd ? 4210 : 120546,
+                    serialPadding: 4,
                 } as any;
             } else {
                 bestSetting = {
-                    id: -1,
-                    format: "{DEPT_CODE}/FSS/IB/{YEAR}/{SERIAL}",
-                    serialStart: 1,
-                    serialPadding: 3,
+                    id: isHnd ? 2 : 1,
+                    format: formatTemplate,
+                    serialStart: isHnd ? 4210 : 120546,
+                    serialPadding: 4,
                 } as any;
             }
         }
@@ -268,10 +258,10 @@ export async function generateMatricNumber(options: {
             }
         }
 
-        const serialPadding = bestSetting.serialPadding ?? 3;
+        const serialPadding = bestSetting.serialPadding ?? 4;
         const paddedSerial = serialPadding > 0 ? String(serialNumberToIssue).padStart(serialPadding, "0") : String(serialNumberToIssue);
 
-        let generatedNumber = bestSetting.format || "{YEAR}/{SERIAL}";
+        let generatedNumber = formatTemplate || bestSetting.format || "{YEAR}/{SERIAL}";
         generatedNumber = generatedNumber.replace(/{YEAR}/g, year.toString());
         generatedNumber = generatedNumber.replace(/{DEPT_CODE}/g, deptCode);
         generatedNumber = generatedNumber.replace(/{FACULTY_CODE}/g, facultyCode);
