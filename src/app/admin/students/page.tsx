@@ -5,7 +5,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Users, CheckCircle, Loader2, Search, FileUp, X, FileText, ShieldAlert, QrCode, Trash2, AlertTriangle, Lock, Unlock, CreditCard, Download } from "lucide-react";
+import { Users, CheckCircle, Loader2, Search, FileUp, X, FileText, ShieldAlert, QrCode, Trash2, AlertTriangle, Lock, Unlock, CreditCard, Download, BookOpen } from "lucide-react";
 import { getDepartments } from "@/actions/departments";
 import { getStudents, approveStudent, bulkImportStudents, toggleFinancialLock, togglePaymentLock, bulkTogglePaymentLock, getStudentSessionOptions, deleteStudentAccount, bulkDeleteStudentAccounts, exportStudentsAction } from "@/actions/students";
 import { getStudentBills, initializeOnBehalfCheckoutAction, postOnBehalfDirectPayment } from "@/actions/bursary";
@@ -1175,6 +1175,16 @@ function StudentsPageContent() {
                                             >
                                                 <FileText className="w-3 h-3" />
                                                 Ledger
+                                            </Button>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => router.push(`/admin/registration/manage?studentId=${s.id}&sessionId=6&semester=1`)}
+                                                className="h-8 px-3 text-xs gap-1 rounded-lg border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 font-bold"
+                                                title="Edit Registered Courses (Add or Delete)"
+                                            >
+                                                <BookOpen className="w-3 h-3" />
+                                                Courses
                                             </Button>
                                             <Button
                                                 variant="ghost"

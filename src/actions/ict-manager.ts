@@ -909,11 +909,43 @@ export async function getCourseRegistrationPrintQueue(filters?: {
         )) : [];
         const paidUserIds = new Set(paidPts.map(t => t.userId));
 
-        // Group registrations by student
-        const regMap = new Map<number, any[]>();
+        // Fetch actual owed carry-overs for these students
+        const owedCarrySet = new Set<string>();
+        if (studentIds.length > 0) {
+            try {
+                const { academicCarryOvers } = await import("@/db/schema");
+                const owedRows = await db.select({
+                    studentId: academicCarryOvers.studentId,
+                    courseId: academicCarryOvers.courseId,
+                })
+                .from(academicCarryOvers)
+                .where(and(
+                    inArray(academicCarryOvers.studentId, studentIds),
+                    inArray(academicCarryOvers.status, ['pending', 'registered'])
+                ));
+                for (const r of owedRows) {
+                    if (r.studentId && r.courseId) {
+                        owedCarrySet.add(`${r.studentId}_${r.courseId}`);
+                    }
+                }
+            } catch {}
+        }
+
+        // Group registrations by student, deduplicating multiple settings rows by courseId
+        const regMap = new Map<number, Map<number, any>>();
         for (const reg of registrations) {
-            if (!regMap.has(reg.studentId)) regMap.set(reg.studentId, []);
-            regMap.get(reg.studentId)!.push(reg);
+            if (!regMap.has(reg.studentId)) regMap.set(reg.studentId, new Map());
+            const studentMap = regMap.get(reg.studentId)!;
+            const existing = studentMap.get(reg.courseId);
+            if (!existing) {
+                studentMap.set(reg.courseId, reg);
+            } else {
+                const studentRow = filtered.find(f => f.studentId === reg.studentId);
+                const ownLvl = studentRow ? (resolveLevel(studentRow.currentLevel, studentRow.programmeType)?.numeric || 100) : 100;
+                if (existing.courseLevel !== ownLvl && reg.courseLevel === ownLvl) {
+                    studentMap.set(reg.courseId, reg);
+                }
+            }
         }
 
         const result = filtered.map(r => {
@@ -930,10 +962,10 @@ export async function getCourseRegistrationPrintQueue(filters?: {
                 programLabel = r.studyMode.replace('_', '-').toUpperCase();
             }
 
-            const studentCourses = (regMap.get(r.studentId) || []).map((c: any) => ({
+            const studentCourses = Array.from(regMap.get(r.studentId)?.values() || []).map((c: any) => ({
                 ...c,
                 statusCode: c.status === 'elective' ? 'E' : c.status === 'required' ? 'R' : 'C',
-                isCarryOver: Boolean(c.courseLevel && c.courseLevel < ownNumericLevel),
+                isCarryOver: owedCarrySet.has(`${r.studentId}_${c.courseId}`),
             }));
 
             return {

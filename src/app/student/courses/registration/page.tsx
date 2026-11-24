@@ -110,7 +110,7 @@ export default function AdvancedCourseRegistrationPortal() {
       // @ts-expect-error - TS18048: Auto-suppressed for build
       if (regRes.data.length > 0) {
         // @ts-expect-error - TS18048: Auto-suppressed for build
-        setSelectedIds(regRes.data.map((c: any) => c.id));
+        setSelectedIds(Array.from(new Set(regRes.data.map((c: any) => c.id))));
       }
     }
   }
@@ -184,7 +184,7 @@ export default function AdvancedCourseRegistrationPortal() {
       studentId: studentCtx.id,
       sessionId: studentCtx.sessionId,
       semester: studentCtx.semester,
-      courseIds: selectedIds
+      courseIds: Array.from(new Set(selectedIds))
     });
     setSubmitting(false);
     if (res.success) {

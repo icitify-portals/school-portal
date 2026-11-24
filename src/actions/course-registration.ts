@@ -144,6 +144,9 @@ export async function getRegisteredCoursesAction(studentId: number, sessionId: n
         const resolvedLvl = studentRow ? resolveLevel(studentRow.currentLevel, studentRow.programmeType) : null;
         const ownNumericLevel = resolvedLvl?.numeric || 100;
 
+        const carryOverCourseIds = await CourseRegistrationService.getCarryOverCourseIds(studentId);
+        const owedCarrySet = new Set(carryOverCourseIds);
+
         const registered = await db.select({
             id: courses.id,
             name: sql<string>`COALESCE(${courseDepartmentSettings.courseTitle}, ${courses.name})`,
@@ -169,10 +172,22 @@ export async function getRegisteredCoursesAction(studentId: number, sessionId: n
             eq(studentCourseRegistrations.semester, semester)
         ));
 
-        const formattedRegistered = registered.map((c) => ({
+        // Group and deduplicate by course id, preferring the settings row matching the student's own level
+        const courseMap = new Map<number, typeof registered[0]>();
+        for (const row of registered) {
+            const existing = courseMap.get(row.id);
+            if (!existing) {
+                courseMap.set(row.id, row);
+            } else if (existing.courseLevel !== ownNumericLevel && row.courseLevel === ownNumericLevel) {
+                courseMap.set(row.id, row);
+            }
+        }
+        const dedupedRegistered = Array.from(courseMap.values());
+
+        const formattedRegistered = dedupedRegistered.map((c) => ({
             ...c,
             statusCode: c.status === 'elective' ? 'E' : c.status === 'required' ? 'R' : 'C',
-            isCarryOver: Boolean(c.courseLevel && c.courseLevel < ownNumericLevel),
+            isCarryOver: owedCarrySet.has(c.id),
         }));
 
         const matricOrReg = studentRow?.matricNumber || studentRow?.admissionNumber || studentRow?.jambNumber || '';
@@ -388,8 +403,10 @@ export async function adminUpdateStudentCoursesAction(
         const session = await auth();
         const actorId = session?.user?.id ? parseInt(String(session.user.id)) : null;
 
+        const uniqueCourseIds = Array.from(new Set((courseIds || []).map(Number))).filter(Boolean);
+
         // If admin deletes all courses
-        if (!courseIds || courseIds.length === 0) {
+        if (uniqueCourseIds.length === 0) {
             await db.delete(studentCourseRegistrations).where(and(
                 eq(studentCourseRegistrations.studentId, studentId),
                 eq(studentCourseRegistrations.sessionId, sessionId),
@@ -407,12 +424,27 @@ export async function adminUpdateStudentCoursesAction(
                 ));
             }
 
-            await db.insert(semesterSummaries).values({
-                studentId,
-                sessionId,
-                semester,
-                tcr: 0
-            }).onDuplicateKeyUpdate({ set: { tcr: 0 } });
+            const existingSummaries = await db.select({ id: semesterSummaries.id })
+                .from(semesterSummaries)
+                .where(and(
+                    eq(semesterSummaries.studentId, studentId),
+                    eq(semesterSummaries.sessionId, sessionId),
+                    eq(semesterSummaries.semester, semester)
+                ));
+            if (existingSummaries.length > 0) {
+                await db.update(semesterSummaries).set({ tcr: 0 }).where(eq(semesterSummaries.id, existingSummaries[0].id));
+                const redundant = existingSummaries.slice(1).map(s => s.id);
+                if (redundant.length > 0) {
+                    await db.delete(semesterSummaries).where(inArray(semesterSummaries.id, redundant));
+                }
+            } else {
+                await db.insert(semesterSummaries).values({
+                    studentId,
+                    sessionId,
+                    semester,
+                    tcr: 0
+                });
+            }
 
             await db.insert(systemAuditLogs).values({
                 userId: actorId,
@@ -428,7 +460,7 @@ export async function adminUpdateStudentCoursesAction(
         }
 
         const result = await CourseRegistrationService.submitRegistration(
-            { studentId, sessionId, semester, courseIds },
+            { studentId, sessionId, semester, courseIds: uniqueCourseIds },
             { adminOverride: true }
         );
 

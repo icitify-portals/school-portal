@@ -89,7 +89,7 @@ function AdminCourseRegistrationManageContent() {
             setRegisteredCourses(res.registeredCourses || []);
             setAvailableCourses(res.availableCourses || []);
             setAllCourses(res.allCourses || []);
-            setSelectedCourseIds((res.registeredCourses || []).map((c: any) => c.id));
+            setSelectedCourseIds(Array.from(new Set((res.registeredCourses || []).map((c: any) => c.id))));
         } else {
             toast.error(res.error || "Failed to load student registration");
         }
@@ -129,7 +129,7 @@ function AdminCourseRegistrationManageContent() {
             selectedStudentId,
             sessionId,
             semester,
-            selectedCourseIds
+            Array.from(new Set(selectedCourseIds))
         );
         setSaving(false);
         if (res.success) {

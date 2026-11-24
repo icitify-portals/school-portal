@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,7 +15,8 @@ import {
     ChevronRight,
     Search,
     CheckSquare,
-    Square
+    Square,
+    Edit3
 } from "lucide-react";
 import { getPendingRegistrations, processRegistration, batchProcessRegistrations } from "@/actions/registration";
 import { cn } from "@/lib/utils";
@@ -264,7 +266,17 @@ export default function RegistrationApprovals() {
                                                     ))}
                                                 </div>
                                             </div>
-                                            <div className="flex justify-end gap-3">
+                                            <div className="flex justify-end items-center gap-3">
+                                                <Link href={`/admin/registration/manage?studentId=${reg.studentId}&sessionId=6&semester=${reg.semester}`}>
+                                                    <Button
+                                                        variant="outline"
+                                                        className="h-12 px-6 rounded-xl border-amber-200 text-amber-700 bg-amber-50 hover:bg-amber-100 font-black uppercase text-[10px] tracking-widest gap-2 transition-all"
+                                                        title="Edit student's courses (add or delete) before approving"
+                                                    >
+                                                        <Edit3 className="w-4 h-4" />
+                                                        Edit Courses
+                                                    </Button>
+                                                </Link>
                                                 <Button
                                                     variant="outline"
                                                     disabled={isProcessing}

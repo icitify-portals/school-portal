@@ -187,7 +187,7 @@ name: sql<string>`COALESCE(${courseDepartmentSettings.courseTitle}, ${courses.na
      * defines F as 0 points. Grades outside that scale are ignored rather than
      * guessed at. A later pass in the same course clears the carry-over.
      */
-    private static async getCarryOverCourseIds(studentId: number): Promise<number[]> {
+    public static async getCarryOverCourseIds(studentId: number): Promise<number[]> {
         const carried = new Set<number>();
 
         try {
@@ -400,6 +400,10 @@ name: sql<string>`COALESCE(${courseDepartmentSettings.courseTitle}, ${courses.na
     }, options?: { adminOverride?: boolean }) {
         const isAdminOverride = Boolean(options?.adminOverride);
 
+        // Deduplicate incoming course IDs to prevent repeated insertions
+        const uniqueCourseIds = Array.from(new Set((data.courseIds || []).map(Number))).filter(Boolean);
+        data = { ...data, courseIds: uniqueCourseIds };
+
         if (!isAdminOverride) {
             const win = await this.getRegistrationWindowStatus(data.studentId, data.sessionId, data.semester);
             if (win.phase === 'closed') {
@@ -610,12 +614,35 @@ name: sql<string>`COALESCE(${courseDepartmentSettings.courseTitle}, ${courses.na
                 })));
             }
 
-            await tx.insert(semesterSummaries).values({
-                studentId: data.studentId,
-                sessionId: data.sessionId,
-                semester: data.semester,
-                tcr: totalUnits
-            }).onDuplicateKeyUpdate({ set: { tcr: totalUnits } });
+            const existingSummaries = await tx.select({
+                id: semesterSummaries.id,
+                isPrintFeePaid: semesterSummaries.isPrintFeePaid
+            })
+            .from(semesterSummaries)
+            .where(and(
+                eq(semesterSummaries.studentId, data.studentId),
+                eq(semesterSummaries.sessionId, data.sessionId),
+                eq(semesterSummaries.semester, data.semester)
+            ));
+
+            if (existingSummaries.length > 0) {
+                const primary = existingSummaries.find(s => s.isPrintFeePaid) || existingSummaries[0];
+                await tx.update(semesterSummaries)
+                    .set({ tcr: totalUnits })
+                    .where(eq(semesterSummaries.id, primary.id));
+
+                const redundantIds = existingSummaries.filter(s => s.id !== primary.id).map(s => s.id);
+                if (redundantIds.length > 0) {
+                    await tx.delete(semesterSummaries).where(inArray(semesterSummaries.id, redundantIds));
+                }
+            } else {
+                await tx.insert(semesterSummaries).values({
+                    studentId: data.studentId,
+                    sessionId: data.sessionId,
+                    semester: data.semester,
+                    tcr: totalUnits
+                });
+            }
 
             return { success: true, totalUnits };
         });
