@@ -25,6 +25,7 @@ export async function GET(req: Request) {
                 "Receipt No": `#${String(tx.id).padStart(6, '0')}`,
                 "Method": tx.gateway || "N/A",
                 "Status": tx.status || "completed",
+                ...(data.verificationUrl ? { "Verify Online": data.verificationUrl } : {}),
             },
         });
 

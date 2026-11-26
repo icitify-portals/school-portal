@@ -1779,6 +1779,8 @@ export async function getTransactionForReceipt(id: number) {
 
         let txData: any = data.length > 0 ? data[0] : null;
         if (txData && !isStaff && Number(txData.student?.userId || 0) !== sessionUserId) return null;
+        // Never issue or render a receipt for an unpaid, pending, or failed transaction
+        if (txData && String(txData.transaction?.status || '').toLowerCase() !== 'completed') return null;
 
         if (txData && txData.student) {
             const userName = txData.user?.name || '';
@@ -1803,6 +1805,8 @@ export async function getTransactionForReceipt(id: number) {
             if (ptData.length === 0) return null;
             const pt = ptData[0].pt;
             if (!isStaff && Number(pt.userId) !== sessionUserId) return null;
+            const ptStatus = String(pt.status || '').toLowerCase();
+            if (!['completed', 'paid', 'successful', 'success'].includes(ptStatus)) return null;
 
             // Get student info using userId
             const studentData = await db.select({
@@ -1886,12 +1890,29 @@ export async function getTransactionForReceipt(id: number) {
             arrears = unpaidBills.reduce((sum, b) => sum + (parseFloat(b.total) - parseFloat(b.paid || "0.00")), 0);
         }
 
+        const verifyRef = txData.transaction?.gatewayReference || txData.transaction?.rrr || String(txData.transaction?.id || id);
+        const appUrl = (process.env.NEXT_PUBLIC_APP_URL || 'https://portal.fssibadan.edu.ng').replace(/\/$/, '');
+        const verificationUrl = `${appUrl}/verify/receipt/${encodeURIComponent(String(verifyRef))}`;
+        let verificationQrDataUrl: string | null = null;
+        try {
+            const QRCode = (await import('qrcode')).default;
+            verificationQrDataUrl = await QRCode.toDataURL(verificationUrl, {
+                width: 140,
+                margin: 1,
+                color: { dark: '#0f172a', light: '#ffffff' }
+            });
+        } catch (qrErr) {
+            console.error("Failed to generate receipt QR:", qrErr);
+        }
+
         return {
             ...txData,
             branding,
             bursar,
             arrears,
             bursarySettings,
+            verificationUrl,
+            verificationQrDataUrl,
             template: bursarySettings['receipt_template'] || 'modern'
         };
     } catch (error) {

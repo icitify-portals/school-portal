@@ -64,7 +64,7 @@ export default function ReceiptPage() {
         );
     }
 
-    const { transaction, student, programme, branding, template, bursar, arrears, bursarySettings } = data;
+    const { transaction, student, programme, branding, template, bursar, arrears, bursarySettings, verificationUrl, verificationQrDataUrl } = data;
 
     // Enrich student data with programme info for templates
     const enrichedStudent = { ...student, programme };
@@ -99,6 +99,27 @@ export default function ReceiptPage() {
                     <HeritageReceipt transaction={transaction} student={enrichedStudent} branding={branding} bursar={bursar} arrears={arrears} bursarySettings={bursarySettings} />
                 ) : (
                     <ModernReceipt transaction={transaction} student={enrichedStudent} branding={branding} bursar={bursar} arrears={arrears} bursarySettings={bursarySettings} />
+                )}
+
+                {verificationQrDataUrl && verificationUrl && (
+                    <div className="max-w-2xl mx-auto mt-4 bg-white border border-slate-200 rounded-xl p-4 flex items-center justify-between gap-4 print:border-slate-300 print:shadow-none">
+                        <div className="space-y-1">
+                            <p className="text-[11px] font-black uppercase tracking-widest text-emerald-700">
+                                Official Anti-Forgery Verification Seal
+                            </p>
+                            <p className="text-[11px] text-slate-600 leading-snug">
+                                Scan this QR code or visit the link below to verify live payer name, amount, and payment status on the official FSS Ibadan Portal.
+                            </p>
+                            <p className="text-[10px] font-mono text-slate-500 break-all">
+                                {verificationUrl}
+                            </p>
+                        </div>
+                        <img
+                            src={verificationQrDataUrl}
+                            alt="Receipt Verification QR Code"
+                            className="w-24 h-24 shrink-0 border border-slate-200 rounded-lg p-1 bg-white"
+                        />
+                    </div>
                 )}
             </div>
 
